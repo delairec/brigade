@@ -457,3 +457,24 @@ TASK B39
 	SPEC "the ledger comparison against the baseline of 26/09 to 03/10"
 	AFTER @TASK.B37
 	AFTER @TASK.B38
+
+TASK B40
+	TITLE "Evaluate rtk as a candidate filter of shell output"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "runs"
+	ROLE dora
+	ROLE prudence
+	SPEC "rtk (github.com/rtk-ai/rtk) is installed for implementation runs only, telemetry"
+		+ "disabled, its hook proven to coexist with the hooks of the instructions corpus and never"
+		+ "to rewrite an awawa command"
+	SPEC "implementation runs read compact output: failures only, the test runner in fail-fast mode"
+		+ "(bun test --bail, pytest -x)"
+	SPEC "verification runs read full raw output: the verifier's pass, the merge gate of the tick"
+		+ "and the evidence quoted in a report run without rtk or through rtk run"
+	SPEC "a run that needs the full output of a filtered command recovers it with rtk recall"
+		+ "instead of re-running it"
+	SPEC "the ledger compares one wave with rtk and one without: agent steps, re-reads of oversized"
+		+ "output, findings missed by the verifier"
+	SPEC "a DECISION records the adoption or the rejection, with the measured comparison"
+	AFTER @TASK.B21
