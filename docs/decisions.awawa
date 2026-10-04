@@ -115,3 +115,19 @@ DECISION MinedConstraintsAreDeliveredAsWaves
 		+ "and a pseudonym is kept anywhere"
 	RATIONALE "the user's answer on mining; the anonymisation rule of the example project"
 	SOURCE "the Artifact Brigade Blueprint, plan section 10"
+
+DECISION TheCorpusIsTheHomeOfTaskStatusTheBoardItsView
+	TITLE "the corpus is the single home of task status; the task board of the Artifact is a view"
+		+ "of it"
+	STATUS active
+	DESC "a task's STATUS is edited in docs/tasks.awawa and nowhere else"
+	DESC "the board of the Blueprint shows the status the corpus holds, written by a deterministic"
+		+ "command"
+	DESC "a status changed on the board binds nothing"
+	REJECTED "the board as the home of status until the brigade delivers its own waves, the"
+		+ "planning run's choice: the corpus held every task draft while the board showed them"
+		+ "todo, two homes already disagreeing"
+	REJECTED "two homes kept in sync by hand: a hand-maintained view is wrong by the next commit"
+	RATIONALE "the plan's own principle, one home per fact, views rendered never hand-maintained;"
+		+ "ruled by the user on 2026-10-05"
+	SOURCE "pull request #1 of the brigade repository"
