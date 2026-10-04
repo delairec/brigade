@@ -478,3 +478,26 @@ TASK B40
 		+ "output, findings missed by the verifier"
 	SPEC "a DECISION records the adoption or the rejection, with the measured comparison"
 	AFTER @TASK.B21
+
+TASK B41
+	TITLE "Mirror the corpus task statuses to the Blueprint board"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "artifact"
+	ROLE bastien
+	SPEC "brigade board sync reads every TASK of the repository corpus through the corpus reader"
+		+ "and writes its STATUS to the field status of the document tasks/<id> of the board's"
+		+ "tasks collection; a second sync writes nothing"
+	SPEC "the board renders the corpus's statuses, draft, todo, implemented and archived, as they"
+		+ "are or through one mapping declared in one place of the page; the sync writes nothing"
+		+ "while the board cannot display a corpus value"
+	SPEC "the board's status control is read-only, or records a proposal in a field of its own that"
+		+ "the sync never overwrites; no action of the page writes status"
+	SPEC "the sync prints the documents it wrote, text and --json, and exits 1 when the board holds"
+		+ "a task the corpus does not"
+	AFTER @TASK.B08
+	RATIONALE "the board page of 2026-10-04 edits status in a vocabulary of its own, todo, doing,"
+		+ "review, done and blocked, and cannot display draft; its documents all hold todo while"
+		+ "the corpus holds draft"
+	SOURCE "@DECISION.TheCorpusIsTheHomeOfTaskStatusTheBoardItsView, pull request #1 of the brigade"
+		+ "repository"
