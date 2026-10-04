@@ -1,0 +1,117 @@
+DECISION CliDoesTheMechanicalWorkAgentsOnlyJudge
+	TITLE "every mechanical step of a wave is a CLI command; a model is called only to judge"
+	STATUS active
+	DESC "branches, worktrees, ordering, launching, polling, merging, rebasing, statistics, report"
+		+ "skeletons and signal normalisation are deterministic Python; an agent receives a"
+		+ "pre-computed context from one command and returns a verdict or a text through another"
+	REJECTED "a coordinator agent that orchestrates the wave: it rediscovers state at every step"
+		+ "and spends judgment on bookkeeping"
+	REJECTED "letting each run read git, gh and files itself: measured, the first edit of a task"
+		+ "run came after 23 steps and 134 000 tokens in median"
+	RATIONALE "the user's first principle for the plan; the measured cost of discovery is the"
+		+ "largest saving available"
+	SOURCE "the Artifact Brigade Blueprint, plan section 1 and 5"
+
+DECISION TheToolIsNamedBrigade
+	TITLE "the CLI, the repository and the config directory are named brigade"
+	STATUS active
+	DESC "the kitchen brigade is the team of roles under the chef, who is the user; the"
+		+ "verification gate is nicknamed the pass"
+	REJECTED "fab: collides with the Fabric CLI"
+	REJECTED "chef, kitchen: collide with the Chef ecosystem's CLIs"
+	REJECTED "expo, pass: collide with the Expo CLI and the pass password store"
+	RATIONALE "free on PATH and in Debian packages on 2026-10-04; the metaphor is the one the user"
+		+ "adopted from the talk"
+	SOURCE "the Artifact Brigade Blueprint, plan section 3"
+
+DECISION PythonStandardLibraryOnly
+	TITLE "brigade is Python 3.13 standard library plus POSIX sh for systemd units, with no"
+		+ "third-party dependency"
+	STATUS active
+	REJECTED "a Bun or TypeScript CLI: ties a machine-wide tool to a JavaScript toolchain the"
+		+ "instructions corpus does not have"
+	REJECTED "a TUI framework: a new dependency for views the web dashboard renders"
+	RATIONALE "the hooks, the unattended runner and the user's local context page are already"
+		+ "Python and sh; nothing new has to be installed"
+	SOURCE "the Artifact Brigade Blueprint, plan section 13 and 14"
+
+DECISION ADeterministicTickReplacesTheCoordinatorAgent
+	TITLE "the coordinator is brigade tick, a deterministic pass run by a user systemd timer every"
+		+ "five minutes"
+	STATUS active
+	DESC "it reconciles waves with git and GitHub, advances task states, launches runs within the"
+		+ "slot cap, merges verified pull requests and records events"
+	REJECTED "a long-lived coordinator session: costs tokens for waiting and loses state at"
+		+ "compaction"
+	REJECTED "cloud routines: the private satellite and the worktrees are on the machine only"
+	RATIONALE "every transition is a condition evaluated from facts; the laptop being off loses"
+		+ "nothing with Persistent=true"
+	SOURCE "the Artifact Brigade Blueprint, plan section 5 and 15"
+
+DECISION HybridStorageCorpusAndLedger
+	TITLE "durable facts live in awawa corpora, high-volume events in an append-only JSONL ledger"
+	STATUS active
+	DESC "the brigade corpus holds PROJECT, POLICY, ROUTINE, REQUEST, PATTERN and CONSTRAINT; each"
+		+ "project corpus keeps its WAVE and TASK entities; the ledger holds runs, states, pauses"
+		+ "and merges"
+	REJECTED "everything in awawa: one entity per run means thousands of entities and git noise"
+	REJECTED "SQLite for everything: a second grammar without schema lint"
+	RATIONALE "the user's answer to the storage question; one home per fact, views rendered never"
+		+ "hand-maintained"
+	SOURCE "the Artifact Brigade Blueprint, plan section 11 and 12"
+
+DECISION AVerifierRunOnEveryPullRequestAndOneHumanGate
+	TITLE "every pull request passes a deterministic preflight then one prudence run before merging"
+		+ "into integration; the user merges integration into main"
+	STATUS active
+	REJECTED "the user reviewing every diff: the rung the user asked to leave"
+	REJECTED "sampling that blocks: sampling stays a suggestion in the report"
+	RATIONALE "the user's answers on autonomy and review; delivered work is never verified by the"
+		+ "run that produced it"
+	SOURCE "the Artifact Brigade Blueprint, plan section 7"
+
+DECISION QuotaPausesTheWaveAndResumesTheSameSession
+	TITLE "a rate-limit result pauses the wave; the resume is claude --resume of the suspended"
+		+ "session at the time the message names"
+	STATUS active
+	REJECTED "a dollar cap: the subscription is the cap"
+	REJECTED "probing the quota with extra calls: the resume itself is the probe"
+	RATIONALE "the user's answer on budget: waves of 10 to 20 pull requests, the quota blocks"
+		+ "before any overspend"
+	SOURCE "the Artifact Brigade Blueprint, plan section 15"
+
+DECISION TheDashboardIsBuiltThePluginAndAwawaWebAreKept
+	TITLE "a loopback web dashboard is built; the IntelliJ plugin stays for in-IDE work; awawa-web"
+		+ "stays the editor of the brigade corpus"
+	STATUS active
+	DESC "the dashboard exposes a local JSON API the plugin may consume later for a branch selector"
+	REJECTED "extending the plugin into the factory's UI: it would have to grow a server and a"
+		+ "ledger reader of its own"
+	REJECTED "a second corpus editor in the dashboard: awawa-web already edits block by block with"
+		+ "fmt and lint"
+	RATIONALE "the plugin's handbook names user-defined views as its extension point; the branch"
+		+ "selector is a server-side fact (git archive per SHA)"
+	SOURCE "the Artifact Brigade Blueprint, plan section 13"
+
+DECISION AwawaIsWrappedAsItIs
+	TITLE "the plan wraps the awawa binary as it is; desired changes go to a list of requests to"
+		+ "its author, never on the critical path"
+	STATUS active
+	REJECTED "forking awawa or waiting for a feature: the user is a consumer and the author may"
+		+ "lack time"
+	RATIONALE "every awawa gap has a workaround the POC uses: block edits with fmt and lint,"
+		+ "per-entity spawns cached per SHA"
+	SOURCE "the Artifact Brigade Blueprint, plan section 17"
+
+DECISION MinedConstraintsAreDeliveredAsWaves
+	TITLE "constraints mined from transcripts become waves like any other work, auto-merged into"
+		+ "integration and listed in the report with their reason"
+	STATUS active
+	DESC "the scrubber runs before anything leaves the state directory: Steam id pattern, player"
+		+ "names computed at run time from the private saves and never stored, e-mail addresses,"
+		+ "private paths"
+	REJECTED "proposals only in the dashboard: the user asked for the same autonomy as a wave"
+	REJECTED "a stored list of real names for the scrubber: no correspondence between a real name"
+		+ "and a pseudonym is kept anywhere"
+	RATIONALE "the user's answer on mining; the anonymisation rule of the example project"
+	SOURCE "the Artifact Brigade Blueprint, plan section 10"

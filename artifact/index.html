@@ -1,0 +1,699 @@
+<title>Brigade Blueprint</title>
+<meta name="description" content="Spec, mockups, demo and the task board for brigade: a machine-wide CLI, timer and dashboard that run AI-agent waves unattended, where the CLI does the mechanical work and agents only judge.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a sticky tab bar over one reading column (max 1120px); the plan reads like a document with
+   bounded tables and terminal figures; the task board and demo are tools inside the same frame. */
+:root {
+  --bg: #F4F6F3; --surface: #FFFFFF; --ink: #1B2422; --muted: #5C6B66; --faint: #8C9994; --rule: #D8DFDB;
+  --accent: #1F7A6E; --accent-ink: #17635A; --accent-soft: #E2F1EE;
+  --brass: #A8761F; --brass-soft: #F6EEDB;
+  --code-bg: #E9EEEB; --term-bg: #1B2426; --term-fg: #DCE5E0; --term-dim: #8A9A94; --term-kw: #6FD3C2; --term-ok: #7FCF9A; --term-warn: #E4B85B; --term-err: #EF8A8A; --term-prompt: #9BB3AB;
+  --ok: #2F8F5B; --warn: #B7791F; --err: #B4443F;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121717; --surface: #1A2122; --ink: #E3E9E5; --muted: #A3B1AB; --faint: #75837D; --rule: #2B3533;
+    --accent: #5FC2B2; --accent-ink: #8ADCCF; --accent-soft: #17342F;
+    --brass: #D9A84A; --brass-soft: #3A2F17;
+    --code-bg: #222B2C; --term-bg: #0D1213; --term-fg: #D6DFDA; --term-dim: #7C8C86; --term-kw: #6FD3C2; --term-ok: #7FCF9A; --term-warn: #E4B85B; --term-err: #EF8A8A; --term-prompt: #8FA7A0;
+    --ok: #6CC594; --warn: #E0B35A; --err: #EF8C87;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121717; --surface: #1A2122; --ink: #E3E9E5; --muted: #A3B1AB; --faint: #75837D; --rule: #2B3533;
+  --accent: #5FC2B2; --accent-ink: #8ADCCF; --accent-soft: #17342F;
+  --brass: #D9A84A; --brass-soft: #3A2F17;
+  --code-bg: #222B2C; --term-bg: #0D1213; --term-fg: #D6DFDA; --term-dim: #7C8C86; --term-kw: #6FD3C2; --term-ok: #7FCF9A; --term-warn: #E4B85B; --term-err: #EF8A8A; --term-prompt: #8FA7A0;
+  --ok: #6CC594; --warn: #E0B35A; --err: #EF8C87;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body { color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.55; }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, kbd { font-family: var(--mono); font-size: .85em; }
+code { background: var(--code-bg); padding: .06em .32em; border-radius: 4px; }
+h1, h2, h3, h4 { font-family: var(--display); letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-size: 24px; font-weight: 600; margin: 40px 0 10px; padding-top: 18px; border-top: 1px solid var(--rule); }
+h2 .n { color: var(--faint); font-weight: 500; margin-right: .5em; font-variant-numeric: tabular-nums; }
+h3 { font-size: 18px; font-weight: 600; margin: 26px 0 6px; }
+p, li, dd { max-width: 72ch; }
+p { margin: 0 0 12px; }
+ul, ol { padding-left: 1.3em; margin: 0 0 14px; }
+li { margin-bottom: 5px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* header */
+.site { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
+.site-in { max-width: 1120px; margin: 0 auto; padding-inline: 20px; display: flex; align-items: center; gap: 18px; min-height: 54px; flex-wrap: wrap; }
+.brand { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 9px; }
+.brand-mark { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); color: #fff; display: grid; place-items: center; font-family: var(--mono); font-size: 12px; font-weight: 500; }
+.tabs { display: flex; gap: 2px; margin-left: auto; overflow-x: auto; max-width: 100%; font-size: 15px; }
+.tabs a { white-space: nowrap; color: var(--muted); text-decoration: none; padding: 15px 12px 13px; border-bottom: 2px solid transparent; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.tabs a.appendix { color: var(--faint); font-size: 14px; }
+@media (max-width: 560px) { .site-in { gap: 6px; } .tabs { margin-left: 0; width: 100%; } .tabs a { padding: 8px 10px 10px; } }
+
+.page { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 90px; }
+@media (max-width: 520px) { .page { padding-inline: 16px; } }
+.pane[hidden] { display: none; }
+.loading { color: var(--faint); font-style: italic; padding-block: 40px; }
+
+/* document parts */
+.doc-head { max-width: 860px; margin-bottom: 14px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.doc-head h1, .hero h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; line-height: 1.12; margin: 0 0 12px; }
+.lede { font-size: 19px; color: var(--muted); margin: 0 0 14px; max-width: 64ch; }
+.meta { font-size: 13.5px; color: var(--faint); display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--mono); }
+.toc { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px; margin: 18px 0 8px; }
+.toc ol { margin: 0; padding-left: 1.6em; columns: 2; column-gap: 28px; font-size: 14.5px; }
+.toc li { margin-bottom: 3px; break-inside: avoid; }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--ink); text-decoration: underline; }
+@media (max-width: 700px) { .toc ol { columns: 1; } }
+section { scroll-margin-top: 76px; }
+.principles > li { margin-bottom: 12px; }
+.gloss dt { font-weight: 600; margin-top: 10px; font-family: var(--display); }
+.gloss dd { margin: 2px 0 0 0; }
+.grid2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px 32px; }
+@media (max-width: 780px) { .grid2 { grid-template-columns: minmax(0,1fr); } }
+.tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; padding: 1px 7px; border-radius: 4px; vertical-align: 1px; }
+.tag.cli { background: var(--accent-soft); color: var(--accent-ink); }
+.tag.ai { background: var(--brass-soft); color: var(--brass); }
+.tbl { overflow-x: auto; margin: 10px 0 18px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+.tbl table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.45; }
+.tbl th, .tbl td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl th { font-weight: 600; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: color-mix(in srgb, var(--code-bg) 55%, var(--surface)); white-space: nowrap; }
+.tbl td code { white-space: normal; word-break: break-word; }
+.tbl.wide table { min-width: 860px; }
+figure.fig { margin: 18px 0 26px; }
+figure.fig svg { display: block; max-width: 100%; height: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 8px; color: var(--ink); }
+figure.fig svg text { font-family: var(--mono); }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 76ch; }
+figcaption b { color: var(--ink); }
+
+/* terminal */
+pre.term { margin: 0; background: var(--term-bg); color: var(--term-fg); font-family: var(--mono); font-size: 12.5px; line-height: 1.55; padding: 14px 16px; overflow-x: auto; border-radius: 0 0 10px 10px; tab-size: 4; }
+pre.term.static { border-radius: 10px; margin: 12px 0 18px; }
+.term .dim { color: var(--term-dim); } .term .kw, .term .hl { color: var(--term-kw); font-weight: 500; } .term .ok { color: var(--term-ok); } .term .warn { color: var(--term-warn); } .term .err { color: var(--term-err); } .term .p { color: var(--term-prompt); } .term .c { color: var(--term-fg); font-weight: 500; }
+.tagc, .taga { display: inline-block; min-width: 5.2em; text-align: center; font-size: 11px; border-radius: 3px; padding: 0 5px; font-family: var(--mono); letter-spacing: .03em; }
+.tagc { background: #1F7A6E; color: #ECFFFA; } .taga { background: #A8761F; color: #FFF6E3; }
+p .tagc, p .taga { min-width: 0; }
+figure.shot { margin: 16px 0 26px; }
+.shot-bar { display: flex; align-items: center; gap: 6px; background: color-mix(in srgb, var(--term-bg) 80%, #000); color: var(--term-dim); border-radius: 10px 10px 0 0; padding: 7px 12px; font-family: var(--mono); font-size: 12px; }
+.shot-bar span { width: 10px; height: 10px; border-radius: 50%; background: var(--term-dim); opacity: .55; }
+.shot-bar em { font-style: normal; margin-left: 8px; color: var(--term-fg); }
+
+/* dashboard screens */
+figure.screen { margin: 16px 0 26px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface); font-size: 13.5px; }
+.sbar { display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface)); flex-wrap: wrap; }
+.sbar b { font-family: var(--display); }
+.snav { display: flex; gap: 2px; font-size: 13px; }
+.snav span, .snav em { padding: 3px 9px; border-radius: 6px; color: var(--muted); font-style: normal; }
+.snav em { background: var(--surface); color: var(--ink); font-weight: 600; }
+.sright { margin-left: auto; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.sbody { padding: 12px 14px; display: grid; gap: 12px; }
+.scards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.scard { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; }
+.scard.warn { border-color: var(--warn); }
+.sl { font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.sv { font-family: var(--display); font-size: 26px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.sd { color: var(--muted); font-size: 12.5px; }
+.spane { border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.sh { font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 7px 12px; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--code-bg) 50%, var(--surface)); }
+.srow { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.srow:last-child { border-bottom: 0; }
+.sdim { color: var(--muted); font-size: 12.5px; }
+.sact { margin-left: auto; font-size: 12.5px; border: 1px solid var(--rule); border-radius: 6px; padding: 2px 9px; color: var(--ink); }
+.sact + .sact { margin-left: 0; }
+.sact.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--rule); color: var(--muted); }
+.pill.s-running, .pill.s-ok { border-color: var(--ok); color: var(--ok); } .pill.s-paused, .pill.s-fixing { border-color: var(--warn); color: var(--warn); } .pill.s-new { border-color: var(--accent); color: var(--accent-ink); } .pill.s-sig { color: var(--muted); }
+.board { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.col { flex: 0 0 180px; background: color-mix(in srgb, var(--code-bg) 55%, var(--surface)); border: 1px solid var(--rule); border-radius: 8px; padding: 6px; min-height: 90px; }
+.board.small .col { flex-basis: 160px; }
+.colh { font-size: 12px; font-weight: 600; color: var(--muted); padding: 2px 4px 6px; display: flex; justify-content: space-between; }
+.colh span { font-family: var(--mono); font-weight: 400; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; font-size: 12.5px; line-height: 1.35; }
+.card.ok { border-left: 3px solid var(--ok); } .card.warnc { border-left: 3px solid var(--warn); } .card.aic { border-left: 3px solid var(--brass); } .card.clic { border-left: 3px solid var(--accent); }
+.timeline { display: flex; gap: 6px; flex-wrap: wrap; }
+.tl { font-family: var(--mono); font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--rule); }
+.tl.cli { border-color: var(--accent); color: var(--accent-ink); } .tl.ai { border-color: var(--brass); color: var(--brass); } .tl.warn { border-color: var(--warn); color: var(--warn); }
+.selectors { display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+.selectors select { font: inherit; font-size: 13px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); max-width: 100%; }
+
+/* overview */
+.hero { max-width: 860px; padding-block: 10px 6px; }
+.hero h1 { margin-bottom: 14px; }
+.two { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: 28px 40px; margin-top: 28px; align-items: start; }
+@media (max-width: 880px) { .two { grid-template-columns: minmax(0,1fr); } }
+.facts { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--rule); }
+.facts li { display: grid; grid-template-columns: 9em minmax(0,1fr); gap: 14px; padding-block: 11px; border-bottom: 1px solid var(--rule); font-size: 15.5px; }
+.facts li b { font-family: var(--display); font-size: 14.5px; color: var(--muted); font-weight: 600; padding-top: 1px; }
+@media (max-width: 520px) { .facts li { grid-template-columns: minmax(0,1fr); gap: 2px; } }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 4px; }
+.btn { font-family: var(--display); font-size: 15px; font-weight: 600; text-decoration: none; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--rule); color: var(--ink); background: var(--surface); display: inline-flex; align-items: center; gap: 8px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.callout { background: var(--brass-soft); border: 1px solid color-mix(in srgb, var(--brass) 40%, var(--rule)); border-radius: 10px; padding: 14px 18px; margin: 18px 0; }
+.callout h3 { margin: 0 0 6px; font-size: 16px; }
+.callout p { margin: 0; font-size: 15.5px; }
+
+/* tasks board */
+.filterbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+.filterbar label { display: inline-flex; align-items: center; gap: 6px; }
+.filterbar select, .filterbar input[type=search] { font: inherit; font-size: 14px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); }
+.filterbar input[type=search] { min-width: 180px; }
+.tasks-state { color: var(--muted); font-size: 14.5px; margin: 6px 0 14px; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 18px; }
+.mcard { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: var(--surface); }
+.mcard .sl { margin-bottom: 2px; }
+.bar { height: 6px; background: var(--code-bg); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.milestone { margin: 22px 0 8px; }
+.milestone h3 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+.milestone h3 small { color: var(--muted); font-weight: 400; font-family: var(--body); font-size: 14px; }
+.trows { border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.trow { display: grid; grid-template-columns: 4.2em minmax(0,1fr) 7.5em 9.2em; gap: 10px; align-items: center; padding: 9px 12px; border-bottom: 1px solid var(--rule); font-size: 14.5px; }
+.trow:last-child { border-bottom: 0; }
+.trow .tid { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.trow .ttl { min-width: 0; }
+.trow .ttl button { font: inherit; text-align: left; background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; }
+.trow .ttl button:hover { text-decoration: underline; }
+.trow .ttl .sub { display: block; color: var(--muted); font-size: 12.5px; }
+.trow .role { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.status-select { font: inherit; font-size: 13px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); width: 100%; }
+.status-select.todo { border-color: var(--rule); } .status-select.doing { border-color: var(--accent); color: var(--accent-ink); } .status-select.review { border-color: var(--brass); color: var(--brass); } .status-select.done { border-color: var(--ok); color: var(--ok); } .status-select.blocked { border-color: var(--err); color: var(--err); }
+.status-select:disabled { opacity: .6; }
+@media (max-width: 640px) { .trow { grid-template-columns: 4.2em minmax(0,1fr); } .trow .role { grid-column: 2; } .trow .status-select { grid-column: 2; max-width: 14em; } }
+.tdetail { grid-column: 1 / -1; background: color-mix(in srgb, var(--code-bg) 45%, var(--surface)); border-radius: 8px; padding: 10px 12px; font-size: 14px; display: grid; gap: 8px; }
+.tdetail dl { margin: 0; display: grid; grid-template-columns: 7em minmax(0,1fr); gap: 4px 12px; }
+.tdetail dt { color: var(--muted); } .tdetail dd { margin: 0; }
+.tdetail textarea { font: inherit; font-size: 13.5px; width: 100%; min-height: 60px; border: 1px solid var(--rule); border-radius: 6px; padding: 6px 8px; background: var(--surface); color: var(--ink); resize: vertical; }
+.tdetail .acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sbtn { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+.sbtn:hover { border-color: var(--faint); }
+.sbtn:disabled { opacity: .5; cursor: default; }
+.hint { font-size: 12.5px; color: var(--faint); }
+.howto { font-size: 14.5px; color: var(--muted); border-left: 3px solid var(--rule); padding-left: 14px; margin: 24px 0; }
+
+/* demo */
+.demo-grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,.8fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .demo-grid { grid-template-columns: minmax(0,1fr); } }
+.demo-grid h2 { margin-top: 8px; border-top: 0; padding-top: 0; font-size: 20px; }
+.dbtns, .dctl { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; align-items: center; }
+.dbtn { font-family: var(--mono); font-size: 12.5px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+.dbtn:hover { border-color: var(--accent); }
+.dbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.dbtn.ghost { color: var(--muted); }
+.dbtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overflow: auto; }
+.dstep { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.dlog { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 10px 0 0; padding-left: 1.4em; max-height: 220px; overflow: auto; }
+.dlog li { margin-bottom: 2px; }
+.dlog .cli { color: var(--accent-ink); } .dlog .ai { color: var(--brass); } .dlog .warn { color: var(--warn); }
+
+/* brief */
+#pane-brief details { border: 1px solid var(--rule); border-radius: 8px; padding: 8px 14px; margin-bottom: 8px; background: var(--surface); }
+#pane-brief summary { cursor: pointer; }
+#pane-brief details p, #pane-brief details ul { margin-top: 8px; }
+</style>
+
+<header class="site">
+  <div class="site-in">
+    <a class="brand" href="#overview"><span class="brand-mark" aria-hidden="true">br</span>brigade</a>
+    <nav class="tabs" aria-label="Pages">
+      <a href="#overview" data-tab="overview">Overview</a>
+      <a href="#plan" data-tab="plan">Plan</a>
+      <a href="#mockups" data-tab="mockups">Mockups</a>
+      <a href="#tasks" data-tab="tasks">Tasks</a>
+      <a href="#demo" data-tab="demo">Demo</a>
+      <a href="#brief" data-tab="brief" class="appendix">Brief</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+<!-- ============ OVERVIEW (inline: the first frame) ============ -->
+<div class="pane" id="pane-overview" data-pane="overview">
+  <div class="hero">
+    <p class="eyebrow">Plan for a proof of concept · 2026-10-04 · machine-wide, standalone project</p>
+    <h1>One request in, one merge out.</h1>
+    <p class="lede">brigade is a CLI, a timer and a local dashboard that turn a request into a wave of tasks, run the tasks as agent runs in worktrees, verify every pull request, merge the compliant ones into an integration branch, and leave the user one report and one merge. The CLI does everything mechanical; the agents only judge.</p>
+    <div class="cta">
+      <a class="btn primary" href="#plan">Read the plan</a>
+      <a class="btn" href="#tasks">Open the task board</a>
+      <a class="btn" href="#demo">Try the demo</a>
+    </div>
+  </div>
+
+  <div class="two">
+    <div>
+      <h2 style="margin-top:8px;border-top:0;padding-top:0">In one minute</h2>
+      <ul class="facts">
+        <li><b>What it is</b><span>A kitchen brigade for the machine: the user is the chef, the roles of the instructions corpus are the cooks, <code>brigade</code> is the expediter who orders, times and checks every plate. Python 3.13 standard library, a user systemd timer, a loopback web page; awawa and the roles are read as they are.</span></li>
+        <li><b>What it does</b><span><code>brigade wave new &lt;project&gt; "…"</code> → a planner cuts the request into tasks on an integration branch → the tick launches runs in dependency order, four at a time → each PR goes through the pass (deterministic preflight, then one verifier run) → compliant PRs merge into integration → a report, a dependency graph and a manual-test table are written → the user merges integration into main.</span></li>
+        <li><b>Where it saves</b><span>Measured today: a build run makes its first edit after 23 steps and 134 000 tokens of discovery; 146 steps a week went to re-reading oversized outputs; rebases took 53 steps on a model. The CLI hands each run one pre-computed package and does the rest itself; the estimate is 200 to 270 agent steps saved per wave of 15 tasks, to be confirmed by the ledger.</span></li>
+        <li><b>Outer loop</b><span>Review threads, failing checks, local notes, gardening scans and corrections mined from transcripts become signals in a buffer; triage groups them into patterns; one ratification turns a pattern into a wave or a constraint (rule, guard, lint, script), merged like any other work and listed in the report.</span></li>
+        <li><b>Interface</b><span>A web dashboard served locally, with a selector to browse any branch or worktree's corpus without checking it out; the IntelliJ plugin stays for in-IDE work, awawa-web stays as the structural editor of the brigade's own corpus.</span></li>
+        <li><b>Safety</b><span>Everything lands on branches; the machine account merges into <code>integration/*</code> only; an unattended run never assumes; a stuck wave parks with a question. The user's one gate is the merge into main.</span></li>
+      </ul>
+    </div>
+    <div>
+      <h2 style="margin-top:8px;border-top:0;padding-top:0">What the user settled</h2>
+      <ul class="facts">
+        <li><b>Autonomy</b><span>Beyond pull requests: planning, building, verifying, merging into integration and reporting run without the user. Changes to the instructions corpus are allowed if the report lists them with their reason.</span></li>
+        <li><b>Storage</b><span>Hybrid: awawa corpora for durable facts, an append-only JSONL ledger for events.</span></li>
+        <li><b>Intake</b><span>All four sources, phased: review threads and CI failures first, then notes, gardening scans, transcript corrections.</span></li>
+        <li><b>Execution</b><span>Local only: a user systemd timer, non-interactive runs, background sessions for long ones.</span></li>
+        <li><b>Budget</b><span>No cost cap (subscription); the plan pauses and resumes a wave when the rate-limit window closes; statistics come from the CLI's own result data. Waves of 10 to 20 pull requests.</span></li>
+        <li><b>Review</b><span>A verifier agent checks every PR; the user reviews at the merge into main, from the report and the manual-test table; sampling stays a suggestion.</span></li>
+        <li><b>First principle</b><span>The CLI does everything mechanical; agents only judge. Every lifecycle step is marked accordingly, agents never rediscover state through git, gh or file reads, and the POC starts with the deterministic commands.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <figure class="fig" style="margin-top:34px">
+    <svg viewBox="0 0 980 300" role="img" aria-label="The trust ladder with five rungs: supervised writing, tasks delivered to pull requests, review rounds and rebases by agents, unattended waves with merges into integration, and waves started by signals with merges into main; the machine stands today at rung two, the POC targets rung four, rung five is a policy switch shipped off." style="max-width:100%;height:auto">
+      <g font-family="var(--mono)" font-size="12" fill="currentColor">
+        <line x1="60" y1="270" x2="940" y2="30" stroke="currentColor" stroke-dasharray="4 4" opacity=".5"/>
+        <g>
+          <rect x="40" y="236" width="150" height="48" rx="6" fill="none" stroke="currentColor"/><text x="50" y="256" font-weight="600">1 supervised</text><text x="50" y="274" font-size="11">agent writes, user drives</text>
+          <rect x="230" y="186" width="150" height="48" rx="6" stroke-width="2"/ style="fill:var(--accent-soft);stroke:var(--accent)"><text x="240" y="206" font-weight="600">2 tasks → PRs</text><text x="240" y="224" font-size="11">worktrees, guards, CI</text>
+          <rect x="420" y="136" width="150" height="48" rx="6" fill="none" stroke="currentColor"/><text x="430" y="156" font-weight="600">3 rounds, rebases</text><text x="430" y="174" font-size="11">remi, manu, by hand</text>
+          <rect x="610" y="86" width="150" height="48" rx="6" stroke-width="2"/ style="fill:var(--brass-soft);stroke:var(--brass)"><text x="620" y="106" font-weight="600">4 unattended wave</text><text x="620" y="124" font-size="11">plan, pass, merge, report</text>
+          <rect x="800" y="36" width="150" height="48" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="810" y="56" font-weight="600">5 signal → main</text><text x="810" y="74" font-size="11">policy switch, off</text>
+        </g>
+        <text x="305" y="252" text-anchor="middle" style="fill:var(--accent)" font-weight="600">today</text>
+        <text x="685" y="152" text-anchor="middle" style="fill:var(--brass)" font-weight="600">POC target</text>
+        <text x="40" y="24" font-size="11" font-style="italic">the user's part shrinks from every step to one request and one merge</text>
+      </g>
+    </svg>
+    <figcaption><b>The trust ladder, placed.</b> Rung 2 is where the example project stands with its roles, guards and waves; rung 4 is what the user asked for; rung 5 is drawn so that it is a switch, not a rewrite.</figcaption>
+  </figure>
+
+  <h2>The talk against the machine</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Mechanism in the talk</th><th>On the machine today</th><th>What brigade adds</th></tr></thead>
+    <tbody>
+      <tr><td>Verification as the first skill: agents with hands and eyes</td><td>unit tests, 20 guards, a coverage gate, browser suites in CI, a verifier role launched on request</td><td>the pass on every PR: deterministic preflight, then one verifier run, then the merge</td></tr>
+      <tr><td>Deterministic parts extracted into a CLI; the agent keeps judgment</td><td>awawa compiles context and rules; guards; an unattended runner for procedures</td><td>the whole wave mechanics as CLI commands; context in, verdict out</td></tr>
+      <tr><td>Mistakes become lint rules and structure</td><td>schema lint, guards, rules with an enforcement hook</td><td>signals → patterns → constraints, delivered as waves</td></tr>
+      <tr><td>Inner loop connected to the outer loop</td><td>the user relays review threads, failing checks and notes</td><td>connectors, an inbox, triage</td></tr>
+      <tr><td>A coordinator that delegates and keeps the thread between related work</td><td>a Claude command run by hand for one wave; roles since 2026-10-03</td><td>a deterministic tick on a timer; a planner that rules on overlaps</td></tr>
+      <tr><td>Buffers and routines instead of fixing everything at once</td><td>open questions and draft tasks; a weekly worktree cleanup</td><td>a signal buffer with fingerprints, counts and age; gardening routines</td></tr>
+      <tr><td>Sampling instead of reviewing everything</td><td>the user reviews most PRs</td><td>the report suggests three PRs to read; nothing blocks on it</td></tr>
+      <tr><td>Skills and rules mined from one's own transcripts</td><td>a step counter and usage reports per PR</td><td>the miner, with a mandatory anonymisation step</td></tr>
+      <tr><td>A cross-project view</td><td>per-run progress files, worktrees found by walking the home directory</td><td>a registry, a ledger, one dashboard</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout">
+    <h3>How to read this Artifact</h3>
+    <p><b>Plan</b> is the specification, twenty sections with diagrams and the savings estimates. <b>Mockups</b> shows the terminal and the dashboard with sample data. <b>Tasks</b> is the live board of the 39 POC tasks: change a status and it stays changed for everyone who opens this page, agents included. <b>Demo</b> replays the commands and a wave. <b>Brief</b> is the appendix: what this plan was asked to be.</p>
+  </div>
+</div>
+
+<!-- ============ fetched panes ============ -->
+<div class="pane" id="pane-plan" data-pane="plan" data-src="parts/plan.html" hidden><p class="loading">Loading the plan…</p></div>
+<div class="pane" id="pane-mockups" data-pane="mockups" data-src="parts/mockups.html" hidden><p class="loading">Loading the mockups…</p></div>
+<div class="pane" id="pane-demo" data-pane="demo" data-src="parts/demo.html" hidden><p class="loading">Loading the demo…</p></div>
+<div class="pane" id="pane-brief" data-pane="brief" data-src="parts/brief.html" hidden><p class="loading">Loading the brief…</p></div>
+
+<!-- ============ TASKS (inline: needs the runtime) ============ -->
+<div class="pane" id="pane-tasks" data-pane="tasks" hidden>
+  <header class="doc-head">
+    <p class="eyebrow">Task board · shared, persistent</p>
+    <h1>The POC, task by task</h1>
+    <p class="lede">Thirty-nine tasks in seven milestones, deterministic commands first. A status changed here is stored for everyone who opens this page; an agent can read and update the same records through the Artifact's data tool.</p>
+  </header>
+  <div class="tasks-state" id="tasks-state">Connecting to the board…</div>
+  <div class="summary" id="tasks-summary"></div>
+  <div class="filterbar" id="tasks-filters" hidden>
+    <label>Milestone <select id="f-milestone"><option value="">all</option></select></label>
+    <label>Status <select id="f-status"><option value="">all</option><option value="todo">todo</option><option value="doing">doing</option><option value="review">review</option><option value="done">done</option><option value="blocked">blocked</option></select></label>
+    <label>Role <select id="f-role"><option value="">all</option></select></label>
+    <label><input type="search" id="f-search" placeholder="search id, title, component"></label>
+    <span class="hint" id="tasks-count"></span>
+  </div>
+  <div id="tasks-root"></div>
+  <p class="howto">For an agent: each document lives at <code>tasks/&lt;id&gt;</code> with the fields <code>status</code> (todo, doing, review, done, blocked), <code>notes</code>, <code>updated_at</code>; read it, then update <code>status</code> with the version you read. The "copy brief" button on a task copies its title, acceptance line, dependencies and role, ready to paste into a launch.</p>
+</div>
+
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var TABS = ['overview', 'plan', 'mockups', 'tasks', 'demo', 'brief'];
+  var PREFIX = { p: 'plan', m: 'mockups', b: 'brief' };
+  var loaded = {};
+  var loading = {};
+
+  function paneOf(tab) { return document.getElementById('pane-' + tab); }
+
+  function ensure(tab) {
+    var pane = paneOf(tab);
+    if (!pane || !pane.dataset.src || loaded[tab]) return Promise.resolve();
+    if (loading[tab]) return loading[tab];
+    loading[tab] = fetch(pane.dataset.src).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    }).then(function (html) {
+      pane.innerHTML = html;
+      loaded[tab] = true;
+      if (tab === 'demo') initDemo();
+    }).catch(function (e) {
+      pane.innerHTML = '<p class="loading">This part could not be loaded (' + e.message + '). Reload the page to try again.</p>';
+    });
+    return loading[tab];
+  }
+
+  function resolve(hash) {
+    var h = (hash || '').replace(/^#/, '');
+    if (!h) return { tab: 'overview', anchor: null };
+    if (TABS.indexOf(h) >= 0) return { tab: h, anchor: null };
+    var m = /^([pmb])-/.exec(h);
+    if (m) return { tab: PREFIX[m[1]], anchor: h };
+    if (/^(t|s)-/.test(h)) return { tab: 'mockups', anchor: h };
+    return { tab: 'overview', anchor: h };
+  }
+
+  function show(tab, anchor) {
+    TABS.forEach(function (t) {
+      var pane = paneOf(t);
+      if (pane) pane.hidden = (t !== tab);
+    });
+    document.querySelectorAll('.tabs a').forEach(function (a) {
+      if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    ensure(tab).then(function () {
+      if (anchor) {
+        var el = document.getElementById(anchor);
+        if (el) el.scrollIntoView({ block: 'start' });
+      } else {
+        window.scrollTo(0, 0);
+      }
+      if (tab === 'demo') ensure('mockups');
+    });
+  }
+
+  function route() { var r = resolve(location.hash); show(r.tab, r.anchor); }
+  window.addEventListener('hashchange', route);
+  route();
+  // prefetch the rest once the first frame is painted
+  window.setTimeout(function () { ['plan', 'mockups', 'brief', 'demo'].forEach(ensure); }, 800);
+
+  /* ---------------- tasks board (db capability) ---------------- */
+  var STATUSES = ['todo', 'doing', 'review', 'done', 'blocked'];
+  var tasks = [];
+  var pending = {};
+  var open = {};
+  var filters = { milestone: '', status: '', role: '', q: '' };
+  var db = null;
+  try { var saved = JSON.parse(localStorage.getItem('brigade.filters') || '{}'); if (saved && typeof saved === 'object') filters = Object.assign(filters, saved); } catch (e) {}
+
+  function el(tag, attrs, children) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'class') n.className = attrs[k];
+      else if (k === 'text') n.textContent = attrs[k];
+      else if (k.indexOf('on') === 0) n.addEventListener(k.slice(2), attrs[k]);
+      else n.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach(function (c) { if (c) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return n;
+  }
+
+  function saveFilters() { try { localStorage.setItem('brigade.filters', JSON.stringify(filters)); } catch (e) {} }
+
+  function visible(t) {
+    if (filters.milestone && t.milestone !== filters.milestone) return false;
+    if (filters.status && t.status !== filters.status) return false;
+    if (filters.role && t.role !== filters.role) return false;
+    if (filters.q) {
+      var q = filters.q.toLowerCase();
+      var hay = (t.id + ' ' + (t.title || '') + ' ' + (t.component || '') + ' ' + (t.acceptance || '')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  }
+
+  function fillSelect(id, values, current) {
+    var s = document.getElementById(id);
+    var keep = s.options[0];
+    s.innerHTML = '';
+    s.appendChild(keep);
+    values.forEach(function (v) { s.appendChild(el('option', { value: v.value, text: v.label })); });
+    s.value = current || '';
+  }
+
+  function renderSummary() {
+    var box = document.getElementById('tasks-summary');
+    box.innerHTML = '';
+    var byM = {};
+    tasks.forEach(function (t) {
+      var k = t.milestone || '?';
+      byM[k] = byM[k] || { title: t.milestone_title || '', total: 0, done: 0 };
+      byM[k].total++;
+      if (t.status === 'done') byM[k].done++;
+    });
+    var total = tasks.length, done = tasks.filter(function (t) { return t.status === 'done'; }).length;
+    var doing = tasks.filter(function (t) { return t.status === 'doing' || t.status === 'review'; }).length;
+    var blocked = tasks.filter(function (t) { return t.status === 'blocked'; }).length;
+    box.appendChild(el('div', { class: 'mcard' }, [el('div', { class: 'sl', text: 'All tasks' }), el('div', { class: 'sv', text: done + ' / ' + total }), el('div', { class: 'sd', text: doing + ' in progress · ' + blocked + ' blocked' }), el('div', { class: 'bar' }, [el('i', { style: 'width:' + (total ? Math.round(done / total * 100) : 0) + '%' })])]));
+    Object.keys(byM).sort().forEach(function (k) {
+      var m = byM[k];
+      box.appendChild(el('div', { class: 'mcard' }, [el('div', { class: 'sl', text: k }), el('div', { class: 'sv', text: m.done + ' / ' + m.total }), el('div', { class: 'sd', text: m.title }), el('div', { class: 'bar' }, [el('i', { style: 'width:' + (m.total ? Math.round(m.done / m.total * 100) : 0) + '%' })])]));
+    });
+  }
+
+  function briefText(t) {
+    return 'Task ' + t.id + ' (' + t.milestone + ', ' + (t.component || '') + ')\n' +
+      'Title: ' + (t.title || '') + '\n' +
+      'Role: ' + (t.role || '') + '\n' +
+      'Acceptance: ' + (t.acceptance || '') + '\n' +
+      'Depends on: ' + ((t.depends || []).join(', ') || 'nothing') + '\n' +
+      'Record in the board: document tasks/' + t.id + ', field status (todo, doing, review, done, blocked).';
+  }
+
+  function copyText(text, btn) {
+    var done = function () { btn.textContent = 'copied'; window.setTimeout(function () { btn.textContent = 'copy brief'; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+    } else fallback();
+    function fallback() {
+      var ta = el('textarea', { style: 'position:fixed;left:-9999px' }); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'select and copy by hand'; }
+      document.body.removeChild(ta);
+    }
+  }
+
+  function setStatus(t, status, select) {
+    if (!db || pending[t.id] || status === t.status) return;
+    pending[t.id] = true; select.disabled = true;
+    db.doc('tasks/' + t.id).update({ status: status, updated_at: new Date().toISOString(), updated_by: 'board' }).then(function () {
+      pending[t.id] = false;
+    }).catch(function (e) {
+      pending[t.id] = false; select.disabled = false; select.value = t.status;
+      note('The status of ' + t.id + ' was not saved (' + (e && e.code ? e.code : 'error') + '). Only contributors of this Artifact can write; try again or ask the owner.');
+    });
+  }
+
+  function saveNotes(t, text, btn) {
+    if (!db || pending[t.id]) return;
+    pending[t.id] = true; btn.disabled = true;
+    db.doc('tasks/' + t.id).update({ notes: text, updated_at: new Date().toISOString(), updated_by: 'board' }).then(function () {
+      pending[t.id] = false; btn.disabled = false; btn.textContent = 'saved'; window.setTimeout(function () { btn.textContent = 'save notes'; }, 1600);
+    }).catch(function (e) {
+      pending[t.id] = false; btn.disabled = false;
+      note('The notes of ' + t.id + ' were not saved (' + (e && e.code ? e.code : 'error') + ').');
+    });
+  }
+
+  function note(msg) { document.getElementById('tasks-state').textContent = msg; }
+
+  function renderRow(t) {
+    var select = el('select', { class: 'status-select ' + (t.status || 'todo'), 'aria-label': 'Status of ' + t.id, id: 'status-' + t.id });
+    STATUSES.forEach(function (s) { select.appendChild(el('option', { value: s, text: s })); });
+    select.value = STATUSES.indexOf(t.status) >= 0 ? t.status : 'todo';
+    if (pending[t.id]) select.disabled = true;
+    select.addEventListener('change', function () { setStatus(t, select.value, select); });
+    var title = el('button', { type: 'button', 'aria-expanded': open[t.id] ? 'true' : 'false', onclick: function () { open[t.id] = !open[t.id]; render(); } }, [t.title || t.id]);
+    var sub = el('span', { class: 'sub', text: (t.component || '') + ((t.depends && t.depends.length) ? ' · after ' + t.depends.join(', ') : '') });
+    var row = el('div', { class: 'trow' }, [
+      el('span', { class: 'tid', text: t.id }),
+      el('div', { class: 'ttl' }, [title, sub]),
+      el('span', { class: 'role', text: t.role || '' }),
+      select
+    ]);
+    if (open[t.id]) {
+      var ta = el('textarea', { id: 'notes-' + t.id, 'aria-label': 'Notes of ' + t.id, placeholder: 'notes: a decision, a blocker, a PR number' });
+      ta.value = t.notes || '';
+      var save = el('button', { type: 'button', class: 'sbtn', text: 'save notes', onclick: function () { saveNotes(t, ta.value, save); } });
+      var copy = el('button', { type: 'button', class: 'sbtn', text: 'copy brief', onclick: function () { copyText(briefText(t), copy); } });
+      var detail = el('div', { class: 'tdetail' }, [
+        el('dl', null, [
+          el('dt', { text: 'Acceptance' }), el('dd', { text: t.acceptance || '' }),
+          el('dt', { text: 'Depends on' }), el('dd', { text: (t.depends || []).join(', ') || 'nothing' }),
+          el('dt', { text: 'Role' }), el('dd', { text: t.role || '' }),
+          el('dt', { text: 'Updated' }), el('dd', { text: t.updated_at ? new Date(t.updated_at).toLocaleString() : 'never' })
+        ]),
+        ta,
+        el('div', { class: 'acts' }, [save, copy, el('span', { class: 'hint', text: 'document tasks/' + t.id })])
+      ]);
+      row.appendChild(detail);
+    }
+    return row;
+  }
+
+  function render() {
+    var root = document.getElementById('tasks-root');
+    root.innerHTML = '';
+    renderSummary();
+    var ms = {}; var roles = {};
+    tasks.forEach(function (t) { ms[t.milestone] = t.milestone_title || ''; if (t.role) roles[t.role] = true; });
+    fillSelect('f-milestone', Object.keys(ms).sort().map(function (k) { return { value: k, label: k + (ms[k] ? ' · ' + ms[k] : '') }; }), filters.milestone);
+    fillSelect('f-role', Object.keys(roles).sort().map(function (k) { return { value: k, label: k }; }), filters.role);
+    document.getElementById('f-status').value = filters.status;
+    document.getElementById('f-search').value = filters.q;
+    var shown = tasks.filter(visible).sort(function (a, b) { return (a.order || 0) - (b.order || 0) || a.id.localeCompare(b.id); });
+    document.getElementById('tasks-count').textContent = shown.length + ' of ' + tasks.length + ' tasks';
+    var groups = {};
+    shown.forEach(function (t) { (groups[t.milestone] = groups[t.milestone] || []).push(t); });
+    Object.keys(groups).sort().forEach(function (k) {
+      var g = groups[k];
+      var doneN = g.filter(function (t) { return t.status === 'done'; }).length;
+      var sec = el('section', { class: 'milestone' }, [
+        el('h3', null, [k, el('small', { text: (ms[k] || '') + ' · ' + doneN + ' of ' + g.length + ' done' })]),
+        el('div', { class: 'trows' }, g.map(renderRow))
+      ]);
+      root.appendChild(sec);
+    });
+    if (!tasks.length) note('The board is empty. Seed it with the Artifact data tool: collection "tasks", one document per task with id, title, milestone, component, role, acceptance, depends, status, order.');
+  }
+
+  ['f-milestone', 'f-status', 'f-role'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', function (e) {
+      filters[{ 'f-milestone': 'milestone', 'f-status': 'status', 'f-role': 'role' }[id]] = e.target.value; saveFilters(); render();
+    });
+  });
+  document.getElementById('f-search').addEventListener('input', function (e) { filters.q = e.target.value; saveFilters(); render(); });
+
+  function initTasks() {
+    var usep = (window.claude && typeof window.claude.use === 'function') ? window.claude.use('db') : Promise.resolve(null);
+    usep.then(function (d) {
+      db = d;
+      if (!db) { note('The board needs the claude.ai viewer, signed in: open this Artifact there to load and change the tasks. The list of tasks is also in the Plan tab, section 18.'); return; }
+      document.getElementById('tasks-filters').hidden = false;
+      note('Live board. A change of status is saved at once and seen by everyone who opens this page.');
+      db.collection('tasks').onSnapshot(function (snap) {
+        tasks = snap.docs.filter(function (d) { return d.exists; }).map(function (d) { var data = d.data() || {}; return Object.assign({ id: d.id }, data, { depends: Array.isArray(data.depends) ? data.depends : [] }); });
+        render();
+      }, function (err) {
+        note('The board lost its connection (' + (err && err.code ? err.code : 'error') + '). Reload the page to reconnect.');
+      });
+    });
+  }
+  initTasks();
+
+  /* ---------------- demo ---------------- */
+  var demoReady = false;
+  function initDemo() {
+    if (demoReady) return; demoReady = true;
+    var term = document.getElementById('demo-term');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var timer = null;
+    document.querySelectorAll('.dbtn[data-cmd]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.dataset.cmd;
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (id === 'clear') { term.innerHTML = '<span class="p">$</span> <span class="dim">pick a command above</span>\n'; return; }
+        ensure('mockups').then(function () {
+          var src = document.getElementById(id);
+          if (!src) { term.textContent = 'mockup not found'; return; }
+          var lines = src.innerHTML.split('\n');
+          term.innerHTML = '';
+          var i = 0;
+          function step() {
+            var chunk = reduce ? lines.length : 2;
+            for (var k = 0; k < chunk && i < lines.length; k++, i++) term.insertAdjacentHTML('beforeend', lines[i] + '\n');
+            term.scrollTop = term.scrollHeight;
+            if (i < lines.length) timer = window.setTimeout(step, 45);
+          }
+          step();
+        });
+      });
+    });
+
+    var TASKS = [
+      { id: 'FEAT146', t: 'phone + keyboard', after: [] },
+      { id: 'FEAT151', t: 'planet page skeleton', after: [] },
+      { id: 'FEAT189', t: 'no earlier look', after: ['FEAT151'] },
+      { id: 'FEAT195', t: 'equipment icons', after: ['FEAT151', 'FEAT196'] },
+      { id: 'FEAT196', t: 'equipment list', after: ['FEAT151'] }
+    ];
+    var COLS = ['queued', 'running', 'pr_open', 'verifying', 'fixing', 'merged'];
+    var SCRIPT = [
+      { label: 'request recorded', log: [['cli', 'R-021 recorded; plan context built (0 AI steps)']], set: {} },
+      { label: 'ada plans', log: [['ai', 'ada: 5 tasks, 1 overlap ruled (19 steps)'], ['cli', 'entities written, fmt + lint ok, integration branch created']], set: {} },
+      { label: 'tick 1', log: [['cli', 'FEAT146, FEAT151 startable; 2 worktrees + setup; 2 bastien runs launched']], set: { FEAT146: 'running', FEAT151: 'running' } },
+      { label: 'tick 3', log: [['ai', 'bastien FEAT146: PR 291 (31 steps)'], ['cli', 'PR 291 seen; checks pending']], set: { FEAT146: 'pr_open' } },
+      { label: 'tick 4', log: [['cli', 'PR 291 checks 7/7 green; preflight ok; prudence launched'], ['ai', 'bastien FEAT151: PR 292 (44 steps)'], ['cli', 'PR 292: coverage check failed; bastien fix round 1/2']], set: { FEAT146: 'verifying', FEAT151: 'fixing' } },
+      { label: 'tick 5', log: [['ai', 'prudence: approve PR 291 (14 steps, 1 low finding)'], ['cli', 'PR 291 merged (squash) into integration'], ['warn', 'rate limit in a result: wave paused until 14:00']], set: { FEAT146: 'merged' } },
+      { label: 'tick 62 (14:00)', log: [['cli', 'resume suspended run with --resume'], ['ai', 'bastien: coverage fixed, pushed'], ['cli', 'PR 292 checks green; preflight ok; prudence launched']], set: { FEAT151: 'verifying' } },
+      { label: 'tick 63', log: [['ai', 'prudence: approve PR 292'], ['cli', 'PR 292 merged; FEAT189, FEAT196 startable; FEAT195 waits (overlap); 2 runs launched']], set: { FEAT151: 'merged', FEAT189: 'running', FEAT196: 'running' } },
+      { label: 'tick 70', log: [['ai', 'bastien ×2: PR 293, PR 294'], ['cli', 'both pass preflight; prudence ×2']], set: { FEAT189: 'verifying', FEAT196: 'verifying' } },
+      { label: 'tick 71', log: [['ai', 'prudence: approve 293; request changes 294 (a decision not recorded)'], ['cli', 'PR 293 merged; remi round for 294']], set: { FEAT189: 'merged', FEAT196: 'fixing' } },
+      { label: 'tick 74', log: [['ai', 'remi: decision recorded, reply posted'], ['cli', 'PR 294 re-verified'], ['ai', 'prudence: approve'], ['cli', 'PR 294 merged; FEAT195 startable; run launched']], set: { FEAT196: 'merged', FEAT195: 'running' } },
+      { label: 'tick 80', log: [['ai', 'bastien: PR 295'], ['cli', 'preflight ok; prudence approve; merged'], ['cli', 'all tasks merged: report skeleton built (stats, graph, 14 manual tests)']], set: { FEAT195: 'merged' } },
+      { label: 'end', log: [['ai', 'rita: narrative, reasons, 3 PRs to sample (12 steps)'], ['cli', 'report committed; integration → main PR ready for the user']], set: {} }
+    ];
+    var state = {}; var idx = -1; var auto = null;
+    function reset() { state = {}; TASKS.forEach(function (t) { state[t.id] = 'queued'; }); idx = -1; document.getElementById('demo-log').innerHTML = ''; drawBoard(); document.getElementById('demo-step').textContent = 'tick 0 · request recorded'; }
+    function drawBoard() {
+      var board = document.getElementById('demo-board'); board.innerHTML = '';
+      COLS.forEach(function (c) {
+        var items = TASKS.filter(function (t) { return state[t.id] === c; });
+        var col = el('div', { class: 'col' }, [el('div', { class: 'colh' }, [c.replace('_', ' '), el('span', { text: String(items.length) })])]);
+        items.forEach(function (t) {
+          var cls = c === 'merged' ? 'card ok' : (c === 'fixing' ? 'card warnc' : (c === 'running' || c === 'verifying' ? 'card aic' : 'card'));
+          col.appendChild(el('div', { class: cls }, [el('b', { text: t.id }), ' ' + t.t, t.after.length ? el('br') : null, t.after.length ? el('span', { class: 'sdim', text: 'after ' + t.after.join(', ') }) : null]));
+        });
+        board.appendChild(col);
+      });
+    }
+    function next() {
+      if (idx >= SCRIPT.length - 1) { stopAuto(); return; }
+      idx++;
+      var s = SCRIPT[idx];
+      Object.keys(s.set).forEach(function (k) { state[k] = s.set[k]; });
+      var log = document.getElementById('demo-log');
+      s.log.forEach(function (l) { log.appendChild(el('li', { class: l[0], text: '[' + (l[0] === 'ai' ? 'agent' : l[0]) + '] ' + l[1] })); });
+      log.scrollTop = log.scrollHeight;
+      document.getElementById('demo-step').textContent = s.label + ' · ' + (idx + 1) + ' / ' + SCRIPT.length;
+      drawBoard();
+    }
+    function stopAuto() { if (auto) { clearInterval(auto); auto = null; } document.getElementById('demo-auto').textContent = 'Play'; document.getElementById('demo-auto').setAttribute('aria-pressed', 'false'); }
+    document.getElementById('demo-next').addEventListener('click', function () { stopAuto(); next(); });
+    document.getElementById('demo-reset').addEventListener('click', function () { stopAuto(); reset(); });
+    document.getElementById('demo-auto').addEventListener('click', function () {
+      if (auto) { stopAuto(); return; }
+      if (idx >= SCRIPT.length - 1) reset();
+      document.getElementById('demo-auto').textContent = 'Pause'; document.getElementById('demo-auto').setAttribute('aria-pressed', 'true');
+      auto = window.setInterval(next, reduce ? 400 : 1400);
+    });
+    reset();
+  }
+})();
+</script>

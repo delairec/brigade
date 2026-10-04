@@ -1,0 +1,36 @@
+<header class="doc-head">
+  <p class="eyebrow">Demo · nothing runs on your machine</p>
+  <h1>Try the commands and watch a wave move</h1>
+  <p class="lede">A fake terminal that replays the mockups, and a board that advances one tick at a time through the same sample wave. Both are static scripts: no agent is launched, nothing is read from any repository.</p>
+</header>
+
+<div class="demo-grid">
+  <section class="demo-term-wrap" aria-labelledby="demo-term-h">
+    <h2 id="demo-term-h">Terminal</h2>
+    <div class="dbtns" role="group" aria-label="Commands to replay">
+      <button type="button" class="dbtn" data-cmd="t-status">brigade status</button>
+      <button type="button" class="dbtn" data-cmd="t-wave-new">brigade wave new …</button>
+      <button type="button" class="dbtn" data-cmd="t-task-context">brigade task context FEAT146</button>
+      <button type="button" class="dbtn" data-cmd="t-verify">brigade verify preflight 292</button>
+      <button type="button" class="dbtn" data-cmd="t-wave-show">brigade wave show pc/16</button>
+      <button type="button" class="dbtn" data-cmd="t-inbox">brigade inbox · triage</button>
+      <button type="button" class="dbtn" data-cmd="t-ledger">brigade ledger --wave pc/16</button>
+      <button type="button" class="dbtn" data-cmd="t-corpus">brigade corpus --ref …</button>
+      <button type="button" class="dbtn ghost" data-cmd="clear">clear</button>
+    </div>
+    <pre class="term demo" id="demo-term" aria-live="polite" tabindex="0"><span class="p">$</span> <span class="dim">pick a command above</span>
+</pre>
+  </section>
+
+  <section class="demo-board-wrap" aria-labelledby="demo-board-h">
+    <h2 id="demo-board-h">A wave, one tick at a time</h2>
+    <div class="dctl">
+      <button type="button" class="dbtn primary" id="demo-next">Next tick</button>
+      <button type="button" class="dbtn" id="demo-auto">Play</button>
+      <button type="button" class="dbtn ghost" id="demo-reset">Reset</button>
+      <span class="dstep" id="demo-step">tick 0 · request recorded</span>
+    </div>
+    <div class="board small" id="demo-board" aria-live="polite"></div>
+    <ol class="dlog" id="demo-log"></ol>
+  </section>
+</div>

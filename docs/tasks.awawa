@@ -1,0 +1,459 @@
+TASK B01
+	TITLE "Repository skeleton and entry point"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "cli"
+	ROLE bastien
+	SPEC "brigade --version prints the version"
+	SPEC "python -m unittest passes"
+	SPEC "the README names the install, a symlink into a directory on PATH"
+
+TASK B02
+	TITLE "brigade doctor"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "cli"
+	ROLE bastien
+	SPEC "checks awawa 2.7 or later, awawa-web, claude, the two gh accounts (the user and the"
+		+ "machine account), the instructions corpus linting green, Python 3.13 or later, user"
+		+ "systemd, config and state directories, schema version"
+	SPEC "exits 0, or 1 with findings"
+	AFTER @TASK.B01
+
+TASK B03
+	TITLE "Operational corpus schema and brigade init"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "corpus"
+	ROLE bastien
+	SPEC "brigade init creates the config corpus as a git repository with the schema template"
+		+ "installed"
+	SPEC "awawa lint --strict exits 0 on it"
+	SPEC "a second init changes nothing"
+	AFTER @TASK.B01
+
+TASK B04
+	TITLE "Registry commands"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "registry"
+	ROLE bastien
+	SPEC "project add discovers remote, main branch and corpus root and drafts ACCEPTANCE and SETUP"
+		+ "lines"
+	SPEC "list, show, pause, resume"
+	SPEC "every write goes through fmt, lint and a commit"
+	AFTER @TASK.B03
+
+TASK B05
+	TITLE "Ledger writer and reader"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "ledger"
+	ROLE bastien
+	SPEC "append-only monthly JSONL"
+	SPEC "brigade ledger prints text and --json"
+	SPEC "p50 and p90 steps per procedure are computed from the events"
+	AFTER @TASK.B01
+
+TASK B06
+	TITLE "brigade run: launch a role run and capture its result"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "runs"
+	ROLE bastien
+	SPEC "runs a procedure as a role with claude -p --output-format stream-json, detached under"
+		+ "systemd-run or in the foreground"
+	SPEC "writes the result object (steps, duration, usage, session id, error class) to the ledger"
+	SPEC "passes the role package with --append-system-prompt-file"
+	SPEC "claude --bg evaluated and the choice recorded as a DECISION"
+	AFTER @TASK.B05
+
+TASK B07
+	TITLE "Tick skeleton and systemd units"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "tick"
+	ROLE bastien
+	SPEC "brigade tick --once takes a lock, reconciles nothing yet and records a ledger event"
+	SPEC "install-units installs the timer and the service"
+	SPEC "the journal shows one tick every five minutes"
+	AFTER @TASK.B05
+
+TASK B08
+	TITLE "Corpus-at-ref reader"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "corpus"
+	ROLE bastien
+	SPEC "brigade corpus <project> --ref <branch|sha|worktree:name> -- <awawa args> runs awawa on a"
+		+ "git archive cached per SHA, or in place for a worktree"
+	SPEC "the cache is pruned by size"
+	AFTER @TASK.B04
+
+TASK B09
+	TITLE "Roles ada, rita and mina in the instructions corpus"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "roles"
+	ROLE lex
+	SPEC "three AGENT entities with WORK, REASONING and RETURNS, and their adapter files"
+	SPEC "awawa lint --strict green on the corpus"
+	SPEC "delivered as a pull request on the instructions repository"
+
+TASK B10
+	TITLE "Procedure wave-plan.md and brigade plan context|record"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "planning"
+	ROLE bastien
+	SPEC "plan context prints the planning package"
+	SPEC "plan record --file validates the plan JSON against the TASK and WAVE schema, writes the"
+		+ "entities, runs fmt and lint, creates the integration branch and commits"
+	SPEC "a lint failure comes back as one correction request"
+	AFTER @TASK.B04
+	AFTER @TASK.B09
+
+TASK B11
+	TITLE "brigade wave new|show|list"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "waves"
+	ROLE bastien
+	SPEC "a request becomes a REQUEST entity and a planned wave"
+	SPEC "show prints the task table with states from the ledger"
+	SPEC "POLICY.PLAN_REVIEW ask|auto is honoured"
+	AFTER @TASK.B10
+
+TASK B12
+	TITLE "Scheduler: startable tasks, slots, worktrees, briefs, launches"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE bastien
+	SPEC "startable means every AFTER merged and no live BLOCKED_BY"
+	SPEC "the overlap order comes from the plan"
+	SPEC "a worktree is cut from the integration head with the SETUP commands run and ancestry"
+		+ "asserted"
+	SPEC "the brief is filled from a template"
+	SPEC "bastien is launched through brigade run within the slot cap"
+	AFTER @TASK.B06
+	AFTER @TASK.B07
+	AFTER @TASK.B11
+
+TASK B13
+	TITLE "brigade task context|check|pr|promote"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "agent side"
+	ROLE bastien
+	SPEC "context prints the whole starting package in one command"
+	SPEC "check runs the ACCEPTANCE commands plus fmt --check and lint --strict with a bounded"
+		+ "summary"
+	SPEC "pr pushes and opens the pull request with a templated body"
+	SPEC "promote sets STATUS implemented and DELIVERED_BY, runs fmt and lint, commits and pushes"
+	AFTER @TASK.B12
+
+TASK B14
+	TITLE "Pull-request tracking in the tick"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE bastien
+	SPEC "the tick finds the pull request of a task branch, reads its checks and review state"
+		+ "through gh, records ledger events and moves the task state"
+	AFTER @TASK.B12
+
+TASK B15
+	TITLE "brigade verify preflight"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "the pass"
+	ROLE bastien
+	SPEC "the eight deterministic checks (ancestry, checks, corpus, promotion, untouched files,"
+		+ "privacy, body, size) with a findings JSON and exit 1 on failure"
+	AFTER @TASK.B08
+	AFTER @TASK.B14
+
+TASK B16
+	TITLE "Procedure verify-pr.md and brigade verify context|verdict"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "the pass"
+	ROLE bastien
+	ROLE lex
+	SPEC "prudence receives the verification package and posts approve or request changes through"
+		+ "verdict, as the machine account, with the ledger event"
+	AFTER @TASK.B15
+
+TASK B17
+	TITLE "Auto-merge into integration and scheduling of dependents"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE bastien
+	SPEC "approve plus green checks merge the pull request with PROJECT.MERGE"
+	SPEC "the task becomes merged"
+	SPEC "its dependents become startable in the same tick"
+	AFTER @TASK.B16
+
+TASK B18
+	TITLE "Repair paths"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE bastien
+	SPEC "changes requested starts a remi round through review context|reply"
+	SPEC "a failing check starts a bastien fix"
+	SPEC "a branch behind integration is rebased by git and manu runs only on a conflict through"
+		+ "rebase context|done"
+	SPEC "rounds are capped by POLICY.VERIFY_ROUNDS, then the task is parked with the reason"
+	AFTER @TASK.B17
+
+TASK B19
+	TITLE "Quota pause and resume"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "runs"
+	ROLE bastien
+	SPEC "a rate-limit result pauses the wave with resume_at parsed from the message or set to now"
+		+ "plus 30 minutes"
+	SPEC "the first tick after resume_at resumes each suspended run with --resume"
+	SPEC "ledger events wave.paused and wave.resumed"
+	AFTER @TASK.B14
+
+TASK B20
+	TITLE "Procedure wave-report.md and brigade report skeleton|finish"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "report"
+	ROLE bastien
+	ROLE lex
+	SPEC "the skeleton holds the task table, the statistics, the dependency graph, the manual-test"
+		+ "table from SPEC lines, the instructions-corpus change list and the parked questions"
+	SPEC "finish commits the report on the integration branch and updates the integration pull"
+		+ "request"
+	AFTER @TASK.B17
+
+TASK B21
+	TITLE "Rehearsal on a sandbox repository"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "validation"
+	ROLE prudence
+	SPEC "a throwaway repository with a starter corpus delivers a three-task wave unattended from"
+		+ "wave new to the integration pull request"
+	SPEC "the ledger holds every run"
+	SPEC "steps per run and steps to first edit are recorded as the first budgets"
+	AFTER @TASK.B13
+	AFTER @TASK.B18
+	AFTER @TASK.B19
+	AFTER @TASK.B20
+
+TASK B22
+	TITLE "Signals store, brigade note and brigade inbox"
+	STATUS draft
+	MILESTONE @MILESTONE.M2
+	COMPONENT "intake"
+	ROLE bastien
+	SPEC "signals JSONL with fingerprint, count, age and status"
+	SPEC "note appends"
+	SPEC "inbox lists, shows and dismisses"
+	SPEC "a dismissed fingerprint never returns as new"
+	AFTER @TASK.B05
+
+TASK B23
+	TITLE "Connector: review threads"
+	STATUS draft
+	MILESTONE @MILESTONE.M2
+	COMPONENT "intake"
+	ROLE bastien
+	SPEC "unresolved review threads on open pull requests of registered projects become signals"
+		+ "every tick, read through GraphQL reviewThreads"
+	AFTER @TASK.B22
+	AFTER @TASK.B14
+
+TASK B24
+	TITLE "Connector: check runs"
+	STATUS draft
+	MILESTONE @MILESTONE.M2
+	COMPONENT "intake"
+	ROLE bastien
+	SPEC "failing check runs on open pull requests and on main become signals carrying the first"
+		+ "failing step"
+	AFTER @TASK.B22
+	AFTER @TASK.B14
+
+TASK B25
+	TITLE "Procedure triage.md and brigade triage context|record"
+	STATUS draft
+	MILESTONE @MILESTONE.M2
+	COMPONENT "triage"
+	ROLE bastien
+	ROLE lex
+	SPEC "deterministic grouping by family first"
+	SPEC "then mina writes PATTERN entities with evidence and an ACTION"
+	SPEC "record validates, writes, formats, lints and commits"
+	AFTER @TASK.B22
+	AFTER @TASK.B09
+
+TASK B26
+	TITLE "Ratification into a wave"
+	STATUS draft
+	MILESTONE @MILESTONE.M2
+	COMPONENT "triage"
+	ROLE bastien
+	SPEC "inbox ratify <P> turns a pattern into a REQUEST on its target, or into a CONSTRAINT with"
+		+ "its request"
+	SPEC "the wave engine delivers it and the report lists the constraint with its reason"
+	AFTER @TASK.B25
+	AFTER @TASK.B11
+
+TASK B27
+	TITLE "brigade serve and the JSON API"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE bastien
+	SPEC "a loopback server"
+	SPEC "/api/status, /api/waves/<id>, /api/inbox, /api/corpus, /api/ledger, /api/reports"
+	SPEC "a polling page shell with theme tokens"
+	AFTER @TASK.B05
+	AFTER @TASK.B08
+
+TASK B28
+	TITLE "Home and Wave views"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE bastien
+	SPEC "projects, waves, inbox count, quota and last tick"
+	SPEC "a board of tasks by state with pull request, rounds and steps"
+	SPEC "a timeline"
+	SPEC "pause, resume and retry actions through the CLI"
+	AFTER @TASK.B27
+	AFTER @TASK.B14
+
+TASK B29
+	TITLE "Inbox view"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE bastien
+	SPEC "signals grouped and patterns proposed"
+	SPEC "ratify and dismiss call the CLI"
+	AFTER @TASK.B27
+	AFTER @TASK.B25
+
+TASK B30
+	TITLE "Corpus view with the branch selector"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE bastien
+	SPEC "project, ref (branch, worktree, sha) and type selectors"
+	SPEC "tree, board by field and dependencies, read-only"
+	SPEC "a link to awawa-web for the checkout and an IDE link to the line"
+	AFTER @TASK.B27
+	AFTER @TASK.B08
+
+TASK B31
+	TITLE "Ledger and Reports views"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE bastien
+	SPEC "steps p50 and p90 by role and procedure, waves per month, pauses and the baseline"
+		+ "comparison"
+	SPEC "reports rendered with their manual-test tables"
+	AFTER @TASK.B27
+	AFTER @TASK.B20
+
+TASK B32
+	TITLE "Follow-up: the IntelliJ plugin reads /api/corpus"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE none
+	SPEC "outside the POC: the plugin gains the ref selector as a thin client of the local API"
+	AFTER @TASK.B30
+
+TASK B33
+	TITLE "ROUTINE entities and their runner"
+	STATUS draft
+	MILESTONE @MILESTONE.M4
+	COMPONENT "routines"
+	ROLE bastien
+	SPEC "routines with a calendar expression run by the tick when due"
+	SPEC "a non-zero output becomes a signal"
+	SPEC "the first four routines: lint --strict on each corpus, fmt --check, stale branches,"
+		+ "worktree state"
+	AFTER @TASK.B07
+	AFTER @TASK.B22
+
+TASK B34
+	TITLE "Routine results in the dashboard and the inbox"
+	STATUS draft
+	MILESTONE @MILESTONE.M4
+	COMPONENT "routines"
+	ROLE bastien
+	SPEC "failing routines appear on Home with their age"
+	SPEC "a routine signal appears in the inbox"
+	AFTER @TASK.B33
+	AFTER @TASK.B29
+
+TASK B35
+	TITLE "Transcript reader, heuristics and scrubber"
+	STATUS draft
+	MILESTONE @MILESTONE.M5
+	COMPONENT "miner"
+	ROLE bastien
+	SPEC "reads sessions since a watermark through the existing steps reader"
+	SPEC "detects corrections, refusals, repeated commands and oversized-output re-reads"
+	SPEC "scrubs Steam ids, player names computed at run time from the private saves, e-mail"
+		+ "addresses and private paths"
+	SPEC "a fixture test proves no real identifier survives"
+	AFTER @TASK.B22
+
+TASK B36
+	TITLE "Procedure mine-transcripts.md and brigade mine"
+	STATUS draft
+	MILESTONE @MILESTONE.M5
+	COMPONENT "miner"
+	ROLE bastien
+	ROLE lex
+	SPEC "mina groups the findings into patterns and constraint candidates"
+	SPEC "ratified constraints follow the ratification path"
+	AFTER @TASK.B35
+	AFTER @TASK.B25
+
+TASK B37
+	TITLE "Budgets from the ledger"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "ledger"
+	ROLE bastien
+	SPEC "brigade ledger budgets proposes p90 steps per procedure"
+	SPEC "a pull request updates the front matter of each procedure"
+	AFTER @TASK.B21
+
+TASK B38
+	TITLE "Project decisions revisited for the example project"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "docs"
+	ROLE lex
+	SPEC "a docs wave records that the plan travels on the integration branch, that the machine"
+		+ "account merges into integration, and the auto-merge policy"
+	AFTER @TASK.B21
+
+TASK B39
+	TITLE "Documentation and the first real wave"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "docs"
+	ROLE rita
+	SPEC "README, brigade help and the handbook refreshed"
+	SPEC "a wave of about ten tasks delivered on the example project with its report"
+	SPEC "the ledger comparison against the baseline of 26/09 to 03/10"
+	AFTER @TASK.B37
+	AFTER @TASK.B38

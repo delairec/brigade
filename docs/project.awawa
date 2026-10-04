@@ -1,0 +1,4 @@
+PROJECT Brigade
+	TITLE "brigade: a CLI, a timer and a local dashboard that run AI-agent waves unattended"
+	DESC "the CLI does everything mechanical; the agents only judge"
+	SOURCE "the Artifact Brigade Blueprint, published 2026-10-04"

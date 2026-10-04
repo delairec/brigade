@@ -1,0 +1,125 @@
+<header class="doc-head">
+  <p class="eyebrow">Appendix</p>
+  <h1>The brief behind this plan</h1>
+  <p class="lede">The main session, which conducts the work, handed this plan to Max, the role that reasons deepest. Max is read-only on every repository; it may only write its own working files and publish this Artifact. The work ran in two phases: first questions to the user, then design and writing. This page is the brief Max received, together with the clarifications that came during the work.</p>
+</header>
+
+<section id="b-goal">
+  <h2>Goal</h2>
+  <p>Industrialise the use of AI agents on one machine and across all projects, through a CLI and an environment inspired by a talk on software factories and the trust ladder with agents. The deliverable is a published Artifact holding a detailed, spec-like plan, solid enough to build a proof of concept suited to the user's needs and machine, which AI agents can then implement task by task.</p>
+</section>
+
+<section id="b-done">
+  <h2>What done looks like</h2>
+  <ul>
+    <li>A spec of the environment and its CLI.</li>
+    <li>Visual mockups (terminal output, tool screens) and diagrams wherever they help understanding.</li>
+    <li>A task page whose statuses persist and can be changed, so agents and the user can track the POC's implementation.</li>
+    <li>A demo page, if it stays light.</li>
+    <li>awawa considered as a possible building block, not as a given.</li>
+  </ul>
+</section>
+
+<section id="b-method">
+  <h2>Working method</h2>
+  <ul>
+    <li><b>Questions first.</b> Before designing anything, read the talk's transcript, survey the existing environment, and return a short list of questions. Each one opens with its context, offers concrete options with a recommendation, and says what each answer changes. The design starts once the answers are in.</li>
+    <li><b>Context discipline.</b> Keep a hand-off file current at each milestone, with the answers, the decisions, the outline and what remains, so a successor run can take over if the work grows long.</li>
+    <li><b>No side effects.</b> No repository is modified; only the Artifact is published.</li>
+  </ul>
+</section>
+
+<section id="b-inputs">
+  <h2>Inputs</h2>
+  <ul>
+    <li>The talk's transcript. Its themes: the trust ladder; verification as the key to autonomy; determinism versus judgment; agent mistakes turned into system constraints; the codebase as prompt; inner and outer loops; a coordinator agent; buffers; sampling-based review; the "dark factory"; verifiability; skills mined from history.</li>
+    <li>The existing environment, to be surveyed rather than trusted:
+      <ul>
+        <li>a rules corpus written with awawa, holding rules, triggers, named roles and procedures;</li>
+        <li>Claude Code roles and hooks;</li>
+        <li>a project run in waves of background agents in git worktrees, one pull request per task;</li>
+        <li>repository guards and a coverage gate;</li>
+        <li>a GitHub bot account;</li>
+        <li>usage reports written after each reviewed pull request.</li>
+      </ul>
+    </li>
+    <li>An earlier comparison of awawa with the talk:
+      <ul>
+        <li>awawa compiles context and rules, not code;</li>
+        <li>coordination exists through the roles, verification through tests, CI and a verifier role;</li>
+        <li>missing: intake of outer-loop signals, a triage buffer, sampling review, systematic mistake-to-constraint mining, deterministic codemods and a cross-project view.</li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<section id="b-clarifications">
+  <h2>Clarifications received during the work</h2>
+  <details open>
+    <summary><b>Scope</b></summary>
+    <p>The factory is a new, standalone project that applies machine-wide, across every project. The existing project is only one example of current practice. The Artifact is written in English.</p>
+  </details>
+  <details open>
+    <summary><b>Autonomy</b></summary>
+    <p>The user states an intent, and from there agents work on their own:</p>
+    <ul>
+      <li>they plan a wave on an integration branch, split into tasks;</li>
+      <li>they dispatch the tasks in dependency order;</li>
+      <li>they open pull requests, which a specialised agent verifies and which are merged into the integration branch once compliant.</li>
+    </ul>
+    <p>A reporting agent then delivers:</p>
+    <ul>
+      <li>a report;</li>
+      <li>the updated dependency graph;</li>
+      <li>a table of manual tests the user may run.</li>
+    </ul>
+    <p>Changes to the global instructions corpus are allowed, provided the report lists them with their reason. Everything is versioned, so nothing is irreversible. The only human gate is merging the integration branch into the project's main branch.</p>
+  </details>
+  <details open>
+    <summary><b>Storage</b></summary>
+    <p>Hybrid: an awawa corpus for durable facts, and an append-only JSONL ledger for high-volume events.</p>
+  </details>
+  <details open>
+    <summary><b>Intake</b></summary>
+    <p>All four sources, phased sensibly in the POC:</p>
+    <ul>
+      <li>GitHub review threads and CI failures;</li>
+      <li>scheduled gardening scans;</li>
+      <li>a local notes inbox;</li>
+      <li>corrections mined from agent transcripts.</li>
+    </ul>
+  </details>
+  <details open>
+    <summary><b>Execution</b></summary>
+    <p>Local only: a user systemd timer, unattended runs, and background sessions for long runs.</p>
+  </details>
+  <details open>
+    <summary><b>Budget</b></summary>
+    <p>The user has a subscription, so no cost cap. The plan handles hitting the rate-limit window by pausing and resuming the wave. Usage statistics come from the CLI, not from AI spend. Expected scale: waves of 10 to 20 pull requests.</p>
+  </details>
+  <details open>
+    <summary><b>Mining</b></summary>
+    <p>Constraints derived from transcripts are produced and merged like any other wave work, and listed in the report with their reason. Anonymisation of personal data is mandatory.</p>
+  </details>
+  <details open>
+    <summary><b>Review</b></summary>
+    <p>A verifier agent checks every pull request. The user reviews only at the merge into the main branch, with the report and the manual-test table.</p>
+  </details>
+  <details open>
+    <summary><b>Interface</b></summary>
+    <p>To arbitrate:</p>
+    <ul>
+      <li>either keep the IntelliJ plugin currently in use, whose spec is described in an existing Artifact, with the option to display any local branch or worktree without checking it out;</li>
+      <li>or move to a local web server, which allows richer screens: statistics collected by the CLI, project management, corpus browsing.</li>
+    </ul>
+    <p>The name and the CLI's language are Max's to recommend.</p>
+  </details>
+  <details open>
+    <summary><b>awawa</b></summary>
+    <p>The user is a consumer, not its author. The plan wraps the binary as it is, and any desired change goes to a separate list of requests, never on the POC's critical path.</p>
+  </details>
+  <details open>
+    <summary><b>First principle</b></summary>
+    <p>The CLI does everything mechanical; agents only judge. Every step of the wave lifecycle is marked as deterministic (CLI) or judgment (agent). Agents receive pre-computed context from the CLI and hand their verdicts back to it, rather than rediscovering state through git, the GitHub CLI or file reads. The diagrams and mockups show this split, an estimate of the AI work saved is given where possible, and the POC tasks start with the deterministic commands.</p>
+  </details>
+</section>

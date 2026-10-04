@@ -1,0 +1,99 @@
+// The corpus of the brigade project itself: what the tool must become, task by task.
+// Read it with awawa; the live status of the POC tasks is the board of the published Artifact.
+SCHEMA *
+	DESC "fields legal on every entity of this corpus"
+	FIELD DESC string
+		REPEATABLE
+	FIELD RATIONALE string
+		REPEATABLE
+		CATEGORY reasoning
+	FIELD SOURCE string
+		REPEATABLE
+		DESC "where this was decided or read"
+
+SCHEMA PROJECT
+	DESC "the project this corpus describes, exactly one"
+	FIELD TITLE string
+		REQUIRED
+
+SCHEMA MILESTONE
+	DESC "a delivery the tasks are planned against"
+	FIELD TITLE string
+		REQUIRED
+	FIELD STATUS planned|reached
+		REQUIRED
+	WHEN STATUS reached
+		GATE error
+
+SCHEMA TASK
+	DESC "a unit of work delivered by one pull request of the brigade repository"
+	FIELD TITLE string
+		REQUIRED
+		DESC "what the task delivers, in one line"
+	FIELD STATUS draft|todo|implemented|archived
+		REQUIRED
+		DESC "draft: not ratified; todo: ratified; implemented: merged; archived: retired"
+	FIELD SPEC string
+		REQUIRED
+		REPEATABLE
+		DESC "one acceptance criterion, observable once delivered"
+		FIELD IMPL anchor
+			REPEATABLE
+			DESC "the test or the code where the criterion is proven; written at delivery"
+	FIELD MILESTONE @MILESTONE
+		REQUIRED
+		CONVERSE COMPRISES
+	FIELD COMPONENT string
+		DESC "the part of brigade the task touches"
+	FIELD ROLE ada|bastien|lex|prudence|remi|manu|rita|mina|dora|none
+		REPEATABLE
+		DESC "the role suggested to deliver it"
+	FIELD AFTER @TASK
+		REPEATABLE
+		CONVERSE BEFORE
+		DESC "the task that must merge before this one"
+	FIELD DELIVERED_BY uint
+		DESC "the number of the pull request that delivers it"
+	WHEN STATUS draft
+		GATE suppressed
+	WHEN STATUS todo
+		GATE error
+	WHEN STATUS implemented
+		GATE error
+		FIELD SPEC
+			REQUIRED
+			REPEATABLE
+			FIELD IMPL
+				REQUIRED
+				REPEATABLE
+		FIELD DELIVERED_BY
+			REQUIRED
+	WHEN STATUS archived
+		GATE suppressed
+
+SCHEMA DECISION
+	DESC "a ruling of the plan, and what it turned down"
+	FIELD TITLE string
+		REQUIRED
+	FIELD STATUS active|archived
+		REQUIRED
+	FIELD REJECTED string
+		REQUIRED
+		REPEATABLE
+		DESC "an alternative, then why it was refused"
+	FIELD CLOSES @OPEN_QUESTION
+		REPEATABLE
+		CONVERSE CLOSED_BY
+	WHEN STATUS active
+		GATE error
+	WHEN STATUS archived
+		GATE suppressed
+
+SCHEMA OPEN_QUESTION
+	DESC "a project-level fact left undecided"
+	FIELD QUESTION string
+		REQUIRED
+	FIELD STATUS open|closed
+		REQUIRED
+	WHEN STATUS closed
+		GATE suppressed

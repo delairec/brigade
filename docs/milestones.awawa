@@ -1,0 +1,27 @@
+MILESTONE M0
+	TITLE "Foundations"
+	STATUS planned
+
+MILESTONE M1
+	TITLE "Wave engine"
+	STATUS planned
+
+MILESTONE M2
+	TITLE "Intake and triage"
+	STATUS planned
+
+MILESTONE M3
+	TITLE "Dashboard"
+	STATUS planned
+
+MILESTONE M4
+	TITLE "Gardening routines"
+	STATUS planned
+
+MILESTONE M5
+	TITLE "Miner"
+	STATUS planned
+
+MILESTONE M6
+	TITLE "Hardening"
+	STATUS planned
