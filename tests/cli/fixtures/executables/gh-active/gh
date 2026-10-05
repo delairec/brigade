@@ -1,0 +1,6 @@
+#!/bin/sh
+case "$*" in
+  "auth status --active --hostname github.com --json hosts")
+    echo '{"hosts":{"github.com":[{"state":"success","active":true,"host":"github.com","login":"octo-bot","tokenSource":"keyring","scopes":"repo","gitProtocol":"https"}]}}' ;;
+  *) exit 2 ;;
+esac

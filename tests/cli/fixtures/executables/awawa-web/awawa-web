@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$*" in
+  "--help") echo "usage: awawa-web [--port N] [--awawa PATH] [PATH ...]" ;;
+  *) exit 2 ;;
+esac
