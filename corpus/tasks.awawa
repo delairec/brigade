@@ -52,20 +52,40 @@ TASK B01
 TASK B02
 	TITLE "brigade doctor: the prerequisites checked, the optional items reported with their"
 		+ "fallback"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
 	SPEC "brigade doctor checks Python 3.11 or later, git and awawa 2.7 or later, each line naming"
 		+ "the version found and its floor"
+		IMPL "brigade/commands/doctor.py::AWAWA_FLOOR = (2, 7)"
+		IMPL "brigade/git/read_git_version.py::def read_git_version("
+		IMPL "brigade/corpus/read_awawa_version.py::def read_awawa_version("
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_report_every_item_ok_in_the_versioned_document"
+		IMPL "tests/cli/test_doctor.py::class BrigadeDoctorWhenAPrerequisiteFails"
 	SPEC "it reports as optional, each with its fallback: a user systemd instance, else a cron line"
 		+ "or brigade tick --loop; gh and the login it is active as, else local mode without a"
 		+ "forge; awawa-web, else the dashboard's corpus view only"
+		IMPL "brigade/commands/doctor.py::SCHEDULER_FALLBACK ="
+		IMPL "brigade/adapters/forges/github.py::def describe_account("
+		IMPL "tests/cli/test_doctor.py::class BrigadeDoctorWhenAnOptionalItemIsMissing"
 	SPEC "it prints text and --json; the JSON document carries schema_version and one entry per"
 		+ "item with its name, its state (ok, warning or finding), its detail and its fallback"
+		IMPL "brigade/cli.py::def _run_doctor(options):"
+		IMPL "brigade/commands/render_doctor_text.py::def render_doctor_text("
+		IMPL "tests/cli/test_doctor.py::def test_should_print_the_report_as_text"
+		IMPL "tests/cli/test_doctor.py::class BrigadeDoctorAsTextWithAFindingAndAWarning"
 	SPEC "it exits 0, or 1 with findings; a missing optional item is a warning, never a finding"
+		IMPL "brigade/cli.py::def _decide_doctor_exit_code(document):"
+		IMPL "tests/cli/test_doctor.py::def test_should_report_the_finding_and_exit_1"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_report_a_warning_with_its_fallback_and_exit_0"
 	SPEC "tests under tests/cli prove each finding and each warning by running brigade doctor with"
 		+ "a PATH of fixture executables"
+		IMPL "tests/cli/test_doctor.py::def run_doctor(path_directories, *options):"
+		IMPL "tests/cli/fixtures/executables/gh-logged-out/gh::You are not logged into any GitHub"
+			+ "hosts"
 	AFTER @TASK.B01
 	RATIONALE "doctor tells on a new machine whether brigade can run there: Python 3.11 or later,"
 		+ "git, awawa and one adapted client are the prerequisites, every other item optional with"
@@ -86,6 +106,7 @@ TASK B02
 		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
 	SOURCE "the Artifact Brigade Blueprint, plan section 16, row setup, and the brigade doctor"
 		+ "mockup; the user's rulings of 2026-10-05 in the refinement of B02"
+	DELIVERED_BY 12
 
 TASK B03
 	TITLE "Operational corpus schema and brigade init"
