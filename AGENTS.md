@@ -34,8 +34,15 @@ awawa fmt --check . && awawa lint --strict .                              # the 
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint",
   <https://claude.ai/artifact/ENPmZkLZS85qhvVBakhXJe>; `index.html` is the page, `parts/` the fragments it fetches.
   A republish goes through the Artifact tool with `url` set to that address, after a read of it.
+- `brigade/` — the one package, flat at the repository root, a subpackage per component created by the first task
+  of that component (@DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents); the files brigade
+  ships live in a `data/` folder of the component that reads them
+  (@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources).
 - `schema/_schema.awawa.tpl` — the schema `brigade init` installs in the operational corpus; a template, not part
-  of this corpus.
+  of this corpus; it moves under the package with the task that reads it
+  (@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources).
+- `tests/` — `cli`, `integration`, `unit` and `guards`, the four suites of
+  @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents.
 - `HANDOFF.md` — the record of the planning run, dated: it is never rewritten.
 
 ## Stack
@@ -45,6 +52,16 @@ dependency (@DECISION.PythonStandardLibraryOnly); tests with `unittest`. The AI 
 are adapters, the collectors, checks and outputs are plugins, a kind of work is a recipe
 (@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters, @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun,
 @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder).
+
+The architecture of the code is ruled by the decisions of 2026-10-05, read before writing a module:
+plugins resolved by name and never imported (@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported),
+the tick as a pure planner and an executor (@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction),
+one document and one exit table per command (@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable),
+atomic writes under locks (@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory), one subprocess
+runner and gateways for git and awawa (@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa), the clock
+read once (@DECISION.TheClockIsReadOnceAndCarriedAsAFact), paths and configuration resolved in one place
+(@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables), documents versioned and validated on entry
+(@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry).
 
 ## Branches and GitHub
 

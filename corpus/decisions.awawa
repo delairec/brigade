@@ -233,7 +233,9 @@ DECISION ThePortableContractIsTheCommandLineAndNeutralFiles
 		+ "port and not a redesign"
 	STATUS active
 	DESC "every command prints --json with stable field names and the documented exit codes; the"
-		+ "dashboard, the agents and the tests use the command line, never the package"
+		+ "dashboard and the agents use the command line, never the package; tests/cli is the"
+		+ "acceptance suite a port must pass; tests/unit and tests/integration test the Python and"
+		+ "die with it"
 	DESC "state is JSONL, JSON, TOML, Markdown with a flat front matter and awawa corpora; recipes"
 		+ "are TOML; no pickle, shelve or private database; a sqlite file may only be a derived"
 		+ "cache deletable at any time"
@@ -258,6 +260,8 @@ DECISION ThePortableContractIsTheCommandLineAndNeutralFiles
 		+ "Rust or another distributable form; what these rules keep outside the Python package is"
 		+ "what a port carries over unchanged"
 	SOURCE "pull request #3 of the brigade repository"
+	SOURCE "DESC 1 amended on the user's ruling of 2026-10-05, pull request #9 of the brigade"
+		+ "repository"
 
 DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 	TITLE "work that is not a wave, a report, a data collection, an audit, a research, is a study:"
@@ -402,3 +406,420 @@ DECISION TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
 		+ "this repository, corpus/ is the name they gave it, brigade's convention for the projects"
 		+ "it manages is configurable, and its default is the same as this repository"
 	SOURCE "the user's rulings of 2026-10-05, pull request #7 of the brigade repository"
+
+DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+	TITLE "brigade is one flat package at the repository root, a subpackage per component created"
+		+ "by the first task of that component, one public function per module, four test suites"
+	STATUS active
+	DESC "brigade/ at the repository root, run by bin/brigade or dist/brigade.pyz; no src/ layout,"
+		+ "no setup.py, no pyproject, no pip install"
+	DESC "a subpackage of brigade/ per COMPONENT of the tasks (ledger, registry, corpus, runs,"
+		+ "tick, waves, verify for the pass, studies, intake, recipes, dashboard, roles), created"
+		+ "by the first task of that component, never ahead of it"
+	DESC "brigade/commands/ one module per command, brigade/cli.py the parser and the exit mapping,"
+		+ "brigade/launcher.py the floor check; brigade/adapters/clients, forges and schedulers,"
+		+ "brigade/collectors/, brigade/checks/ and brigade/outputs/ the plugins; brigade/system/"
+		+ "the primitives: paths, clock, processes, locks, atomic files, ids, documents"
+	DESC "a module exposes one public function named after a verb, no leading underscore, its"
+		+ "helpers underscored, with the constants and frozen dataclasses it declares; its unit"
+		+ "test is tests/unit/<same path>/test_<module>.py, as brigade/python_floor.py and"
+		+ "tests/unit/test_python_floor.py of @TASK.B01 do"
+		REF @TASK.B01
+	DESC "launcher.py and python_floor.py run before the floor check: they use no syntax or"
+		+ "annotation newer than the interpreters they refuse; the CI floor job proves 3.10 only"
+	DESC "tests/cli is the acceptance suite, through the entry points as subprocesses;"
+		+ "tests/integration the gateways, against a real git repository or awawa corpus in a"
+		+ "temporary directory; tests/unit the pure functions; tests/guards the import graph, the"
+		+ "environment reads and the README table"
+	DESC "public functions, dataclasses and plugin operations carry type annotations read by the"
+		+ "IDE; no checker runs in CI; adopting one is a tool introduction discussed with the user"
+	DESC "binds every code task from @TASK.B02; @TASK.B42 writes the guards, @TASK.B21 the"
+		+ "integration fixtures"
+		REF @TASK.B02
+		REF @TASK.B42
+		REF @TASK.B21
+	REJECTED "src/brigade/: an install layout for a package nobody pip-installs; it only lengthens"
+		+ "the path bin/brigade inserts"
+	REJECTED "the component directories created now, empty: an empty package reads as architecture"
+		+ "and is not; each arrives with its task"
+	REJECTED "one module per component: the one-exported-function rule of the instructions corpus"
+		+ "and the IMPL anchors need module names that say what they hold"
+	REJECTED "mypy or pyright in CI now: a third-party tool nobody asked for; the IDE on the"
+		+ "reference machine checks the annotations live"
+	RATIONALE "the user asked on 2026-10-05 for strict foundations before the code of M0 grows; the"
+		+ "layout applies the rules one_exported_function_per_file, yagni, kiss, test_scope_levels"
+		+ "and tool_introduction_is_the_users_call of the instructions corpus"
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	TITLE "client, forge, scheduler, collector, check and output are plugin kinds resolved by name"
+		+ "through one resolver; the core sees documents only and imports no plugin; Clean"
+		+ "Architecture's layering is not adopted"
+	STATUS active
+	DESC "a built-in plugin is a module under its kind's package, an external one an executable"
+		+ "brigade-<kind>-<name> on PATH; one resolver turns a name into one object answering the"
+		+ "kind's operations, searched in the kind's declared order: project, machine, PATH,"
+		+ "built-ins"
+	DESC "an operation takes a JSON-compatible dict and returns one, validated by the core on entry"
+		+ "as @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets; a module"
+		+ "plugin and an executable plugin are indistinguishable to the core; no plugin Python type"
+		+ "crosses"
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	DESC "a client adapter translates: launch answers argv, environment and stdin, result parses"
+		+ "the client's output into the normalised document; the core spawns and owns the process"
+	DESC "no module outside a plugin package imports a plugin package statically; the resolver"
+		+ "imports by name at run time; a plugin may import the core; the guard of tests/guards"
+		+ "parses every module with ast and fails on a static import of brigade.adapters,"
+		+ "brigade.collectors, brigade.checks or brigade.outputs from outside their own package,"
+		+ "the guard @TASK.B42 asks for, widened"
+		REF @TASK.B42
+	DESC "the commands build the runtime: paths, clock, process runner, renderer, resolver; a core"
+		+ "function receives resolved plugin objects as arguments and resolves nothing itself"
+	DESC "binds @TASK.B06, @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B23, @TASK.B24, @TASK.B42,"
+		+ "@TASK.B43, @TASK.B46, @TASK.B47 and @TASK.B48"
+		REF @TASK.B06
+		REF @TASK.B07
+		REF @TASK.B12
+		REF @TASK.B14
+		REF @TASK.B23
+		REF @TASK.B24
+		REF @TASK.B42
+		REF @TASK.B43
+		REF @TASK.B46
+		REF @TASK.B47
+		REF @TASK.B48
+	REJECTED "a typing.Protocol shared by core and adapters in a common module: an adapter needs no"
+		+ "brigade import to answer documents, and the graph stays one-directional"
+	REJECTED "calling brigade adapter as a subprocess for a built-in adapter: a process per"
+		+ "operation for a module already held; the executable path exists for external adapters"
+	REJECTED "Clean Architecture's use case, presenter and ViewModel layering: one delivery"
+		+ "mechanism, the command line of DESC 1 of the decision"
+		+ "ThePortableContractIsTheCommandLineAndNeutralFiles, one persistence, neutral files,"
+		+ "adapters already process-shaped, and a port at M3 that carries the contract, not the"
+		+ "Python; the rules of the areas architecture and architecture_layers of the instructions"
+		+ "corpus govern a core- package, which brigade is not"
+	RATIONALE "it refines DESC 5 and 6 of"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles, DESC 3 of"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters and plan section 17 to every plugin"
+		+ "kind; a shared adapter is created by a factory, never at import, as the rule"
+		+ "shared_adapter_created_explicitly of the instructions corpus says"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	RATIONALE "it departs from the architecture rules of the instructions corpus, the areas"
+		+ "architecture and architecture_layers, stated here because this corpus declares no"
+		+ "DEROGATES field: those rules govern a core- package, and brigade is a command-line tool"
+		+ "with one delivery, one persistence and process-shaped adapters"
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
+		+ "snapshot, and applies them through an executor that records every outcome in the ledger"
+	STATUS active
+	DESC "a tick builds one snapshot of the facts, ledger-derived states, registry, git facts,"
+		+ "forge facts, live processes and now, as frozen dataclasses; the snapshot serialises to"
+		+ "one JSON document"
+	DESC "plan(snapshot) -> actions is pure: no I/O, no clock, no randomness; an action is a frozen"
+		+ "record, launch run, create worktree, merge pull request, pause wave, record event and"
+		+ "the like"
+	DESC "the executor applies the actions in order through the gateways and plugins handed to it,"
+		+ "records each outcome in the ledger and stops at the first failure; the next tick"
+		+ "recomputes from facts, so every action is idempotent or guarded by a fact"
+	DESC "a tick runs plan and apply rounds until the plan is empty or a cap is reached, so a merge"
+		+ "makes its dependents startable in the same tick, as @TASK.B17 asks"
+		REF @TASK.B17
+	DESC "brigade tick --dry-run prints the snapshot and the plan and applies nothing; a snapshot"
+		+ "fixture file is the input of the planner's tests, table-driven on literal rows"
+	DESC "due studies and due orders are the same shape: due is a pure function of schedule, last"
+		+ "run and now"
+	DESC "the tick keeps no truth of its own: the heartbeat of the last tick of @TASK.B28 is a"
+		+ "state file written atomically, not a ledger line per empty tick"
+		REF @TASK.B28
+	DESC "binds @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B17, @TASK.B18, @TASK.B19, @TASK.B48 and"
+		+ "@TASK.B51"
+		REF @TASK.B07
+		REF @TASK.B12
+		REF @TASK.B14
+		REF @TASK.B17
+		REF @TASK.B18
+		REF @TASK.B19
+		REF @TASK.B48
+		REF @TASK.B51
+	REJECTED "an imperative tick with injected gateways: every test needs a fake git, a fake forge"
+		+ "and a fake ledger where the planner needs one JSON file"
+	REJECTED "a tick state file as the truth: the facts are in the ledger, git, the forge and the"
+		+ "corpora, as the decision ADeterministicTickReplacesTheCoordinatorAgent sets; a state"
+		+ "file is derived"
+	RATIONALE "every transition of @DECISION.ADeterministicTickReplacesTheCoordinatorAgent is a"
+		+ "condition evaluated from facts, and @DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge"
+		+ "leaves no judgement to the tick; the rules test_static_data and test_quality of the"
+		+ "instructions corpus want literal rows and time controlled, which a pure planner over a"
+		+ "snapshot gives"
+		REF @DECISION.ADeterministicTickReplacesTheCoordinatorAgent
+		REF @DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	TITLE "every command returns one document carrying schema_version, printed as JSON or rendered"
+		+ "once as text, and exits by one table of codes mapped from one exception family in cli.py"
+	STATUS active
+	DESC "a command module exposes run(request, runtime) -> document, a JSON-compatible dict"
+		+ "carrying schema_version; --json prints it; the text is rendered from the document, so"
+		+ "the text never shows a fact the document lacks"
+	DESC "a document is bounded: a long result goes to a file under $XDG_STATE_HOME/brigade/ and"
+		+ "the document carries its path and a summary"
+	DESC "stdout carries the document only; stderr carries diagnostics and errors; under --json an"
+		+ "error still goes to stderr and stdout stays empty, awawa's convention: a show of a"
+		+ "missing target with --json leaves stdout empty, writes one stderr line and exits 1"
+		+ "(awawa, 2026-10-05)"
+	DESC "exit codes: 0 done; 1 the command did not do what was asked, findings, a failed check, a"
+		+ "missing prerequisite or a tool failure, with the document when there is one and a stderr"
+		+ "line when there is not; 2 usage; 3 refused by policy; 4 paused on quota; 70 brigade's"
+		+ "own defect, an unexpected exception with its traceback on stderr, sysexits EX_SOFTWARE"
+	DESC "one exception family maps to the table, BrigadeError 1, UsageError 2, PolicyRefusal 3,"
+		+ "QuotaPause 4, caught in cli.py alone; the message reads brigade <command>: <message>;"
+		+ "findings are a document, not an exception"
+	DESC "--json and the common options are declared once on a parent parser attached to every"
+		+ "subcommand; brigade --version with or without --json stays as @TASK.B01 delivered it"
+		REF @TASK.B01
+	DESC "a long-lived command, tick --loop or serve, writes diagnostics to stderr and exits 0 on"
+		+ "SIGTERM and SIGINT; brigade keeps no log file of its own besides runs/<id>/; the"
+		+ "scheduler adapter decides where stderr goes, the journal or the file the cron line names"
+	DESC "binds @TASK.B02 first, which introduces the renderer, the exit mapping, the parent parser"
+		+ "and the runtime builder, then every command task"
+		REF @TASK.B02
+	REJECTED "three codes 0, 1 and 2: the plan's reference already documents 3 and 4 for the wave"
+		+ "commands, and a crash exiting 1 passes for findings in a test and under systemd"
+	REJECTED "an error document on stdout under --json: awawa, which the agents already read,"
+		+ "prints errors on stderr; two conventions on one machine"
+	REJECTED "replacing argparse's usage exit: its exit 2 and usage message are the table's row,"
+		+ "and the tests of B01 pin them"
+	RATIONALE "the plan's exit-code line of the Blueprint, plan section 16, reads 0 done, 1"
+		+ "findings, 2 usage, 3 refused by policy, 4 paused on quota; section 16 also bounds a"
+		+ "document, 146 oversized re-reads having been measured; the rules"
+		+ "cli_exit_codes_and_streams, cli_parsing_handling_rendering_separated and"
+		+ "cli_arguments_validated of the instructions corpus shape the rest"
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"
+		+ "lock file per shared resource: the tick, the ledger, each corpus repository and each"
+		+ "project's worktrees"
+	STATUS active
+	DESC "locks are fcntl.flock on files under $XDG_STATE_HOME/brigade/locks/, one per shared"
+		+ "resource: the tick, the ledger, each corpus repository brigade writes, keyed by path,"
+		+ "and each project's worktrees; the PID is written for diagnosis, never used for exclusion"
+	DESC "the tick takes its lock non-blocking; when another holds it, it exits 0 with one stderr"
+		+ "line and records nothing"
+	DESC "a ledger write is one line appended under the ledger lock, flushed before release; the"
+		+ "file is never rewritten"
+	DESC "a JSON state file is written to a temporary file in the same directory, fsynced and"
+		+ "renamed over the old one; a reader meets a whole file or none"
+	DESC "a corpus write, edit, fmt, lint and commit, runs under the repository's lock and is"
+		+ "rolled back with git when lint fails, the one correction request of @TASK.B10"
+		REF @TASK.B10
+	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B13 and @TASK.B22"
+		REF @TASK.B04
+		REF @TASK.B05
+		REF @TASK.B07
+		REF @TASK.B13
+		REF @TASK.B22
+	REJECTED "locks under $XDG_CACHE_HOME, the Blueprint plan's place: a cache may be deleted at"
+		+ "any time, and a deleted lock file breaks the exclusion"
+	REJECTED "PID-liveness or mkdir locks: the kernel releases flock when the process dies; no"
+		+ "stale-lock code to write or test"
+	REJECTED "relying on O_APPEND atomicity: true on Linux for one write call, unspecified"
+		+ "elsewhere; the lock costs microseconds"
+	RATIONALE "DESC 4 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites names only the"
+		+ "refs and the collector caches for $XDG_CACHE_HOME and puts state under $XDG_STATE_HOME,"
+		+ "so locks in the state directory contradict no decision; @TASK.B13 promotes the ledger"
+		+ "from parallel runs"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+		REF @TASK.B13
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
+	TITLE "every file brigade ships lives in a data/ folder of the component that reads it, under"
+		+ "brigade/, and is read with importlib.resources, so the clone and the zipapp read the"
+		+ "same files"
+	STATUS active
+	DESC "every file brigade ships, the operational schema template, the built-in roles,"
+		+ "procedures, recipes and templates, the dashboard page and the scheduler unit templates,"
+		+ "lives in a data/ folder of the component that reads it, under brigade/, read with"
+		+ "importlib.resources.files(); as_file() only to hand a path to a subprocess"
+	DESC "a shipped awawa file keeps a name not ending in .awawa, schema.awawa.tpl: a .awawa under"
+		+ "the package joins this repository's corpus and collides, proven on 2026-10-05 by L005"
+		+ "duplicate identity on the schema and lint exit 1 with the file, exit 0 once renamed .tpl"
+	DESC "build.py ships the package tree as it is, so the clone and the zipapp read the same"
+		+ "files; files(), as_file() and iterdir() from a .pyz were proven on 2026-10-05"
+	DESC "templates, the brief, the pull request body, the report skeleton, config.toml, the"
+		+ "systemd unit and the cron line, are string.Template files; no template engine"
+	DESC "the tasks naming roles/, recipes/ and procedures/, @TASK.B09, @TASK.B43, @TASK.B50 and"
+		+ "@TASK.B52, read them as the shipped directories under the package"
+		REF @TASK.B09
+		REF @TASK.B43
+		REF @TASK.B50
+		REF @TASK.B52
+	DESC "binds @TASK.B03, @TASK.B07, @TASK.B09, @TASK.B10, @TASK.B12, @TASK.B13, @TASK.B16,"
+		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50 and @TASK.B52"
+		REF @TASK.B03
+		REF @TASK.B07
+		REF @TASK.B09
+		REF @TASK.B10
+		REF @TASK.B12
+		REF @TASK.B13
+		REF @TASK.B16
+		REF @TASK.B27
+		REF @TASK.B43
+		REF @TASK.B48
+		REF @TASK.B50
+		REF @TASK.B52
+	REJECTED "root-level roles/, recipes/, procedures/, schema/ and scheduler/, the Blueprint"
+		+ "plan's layout: build.py copies brigade/ alone, so a root-level file is absent from"
+		+ "dist/brigade.pyz"
+	REJECTED "paths relative to __file__: the zipapp has none; importlib.resources serves both"
+		+ "installs"
+	RATIONALE "the two installs of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, the"
+		+ "clone and the zipapp, must read the same files; only a resource inside the package"
+		+ "reaches both"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	TITLE "every subprocess goes through one runner of brigade/system, git and awawa through"
+		+ "gateway modules built on it, and gh through the GitHub forge adapter alone"
+	STATUS active
+	DESC "every subprocess goes through one function of brigade/system: an argv list, never a shell"
+		+ "string, an explicit cwd, an environment built from a whitelist, PATH, HOME, LANG, LC_*,"
+		+ "XDG_*, the BRIGADE_* variables of collectors and what the adapter adds, a timeout on"
+		+ "every call, UTF-8 text with replacement; it returns a record, argv, cwd, exit code,"
+		+ "stdout, stderr and duration, and raises ToolFailure on an exit code the caller did not"
+		+ "declare acceptable, awawa lint 1 or gh pr view 1 on not found"
+	DESC "the runner reads os.environ to build that environment: it is, with paths, one of the two"
+		+ "modules the environment-read guard of"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables allows"
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	DESC "git and awawa have gateway modules, brigade/git/ and brigade/corpus/, exposing named"
+		+ "operations built on the runner; nothing else calls git or awawa; gh is called only by"
+		+ "the GitHub forge adapter"
+	DESC "a detached run is spawned by one function: new session, stdout and stderr to files under"
+		+ "runs/<id>/, pid file; liveness is read from the pid and the result file"
+	DESC "--verbose prints every subprocess argv, exit code and duration on stderr"
+	DESC "a gateway is tested in tests/integration against a real git repository or awawa corpus in"
+		+ "a temporary directory; a fake executable on PATH doubles a tool only when its failure is"
+		+ "the behaviour under test, the PATH of fixture executables of @TASK.B02"
+		REF @TASK.B02
+	DESC "binds @TASK.B02, @TASK.B04, @TASK.B06, @TASK.B08, @TASK.B13 and @TASK.B47"
+		REF @TASK.B02
+		REF @TASK.B04
+		REF @TASK.B06
+		REF @TASK.B08
+		REF @TASK.B13
+		REF @TASK.B47
+	REJECTED "subprocess calls scattered where needed: no timeout policy, no environment policy,"
+		+ "and a port must find them all"
+	REJECTED "shell=True anywhere: quoting defects and a dependency on the user's shell"
+	RATIONALE "the rule test_doubles of the instructions corpus prefers a real implementation when"
+		+ "fast, deterministic and isolated, and repository_facts_proven_by_command wants the"
+		+ "command that proves a fact: one runner records every call, and real git and awawa in a"
+		+ "temporary directory answer the gateway tests"
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION TheClockIsReadOnceAndCarriedAsAFact
+	TITLE "now is read once per command, in UTC, and carried as a fact in the request or the"
+		+ "snapshot; no core function reads the clock, and one tick has one instant"
+	STATUS active
+	DESC "now is read once per command in the runtime, in UTC, and carried in the request or the"
+		+ "snapshot; no core function reads the clock; one tick has one instant"
+	DESC "a CLI test that needs the past writes facts in the past, a ledger line whose resume_at"
+		+ "precedes now; the planner's tests pass now as a literal"
+	DESC "binds @TASK.B05, @TASK.B07, @TASK.B19 and @TASK.B48"
+		REF @TASK.B05
+		REF @TASK.B07
+		REF @TASK.B19
+		REF @TASK.B48
+	REJECTED "a BRIGADE_NOW override: an environment branch in production code, which the rule"
+		+ "environment_difference_in_configuration of the instructions corpus refuses, for what a"
+		+ "fixture can state"
+	REJECTED "datetime.now() in core modules: two instants in one tick; the rule test_quality of"
+		+ "the instructions corpus wants time controlled"
+	RATIONALE "a time read once is a fact like any other of the snapshot: the planner stays pure"
+		+ "and a test states the time it needs instead of controlling a clock"
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	TITLE "the roots are built once from the XDG variables in brigade/system/paths, config.toml is"
+		+ "read once into a frozen record, and every function takes the paths it needs as arguments"
+	STATUS active
+	DESC "brigade/system/paths builds the roots once from XDG_CONFIG_HOME, XDG_STATE_HOME and"
+		+ "XDG_CACHE_HOME with their defaults; no module other than paths and the process runner of"
+		+ "brigade/system reads os.environ, os.getenv, Path.home or expanduser, a guard of"
+		+ "tests/guards checks it; every function takes the paths it needs as arguments"
+	DESC "tests redirect brigade with the XDG variables alone; no brigade-specific override"
+		+ "variable"
+	DESC "config.toml is read with tomllib into one frozen record with defaults; an unknown key or"
+		+ "a wrong type is an error naming the key and the file; brigade writes it once at init"
+		+ "from the shipped template and never rewrites it; doctor reports it"
+	DESC "$XDG_CONFIG_HOME/brigade/ is the operational corpus repository; config.toml is in its"
+		+ ".gitignore, a machine binding not being a ratified fact, as"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites rules; roles/, collectors/,"
+		+ "checks/ and recipes/ are versioned with it"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	DESC "binds @TASK.B02, @TASK.B03, @TASK.B04, @TASK.B42 and @TASK.B43"
+		REF @TASK.B02
+		REF @TASK.B03
+		REF @TASK.B04
+		REF @TASK.B42
+		REF @TASK.B43
+	REJECTED "a BRIGADE_HOME variable: a second way to say what XDG already says"
+	REJECTED "a config set command rewriting the file: tomllib reads only; a writer without"
+		+ "round-trip loses the user's comments"
+	RATIONALE "DESC 3 and 4 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites already"
+		+ "place the machine bindings and the custom roles, collectors, checks and recipes under"
+		+ "$XDG_CONFIG_HOME/brigade/; one module turning the variables into paths is what keeps"
+		+ "every other function free of the environment"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	TITLE "every document brigade writes or reads carries an integer schema_version per kind, an"
+		+ "inbound document is validated against its declared shape before the core reads it, and a"
+		+ "reader upgrades every version ever written"
+	STATUS active
+	DESC "every document brigade writes or reads, command output, ledger line, result, collector"
+		+ "document, recipe, config and answer file, carries schema_version, an integer per"
+		+ "document kind starting at 1, the name @TASK.B01 and @TASK.B02 fix; @TASK.B47 and"
+		+ "@TASK.B50 say schema and are aligned at their refinement"
+		REF @TASK.B01
+		REF @TASK.B02
+		REF @TASK.B47
+		REF @TASK.B50
+	DESC "one validator module checks an inbound document, an adapter answer, a collector output, a"
+		+ "plan JSON or a study answer, against a shape declared next to its kind, required keys,"
+		+ "types and enumerations, before the core reads it; an unknown schema_version is refused"
+		+ "by name"
+	DESC "a reader keeps an upgrade function per kind from every version ever written to the"
+		+ "current one; a ledger line is upgraded on read and never rewritten; a state file is"
+		+ "upgraded on read and written back current"
+	DESC "inside the core a document becomes a frozen dataclass through one from_document and"
+		+ "to_document pair per kind; dicts stay at the edges"
+	DESC "timestamps are ISO 8601 UTC with Z; durations are integer milliseconds in *_ms fields;"
+		+ "run ids are time-sortable, <UTC compact>-<6 hex>, from one function"
+	DESC "binds @TASK.B02, @TASK.B05, @TASK.B06, @TASK.B42, @TASK.B47, @TASK.B48 and @TASK.B50"
+		REF @TASK.B02
+		REF @TASK.B05
+		REF @TASK.B06
+		REF @TASK.B42
+		REF @TASK.B47
+		REF @TASK.B48
+		REF @TASK.B50
+	REJECTED "a schema string naming kind and version: the kind is already the event name, the"
+		+ "collector name, the command or the file name, and two ratified tasks name schema_version"
+	REJECTED "JSON Schema validated by a library: a third-party dependency for keys, types and"
+		+ "enumerations"
+	RATIONALE "DESC 3 of @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles gives every"
+		+ "result, event, collector, recipe and config document a schema version and DESC 2 refuses"
+		+ "pickle; SPEC 1 of @TASK.B01 and SPEC 3 of @TASK.B02 already name schema_version"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+		REF @TASK.B01
+		REF @TASK.B02
+	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
