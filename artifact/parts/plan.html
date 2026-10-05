@@ -84,7 +84,7 @@
     <dt>study</dt><dd>A question answered by evidence: collectors, then at most one judging run (a <code>STUDY</code> entity); the built-in recipe <code>study</code>.</dd>
     <dt>collector</dt><dd>A deterministic executable or built-in printing one JSON document; never a model.</dd>
     <dt>check</dt><dd>A deterministic executable printing <code>{"ok": bool, "reason": str}</code>; the condition of a gate step.</dd>
-    <dt>scan</dt><dd>A study with no judging slot; the gardening scans are scans with <code>OUTPUT inbox</code>.</dd>
+    <dt>scan</dt><dd>A study with no judging slot: its non-empty output is the answer; the gardening scans of M4 declare <code>OUTPUT inbox</code>.</dd>
     <dt>recipe</dt><dd>A kind of work declared by the user: a TOML file of ordered process-shaped steps, run by the tick's engine.</dd>
     <dt>order</dt><dd>One instance of a recipe (an <code>ORDER</code> entity); a <code>REQUEST</code> is the order of the native recipe <code>wave</code>, a <code>STUDY</code> the order of <code>study</code>.</dd>
     <dt>ledger</dt><dd>Append-only JSONL events under <code>$XDG_STATE_HOME/brigade/ledger/</code>: runs, steps, durations, states, pauses, merges. Every statistic is derived from it.</dd>
@@ -681,7 +681,7 @@ branch = "pr"</pre>
  "usage":{"input":812340,"output":15480,"cache_read":690211,"cache_write":104020},"session":"7f3c…","error":null}
 <span class="dim"># a client that reports no step count or usage</span>
 {"schema":1,"client":"&lt;other&gt;","outcome":"pr_open","steps":null,"duration_s":1530,"usage":null,"session":"a91e…","error":null}</pre>
-  <pre class="term static">{"ts":"…","ev":"run.finished","run":"r-0186","wave":"tp/16","task":"TP146","slot":"build","role":"bastien","client":"claude","procedure":"awawa-task","segment":1,
+  <pre class="term static">{"ts":"…","ev":"run.finished","run":"r-0193","wave":"tp/16","task":"TP146","slot":"build","role":"bastien","client":"claude","procedure":"awawa-task","segment":1,
  "session":"7f3c…","steps":31,"duration_s":1412,"usage":{"input":812340,"output":15480,"cache_read":690211,"cache_write":104020},
  "outcome":"pr_open","pr":291,"exit":0}
 {"ts":"…","ev":"wave.paused","wave":"tp/16","reason":"quota","resume_at":"2026-10-06T14:00:00Z","runs_suspended":["r-0187","r-0188"]}
@@ -842,7 +842,7 @@ branch = "pr"</pre>
   <div class="tbl"><table>
     <thead><tr><th>Milestone</th><th>Delivers</th><th>Done when</th></tr></thead>
     <tbody>
-      <tr><td>M0 Foundations (B01–B08, B42, B43, B49)</td><td>repository and entry point, doctor, schema and <code>init</code>, registry, ledger, <code>brigade run</code> with result capture, tick skeleton and scheduler units, corpus-at-ref reader, the client adapter contract with the Claude Code and fake adapters, role files and slots, the supported-clients table</td><td><code>brigade doctor</code> green; a run of <code>worktree-cleanup.md</code> through <code>brigade run</code> appears in the ledger with its steps</td></tr>
+      <tr><td>M0 Foundations (B01–B08, B42, B43, B49)</td><td>repository and entry point, doctor, schema and <code>init</code>, registry, ledger, <code>brigade run</code> with result capture, tick skeleton and scheduler install, corpus-at-ref reader, the client adapter contract with the Claude Code and fake adapters, role files and slots, the supported-clients table</td><td><code>brigade doctor</code> green; a run of <code>worktree-cleanup.md</code> through <code>brigade run</code> appears in the ledger with its steps</td></tr>
       <tr><td>M1 Wave engine (B09–B21, B44, B47, B48)</td><td>built-in roles ada, bilal and mina, plan procedure, scheduler, PR tracking, preflight, the verify procedure, auto-merge, repair paths, quota pause, the study <code>wave-report</code>, wave commands, rehearsal; the second client adapter; collectors; the STUDY entity and <code>brigade study</code></td><td>a sandbox repository with a starter corpus delivers a 3-task wave unattended, from <code>brigade wave new</code> to the integration PR with its report, on each installed adapter and on the fake adapter; the report of the rehearsal wave is the study <code>wave-report</code></td></tr>
       <tr><td>M2 Intake and triage (B22–B26)</td><td>notes, review-thread and check-run connectors, the study <code>triage</code>, ratify → request or constraint</td><td>a review comment left by the user on a PR becomes a signal, a pattern, and a ratified constraint wave</td></tr>
       <tr><td>M3 Dashboard (B27–B32, B41)</td><td>server, Home, Wave, Inbox, Corpus with branch selector, Ledger, Reports; the corpus's task statuses mirrored to the Blueprint board; the IDE plugin's follow-up (B32, outside the POC)</td><td>the user follows a wave and ratifies a pattern without a terminal; any branch's corpus is browsed without a checkout</td></tr>
