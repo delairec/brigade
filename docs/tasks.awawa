@@ -73,7 +73,7 @@ TASK B06
 	AFTER @TASK.B43
 
 TASK B07
-	TITLE "Tick skeleton and systemd units"
+	TITLE "Tick skeleton and scheduler install"
 	STATUS draft
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tick"
@@ -169,7 +169,7 @@ TASK B14
 	COMPONENT "tick"
 	ROLE bastien
 	SPEC "the tick finds the pull request of a task branch, reads its checks and review state"
-		+ "through gh, records ledger events and moves the task state"
+		+ "through the forge adapter, records ledger events and moves the task state"
 	AFTER @TASK.B12
 
 TASK B15
@@ -190,8 +190,8 @@ TASK B16
 	COMPONENT "the pass"
 	ROLE bastien
 	ROLE lex
-	SPEC "prudence receives the verification package and posts approve or request changes through"
-		+ "verdict, as the configured forge account, recorded in the ledger event"
+	SPEC "the verify slot receives the verification package and posts approve or request changes"
+		+ "through verdict, as the configured forge account, recorded in the ledger event"
 	AFTER @TASK.B15
 
 TASK B17
@@ -211,10 +211,10 @@ TASK B18
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE bastien
-	SPEC "changes requested starts a remi round through review context|reply"
-	SPEC "a failing check starts a bastien fix"
-	SPEC "a branch behind integration is rebased by git and manu runs only on a conflict through"
-		+ "rebase context|done"
+	SPEC "changes requested starts a run of the review slot through review context|reply"
+	SPEC "a failing check starts a fix by the build slot"
+	SPEC "a branch behind integration is rebased by git and the rebase slot runs only on a conflict"
+		+ "through rebase context|done"
 	SPEC "rounds are capped by POLICY.VERIFY_ROUNDS, then the task is parked with the reason"
 	AFTER @TASK.B17
 
@@ -285,7 +285,7 @@ TASK B23
 	DESC "delivered as the built-in collector pr-threads, run every tick and reused by studies and"
 		+ "recipes"
 	SPEC "unresolved review threads on open pull requests of registered projects become signals"
-		+ "every tick, read through GraphQL reviewThreads"
+		+ "every tick, read through the forge adapter, GraphQL reviewThreads on GitHub"
 	AFTER @TASK.B22
 	AFTER @TASK.B14
 	AFTER @TASK.B47

@@ -34,7 +34,7 @@ DECISION PythonStandardLibraryOnly
 	RATIONALE "the hooks, the unattended runner and the user's local context page are already"
 		+ "Python and sh; 3.11 is the floor tomllib needs and nothing in the plan needs a later"
 		+ "feature"
-	SOURCE "the Artifact Brigade Blueprint, plan section 13 and 14"
+	SOURCE "the Artifact Brigade Blueprint, plan section 15 and 16"
 
 DECISION ADeterministicTickReplacesTheCoordinatorAgent
 	TITLE "the coordinator is brigade tick, a deterministic pass run every five minutes by the"
@@ -48,7 +48,7 @@ DECISION ADeterministicTickReplacesTheCoordinatorAgent
 	REJECTED "cloud routines: private data and the worktrees are on the machine only"
 	RATIONALE "every transition is a condition evaluated from facts; the laptop being off loses"
 		+ "nothing, the next tick after boot resumes"
-	SOURCE "the Artifact Brigade Blueprint, plan section 5 and 15"
+	SOURCE "the Artifact Brigade Blueprint, plan section 5 and 17"
 
 DECISION HybridStorageCorpusAndLedger
 	TITLE "durable facts live in awawa corpora, high-volume events in an append-only JSONL ledger"
@@ -60,7 +60,7 @@ DECISION HybridStorageCorpusAndLedger
 	REJECTED "SQLite for everything: a second grammar without schema lint"
 	RATIONALE "the user's answer to the storage question; one home per fact, views rendered never"
 		+ "hand-maintained"
-	SOURCE "the Artifact Brigade Blueprint, plan section 11 and 12"
+	SOURCE "the Artifact Brigade Blueprint, plan section 13 and 14"
 
 DECISION AVerifierRunOnEveryPullRequestAndOneHumanGate
 	TITLE "every pull request passes a deterministic preflight then one prudence run before merging"
@@ -83,7 +83,7 @@ DECISION QuotaPausesTheWaveAndResumesTheSameSession
 		+ "every run already keeps"
 	RATIONALE "the user's answer on budget: waves of 10 to 20 pull requests, the quota blocks"
 		+ "before any overspend"
-	SOURCE "the Artifact Brigade Blueprint, plan section 15"
+	SOURCE "the Artifact Brigade Blueprint, plan section 17"
 
 DECISION TheDashboardIsBuiltThePluginAndAwawaWebAreKept
 	TITLE "a loopback web dashboard is built; the IntelliJ plugin stays for in-IDE work; awawa-web"
@@ -96,7 +96,7 @@ DECISION TheDashboardIsBuiltThePluginAndAwawaWebAreKept
 		+ "fmt and lint"
 	RATIONALE "the plugin's handbook names user-defined views as its extension point; the branch"
 		+ "selector is a server-side fact (git archive per SHA)"
-	SOURCE "the Artifact Brigade Blueprint, plan section 13"
+	SOURCE "the Artifact Brigade Blueprint, plan section 15"
 
 DECISION AwawaIsWrappedAsItIs
 	TITLE "the plan wraps the awawa binary as it is; desired changes go to a list of requests to"
@@ -106,7 +106,7 @@ DECISION AwawaIsWrappedAsItIs
 		+ "lack time"
 	RATIONALE "every awawa gap has a workaround the POC uses: block edits with fmt and lint,"
 		+ "per-entity spawns cached per SHA"
-	SOURCE "the Artifact Brigade Blueprint, plan section 17"
+	SOURCE "the Artifact Brigade Blueprint, plan section 19"
 
 DECISION MinedConstraintsAreDeliveredAsWaves
 	TITLE "constraints mined from transcripts become waves like any other work, auto-merged into"
@@ -119,7 +119,7 @@ DECISION MinedConstraintsAreDeliveredAsWaves
 	REJECTED "a stored list of real names for the scrubber: no correspondence between a real name"
 		+ "and a pseudonym is kept anywhere"
 	RATIONALE "the user's answer on mining; no real identifier leaves the machine"
-	SOURCE "the Artifact Brigade Blueprint, plan section 10"
+	SOURCE "the Artifact Brigade Blueprint, plan section 12"
 
 DECISION TheCorpusIsTheHomeOfTaskStatusTheBoardItsView
 	TITLE "the corpus is the single home of task status; the task board of the Artifact is a view"
@@ -169,7 +169,7 @@ DECISION BrigadeNamesNoAiClientOutsideItsAdapters
 		+ "document a non-interactive mode with a JSON output (Claude Code 2.1.289 --help, Codex"
 		+ "exec, OpenCode run, Gemini headless, read on 2026-10-05) and only Claude Code is"
 		+ "installed on the reference machine"
-	SOURCE "the user's rulings of 2026-10-05; Max's reports of 2026-10-05"
+	SOURCE "pull request #3 of the brigade repository"
 
 DECISION RolesAreSlotsBoundToRoleFiles
 	TITLE "a procedure calls a slot, never a role name; a role is a Markdown file with a flat front"
@@ -197,7 +197,7 @@ DECISION RolesAreSlotsBoundToRoleFiles
 	RATIONALE "the user asked on 2026-10-05 for custom roles and for their own roles by default,"
 		+ "and named the reporter bilal; @SCHEMA.AGENT of the instructions corpus separates"
 		+ "REASONING from the model each adapter binds"
-	SOURCE "the user's rulings of 2026-10-05; Max's reports of 2026-10-05"
+	SOURCE "pull request #3 of the brigade repository"
 
 DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
 	TITLE "brigade installs on any Linux from one zipapp or a clone; Python 3.11 or later, git,"
@@ -225,7 +225,7 @@ DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
 		+ "the corpus is a git history"
 	RATIONALE "the user ruled on 2026-10-05 that brigade installs and runs on another Linux machine"
 		+ "with another AI client"
-	SOURCE "the user's rulings of 2026-10-05; Max's reports of 2026-10-05"
+	SOURCE "pull request #3 of the brigade repository"
 
 DECISION ThePortableContractIsTheCommandLineAndNeutralFiles
 	TITLE "the command line with --json is the contract, state lives in language-neutral files and"
@@ -250,14 +250,14 @@ DECISION ThePortableContractIsTheCommandLineAndNeutralFiles
 		+ "or Rust"
 	REJECTED "a Rust rewrite now: no toolchain on the reference machine (command -v rustc cargo,"
 		+ "2026-10-05), every crate a dependency the standard-library ruling refuses, and the"
-		+ "tool's shape still open, 41 draft tasks and 5 open decisions"
+		+ "tool's shape still open"
 	REJECTED "a Go rewrite now: the same absent toolchain; Go stays the target that keeps a"
 		+ "standard-library-only policy with a static binary"
 	REJECTED "PyInstaller or Nuitka: third-party packagers for what zipapp does"
 	RATIONALE "the user asked on 2026-10-05 for an architecture that eases a later migration to"
 		+ "Rust or another distributable form; what these rules keep outside the Python package is"
 		+ "what a port carries over unchanged"
-	SOURCE "the user's rulings of 2026-10-05; Max's reports of 2026-10-05"
+	SOURCE "pull request #3 of the brigade repository"
 
 DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 	TITLE "work that is not a wave, a report, a data collection, an audit, a research, is a study:"
@@ -283,7 +283,7 @@ DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 	DESC "the report slot answers with a narrative, the explore slot with findings and their"
 		+ "evidence, the triage slot with patterns, the rules slot with rules"
 	DESC "a study with no judging slot is a scan: its non-empty output is the answer; the gardening"
-		+ "routines are scans with OUTPUT inbox"
+		+ "scans of M4 declare OUTPUT inbox"
 	DESC "the wave report, the triage and the miner are the built-in studies wave-report, triage"
 		+ "and mine-transcripts"
 	DESC "a study runs on demand with brigade study run, or when due, by the tick, under the slot"
@@ -301,7 +301,7 @@ DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 	RATIONALE "the user asked on 2026-10-05 whether brigade separates judgment from mechanics for"
 		+ "work that is not a wave; the first principle applies to every kind of work, and the"
 		+ "miner of the plan already had this shape for one case"
-	SOURCE "the user's question of 2026-10-05; Max's report of 2026-10-05, second round"
+	SOURCE "pull request #3 of the brigade repository"
 
 DECISION AKindOfWorkIsARecipeAnInstanceAnOrder
 	TITLE "a user declares a new kind of work as a recipe, a TOML file of ordered process-shaped"
@@ -351,4 +351,4 @@ DECISION AKindOfWorkIsARecipeAnInstanceAnOrder
 		+ "the word recipe; the user's own usage-report command, 21 000 characters bound to one"
 		+ "client, is the first recipe to write: three collectors, one gate, one judging run, one"
 		+ "file on the pull request's branch"
-	SOURCE "the user's question of 2026-10-05; Max's report of 2026-10-05, third round"
+	SOURCE "pull request #3 of the brigade repository"
