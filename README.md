@@ -25,7 +25,7 @@ python3 build.py
 python3 dist/brigade.pyz --version
 ```
 
-Under Python 3.11, brigade exits non-zero and names the version it needs and the version it found.
+Below Python 3.11, brigade exits non-zero and names the version it needs and the version it found.
 
 ## Develop
 

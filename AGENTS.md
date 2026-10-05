@@ -87,5 +87,5 @@ ln -s "$PWD/bin/brigade" ~/.local/bin/brigade       # installs brigade from the 
 - `bin/brigade` is the entry point of the clone, `brigade/` the package, `brigade/python_floor.py` the one place the
   Python floor is declared.
 - The CI (`.github/workflows/ci.yml`) runs the tests and the zipapp build on Python 3.11 and on the latest release,
-  and checks the refusal under the floor on Python 3.10; the reference machine has no 3.11, so only the CI proves the
-  floor.
+  and checks the refusal under the floor on Python 3.10; the reference machine has no interpreter below 3.11, so only
+  the CI proves the floor.
