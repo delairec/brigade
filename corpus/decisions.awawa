@@ -419,7 +419,9 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC "brigade/commands/ one module per command, brigade/cli.py the parser and the exit mapping,"
 		+ "brigade/launcher.py the floor check; brigade/adapters/clients, forges and schedulers,"
 		+ "brigade/collectors/, brigade/checks/ and brigade/outputs/ the plugins; brigade/system/"
-		+ "the primitives: paths, clock, processes, locks, atomic files, ids, documents"
+		+ "the primitives: paths, clock, processes, locks, atomic files, ids, documents;"
+		+ "brigade/git/ the git gateway, as brigade/corpus/ is the awawa one"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	DESC "a module exposes one public function named after a verb, no leading underscore, its"
 		+ "helpers underscored, with the constants and frozen dataclasses it declares; its unit"
 		+ "test is tests/unit/<same path>/test_<module>.py, as brigade/python_floor.py and"
