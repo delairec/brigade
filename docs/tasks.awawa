@@ -199,8 +199,8 @@ TASK B17
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE bastien
-	SPEC "approve plus green checks merge the pull request with the merge method the instructions"
-		+ "corpus rules"
+	SPEC "approve plus green checks merge the pull request with the merge method"
+		+ "@RULE.squash_merge_rebase_update of the instructions corpus names"
 	SPEC "the task becomes merged"
 	SPEC "its dependents become startable in the same tick"
 	AFTER @TASK.B16

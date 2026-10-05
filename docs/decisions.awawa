@@ -151,19 +151,22 @@ DECISION BrigadeNamesNoAgentCliEachCliIsAnAdapter
 		+ "runs: a feature of one adapter, not of the core; the adapter's resume is the way back in"
 	RATIONALE "the user ruled on 2026-10-05 that the plan be reviewed to be agnostic and avoid what"
 		+ "is specific to one agent CLI; the instructions corpus holds the same stance for itself"
+		+ "in @RULE.instructions_are_agent_agnostic"
 	SOURCE "the user's ruling of 2026-10-05, pull request #2 of the brigade repository"
 
 DECISION TheMergeMethodIsTheInstructionsCorpusRuleNotAProjectField
 	TITLE "the merge of a task pull request into the integration branch follows the merge rule of"
 		+ "the instructions corpus; the brigade corpus declares no merge field"
 	STATUS active
-	DESC "the tick merges with the method that rule names, a constant of the tick; the rule is"
-		+ "cited, never restated"
+	DESC "the rule is @RULE.squash_merge_rebase_update of the instructions corpus; the tick merges"
+		+ "with the method it names, a constant of the tick; the rule is cited, never restated"
 	REJECTED "PROJECT.MERGE squash|rebase|merge per project, the plan's field of 2026-10-04: a"
 		+ "general rule copied into every project's record, two homes for one fact"
 	RATIONALE "the user ruled the merge method general on 2026-10-05; a general rule lives in the"
 		+ "instructions corpus and in no project's records"
 	SOURCE "the user's ruling of 2026-10-05, pull request #2 of the brigade repository"
+	SOURCE "@RULE.squash_merge_rebase_update, written by pull request #73 of the instructions"
+		+ "repository"
 
 DECISION TheIntegrationPullRequestOpensAsLateAsPossible
 	TITLE "the integration pull request is opened as late as possible, with the report; earlier"
@@ -229,6 +232,6 @@ DECISION TheCommandLineIsTheContract
 	DESC "no pickle, no serialised object: a state file is JSON, JSON lines or text"
 	REJECTED "a Python API as the contract: a migration to another language would rewrite every"
 		+ "caller"
-	RATIONALE "the contract keeps a later migration, to Rust or another language, to one or two"
-		+ "waves; the choice of Python stands"
+	RATIONALE "the contract keeps a later migration, to Rust or another language, open; the choice"
+		+ "of Python stands"
 	SOURCE "the user's ruling of 2026-10-05 on sharing, pull request #2 of the brigade repository"
