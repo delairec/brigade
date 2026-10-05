@@ -365,15 +365,15 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 
   function ensure(tab) {
     var pane = paneOf(tab);
-    if (!pane || !pane.dataset.src || loaded[tab]) return Promise.resolve();
-    if (loading[tab]) return loading[tab];
+    if (!pane || !pane.dataset.src || loaded[tab]) { return Promise.resolve(); }
+    if (loading[tab]) { return loading[tab]; }
     loading[tab] = fetch(pane.dataset.src).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) { throw new Error('HTTP ' + r.status); }
       return r.text();
     }).then(function (html) {
       pane.innerHTML = html;
       loaded[tab] = true;
-      if (tab === 'demo') initDemo();
+      if (tab === 'demo') { initDemo(); }
     }).catch(function (e) {
       pane.innerHTML = '<p class="loading">This part could not be loaded (' + e.message + '). Reload the page to try again.</p>';
     });
@@ -382,40 +382,38 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 
   function resolve(hash) {
     var h = (hash || '').replace(/^#/, '');
-    if (!h) return { tab: 'overview', anchor: null };
-    if (TABS.indexOf(h) >= 0) return { tab: h, anchor: null };
+    if (!h) { return { tab: 'overview', anchor: null }; }
+    if (TABS.indexOf(h) >= 0) { return { tab: h, anchor: null }; }
     var m = /^([pmb])-/.exec(h);
-    if (m) return { tab: PREFIX[m[1]], anchor: h };
-    if (/^(t|s)-/.test(h)) return { tab: 'mockups', anchor: h };
+    if (m) { return { tab: PREFIX[m[1]], anchor: h }; }
+    if (/^(t|s)-/.test(h)) { return { tab: 'mockups', anchor: h }; }
     return { tab: 'overview', anchor: h };
   }
 
   function show(tab, anchor) {
     TABS.forEach(function (t) {
       var pane = paneOf(t);
-      if (pane) pane.hidden = (t !== tab);
+      if (pane) { pane.hidden = (t !== tab); }
     });
     document.querySelectorAll('.tabs a').forEach(function (a) {
-      if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      if (a.dataset.tab === tab) { a.setAttribute('aria-current', 'page'); } else { a.removeAttribute('aria-current'); }
     });
     ensure(tab).then(function () {
       if (anchor) {
         var el = document.getElementById(anchor);
-        if (el) el.scrollIntoView({ block: 'start' });
+        if (el) { el.scrollIntoView({ block: 'start' }); }
       } else {
         window.scrollTo(0, 0);
       }
-      if (tab === 'demo') ensure('mockups');
+      if (tab === 'demo') { ensure('mockups'); }
     });
   }
 
   function route() { var r = resolve(location.hash); show(r.tab, r.anchor); }
   window.addEventListener('hashchange', route);
   route();
-  // prefetch the rest once the first frame is painted
   window.setTimeout(function () { ['plan', 'mockups', 'brief', 'demo'].forEach(ensure); }, 800);
 
-  /* ---------------- tasks board (db capability) ---------------- */
   var STATUS_TONES = { draft: '--muted', todo: '--accent', implemented: '--ok', archived: '--faint' };
   var DELIVERED_STATUS = 'implemented';
   var RETIRED_STATUS = 'archived';
@@ -425,7 +423,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   var open = {};
   var filters = { milestone: '', status: '', role: '', q: '' };
   var db = null;
-  try { var saved = JSON.parse(localStorage.getItem('brigade.filters') || '{}'); if (saved && typeof saved === 'object') filters = Object.assign(filters, saved); } catch (e) {}
+  try { var saved = JSON.parse(localStorage.getItem('brigade.filters') || '{}'); if (saved && typeof saved === 'object') { filters = Object.assign(filters, saved); } } catch (e) {}
   if (!isCorpusStatus(filters.status)) { filters.status = ''; }
 
   function isCorpusStatus(status) { return typeof status === 'string' && Object.prototype.hasOwnProperty.call(STATUS_TONES, status); }
@@ -436,26 +434,28 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
-    if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === 'class') n.className = attrs[k];
-      else if (k === 'text') n.textContent = attrs[k];
-      else if (k.indexOf('on') === 0) n.addEventListener(k.slice(2), attrs[k]);
-      else n.setAttribute(k, attrs[k]);
-    });
-    (children || []).forEach(function (c) { if (c) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        if (k === 'class') { n.className = attrs[k]; }
+        else if (k === 'text') { n.textContent = attrs[k]; }
+        else if (k.indexOf('on') === 0) { n.addEventListener(k.slice(2), attrs[k]); }
+        else { n.setAttribute(k, attrs[k]); }
+      });
+    }
+    (children || []).forEach(function (c) { if (c) { n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); } });
     return n;
   }
 
   function saveFilters() { try { localStorage.setItem('brigade.filters', JSON.stringify(filters)); } catch (e) {} }
 
   function visible(t) {
-    if (filters.milestone && t.milestone !== filters.milestone) return false;
-    if (filters.status && t.status !== filters.status) return false;
-    if (filters.role && t.role !== filters.role) return false;
+    if (filters.milestone && t.milestone !== filters.milestone) { return false; }
+    if (filters.status && t.status !== filters.status) { return false; }
+    if (filters.role && t.role !== filters.role) { return false; }
     if (filters.q) {
       var q = filters.q.toLowerCase();
       var hay = (t.id + ' ' + (t.title || '') + ' ' + (t.component || '') + ' ' + (t.acceptance || '')).toLowerCase();
-      if (hay.indexOf(q) < 0) return false;
+      if (hay.indexOf(q) < 0) { return false; }
     }
     return true;
   }
@@ -476,8 +476,8 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     tasks.forEach(function (t) {
       var k = t.milestone || '?';
       byM[k] = byM[k] || { title: t.milestone_title || '', live: 0, implemented: 0 };
-      if (t.status !== RETIRED_STATUS) byM[k].live++;
-      if (t.status === DELIVERED_STATUS) byM[k].implemented++;
+      if (t.status !== RETIRED_STATUS) { byM[k].live++; }
+      if (t.status === DELIVERED_STATUS) { byM[k].implemented++; }
     });
     var live = tasks.length - countStatus(tasks, RETIRED_STATUS);
     var implemented = countStatus(tasks, DELIVERED_STATUS);
@@ -502,7 +502,9 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     var markCopied = function () { btn.textContent = 'copied'; window.setTimeout(function () { btn.textContent = 'copy brief'; }, 1600); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(markCopied, function () { fallback(); });
-    } else fallback();
+    } else {
+      fallback();
+    }
     function fallback() {
       var ta = el('textarea', { style: 'position:fixed;left:-9999px' }); ta.value = text; document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); markCopied(); } catch (e) { btn.textContent = 'select and copy by hand'; }
@@ -511,7 +513,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   }
 
   function saveNotes(t, text, btn) {
-    if (!db || pending[t.id]) return;
+    if (!db || pending[t.id]) { return; }
     pending[t.id] = true; btn.disabled = true;
     db.doc('tasks/' + t.id).update({ notes: text, updated_at: new Date().toISOString(), updated_by: 'board' }).then(function () {
       pending[t.id] = false; btn.disabled = false; btn.textContent = 'saved'; window.setTimeout(function () { btn.textContent = 'save notes'; }, 1600);
@@ -561,7 +563,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     root.innerHTML = '';
     renderSummary();
     var ms = {}; var roles = {};
-    tasks.forEach(function (t) { ms[t.milestone] = t.milestone_title || ''; if (t.role) roles[t.role] = true; });
+    tasks.forEach(function (t) { ms[t.milestone] = t.milestone_title || ''; if (t.role) { roles[t.role] = true; } });
     fillSelect('f-milestone', Object.keys(ms).sort().map(function (k) { return { value: k, label: k + (ms[k] ? ' · ' + ms[k] : '') }; }), filters.milestone);
     fillSelect('f-role', Object.keys(roles).sort().map(function (k) { return { value: k, label: k }; }), filters.role);
     fillSelect('f-status', Object.keys(STATUS_TONES).map(function (s) { return { value: s, label: s }; }), filters.status);
@@ -579,7 +581,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
       ]);
       root.appendChild(sec);
     });
-    if (!tasks.length) note('The board is empty. Seed it with the Artifact data tool: collection "tasks", one document per task with id, title, milestone, component, role, acceptance, depends, status, order; status holds the corpus STATUS verbatim, one of ' + Object.keys(STATUS_TONES).join(', ') + '.');
+    if (!tasks.length) { note('The board is empty. Seed it with the Artifact data tool: collection "tasks", one document per task with id, title, milestone, component, role, acceptance, depends, status, order; status holds the corpus STATUS verbatim, one of ' + Object.keys(STATUS_TONES).join(', ') + '.'); }
   }
 
   ['f-milestone', 'f-status', 'f-role'].forEach(function (id) {
@@ -606,10 +608,9 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   }
   initTasks();
 
-  /* ---------------- demo ---------------- */
   var demoReady = false;
   function initDemo() {
-    if (demoReady) return; demoReady = true;
+    if (demoReady) { return; } demoReady = true;
     var term = document.getElementById('demo-term');
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var timer = null;
@@ -626,9 +627,9 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
           var i = 0;
           function step() {
             var chunk = reduce ? lines.length : 2;
-            for (var k = 0; k < chunk && i < lines.length; k++, i++) term.insertAdjacentHTML('beforeend', lines[i] + '\n');
+            for (var k = 0; k < chunk && i < lines.length; k++, i++) { term.insertAdjacentHTML('beforeend', lines[i] + '\n'); }
             term.scrollTop = term.scrollHeight;
-            if (i < lines.length) timer = window.setTimeout(step, 45);
+            if (i < lines.length) { timer = window.setTimeout(step, 45); }
           }
           step();
         });
@@ -688,7 +689,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     document.getElementById('demo-reset').addEventListener('click', function () { stopAuto(); reset(); });
     document.getElementById('demo-auto').addEventListener('click', function () {
       if (auto) { stopAuto(); return; }
-      if (idx >= SCRIPT.length - 1) reset();
+      if (idx >= SCRIPT.length - 1) { reset(); }
       document.getElementById('demo-auto').textContent = 'Pause'; document.getElementById('demo-auto').setAttribute('aria-pressed', 'true');
       auto = window.setInterval(next, reduce ? 400 : 1400);
     });
