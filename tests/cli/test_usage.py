@@ -25,3 +25,14 @@ class BrigadeUsageWhenAnUnknownOptionIsGiven(unittest.TestCase):
         self.assertEqual(completed.returncode, 2)
         self.assertEqual(completed.stdout, "")
         self.assertIn("unrecognized arguments: --frobnicate", completed.stderr)
+
+
+class BrigadeUsageWhenOnlyTheJsonOptionIsGiven(unittest.TestCase):
+    def test_should_refuse_as_when_no_option_is_given(self):
+        # Act
+        completed = subprocess.run([CLONE_ENTRY_POINT, "--json"], capture_output=True, text=True)
+
+        # Assert
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(completed.stdout, "")
+        self.assertIn("brigade: error: no option given", completed.stderr)
