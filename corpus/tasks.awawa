@@ -24,7 +24,7 @@ TASK B01
 	SPEC "the Python floor, 3.11, is declared in one place; under it, brigade exits non-zero with a"
 		+ "message naming 3.11 and the running version"
 		IMPL "brigade/python_floor.py::PYTHON_FLOOR = (3, 11)"
-		IMPL "brigade/launcher.py::def launch():"
+		IMPL "brigade/launcher.py::def launch() -> None:"
 		IMPL "tests/unit/test_python_floor.py::class PythonFloor(unittest.TestCase)"
 		IMPL ".github/workflows/ci.yml::name: Refusal under the Python floor"
 	SPEC "a GitHub Actions workflow runs the unit tests and the zipapp build on Python 3.11 and on"

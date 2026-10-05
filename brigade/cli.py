@@ -17,7 +17,7 @@ def _describe_version(as_json):
     return f"brigade {VERSION}"
 
 
-def main(arguments):
+def main(arguments: list[str]) -> int:
     parser = _create_parser()
     options = parser.parse_args(arguments)
     if not options.version:
