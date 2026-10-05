@@ -4,8 +4,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a sticky tab bar over one reading column (max 1120px); the plan reads like a document with
-   bounded tables and terminal figures; the task board and demo are tools inside the same frame. */
 :root {
   --bg: #F4F6F3; --surface: #FFFFFF; --ink: #1B2422; --muted: #5C6B66; --faint: #8C9994; --rule: #D8DFDB;
   --accent: #1F7A6E; --accent-ink: #17635A; --accent-soft: #E2F1EE;
@@ -51,7 +49,6 @@ ul, ol { padding-left: 1.3em; margin: 0 0 14px; }
 li { margin-bottom: 5px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 
-/* header */
 .site { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
 .site-in { max-width: 1120px; margin: 0 auto; padding-inline: 20px; display: flex; align-items: center; gap: 18px; min-height: 54px; flex-wrap: wrap; }
 .brand { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 9px; }
@@ -68,7 +65,6 @@ li { margin-bottom: 5px; }
 .pane[hidden] { display: none; }
 .loading { color: var(--faint); font-style: italic; padding-block: 40px; }
 
-/* document parts */
 .doc-head { max-width: 860px; margin-bottom: 14px; }
 .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
 .doc-head h1, .hero h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; line-height: 1.12; margin: 0 0 12px; }
@@ -102,7 +98,6 @@ figure.fig svg text { font-family: var(--mono); }
 figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 76ch; }
 figcaption b { color: var(--ink); }
 
-/* terminal */
 pre.term { margin: 0; background: var(--term-bg); color: var(--term-fg); font-family: var(--mono); font-size: 12.5px; line-height: 1.55; padding: 14px 16px; overflow-x: auto; border-radius: 0 0 10px 10px; tab-size: 4; }
 pre.term.static { border-radius: 10px; margin: 12px 0 18px; }
 .term .dim { color: var(--term-dim); } .term .kw, .term .hl { color: var(--term-kw); font-weight: 500; } .term .ok { color: var(--term-ok); } .term .warn { color: var(--term-warn); } .term .err { color: var(--term-err); } .term .p { color: var(--term-prompt); } .term .c { color: var(--term-fg); font-weight: 500; }
@@ -114,7 +109,6 @@ figure.shot { margin: 16px 0 26px; }
 .shot-bar span { width: 10px; height: 10px; border-radius: 50%; background: var(--term-dim); opacity: .55; }
 .shot-bar em { font-style: normal; margin-left: 8px; color: var(--term-fg); }
 
-/* dashboard screens */
 figure.screen { margin: 16px 0 26px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface); font-size: 13.5px; }
 .sbar { display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface)); flex-wrap: wrap; }
 .sbar b { font-family: var(--display); }
@@ -152,7 +146,6 @@ figure.screen { margin: 16px 0 26px; border: 1px solid var(--rule); border-radiu
 .selectors { display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: center; font-size: 13px; }
 .selectors select { font: inherit; font-size: 13px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); max-width: 100%; }
 
-/* overview */
 .hero { max-width: 860px; padding-block: 10px 6px; }
 .hero h1 { margin-bottom: 14px; }
 .two { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: 28px 40px; margin-top: 28px; align-items: start; }
@@ -168,7 +161,6 @@ figure.screen { margin: 16px 0 26px; border: 1px solid var(--rule); border-radiu
 .callout h3 { margin: 0 0 6px; font-size: 16px; }
 .callout p { margin: 0; font-size: 15.5px; }
 
-/* tasks board */
 .filterbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
 .filterbar label { display: inline-flex; align-items: center; gap: 6px; }
 .filterbar select, .filterbar input[type=search] { font: inherit; font-size: 14px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); }
@@ -204,7 +196,6 @@ figure.screen { margin: 16px 0 26px; border: 1px solid var(--rule); border-radiu
 .hint { font-size: 12.5px; color: var(--faint); }
 .howto { font-size: 14.5px; color: var(--muted); border-left: 3px solid var(--rule); padding-left: 14px; margin: 24px 0; }
 
-/* demo */
 .demo-grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,.8fr); gap: 24px; align-items: start; }
 @media (max-width: 900px) { .demo-grid { grid-template-columns: minmax(0,1fr); } }
 .demo-grid h2 { margin-top: 8px; border-top: 0; padding-top: 0; font-size: 20px; }
@@ -220,7 +211,6 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 .dlog li { margin-bottom: 2px; }
 .dlog .cli { color: var(--accent-ink); } .dlog .ai { color: var(--brass); } .dlog .warn { color: var(--warn); }
 
-/* brief */
 #pane-brief details { border: 1px solid var(--rule); border-radius: 8px; padding: 8px 14px; margin-bottom: 8px; background: var(--surface); }
 #pane-brief summary { cursor: pointer; }
 #pane-brief details p, #pane-brief details ul { margin-top: 8px; }
@@ -242,7 +232,6 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 
 <main class="page">
 
-<!-- ============ OVERVIEW (inline: the first frame) ============ -->
 <div class="pane" id="pane-overview" data-pane="overview">
   <div class="hero">
     <p class="eyebrow">Plan for a proof of concept · 2026-10-04 · revised 2026-10-05 · machine-wide, standalone project</p>
@@ -325,13 +314,11 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   </div>
 </div>
 
-<!-- ============ fetched panes ============ -->
 <div class="pane" id="pane-plan" data-pane="plan" data-src="parts/plan.html" hidden><p class="loading">Loading the plan…</p></div>
 <div class="pane" id="pane-mockups" data-pane="mockups" data-src="parts/mockups.html" hidden><p class="loading">Loading the mockups…</p></div>
 <div class="pane" id="pane-demo" data-pane="demo" data-src="parts/demo.html" hidden><p class="loading">Loading the demo…</p></div>
 <div class="pane" id="pane-brief" data-pane="brief" data-src="parts/brief.html" hidden><p class="loading">Loading the brief…</p></div>
 
-<!-- ============ TASKS (inline: needs the runtime) ============ -->
 <div class="pane" id="pane-tasks" data-pane="tasks" hidden>
   <header class="doc-head">
     <p class="eyebrow">Task board · a view of the corpus</p>
