@@ -562,8 +562,9 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     Object.keys(groups).sort().forEach(function (k) {
       var g = groups[k];
       var implementedN = countStatus(g, DELIVERED_STATUS);
+      var liveN = g.length - countStatus(g, RETIRED_STATUS);
       var sec = el('section', { class: 'milestone' }, [
-        el('h3', null, [k, el('small', { text: (ms[k] || '') + ' · ' + implementedN + ' of ' + g.length + ' ' + DELIVERED_STATUS })]),
+        el('h3', null, [k, el('small', { text: (ms[k] || '') + ' · ' + implementedN + ' of ' + liveN + ' ' + DELIVERED_STATUS })]),
         el('div', { class: 'trows' }, g.map(renderRow))
       ]);
       root.appendChild(sec);
