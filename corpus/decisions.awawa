@@ -401,4 +401,4 @@ DECISION TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
 	RATIONALE "ruled by the user on 2026-10-05: docs/ did not suit them for the specification of"
 		+ "this repository, corpus/ is the name they gave it, brigade's convention for the projects"
 		+ "it manages is configurable, and its default is the same as this repository"
-	SOURCE "the user's rulings of 2026-10-05, pull request #N of the brigade repository"
+	SOURCE "the user's rulings of 2026-10-05, pull request #7 of the brigade repository"
