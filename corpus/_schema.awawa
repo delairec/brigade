@@ -4,12 +4,21 @@ SCHEMA *
 	DESC "fields legal on every entity of this corpus"
 	FIELD DESC string
 		REPEATABLE
+		FIELD REF reference
+			REPEATABLE
+			DESC "an entity the prose above names, indexed"
 	FIELD RATIONALE string
 		REPEATABLE
 		CATEGORY reasoning
+		FIELD REF reference
+			REPEATABLE
+			DESC "an entity the prose above names, indexed"
 	FIELD SOURCE string
 		REPEATABLE
 		DESC "where this was decided or read"
+		FIELD REF reference
+			REPEATABLE
+			DESC "an entity the prose above names, indexed"
 
 SCHEMA PROJECT
 	DESC "the project this corpus describes, exactly one"
