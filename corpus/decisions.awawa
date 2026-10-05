@@ -772,7 +772,12 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 		REF @TASK.B04
 		REF @TASK.B42
 		REF @TASK.B43
+	DESC "brigade init creates the operational corpus repository and config.toml only; every writer"
+		+ "creates its directory under $XDG_STATE_HOME/brigade/ or $XDG_CACHE_HOME/brigade/ when it"
+		+ "writes"
 	REJECTED "a BRIGADE_HOME variable: a second way to say what XDG already says"
+	REJECTED "init creating the state and cache directories, the Blueprint plan's step: a writer"
+		+ "relying on it breaks once the directory is deleted"
 	REJECTED "a config set command rewriting the file: tomllib reads only; a writer without"
 		+ "round-trip loses the user's comments"
 	RATIONALE "DESC 3 and 4 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites already"
@@ -781,6 +786,7 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 		+ "every other function free of the environment"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's ruling of 2026-10-05 in the refinement of B03"
 
 DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	TITLE "every document brigade writes or reads carries an integer schema_version per kind, an"

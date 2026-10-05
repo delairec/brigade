@@ -109,16 +109,56 @@ TASK B02
 	DELIVERED_BY 12
 
 TASK B03
-	TITLE "Operational corpus schema and brigade init"
-	STATUS draft
+	TITLE "brigade init: the operational corpus repository, its schema and config.toml"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
 	ROLE bastien
-	SPEC "brigade init creates the config corpus as a git repository with the schema template"
-		+ "installed"
-	SPEC "awawa lint --strict exits 0 on it"
-	SPEC "a second init changes nothing"
+	SPEC "brigade init creates $XDG_CONFIG_HOME/brigade/, ~/.config/brigade/ by default, as a git"
+		+ "repository holding _schema.awawa installed from the shipped template and a .gitignore"
+		+ "listing config.toml, both committed in one commit with the user's git identity"
+	SPEC "awawa lint --strict exits 0 on the created corpus"
+	SPEC "the schema template lives at brigade/corpus/data/schema.awawa.tpl and schema/ is gone"
+		+ "from the repository root; init run from the clone and from dist/brigade.pyz installs the"
+		+ "same file"
+	SPEC "init writes config.toml once from a shipped string.Template, every key commented out with"
+		+ "its meaning; tomllib reads it as an empty table"
+	SPEC "brigade/system/paths builds the config, state and cache roots from XDG_CONFIG_HOME,"
+		+ "XDG_STATE_HOME and XDG_CACHE_HOME with their defaults; the tests redirect brigade with"
+		+ "these variables alone"
+	SPEC "init creates neither $XDG_STATE_HOME/brigade/ nor $XDG_CACHE_HOME/brigade/"
+	SPEC "a second init rewrites nothing and commits nothing; a present file that differs from the"
+		+ "shipped one is left as it is and reported as a warning, exit 0"
+	SPEC "without a git user.name or user.email, init exits 1 with a message naming the missing"
+		+ "key, before creating anything"
+	SPEC "it prints text and --json; the JSON document carries schema_version and one entry per"
+		+ "item, the repository, the schema, the .gitignore and config.toml, each with its state:"
+		+ "created, present or differs"
 	AFTER @TASK.B01
+	AFTER @TASK.B02
+	RATIONALE "the registry, the policies, the studies, the orders and the requests are written"
+		+ "into this corpus; @TASK.B04 and @TASK.B43 wait on it"
+		REF @TASK.B04
+		REF @TASK.B43
+	RATIONALE "the template moves under the package because"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources rejects a root-level"
+		+ "schema/, absent from dist/brigade.pyz; the place of the corpus, its .gitignore and"
+		+ "config.toml written once at init follow"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables, which also leaves"
+		+ "the state and cache directories to their writers"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	RATIONALE "config.toml is written, not read: the frozen record and its validation arrive with"
+		+ "@TASK.B42, its first reader, whose doctor finding names brigade init when no client is"
+		+ "configured"
+		REF @TASK.B42
+	RATIONALE "a differing file is reported, never rewritten, so that a second init stays harmless;"
+		+ "upgrading an installed schema is left to a later task"
+	RATIONALE "the document and the exit codes follow"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	SOURCE "the Artifact Brigade Blueprint, plan sections 13 and 16; the user's rulings of"
+		+ "2026-10-05 in the refinement of B03"
 
 TASK B04
 	TITLE "Registry commands"
