@@ -161,18 +161,72 @@ TASK B03
 		+ "2026-10-05 in the refinement of B03"
 
 TASK B04
-	TITLE "Registry commands"
-	STATUS draft
+	TITLE "brigade project add, list, show, pause and resume: the registry in the operational"
+		+ "corpus"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "registry"
 	ROLE bastien
-	SPEC "project add discovers remote, main branch and corpus root and drafts ACCEPTANCE and SETUP"
-		+ "lines"
-	SPEC "project add --init-corpus creates the project's corpus in the folder its CORPUS field"
-		+ "names, corpus/ by default"
-	SPEC "list, show, pause, resume"
-	SPEC "every write goes through fmt, lint and a commit"
+	SPEC "brigade project add <path> appends a PROJECT entity to projects.awawa of the operational"
+		+ "corpus, named after the basename of the path with every character outside an identifier"
+		+ "replaced by _, or after --name; a --name that is not an identifier exits 2"
+	SPEC "it discovers PATH, absolute; REMOTE, owner/name of the origin remote; MAIN, the branch"
+		+ "origin/HEAD names, else the branch checked out; CORPUS, the folder holding the tracked"
+		+ ".awawa files, absent when there is none; FORGE github when the origin remote is on"
+		+ "github.com; STATUS active"
+	SPEC "--acceptance, --heavy and --setup, repeatable, write ACCEPTANCE, HEAVY and SETUP lines; a"
+		+ "field given no flag is guessed from the supported configurations, HEAVY never"
+	SPEC "a package.json at the root: the package manager is bun for a bun.lock or bun.lockb, pnpm"
+		+ "for a pnpm-lock.yaml, yarn for a yarn.lock, npm otherwise; ACCEPTANCE <pm> run <script>"
+		+ "for each of the scripts test, lint and typecheck it declares; SETUP npm ci with a"
+		+ "package-lock.json, npm install without one, <pm> install --frozen-lockfile for bun, pnpm"
+		+ "and yarn"
+	SPEC "a pyproject.toml, setup.py or requirements.txt at the root, or a test_*.py under a root"
+		+ "tests/ directory: ACCEPTANCE python3 -m pytest when pyproject.toml has a"
+		+ "[tool.pytest.ini_options] table or a pytest.ini or conftest.py sits at the root, python3"
+		+ "-m unittest otherwise; SETUP uv sync --frozen with a uv.lock, none otherwise"
+	SPEC "a Cargo.toml at the root: ACCEPTANCE cargo test; SETUP cargo fetch --locked with a"
+		+ "Cargo.lock, none otherwise"
+	SPEC "several configurations add their lines in the order package.json, Python, Rust; the"
+		+ "document marks every guessed line as guessed and says when no supported configuration"
+		+ "was found"
+	SPEC "a path or a name already registered exits 1 naming the PROJECT entity and writes nothing;"
+		+ "--force replaces that entity"
+	SPEC "brigade project list prints every project with its name, path and status; brigade project"
+		+ "show <name> prints its fields; an unknown name exits 1"
+	SPEC "brigade project pause <name> and resume <name> set STATUS paused and active; a project"
+		+ "already in that status is left as it is, exit 0"
+	SPEC "every write runs under the lock of the corpus repository in"
+		+ "$XDG_STATE_HOME/brigade/locks/, then awawa fmt, awawa lint --strict and one git commit;"
+		+ "a failing lint restores the corpus with git and exits 1"
+	SPEC "before brigade init, every project command exits 1 with a message naming brigade init"
+	SPEC "every command prints text and --json; the JSON document carries schema_version"
 	AFTER @TASK.B03
+	RATIONALE "the registry is the list of projects every wave, study and order points at;"
+		+ "@TASK.B08, @TASK.B10 and @TASK.B38 wait on it"
+		REF @TASK.B08
+		REF @TASK.B10
+		REF @TASK.B38
+	RATIONALE "the user ruled that the commands are given by flags and guessed only when absent,"
+		+ "from a short list of supported configurations, package.json, Python and Rust to begin"
+		+ "with; HEAVY is never guessed, a heavy suite being a judgment"
+	RATIONALE "--init-corpus left B04 for @TASK.B55: awawa's binary ships no starter, the WAVE"
+		+ "schema comes with @TASK.B10, and opening the pull request needs the forge adapter of"
+		+ "@TASK.B46"
+		REF @TASK.B55
+		REF @TASK.B10
+		REF @TASK.B46
+	RATIONALE "the name is turned into an identifier because awawa refuses another: PROJECT"
+		+ "my-app.v2 fails lint with L017"
+	RATIONALE "the lock, the rollback and the gateways follow"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory and"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa; the corpus folder"
+		+ "discovered follows @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
+	SOURCE "the Artifact Brigade Blueprint, plan sections 13 and 16; the user's rulings of"
+		+ "2026-10-06 in the refinement of B04"
 
 TASK B05
 	TITLE "Ledger writer and reader"
@@ -941,3 +995,24 @@ TASK B54
 		+ "command of brigade"
 	SOURCE "the user's rulings of 2026-10-05, pull request #4 of the brigade repository"
 	DELIVERED_BY 5
+
+TASK B55
+	TITLE "brigade project add --init-corpus: a corpus for a project that has none"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "registry"
+	ROLE bastien
+	SPEC "project add --init-corpus installs brigade's project corpus template, TASK, WAVE,"
+		+ "DECISION and OPEN_QUESTION, in the folder CORPUS names, corpus/ by default, on a branch,"
+		+ "and opens a pull request through the forge adapter"
+	SPEC "awawa lint --strict exits 0 on the installed corpus"
+	AFTER @TASK.B04
+	AFTER @TASK.B10
+	AFTER @TASK.B46
+	RATIONALE "split from @TASK.B04 in its refinement: awawa's binary ships no starter, the WAVE"
+		+ "schema comes with @TASK.B10, and the pull request needs the forge adapter of @TASK.B46"
+		REF @TASK.B04
+		REF @TASK.B10
+		REF @TASK.B46
+	SOURCE "the Artifact Brigade Blueprint, plan section 13; the user's ruling of 2026-10-06 in the"
+		+ "refinement of B04"
