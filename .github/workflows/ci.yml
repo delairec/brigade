@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tests:
+    name: Tests and zipapp on Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.x"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python3 --version
+      - run: python3 -m unittest -v
+      - run: python3 build.py
+      - run: python3 dist/brigade.pyz --version
+
+  floor:
+    name: Refusal under the Python floor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - run: python3 build.py
+      - name: The clone entry point refuses Python 3.10
+        run: |
+          if bin/brigade --version 2> refusal.txt; then exit 1; fi
+          cat refusal.txt
+          grep -F "Python 3.11" refusal.txt
+          grep -F "$(python3 -c 'import platform; print(platform.python_version())')" refusal.txt
+      - name: The zipapp refuses Python 3.10
+        run: |
+          if python3 dist/brigade.pyz --version 2> refusal.txt; then exit 1; fi
+          cat refusal.txt
+          grep -F "Python 3.11" refusal.txt
+          grep -F "$(python3 -c 'import platform; print(platform.python_version())')" refusal.txt

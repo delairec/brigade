@@ -19,7 +19,7 @@ is the repository root**: every command takes `.` as its last argument from ther
 awawa status .                                                            # where the project stands
 awawa context @TASK.X --skip reasoning --skip provenance --with-schema .  # before implementing or specifying X
 awawa lint --closure @TASK.X .                                            # what X rests on, and what blocks it
-awawa fmt --check . && awawa lint --strict .                              # the only checks of the repository today
+awawa fmt --check . && awawa lint --strict .                              # the checks of the corpus
 ```
 
 - A new entity goes **at the end** of the file of its type (`decisions.awawa`, `tasks.awawa`, `milestones.awawa`).
@@ -59,4 +59,16 @@ lists the tasks of a milestone.
 
 ## Commands
 
-No command exists yet beyond awawa's. B01 delivers the entry point and fills this section.
+From the repository root, with `python3` alone:
+
+```
+python3 -m unittest                                 # the tests; tests/cli runs brigade as a subprocess
+python3 build.py                                    # builds dist/brigade.pyz with the zipapp module
+ln -s "$PWD/bin/brigade" ~/.local/bin/brigade       # installs brigade from the clone, any directory on PATH
+```
+
+- `bin/brigade` is the entry point of the clone, `brigade/` the package, `brigade/python_floor.py` the one place the
+  Python floor is declared.
+- The CI (`.github/workflows/ci.yml`) runs the tests and the zipapp build on Python 3.11 and on the latest release,
+  and checks the refusal under the floor on Python 3.10; the reference machine has no 3.11, so only the CI proves the
+  floor.
