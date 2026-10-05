@@ -17,7 +17,8 @@ SCHEMA PROJECT
 	FIELD MAIN string
 		REQUIRED
 	FIELD CORPUS string
-		DESC "the workspace root the anchors resolve from, relative to PATH"
+		DESC "the corpus folder, relative to PATH, the anchors resolve from: corpus/ when brigade"
+			+ "creates it, else the root project add discovered"
 	FIELD ACCEPTANCE string
 		REPEATABLE
 		DESC "a light command run by task check"

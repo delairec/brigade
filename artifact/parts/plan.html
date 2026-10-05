@@ -302,7 +302,7 @@ on PATH           awawa  git  the client (claude)  gh (optional)  brigade-client
       <tr><td>8</td><td>Merge into integration when verdict = approve and checks green, with the project's merge method; mark the task delivered; start the dependents</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code> → <code>gh pr merge</code></td><td>Today: the user merges. The forge account merges into <code>integration/*</code> only (branch protection on main).</td></tr>
       <tr><td>9</td><td>End of wave: statistics from the ledger, dependency graph (the project's own command where one exists, else the task graph as SVG), manual-test table pre-filled from every <code>SPEC</code> line and its <code>IMPL</code> anchors, list of <code>&lt;rootDir&gt;</code> changes from the merged diffs, the report template filled</td><td><span class="tag cli">CLI</span></td><td>the collectors of the built-in study <code>wave-report</code> (§10), run by <code>brigade tick</code></td><td>New. 0 AI steps for every number, table and link.</td></tr>
       <tr><td>10</td><td>Write the narrative: what was delivered, risks, the reason of each <code>&lt;rootDir&gt;</code> change, what to test by hand first, sampling suggestions (largest diff, most rounds, core packages touched)</td><td><span class="tag ai">agent</span> report (bilal)</td><td>the study <code>wave-report</code>: <code>brigade study context wave-report</code>, then <code>brigade study answer wave-report --file report.md</code></td><td>New. One run per wave.</td></tr>
-      <tr><td>11</td><td>Commit the report on the integration branch (<code>docs/waves/&lt;n&gt;-report.md</code>), open or update the integration → main PR with the report, notify</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code></td><td>The user's one gate: merge. The worktrees stay for the weekly cleanup timer; the integration branch is deleted once delivered, as the project's decision says.</td></tr>
+      <tr><td>11</td><td>Commit the report on the integration branch (<code>waves/&lt;n&gt;-report.md</code> under the project's corpus folder), open or update the integration → main PR with the report, notify</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code></td><td>The user's one gate: merge. The worktrees stay for the weekly cleanup timer; the integration branch is deleted once delivered, as the project's decision says.</td></tr>
     </tbody>
   </table></div>
 
@@ -402,7 +402,7 @@ on PATH           awawa  git  the client (claude)  gh (optional)  brigade-client
 
 <section id="p-report">
   <h2><span class="n">8</span>The report</h2>
-  <p>One file per wave, <code>docs/waves/&lt;n&gt;-report.md</code> on the integration branch, dated and never rewritten; the integration → main PR body carries its summary and a link. Its sections, and who fills them:</p>
+  <p>One file per wave, <code>waves/&lt;n&gt;-report.md</code> under the project's corpus folder (<code>PROJECT.CORPUS</code>) on the integration branch, dated and never rewritten; the integration → main PR body carries its summary and a link. Its sections, and who fills them:</p>
   <div class="tbl"><table>
     <thead><tr><th>Section</th><th>Filled by</th><th>From</th></tr></thead>
     <tbody>
@@ -584,7 +584,7 @@ branch = "pr"</pre>
 	FIELD PATH string REQUIRED            <span class="dim">// absolute path of the main checkout</span>
 	FIELD REMOTE string                   <span class="dim">// owner/name on GitHub</span>
 	FIELD MAIN string REQUIRED            <span class="dim">// master, main</span>
-	FIELD CORPUS string                   <span class="dim">// workspace root the anchors resolve from; "." for the repository root</span>
+	FIELD CORPUS string                   <span class="dim">// the corpus folder, relative to PATH; corpus/ when brigade creates it</span>
 	FIELD ACCEPTANCE string REPEATABLE    <span class="dim">// light commands run by `task check`: bun test, bun run lint:types, bun run guards</span>
 	FIELD HEAVY string REPEATABLE         <span class="dim">// suites left to CI, read on the PR: bun run test:ui, audit:quality</span>
 	FIELD SETUP string REPEATABLE         <span class="dim">// per-worktree commands: bun install --frozen-lockfile, ln -sfn …/tidepool-data data</span>
@@ -671,7 +671,7 @@ branch = "pr"</pre>
 	PRIVATE "stn_[0-9a-f]{12}"
 	FORGE "github"
 	STATUS active</pre>
-  <p>A project without a corpus is registered with <code>--init-corpus</code>: the CLI copies awawa's <code>starter.awawa</code> into a <code>docs/</code> corpus (TASK, WAVE, DECISION, OPEN_QUESTION) on a branch and opens a PR, so that waves have a home before the first request.</p>
+  <p>A project without a corpus is registered with <code>--init-corpus</code>: the CLI copies awawa's <code>starter.awawa</code> into the project's corpus folder, <code>corpus/</code> unless the user names another in <code>CORPUS</code> (TASK, WAVE, DECISION, OPEN_QUESTION), on a branch and opens a PR, so that waves have a home before the first request.</p>
 </section>
 
 <section id="p-ledger">

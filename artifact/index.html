@@ -310,7 +310,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 
   <div class="callout">
     <h3>How to read this Artifact</h3>
-    <p><b>Plan</b> is the specification, twenty-two sections with diagrams and the savings estimates. <b>Mockups</b> shows the terminal and the dashboard with sample data. <b>Tasks</b> is the board of the 54 tasks, a view of the corpus: each status is the one <code>docs/tasks.awawa</code> holds. <b>Demo</b> replays the commands and a wave. <b>Brief</b> is the appendix: what this plan was asked to be.</p>
+    <p><b>Plan</b> is the specification, twenty-two sections with diagrams and the savings estimates. <b>Mockups</b> shows the terminal and the dashboard with sample data. <b>Tasks</b> is the board of the 54 tasks, a view of the corpus: each status is the one <code>corpus/tasks.awawa</code> holds. <b>Demo</b> replays the commands and a wave. <b>Brief</b> is the appendix: what this plan was asked to be.</p>
   </div>
 </div>
 
@@ -323,7 +323,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   <header class="doc-head">
     <p class="eyebrow">Task board · a view of the corpus</p>
     <h1>The POC, task by task</h1>
-    <p class="lede">Fifty-four tasks in nine milestones, deterministic commands first. This board is a view of <code>docs/tasks.awawa</code>, refreshed when the Artifact is republished, until brigade's own dashboard replaces it: the corpus is the one home of a status, and a status changed here binds nothing.</p>
+    <p class="lede">Fifty-four tasks in nine milestones, deterministic commands first. This board is a view of <code>corpus/tasks.awawa</code>, refreshed when the Artifact is republished, until brigade's own dashboard replaces it: the corpus is the one home of a status, and a status changed here binds nothing.</p>
   </header>
   <div class="tasks-state" id="tasks-state">Connecting to the board…</div>
   <div class="summary" id="tasks-summary"></div>
@@ -335,7 +335,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     <span class="hint" id="tasks-count"></span>
   </div>
   <div id="tasks-root"></div>
-  <p class="howto">For an agent: each document lives at <code>tasks/&lt;id&gt;</code> with the fields <code>status</code>, <code>notes</code>, <code>updated_at</code>; the field <code>status</code> holds the corpus <code>STATUS</code> verbatim, is changed in <code>docs/tasks.awawa</code>, never here, and is refreshed when the Artifact is republished, until brigade's dashboard replaces this board. The "copy brief" button on a task copies its title, acceptance line, dependencies and role, ready to paste into a launch.</p>
+  <p class="howto">For an agent: each document lives at <code>tasks/&lt;id&gt;</code> with the fields <code>status</code>, <code>notes</code>, <code>updated_at</code>; the field <code>status</code> holds the corpus <code>STATUS</code> verbatim, is changed in <code>corpus/tasks.awawa</code>, never here, and is refreshed when the Artifact is republished, until brigade's dashboard replaces this board. The "copy brief" button on a task copies its title, acceptance line, dependencies and role, ready to paste into a launch.</p>
 </div>
 
 </main>
@@ -482,7 +482,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
       'Role: ' + (t.role || '') + '\n' +
       'Acceptance: ' + (t.acceptance || '') + '\n' +
       'Depends on: ' + ((t.depends || []).join(', ') || 'nothing') + '\n' +
-      'Status: ' + labelStatusOf(t) + ' (held by docs/tasks.awawa; the board mirrors it).';
+      'Status: ' + labelStatusOf(t) + ' (held by corpus/tasks.awawa; the board mirrors it).';
   }
 
   function copyText(text, btn) {
