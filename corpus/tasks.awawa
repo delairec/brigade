@@ -1,23 +1,38 @@
 TASK B01
 	TITLE "Repository skeleton and entry point"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
 	SPEC "brigade --version prints the version; brigade --version --json prints a JSON document"
 		+ "carrying schema_version and version"
+		IMPL "brigade/cli.py::def _describe_version(as_json):"
+		IMPL "tests/cli/test_version.py::class BrigadeVersionWhenAJsonDocumentIsAsked"
 	SPEC "python3 -m unittest passes and holds black-box tests under tests/cli that run brigade as"
 		+ "a subprocess, through the entry point of the clone and through dist/brigade.pyz"
+		IMPL "tests/cli/test_version.py::class BrigadeVersion(unittest.TestCase)"
+		IMPL "tests/cli/test_zipapp.py::class BrigadeZipapp"
 	SPEC "from a clone, a symlink into a directory on PATH runs brigade from any working directory;"
 		+ "the README states that install and no longer describes a repository without code"
+		IMPL "bin/brigade::os.path.realpath(__file__)"
+		IMPL "tests/cli/test_install.py::class BrigadeInstallWhenLinkedIntoADirectoryOnPath"
+		IMPL "README.md::## Install"
 	SPEC "one documented command needing python3 alone builds dist/brigade.pyz with the zipapp"
 		+ "module, and python3 dist/brigade.pyz --version prints the version"
+		IMPL "build.py::zipapp.create_archive("
+		IMPL "tests/cli/test_zipapp.py::def test_should_print_the_version_from_the_built_archive"
 	SPEC "the Python floor, 3.11, is declared in one place; under it, brigade exits non-zero with a"
 		+ "message naming 3.11 and the running version"
+		IMPL "brigade/python_floor.py::PYTHON_FLOOR = (3, 11)"
+		IMPL "brigade/launcher.py::def launch():"
+		IMPL "tests/unit/test_python_floor.py::class PythonFloor(unittest.TestCase)"
+		IMPL ".github/workflows/ci.yml::name: Refusal under the Python floor"
 	SPEC "a GitHub Actions workflow runs the unit tests and the zipapp build on Python 3.11 and on"
 		+ "the latest Python release, on every pull request"
+		IMPL ".github/workflows/ci.yml::name: Tests and zipapp on Python"
 	SPEC "the Commands section of AGENTS.md lists the commands that run the tests, build the zipapp"
 		+ "and install brigade"
+		IMPL "AGENTS.md::## Commands"
 	RATIONALE "every other task of M0 adds a command to the entry point this task delivers, and the"
 		+ "tests/cli harness it starts is the acceptance suite"
 		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles sets"
@@ -32,6 +47,7 @@ TASK B01
 		+ "3.11"
 	SOURCE "the Artifact Brigade Blueprint, plan sections 15 and 16; the user's rulings of"
 		+ "2026-10-05 in the refinement of B01"
+	DELIVERED_BY 9
 
 TASK B02
 	TITLE "brigade doctor: the prerequisites checked, the optional items reported with their"
