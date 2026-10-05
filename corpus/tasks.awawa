@@ -34,16 +34,42 @@ TASK B01
 		+ "2026-10-05 in the refinement of B01"
 
 TASK B02
-	TITLE "brigade doctor"
-	STATUS draft
+	TITLE "brigade doctor: the prerequisites checked, the optional items reported with their"
+		+ "fallback"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
-	SPEC "checks Python 3.11 or later, git, awawa 2.7 or later and the configured client adapter's"
-		+ "probe; reports gh and the machine account, the user systemd instance, the instructions"
-		+ "corpus and awawa-web as optional, each with its fallback"
-	SPEC "exits 0, or 1 with findings; a missing optional item is a warning"
+	SPEC "brigade doctor checks Python 3.11 or later, git and awawa 2.7 or later, each line naming"
+		+ "the version found and its floor"
+	SPEC "it reports as optional, each with its fallback: a user systemd instance, else a cron line"
+		+ "or brigade tick --loop; gh and the login it is active as, else local mode without a"
+		+ "forge; awawa-web, else the dashboard's corpus view only"
+	SPEC "it prints text and --json; the JSON document carries schema_version and one entry per"
+		+ "item with its name, its state (ok, warning or finding), its detail and its fallback"
+	SPEC "it exits 0, or 1 with findings; a missing optional item is a warning, never a finding"
+	SPEC "tests under tests/cli prove each finding and each warning by running brigade doctor with"
+		+ "a PATH of fixture executables"
 	AFTER @TASK.B01
+	RATIONALE "doctor tells on a new machine whether brigade can run there: Python 3.11 or later,"
+		+ "git, awawa and one adapted client are the prerequisites, every other item optional with"
+		+ "a fallback, as @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites sets"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "B02 reads no config.toml: each binding's line comes with the task that first uses"
+		+ "it, the client probe with @TASK.B42, the instructions corpus with @TASK.B43, the check"
+		+ "of the configured forge account with @TASK.B46; the IDE plugin is not reported, no shell"
+		+ "command probes it"
+		REF @TASK.B42
+		REF @TASK.B43
+		REF @TASK.B46
+	RATIONALE "the Python line can only report the running version: under 3.11 the entry point of"
+		+ "@TASK.B01 exits before doctor runs"
+		REF @TASK.B01
+	RATIONALE "--json and the black-box tests follow"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+	SOURCE "the Artifact Brigade Blueprint, plan section 16, row setup, and the brigade doctor"
+		+ "mockup; the user's rulings of 2026-10-05 in the refinement of B02"
 
 TASK B03
 	TITLE "Operational corpus schema and brigade init"
@@ -583,7 +609,11 @@ TASK B42
 	SPEC "the fake adapter replays recorded result documents and is the one the test suite launches"
 	SPEC "one test per fallback proves the core's behaviour when probe declares an operation absent"
 	SPEC "a guard script under tests fails when a module of the core imports an adapter module"
+	SPEC "brigade doctor checks the configured client adapter's probe as a prerequisite; a"
+		+ "config.toml absent or naming no client is a finding that names the config key and"
+		+ "brigade init"
 	AFTER @TASK.B01
+	AFTER @TASK.B02
 
 TASK B43
 	TITLE "Role files, slots and their resolution"
@@ -600,7 +630,11 @@ TASK B43
 	SPEC "a file of the machine's roles directory resolves before the corpus; PROJECT.ROLE"
 		+ "slot=name resolves first"
 	SPEC "a role file naming a model fails brigade roles lint"
+	SPEC "brigade doctor reports the configured instructions corpus as optional, awawa lint"
+		+ "--strict clean or not; none configured is a warning with its fallback, built-in roles"
+		+ "and no instructions package"
 	AFTER @TASK.B01
+	AFTER @TASK.B02
 	AFTER @TASK.B03
 
 TASK B44
@@ -647,11 +681,14 @@ TASK B46
 	ROLE bastien
 	SPEC "the GitHub adapter wraps gh as today; the account it acts as is config.toml's and the"
 		+ "ledger records it on every write"
+	SPEC "brigade doctor reports whether gh is active as the account config.toml names; a mismatch"
+		+ "is a warning with its fallback, the user's account recorded in the ledger"
 	SPEC "FORGE none runs a wave on local branches: the pass reads the acceptance results of task"
 		+ "check instead of check runs, the verdict is kept in the ledger and the merge into"
 		+ "integration is a git merge"
 	SPEC "the collectors pr-list, pr-threads and check-runs declare themselves absent under FORGE"
 		+ "none"
+	AFTER @TASK.B02
 	AFTER @TASK.B17
 	AFTER @TASK.B42
 
