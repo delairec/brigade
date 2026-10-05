@@ -67,8 +67,9 @@ TASK B06
 	ROLE bastien
 	SPEC "runs a procedure as a role through the adapter of the project, detached under systemd-run"
 		+ "or in the foreground"
-	SPEC "writes the normalised result (steps, duration, usage, session id, error kind) to the"
-		+ "ledger"
+	SPEC "writes the normalised result to the ledger: text, ok, exit_code and the raw message"
+		+ "always; usage, duration_ms, turns, cost, error_kind, resets_at and session_ref when the"
+		+ "adapter reports them"
 	SPEC "passes the role package through the adapter, which hands it to its CLI as part of the"
 		+ "system prompt"
 	SPEC "the Claude Code adapter is the first: headless mode, a streamed JSON result mapped to the"
@@ -224,10 +225,11 @@ TASK B19
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE bastien
-	SPEC "a rate-limit result pauses the wave with resume_at parsed from the message or set to now"
-		+ "plus 30 minutes"
-	SPEC "the first tick after resume_at resumes each suspended run through the adapter's resume of"
-		+ "its session"
+	SPEC "a rate-limit result pauses the wave with resume_at set from the result's resets_at, else"
+		+ "to now plus 30 minutes"
+	SPEC "the first tick after resume_at resumes each suspended run through resume(session_ref), or"
+		+ "relaunches it with its brief and its progress file when the adapter does not resume by"
+		+ "ref"
 	SPEC "ledger events wave.paused and wave.resumed"
 	AFTER @TASK.B14
 
@@ -417,7 +419,8 @@ TASK B35
 	MILESTONE @MILESTONE.M5
 	COMPONENT "miner"
 	ROLE bastien
-	SPEC "reads sessions since a watermark through the adapter's transcript reader"
+	SPEC "reads transcripts since a watermark as the neutral events the adapter's"
+		+ "transcript(transcript_ref) returns; the core parses no vendor format"
 	SPEC "detects corrections, refusals, repeated commands and oversized-output re-reads"
 	SPEC "scrubs Steam ids, player names computed at run time from the private saves, e-mail"
 		+ "addresses and private paths"
@@ -518,9 +521,13 @@ TASK B42
 	MILESTONE @MILESTONE.M0
 	COMPONENT "runs"
 	ROLE bastien
-	SPEC "an adapter is one module that launches a run as a role with a brief, capabilities and a"
-		+ "budget, reads its normalised result (steps, duration, usage, session id, error kind, the"
-		+ "reset time of a rate limit), resumes a session and reads session transcripts"
+	SPEC "an adapter is one module with start(prompt) and resume(session_ref, prompt), both"
+		+ "returning the normalised result (text, ok, exit_code, raw always; usage, duration_ms,"
+		+ "turns, cost, error_kind, resets_at optional), transcript(transcript_ref) returning"
+		+ "neutral events, and a declaration of its capabilities"
+	SPEC "session_ref and transcript_ref are opaque strings the core stores and never parses"
+	SPEC "a fake adapter without session_ref and without resets_at proves the fallbacks: relaunch"
+		+ "with the progress file, now plus 30 minutes"
 	SPEC "the core imports no adapter by name: PROJECT.ADAPTER names it, the first adapter when"
 		+ "absent"
 	SPEC "a fake adapter in the tests proves the core runs with no agent CLI installed"
