@@ -33,6 +33,18 @@ SCHEMA PROJECT
 		DEFAULT squash
 	FIELD GRAPH string
 		DESC "the command that regenerates the dependency graph document"
+	FIELD CLIENT string
+		DESC "the client adapter of this project's runs; config.toml's default when absent"
+	FIELD ROLESET string
+		DESC "builtin, corpus, or a directory of role files; the resolution order when absent"
+	FIELD ROLE string
+		REPEATABLE
+		DESC "slot=role, an override of the binding, e.g. verify=prudence"
+	FIELD PRIVATE string
+		REPEATABLE
+		DESC "a regular expression the privacy scan and the scrubber refuse, e.g. stn_[0-9a-f]{12}"
+	FIELD FORGE string
+		DESC "github or none"
 	FIELD STATUS active|paused
 		REQUIRED
 
@@ -53,18 +65,54 @@ SCHEMA POLICY
 	FIELD SAMPLING suggestions|none
 		DEFAULT suggestions
 
-SCHEMA ROUTINE
-	DESC "a scheduled deterministic scan whose non-zero output is a signal"
-	FIELD KIND gardening|intake
+SCHEMA STUDY
+	DESC "a question answered by evidence: collectors, then at most one judging run; with no slot,"
+		+ "a scan"
+	FIELD TITLE string
 		REQUIRED
-	FIELD COMMAND string
-		REQUIRED
-	FIELD EVERY string
-		REQUIRED
-		DESC "a systemd calendar expression"
+	FIELD QUESTION string
+		DESC "the user's words, verbatim; absent for a scan"
 	FIELD PROJECT @PROJECT
-	FIELD STATUS active|paused
+		DESC "absent for a machine-wide study"
+	FIELD COLLECTOR string
 		REQUIRED
+		REPEATABLE
+		DESC "a collector name with its parameters, e.g. git-log since=30d, or shell: <command>"
+	FIELD SLOT report|explore|triage|rules|none
+		DEFAULT report
+		DESC "the judging slot; none makes the study a scan"
+	FIELD EVERY string
+		DESC "a brigade schedule evaluated by the tick: 5m, 1h, daily@09:00, mon@09:00; absent"
+			+ "means on demand"
+	FIELD OUTPUT string
+		REQUIRED
+		DESC "inbox, file:<path pattern>, entity:<TYPE>, issue, or an output on PATH"
+	FIELD TEMPLATE string
+		DESC "a Markdown skeleton whose placeholders the CLI fills from the collectors"
+	FIELD STATUS active|paused|archived
+		REQUIRED
+	WHEN STATUS archived
+		GATE suppressed
+
+SCHEMA ORDER
+	DESC "one instance of a recipe: its parameters, its project, its schedule"
+	FIELD RECIPE string
+		REQUIRED
+	FIELD PROJECT @PROJECT
+		DESC "absent for a machine-wide order"
+	FIELD TEXT string
+		DESC "the user's words, verbatim, when the recipe takes them"
+	FIELD PARAM string
+		REPEATABLE
+		DESC "key=value"
+	FIELD EVERY string
+		DESC "a brigade schedule evaluated by the tick; absent means on demand"
+	FIELD OUTPUT string
+		DESC "an override of the recipe's output"
+	FIELD STATUS active|paused|archived
+		REQUIRED
+	WHEN STATUS archived
+		GATE suppressed
 
 SCHEMA REQUEST
 	DESC "what the user wants for one project, in their words; it becomes one wave"
@@ -90,7 +138,9 @@ SCHEMA PATTERN
 		REQUIRED
 	FIELD EVIDENCE string
 		REPEATABLE
-	FIELD ACTION wave|constraint|dismiss
+	FIELD ACTION wave|constraint|order|dismiss
+	FIELD RECIPE string
+		DESC "the recipe an order action places"
 	FIELD TARGET string
 	WHEN STATUS dismissed
 		GATE suppressed

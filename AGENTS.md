@@ -39,8 +39,11 @@ awawa fmt --check . && awawa lint --strict .                              # the 
 
 ## Stack
 
-Python 3.13 standard library plus POSIX sh for the systemd units, no third-party dependency
-(@DECISION.PythonStandardLibraryOnly); tests with `unittest`.
+Python 3.11 or later, standard library only, POSIX sh only in the optional scheduler files, no third-party
+dependency (@DECISION.PythonStandardLibraryOnly); tests with `unittest`. The AI client, the scheduler and the forge
+are adapters, the collectors, checks and outputs are plugins, a kind of work is a recipe
+(@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters, @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun,
+@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder).
 
 ## Branches and GitHub
 

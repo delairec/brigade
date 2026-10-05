@@ -7,6 +7,9 @@ TASK B01
 	SPEC "brigade --version prints the version"
 	SPEC "python -m unittest passes"
 	SPEC "the README names the install, a symlink into a directory on PATH"
+	SPEC "make dist builds dist/brigade.pyz with the zipapp module and python3 dist/brigade.pyz"
+		+ "--version prints the version"
+	SPEC "the Python floor, 3.11, is declared in one place and checked at startup"
 
 TASK B02
 	TITLE "brigade doctor"
@@ -14,10 +17,10 @@ TASK B02
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
-	SPEC "checks awawa 2.7 or later, awawa-web, claude, the two gh accounts (the user and the"
-		+ "machine account), the instructions corpus linting green, Python 3.13 or later, user"
-		+ "systemd, config and state directories, schema version"
-	SPEC "exits 0, or 1 with findings"
+	SPEC "checks Python 3.11 or later, git, awawa 2.7 or later and the configured client adapter's"
+		+ "probe; reports gh and the machine account, the user systemd instance, the instructions"
+		+ "corpus and awawa-web as optional, each with its fallback"
+	SPEC "exits 0, or 1 with findings; a missing optional item is a warning"
 	AFTER @TASK.B01
 
 TASK B03
@@ -61,12 +64,13 @@ TASK B06
 	MILESTONE @MILESTONE.M0
 	COMPONENT "runs"
 	ROLE bastien
-	SPEC "runs a procedure as a role with claude -p --output-format stream-json, detached under"
-		+ "systemd-run or in the foreground"
-	SPEC "writes the result object (steps, duration, usage, session id, error class) to the ledger"
-	SPEC "passes the role package with --append-system-prompt-file"
-	SPEC "claude --bg evaluated and the choice recorded as a DECISION"
+	SPEC "runs a procedure as a slot through the configured client adapter, detached as a"
+		+ "brigade-owned subprocess with its own session, log files and pid, or in the foreground"
+	SPEC "writes the normalised result to the ledger, null fields named with their reason"
+	SPEC "passes the role package as the adapter translates it"
 	AFTER @TASK.B05
+	AFTER @TASK.B42
+	AFTER @TASK.B43
 
 TASK B07
 	TITLE "Tick skeleton and systemd units"
@@ -75,8 +79,9 @@ TASK B07
 	COMPONENT "tick"
 	ROLE bastien
 	SPEC "brigade tick --once takes a lock, reconciles nothing yet and records a ledger event"
-	SPEC "install-units installs the timer and the service"
-	SPEC "the journal shows one tick every five minutes"
+	SPEC "brigade scheduler install writes the user systemd timer and service where a user instance"
+		+ "runs, else a cron line; brigade tick --loop is the third scheduler"
+	SPEC "the journal or the tick log shows one tick every five minutes"
 	AFTER @TASK.B05
 
 TASK B08
@@ -91,14 +96,18 @@ TASK B08
 	AFTER @TASK.B04
 
 TASK B09
-	TITLE "Roles ada, rita and mina in the instructions corpus"
+	TITLE "Built-in roles ada, bilal and mina"
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "roles"
+	ROLE bastien
 	ROLE lex
-	SPEC "three AGENT entities with WORK, REASONING and RETURNS, and their adapter files"
-	SPEC "awawa lint --strict green on the corpus"
-	SPEC "delivered as a pull request on the instructions repository"
+	SPEC "three role files under roles/, slots plan, report and triage, with work, reasoning,"
+		+ "capabilities, budget and returns, their bodies self-contained"
+	SPEC "brigade roles lint green"
+	SPEC "delivered in the brigade repository; an import into the instructions corpus is a separate"
+		+ "pull request the user asks for"
+	AFTER @TASK.B43
 
 TASK B10
 	TITLE "Procedure wave-plan.md and brigade plan context|record"
@@ -135,7 +144,7 @@ TASK B12
 	SPEC "a worktree is cut from the integration head with the SETUP commands run and ancestry"
 		+ "asserted"
 	SPEC "the brief is filled from a template"
-	SPEC "bastien is launched through brigade run within the slot cap"
+	SPEC "the build slot is launched through brigade run within the slot cap"
 	AFTER @TASK.B06
 	AFTER @TASK.B07
 	AFTER @TASK.B11
@@ -182,7 +191,7 @@ TASK B16
 	ROLE bastien
 	ROLE lex
 	SPEC "prudence receives the verification package and posts approve or request changes through"
-		+ "verdict, as the machine account, with the ledger event"
+		+ "verdict, as the configured forge account, recorded in the ledger event"
 	AFTER @TASK.B15
 
 TASK B17
@@ -217,22 +226,27 @@ TASK B19
 	ROLE bastien
 	SPEC "a rate-limit result pauses the wave with resume_at parsed from the message or set to now"
 		+ "plus 30 minutes"
-	SPEC "the first tick after resume_at resumes each suspended run with --resume"
+	SPEC "the first tick after resume_at resumes each suspended run through the adapter's resume,"
+		+ "or relaunches it from its progress file when the adapter has none"
 	SPEC "ledger events wave.paused and wave.resumed"
 	AFTER @TASK.B14
 
 TASK B20
-	TITLE "Procedure wave-report.md and brigade report skeleton|finish"
+	TITLE "Built-in study wave-report"
 	STATUS draft
 	MILESTONE @MILESTONE.M1
-	COMPONENT "report"
+	COMPONENT "studies"
 	ROLE bastien
-	ROLE lex
-	SPEC "the skeleton holds the task table, the statistics, the dependency graph, the manual-test"
-		+ "table from SPEC lines, the instructions-corpus change list and the parked questions"
-	SPEC "finish commits the report on the integration branch and updates the integration pull"
-		+ "request"
+	SPEC "the collectors ledger, pr-list, corpus and git-diff-stat fill the template skeleton: the"
+		+ "task table, the statistics, the dependency graph, the manual-test table from SPEC lines,"
+		+ "the instructions-corpus change list and the parked questions"
+	SPEC "the report slot completes the narrative, the reasons, the manual tests in a tester's"
+		+ "words and the sampling suggestions; study answer refuses an answer that changed a"
+		+ "CLI-filled section, commits docs/waves/<n>-report.md on the integration branch and"
+		+ "updates the integration pull request"
+	SPEC "the tick runs it when every task of the wave is merged or parked"
 	AFTER @TASK.B17
+	AFTER @TASK.B48
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
@@ -244,6 +258,7 @@ TASK B21
 		+ "wave new to the integration pull request"
 	SPEC "the ledger holds every run"
 	SPEC "steps per run and steps to first edit are recorded as the first budgets"
+	SPEC "the same rehearsal runs on the fake adapter as the test suite's end-to-end case"
 	AFTER @TASK.B13
 	AFTER @TASK.B18
 	AFTER @TASK.B19
@@ -267,10 +282,13 @@ TASK B23
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
 	ROLE bastien
+	DESC "delivered as the built-in collector pr-threads, run every tick and reused by studies and"
+		+ "recipes"
 	SPEC "unresolved review threads on open pull requests of registered projects become signals"
 		+ "every tick, read through GraphQL reviewThreads"
 	AFTER @TASK.B22
 	AFTER @TASK.B14
+	AFTER @TASK.B47
 
 TASK B24
 	TITLE "Connector: check runs"
@@ -278,23 +296,28 @@ TASK B24
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
 	ROLE bastien
+	DESC "delivered as the built-in collector check-runs, run every tick and reused by studies and"
+		+ "recipes"
 	SPEC "failing check runs on open pull requests and on main become signals carrying the first"
 		+ "failing step"
 	AFTER @TASK.B22
 	AFTER @TASK.B14
+	AFTER @TASK.B47
 
 TASK B25
-	TITLE "Procedure triage.md and brigade triage context|record"
+	TITLE "Built-in study triage"
 	STATUS draft
 	MILESTONE @MILESTONE.M2
-	COMPONENT "triage"
+	COMPONENT "studies"
 	ROLE bastien
-	ROLE lex
-	SPEC "deterministic grouping by family first"
-	SPEC "then mina writes PATTERN entities with evidence and an ACTION"
-	SPEC "record validates, writes, formats, lints and commits"
+	SPEC "the collector inbox-families groups the signals deterministically, same rule cited, same"
+		+ "file, same check name, same correction marker, with their evidence"
+	SPEC "the triage slot writes PATTERN entities with evidence and an ACTION through study answer,"
+		+ "OUTPUT entity:PATTERN, which validates, writes, formats, lints and commits"
+	SPEC "brigade study run triage runs it on demand; the tick runs it daily by default"
 	AFTER @TASK.B22
 	AFTER @TASK.B09
+	AFTER @TASK.B48
 
 TASK B26
 	TITLE "Ratification into a wave"
@@ -326,7 +349,8 @@ TASK B28
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE bastien
-	SPEC "projects, waves, inbox count, quota and last tick"
+	SPEC "projects, waves, inbox count, quota, last tick, due studies and orders, failing scans,"
+		+ "parked orders"
 	SPEC "a board of tasks by state with pull request, rounds and steps"
 	SPEC "a timeline"
 	SPEC "pause, resume and retry actions through the CLI"
@@ -364,7 +388,7 @@ TASK B31
 	ROLE bastien
 	SPEC "steps p50 and p90 by role and procedure, waves per month, pauses and the baseline"
 		+ "comparison"
-	SPEC "reports rendered with their manual-test tables"
+	SPEC "wave reports, study answers and order outputs rendered with their manual-test tables"
 	AFTER @TASK.B27
 	AFTER @TASK.B20
 
@@ -378,50 +402,54 @@ TASK B32
 	AFTER @TASK.B30
 
 TASK B33
-	TITLE "ROUTINE entities and their runner"
+	TITLE "Gardening scans: studies without a judging run"
 	STATUS draft
 	MILESTONE @MILESTONE.M4
-	COMPONENT "routines"
+	COMPONENT "studies"
 	ROLE bastien
-	SPEC "routines with a calendar expression run by the tick when due"
-	SPEC "a non-zero output becomes a signal"
-	SPEC "the first four routines: lint --strict on each corpus, fmt --check, stale branches,"
-		+ "worktree state"
-	AFTER @TASK.B07
+	SPEC "a scan is a STUDY with SLOT none and OUTPUT inbox, run by the tick when due; a non-empty"
+		+ "collector output becomes a signal with the collector's fingerprint"
+	SPEC "the first four scans ship as built-in studies, corpus-lint, corpus-fmt, stale-branches"
+		+ "and worktrees, one per registered project"
 	AFTER @TASK.B22
+	AFTER @TASK.B48
 
 TASK B34
-	TITLE "Routine results in the dashboard and the inbox"
+	TITLE "Scan results in the dashboard and the inbox"
 	STATUS draft
 	MILESTONE @MILESTONE.M4
-	COMPONENT "routines"
+	COMPONENT "studies"
 	ROLE bastien
-	SPEC "failing routines appear on Home with their age"
-	SPEC "a routine signal appears in the inbox"
+	SPEC "failing scans appear on Home with their age"
+	SPEC "a scan signal appears in the inbox"
 	AFTER @TASK.B33
 	AFTER @TASK.B29
 
 TASK B35
-	TITLE "Transcript reader, heuristics and scrubber"
+	TITLE "Collectors transcripts and transcript-findings, with the scrubber"
 	STATUS draft
 	MILESTONE @MILESTONE.M5
-	COMPONENT "miner"
+	COMPONENT "studies"
 	ROLE bastien
-	SPEC "reads sessions since a watermark through the existing steps reader"
-	SPEC "detects corrections, refusals, repeated commands and oversized-output re-reads"
-	SPEC "scrubs Steam ids, player names computed at run time from the private saves, e-mail"
-		+ "addresses and private paths"
-	SPEC "a fixture test proves no real identifier survives"
+	SPEC "transcripts reads sessions since a watermark through the client adapter's transcripts"
+		+ "operation, else brigade's own run logs"
+	SPEC "transcript-findings detects corrections, refusals, repeated commands and oversized-output"
+		+ "re-reads, each with its session and line"
+	SPEC "the scrubber runs inside both collectors before anything is written: the PRIVATE patterns"
+		+ "of every registered project and brigade's built-ins, e-mail addresses and home paths; a"
+		+ "set computed at run time is never stored"
+	SPEC "a fixture test proves no declared identifier survives"
 	AFTER @TASK.B22
+	AFTER @TASK.B47
 
 TASK B36
-	TITLE "Procedure mine-transcripts.md and brigade mine"
+	TITLE "Built-in study mine-transcripts"
 	STATUS draft
 	MILESTONE @MILESTONE.M5
-	COMPONENT "miner"
+	COMPONENT "studies"
 	ROLE bastien
-	ROLE lex
-	SPEC "mina groups the findings into patterns and constraint candidates"
+	SPEC "SLOT triage, OUTPUT entity:PATTERN, scheduled weekly by default; the triage slot groups"
+		+ "the findings into patterns and constraint candidates"
 	SPEC "ratified constraints follow the ratification path"
 	AFTER @TASK.B35
 	AFTER @TASK.B25
@@ -437,13 +465,15 @@ TASK B37
 	AFTER @TASK.B21
 
 TASK B38
-	TITLE "Project decisions revisited for the example project"
+	TITLE "Decisions a project records when it joins brigade"
 	STATUS draft
 	MILESTONE @MILESTONE.M6
-	COMPONENT "docs"
-	ROLE lex
-	SPEC "a docs wave records that the plan travels on the integration branch, that the machine"
-		+ "account merges into integration, and the auto-merge policy"
+	COMPONENT "registry"
+	ROLE bastien
+	SPEC "brigade project add --init-decisions drafts in the project's corpus the three decisions a"
+		+ "wave needs, the plan travels on the integration branch, the forge account merges into"
+		+ "integration, the auto-merge policy; the draft goes through fmt, lint and a pull request"
+	AFTER @TASK.B04
 	AFTER @TASK.B21
 
 TASK B39
@@ -451,9 +481,9 @@ TASK B39
 	STATUS draft
 	MILESTONE @MILESTONE.M6
 	COMPONENT "docs"
-	ROLE rita
+	ROLE bilal
 	SPEC "README, brigade help and the handbook refreshed"
-	SPEC "a wave of about ten tasks delivered on the example project with its report"
+	SPEC "a wave of about ten tasks delivered on a project of the user with its report"
 	SPEC "the ledger comparison against the baseline of 26/09 to 03/10"
 	AFTER @TASK.B37
 	AFTER @TASK.B38
@@ -466,8 +496,8 @@ TASK B40
 	ROLE dora
 	ROLE prudence
 	SPEC "rtk (github.com/rtk-ai/rtk) is installed for implementation runs only, telemetry"
-		+ "disabled, its hook proven to coexist with the hooks of the instructions corpus and never"
-		+ "to rewrite an awawa command"
+		+ "disabled, its hook proven to coexist with the configured client's hooks and never to"
+		+ "rewrite an awawa command"
 	SPEC "implementation runs read compact output: failures only, the test runner in fail-fast mode"
 		+ "(bun test --bail, pytest -x)"
 	SPEC "verification runs read full raw output: the verifier's pass, the merge gate of the tick"
@@ -501,3 +531,241 @@ TASK B41
 		+ "the corpus holds draft"
 	SOURCE "@DECISION.TheCorpusIsTheHomeOfTaskStatusTheBoardItsView, pull request #1 of the brigade"
 		+ "repository"
+
+TASK B42
+	TITLE "Client adapter contract, the Claude Code adapter and the fake adapter"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "adapters"
+	ROLE bastien
+	SPEC "the contract is five operations answered as JSON documents, probe, launch, result, resume"
+		+ "and transcripts; brigade adapter probe|launch-argv|parse-result expose them on the"
+		+ "command line"
+	SPEC "the Claude Code adapter maps capabilities to tool grants, the reasoning level to a model"
+		+ "and an effort, passes the role package as an appended system prompt, caps the turns at"
+		+ "the budget plus a quarter, and normalises the result object into outcome, steps, usage,"
+		+ "session id, duration and error class, a rate limit classified and its reset hour parsed"
+		+ "when named"
+	SPEC "an adapter is a built-in module or an executable brigade-client-<name> on PATH;"
+		+ "config.toml selects it and PROJECT.CLIENT overrides it"
+	SPEC "the fake adapter replays recorded result documents and is the one the test suite launches"
+	SPEC "one test per fallback proves the core's behaviour when probe declares an operation absent"
+	AFTER @TASK.B01
+
+TASK B43
+	TITLE "Role files, slots and their resolution"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "roles"
+	ROLE bastien
+	SPEC "roles/ holds a built-in role file for each of the nine slots, flat front matter and"
+		+ "system prompt body"
+	SPEC "brigade roles list prints the slot, the role, its source and the model the adapter binds,"
+		+ "text and --json; brigade roles show <slot> prints the resolved file"
+	SPEC "an AGENT entity of the configured instructions corpus is read through awawa status and"
+		+ "context --json at launch time and resolves before the built-ins"
+	SPEC "a file of the machine's roles directory resolves before the corpus; PROJECT.ROLE"
+		+ "slot=name resolves first"
+	SPEC "a role file naming a model fails brigade roles lint"
+	AFTER @TASK.B01
+	AFTER @TASK.B03
+
+TASK B44
+	TITLE "Second client adapter and the rehearsal on it"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "adapters"
+	ROLE bastien
+	DESC "candidates read on 2026-10-05: OpenCode (run --format json, agent files with per-tool"
+		+ "permission, --session), Codex (exec --json, exec resume, sandbox modes), Gemini CLI (-p"
+		+ "--output-format json); none installed on the reference machine"
+	SPEC "an adapter for the client the user names before this task is ratified answers probe,"
+		+ "launch and result, and resume and transcripts where the client offers them"
+	SPEC "the sandbox rehearsal of B21 runs on it with the same three tasks and the ledger holds"
+		+ "both runs"
+	SPEC "the rehearsal report lists what the normalised results of the two clients lack, steps or"
+		+ "usage null"
+	SPEC "the README table of B49 gains the client's row through the generator"
+	AFTER @TASK.B21
+	AFTER @TASK.B42
+	AFTER @TASK.B49
+
+TASK B45
+	TITLE "Fresh-account install rehearsal"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "install"
+	ROLE prudence
+	SPEC "a new Unix account on the reference machine, without the instructions corpus, gh, the"
+		+ "client's configuration directory or awawa-web, installs dist/brigade.pyz and brigade"
+		+ "doctor exits 0 with every optional item reported"
+	SPEC "brigade init, project add on the sandbox repository and a one-task wave on the fake"
+		+ "adapter run to the end in that account"
+	SPEC "the cron line written by brigade scheduler install runs the tick"
+	AFTER @TASK.B21
+	AFTER @TASK.B42
+	AFTER @TASK.B43
+
+TASK B46
+	TITLE "Forge adapter and local mode"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "adapters"
+	ROLE bastien
+	SPEC "the GitHub adapter wraps gh as today; the account it acts as is config.toml's and the"
+		+ "ledger records it on every write"
+	SPEC "FORGE none runs a wave on local branches: the pass reads the acceptance results of task"
+		+ "check instead of check runs, the verdict is kept in the ledger and the merge into"
+		+ "integration is a git merge"
+	SPEC "the collectors pr-list, pr-threads and check-runs declare themselves absent under FORGE"
+		+ "none"
+	AFTER @TASK.B17
+	AFTER @TASK.B42
+
+TASK B47
+	TITLE "Collector contract, runner and the built-in collectors"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "studies"
+	ROLE bastien
+	SPEC "a collector is an executable or a built-in that reads BRIGADE_PROJECT_PATH,"
+		+ "BRIGADE_SINCE, BRIGADE_RUN_DIR and BRIGADE_PARAMS from its environment and prints one"
+		+ "JSON document with schema, collector, collected_at, summary and items"
+	SPEC "brigade collect <name> [key=value...] runs one collector, writes its document and a"
+		+ "sidecar with command, duration, exit code and hash under the run directory, and prints"
+		+ "the summary; a cache keyed by the hash of command and inputs answers a repeated call,"
+		+ "--refresh bypasses it"
+	SPEC "collectors resolve in order: the project's .brigade/collectors/, the machine's collectors"
+		+ "directory, brigade-collector-<name> on PATH, the built-ins; brigade collectors list"
+		+ "prints them with their source"
+	SPEC "the built-ins: git-log, git-diff-stat, worktrees, corpus (awawa --json at a ref through"
+		+ "the corpus reader), ledger (an event slice with aggregates), pr-list, pr-threads and"
+		+ "check-runs (through the forge adapter), transcripts (through the client adapter,"
+		+ "scrubbed), shell (a command line declared in the study), study (another study's last"
+		+ "answer)"
+	SPEC "a collector never launches a model; the test suite proves it by running every built-in"
+		+ "with the fake adapter and no client on PATH"
+	AFTER @TASK.B05
+	AFTER @TASK.B08
+	AFTER @TASK.B42
+
+TASK B48
+	TITLE "STUDY entity, brigade study commands, study.md, scheduling by the tick"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "studies"
+	ROLE bastien
+	SPEC "study new records a STUDY entity through fmt, lint and a commit, with the question"
+		+ "verbatim, the project when there is one, the collectors, the slot or none, the schedule"
+		+ "or none, the output and the template, and runs it once unless --every is given"
+	SPEC "study run runs the ordered steps collect, judge and output: the collectors, then the"
+		+ "slot's role through brigade run with the procedure study.md, then the output; a study"
+		+ "with SLOT none writes the collected output to its destination and launches nothing"
+	SPEC "each step's result is a file under runs/<id>/steps/, and a resumed study restarts at its"
+		+ "first undone step; this layout and the event names below are the recipe engine's"
+		+ "contract, which replaces this orchestration in M8 without a command changing"
+	SPEC "study context prints the question, each collector's summary with the path of its full"
+		+ "document, the template's skeleton filled with the collected values and the expected"
+		+ "shape of the answer; the full package is written to the run directory"
+	SPEC "study answer --file validates the answer against the template's sections or the output's"
+		+ "schema, refuses an answer that changed a CLI-filled section, writes it to the output,"
+		+ "file on a branch of the project with a pull request where the project has a forge,"
+		+ "corpus entity through fmt, lint and a commit, inbox signal, forge issue or"
+		+ "brigade-output-<name> on PATH"
+	SPEC "the tick runs each due study under the slot cap and records order.started, step.done,"
+		+ "step.failed, order.parked and order.done with kind study"
+	SPEC "study list, show, pause and resume; list prints every study with its schedule, last run"
+		+ "and last outcome, text and --json"
+	AFTER @TASK.B06
+	AFTER @TASK.B07
+	AFTER @TASK.B43
+	AFTER @TASK.B47
+
+TASK B49
+	TITLE "Supported-clients table in the README, generated and tested"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "adapters"
+	ROLE bastien
+	SPEC "brigade adapter matrix prints, for every adapter shipped or found on PATH, one row per"
+		+ "adapter operation with the support level: full, the client offers it and the adapter"
+		+ "implements it; fallback, the recorded fallback applies; absent, neither"
+	SPEC "README.md holds the table between two marker comments; a test regenerates it and fails"
+		+ "when the README differs"
+	SPEC "the fake adapter is listed as the test suite's, not as a supported client"
+	AFTER @TASK.B42
+
+TASK B50
+	TITLE "Recipe files: format, resolution and lint"
+	STATUS draft
+	MILESTONE @MILESTONE.M8
+	COMPONENT "recipes"
+	ROLE bastien
+	SPEC "a recipe is a TOML file with schema, name, description, params, max_wall and ordered step"
+		+ "tables of the kinds collect, command, gate, judge, output, order, corpus and op, op"
+		+ "being one of worktree, commit, pull-request and merge; a value substitutes {param} from"
+		+ "the order and the project, nothing else"
+	SPEC "a judge step names a slot, a procedure and a template or an answer schema; a gate step"
+		+ "names a check, an executable printing ok and reason, resolved like a collector, with the"
+		+ "built-ins pr-is-reviewed, checks-green, branch-descends-from and corpus-lint-green;"
+		+ "on_fail is park by default, else skip, stop or retry:N"
+	SPEC "recipes resolve in order: the project's .brigade/recipes/, the machine's recipes"
+		+ "directory, brigade's recipes/; brigade recipes list prints them with their source, wave"
+		+ "listed as native, and brigade recipes show <name> prints the file"
+	SPEC "brigade recipe lint checks the schema, that every collector, check, output, procedure and"
+		+ "slot resolves, that every param referenced is declared, and refuses a client or model"
+		+ "key and a command naming the configured client's binary"
+	SPEC "recipes/study.toml ships as the built-in recipe study, its collect steps taken from the"
+		+ "order's COLLECTOR lines"
+	AFTER @TASK.B47
+	AFTER @TASK.B48
+
+TASK B51
+	TITLE "ORDER entity and the recipe engine in the tick"
+	STATUS draft
+	MILESTONE @MILESTONE.M8
+	COMPONENT "recipes"
+	ROLE bastien
+	SPEC "brigade order new <recipe> [--project] [--every] [key=value...] [text] records an ORDER"
+		+ "entity through fmt, lint and a commit and runs it once unless --every is given; order"
+		+ "run, list, show, pause, resume and cancel"
+	SPEC "the engine runs the steps in order, each result a file under runs/<id>/steps/; a resumed"
+		+ "order restarts at its first undone step; the tick runs due orders under the slot cap and"
+		+ "within max_wall"
+	SPEC "brigade order context <run> prints the run directory's documents and the expected shape"
+		+ "of the answer; brigade order answer <run> --file validates and stores a judge step's"
+		+ "answer; a judge step is a run with its procedure's budget"
+	SPEC "a failed gate or command parks the order with the step's reason unless the recipe says"
+		+ "skip, stop or retry:N; a parked order shows on Home and in the inbox and resumes through"
+		+ "brigade order resume once the user acted; nothing is assumed"
+	SPEC "ledger events order.started, step.done, step.failed, order.parked and order.done; brigade"
+		+ "study run and brigade study answer become the study recipe's commands and the native"
+		+ "orchestration of B48 is deleted, the study tests passing unchanged"
+	AFTER @TASK.B50
+
+TASK B52
+	TITLE "Example recipe pr-usage-report, end to end on the sandbox"
+	STATUS draft
+	MILESTONE @MILESTONE.M8
+	COMPONENT "recipes"
+	ROLE bastien
+	ROLE prudence
+	SPEC "recipes/examples/pr-usage-report.toml: the collectors ledger, pr-threads and corpus for"
+		+ "one pull request, the gate pr-is-reviewed, one judge step on the report slot with a"
+		+ "template, an output file committed on the pull request's branch"
+	SPEC "brigade order new pr-usage-report pr=<n> runs on the sandbox repository to the committed"
+		+ "file; the ledger shows every collector at 0 AI steps and the judge run's steps"
+	SPEC "the README documents how to write a recipe from this example"
+	AFTER @TASK.B51
+
+TASK B53
+	TITLE "Ratifying a pattern into an order"
+	STATUS draft
+	MILESTONE @MILESTONE.M8
+	COMPONENT "recipes"
+	ROLE bastien
+	SPEC "PATTERN.ACTION accepts order and PATTERN.RECIPE names the recipe; brigade inbox ratify"
+		+ "places the order with the pattern's evidence as parameters"
+	SPEC "the order's output names the pattern it came from"
+	AFTER @TASK.B26
+	AFTER @TASK.B51
