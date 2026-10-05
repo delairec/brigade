@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$*" in
+  "--version") echo "fatal: unable to access '/etc/gitconfig': Permission denied" >&2; exit 128 ;;
+  *) exit 2 ;;
+esac

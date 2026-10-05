@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$*" in
+  "--version") echo "awawa 2.7.0" ;;
+  *) exit 2 ;;
+esac

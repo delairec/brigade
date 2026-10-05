@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$*" in
+  "--version") echo "git version 2.47.3" ;;
+  *) exit 2 ;;
+esac

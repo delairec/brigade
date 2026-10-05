@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$*" in
+  "--user is-system-running") echo "running" ;;
+  *) exit 2 ;;
+esac

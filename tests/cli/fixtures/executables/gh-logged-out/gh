@@ -1,0 +1,7 @@
+#!/bin/sh
+case "$*" in
+  "auth status --active --hostname github.com --json hosts")
+    echo "You are not logged into any GitHub hosts. To log in, run: gh auth login" >&2
+    echo '{"hosts":{}}' ;;
+  *) exit 2 ;;
+esac

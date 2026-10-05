@@ -3,7 +3,8 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists; `brigade --version` is its only command so far, every other one is a task of the corpus.
+The entry point exists with two commands so far, `brigade --version` and `brigade doctor`; every other one is a task
+of the corpus.
 
 ## Install
 
@@ -26,6 +27,11 @@ python3 dist/brigade.pyz --version
 ```
 
 Below Python 3.11, brigade exits non-zero and names the version it needs and the version it found.
+
+`brigade doctor` (or `brigade doctor --json`) tells whether brigade can run on the machine: Python 3.11 or later, git
+and awawa 2.7 or later are checked, a missing one is a finding and the exit code is 1; a user systemd instance, gh
+and the account it is logged in as, and awawa-web are optional, each reported with its fallback, a missing one a
+warning.
 
 ## Develop
 
