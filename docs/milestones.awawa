@@ -15,7 +15,7 @@ MILESTONE M3
 	STATUS planned
 
 MILESTONE M4
-	TITLE "Gardening routines"
+	TITLE "Gardening scans"
 	STATUS planned
 
 MILESTONE M5
@@ -24,4 +24,12 @@ MILESTONE M5
 
 MILESTONE M6
 	TITLE "Hardening"
+	STATUS planned
+
+MILESTONE M7
+	TITLE "Portability"
+	STATUS planned
+
+MILESTONE M8
+	TITLE "Recipes"
 	STATUS planned

@@ -247,7 +247,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 <!-- ============ OVERVIEW (inline: the first frame) ============ -->
 <div class="pane" id="pane-overview" data-pane="overview">
   <div class="hero">
-    <p class="eyebrow">Plan for a proof of concept · 2026-10-04 · machine-wide, standalone project</p>
+    <p class="eyebrow">Plan for a proof of concept · 2026-10-04 · revised 2026-10-05 · machine-wide, standalone project</p>
     <h1>One request in, one merge out.</h1>
     <p class="lede">brigade is a CLI, a timer and a local dashboard that turn a request into a wave of tasks, run the tasks as agent runs in worktrees, verify every pull request, merge the compliant ones into an integration branch, and leave the user one report and one merge. The CLI does everything mechanical; the agents only judge.</p>
     <div class="cta">
@@ -261,12 +261,12 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     <div>
       <h2 style="margin-top:8px;border-top:0;padding-top:0">In one minute</h2>
       <ul class="facts">
-        <li><b>What it is</b><span>A kitchen brigade for the machine: the user is the chef, the roles of the instructions corpus are the cooks, <code>brigade</code> is the expediter who orders, times and checks every plate. Python 3.13 standard library, a user systemd timer, a loopback web page; awawa and the roles are read as they are.</span></li>
-        <li><b>What it does</b><span><code>brigade wave new &lt;project&gt; "…"</code> → a planner cuts the request into tasks on an integration branch → the tick launches runs in dependency order, four at a time → each PR goes through the pass (deterministic preflight, then one verifier run) → compliant PRs merge into integration → a report, a dependency graph and a manual-test table are written → the user merges integration into main.</span></li>
+        <li><b>What it is</b><span>A kitchen brigade for the machine: the user is the chef, the cooks are the roles, the user's own where an instructions corpus is configured, brigade's built-in roles otherwise; <code>brigade</code> is the expediter who orders, times and checks every plate. Python standard library shipped as one file, a scheduler of the machine (systemd timer, cron or a loop), a loopback web page; the AI client sits behind an adapter, Claude Code first; awawa is read as it is.</span></li>
+        <li><b>What it does</b><span><code>brigade wave new &lt;project&gt; "…"</code> → a planner cuts the request into tasks on an integration branch → the tick launches runs in dependency order, four at a time → each PR goes through the pass (deterministic preflight, then one verifier run) → compliant PRs merge into integration → a report, a dependency graph and a manual-test table are written → the user merges integration into main. A study does the same for work that is not code: collectors assemble the evidence, one run judges, the answer lands where the study says. A recipe lets the user declare a kind of work of their own from the same steps.</span></li>
         <li><b>Where it saves</b><span>Measured today: a build run makes its first edit after 23 steps and 134 000 tokens of discovery; 146 steps a week went to re-reading oversized outputs; rebases took 53 steps on a model. The CLI hands each run one pre-computed package and does the rest itself; the estimate is 200 to 270 agent steps saved per wave of 15 tasks, to be confirmed by the ledger.</span></li>
         <li><b>Outer loop</b><span>Review threads, failing checks, local notes, gardening scans and corrections mined from transcripts become signals in a buffer; triage groups them into patterns; one ratification turns a pattern into a wave or a constraint (rule, guard, lint, script), merged like any other work and listed in the report.</span></li>
         <li><b>Interface</b><span>A web dashboard served locally, with a selector to browse any branch or worktree's corpus without checking it out; the IntelliJ plugin stays for in-IDE work, awawa-web stays as the structural editor of the brigade's own corpus.</span></li>
-        <li><b>Safety</b><span>Everything lands on branches; the machine account merges into <code>integration/*</code> only; an unattended run never assumes; a stuck wave parks with a question. The user's one gate is the merge into main.</span></li>
+        <li><b>Safety</b><span>Everything lands on branches; the forge account merges into <code>integration/*</code> only; an unattended run never assumes; a stuck wave parks with a question. The user's one gate is the merge into main.</span></li>
       </ul>
     </div>
     <div>
@@ -275,10 +275,13 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
         <li><b>Autonomy</b><span>Beyond pull requests: planning, building, verifying, merging into integration and reporting run without the user. Changes to the instructions corpus are allowed if the report lists them with their reason.</span></li>
         <li><b>Storage</b><span>Hybrid: awawa corpora for durable facts, an append-only JSONL ledger for events.</span></li>
         <li><b>Intake</b><span>All four sources, phased: review threads and CI failures first, then notes, gardening scans, transcript corrections.</span></li>
-        <li><b>Execution</b><span>Local only: a user systemd timer, non-interactive runs, background sessions for long ones.</span></li>
-        <li><b>Budget</b><span>No cost cap (subscription); the plan pauses and resumes a wave when the rate-limit window closes; statistics come from the CLI's own result data. Waves of 10 to 20 pull requests.</span></li>
+        <li><b>Execution</b><span>Local only: a scheduler of the machine runs the tick, runs are unattended subprocesses brigade owns.</span></li>
+        <li><b>Budget</b><span>No cost cap (subscription); the plan pauses and resumes a wave when the rate-limit window closes; statistics come from the result data the client adapter normalises. Waves of 10 to 20 pull requests.</span></li>
         <li><b>Review</b><span>A verifier agent checks every PR; the user reviews at the merge into main, from the report and the manual-test table; sampling stays a suggestion.</span></li>
         <li><b>First principle</b><span>The CLI does everything mechanical; agents only judge. Every lifecycle step is marked accordingly, agents never rediscover state through git, gh or file reads, and the POC starts with the deterministic commands.</span></li>
+        <li><b>Portability</b><span>Agnostic of the AI client: five adapter operations with a fallback each, the supported clients tabled in the README; roles are slots bound to role files, the user's roles by default, custom ones in a directory; installs on any Linux with Python 3.11, git, awawa and one adapted client; systemd, gh, the machine account and the instructions corpus optional.</span></li>
+        <li><b>Studies</b><span>Reports, collections, audits and research are studies: deterministic collectors, then at most one judging run; scans are studies without judgment.</span></li>
+        <li><b>Recipes</b><span>A kind of work is a recipe: ordered process-shaped steps in a file, run by the tick; an order is one instance; wave stays native, study is the first built-in recipe; plugins on PATH add clients, collectors, checks and outputs.</span></li>
       </ul>
     </div>
   </div>
@@ -289,9 +292,9 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
         <line x1="60" y1="270" x2="940" y2="30" stroke="currentColor" stroke-dasharray="4 4" opacity=".5"/>
         <g>
           <rect x="40" y="236" width="150" height="48" rx="6" fill="none" stroke="currentColor"/><text x="50" y="256" font-weight="600">1 supervised</text><text x="50" y="274" font-size="11">agent writes, user drives</text>
-          <rect x="230" y="186" width="150" height="48" rx="6" stroke-width="2"/ style="fill:var(--accent-soft);stroke:var(--accent)"><text x="240" y="206" font-weight="600">2 tasks → PRs</text><text x="240" y="224" font-size="11">worktrees, guards, CI</text>
+          <rect x="230" y="186" width="150" height="48" rx="6" stroke-width="2" style="fill:var(--accent-soft);stroke:var(--accent)"/><text x="240" y="206" font-weight="600">2 tasks → PRs</text><text x="240" y="224" font-size="11">worktrees, guards, CI</text>
           <rect x="420" y="136" width="150" height="48" rx="6" fill="none" stroke="currentColor"/><text x="430" y="156" font-weight="600">3 rounds, rebases</text><text x="430" y="174" font-size="11">remi, manu, by hand</text>
-          <rect x="610" y="86" width="150" height="48" rx="6" stroke-width="2"/ style="fill:var(--brass-soft);stroke:var(--brass)"><text x="620" y="106" font-weight="600">4 unattended wave</text><text x="620" y="124" font-size="11">plan, pass, merge, report</text>
+          <rect x="610" y="86" width="150" height="48" rx="6" stroke-width="2" style="fill:var(--brass-soft);stroke:var(--brass)"/><text x="620" y="106" font-weight="600">4 unattended wave</text><text x="620" y="124" font-size="11">plan, pass, merge, report</text>
           <rect x="800" y="36" width="150" height="48" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="810" y="56" font-weight="600">5 signal → main</text><text x="810" y="74" font-size="11">policy switch, off</text>
         </g>
         <text x="305" y="252" text-anchor="middle" style="fill:var(--accent)" font-weight="600">today</text>
@@ -299,19 +302,19 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
         <text x="40" y="24" font-size="11" font-style="italic">the user's part shrinks from every step to one request and one merge</text>
       </g>
     </svg>
-    <figcaption><b>The trust ladder, placed.</b> Rung 2 is where the example project stands with its roles, guards and waves; rung 4 is what the user asked for; rung 5 is drawn so that it is a switch, not a rewrite.</figcaption>
+    <figcaption><b>The trust ladder, placed.</b> Rung 2 is where the user's projects stand with their roles, guards and waves; rung 4 is what the user asked for; rung 5 is drawn so that it is a switch, not a rewrite.</figcaption>
   </figure>
 
   <h2>The talk against the machine</h2>
   <div class="tbl"><table>
     <thead><tr><th>Mechanism in the talk</th><th>On the machine today</th><th>What brigade adds</th></tr></thead>
     <tbody>
-      <tr><td>Verification as the first skill: agents with hands and eyes</td><td>unit tests, 20 guards, a coverage gate, browser suites in CI, a verifier role launched on request</td><td>the pass on every PR: deterministic preflight, then one verifier run, then the merge</td></tr>
+      <tr><td>Verification as the first skill: agents with hands and eyes</td><td>unit tests, guards, a coverage gate, browser suites in CI, a verifier role launched on request</td><td>the pass on every PR: deterministic preflight, then one verifier run, then the merge</td></tr>
       <tr><td>Deterministic parts extracted into a CLI; the agent keeps judgment</td><td>awawa compiles context and rules; guards; an unattended runner for procedures</td><td>the whole wave mechanics as CLI commands; context in, verdict out</td></tr>
       <tr><td>Mistakes become lint rules and structure</td><td>schema lint, guards, rules with an enforcement hook</td><td>signals → patterns → constraints, delivered as waves</td></tr>
       <tr><td>Inner loop connected to the outer loop</td><td>the user relays review threads, failing checks and notes</td><td>connectors, an inbox, triage</td></tr>
-      <tr><td>A coordinator that delegates and keeps the thread between related work</td><td>a Claude command run by hand for one wave; roles since 2026-10-03</td><td>a deterministic tick on a timer; a planner that rules on overlaps</td></tr>
-      <tr><td>Buffers and routines instead of fixing everything at once</td><td>open questions and draft tasks; a weekly worktree cleanup</td><td>a signal buffer with fingerprints, counts and age; gardening routines</td></tr>
+      <tr><td>A coordinator that delegates and keeps the thread between related work</td><td>a wave command run by hand; roles since 2026-10-03</td><td>a deterministic tick on a timer; a planner that rules on overlaps</td></tr>
+      <tr><td>Buffers and routines instead of fixing everything at once</td><td>open questions and draft tasks; a weekly worktree cleanup</td><td>a signal buffer with fingerprints, counts and age; gardening scans</td></tr>
       <tr><td>Sampling instead of reviewing everything</td><td>the user reviews most PRs</td><td>the report suggests three PRs to read; nothing blocks on it</td></tr>
       <tr><td>Skills and rules mined from one's own transcripts</td><td>a step counter and usage reports per PR</td><td>the miner, with a mandatory anonymisation step</td></tr>
       <tr><td>A cross-project view</td><td>per-run progress files, worktrees found by walking the home directory</td><td>a registry, a ledger, one dashboard</td></tr>
@@ -320,7 +323,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 
   <div class="callout">
     <h3>How to read this Artifact</h3>
-    <p><b>Plan</b> is the specification, twenty sections with diagrams and the savings estimates. <b>Mockups</b> shows the terminal and the dashboard with sample data. <b>Tasks</b> is the live board of the 39 POC tasks: change a status and it stays changed for everyone who opens this page, agents included. <b>Demo</b> replays the commands and a wave. <b>Brief</b> is the appendix: what this plan was asked to be.</p>
+    <p><b>Plan</b> is the specification, twenty-two sections with diagrams and the savings estimates. <b>Mockups</b> shows the terminal and the dashboard with sample data. <b>Tasks</b> is the board of the 53 POC tasks, a view of the corpus: each status is the one <code>docs/tasks.awawa</code> holds. <b>Demo</b> replays the commands and a wave. <b>Brief</b> is the appendix: what this plan was asked to be.</p>
   </div>
 </div>
 
@@ -333,9 +336,9 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 <!-- ============ TASKS (inline: needs the runtime) ============ -->
 <div class="pane" id="pane-tasks" data-pane="tasks" hidden>
   <header class="doc-head">
-    <p class="eyebrow">Task board · shared, persistent</p>
+    <p class="eyebrow">Task board · a view of the corpus</p>
     <h1>The POC, task by task</h1>
-    <p class="lede">Thirty-nine tasks in seven milestones, deterministic commands first. A status changed here is stored for everyone who opens this page; an agent can read and update the same records through the Artifact's data tool.</p>
+    <p class="lede">Fifty-three tasks in nine milestones, deterministic commands first. Statuses are mirrored from the corpus by <code>brigade board sync</code>: the corpus is their one home, and a status changed here binds nothing.</p>
   </header>
   <div class="tasks-state" id="tasks-state">Connecting to the board…</div>
   <div class="summary" id="tasks-summary"></div>
@@ -347,7 +350,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     <span class="hint" id="tasks-count"></span>
   </div>
   <div id="tasks-root"></div>
-  <p class="howto">For an agent: each document lives at <code>tasks/&lt;id&gt;</code> with the fields <code>status</code> (todo, doing, review, done, blocked), <code>notes</code>, <code>updated_at</code>; read it, then update <code>status</code> with the version you read. The "copy brief" button on a task copies its title, acceptance line, dependencies and role, ready to paste into a launch.</p>
+  <p class="howto">For an agent: each document lives at <code>tasks/&lt;id&gt;</code> with the fields <code>status</code>, <code>notes</code>, <code>updated_at</code>; a task's status is changed in <code>docs/tasks.awawa</code>, never here, and reaches this board through <code>brigade board sync</code>. The "copy brief" button on a task copies its title, acceptance line, dependencies and role, ready to paste into a launch.</p>
 </div>
 
 </main>
@@ -594,7 +597,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     var usep = (window.claude && typeof window.claude.use === 'function') ? window.claude.use('db') : Promise.resolve(null);
     usep.then(function (d) {
       db = d;
-      if (!db) { note('The board needs the claude.ai viewer, signed in: open this Artifact there to load and change the tasks. The list of tasks is also in the Plan tab, section 18.'); return; }
+      if (!db) { note('The board needs the claude.ai viewer, signed in: open this Artifact there to load the tasks. The milestones and their tasks are also in the Plan tab, section 20.'); return; }
       document.getElementById('tasks-filters').hidden = false;
       note('Live board. A change of status is saved at once and seen by everyone who opens this page.');
       db.collection('tasks').onSnapshot(function (snap) {
@@ -637,27 +640,27 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     });
 
     var TASKS = [
-      { id: 'FEAT146', t: 'phone + keyboard', after: [] },
-      { id: 'FEAT151', t: 'planet page skeleton', after: [] },
-      { id: 'FEAT189', t: 'no earlier look', after: ['FEAT151'] },
-      { id: 'FEAT195', t: 'equipment icons', after: ['FEAT151', 'FEAT196'] },
-      { id: 'FEAT196', t: 'equipment list', after: ['FEAT151'] }
+      { id: 'TP146', t: 'phone + keyboard', after: [] },
+      { id: 'TP151', t: 'station page skeleton', after: [] },
+      { id: 'TP189', t: 'seven-day forecast', after: ['TP151'] },
+      { id: 'TP195', t: 'buoy icons', after: ['TP151', 'TP196'] },
+      { id: 'TP196', t: 'buoy list', after: ['TP151'] }
     ];
     var COLS = ['queued', 'running', 'pr_open', 'verifying', 'fixing', 'merged'];
     var SCRIPT = [
       { label: 'request recorded', log: [['cli', 'R-021 recorded; plan context built (0 AI steps)']], set: {} },
       { label: 'ada plans', log: [['ai', 'ada: 5 tasks, 1 overlap ruled (19 steps)'], ['cli', 'entities written, fmt + lint ok, integration branch created']], set: {} },
-      { label: 'tick 1', log: [['cli', 'FEAT146, FEAT151 startable; 2 worktrees + setup; 2 bastien runs launched']], set: { FEAT146: 'running', FEAT151: 'running' } },
-      { label: 'tick 3', log: [['ai', 'bastien FEAT146: PR 291 (31 steps)'], ['cli', 'PR 291 seen; checks pending']], set: { FEAT146: 'pr_open' } },
-      { label: 'tick 4', log: [['cli', 'PR 291 checks 7/7 green; preflight ok; prudence launched'], ['ai', 'bastien FEAT151: PR 292 (44 steps)'], ['cli', 'PR 292: coverage check failed; bastien fix round 1/2']], set: { FEAT146: 'verifying', FEAT151: 'fixing' } },
-      { label: 'tick 5', log: [['ai', 'prudence: approve PR 291 (14 steps, 1 low finding)'], ['cli', 'PR 291 merged (squash) into integration'], ['warn', 'rate limit in a result: wave paused until 14:00']], set: { FEAT146: 'merged' } },
-      { label: 'tick 62 (14:00)', log: [['cli', 'resume suspended run with --resume'], ['ai', 'bastien: coverage fixed, pushed'], ['cli', 'PR 292 checks green; preflight ok; prudence launched']], set: { FEAT151: 'verifying' } },
-      { label: 'tick 63', log: [['ai', 'prudence: approve PR 292'], ['cli', 'PR 292 merged; FEAT189, FEAT196 startable; FEAT195 waits (overlap); 2 runs launched']], set: { FEAT151: 'merged', FEAT189: 'running', FEAT196: 'running' } },
-      { label: 'tick 70', log: [['ai', 'bastien ×2: PR 293, PR 294'], ['cli', 'both pass preflight; prudence ×2']], set: { FEAT189: 'verifying', FEAT196: 'verifying' } },
-      { label: 'tick 71', log: [['ai', 'prudence: approve 293; request changes 294 (a decision not recorded)'], ['cli', 'PR 293 merged; remi round for 294']], set: { FEAT189: 'merged', FEAT196: 'fixing' } },
-      { label: 'tick 74', log: [['ai', 'remi: decision recorded, reply posted'], ['cli', 'PR 294 re-verified'], ['ai', 'prudence: approve'], ['cli', 'PR 294 merged; FEAT195 startable; run launched']], set: { FEAT196: 'merged', FEAT195: 'running' } },
-      { label: 'tick 80', log: [['ai', 'bastien: PR 295'], ['cli', 'preflight ok; prudence approve; merged'], ['cli', 'all tasks merged: report skeleton built (stats, graph, 14 manual tests)']], set: { FEAT195: 'merged' } },
-      { label: 'end', log: [['ai', 'rita: narrative, reasons, 3 PRs to sample (12 steps)'], ['cli', 'report committed; integration → main PR ready for the user']], set: {} }
+      { label: 'tick 1', log: [['cli', 'TP146, TP151 startable; 2 worktrees + setup; 2 bastien runs launched']], set: { TP146: 'running', TP151: 'running' } },
+      { label: 'tick 3', log: [['ai', 'bastien TP146: PR 291 (31 steps)'], ['cli', 'PR 291 seen; checks pending']], set: { TP146: 'pr_open' } },
+      { label: 'tick 4', log: [['cli', 'PR 291 checks 7/7 green; preflight ok; prudence launched'], ['ai', 'bastien TP151: PR 292 (44 steps)'], ['cli', 'PR 292: coverage check failed; bastien fix round 1/2']], set: { TP146: 'verifying', TP151: 'fixing' } },
+      { label: 'tick 5', log: [['ai', 'prudence: approve PR 291 (14 steps, 1 low finding)'], ['cli', 'PR 291 merged (squash) into integration'], ['warn', 'rate limit in a result: wave paused until 14:00']], set: { TP146: 'merged' } },
+      { label: 'tick 62 (14:00)', log: [['cli', 'resume suspended run (adapter resume)'], ['ai', 'bastien: coverage fixed, pushed'], ['cli', 'PR 292 checks green; preflight ok; prudence launched']], set: { TP151: 'verifying' } },
+      { label: 'tick 63', log: [['ai', 'prudence: approve PR 292'], ['cli', 'PR 292 merged; TP189, TP196 startable; TP195 waits (overlap); 2 runs launched']], set: { TP151: 'merged', TP189: 'running', TP196: 'running' } },
+      { label: 'tick 70', log: [['ai', 'bastien ×2: PR 293, PR 294'], ['cli', 'both pass preflight; prudence ×2']], set: { TP189: 'verifying', TP196: 'verifying' } },
+      { label: 'tick 71', log: [['ai', 'prudence: approve 293; request changes 294 (a decision not recorded)'], ['cli', 'PR 293 merged; remi round for 294']], set: { TP189: 'merged', TP196: 'fixing' } },
+      { label: 'tick 74', log: [['ai', 'remi: decision recorded, reply posted'], ['cli', 'PR 294 re-verified'], ['ai', 'prudence: approve'], ['cli', 'PR 294 merged; TP195 startable; run launched']], set: { TP196: 'merged', TP195: 'running' } },
+      { label: 'tick 80', log: [['ai', 'bastien: PR 295'], ['cli', 'preflight ok; prudence approve; merged'], ['cli', 'all tasks merged: study wave-report collected (stats, graph, 14 manual tests)']], set: { TP195: 'merged' } },
+      { label: 'end', log: [['ai', 'bilal: narrative, reasons, 3 PRs to sample (12 steps)'], ['cli', 'report committed; integration → main PR ready for the user']], set: {} }
     ];
     var state = {}; var idx = -1; var auto = null;
     function reset() { state = {}; TASKS.forEach(function (t) { state[t.id] = 'queued'; }); idx = -1; document.getElementById('demo-log').innerHTML = ''; drawBoard(); document.getElementById('demo-step').textContent = 'tick 0 · request recorded'; }
