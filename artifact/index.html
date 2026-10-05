@@ -191,10 +191,8 @@ figure.screen { margin: 16px 0 26px; border: 1px solid var(--rule); border-radiu
 .trow .ttl button:hover { text-decoration: underline; }
 .trow .ttl .sub { display: block; color: var(--muted); font-size: 12.5px; }
 .trow .role { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.status-select { font: inherit; font-size: 13px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); width: 100%; }
-.status-select.todo { border-color: var(--rule); } .status-select.doing { border-color: var(--accent); color: var(--accent-ink); } .status-select.review { border-color: var(--brass); color: var(--brass); } .status-select.done { border-color: var(--ok); color: var(--ok); } .status-select.blocked { border-color: var(--err); color: var(--err); }
-.status-select:disabled { opacity: .6; }
-@media (max-width: 640px) { .trow { grid-template-columns: 4.2em minmax(0,1fr); } .trow .role { grid-column: 2; } .trow .status-select { grid-column: 2; max-width: 14em; } }
+.status-badge { font-family: var(--mono); font-size: 12.5px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--tone, var(--rule)); color: var(--tone, var(--ink)); justify-self: start; }
+@media (max-width: 640px) { .trow { grid-template-columns: 4.2em minmax(0,1fr); } .trow .role { grid-column: 2; } .trow .status-badge { grid-column: 2; } }
 .tdetail { grid-column: 1 / -1; background: color-mix(in srgb, var(--code-bg) 45%, var(--surface)); border-radius: 8px; padding: 10px 12px; font-size: 14px; display: grid; gap: 8px; }
 .tdetail dl { margin: 0; display: grid; grid-template-columns: 7em minmax(0,1fr); gap: 4px 12px; }
 .tdetail dt { color: var(--muted); } .tdetail dd { margin: 0; }
@@ -344,13 +342,13 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   <div class="summary" id="tasks-summary"></div>
   <div class="filterbar" id="tasks-filters" hidden>
     <label>Milestone <select id="f-milestone"><option value="">all</option></select></label>
-    <label>Status <select id="f-status"><option value="">all</option><option value="todo">todo</option><option value="doing">doing</option><option value="review">review</option><option value="done">done</option><option value="blocked">blocked</option></select></label>
+    <label>Status <select id="f-status"><option value="">all</option></select></label>
     <label>Role <select id="f-role"><option value="">all</option></select></label>
     <label><input type="search" id="f-search" placeholder="search id, title, component"></label>
     <span class="hint" id="tasks-count"></span>
   </div>
   <div id="tasks-root"></div>
-  <p class="howto">For an agent: each document lives at <code>tasks/&lt;id&gt;</code> with the fields <code>status</code>, <code>notes</code>, <code>updated_at</code>; a task's status is changed in <code>docs/tasks.awawa</code>, never here, and reaches this board through <code>brigade board sync</code>. The "copy brief" button on a task copies its title, acceptance line, dependencies and role, ready to paste into a launch.</p>
+  <p class="howto">For an agent: each document lives at <code>tasks/&lt;id&gt;</code> with the fields <code>status</code>, <code>notes</code>, <code>updated_at</code>; the field <code>status</code> holds the corpus <code>STATUS</code> verbatim, is changed in <code>docs/tasks.awawa</code>, never here, and is written only by <code>brigade board sync</code>. The "copy brief" button on a task copies its title, acceptance line, dependencies and role, ready to paste into a launch.</p>
 </div>
 
 </main>
@@ -418,13 +416,23 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   window.setTimeout(function () { ['plan', 'mockups', 'brief', 'demo'].forEach(ensure); }, 800);
 
   /* ---------------- tasks board (db capability) ---------------- */
-  var STATUSES = ['todo', 'doing', 'review', 'done', 'blocked'];
+  var STATUS_TONES = { draft: '--muted', todo: '--accent', implemented: '--ok', archived: '--faint' };
+  var DELIVERED_STATUS = 'implemented';
+  var RETIRED_STATUS = 'archived';
+  var FOREIGN_STATUS_TONE = '--err';
   var tasks = [];
   var pending = {};
   var open = {};
   var filters = { milestone: '', status: '', role: '', q: '' };
   var db = null;
   try { var saved = JSON.parse(localStorage.getItem('brigade.filters') || '{}'); if (saved && typeof saved === 'object') filters = Object.assign(filters, saved); } catch (e) {}
+  if (!isCorpusStatus(filters.status)) { filters.status = ''; }
+
+  function isCorpusStatus(status) { return typeof status === 'string' && Object.prototype.hasOwnProperty.call(STATUS_TONES, status); }
+
+  function labelStatusOf(t) { return t.status ? String(t.status) : 'no status'; }
+
+  function countStatus(list, status) { return list.filter(function (t) { return t.status === status; }).length; }
 
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
@@ -467,17 +475,17 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     var byM = {};
     tasks.forEach(function (t) {
       var k = t.milestone || '?';
-      byM[k] = byM[k] || { title: t.milestone_title || '', total: 0, done: 0 };
-      byM[k].total++;
-      if (t.status === 'done') byM[k].done++;
+      byM[k] = byM[k] || { title: t.milestone_title || '', live: 0, implemented: 0 };
+      if (t.status !== RETIRED_STATUS) byM[k].live++;
+      if (t.status === DELIVERED_STATUS) byM[k].implemented++;
     });
-    var total = tasks.length, done = tasks.filter(function (t) { return t.status === 'done'; }).length;
-    var doing = tasks.filter(function (t) { return t.status === 'doing' || t.status === 'review'; }).length;
-    var blocked = tasks.filter(function (t) { return t.status === 'blocked'; }).length;
-    box.appendChild(el('div', { class: 'mcard' }, [el('div', { class: 'sl', text: 'All tasks' }), el('div', { class: 'sv', text: done + ' / ' + total }), el('div', { class: 'sd', text: doing + ' in progress · ' + blocked + ' blocked' }), el('div', { class: 'bar' }, [el('i', { style: 'width:' + (total ? Math.round(done / total * 100) : 0) + '%' })])]));
+    var live = tasks.length - countStatus(tasks, RETIRED_STATUS);
+    var implemented = countStatus(tasks, DELIVERED_STATUS);
+    var breakdown = Object.keys(STATUS_TONES).map(function (s) { return { status: s, n: countStatus(tasks, s) }; }).filter(function (c) { return c.n > 0; }).map(function (c) { return c.n + ' ' + c.status; }).join(' · ');
+    box.appendChild(el('div', { class: 'mcard' }, [el('div', { class: 'sl', text: 'All tasks' }), el('div', { class: 'sv', text: implemented + ' / ' + live }), el('div', { class: 'sd', text: breakdown }), el('div', { class: 'bar' }, [el('i', { style: 'width:' + (live ? Math.round(implemented / live * 100) : 0) + '%' })])]));
     Object.keys(byM).sort().forEach(function (k) {
       var m = byM[k];
-      box.appendChild(el('div', { class: 'mcard' }, [el('div', { class: 'sl', text: k }), el('div', { class: 'sv', text: m.done + ' / ' + m.total }), el('div', { class: 'sd', text: m.title }), el('div', { class: 'bar' }, [el('i', { style: 'width:' + (m.total ? Math.round(m.done / m.total * 100) : 0) + '%' })])]));
+      box.appendChild(el('div', { class: 'mcard' }, [el('div', { class: 'sl', text: k }), el('div', { class: 'sv', text: m.implemented + ' / ' + m.live }), el('div', { class: 'sd', text: m.title }), el('div', { class: 'bar' }, [el('i', { style: 'width:' + (m.live ? Math.round(m.implemented / m.live * 100) : 0) + '%' })])]));
     });
   }
 
@@ -487,30 +495,19 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
       'Role: ' + (t.role || '') + '\n' +
       'Acceptance: ' + (t.acceptance || '') + '\n' +
       'Depends on: ' + ((t.depends || []).join(', ') || 'nothing') + '\n' +
-      'Record in the board: document tasks/' + t.id + ', field status (todo, doing, review, done, blocked).';
+      'Status: ' + labelStatusOf(t) + ' (held by docs/tasks.awawa; the board mirrors it).';
   }
 
   function copyText(text, btn) {
-    var done = function () { btn.textContent = 'copied'; window.setTimeout(function () { btn.textContent = 'copy brief'; }, 1600); };
+    var markCopied = function () { btn.textContent = 'copied'; window.setTimeout(function () { btn.textContent = 'copy brief'; }, 1600); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+      navigator.clipboard.writeText(text).then(markCopied, function () { fallback(); });
     } else fallback();
     function fallback() {
       var ta = el('textarea', { style: 'position:fixed;left:-9999px' }); ta.value = text; document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'select and copy by hand'; }
+      try { document.execCommand('copy'); markCopied(); } catch (e) { btn.textContent = 'select and copy by hand'; }
       document.body.removeChild(ta);
     }
-  }
-
-  function setStatus(t, status, select) {
-    if (!db || pending[t.id] || status === t.status) return;
-    pending[t.id] = true; select.disabled = true;
-    db.doc('tasks/' + t.id).update({ status: status, updated_at: new Date().toISOString(), updated_by: 'board' }).then(function () {
-      pending[t.id] = false;
-    }).catch(function (e) {
-      pending[t.id] = false; select.disabled = false; select.value = t.status;
-      note('The status of ' + t.id + ' was not saved (' + (e && e.code ? e.code : 'error') + '). Only contributors of this Artifact can write; try again or ask the owner.');
-    });
   }
 
   function saveNotes(t, text, btn) {
@@ -527,18 +524,17 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   function note(msg) { document.getElementById('tasks-state').textContent = msg; }
 
   function renderRow(t) {
-    var select = el('select', { class: 'status-select ' + (t.status || 'todo'), 'aria-label': 'Status of ' + t.id, id: 'status-' + t.id });
-    STATUSES.forEach(function (s) { select.appendChild(el('option', { value: s, text: s })); });
-    select.value = STATUSES.indexOf(t.status) >= 0 ? t.status : 'todo';
-    if (pending[t.id]) select.disabled = true;
-    select.addEventListener('change', function () { setStatus(t, select.value, select); });
+    var corpusStatus = isCorpusStatus(t.status);
+    var badgeAttrs = { class: 'status-badge', id: 'status-' + t.id, style: '--tone: var(' + (corpusStatus ? STATUS_TONES[t.status] : FOREIGN_STATUS_TONE) + ')', text: labelStatusOf(t) };
+    if (!corpusStatus) { badgeAttrs.title = 'not a corpus status'; }
+    var badge = el('span', badgeAttrs);
     var title = el('button', { type: 'button', 'aria-expanded': open[t.id] ? 'true' : 'false', onclick: function () { open[t.id] = !open[t.id]; render(); } }, [t.title || t.id]);
     var sub = el('span', { class: 'sub', text: (t.component || '') + ((t.depends && t.depends.length) ? ' · after ' + t.depends.join(', ') : '') });
     var row = el('div', { class: 'trow' }, [
       el('span', { class: 'tid', text: t.id }),
       el('div', { class: 'ttl' }, [title, sub]),
       el('span', { class: 'role', text: t.role || '' }),
-      select
+      badge
     ]);
     if (open[t.id]) {
       var ta = el('textarea', { id: 'notes-' + t.id, 'aria-label': 'Notes of ' + t.id, placeholder: 'notes: a decision, a blocker, a PR number' });
@@ -568,7 +564,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     tasks.forEach(function (t) { ms[t.milestone] = t.milestone_title || ''; if (t.role) roles[t.role] = true; });
     fillSelect('f-milestone', Object.keys(ms).sort().map(function (k) { return { value: k, label: k + (ms[k] ? ' · ' + ms[k] : '') }; }), filters.milestone);
     fillSelect('f-role', Object.keys(roles).sort().map(function (k) { return { value: k, label: k }; }), filters.role);
-    document.getElementById('f-status').value = filters.status;
+    fillSelect('f-status', Object.keys(STATUS_TONES).map(function (s) { return { value: s, label: s }; }), filters.status);
     document.getElementById('f-search').value = filters.q;
     var shown = tasks.filter(visible).sort(function (a, b) { return (a.order || 0) - (b.order || 0) || a.id.localeCompare(b.id); });
     document.getElementById('tasks-count').textContent = shown.length + ' of ' + tasks.length + ' tasks';
@@ -576,14 +572,14 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     shown.forEach(function (t) { (groups[t.milestone] = groups[t.milestone] || []).push(t); });
     Object.keys(groups).sort().forEach(function (k) {
       var g = groups[k];
-      var doneN = g.filter(function (t) { return t.status === 'done'; }).length;
+      var implementedN = countStatus(g, DELIVERED_STATUS);
       var sec = el('section', { class: 'milestone' }, [
-        el('h3', null, [k, el('small', { text: (ms[k] || '') + ' · ' + doneN + ' of ' + g.length + ' done' })]),
+        el('h3', null, [k, el('small', { text: (ms[k] || '') + ' · ' + implementedN + ' of ' + g.length + ' ' + DELIVERED_STATUS })]),
         el('div', { class: 'trows' }, g.map(renderRow))
       ]);
       root.appendChild(sec);
     });
-    if (!tasks.length) note('The board is empty. Seed it with the Artifact data tool: collection "tasks", one document per task with id, title, milestone, component, role, acceptance, depends, status, order.');
+    if (!tasks.length) note('The board is empty. Seed it with the Artifact data tool: collection "tasks", one document per task with id, title, milestone, component, role, acceptance, depends, status, order; status holds the corpus STATUS verbatim, one of ' + Object.keys(STATUS_TONES).join(', ') + '.');
   }
 
   ['f-milestone', 'f-status', 'f-role'].forEach(function (id) {
@@ -599,7 +595,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
       db = d;
       if (!db) { note('The board needs the claude.ai viewer, signed in: open this Artifact there to load the tasks. The milestones and their tasks are also in the Plan tab, section 20.'); return; }
       document.getElementById('tasks-filters').hidden = false;
-      note('Live board. A change of status is saved at once and seen by everyone who opens this page.');
+      note('Live board. Statuses mirror the corpus; notes are saved at once and seen by everyone who opens this page.');
       db.collection('tasks').onSnapshot(function (snap) {
         tasks = snap.docs.filter(function (d) { return d.exists; }).map(function (d) { var data = d.data() || {}; return Object.assign({ id: d.id }, data, { depends: Array.isArray(data.depends) ? data.depends : [] }); });
         render();
