@@ -510,7 +510,7 @@ TASK B40
 	AFTER @TASK.B21
 
 TASK B41
-	TITLE "Mirror the corpus task statuses to the Blueprint board"
+	TITLE "brigade board sync writes the corpus task statuses to the Blueprint board"
 	STATUS draft
 	MILESTONE @MILESTONE.M3
 	COMPONENT "artifact"
@@ -518,19 +518,18 @@ TASK B41
 	SPEC "brigade board sync reads every TASK of the repository corpus through the corpus reader"
 		+ "and writes its STATUS to the field status of the document tasks/<id> of the board's"
 		+ "tasks collection; a second sync writes nothing"
-	SPEC "the board renders the corpus's statuses, draft, todo, implemented and archived, as they"
-		+ "are or through one mapping declared in one place of the page; the sync writes nothing"
-		+ "while the board cannot display a corpus value"
-	SPEC "the board's status control is read-only, or records a proposal in a field of its own that"
-		+ "the sync never overwrites; no action of the page writes status"
+	SPEC "the sync writes nothing while the board cannot display a corpus value"
+	SPEC "the sync writes the field status of a document and no other field of it"
 	SPEC "the sync prints the documents it wrote, text and --json, and exits 1 when the board holds"
 		+ "a task the corpus does not"
 	AFTER @TASK.B08
-	RATIONALE "the board page of 2026-10-04 edits status in a vocabulary of its own, todo, doing,"
-		+ "review, done and blocked, and cannot display draft; its documents all hold todo while"
-		+ "the corpus holds draft"
+	AFTER @TASK.B54
+	RATIONALE "the board documents of 2026-10-04 all hold todo while the corpus holds draft; the"
+		+ "command needs the entry point of B01 and the corpus reader of B08, so the page it writes"
+		+ "to was split out as B54 on 2026-10-05 and delivered first"
 	SOURCE "@DECISION.TheCorpusIsTheHomeOfTaskStatusTheBoardItsView, pull request #1 of the brigade"
 		+ "repository"
+	SOURCE "the user's rulings of 2026-10-05, pull request #4 of the brigade repository"
 
 TASK B42
 	TITLE "Client adapter contract, the Claude Code adapter and the fake adapter"
@@ -769,3 +768,22 @@ TASK B53
 	SPEC "the order's output names the pattern it came from"
 	AFTER @TASK.B26
 	AFTER @TASK.B51
+
+TASK B54
+	TITLE "The Blueprint board renders the corpus task statuses"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "artifact"
+	ROLE bastien
+	SPEC "the board renders the corpus's statuses, draft, todo, implemented and archived, as they"
+		+ "are or through one mapping declared in one place of the page"
+	SPEC "the board renders a task document whose field status holds any corpus value; the page"
+		+ "holds no other status vocabulary"
+	SPEC "the board's status control is read-only, or records a proposal in a field of its own,"
+		+ "distinct from status; no action of the page writes status"
+	RATIONALE "the board page of 2026-10-04 edits status in a vocabulary of its own, todo, doing,"
+		+ "review, done and blocked, and cannot display draft: republished with the 53 tasks of the"
+		+ "corpus, all draft, it would show every one as todo; split out of B41 on 2026-10-05 so"
+		+ "the page is delivered before the republication, in M0 with no AFTER because it needs no"
+		+ "command of brigade"
+	SOURCE "the user's rulings of 2026-10-05, pull request #4 of the brigade repository"
