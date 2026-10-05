@@ -25,3 +25,7 @@ MILESTONE M5
 MILESTONE M6
 	TITLE "Hardening"
 	STATUS planned
+
+MILESTONE M7
+	TITLE "Installation on another machine"
+	STATUS planned

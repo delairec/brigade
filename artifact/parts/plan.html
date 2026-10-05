@@ -2,7 +2,7 @@
   <p class="eyebrow">Specification · proposal of 2026-10-04 · for a POC</p>
   <h1>brigade: a kitchen for AI-agent waves, run from one machine</h1>
   <p class="lede">A CLI, a timer and a local dashboard that turn one request into a wave of tasks, run the tasks as agent runs in worktrees, verify every pull request, merge the compliant ones into an integration branch, and hand the user one report and one merge button. The CLI does everything mechanical; the agents only judge.</p>
-  <div class="meta"><span>Target machine: Debian 13, awawa 2.7, Python 3.13; first agent-CLI adapter: Claude Code 2.1.289</span><span>Depends on <code>&lt;rootDir&gt;</code> (roles, rules, procedures) and the <code>awawa</code> binary as it is</span><span>Figures labelled <i>measured</i> come from the user's notes of 2026-10-03 (119 sessions, 217 launches, 26/09–03/10); figures labelled <i>estimate</i> are to be replaced by the ledger</span></div>
+  <div class="meta"><span>Target: Linux with user systemd (developed on Debian 13), awawa 2.7, Python 3.13; first agent-CLI adapter: Claude Code 2.1.289</span><span>Depends on <code>&lt;rootDir&gt;</code> (roles, rules, procedures) and the <code>awawa</code> binary as it is</span><span>Figures labelled <i>measured</i> come from the user's notes of 2026-10-03 (119 sessions, 217 launches, 26/09–03/10); figures labelled <i>estimate</i> are to be replaced by the ledger</span></div>
 </header>
 
 <nav class="toc" aria-label="Plan contents">
@@ -40,6 +40,7 @@
     <li><b>One home per fact.</b> Durable, reviewed facts live in awawa corpora (the project's tasks and decisions, the brigade's registry and patterns); high-volume events live in an append-only ledger; views are rendered, never hand-maintained.</li>
     <li><b>Unattended by default, never assuming.</b> A run with nobody to ask keeps, skips or reports what it cannot clear on evidence (<code>@RULE.unattended_procedure_never_assumes</code>). A stuck wave parks with a question; it does not guess.</li>
     <li><b>Agent-agnostic throughout.</b> Roles, rules and procedures in <code>&lt;rootDir&gt;</code> name no CLI, and neither does the core of <code>brigade</code>: each agent CLI is an adapter of brigade behind one interface (launch a run as a role, detached; a normalised result; resume; transcripts). Claude Code is the first adapter (<code>@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter</code>).</li>
+    <li><b>Shareable from the start.</b> No path and no account in the code, all through configuration; the machine account is optional; Linux with user systemd is the one platform; a user without an instructions corpus gets brigade's default roles. The command line is the contract: the shapes of <code>--json</code> outputs and state files are <code>CONTRACT</code> entities of the repository corpus, every command is tested as a black box, adapters and hooks talk to brigade by subprocess and JSON. Installing on another machine is M7, after the POC (<code>@DECISION.BrigadeIsShareableFromTheStart</code>, <code>@DECISION.TheCommandLineIsTheContract</code>).</li>
   </ol>
 </section>
 
@@ -63,8 +64,8 @@
 <section id="p-glossary">
   <h2><span class="n">3</span>Glossary</h2>
   <dl class="gloss">
-    <dt>&lt;rootDir&gt;</dt><dd>The user's instructions corpus (roles, rules, triggers, procedures), named as its own AGENTS.md names it. The brigade reads it as it is.</dd>
-    <dt>brigade</dt><dd>The whole system: the <code>brigade</code> CLI, its timer-driven tick, its dashboard, its corpus and its ledger. In a kitchen, the brigade is the team under the chef; here the chef is the user and the cooks are the roles of <code>&lt;rootDir&gt;</code>.</dd>
+    <dt>&lt;rootDir&gt;</dt><dd>The user's instructions corpus (roles, rules, triggers, procedures), named as its own AGENTS.md names it. The brigade reads it as it is; a user without one runs brigade's default roles.</dd>
+    <dt>brigade</dt><dd>The whole system: the <code>brigade</code> CLI, its timer-driven tick, its dashboard, its corpus and its ledger. In a kitchen, the brigade is the team under the chef; here the chef is the user and the cooks are the roles of <code>&lt;rootDir&gt;</code>, or brigade's default roles.</dd>
     <dt>project</dt><dd>A registered repository on this machine, with its main branch, its corpus root, its acceptance commands and its per-worktree setup (a <code>PROJECT</code> entity, §11).</dd>
     <dt>request</dt><dd>What the user wants, in their words, for one project (a <code>REQUEST</code> entity). It becomes one wave.</dd>
     <dt>wave</dt><dd>A set of tasks delivered on one integration branch (<code>integration/&lt;slug&gt;</code>), closed by one merge into main. The <code>WAVE</code> and <code>TASK</code> entities live in the project's own corpus, as today.</dd>
@@ -463,7 +464,13 @@ on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
 <section id="p-registry">
   <h2><span class="n">11</span>Registry, policies, routines: the brigade corpus</h2>
   <p>The brigade's durable facts are an awawa corpus in <code>$XDG_CONFIG_HOME/brigade</code>, with its own schema shipped by the tool and installed by <code>brigade init</code>; the directory is a git repository, so every ratification is a commit and awawa-web edits it as structure. Waves and tasks are not here: they belong to each project's corpus, where they already live.</p>
-  <pre class="term static"><span class="kw">SCHEMA</span> PROJECT
+  <pre class="term static"><span class="kw">SCHEMA</span> SETTINGS                        <span class="dim">// one entity, written by brigade init</span>
+	FIELD ROLES imported|default REQUIRED  <span class="dim">// the roles of INSTRUCTIONS, or the default roles brigade ships</span>
+	FIELD INSTRUCTIONS string             <span class="dim">// path of the instructions corpus, when ROLES is imported</span>
+	FIELD ACCOUNT string                  <span class="dim">// the gh account commands run as; the active login when absent</span>
+	FIELD BOT string                      <span class="dim">// the machine account that merges and comments; optional</span>
+
+<span class="kw">SCHEMA</span> PROJECT
 	NAME slug
 	FIELD PATH string REQUIRED            <span class="dim">// absolute path of the main checkout</span>
 	FIELD REMOTE string                   <span class="dim">// owner/name on GitHub</span>
@@ -581,11 +588,11 @@ on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
 
 <section id="p-cli">
   <h2><span class="n">14</span>CLI reference</h2>
-  <p>Every command prints text for a person and <code>--json</code> for a program; a long output goes to a file under the state directory with its path and a summary on stdout. Exit codes: 0 done, 1 findings, 2 usage, 3 refused by policy, 4 paused on quota.</p>
+  <p>Every command prints text for a person and <code>--json</code> for a program; a long output goes to a file under the state directory with its path and a summary on stdout. Exit codes: 0 done, 1 findings, 2 usage, 3 refused by policy, 4 paused on quota. The shape of every <code>--json</code> output and state file is a <code>CONTRACT</code> entity of the repository corpus, and every command has a black-box test, subprocess in and JSON out (B44).</p>
   <div class="tbl wide"><table>
     <thead><tr><th>Area</th><th>Command</th><th>Does</th></tr></thead>
     <tbody>
-      <tr><td>setup</td><td><code>brigade init</code> · <code>doctor</code> · <code>install-units</code></td><td>creates the config corpus (git) and state dirs; checks awawa ≥ 2.7, awawa-web, the agent CLI of each adapter, gh accounts (the user's and the machine account's), <code>&lt;rootDir&gt;</code> lint, Python ≥ 3.13, user systemd, schema version; installs the timer</td></tr>
+      <tr><td>setup</td><td><code>brigade init</code> · <code>doctor</code> · <code>install-units</code></td><td>creates the config corpus (git) and state dirs, asking whether to import the user's roles or use brigade's default roles; checks awawa ≥ 2.7, awawa-web, the agent CLI of each adapter, the gh account and the machine account when configured, <code>&lt;rootDir&gt;</code> lint when imported, Python ≥ 3.13, user systemd, schema version; installs the timer</td></tr>
       <tr><td>registry</td><td><code>brigade project add &lt;path&gt; [--init-corpus]</code> · <code>list</code> · <code>show</code> · <code>pause</code> · <code>resume</code></td><td>discovers remote, main, corpus root; drafts ACCEPTANCE/SETUP; writes the entity through fmt + lint + commit</td></tr>
       <tr><td>waves</td><td><code>brigade wave new &lt;project&gt; "&lt;request&gt;"</code> · <code>show</code> · <code>start</code> · <code>pause</code> · <code>resume</code> · <code>cancel</code> · <code>list</code></td><td>the request, its plan, its run; <code>start</code> is implicit under <code>PLAN_REVIEW auto</code></td></tr>
       <tr><td>tick</td><td><code>brigade tick [--once|--loop]</code> · <code>status</code></td><td>one reconcile pass (what the timer runs); the global overview</td></tr>
@@ -607,7 +614,7 @@ on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
     <li><b>Context injection.</b> The hooks of <code>&lt;rootDir&gt;</code>'s adapter inject a role's package only for sub-agents; a top-level run started by a CLI gets none, so <code>brigade run</code> passes the package itself through the adapter, which hands it to its CLI as part of the system prompt, built once per tick by <code>awawa context @AGENT.&lt;role&gt; --depth 2 --skip reasoning &lt;rootDir&gt;</code>. No run depends on its own diligence to load its rules.</li>
     <li><b>Slots and locks.</b> Four runs at once per project by default; one tick at a time (a lock file with the PID); a wave reconciled by one tick at a time.</li>
     <li><b>Quota.</b> A result whose error names the rate limit pauses the wave: runs in flight are left to finish or fail, the wave records <code>resume_at</code> from the hour the message names (else now + 30 min), and the first tick after that time resumes each suspended run through the adapter's resume of its session and the prompt "continue from your progress file". The pause itself is the probe; no extra call is spent.</li>
-    <li><b>Accounts.</b> <code>gh</code> runs as the machine account (what the shell wrappers do today, reproduced by the CLI reading the keyring with <code>gh auth token --user</code>); commits carry the attribution lines the session passes.</li>
+    <li><b>Accounts.</b> <code>gh</code> runs as the machine account when <code>SETTINGS.BOT</code> names one (what the shell wrappers do today, reproduced by the CLI reading the keyring with <code>gh auth token --user</code>), else as the user's account; commits carry the attribution lines the session passes.</li>
   </ul>
 </section>
 
@@ -627,7 +634,7 @@ on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
     <div>
       <h3>Mechanical guarantees</h3>
       <ul>
-        <li>branch protection on main: the bot can merge into <code>integration/*</code> only;</li>
+        <li>with a machine account, branch protection on main: the bot can merge into <code>integration/*</code> only;</li>
         <li>each run in its own worktree, tools from the procedure's capabilities, no <code>--dangerously-skip-permissions</code>;</li>
         <li>every write to a corpus goes through <code>fmt</code> + <code>lint --strict</code> + a commit on a branch;</li>
         <li>the privacy scan refuses a PR carrying a real identifier before any agent sees the diff;</li>
@@ -649,7 +656,7 @@ on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
       <tr><td><code>@AGENT.mina</code></td><td>groups signals into patterns with evidence and proposes constraints; mines transcripts</td><td>standard</td><td>patterns JSON</td></tr>
     </tbody>
   </table></div>
-  <p>Existing roles keep their entities; their procedures gain one line: "your first message is <code>brigade … context</code>". The interactive wave-start command of <code>&lt;rootDir&gt;</code>'s adapter becomes a thin wrapper of <code>brigade wave new</code> for the interactive case, or retires once the ledger shows the tick doing its job. A project decision of planet-crafter is to revisit by a docs wave (B38): a wave is planned on master today; under the brigade the plan's entities travel on the integration branch and reach master at delivery.</p>
+  <p>Existing roles keep their entities; their procedures gain one line: "your first message is <code>brigade … context</code>". The interactive wave-start command of <code>&lt;rootDir&gt;</code>'s adapter becomes a thin wrapper of <code>brigade wave new</code> for the interactive case, or retires once the ledger shows the tick doing its job. A project decision of planet-crafter is to revisit by a docs wave (B38): a wave is planned on master today; under the brigade the plan's entities travel on the integration branch and reach master at delivery. A user without an instructions corpus runs brigade's default roles, a minimal set shipped with the package with the rules they need (B43).</p>
   <h3>Requests to awawa's author (never on the POC's critical path)</h3>
   <div class="tbl"><table>
     <thead><tr><th>Request</th><th>Why</th><th>Workaround used by the POC</th></tr></thead>
@@ -665,17 +672,18 @@ on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
 
 <section id="p-poc">
   <h2><span class="n">18</span>POC scope, milestones, success criteria</h2>
-  <p>The Tasks tab holds the 39 tasks with their statuses; this is the shape. Deterministic commands come first, so that the first judgment run already starts from a pre-computed context.</p>
+  <p>The Tasks tab holds the tasks with their statuses; this is the shape. The POC is M0 to M6; M7 follows it. Deterministic commands come first, so that the first judgment run already starts from a pre-computed context.</p>
   <div class="tbl"><table>
     <thead><tr><th>Milestone</th><th>Delivers</th><th>Done when</th></tr></thead>
     <tbody>
-      <tr><td>M0 Foundations (B01–B08, B42)</td><td>repo, doctor, schema and <code>init</code>, registry, ledger, the agent-CLI adapter interface, <code>brigade run</code> with result capture, tick skeleton and units, corpus-at-ref reader</td><td><code>brigade doctor</code> green; a run of <code>worktree-cleanup.md</code> through <code>brigade run</code> appears in the ledger with its steps</td></tr>
+      <tr><td>M0 Foundations (B01–B08, B42, B44)</td><td>repo, doctor, schema and <code>init</code>, registry, ledger, the agent-CLI adapter interface, the CLI contract with its black-box tests, <code>brigade run</code> with result capture, tick skeleton and units, corpus-at-ref reader</td><td><code>brigade doctor</code> green; a run of <code>worktree-cleanup.md</code> through <code>brigade run</code> appears in the ledger with its steps</td></tr>
       <tr><td>M1 Wave engine (B09–B21)</td><td>roles ada/rita/mina, plan procedure, scheduler, PR tracking, preflight, prudence, auto-merge, repair paths, quota pause, report, wave commands, rehearsal</td><td>a sandbox repository with a starter corpus delivers a 3-task wave unattended, from <code>brigade wave new</code> to the integration PR with its report</td></tr>
       <tr><td>M2 Intake and triage (B22–B26)</td><td>notes, review-thread and check-run connectors, triage, ratify → request or constraint</td><td>a review comment left by the user on a PR becomes a signal, a pattern, and a ratified constraint wave</td></tr>
       <tr><td>M3 Dashboard (B27–B31)</td><td>server, Home, Wave, Inbox, Corpus with branch selector, Ledger, Reports</td><td>the user follows a wave and ratifies a pattern without a terminal; any branch's corpus is browsed without a checkout</td></tr>
       <tr><td>M4 Gardening (B33–B34)</td><td>ROUTINE entities, runner, results in inbox and dashboard</td><td>a lint drift on a corpus appears in the inbox within one tick of its schedule</td></tr>
       <tr><td>M5 Miner (B35–B36)</td><td>transcript reader, heuristics, scrubber with its test, mining procedure</td><td>a correction given this week appears as a pattern with its scrubbed quote; the fixture test proves no real identifier survives</td></tr>
       <tr><td>M6 Hardening (B37–B39)</td><td>budgets from the ledger, project decisions revisited, docs, first real wave on planet-crafter</td><td>a real wave of about 10 tasks delivered; the ledger comparison shows steps to first edit and steps per run against the 26/09–03/10 baseline</td></tr>
+      <tr><td>M7 Installation on another machine (B43, B45)</td><td>default roles shipped with the package, documented install, no path or account of the author's machine</td><td>a fresh Linux user installs brigade from the README alone and <code>brigade doctor</code> is green; with the default roles, a wave runs without an instructions corpus</td></tr>
     </tbody>
   </table></div>
   <p><b>Success criteria of the POC.</b> (1) One request becomes one delivered integration PR with a report, with no human action in between, on a sandbox then on planet-crafter. (2) The pass refuses at least one defective PR on preflight alone. (3) Steps to first edit in a task run fall from 23 (median, measured) to under 10. (4) A real correction of the user travels from a transcript to a merged constraint. (5) Every number in the report is traceable to a ledger line.</p>
@@ -691,6 +699,7 @@ on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
     <li>The integration → main PR is opened as late as possible, with the report; earlier when a need requires it (<code>@DECISION.TheIntegrationPullRequestOpensAsLateAsPossible</code>).</li>
     <li>Dogfooding: M0 and M1 are delivered by the existing machinery, one PR per task; from M2 brigade delivers its own waves (<code>@DECISION.BrigadeDeliversItsOwnWavesFromM2</code>).</li>
   </ul>
+  <p>Ruled the same day, outside the five: brigade is shareable from the start, with the installation on another machine as M7 (<code>@DECISION.BrigadeIsShareableFromTheStart</code>); the command line is the contract (<code>@DECISION.TheCommandLineIsTheContract</code>); Rust was weighed and the Python ruling stands (<code>@DECISION.PythonStandardLibraryOnly</code>).</p>
 </section>
 
 <section id="p-sources">

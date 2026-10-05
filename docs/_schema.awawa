@@ -97,3 +97,28 @@ SCHEMA OPEN_QUESTION
 		REQUIRED
 	WHEN STATUS closed
 		GATE suppressed
+
+SCHEMA CONTRACT
+	DESC "the shape of one --json output or one state file of brigade: its command-line contract"
+	FIELD TITLE string
+		REQUIRED
+	FIELD STATUS active|archived
+		REQUIRED
+	FIELD KIND output|file
+		REQUIRED
+		DESC "output: the --json output of a command; file: a file under the config or state"
+			+ "directory"
+	FIELD COMMAND string
+		DESC "the command line, for an output"
+	FIELD PATH string
+		DESC "the path pattern under its directory, for a file"
+	FIELD KEY string
+		REQUIRED
+		REPEATABLE
+		DESC "one key: name, type, meaning"
+	FIELD DELIVERED_BY uint
+		DESC "the number of the pull request that delivered the command or the file"
+	WHEN STATUS active
+		GATE error
+	WHEN STATUS archived
+		GATE suppressed

@@ -9,6 +9,19 @@ SCHEMA *
 		REPEATABLE
 		CATEGORY reasoning
 
+SCHEMA SETTINGS
+	DESC "the machine-level configuration: one entity, written by brigade init"
+	FIELD ROLES imported|default
+		REQUIRED
+		DESC "imported: the roles of the instructions corpus INSTRUCTIONS names; default: the roles"
+			+ "brigade ships"
+	FIELD INSTRUCTIONS string
+		DESC "the path of the instructions corpus, when ROLES is imported"
+	FIELD ACCOUNT string
+		DESC "the gh account commands run as; the active login when absent"
+	FIELD BOT string
+		DESC "the machine account that merges and comments; optional"
+
 SCHEMA PROJECT
 	DESC "a registered repository on this machine"
 	FIELD PATH string

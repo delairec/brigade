@@ -261,12 +261,12 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     <div>
       <h2 style="margin-top:8px;border-top:0;padding-top:0">In one minute</h2>
       <ul class="facts">
-        <li><b>What it is</b><span>A kitchen brigade for the machine: the user is the chef, the roles of the instructions corpus are the cooks, <code>brigade</code> is the expediter who orders, times and checks every plate. Python 3.13 standard library, a user systemd timer, a loopback web page; awawa and the roles are read as they are.</span></li>
+        <li><b>What it is</b><span>A kitchen brigade for the machine: the user is the chef, the roles of the instructions corpus (or brigade's default roles) are the cooks, <code>brigade</code> is the expediter who orders, times and checks every plate. Python 3.13 standard library, a user systemd timer, a loopback web page; awawa and the roles are read as they are.</span></li>
         <li><b>What it does</b><span><code>brigade wave new &lt;project&gt; "…"</code> → a planner cuts the request into tasks on an integration branch → the tick launches runs in dependency order, four at a time → each PR goes through the pass (deterministic preflight, then one verifier run) → compliant PRs merge into integration → a report, a dependency graph and a manual-test table are written → the user merges integration into main.</span></li>
         <li><b>Where it saves</b><span>Measured today: a build run makes its first edit after 23 steps and 134 000 tokens of discovery; 146 steps a week went to re-reading oversized outputs; rebases took 53 steps on a model. The CLI hands each run one pre-computed package and does the rest itself; the estimate is 200 to 270 agent steps saved per wave of 15 tasks, to be confirmed by the ledger.</span></li>
         <li><b>Outer loop</b><span>Review threads, failing checks, local notes, gardening scans and corrections mined from transcripts become signals in a buffer; triage groups them into patterns; one ratification turns a pattern into a wave or a constraint (rule, guard, lint, script), merged like any other work and listed in the report.</span></li>
         <li><b>Interface</b><span>A web dashboard served locally, with a selector to browse any branch or worktree's corpus without checking it out; the IntelliJ plugin stays for in-IDE work, awawa-web stays as the structural editor of the brigade's own corpus.</span></li>
-        <li><b>Safety</b><span>Everything lands on branches; the machine account merges into <code>integration/*</code> only; an unattended run never assumes; a stuck wave parks with a question. The user's one gate is the merge into main.</span></li>
+        <li><b>Safety</b><span>Everything lands on branches; the machine account, when configured, merges into <code>integration/*</code> only; an unattended run never assumes; a stuck wave parks with a question. The user's one gate is the merge into main.</span></li>
       </ul>
     </div>
     <div>
@@ -275,10 +275,11 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
         <li><b>Autonomy</b><span>Beyond pull requests: planning, building, verifying, merging into integration and reporting run without the user. Changes to the instructions corpus are allowed if the report lists them with their reason.</span></li>
         <li><b>Storage</b><span>Hybrid: awawa corpora for durable facts, an append-only JSONL ledger for events.</span></li>
         <li><b>Intake</b><span>All four sources, phased: review threads and CI failures first, then notes, gardening scans, transcript corrections.</span></li>
-        <li><b>Execution</b><span>Local only: a user systemd timer, non-interactive runs, background sessions for long ones.</span></li>
+        <li><b>Execution</b><span>Local only: a user systemd timer, non-interactive runs detached under systemd, through one adapter per agent CLI.</span></li>
         <li><b>Budget</b><span>No cost cap (subscription); the plan pauses and resumes a wave when the rate-limit window closes; statistics come from the CLI's own result data. Waves of 10 to 20 pull requests.</span></li>
         <li><b>Review</b><span>A verifier agent checks every PR; the user reviews at the merge into main, from the report and the manual-test table; sampling stays a suggestion.</span></li>
         <li><b>First principle</b><span>The CLI does everything mechanical; agents only judge. Every lifecycle step is marked accordingly, agents never rediscover state through git, gh or file reads, and the POC starts with the deterministic commands.</span></li>
+        <li><b>Sharing</b><span>Shareable from the start: no path or account in the code, the machine account optional, Linux with user systemd, default roles for a user without an instructions corpus, the command line as the contract; installing on another machine is M7, after the POC.</span></li>
       </ul>
     </div>
   </div>

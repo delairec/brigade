@@ -4,7 +4,8 @@ TASK B01
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
-	SPEC "brigade --version prints the version"
+	SPEC "brigade --version prints the version, as JSON with --json, proven by a black-box test run"
+		+ "by subprocess"
 	SPEC "python -m unittest passes"
 	SPEC "the README names the install, a symlink into a directory on PATH"
 
@@ -14,9 +15,10 @@ TASK B02
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
-	SPEC "checks awawa 2.7 or later, awawa-web, the agent CLI of each adapter, the two gh accounts"
-		+ "(the user and the machine account), the instructions corpus linting green, Python 3.13"
-		+ "or later, user systemd, config and state directories, schema version"
+	SPEC "checks awawa 2.7 or later, awawa-web, the agent CLI of each adapter, the gh account and"
+		+ "the machine account when SETTINGS names one, the instructions corpus linting green when"
+		+ "SETTINGS names one, Python 3.13 or later, user systemd, config and state directories,"
+		+ "schema version"
 	SPEC "exits 0, or 1 with findings"
 	AFTER @TASK.B01
 
@@ -29,6 +31,8 @@ TASK B03
 	SPEC "brigade init creates the config corpus as a git repository with the schema template"
 		+ "installed"
 	SPEC "awawa lint --strict exits 0 on it"
+	SPEC "init asks whether to import the roles the user defines or to use brigade's default roles,"
+		+ "and writes the SETTINGS entity with the answer"
 	SPEC "a second init changes nothing"
 	AFTER @TASK.B01
 
@@ -186,7 +190,7 @@ TASK B16
 	ROLE bastien
 	ROLE lex
 	SPEC "prudence receives the verification package and posts approve or request changes through"
-		+ "verdict, as the machine account, with the ledger event"
+		+ "verdict, as the machine account when one is configured, with the ledger event"
 	AFTER @TASK.B15
 
 TASK B17
@@ -195,7 +199,8 @@ TASK B17
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE bastien
-	SPEC "approve plus green checks merge the pull request with PROJECT.MERGE"
+	SPEC "approve plus green checks merge the pull request with the merge method the instructions"
+		+ "corpus rules"
 	SPEC "the task becomes merged"
 	SPEC "its dependents become startable in the same tick"
 	AFTER @TASK.B16
@@ -523,3 +528,51 @@ TASK B42
 		+ "CLI; a test proves it"
 	AFTER @TASK.B01
 	SOURCE "@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter"
+
+TASK B43
+	TITLE "Default roles shipped with brigade"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "roles"
+	ROLE lex
+	ROLE bastien
+	SPEC "the default roles cover every role the wave lifecycle launches: ada, bastien, prudence,"
+		+ "remi, manu, rita and mina"
+	SPEC "each is an AGENT entity with WORK, REASONING and RETURNS, with the rules it loads, in an"
+		+ "awawa corpus shipped with the package that lints strict"
+	SPEC "brigade init with ROLES default installs that corpus in the config directory"
+	SPEC "a wave runs on a machine with no instructions corpus"
+	AFTER @TASK.B09
+	SOURCE "@DECISION.BrigadeIsShareableFromTheStart"
+
+TASK B44
+	TITLE "CLI contract: CONTRACT entities and black-box tests"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "cli"
+	ROLE bastien
+	SPEC "the shape of every --json output and of every state file is a CONTRACT entity of this"
+		+ "corpus, written at the delivery of its command"
+	SPEC "a black-box test per command runs it by subprocess and checks its --json output against"
+		+ "its CONTRACT"
+	SPEC "a test loads every file under the state directory as JSON, JSON lines or text; a file of"
+		+ "another format fails it"
+	AFTER @TASK.B01
+	SOURCE "@DECISION.TheCommandLineIsTheContract"
+
+TASK B45
+	TITLE "Installation on another Linux machine"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "docs"
+	ROLE rita
+	ROLE prudence
+	SPEC "a fresh Linux user installs brigade from the README alone: awawa, the agent CLI of one"
+		+ "adapter, gh with one account, user systemd; doctor is green"
+	SPEC "no path and no account of the author's machine appears in the code or the docs; a test"
+		+ "proves it"
+	SPEC "with ROLES default, a wave is delivered without an instructions corpus"
+	AFTER @TASK.B39
+	AFTER @TASK.B43
+	AFTER @TASK.B44
+	SOURCE "@DECISION.BrigadeIsShareableFromTheStart"

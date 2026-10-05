@@ -9,7 +9,9 @@ of `docs/` and is read with the tool.
 brigade is a CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does every mechanical step; a model is called only to judge — the first principle,
 @DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge, read before any design choice. Its core names no agent CLI:
-each CLI is an adapter (@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter).
+each CLI is an adapter (@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter). Its command line is its contract
+(@DECISION.TheCommandLineIsTheContract) and it is shareable from the start
+(@DECISION.BrigadeIsShareableFromTheStart).
 
 ## The corpus
 
