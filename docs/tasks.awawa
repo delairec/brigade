@@ -14,9 +14,9 @@ TASK B02
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
-	SPEC "checks awawa 2.7 or later, awawa-web, claude, the two gh accounts (the user and the"
-		+ "machine account), the instructions corpus linting green, Python 3.13 or later, user"
-		+ "systemd, config and state directories, schema version"
+	SPEC "checks awawa 2.7 or later, awawa-web, the agent CLI of each adapter, the two gh accounts"
+		+ "(the user and the machine account), the instructions corpus linting green, Python 3.13"
+		+ "or later, user systemd, config and state directories, schema version"
 	SPEC "exits 0, or 1 with findings"
 	AFTER @TASK.B01
 
@@ -56,17 +56,21 @@ TASK B05
 	AFTER @TASK.B01
 
 TASK B06
-	TITLE "brigade run: launch a role run and capture its result"
+	TITLE "brigade run: launch a role run through an adapter and capture its result"
 	STATUS draft
 	MILESTONE @MILESTONE.M0
 	COMPONENT "runs"
 	ROLE bastien
-	SPEC "runs a procedure as a role with claude -p --output-format stream-json, detached under"
-		+ "systemd-run or in the foreground"
-	SPEC "writes the result object (steps, duration, usage, session id, error class) to the ledger"
-	SPEC "passes the role package with --append-system-prompt-file"
-	SPEC "claude --bg evaluated and the choice recorded as a DECISION"
+	SPEC "runs a procedure as a role through the adapter of the project, detached under systemd-run"
+		+ "or in the foreground"
+	SPEC "writes the normalised result (steps, duration, usage, session id, error kind) to the"
+		+ "ledger"
+	SPEC "passes the role package through the adapter, which hands it to its CLI as part of the"
+		+ "system prompt"
+	SPEC "the Claude Code adapter is the first: headless mode, a streamed JSON result mapped to the"
+		+ "normalised result"
 	AFTER @TASK.B05
+	AFTER @TASK.B42
 
 TASK B07
 	TITLE "Tick skeleton and systemd units"
@@ -121,7 +125,7 @@ TASK B11
 	ROLE bastien
 	SPEC "a request becomes a REQUEST entity and a planned wave"
 	SPEC "show prints the task table with states from the ledger"
-	SPEC "POLICY.PLAN_REVIEW ask|auto is honoured"
+	SPEC "POLICY.PLAN_REVIEW ask|auto is honoured, ask when the field is absent"
 	AFTER @TASK.B10
 
 TASK B12
@@ -217,7 +221,8 @@ TASK B19
 	ROLE bastien
 	SPEC "a rate-limit result pauses the wave with resume_at parsed from the message or set to now"
 		+ "plus 30 minutes"
-	SPEC "the first tick after resume_at resumes each suspended run with --resume"
+	SPEC "the first tick after resume_at resumes each suspended run through the adapter's resume of"
+		+ "its session"
 	SPEC "ledger events wave.paused and wave.resumed"
 	AFTER @TASK.B14
 
@@ -230,8 +235,8 @@ TASK B20
 	ROLE lex
 	SPEC "the skeleton holds the task table, the statistics, the dependency graph, the manual-test"
 		+ "table from SPEC lines, the instructions-corpus change list and the parked questions"
-	SPEC "finish commits the report on the integration branch and updates the integration pull"
-		+ "request"
+	SPEC "finish commits the report on the integration branch and opens the integration pull"
+		+ "request, or updates it when a need opened it earlier"
 	AFTER @TASK.B17
 
 TASK B21
@@ -407,7 +412,7 @@ TASK B35
 	MILESTONE @MILESTONE.M5
 	COMPONENT "miner"
 	ROLE bastien
-	SPEC "reads sessions since a watermark through the existing steps reader"
+	SPEC "reads sessions since a watermark through the adapter's transcript reader"
 	SPEC "detects corrections, refusals, repeated commands and oversized-output re-reads"
 	SPEC "scrubs Steam ids, player names computed at run time from the private saves, e-mail"
 		+ "addresses and private paths"
@@ -501,3 +506,20 @@ TASK B41
 		+ "the corpus holds draft"
 	SOURCE "@DECISION.TheCorpusIsTheHomeOfTaskStatusTheBoardItsView, pull request #1 of the brigade"
 		+ "repository"
+
+TASK B42
+	TITLE "Agent-CLI adapter interface"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "runs"
+	ROLE bastien
+	SPEC "an adapter is one module that launches a run as a role with a brief, capabilities and a"
+		+ "budget, reads its normalised result (steps, duration, usage, session id, error kind, the"
+		+ "reset time of a rate limit), resumes a session and reads session transcripts"
+	SPEC "the core imports no adapter by name: PROJECT.ADAPTER names it, the first adapter when"
+		+ "absent"
+	SPEC "a fake adapter in the tests proves the core runs with no agent CLI installed"
+	SPEC "no file outside the adapters names a flag, a hook, a session file or a command of one"
+		+ "CLI; a test proves it"
+	AFTER @TASK.B01
+	SOURCE "@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter"

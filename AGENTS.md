@@ -8,7 +8,8 @@ of `docs/` and is read with the tool.
 
 brigade is a CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does every mechanical step; a model is called only to judge — the first principle,
-@DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge, read before any design choice.
+@DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge, read before any design choice. Its core names no agent CLI:
+each CLI is an adapter (@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter).
 
 ## The corpus
 
@@ -49,9 +50,9 @@ which already has write access to this repository: there is nothing to request.
 
 ## Bootstrap
 
-Milestones M0 and M1 are delivered by the existing machinery: the roles of the instructions corpus, one pull
-request per task. From M2, brigade delivers its own waves. `awawa status TASK --where MILESTONE==@MILESTONE.M0 .`
-lists the tasks of a milestone.
+Which milestones the existing machinery delivers, and from which one brigade delivers its own waves, is ruled by
+@DECISION.BrigadeDeliversItsOwnWavesFromM2. `awawa status TASK --where MILESTONE==@MILESTONE.M0 .` lists the
+tasks of a milestone.
 
 ## Commands
 

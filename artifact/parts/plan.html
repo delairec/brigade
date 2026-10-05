@@ -2,7 +2,7 @@
   <p class="eyebrow">Specification · proposal of 2026-10-04 · for a POC</p>
   <h1>brigade: a kitchen for AI-agent waves, run from one machine</h1>
   <p class="lede">A CLI, a timer and a local dashboard that turn one request into a wave of tasks, run the tasks as agent runs in worktrees, verify every pull request, merge the compliant ones into an integration branch, and hand the user one report and one merge button. The CLI does everything mechanical; the agents only judge.</p>
-  <div class="meta"><span>Target machine: Debian 13, Claude Code 2.1.289, awawa 2.7, Python 3.13</span><span>Depends on <code>&lt;rootDir&gt;</code> (roles, rules, procedures) and the <code>awawa</code> binary as it is</span><span>Figures labelled <i>measured</i> come from the user's notes of 2026-10-03 (119 sessions, 217 launches, 26/09–03/10); figures labelled <i>estimate</i> are to be replaced by the ledger</span></div>
+  <div class="meta"><span>Target machine: Debian 13, awawa 2.7, Python 3.13; first agent-CLI adapter: Claude Code 2.1.289</span><span>Depends on <code>&lt;rootDir&gt;</code> (roles, rules, procedures) and the <code>awawa</code> binary as it is</span><span>Figures labelled <i>measured</i> come from the user's notes of 2026-10-03 (119 sessions, 217 launches, 26/09–03/10); figures labelled <i>estimate</i> are to be replaced by the ledger</span></div>
 </header>
 
 <nav class="toc" aria-label="Plan contents">
@@ -25,7 +25,7 @@
     <li><a href="#p-safety">Safety envelope</a></li>
     <li><a href="#p-ai">What changes in <code>&lt;rootDir&gt;</code>, and requests to awawa's author</a></li>
     <li><a href="#p-poc">POC scope, milestones, success criteria</a></li>
-    <li><a href="#p-open">Open decisions</a></li>
+    <li><a href="#p-open">Decisions closed since the proposal</a></li>
     <li><a href="#p-sources">Sources</a></li>
   </ol>
 </nav>
@@ -39,7 +39,7 @@
     <li><b>Everything is versioned, so everything is reversible.</b> Waves live on integration branches, corpora in git, the brigade's own facts in a git repository; the only irreversible act, merging into a project's main branch, stays with the user.</li>
     <li><b>One home per fact.</b> Durable, reviewed facts live in awawa corpora (the project's tasks and decisions, the brigade's registry and patterns); high-volume events live in an append-only ledger; views are rendered, never hand-maintained.</li>
     <li><b>Unattended by default, never assuming.</b> A run with nobody to ask keeps, skips or reports what it cannot clear on evidence (<code>@RULE.unattended_procedure_never_assumes</code>). A stuck wave parks with a question; it does not guess.</li>
-    <li><b>Instructions stay agent-agnostic; the brigade is the adapter.</b> Roles, rules and procedures in <code>&lt;rootDir&gt;</code> name no CLI; <code>brigade</code> is where Claude Code's flags, hooks and session files are known, as <code>adapters/claude.sh</code> is today.</li>
+    <li><b>Agent-agnostic throughout.</b> Roles, rules and procedures in <code>&lt;rootDir&gt;</code> name no CLI, and neither does the core of <code>brigade</code>: each agent CLI is an adapter of brigade behind one interface (launch a run as a role, detached; a normalised result; resume; transcripts). Claude Code is the first adapter (<code>@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter</code>).</li>
   </ol>
 </section>
 
@@ -81,7 +81,7 @@
 
 <section id="p-architecture">
   <h2><span class="n">4</span>Architecture</h2>
-  <p>Three layers, one principle. The <b>brigade</b> layer is deterministic Python: it knows git, GitHub, systemd, Claude Code's flags and session files, and the awawa binary. The <b>judgment</b> layer is the roles of <code>&lt;rootDir&gt;</code>, launched as runs with a pre-computed context. The <b>record</b> layer is corpora and the ledger.</p>
+  <p>Three layers, one principle. The <b>brigade</b> layer is deterministic Python: it knows git, GitHub, systemd and the awawa binary, and reaches each agent CLI through one adapter. The <b>judgment</b> layer is the roles of <code>&lt;rootDir&gt;</code>, launched as runs with a pre-computed context. The <b>record</b> layer is corpora and the ledger.</p>
 
   <figure class="fig">
     <svg viewBox="0 0 980 560" role="img" aria-label="Component architecture: outer-loop sources feed signals into the brigade inbox; the tick reads the registry and the projects' corpora, launches judgment runs, and records everything in the ledger; the dashboard and the CLI read the same records." style="max-width:100%;height:auto">
@@ -115,7 +115,7 @@
         <rect x="316" y="446" width="368" height="76" rx="6" fill="none" stroke="currentColor"/>
         <text x="326" y="466" font-weight="600">reads as it is</text>
         <text x="326" y="484">awawa (status/context/lint/show/new/fmt --json) · &lt;rootDir&gt; (roles, rules, procedures)</text>
-        <text x="326" y="502">git · gh (bot account) · systemd-run · claude -p (stream-json)</text>
+        <text x="326" y="502">git · gh (bot account) · systemd-run · agent-CLI adapter</text>
         <!-- judgment -->
         <rect x="760" y="20" width="200" height="300" rx="8" fill="none" stroke="currentColor" stroke-dasharray="5 4"/>
         <text x="770" y="40" font-weight="600">JUDGMENT · runs of &lt;rootDir&gt; roles</text>
@@ -201,13 +201,13 @@ $XDG_CONFIG_HOME/brigade/
 $XDG_STATE_HOME/brigade/
   ledger/2026-10.jsonl        <span class="dim"># append-only events</span>
   inbox/signals.jsonl         <span class="dim"># normalised signals with fingerprints</span>
-  runs/&lt;run-id&gt;/              <span class="dim"># brief, stream-json log, result.json, progress file</span>
+  runs/&lt;run-id&gt;/              <span class="dim"># brief, the adapter's run log, result.json, progress file</span>
   refs/&lt;project&gt;/&lt;sha&gt;/       <span class="dim"># git archive cache for the branch selector (LRU)</span>
   locks/                      <span class="dim"># one tick at a time, one wave reconcile at a time</span>
 
 <span class="dim"># unchanged, read as they are</span>
 &lt;rootDir&gt;/       the instructions corpus: roles (AGENT), rules, triggers, procedures/awawa-task.md, rebase-on-base.md, awawa-pr-review-round.md
-on PATH           awawa  awawa-web  claude  gh</pre>
+on PATH           awawa  awawa-web  gh  and the agent CLI of each adapter</pre>
 </section>
 
 <section id="p-wave">
@@ -270,10 +270,10 @@ on PATH           awawa  awawa-web  claude  gh</pre>
       <tr><td>6</td><td>Detect the PR, poll checks, run the deterministic preflight (§7)</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code> → <code>brigade verify preflight &lt;pr&gt;</code></td><td>Today each PR is opened for review by the user and <code>/awawa-pr-review</code> reads threads with the model. Preflight findings cost 0 AI steps.</td></tr>
       <tr><td>7</td><td>Judge: SPEC lines against the diff, tests against the rules, decisions recorded, no silent reformat; verdict approve or request changes with findings</td><td><span class="tag ai">agent</span> prudence</td><td>procedure <code>verify-pr.md</code>, reads <code>brigade verify context &lt;pr&gt;</code>, answers with <code>brigade verify verdict</code></td><td>New gate. Replaces the user's reading of every diff (6 of the last 8 merged PRs reviewed by the user).</td></tr>
       <tr><td>7b</td><td>Repair paths: changes requested → remi (review round); failing check → bastien (fix a failing check); behind integration → <code>git rebase</code> by the CLI, manu only on conflict; rounds capped by <code>POLICY.VERIFY_ROUNDS</code> (2), then <code>parked</code></td><td><span class="tag cli">CLI</span> + <span class="tag ai">agent</span></td><td><code>brigade review context / reply</code>, <code>rebase-on-base.md</code>, <code>awawa-pr-review-round.md</code></td><td><i>Measured:</i> the 5 rebases of the week took 53 steps in median on Opus. A clean <code>git rebase</code> is 0 steps; manu runs only when git reports a conflict.</td></tr>
-      <tr><td>8</td><td>Merge into integration when verdict = approve and checks green, with the project's merge method; mark the task delivered; start the dependents</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code> → <code>gh pr merge</code></td><td>Today: the user merges. The bot account merges into <code>integration/*</code> only (branch protection on main).</td></tr>
+      <tr><td>8</td><td>Merge into integration when verdict = approve and checks green, with the merge method the instructions corpus rules; mark the task delivered; start the dependents</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code> → <code>gh pr merge</code></td><td>Today: the user merges. The bot account merges into <code>integration/*</code> only (branch protection on main).</td></tr>
       <tr><td>9</td><td>End of wave: statistics from the ledger, dependency graph (the project's own command where one exists, else the task graph as SVG), manual-test table pre-filled from every <code>SPEC</code> line and its <code>IMPL</code> anchors, list of <code>&lt;rootDir&gt;</code> changes from the merged diffs, report skeleton</td><td><span class="tag cli">CLI</span></td><td><code>brigade report skeleton &lt;wave&gt;</code></td><td>New. 0 AI steps for every number, table and link.</td></tr>
       <tr><td>10</td><td>Write the narrative: what was delivered, risks, the reason of each <code>&lt;rootDir&gt;</code> change, what to test by hand first, sampling suggestions (largest diff, most rounds, core packages touched)</td><td><span class="tag ai">agent</span> rita</td><td>procedure <code>wave-report.md</code>; <code>brigade report finish &lt;wave&gt; --file</code></td><td>New. One run per wave.</td></tr>
-      <tr><td>11</td><td>Commit the report on the integration branch (<code>docs/waves/&lt;n&gt;-report.md</code>), open or update the integration → main PR with the report, notify</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code></td><td>The user's one gate: merge. The worktrees stay for the weekly cleanup timer; the integration branch is deleted once delivered, as the project's decision says.</td></tr>
+      <tr><td>11</td><td>Commit the report on the integration branch (<code>docs/waves/&lt;n&gt;-report.md</code>), open the integration → main PR with the report, or update it when a need opened it earlier (<code>@DECISION.TheIntegrationPullRequestOpensAsLateAsPossible</code>), notify</td><td><span class="tag cli">CLI</span></td><td><code>brigade tick</code></td><td>The user's one gate: merge. The worktrees stay for the weekly cleanup timer; the integration branch is deleted once delivered, as the project's decision says.</td></tr>
     </tbody>
   </table></div>
 
@@ -360,7 +360,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
       </ul>
       <h3>Verdict handling</h3>
       <ul>
-        <li><b>approve</b> + green → merge into integration (<code>PROJECT.MERGE</code>: squash by default), task <code>merged</code>, dependents start;</li>
+        <li><b>approve</b> + green → merge into integration (the merge method is the instructions corpus's rule, <code>@DECISION.TheMergeMethodIsTheInstructionsCorpusRuleNotAProjectField</code>), task <code>merged</code>, dependents start;</li>
         <li><b>request changes</b> → remi round, then back to the pass; after <code>POLICY.VERIFY_ROUNDS</code> rounds the task is <code>parked</code> with the findings in the report;</li>
         <li>a critical finding on a <code>core-*</code> package parks at once.</li>
       </ul>
@@ -381,7 +381,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
       <tr><td>Manual tests: one row per <code>SPEC</code> line: what to do, what to expect, where (page, command, file), proven by (IMPL)</td><td><span class="tag cli">CLI</span> skeleton, <span class="tag ai">rita</span> orders and words them for a human</td><td>SPEC + IMPL anchors, UI screenshot flow where the project has one</td></tr>
       <tr><td>Changes to <code>&lt;rootDir&gt;</code>: entity, PR, reason</td><td><span class="tag cli">CLI</span> list, <span class="tag ai">rita</span> reasons from the PR bodies and decisions</td><td><code>awawa diff</code> between base and head of each merged PR touching <code>&lt;rootDir&gt;</code></td></tr>
       <tr><td>Parked questions, verbatim, with the verified alternative the run explored</td><td><span class="tag cli">CLI</span></td><td>run reports</td></tr>
-      <tr><td>Usage: runs, steps p50/p90 per role, pauses on quota, retries, hand-overs</td><td><span class="tag cli">CLI</span></td><td>ledger (from <code>claude -p</code> result objects, not from spend)</td></tr>
+      <tr><td>Usage: runs, steps p50/p90 per role, pauses on quota, retries, hand-overs</td><td><span class="tag cli">CLI</span></td><td>ledger (from the adapter's normalised result of each run, not from spend)</td></tr>
       <tr><td>Suggestions: three PRs to sample, constraints the wave hints at</td><td><span class="tag ai">rita</span></td><td>preflight size signals, rounds, findings</td></tr>
     </tbody>
   </table></div>
@@ -421,7 +421,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
   <div class="tbl"><table>
     <thead><tr><th>Source</th><th>Connector (CLI)</th><th>Signal</th><th>POC milestone</th></tr></thead>
     <tbody>
-      <tr><td>GitHub review threads on open PRs (the user, the bot, the <code>claude</code> app)</td><td>GraphQL <code>reviewThreads</code> as <code>collect.py</code> does today, every tick</td><td>unresolved thread: path, line, author, first comment</td><td>M2 (needed by the wave engine itself)</td></tr>
+      <tr><td>GitHub review threads on open PRs (the user, the bot, a review app)</td><td>GraphQL <code>reviewThreads</code> as <code>collect.py</code> does today, every tick</td><td>unresolved thread: path, line, author, first comment</td><td>M2 (needed by the wave engine itself)</td></tr>
       <tr><td>CI check runs on open PRs and on main</td><td><code>gh api .../check-runs</code></td><td>failing check: name, PR, log URL, first failing step</td><td>M2</td></tr>
       <tr><td>Local notes</td><td><code>brigade note "…" [--project]</code></td><td>the text, the project, the time</td><td>M2</td></tr>
       <tr><td>Gardening routines</td><td><code>ROUTINE</code> entities run by the tick: <code>awawa lint --strict</code> on each corpus, <code>fmt --check</code>, stale branches, worktree state, dependency audit where the project defines it, CI health reports</td><td>non-zero output, de-duplicated by fingerprint</td><td>M4</td></tr>
@@ -443,7 +443,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
     <div>
       <h3><span class="tag cli">CLI</span> extraction</h3>
       <ul>
-        <li>reader: <code>&lt;rootDir&gt;/adapters/claude-steps.py</code>, the one file that knows the session format; steps counted as distinct answers;</li>
+        <li>reader: the adapter's transcript reader, the one file that knows a CLI's session format (the first adapter reuses the steps reader of <code>&lt;rootDir&gt;</code>'s own adapter); steps counted as distinct answers;</li>
         <li>heuristics: a user message following an assistant answer with a correction marker (<code>non</code>, <code>pas ça</code>, <code>jamais</code>, <code>ne … plus</code>, <code>wrong</code>, <code>don't</code>, <code>stop</code>); a tool refusal by a hook; the same command repeated more than three times in a run; an output too large to display followed by a read of its file; a review thread that led to a changes-requested verdict;</li>
         <li>scrubber, mandatory before anything leaves the state directory: <code>76561198\d{9}</code> → <code>765611900000000xx</code>; the set of player names computed at run time from the private saves present on the machine and never stored; e-mail addresses; paths under <code>.do-not-commit</code>; a unit test proves that a fixture holding each kind of identifier comes out clean;</li>
         <li>each finding is a signal with session id and line, so an agent can quote the exact words later.</li>
@@ -473,13 +473,13 @@ on PATH           awawa  awawa-web  claude  gh</pre>
 	FIELD HEAVY string REPEATABLE         <span class="dim">// suites left to CI, read on the PR: bun run test:ui, audit:quality</span>
 	FIELD SETUP string REPEATABLE         <span class="dim">// per-worktree commands: bun install --frozen-lockfile, ln -sfn …/input input</span>
 	FIELD SLOTS uint DEFAULT 4
-	FIELD MERGE squash|rebase|merge DEFAULT squash
+	FIELD ADAPTER string                  <span class="dim">// the agent-CLI adapter that launches the runs; the first adapter when absent</span>
 	FIELD GRAPH string                    <span class="dim">// command that regenerates the dependency graph document, if any</span>
 	FIELD STATUS active|paused
 
 <span class="kw">SCHEMA</span> POLICY
 	FIELD PROJECT @PROJECT REQUIRED
-	FIELD PLAN_REVIEW ask|auto DEFAULT auto
+	FIELD PLAN_REVIEW ask|auto DEFAULT ask <span class="dim">// ask for the first waves of a newly registered project, then auto</span>
 	FIELD VERIFY_ROUNDS uint DEFAULT 2
 	FIELD HANDOVERS uint DEFAULT 2
 	FIELD AUTO_MERGE integration|none DEFAULT integration
@@ -537,7 +537,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
 
 <section id="p-ledger">
   <h2><span class="n">12</span>Ledger and statistics</h2>
-  <p>Every event is one JSON line in the month's file; nothing is ever edited. The CLI's result object of each run (<code>claude -p --output-format json</code>: <code>num_turns</code>, <code>duration_ms</code>, <code>usage</code>, <code>session_id</code>, <code>is_error</code>, <code>subtype</code>) is the source of the usage figures, as the user asked: statistics come from the CLI, not from spend.</p>
+  <p>Every event is one JSON line in the month's file; nothing is ever edited. The adapter's normalised result of each run (steps, duration, usage, session id, error kind, the reset time of a rate limit; the first adapter maps them from its CLI's JSON result) is the source of the usage figures, as the user asked: statistics come from the CLI, not from spend.</p>
   <pre class="term static">{"ts":"…","ev":"run.finished","run":"r-0186","wave":"pc/16","task":"FEAT146","role":"bastien","procedure":"awawa-task","segment":1,
  "session":"7f3c…","steps":31,"duration_s":1412,"usage":{"input":812340,"output":15480,"cache_read":690211,"cache_write":104020},
  "outcome":"pr_open","pr":291,"exit":0}
@@ -585,7 +585,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
   <div class="tbl wide"><table>
     <thead><tr><th>Area</th><th>Command</th><th>Does</th></tr></thead>
     <tbody>
-      <tr><td>setup</td><td><code>brigade init</code> · <code>doctor</code> · <code>install-units</code></td><td>creates the config corpus (git) and state dirs; checks awawa ≥ 2.7, awawa-web, claude, gh accounts (the user's and the machine account's), <code>&lt;rootDir&gt;</code> lint, Python ≥ 3.13, user systemd, schema version; installs the timer</td></tr>
+      <tr><td>setup</td><td><code>brigade init</code> · <code>doctor</code> · <code>install-units</code></td><td>creates the config corpus (git) and state dirs; checks awawa ≥ 2.7, awawa-web, the agent CLI of each adapter, gh accounts (the user's and the machine account's), <code>&lt;rootDir&gt;</code> lint, Python ≥ 3.13, user systemd, schema version; installs the timer</td></tr>
       <tr><td>registry</td><td><code>brigade project add &lt;path&gt; [--init-corpus]</code> · <code>list</code> · <code>show</code> · <code>pause</code> · <code>resume</code></td><td>discovers remote, main, corpus root; drafts ACCEPTANCE/SETUP; writes the entity through fmt + lint + commit</td></tr>
       <tr><td>waves</td><td><code>brigade wave new &lt;project&gt; "&lt;request&gt;"</code> · <code>show</code> · <code>start</code> · <code>pause</code> · <code>resume</code> · <code>cancel</code> · <code>list</code></td><td>the request, its plan, its run; <code>start</code> is implicit under <code>PLAN_REVIEW auto</code></td></tr>
       <tr><td>tick</td><td><code>brigade tick [--once|--loop]</code> · <code>status</code></td><td>one reconcile pass (what the timer runs); the global overview</td></tr>
@@ -603,10 +603,10 @@ on PATH           awawa  awawa-web  claude  gh</pre>
   <h2><span class="n">15</span>Execution on this machine</h2>
   <ul>
     <li><b>Timer.</b> <code>brigade.timer</code> (user unit, <code>OnCalendar=*:0/5</code>, <code>Persistent=true</code>) starts <code>brigade.service</code> = <code>brigade tick --once</code>. The laptop being off loses nothing: the next tick after boot resumes. Routines carry their own calendar expression and are run by the tick when due.</li>
-    <li><b>Runs.</b> A run is <code>systemd-run --user --unit brigade-run-&lt;id&gt; … claude -p "&lt;brief&gt;" --agent &lt;role&gt; --output-format stream-json --permission-mode acceptEdits --permission-prompts none --allowedTools &lt;from capabilities&gt; --add-dir &lt;state dir&gt; --max-turns &lt;budget&gt;</code>, in the task's worktree, its stream written to <code>runs/&lt;id&gt;/stream.jsonl</code>; the tick reads the final result object. <code>journalctl --user -u brigade-run-&lt;id&gt;</code> is the log; <code>claude --resume &lt;session&gt;</code> the way back into it. <code>claude --bg</code> (attachable background sessions of Claude Code 2.1.289) is the alternative to evaluate in B06: it trades the result object for attachability.</li>
-    <li><b>Context injection.</b> The hooks of <code>charlie</code> inject a role's package only for sub-agents; a top-level <code>--agent</code> run has no such hook, so <code>brigade run</code> passes the package itself with <code>--append-system-prompt-file</code>, built once per tick by <code>awawa context @AGENT.&lt;role&gt; --depth 2 --skip reasoning &lt;rootDir&gt;</code>. No run depends on its own diligence to load its rules.</li>
+    <li><b>Runs.</b> A run is <code>systemd-run --user --unit brigade-run-&lt;id&gt; … &lt;the adapter's launch command&gt;</code>, in the task's worktree: the adapter starts its CLI headless as the role, with the brief, the capabilities and the budget, its log written under <code>runs/&lt;id&gt;/</code>; the tick reads the adapter's normalised result. <code>journalctl --user -u brigade-run-&lt;id&gt;</code> is the log; the adapter's resume of the session the way back into it. Claude Code is the first adapter (B42, B06); the attachable background sessions of one CLI were rejected as a feature of one adapter, not of the core (<code>@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter</code>).</li>
+    <li><b>Context injection.</b> The hooks of <code>&lt;rootDir&gt;</code>'s adapter inject a role's package only for sub-agents; a top-level run started by a CLI gets none, so <code>brigade run</code> passes the package itself through the adapter, which hands it to its CLI as part of the system prompt, built once per tick by <code>awawa context @AGENT.&lt;role&gt; --depth 2 --skip reasoning &lt;rootDir&gt;</code>. No run depends on its own diligence to load its rules.</li>
     <li><b>Slots and locks.</b> Four runs at once per project by default; one tick at a time (a lock file with the PID); a wave reconciled by one tick at a time.</li>
-    <li><b>Quota.</b> A result whose error names the rate limit pauses the wave: runs in flight are left to finish or fail, the wave records <code>resume_at</code> from the hour the message names (else now + 30 min), and the first tick after that time resumes each suspended run with <code>--resume</code> and the prompt "continue from your progress file". The pause itself is the probe; no extra call is spent.</li>
+    <li><b>Quota.</b> A result whose error names the rate limit pauses the wave: runs in flight are left to finish or fail, the wave records <code>resume_at</code> from the hour the message names (else now + 30 min), and the first tick after that time resumes each suspended run through the adapter's resume of its session and the prompt "continue from your progress file". The pause itself is the probe; no extra call is spent.</li>
     <li><b>Accounts.</b> <code>gh</code> runs as the machine account (what the shell wrappers do today, reproduced by the CLI reading the keyring with <code>gh auth token --user</code>); commits carry the attribution lines the session passes.</li>
   </ul>
 </section>
@@ -649,7 +649,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
       <tr><td><code>@AGENT.mina</code></td><td>groups signals into patterns with evidence and proposes constraints; mines transcripts</td><td>standard</td><td>patterns JSON</td></tr>
     </tbody>
   </table></div>
-  <p>Existing roles keep their entities; their procedures gain one line: "your first message is <code>brigade … context</code>". The Claude command <code>/awawa-plan-wave-start</code> becomes a thin wrapper of <code>brigade wave new</code> for the interactive case, or retires once the ledger shows the tick doing its job. A project decision of planet-crafter is to revisit by a docs wave (B38): a wave is planned on master today; under the brigade the plan's entities travel on the integration branch and reach master at delivery.</p>
+  <p>Existing roles keep their entities; their procedures gain one line: "your first message is <code>brigade … context</code>". The interactive wave-start command of <code>&lt;rootDir&gt;</code>'s adapter becomes a thin wrapper of <code>brigade wave new</code> for the interactive case, or retires once the ledger shows the tick doing its job. A project decision of planet-crafter is to revisit by a docs wave (B38): a wave is planned on master today; under the brigade the plan's entities travel on the integration branch and reach master at delivery.</p>
   <h3>Requests to awawa's author (never on the POC's critical path)</h3>
   <div class="tbl"><table>
     <thead><tr><th>Request</th><th>Why</th><th>Workaround used by the POC</th></tr></thead>
@@ -669,7 +669,7 @@ on PATH           awawa  awawa-web  claude  gh</pre>
   <div class="tbl"><table>
     <thead><tr><th>Milestone</th><th>Delivers</th><th>Done when</th></tr></thead>
     <tbody>
-      <tr><td>M0 Foundations (B01–B08)</td><td>repo, doctor, schema and <code>init</code>, registry, ledger, <code>brigade run</code> with result capture, tick skeleton and units, corpus-at-ref reader</td><td><code>brigade doctor</code> green; a run of <code>worktree-cleanup.md</code> through <code>brigade run</code> appears in the ledger with its steps</td></tr>
+      <tr><td>M0 Foundations (B01–B08, B42)</td><td>repo, doctor, schema and <code>init</code>, registry, ledger, the agent-CLI adapter interface, <code>brigade run</code> with result capture, tick skeleton and units, corpus-at-ref reader</td><td><code>brigade doctor</code> green; a run of <code>worktree-cleanup.md</code> through <code>brigade run</code> appears in the ledger with its steps</td></tr>
       <tr><td>M1 Wave engine (B09–B21)</td><td>roles ada/rita/mina, plan procedure, scheduler, PR tracking, preflight, prudence, auto-merge, repair paths, quota pause, report, wave commands, rehearsal</td><td>a sandbox repository with a starter corpus delivers a 3-task wave unattended, from <code>brigade wave new</code> to the integration PR with its report</td></tr>
       <tr><td>M2 Intake and triage (B22–B26)</td><td>notes, review-thread and check-run connectors, triage, ratify → request or constraint</td><td>a review comment left by the user on a PR becomes a signal, a pattern, and a ratified constraint wave</td></tr>
       <tr><td>M3 Dashboard (B27–B31)</td><td>server, Home, Wave, Inbox, Corpus with branch selector, Ledger, Reports</td><td>the user follows a wave and ratifies a pattern without a terminal; any branch's corpus is browsed without a checkout</td></tr>
@@ -682,13 +682,14 @@ on PATH           awawa  awawa-web  claude  gh</pre>
 </section>
 
 <section id="p-open">
-  <h2><span class="n">19</span>Open decisions</h2>
+  <h2><span class="n">19</span>Decisions closed since the proposal</h2>
+  <p>The five choices the proposal of 2026-10-04 left open were ruled on 2026-10-05; each ruling is a <code>DECISION</code> of the repository corpus.</p>
   <ul>
-    <li><code>systemd-run</code> + <code>claude -p</code> versus <code>claude --bg</code> for long runs: result object versus attachability; decided in B06 by trying both on one procedure.</li>
-    <li>Merge method per project (<code>PROJECT.MERGE</code>): squash is the planet-crafter habit; the project's PROCESS entities rule.</li>
-    <li><code>PLAN_REVIEW</code> default: <code>auto</code> as the user asked, <code>ask</code> for the first waves of a new project.</li>
-    <li>Whether the integration → main PR is opened at the wave's start (visible progress) or at its end (clean body); proposal: at start, body rewritten by each report.</li>
-    <li>Where the brigade's own waves run: once B01 lands, the brigade repository registers itself and later milestones are delivered as waves by the brigade (dogfooding from M2).</li>
+    <li>Long runs: <code>systemd-run</code> with the adapter's headless mode; the attachable background sessions of one CLI are a feature of one adapter and leave the plan (<code>@DECISION.BrigadeNamesNoAgentCliEachCliIsAnAdapter</code>).</li>
+    <li>Merge method: a general rule of the instructions corpus, cited, never restated; <code>PROJECT.MERGE</code> is removed (<code>@DECISION.TheMergeMethodIsTheInstructionsCorpusRuleNotAProjectField</code>).</li>
+    <li><code>PLAN_REVIEW</code>: <code>ask</code> for the first waves of a newly registered project, then <code>auto</code>; the schema default is <code>ask</code> (<code>@DECISION.PlanReviewAsksForTheFirstWavesOfANewProject</code>).</li>
+    <li>The integration → main PR is opened as late as possible, with the report; earlier when a need requires it (<code>@DECISION.TheIntegrationPullRequestOpensAsLateAsPossible</code>).</li>
+    <li>Dogfooding: M0 and M1 are delivered by the existing machinery, one PR per task; from M2 brigade delivers its own waves (<code>@DECISION.BrigadeDeliversItsOwnWavesFromM2</code>).</li>
   </ul>
 </section>
 

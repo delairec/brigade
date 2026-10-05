@@ -71,7 +71,7 @@ DECISION AVerifierRunOnEveryPullRequestAndOneHumanGate
 	SOURCE "the Artifact Brigade Blueprint, plan section 7"
 
 DECISION QuotaPausesTheWaveAndResumesTheSameSession
-	TITLE "a rate-limit result pauses the wave; the resume is claude --resume of the suspended"
+	TITLE "a rate-limit result pauses the wave; the resume is the adapter's resume of the suspended"
 		+ "session at the time the message names"
 	STATUS active
 	REJECTED "a dollar cap: the subscription is the cap"
@@ -131,3 +131,64 @@ DECISION TheCorpusIsTheHomeOfTaskStatusTheBoardItsView
 	RATIONALE "the plan's own principle, one home per fact, views rendered never hand-maintained;"
 		+ "ruled by the user on 2026-10-05"
 	SOURCE "pull request #1 of the brigade repository"
+
+DECISION BrigadeNamesNoAgentCliEachCliIsAnAdapter
+	TITLE "the core of brigade names no agent CLI; each CLI is an adapter behind one interface, and"
+		+ "Claude Code is the first adapter"
+	STATUS active
+	DESC "the interface: launch a run as a role with a brief, capabilities and a budget, detached;"
+		+ "return a normalised result (steps, duration, usage, session id, error kind, the reset"
+		+ "time of a rate limit); resume a session; read session transcripts for the miner"
+	DESC "a run is launched detached under systemd-run with the adapter's headless mode"
+	DESC "a flag, a hook, a session file or a command of one CLI appears only in its adapter"
+	REJECTED "brigade as the one place where the first CLI's flags, hooks and session files are"
+		+ "known, the plan's sixth principle of 2026-10-04: a second CLI would rewrite every"
+		+ "command"
+	REJECTED "the attachable background sessions of one CLI (claude --bg) as the way to run long"
+		+ "runs: a feature of one adapter, not of the core; the adapter's resume is the way back in"
+	RATIONALE "the user ruled on 2026-10-05 that the plan be reviewed to be agnostic and avoid what"
+		+ "is specific to one agent CLI; the instructions corpus holds the same stance for itself"
+	SOURCE "the user's ruling of 2026-10-05, pull request #PRNUM of the brigade repository"
+
+DECISION TheMergeMethodIsTheInstructionsCorpusRuleNotAProjectField
+	TITLE "the merge of a task pull request into the integration branch follows the merge rule of"
+		+ "the instructions corpus; the brigade corpus declares no merge field"
+	STATUS active
+	DESC "the tick merges with the method that rule names, a constant of the tick; the rule is"
+		+ "cited, never restated"
+	REJECTED "PROJECT.MERGE squash|rebase|merge per project, the plan's field of 2026-10-04: a"
+		+ "general rule copied into every project's record, two homes for one fact"
+	RATIONALE "the user ruled the merge method general on 2026-10-05; a general rule lives in the"
+		+ "instructions corpus and in no project's records"
+	SOURCE "the user's ruling of 2026-10-05, pull request #PRNUM of the brigade repository"
+
+DECISION TheIntegrationPullRequestOpensAsLateAsPossible
+	TITLE "the integration pull request is opened as late as possible, with the report; earlier"
+		+ "when a need requires it"
+	STATUS active
+	DESC "the tick opens it when the report is committed on the integration branch"
+	REJECTED "opening it at the wave's start for visible progress, its body rewritten by each"
+		+ "report, the plan's proposal of 2026-10-04: the user prefers it opened as late as"
+		+ "possible"
+	RATIONALE "the user's ruling of 2026-10-05 on the open decision of plan section 19"
+	SOURCE "the user's ruling of 2026-10-05, pull request #PRNUM of the brigade repository"
+
+DECISION PlanReviewAsksForTheFirstWavesOfANewProject
+	TITLE "PLAN_REVIEW is ask for the first waves of a newly registered project, then auto"
+	STATUS active
+	DESC "the schema default is ask: a POLICY that names no PLAN_REVIEW asks"
+	DESC "the switch to auto is an edit of the POLICY"
+	REJECTED "auto as the schema default, the plan's proposal of 2026-10-04: the first plans of a"
+		+ "project are the ones the user has not yet seen"
+	RATIONALE "the user's answer of 2026-10-05 to the open decision of plan section 19"
+	SOURCE "the user's ruling of 2026-10-05, pull request #PRNUM of the brigade repository"
+
+DECISION BrigadeDeliversItsOwnWavesFromM2
+	TITLE "milestones M0 and M1 are delivered by the existing machinery, one pull request per task;"
+		+ "from M2 brigade delivers its own waves"
+	STATUS active
+	DESC "the existing machinery is the roles of the instructions corpus, launched by hand"
+	REJECTED "the existing machinery for every milestone: brigade would never be its own first user"
+	REJECTED "dogfooding from the first milestone: the wave engine exists only once M1 is delivered"
+	RATIONALE "the user confirmed on 2026-10-05 the plan's proposal of dogfooding from M2"
+	SOURCE "the user's ruling of 2026-10-05, pull request #PRNUM of the brigade repository"

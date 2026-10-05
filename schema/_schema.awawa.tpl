@@ -29,8 +29,8 @@ SCHEMA PROJECT
 		DESC "a per-worktree command"
 	FIELD SLOTS uint
 		DEFAULT 4
-	FIELD MERGE squash|rebase|merge
-		DEFAULT squash
+	FIELD ADAPTER string
+		DESC "the agent-CLI adapter that launches the runs; the first adapter when absent"
 	FIELD GRAPH string
 		DESC "the command that regenerates the dependency graph document"
 	FIELD STATUS active|paused
@@ -41,7 +41,8 @@ SCHEMA POLICY
 	FIELD PROJECT @PROJECT
 		REQUIRED
 	FIELD PLAN_REVIEW ask|auto
-		DEFAULT auto
+		DEFAULT ask
+		DESC "ask for the first waves of a newly registered project, then auto"
 	FIELD VERIFY_ROUNDS uint
 		DEFAULT 2
 	FIELD HANDOVERS uint

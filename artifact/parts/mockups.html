@@ -84,7 +84,7 @@ WAVE pc/16  integration/save-manager-finish  POLICY plan_review=auto → startin
 09:15:02 <span class="tagc">cli</span>  r-0197 <span class="warn">rate limit</span> in result (resets 14:00) → wave pc/16 <span class="warn">paused:quota</span> · resume_at 14:00 · 1 run suspended
 09:15:02 <span class="tagc">cli</span>  ledger +3 events · tick done in 2.4 s
 
-14:00:00 <span class="tagc">cli</span>  tick #4476 · pc/16 resume_at reached → resume r-0197 (claude --resume 7f3c…) · wave running</pre>
+14:00:00 <span class="tagc">cli</span>  tick #4476 · pc/16 resume_at reached → resume r-0197 (adapter resume of session 7f3c…) · wave running</pre>
     <figcaption>The tick decides from facts it reads; the only model calls are the two launches, each with a budget, each recorded.</figcaption>
   </figure>
 </section>
@@ -242,14 +242,14 @@ Type=oneshot
 ExecStart=brigade tick --once
 StandardOutput=append:%S/brigade/tick.log
 
-<span class="dim"># one run, started by the tick as a transient unit</span>
+<span class="dim"># one run, started by the tick as a transient unit; the command after the unit is the adapter's (shown: the first adapter, Claude Code)</span>
 systemd-run --user --unit brigade-run-r-0193 --working-directory=…/pc-16-feat146 \
   claude -p "@runs/r-0193/brief.md" --agent bastien --output-format stream-json \
   --permission-mode acceptEdits --permission-prompts none \
   --allowedTools "Read,Glob,Grep,Write,Edit,Bash" --add-dir "$XDG_STATE_HOME/brigade" \
   --append-system-prompt-file runs/r-0193/role-package.md --max-turns 94
-<span class="dim"># journalctl --user -u brigade-run-r-0193 · claude --resume 7f3c… to step inside</span></pre>
-    <figcaption>Nothing exotic: a timer, a oneshot service, and one transient unit per run with the role's package passed in.</figcaption>
+<span class="dim"># journalctl --user -u brigade-run-r-0193 · the adapter's resume of session 7f3c… to step inside</span></pre>
+    <figcaption>Nothing exotic: a timer, a oneshot service, and one transient unit per run with the role's package passed in by the adapter.</figcaption>
   </figure>
 </section>
 
