@@ -7,8 +7,7 @@ of `corpus/` and is read with the tool.
 ## What brigade is
 
 brigade is a CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
-registered project. The CLI does every mechanical step; a model is called only to judge — the first principle,
-@DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge, read before any design choice.
+registered project. The CLI does every mechanical step; a model is called only to judge.
 
 ## The corpus
 
@@ -23,45 +22,19 @@ awawa fmt --check . && awawa lint --strict .                              # the 
 ```
 
 - A new entity goes **at the end** of the file of its type (`decisions.awawa`, `tasks.awawa`, `milestones.awawa`).
-- A task's status lives in the corpus alone; the task board of the Artifact is a view of it
-  (@DECISION.TheCorpusIsTheHomeOfTaskStatusTheBoardItsView).
 - A task is implemented only once ratified, `draft → todo`, in a pull request of its own.
 
 ## Layout
 
-- `corpus/` — the corpus: the schema, the milestones, the tasks, the decisions of the plan
-  (@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus).
+- `corpus/` — the corpus.
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint",
   <https://claude.ai/artifact/ENPmZkLZS85qhvVBakhXJe>; `index.html` is the page, `parts/` the fragments it fetches.
   A republish goes through the Artifact tool with `url` set to that address, after a read of it.
-- `brigade/` — the one package, flat at the repository root, a subpackage per component created by the first task
-  of that component (@DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents); the files brigade
-  ships live in a `data/` folder of the component that reads them
-  (@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources).
-- `schema/_schema.awawa.tpl` — the schema `brigade init` installs in the operational corpus; a template, not part
-  of this corpus; it moves under the package with the task that reads it
-  (@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources).
-- `tests/` — `cli`, `integration`, `unit` and `guards`, the four suites of
-  @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents.
 - `HANDOFF.md` — the record of the planning run, dated: it is never rewritten.
 
 ## Stack
 
-Python 3.11 or later, standard library only, POSIX sh only in the optional scheduler files, no third-party
-dependency (@DECISION.PythonStandardLibraryOnly); tests with `unittest`. The AI client, the scheduler and the forge
-are adapters, the collectors, checks and outputs are plugins, a kind of work is a recipe
-(@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters, @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun,
-@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder).
-
-The architecture of the code is ruled by the decisions of 2026-10-05, read before writing a module:
-plugins resolved by name and never imported (@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported),
-the tick as a pure planner and an executor (@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction),
-one document and one exit table per command (@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable),
-atomic writes under locks (@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory), one subprocess
-runner and gateways for git and awawa (@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa), the clock
-read once (@DECISION.TheClockIsReadOnceAndCarriedAsAFact), paths and configuration resolved in one place
-(@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables), documents versioned and validated on entry
-(@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry).
+Python 3.11 or later, standard library only; tests with `unittest`.
 
 ## Branches and GitHub
 
@@ -83,9 +56,3 @@ python3 -m unittest                                 # the tests; tests/cli runs 
 python3 build.py                                    # builds dist/brigade.pyz with the zipapp module
 ln -s "$PWD/bin/brigade" ~/.local/bin/brigade       # installs brigade from the clone, any directory on PATH
 ```
-
-- `bin/brigade` is the entry point of the clone, `brigade/` the package, `brigade/python_floor.py` the one place the
-  Python floor is declared.
-- The CI (`.github/workflows/ci.yml`) runs the tests and the zipapp build on Python 3.11 and on the latest release,
-  and checks the refusal under the floor on Python 3.10; the reference machine has no interpreter below 3.11, so only
-  the CI proves the floor.
