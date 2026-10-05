@@ -9,6 +9,7 @@ CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
 EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables"
 
 GIT = str(EXECUTABLES / "git-2.47.3")
+GIT_FAILING = str(EXECUTABLES / "git-failing")
 AWAWA = str(EXECUTABLES / "awawa-2.7.0")
 AWAWA_BELOW_FLOOR = str(EXECUTABLES / "awawa-2.6.3")
 SYSTEMD_RUNNING = str(EXECUTABLES / "systemd-running")
@@ -157,6 +158,23 @@ class BrigadeDoctorWhenAPrerequisiteFails(unittest.TestCase):
                 # Assert
                 self.assertEqual(completed.returncode, 1, completed.stderr)
                 self.assertEqual(json.loads(completed.stdout)["items"][entry], expected_entry)
+
+
+class BrigadeDoctorWhenAToolFails(unittest.TestCase):
+    def test_should_name_the_failed_command_on_stderr_and_exit_1(self):
+        # Arrange
+        git_failing = [GIT_FAILING, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+
+        # Act
+        completed = run_doctor(git_failing, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(
+            completed.stderr,
+            "brigade doctor: git --version exited 128: fatal: unable to access '/etc/gitconfig': Permission denied\n",
+        )
 
 
 class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
