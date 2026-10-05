@@ -376,9 +376,13 @@ TASK B30
 	ROLE bastien
 	SPEC "project, ref (branch, worktree, sha) and type selectors"
 	SPEC "tree, board by field and dependencies, read-only"
+	SPEC "the board by field, type TASK and field STATUS, shows every task of the selected corpus"
+		+ "at the selected ref with its status; the Blueprint board is retired once it does"
 	SPEC "a link to awawa-web for the checkout and an IDE link to the line"
 	AFTER @TASK.B27
 	AFTER @TASK.B08
+	SOURCE "@DECISION.TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard, pull request #6 of"
+		+ "the brigade repository"
 
 TASK B31
 	TITLE "Ledger and Reports views"
@@ -511,7 +515,7 @@ TASK B40
 
 TASK B41
 	TITLE "brigade board sync writes the corpus task statuses to the Blueprint board"
-	STATUS draft
+	STATUS archived
 	MILESTONE @MILESTONE.M3
 	COMPONENT "artifact"
 	ROLE bastien
@@ -527,9 +531,14 @@ TASK B41
 	RATIONALE "the board documents of 2026-10-04 all hold todo while the corpus holds draft; the"
 		+ "command needs the entry point of B01 and the corpus reader of B08, so the page it writes"
 		+ "to was split out as B54 on 2026-10-05 and delivered first"
+	RATIONALE "archived on 2026-10-05: the Blueprint board is an artefact of the development phase,"
+		+ "refreshed at each republication of the Artifact and retired when the Corpus view of the"
+		+ "dashboard shows the corpus's tasks; a command of brigade written for it was refused"
 	SOURCE "@DECISION.TheCorpusIsTheHomeOfTaskStatusTheBoardItsView, pull request #1 of the brigade"
 		+ "repository"
 	SOURCE "the user's rulings of 2026-10-05, pull request #4 of the brigade repository"
+	SOURCE "@DECISION.TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard, pull request #6 of"
+		+ "the brigade repository"
 
 TASK B42
 	TITLE "Client adapter contract, the Claude Code adapter and the fake adapter"
