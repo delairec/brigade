@@ -1,15 +1,37 @@
 TASK B01
 	TITLE "Repository skeleton and entry point"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE bastien
-	SPEC "brigade --version prints the version"
-	SPEC "python -m unittest passes"
-	SPEC "the README names the install, a symlink into a directory on PATH"
-	SPEC "make dist builds dist/brigade.pyz with the zipapp module and python3 dist/brigade.pyz"
-		+ "--version prints the version"
-	SPEC "the Python floor, 3.11, is declared in one place and checked at startup"
+	SPEC "brigade --version prints the version; brigade --version --json prints a JSON document"
+		+ "carrying schema_version and version"
+	SPEC "python3 -m unittest passes and holds black-box tests under tests/cli that run brigade as"
+		+ "a subprocess, through the entry point of the clone and through dist/brigade.pyz"
+	SPEC "from a clone, a symlink into a directory on PATH runs brigade from any working directory;"
+		+ "the README states that install and no longer describes a repository without code"
+	SPEC "one documented command needing python3 alone builds dist/brigade.pyz with the zipapp"
+		+ "module, and python3 dist/brigade.pyz --version prints the version"
+	SPEC "the Python floor, 3.11, is declared in one place; under it, brigade exits non-zero with a"
+		+ "message naming 3.11 and the running version"
+	SPEC "a GitHub Actions workflow runs the unit tests and the zipapp build on Python 3.11 and on"
+		+ "the latest Python release, on every pull request"
+	SPEC "the Commands section of AGENTS.md lists the commands that run the tests, build the zipapp"
+		+ "and install brigade"
+	RATIONALE "every other task of M0 adds a command to the entry point this task delivers, and the"
+		+ "tests/cli harness it starts is the acceptance suite"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles sets"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+	RATIONALE "the standard library and the 3.11 floor follow @DECISION.PythonStandardLibraryOnly;"
+		+ "the zipapp and the clone are the two installs of"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, so the build needs python3"
+		+ "alone and no make"
+		REF @DECISION.PythonStandardLibraryOnly
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "the reference machine runs Python 3.13.5: only the CI proves the floor on a real"
+		+ "3.11"
+	SOURCE "the Artifact Brigade Blueprint, plan sections 15 and 16; the user's rulings of"
+		+ "2026-10-05 in the refinement of B01"
 
 TASK B02
 	TITLE "brigade doctor"
@@ -560,6 +582,7 @@ TASK B42
 		+ "config.toml selects it and PROJECT.CLIENT overrides it"
 	SPEC "the fake adapter replays recorded result documents and is the one the test suite launches"
 	SPEC "one test per fallback proves the core's behaviour when probe declares an operation absent"
+	SPEC "a guard script under tests fails when a module of the core imports an adapter module"
 	AFTER @TASK.B01
 
 TASK B43
