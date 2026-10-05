@@ -1,7 +1,7 @@
 <header class="doc-head">
   <p class="eyebrow">Mockups · sample data, not a recording</p>
   <h1>What brigade looks like in the terminal and in the browser</h1>
-  <p class="lede">Every line tagged <span class="tagc">cli</span> costs no AI step; a line tagged with a role name is one judgment run. Task ids come from the example project's open tasks; pull-request numbers, run ids and timings are illustrative.</p>
+  <p class="lede">Every line tagged <span class="tagc">cli</span> costs no AI step; a line tagged with a role name is one judgment run. Task ids, pull-request numbers, run ids and timings are invented: tidepool and lantern are fictitious projects.</p>
 </header>
 
 <nav class="toc" aria-label="Mockups">
@@ -15,7 +15,11 @@
     <li><a href="#m-inbox">brigade inbox, triage</a></li>
     <li><a href="#m-ledger">brigade ledger</a></li>
     <li><a href="#m-corpus">brigade corpus at a ref</a></li>
-    <li><a href="#m-units">systemd units</a></li>
+    <li><a href="#m-units">The scheduler, the adapter and a run</a></li>
+    <li><a href="#m-roles">brigade roles list</a></li>
+    <li><a href="#m-doctor">brigade doctor</a></li>
+    <li><a href="#m-study">brigade study run</a></li>
+    <li><a href="#m-order">brigade order new</a></li>
     <li><a href="#m-dash">Dashboard screens</a></li>
   </ol>
 </nav>
@@ -25,18 +29,19 @@
   <figure class="shot">
     <div class="shot-bar"><span></span><span></span><span></span><em>brigade status</em></div>
 <pre class="term" id="t-status"><span class="p">$</span> <span class="c">brigade status</span>
-<span class="hl">brigade</span> 0.1.0 · tick every 5 min · last tick 09:05:12 (2 s) · quota <span class="ok">open</span>
+<span class="hl">brigade</span> 0.1.0 · tick every 5 min (systemd-user) · client claude · last tick 09:05:12 (2 s) · quota <span class="ok">open</span>
 
-PROJECT          MAIN     WAVES   INBOX  ROUTINES
-planet-crafter   master   1 run   7 new  4 ok
+PROJECT          MAIN     WAVES   INBOX  SCANS
+tidepool         main     1 run   7 new  4 ok
 instructions     main     —       2 new  1 ok
-hearthstone      main     paused  —      <span class="warn">1 failing</span>  lint drift on docs/ (since 2d)
+lantern          main     paused  —      <span class="warn">1 failing</span>  lint drift on docs/ (since 2d)
 
 WAVE     PROJECT          STATE     TASKS                     PRS         NEXT
-pc/16    planet-crafter   running   3 merged · 2 running · 1 queued   4 open   FEAT195 waits on FEAT151
+tp/16    tidepool         running   3 merged · 2 running · 1 queued   4 open   TP195 waits on TP151
 
+STUDIES  steps-month on demand · 4 scans due at 10:00 · ORDERS 0 running, 0 parked
 INBOX    7 signals in 3 families · oldest 2d · 1 pattern proposed (P12, 5 signals) → <span class="dim">brigade inbox</span></pre>
-    <figcaption>One screen answers "where does the kitchen stand": projects, the wave in flight, the inbox, the routines, the quota.</figcaption>
+    <figcaption>One screen answers "where does the kitchen stand": projects, the wave in flight, the studies and orders, the inbox, the scans, the quota.</figcaption>
   </figure>
 </section>
 
@@ -44,47 +49,47 @@ INBOX    7 signals in 3 families · oldest 2d · 1 pattern proposed (P12, 5 sign
   <h2>A request becomes a plan</h2>
   <figure class="shot">
     <div class="shot-bar"><span></span><span></span><span></span><em>brigade wave new</em></div>
-<pre class="term" id="t-wave-new"><span class="p">$</span> <span class="c">brigade wave new planet-crafter "Finish the redesigned save manager: phone width, keyboard, equipment icons, the planet page"</span>
+<pre class="term" id="t-wave-new"><span class="p">$</span> <span class="c">brigade wave new tidepool "Finish the station page: phone width, keyboard, buoy icons, the forecast list"</span>
 <span class="tagc">cli</span>  request R-021 recorded · plan context: 433 entities, 4 todo, 21 draft, next task number 196, 38 IMPL files indexed
-<span class="taga">ada</span>  run r-0191 · wave-plan.md · 1 segment · 19 steps · 6 m 40 s
+<span class="taga">ada</span>  run r-0191 · slot plan · wave-plan.md · 1 segment · 19 steps · 6 m 40 s
 <span class="tagc">cli</span>  plan.json valid · 5 tasks · 1 overlap ruled · awawa fmt + lint --strict: 0 errors
-<span class="tagc">cli</span>  branch integration/save-manager-finish from master · WAVE 16 + 5 TASK written · pushed
+<span class="tagc">cli</span>  branch integration/station-page from main · WAVE 16 + 5 TASK written · pushed
 
-WAVE pc/16  integration/save-manager-finish  POLICY plan_review=auto → starting at next tick
+WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at next tick
 
   TASK      TITLE                                                   AFTER        SPEC  OVERLAP
-  FEAT146   phone width and keyboard                                —            3     —
-  FEAT151   planet page skeleton                                    —            4     —
-  FEAT189   no earlier look at the next version                     FEAT151      2     —
-  FEAT195   original icons for the equipment kinds                  FEAT151      2     ui/equipment with FEAT196 → after
-  FEAT196   equipment list on the planet page                       FEAT151      3     ui/equipment
+  TP146     phone width and keyboard                                —            3     —
+  TP151     station page skeleton                                   —            4     —
+  TP189     forecast capped at seven days                           TP151        2     —
+  TP195     original icons for the buoy kinds                       TP151        2     ui/buoys with TP196 → after
+  TP196     buoy list on the station page                           TP151        3     ui/buoys
 
-<span class="dim">brigade wave show pc/16 · brigade wave pause pc/16</span></pre>
+<span class="dim">brigade wave show tp/16 · brigade wave pause tp/16</span></pre>
     <figcaption>The planner only cuts and rules; recording the entities, creating the branch and ordering the overlap are the CLI's.</figcaption>
   </figure>
 </section>
 
 <section id="m-tick">
-  <h2>One tick, as the journal shows it</h2>
+  <h2>One tick, as its log shows it</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>journalctl --user -u brigade -n 30</em></div>
-<pre class="term" id="t-tick">09:10:00 <span class="tagc">cli</span>  tick #4418 · lock ok · 1 active wave · fetch planet-crafter (0.8 s)
-09:10:01 <span class="tagc">cli</span>  pc/16 FEAT146 pr 291 · checks 7/7 <span class="ok">green</span> · preflight <span class="ok">ok</span> (ancestry, fmt, lint, promotion, privacy, body)
-09:10:01 <span class="tagc">cli</span>  pc/16 FEAT146 → verifying · launch <span class="taga">prudence</span> r-0196 verify-pr.md (budget 25)
-09:10:02 <span class="tagc">cli</span>  pc/16 FEAT151 pr 292 · checks 6/7 · <span class="err">test (coverage) failed</span> · 1st failure → launch <span class="taga">bastien</span> r-0197 "fix a failing check" (round 1/2)
-09:10:02 <span class="tagc">cli</span>  pc/16 FEAT189 queued · AFTER FEAT151 not merged · waiting
-09:10:02 <span class="tagc">cli</span>  pc/16 FEAT195 queued · AFTER FEAT151 not merged · waiting
+    <div class="shot-bar"><span></span><span></span><span></span><em>the tick log, last lines</em></div>
+<pre class="term" id="t-tick">09:10:00 <span class="tagc">cli</span>  tick #4418 · lock ok · 1 active wave · fetch tidepool (0.8 s)
+09:10:01 <span class="tagc">cli</span>  tp/16 TP146 pr 291 · checks 7/7 <span class="ok">green</span> · preflight <span class="ok">ok</span> (ancestry, fmt, lint, promotion, privacy, body)
+09:10:01 <span class="tagc">cli</span>  tp/16 TP146 → verifying · launch <span class="taga">prudence</span> r-0196 slot verify · verify-pr.md (budget 25)
+09:10:02 <span class="tagc">cli</span>  tp/16 TP151 pr 292 · checks 6/7 · <span class="err">test (coverage) failed</span> · 1st failure → launch <span class="taga">bastien</span> r-0197 "fix a failing check" (round 1/2)
+09:10:02 <span class="tagc">cli</span>  tp/16 TP189 queued · AFTER TP151 not merged · waiting
+09:10:02 <span class="tagc">cli</span>  tp/16 TP195 queued · AFTER TP151 not merged · waiting
 09:10:03 <span class="tagc">cli</span>  slots 2/4 used · nothing else startable
-09:10:03 <span class="tagc">cli</span>  routines due: none · inbox: +1 signal (review thread pr 291 · the user · PowerBarChartPresenter.ts:41)
+09:10:03 <span class="tagc">cli</span>  studies due: none · inbox: +1 signal (review thread pr 291 · the user · LevelPresenter.ts:41)
 09:10:03 <span class="tagc">cli</span>  ledger +4 events · tick done in 3.1 s
 
 09:15:00 <span class="tagc">cli</span>  tick #4419
 09:15:01 <span class="tagc">cli</span>  r-0196 finished · 14 steps · 4 m 02 s · verdict <span class="ok">approve</span> · 0 findings critical, 1 low (naming)
-09:15:02 <span class="tagc">cli</span>  pc/16 FEAT146 pr 291 → merge (squash) into integration/save-manager-finish <span class="ok">merged</span> · task merged
-09:15:02 <span class="tagc">cli</span>  r-0197 <span class="warn">rate limit</span> in result (resets 14:00) → wave pc/16 <span class="warn">paused:quota</span> · resume_at 14:00 · 1 run suspended
+09:15:02 <span class="tagc">cli</span>  tp/16 TP146 pr 291 → merge (squash) into integration/station-page <span class="ok">merged</span> · task merged
+09:15:02 <span class="tagc">cli</span>  r-0197 <span class="warn">rate limit</span> in result (resets 14:00) → wave tp/16 <span class="warn">paused:quota</span> · resume_at 14:00 · 1 run suspended
 09:15:02 <span class="tagc">cli</span>  ledger +3 events · tick done in 2.4 s
 
-14:00:00 <span class="tagc">cli</span>  tick #4476 · pc/16 resume_at reached → resume r-0197 (claude --resume 7f3c…) · wave running</pre>
+14:00:00 <span class="tagc">cli</span>  tick #4476 · tp/16 resume_at reached → resume r-0197 (adapter resume, session 7f3c…) · wave running</pre>
     <figcaption>The tick decides from facts it reads; the only model calls are the two launches, each with a budget, each recorded.</figcaption>
   </figure>
 </section>
@@ -92,23 +97,23 @@ WAVE pc/16  integration/save-manager-finish  POLICY plan_review=auto → startin
 <section id="m-task-context">
   <h2>What a build run receives, instead of twenty-three steps of discovery</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade task context FEAT146 (abridged)</em></div>
-<pre class="term" id="t-task-context"><span class="p">$</span> <span class="c">brigade task context FEAT146</span>
-<span class="hl">## worktree</span>  .worktrees/pc-16-feat146 · branch feat/feat146-phone-and-keyboard
-  git merge-base --is-ancestor origin/integration/save-manager-finish HEAD → <span class="ok">yes</span>
-  setup done: bun install --frozen-lockfile (12 s) · input → symlink · .do-not-commit → symlink
-<span class="hl">## task</span>  awawa context @TASK.FEAT146 --with-schema .   (1 820 chars, footer: GOVERNED_BY 1, BLOCKED_BY 0)
-  TASK FEAT146 "make the redesigned save manager usable at phone width and by keyboard" STATUS todo WAVE @WAVE.16
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade task context TP146 (abridged)</em></div>
+<pre class="term" id="t-task-context"><span class="p">$</span> <span class="c">brigade task context TP146</span>
+<span class="hl">## worktree</span>  .worktrees/tp-16-tp146 · branch feat/tp146-phone-and-keyboard
+  git merge-base --is-ancestor origin/integration/station-page HEAD → <span class="ok">yes</span>
+  setup done: bun install --frozen-lockfile (12 s) · data → symlink · .private → symlink
+<span class="hl">## task</span>  awawa context @TASK.TP146 --with-schema .   (1 820 chars, footer: GOVERNED_BY 1, BLOCKED_BY 0)
+  TASK TP146 "make the station page usable at phone width and by keyboard" STATUS todo WAVE @WAVE.16
   SPEC "at 400 px wide no control overflows and the page never scrolls sideways"
-  SPEC "every action of the save list is reachable with Tab and Enter"
+  SPEC "every action of the station list is reachable with Tab and Enter"
   SPEC "the focus ring is visible on every control in both themes"
   RATIONALE …
-  awawa lint --closure @TASK.FEAT146 . → 0 errors · everything it rests on: implemented
+  awawa lint --closure @TASK.TP146 . → 0 errors · everything it rests on: implemented
 <span class="hl">## triggers of the files you will touch</span>  code_in_ui_package, changing_behaviour, changing_test (3 packages, 41 rules, 9 600 chars)
 <span class="hl">## project files that bind you</span>  AGENTS.md, agents/worktree.md, agents/pull-request.md
 <span class="hl">## acceptance</span>  bun test · bun run lint:types · bun run guards · bun run test:coverage   (heavy, CI only: bun run test:ui)
 <span class="hl">## reserved</span>  task number 196 · temp dir runs/r-0193/tmp · attribution lines attached
-<span class="hl">## when done</span>  brigade task check FEAT146 → brigade task pr FEAT146 → brigade task promote FEAT146 --pr N
+<span class="hl">## when done</span>  brigade task check TP146 → brigade task pr TP146 → brigade task promote TP146 --pr N
 <span class="dim">full package written to runs/r-0193/context.md (14 200 chars)</span></pre>
     <figcaption>The measured median was 23 steps and 134 000 tokens before the first edit; the package replaces the discovery with one read.</figcaption>
   </figure>
@@ -118,17 +123,17 @@ WAVE pc/16  integration/save-manager-finish  POLICY plan_review=auto → startin
   <h2>The pass, deterministic half</h2>
   <figure class="shot">
     <div class="shot-bar"><span></span><span></span><span></span><em>brigade verify preflight 292</em></div>
-<pre class="term" id="t-verify"><span class="p">$</span> <span class="c">brigade verify preflight planet-crafter 292</span>
-pr 292  feat/feat151-planet-page → integration/save-manager-finish  task FEAT151  head 4c1e9d2
+<pre class="term" id="t-verify"><span class="p">$</span> <span class="c">brigade verify preflight tidepool 292</span>
+pr 292  feat/tp151-station-page → integration/station-page  task TP151  head 4c1e9d2
 <span class="ok">ok</span>    ancestry        descends from integration head (0 behind)
 <span class="ok">ok</span>    checks          7/7 green: test, test (coverage), lint:types, guards, fallow, ui (chromium, firefox, webkit), audit
 <span class="ok">ok</span>    corpus          awawa fmt --check · awawa lint --strict on 4c1e9d2 (refs cache) → 0 errors
-<span class="err">fail</span>  promotion       TASK.FEAT151 STATUS implemented · DELIVERED_BY 292 · SPEC 3/4 carry an IMPL that resolves
-                      missing: SPEC "the page announces the next version" → no IMPL
+<span class="err">fail</span>  promotion       TASK.TP151 STATUS implemented · DELIVERED_BY 292 · SPEC 3/4 carry an IMPL that resolves
+                      missing: SPEC "the page shows the next high tide" → no IMPL
 <span class="ok">ok</span>    untouched       no reformat of corpus files outside the task (git diff --stat *.awawa: 2 files, both named by the task)
-<span class="ok">ok</span>    privacy         0 real identifiers (steam id pattern, player names, e-mail, private paths)
+<span class="ok">ok</span>    privacy         0 private identifiers (station keys, e-mail, private paths)
 <span class="warn">warn</span>  body            PR body still describes the opening intent: 2 acceptance verdicts missing
-<span class="dim">info</span>  size            12 files · +418 −96 · packages: ui-save-manager, core-mapping · layers: presentation, application
+<span class="dim">info</span>  size            12 files · +418 −96 · packages: ui-station, core-tides · layers: presentation, application
 
 verdict: <span class="err">1 fail</span>, 1 warn → back to the author (round 1/2) · prudence not launched
 <span class="dim">findings written to runs/pr-292/preflight.json</span></pre>
@@ -139,19 +144,19 @@ verdict: <span class="err">1 fail</span>, 1 warn → back to the author (round 1
 <section id="m-wave-show">
   <h2>A wave in flight</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade wave show pc/16</em></div>
-<pre class="term" id="t-wave-show"><span class="p">$</span> <span class="c">brigade wave show pc/16</span>
-WAVE pc/16  planet-crafter  integration/save-manager-finish  <span class="ok">running</span>  started 2026-10-06 09:05  slots 2/4
-request R-021 "Finish the redesigned save manager: phone width, keyboard, equipment icons, the planet page"
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade wave show tp/16</em></div>
+<pre class="term" id="t-wave-show"><span class="p">$</span> <span class="c">brigade wave show tp/16</span>
+WAVE tp/16  tidepool  integration/station-page  <span class="ok">running</span>  started 2026-10-06 09:05  slots 2/4
+request R-021 "Finish the station page: phone width, keyboard, buoy icons, the forecast list"
 
 TASK      STATE               PR    ROUNDS  STEPS  WALL     RUN      NOTE
-FEAT146   <span class="ok">merged</span>              291   1       31+14  38 m     r-0193   squash 2026-10-06 09:15
-FEAT151   <span class="warn">fixing</span>              292   1       44     1 h 02   r-0197   coverage check failed · resumed after quota pause
-FEAT189   queued              —     —       —      —        —        AFTER FEAT151
-FEAT195   queued              —     —       —      —        —        AFTER FEAT151 · after FEAT196 (overlap ui/equipment)
-FEAT196   queued              —     —       —      —        —        AFTER FEAT151
+TP146     <span class="ok">merged</span>              291   1       31+14  38 m     r-0193   squash 2026-10-06 09:15
+TP151     <span class="warn">fixing</span>              292   1       44     1 h 02   r-0197   coverage check failed · resumed after quota pause
+TP189     queued              —     —       —      —        —        AFTER TP151
+TP195     queued              —     —       —      —        —        AFTER TP151 · after TP196 (overlap ui/buoys)
+TP196     queued              —     —       —      —        —        AFTER TP151
 
-integration → master  pr 290 <span class="dim">draft</span>  body: report pending · 1 of 5 tasks landed
+integration → main  pr 290 <span class="dim">draft</span>  body: report pending · 1 of 5 tasks landed
 ledger: 4 runs · 89 steps · 1 pause (quota, 4 h 45) · 0 hand-overs · 0 parked</pre>
     <figcaption>States are the tick's; nothing here was typed by a person or asked of a model.</figcaption>
   </figure>
@@ -163,44 +168,44 @@ ledger: 4 runs · 89 steps · 1 pause (quota, 4 h 45) · 0 hand-overs · 0 parke
     <div class="shot-bar"><span></span><span></span><span></span><em>brigade inbox · brigade triage</em></div>
 <pre class="term" id="t-inbox"><span class="p">$</span> <span class="c">brigade inbox</span>
 ID     AGE  KIND            PROJECT          COUNT  EVIDENCE
-S-311  2d   review_thread   planet-crafter   3      presenters build a sentence (pr 280, 283, 291) · @RULE.user_sentence_built_in_presentation
-S-314  1d   check_failed    planet-crafter   2      test (coverage) · new presenter file without a spec (pr 292, 288)
+S-311  2d   review_thread   tidepool         3      presenters build a sentence (pr 280, 283, 291) · @RULE.sentence_built_in_the_view
+S-314  1d   check_failed    tidepool         2      test (coverage) · new presenter file without a spec (pr 292, 288)
 S-318  6h   note            —                1      "the rebase procedure asks for a model even when git rebases cleanly"
-S-319  3h   routine         hearthstone      1      awawa lint --strict: 4 L016 anchors broken since 2026-10-04
-PATTERN  P12  <span class="hl">new</span>  "presenters build user sentences" · 5 signals · ACTION constraint → guard in planet-crafter   <span class="dim">brigade inbox show P12</span>
+S-319  3h   scan            lantern          1      corpus-lint: 4 L016 anchors broken since 2026-10-04
+PATTERN  P12  <span class="hl">new</span>  "presenters build user sentences" · 5 signals · ACTION constraint → guard in tidepool   <span class="dim">brigade inbox show P12</span>
 
 <span class="p">$</span> <span class="c">brigade triage</span>
-<span class="tagc">cli</span>  7 signals → 3 families (rule cited, check name, free text)
-<span class="taga">mina</span> run r-0199 · triage.md · 9 steps · 2 m 50 s
+<span class="tagc">cli</span>  study triage · 7 signals → 3 families (rule cited, check name, free text)
+<span class="taga">mina</span> run r-0199 · slot triage · study.md · 9 steps · 2 m 50 s
 <span class="tagc">cli</span>  patterns.json valid · P12 updated (+2 evidence) · P13 new "coverage gate hit by presenter files" ACTION constraint (guard: a presenter file ships with its spec)
 <span class="tagc">cli</span>  S-318 → P14 new "rebase asks a model when git could" ACTION constraint target instructions (script before procedure)
 <span class="tagc">cli</span>  entities written · awawa fmt + lint --strict 0 errors · commit 3 patterns
 
 <span class="p">$</span> <span class="c">brigade inbox ratify P12</span>
-<span class="tagc">cli</span>  P12 ratified → CONSTRAINT C-07 (guard, planet-crafter) → request R-022 "add a guard refusing a user sentence built in a presenter" · wave at next tick</pre>
+<span class="tagc">cli</span>  P12 ratified → CONSTRAINT C-07 (guard, tidepool) → request R-022 "add a guard refusing a user sentence built in a presenter" · wave at next tick</pre>
     <figcaption>Signals wait; patterns emerge; one ratification starts a constraint wave that lands like any other work.</figcaption>
   </figure>
 </section>
 
 <section id="m-ledger">
-  <h2>Statistics from the CLI, not from spend</h2>
+  <h2>Statistics from the client's result data, not from spend</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade ledger --wave pc/16</em></div>
-<pre class="term" id="t-ledger"><span class="p">$</span> <span class="c">brigade ledger --wave pc/16</span>
-wave pc/16 · 5 tasks · 5 PRs · 4 merged, 1 parked · wall 2 d 03 h (incl. 1 quota pause of 4 h 45)
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade ledger --wave tp/16</em></div>
+<pre class="term" id="t-ledger"><span class="p">$</span> <span class="c">brigade ledger --wave tp/16</span>
+wave tp/16 · 5 tasks · 5 PRs · 4 merged, 1 parked · wall 2 d 03 h (incl. 1 quota pause of 4 h 45)
 
-ROLE       RUNS  STEPS p50  p90  WALL p50   HANDOVERS  OUTCOME
-ada        1     19         19   6 m 40     0          plan accepted 1st round
-bastien    6     29         47   41 m       1          5 PRs, 1 fix of a failing check
-prudence   6     13         18   3 m 50     0          4 approve, 2 request changes
-remi       2     11         14   5 m 10     0          2 rounds answered
-manu       0     —          —    —          —          2 rebases clean by git, 0 conflicts
-rita       1     12         12   4 m 30     0          report committed
+SLOT      ROLE       RUNS  STEPS p50  p90  WALL p50   HANDOVERS  OUTCOME
+plan      ada        1     19         19   6 m 40     0          plan accepted 1st round
+build     bastien    6     29         47   41 m       1          5 PRs, 1 fix of a failing check
+verify    prudence   6     13         18   3 m 50     0          4 approve, 2 request changes
+review    remi       2     11         14   5 m 10     0          2 rounds answered
+rebase    manu       0     —          —    —          —          2 rebases clean by git, 0 conflicts
+report    bilal      1     12         12   4 m 30     0          study wave-report answered
 
 compare with baseline 26/09–03/10 (measured, 61 task runs):  first edit  23 → 6 steps (p50)  ·  steps per task run  47 → 29 (p50)
 oversized-output re-reads: 0 (baseline 146 over 67 launches)
 <span class="dim">brigade ledger budgets → p90 per procedure, for the front matters</span></pre>
-    <figcaption>Every number is a line of the ledger; the baseline figures are the user's own notes of 2026-10-03.</figcaption>
+    <figcaption>Every number is a line of the ledger, taken from the result each client adapter normalises; the baseline figures are the user's own notes of 2026-10-03.</figcaption>
   </figure>
 </section>
 
@@ -208,17 +213,17 @@ oversized-output re-reads: 0 (baseline 146 over 67 launches)
   <h2>A corpus at any branch, without a checkout</h2>
   <figure class="shot">
     <div class="shot-bar"><span></span><span></span><span></span><em>brigade corpus … --ref</em></div>
-<pre class="term" id="t-corpus"><span class="p">$</span> <span class="c">brigade corpus planet-crafter --ref feat/feat189-no-earlier-look -- status TASK --where STATUS==todo</span>
-<span class="tagc">cli</span>  ref feat/feat189-no-earlier-look = 4aec7f9 · cache miss → git archive (0.6 s) → refs/planet-crafter/4aec7f9
+<pre class="term" id="t-corpus"><span class="p">$</span> <span class="c">brigade corpus tidepool --ref feat/tp189-seven-day-forecast -- status TASK --where STATUS==todo</span>
+<span class="tagc">cli</span>  ref feat/tp189-seven-day-forecast = 4aec7f9 · cache miss → git archive (0.6 s) → refs/tidepool/4aec7f9
 TASK (3 of 60):
-  @TASK.FEAT146  todo  ./docs/awawa-project-methodology/tasks.awawa:1108  incoming 0
-  @TASK.FEAT151  todo  ./docs/awawa-project-methodology/tasks.awawa:1138  incoming 5 (BEFORE 3)
-  @TASK.FEAT195  todo  ./docs/awawa-project-methodology/tasks.awawa:2915  incoming 0
+  @TASK.TP146  todo  ./docs/tasks.awawa:1108  incoming 0
+  @TASK.TP151  todo  ./docs/tasks.awawa:1138  incoming 5 (BEFORE 3)
+  @TASK.TP195  todo  ./docs/tasks.awawa:2915  incoming 0
 
-<span class="p">$</span> <span class="c">brigade corpus planet-crafter --ref worktree:pc-16-feat151 -- show @TASK.FEAT151</span>
+<span class="p">$</span> <span class="c">brigade corpus tidepool --ref worktree:tp-16-tp151 -- show @TASK.TP151</span>
 <span class="tagc">cli</span>  worktree read in place (uncommitted edits included)
-TASK FEAT151
-	TITLE "planet page skeleton"
+TASK TP151
+	TITLE "station page skeleton"
 	STATUS implemented
 	DELIVERED_BY 292
 	…</pre>
@@ -227,35 +232,118 @@ TASK FEAT151
 </section>
 
 <section id="m-units">
-  <h2>The timer and a run, as systemd sees them</h2>
+  <h2>The scheduler, the adapter and a run</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>systemd user units</em></div>
-<pre class="term" id="t-units"><span class="dim"># brigade.timer</span>
-[Timer]
-OnCalendar=*:0/5
-Persistent=true
-RandomizedDelaySec=20
+    <div class="shot-bar"><span></span><span></span><span></span><em>config.toml · brigade scheduler install · brigade adapter launch-argv · brigade runs logs</em></div>
+<pre class="term" id="t-units"><span class="dim"># $XDG_CONFIG_HOME/brigade/config.toml (excerpt): the machine's bindings</span>
+schema = 1
+client = "claude"
+scheduler = "systemd-user"
+forge_account = "bot:&lt;login&gt;"
+instructions = "&lt;rootDir&gt;"
 
-<span class="dim"># brigade.service</span>
-[Service]
-Type=oneshot
-ExecStart=brigade tick --once
-StandardOutput=append:%S/brigade/tick.log
+<span class="p">$</span> <span class="c">brigade scheduler install</span>
+<span class="tagc">cli</span>  scheduler systemd-user · user instance running
+<span class="tagc">cli</span>  wrote $XDG_CONFIG_HOME/systemd/user/brigade.timer (OnCalendar=*:0/5, Persistent=true) and brigade.service (brigade tick --once)
+<span class="tagc">cli</span>  timer enabled · next tick 09:10:00 · without systemd: <span class="dim">brigade scheduler install --cron</span>, or <span class="dim">brigade tick --loop</span>
 
-<span class="dim"># one run, started by the tick as a transient unit</span>
-systemd-run --user --unit brigade-run-r-0193 --working-directory=…/pc-16-feat146 \
-  claude -p "@runs/r-0193/brief.md" --agent bastien --output-format stream-json \
+<span class="p">$</span> <span class="c">brigade adapter launch-argv r-0193</span>
+<span class="tagc">cli</span>  client claude · built-in adapter · probe 2.1.289: launch, result, resume, transcripts, tool grants: full
+<span class="tagc">cli</span>  slot build → bastien (instructions corpus) · reasoning standard · budget 75, step cap 94
+cwd  &lt;worktrees&gt;/tp-16-tp146
+claude -p "@runs/r-0193/brief.md" --output-format stream-json \
+  --model opus --effort high \
   --permission-mode acceptEdits --permission-prompts none \
   --allowedTools "Read,Glob,Grep,Write,Edit,Bash" --add-dir "$XDG_STATE_HOME/brigade" \
   --append-system-prompt-file runs/r-0193/role-package.md --max-turns 94
-<span class="dim"># journalctl --user -u brigade-run-r-0193 · claude --resume 7f3c… to step inside</span></pre>
-    <figcaption>Nothing exotic: a timer, a oneshot service, and one transient unit per run with the role's package passed in.</figcaption>
+
+<span class="p">$</span> <span class="c">brigade runs logs r-0193 --tail 3</span>
+09:07:12  run r-0193 · build (bastien) · tp/16 TP146 · started · pid 48211
+09:38:40  result · outcome pr_open · steps 31 · 31 m 28 s · pr 291
+09:38:40  ledger run.finished · segment 1 · exit 0</pre>
+    <figcaption>The machine's bindings live in one file; the scheduler is one command any of three schedulers runs; the core spawns the client itself, with the argv its adapter translated, and reads the log the same way whatever the client.</figcaption>
+  </figure>
+</section>
+
+<section id="m-roles">
+  <h2>Slots and the roles that fill them</h2>
+  <figure class="shot">
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade roles list</em></div>
+<pre class="term" id="t-roles"><span class="p">$</span> <span class="c">brigade roles list</span>
+<span class="tagc">cli</span>  resolution: PROJECT.ROLE → machine roles/ → instructions corpus (&lt;rootDir&gt;) → built-in
+SLOT      ROLE       SOURCE                 REASONING  MODEL (claude adapter)
+plan      ada        built-in               deep       fable · high
+build     bastien    instructions corpus    standard   opus · high
+verify    prudence   instructions corpus    deep       fable · high
+review    remi       instructions corpus    standard   opus · high
+rebase    manu       instructions corpus    light      sonnet · medium
+report    bilal      built-in               standard   opus · high
+triage    mina       built-in               standard   opus · high
+rules     lex        instructions corpus    deep       fable · high
+explore   dora       instructions corpus    light      sonnet · medium
+<span class="dim">tidepool: ROLESET corpus · no ROLE override</span></pre>
+    <figcaption>A procedure names a slot; the slot resolves to a role file or an AGENT entity, and the reasoning level maps to a model in the adapter's table, never in the role.</figcaption>
+  </figure>
+</section>
+
+<section id="m-doctor">
+  <h2>Four prerequisites, the rest optional</h2>
+  <figure class="shot">
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade doctor</em></div>
+<pre class="term" id="t-doctor"><span class="p">$</span> <span class="c">brigade doctor</span>
+<span class="hl">prerequisites</span>
+<span class="ok">ok</span>    python          3.13 (floor 3.11)
+<span class="ok">ok</span>    git             2.47
+<span class="ok">ok</span>    awawa           2.7.0 (floor 2.7)
+<span class="ok">ok</span>    client          claude 2.1.289 · probe answered, 5 of 5 operations
+<span class="hl">optional</span>
+<span class="ok">ok</span>    scheduler       user systemd instance running            <span class="dim">else: a cron line, or brigade tick --loop</span>
+<span class="ok">ok</span>    forge           gh as the machine account bot:&lt;login&gt;   <span class="dim">else: the user's account, logged; else local mode</span>
+<span class="ok">ok</span>    instructions    &lt;rootDir&gt; lint --strict clean          <span class="dim">else: built-in roles, no instructions package</span>
+<span class="warn">warn</span>  awawa-web       not on PATH                             <span class="dim">fallback: the dashboard's corpus view only</span>
+
+doctor: 4 of 4 prerequisites · 1 optional item on its fallback · exit 0</pre>
+    <figcaption>A missing optional item is a warning with its fallback, never a finding: brigade runs on any Linux with Python, git, awawa and one adapted client.</figcaption>
+  </figure>
+</section>
+
+<section id="m-study">
+  <h2>A study: collectors, then one judgment</h2>
+  <figure class="shot">
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade study run steps-month</em></div>
+<pre class="term" id="t-study"><span class="p">$</span> <span class="c">brigade study new "How did the agents spend their steps on tidepool this month?" --project tidepool --collector ledger since=30d --collector git-log since=30d --collector corpus --slot report --output file:docs/reports/{date}-steps.md</span>
+<span class="tagc">cli</span>  STUDY steps-month written · on demand · awawa fmt + lint --strict: 0 errors
+
+<span class="p">$</span> <span class="c">brigade study run steps-month</span>
+<span class="tagc">cli</span>  collector ledger since=30d · 1 284 events · cache hit
+<span class="tagc">cli</span>  collector git-log since=30d · 212 commits · cache hit
+<span class="tagc">cli</span>  collector corpus · 433 entities at main · cache miss (0.4 s)
+<span class="taga">bilal</span> run r-0214 · slot report · study.md · 11 steps · 3 m 20 s
+<span class="tagc">cli</span>  answer validated · CLI sections untouched · committed docs/reports/2026-10-06-steps.md · pull request 296</pre>
+    <figcaption>Three collectors at 0 AI steps, one judging run that reads only what they collected; a second judgment would be a second study.</figcaption>
+  </figure>
+</section>
+
+<section id="m-order">
+  <h2>An order of a recipe the user declared</h2>
+  <figure class="shot">
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade order new pr-usage-report pr=292</em></div>
+<pre class="term" id="t-order"><span class="p">$</span> <span class="c">brigade order new pr-usage-report pr=292</span>
+<span class="tagc">cli</span>  recipe pr-usage-report (6 steps) · ORDER O-004 written · project tidepool · run o-0042
+<span class="tagc">cli</span>  step 1 collect ledger pr=292 · 41 events · cache miss (0.1 s)
+<span class="tagc">cli</span>  step 2 collect pr-threads pr=292 · 6 threads, 6 resolved
+<span class="tagc">cli</span>  step 3 collect corpus diff=base..head · 2 entities changed
+<span class="tagc">cli</span>  step 4 gate pr-is-reviewed <span class="ok">ok</span> · "review addressed, 0 open threads"
+<span class="taga">bilal</span> step 5 judge · slot report · study.md · 9 steps · 2 m 40 s
+<span class="tagc">cli</span>  step 6 output committed on feat/tp151-station-page · docs/usage-reports/pull-requests/292.md
+<span class="tagc">cli</span>  order.done · ledger +7 events</pre>
+    <figcaption>The recipe is a file of the user's; brigade ran it step by step, parked nothing because the gate held, and spent one judging run.</figcaption>
   </figure>
 </section>
 
 <section id="m-dash">
   <h2>Dashboard screens</h2>
-  <p>Served on the loopback interface by <code>brigade serve</code>; one template, polled every five seconds. Four of the six views.</p>
+  <p>Served on the loopback interface by <code>brigade serve</code>; one template, polled every five seconds. Four of the six views; Reports, not drawn, lists the wave reports, the study answers and the order outputs.</p>
 
   <figure class="screen" id="s-home">
     <div class="sbar"><b>brigade</b><span class="snav"><em>Home</em><span>Waves</span><span>Inbox</span><span>Corpus</span><span>Ledger</span><span>Reports</span></span><span class="sright">tick 09:15 · quota open</span></div>
@@ -264,32 +352,33 @@ systemd-run --user --unit brigade-run-r-0193 --working-directory=…/pc-16-feat1
         <div class="scard"><div class="sl">Projects</div><div class="sv">3</div><div class="sd">1 wave running · 1 paused</div></div>
         <div class="scard"><div class="sl">Inbox</div><div class="sv">7</div><div class="sd">3 families · 1 pattern to ratify</div></div>
         <div class="scard"><div class="sl">Runs today</div><div class="sv">9</div><div class="sd">p50 21 steps · 0 hand-overs</div></div>
-        <div class="scard warn"><div class="sl">Routines</div><div class="sv">1</div><div class="sd">lint drift · hearthstone</div></div>
+        <div class="scard warn"><div class="sl">Scans</div><div class="sv">1</div><div class="sd">lint drift · lantern</div></div>
+        <div class="scard"><div class="sl">Parked orders</div><div class="sv">0</div><div class="sd">1 study due at 10:00</div></div>
       </div>
       <div class="spane">
         <div class="sh">Active waves</div>
-        <div class="srow"><span class="pill s-running">running</span><b>pc/16</b> planet-crafter · integration/save-manager-finish <span class="sdim">3 merged · 1 fixing · 1 queued</span><span class="sact">pause</span></div>
-        <div class="srow"><span class="pill s-paused">paused</span><b>hs/3</b> hearthstone · integration/deck-import <span class="sdim">by the user, 2026-10-05</span><span class="sact">resume</span></div>
+        <div class="srow"><span class="pill s-running">running</span><b>tp/16</b> tidepool · integration/station-page <span class="sdim">3 merged · 1 fixing · 1 queued</span><span class="sact">pause</span></div>
+        <div class="srow"><span class="pill s-paused">paused</span><b>ln/3</b> lantern · integration/epub-import <span class="sdim">by the user, 2026-10-05</span><span class="sact">resume</span></div>
       </div>
     </div>
   </figure>
 
   <figure class="screen" id="s-wave">
-    <div class="sbar"><b>brigade</b><span class="snav"><span>Home</span><em>Waves</em><span>Inbox</span><span>Corpus</span><span>Ledger</span><span>Reports</span></span><span class="sright">pc/16 · slots 2/4</span></div>
+    <div class="sbar"><b>brigade</b><span class="snav"><span>Home</span><em>Waves</em><span>Inbox</span><span>Corpus</span><span>Ledger</span><span>Reports</span></span><span class="sright">tp/16 · slots 2/4</span></div>
     <div class="sbody">
       <div class="board">
         <div class="col"><div class="colh">queued <span>3</span></div>
-          <div class="card"><b>FEAT189</b> no earlier look<br><span class="sdim">after FEAT151</span></div>
-          <div class="card"><b>FEAT195</b> equipment icons<br><span class="sdim">after FEAT151, FEAT196</span></div>
-          <div class="card"><b>FEAT196</b> equipment list<br><span class="sdim">after FEAT151</span></div>
+          <div class="card"><b>TP189</b> seven-day forecast<br><span class="sdim">after TP151</span></div>
+          <div class="card"><b>TP195</b> buoy icons<br><span class="sdim">after TP151, TP196</span></div>
+          <div class="card"><b>TP196</b> buoy list<br><span class="sdim">after TP151</span></div>
         </div>
         <div class="col"><div class="colh">running <span>0</span></div></div>
         <div class="col"><div class="colh">pr open · verifying <span>0</span></div></div>
         <div class="col"><div class="colh">fixing <span>1</span></div>
-          <div class="card"><b>FEAT151</b> planet page skeleton<br><span class="sdim">pr 292 · round 1/2 · coverage</span><br><span class="pill s-fixing">bastien r-0197</span></div>
+          <div class="card"><b>TP151</b> station page skeleton<br><span class="sdim">pr 292 · round 1/2 · coverage</span><br><span class="pill s-fixing">bastien r-0197</span></div>
         </div>
         <div class="col"><div class="colh">merged <span>1</span></div>
-          <div class="card ok"><b>FEAT146</b> phone + keyboard<br><span class="sdim">pr 291 · approve · 09:15</span></div>
+          <div class="card ok"><b>TP146</b> phone + keyboard<br><span class="sdim">pr 291 · approve · 09:15</span></div>
         </div>
       </div>
       <div class="timeline">
@@ -302,16 +391,16 @@ systemd-run --user --unit brigade-run-r-0193 --working-directory=…/pc-16-feat1
     <div class="sbar"><b>brigade</b><span class="snav"><span>Home</span><span>Waves</span><span>Inbox</span><em>Corpus</em><span>Ledger</span><span>Reports</span></span><span class="sright">read-only · edit in awawa-web ↗</span></div>
     <div class="sbody">
       <div class="selectors">
-        <label>Project <select id="mock-proj"><option>planet-crafter</option><option>instructions</option><option>hearthstone</option></select></label>
-        <label>Ref <select id="mock-ref"><option>master</option><option>integration/save-manager-finish</option><option selected>feat/feat189-no-earlier-look</option><option>worktree: pc-16-feat151 (uncommitted)</option><option>4aec7f9</option></select></label>
+        <label>Project <select id="mock-proj"><option>tidepool</option><option>instructions</option><option>lantern</option></select></label>
+        <label>Ref <select id="mock-ref"><option>main</option><option>integration/station-page</option><option selected>feat/tp189-seven-day-forecast</option><option>worktree: tp-16-tp151 (uncommitted)</option><option>4aec7f9</option></select></label>
         <label>Type <select id="mock-type"><option>TASK</option><option>DECISION</option><option>WAVE</option></select></label>
         <label>Board by <select id="mock-by"><option>STATUS</option><option>WAVE</option><option>PRIORITY</option></select></label>
         <span class="sdim">git archive 4aec7f9 · cached · awawa status --json 0.2 s</span>
       </div>
       <div class="board small">
-        <div class="col"><div class="colh">draft <span>21</span></div><div class="card"><b>FEAT190</b> …</div><div class="card"><b>REFACTOR197</b> …</div><div class="card sdim">+19</div></div>
-        <div class="col"><div class="colh">todo <span>3</span></div><div class="card"><b>FEAT146</b></div><div class="card"><b>FEAT151</b></div><div class="card"><b>FEAT195</b></div></div>
-        <div class="col"><div class="colh">implemented <span>36</span></div><div class="card ok"><b>FEAT189</b> <span class="sdim">this branch</span></div><div class="card sdim">+35</div></div>
+        <div class="col"><div class="colh">draft <span>21</span></div><div class="card"><b>TP190</b> …</div><div class="card"><b>TP197</b> …</div><div class="card sdim">+19</div></div>
+        <div class="col"><div class="colh">todo <span>3</span></div><div class="card"><b>TP146</b></div><div class="card"><b>TP151</b></div><div class="card"><b>TP195</b></div></div>
+        <div class="col"><div class="colh">implemented <span>36</span></div><div class="card ok"><b>TP189</b> <span class="sdim">this branch</span></div><div class="card sdim">+35</div></div>
       </div>
     </div>
   </figure>
@@ -321,15 +410,15 @@ systemd-run --user --unit brigade-run-r-0193 --working-directory=…/pc-16-feat1
     <div class="sbody">
       <div class="spane">
         <div class="sh">Patterns proposed by triage</div>
-        <div class="srow"><span class="pill s-new">new</span><b>P12</b> presenters build user sentences <span class="sdim">5 signals · constraint: guard · planet-crafter</span><span class="sact primary">ratify</span><span class="sact">dismiss</span></div>
+        <div class="srow"><span class="pill s-new">new</span><b>P12</b> presenters build user sentences <span class="sdim">5 signals · constraint: guard · tidepool</span><span class="sact primary">ratify</span><span class="sact">dismiss</span></div>
         <div class="srow"><span class="pill s-new">new</span><b>P13</b> coverage gate hit by presenter files <span class="sdim">2 signals · constraint: guard</span><span class="sact primary">ratify</span><span class="sact">dismiss</span></div>
         <div class="srow"><span class="pill s-new">new</span><b>P14</b> rebase asks a model when git could <span class="sdim">1 note · constraint: script · instructions</span><span class="sact primary">ratify</span><span class="sact">dismiss</span></div>
       </div>
       <div class="spane">
         <div class="sh">Signals, grouped</div>
-        <div class="srow"><span class="pill s-sig">review</span>S-311 · 3 threads citing @RULE.user_sentence_built_in_presentation <span class="sdim">pr 280, 283, 291 · 2 d</span></div>
+        <div class="srow"><span class="pill s-sig">review</span>S-311 · 3 threads citing @RULE.sentence_built_in_the_view <span class="sdim">pr 280, 283, 291 · 2 d</span></div>
         <div class="srow"><span class="pill s-sig">check</span>S-314 · test (coverage) failed twice on new presenter files <span class="sdim">pr 288, 292 · 1 d</span></div>
-        <div class="srow"><span class="pill s-sig">routine</span>S-319 · awawa lint --strict: 4 L016 on hearthstone <span class="sdim">3 h</span></div>
+        <div class="srow"><span class="pill s-sig">scan</span>S-319 · corpus-lint: 4 L016 on lantern <span class="sdim">3 h</span></div>
       </div>
     </div>
   </figure>
