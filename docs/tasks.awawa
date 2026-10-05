@@ -771,19 +771,25 @@ TASK B53
 
 TASK B54
 	TITLE "The Blueprint board renders the corpus task statuses"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "artifact"
 	ROLE bastien
 	SPEC "the board renders the corpus's statuses, draft, todo, implemented and archived, as they"
 		+ "are or through one mapping declared in one place of the page"
+		IMPL "artifact/index.html::var STATUS_TONES = {"
 	SPEC "the board renders a task document whose field status holds any corpus value; the page"
 		+ "holds no other status vocabulary"
+		IMPL "artifact/index.html::function isCorpusStatus(status)"
+		IMPL "artifact/index.html::function labelStatusOf(t)"
 	SPEC "the board's status control is read-only, or records a proposal in a field of its own,"
 		+ "distinct from status; no action of the page writes status"
+		IMPL "artifact/index.html::.update({ notes: text, updated_at"
+		IMPL "artifact/index.html::var badge = el('span', badgeAttrs);"
 	RATIONALE "the board page of 2026-10-04 edits status in a vocabulary of its own, todo, doing,"
 		+ "review, done and blocked, and cannot display draft: republished with the 53 tasks of the"
 		+ "corpus, all draft, it would show every one as todo; split out of B41 on 2026-10-05 so"
 		+ "the page is delivered before the republication, in M0 with no AFTER because it needs no"
 		+ "command of brigade"
 	SOURCE "the user's rulings of 2026-10-05, pull request #4 of the brigade repository"
+	DELIVERED_BY 5
