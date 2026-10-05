@@ -34,7 +34,7 @@
 PROJECT          MAIN     WAVES   INBOX  SCANS
 tidepool         main     1 run   7 new  4 ok
 instructions     main     —       2 new  1 ok
-lantern          main     paused  —      <span class="warn">1 failing</span>  lint drift on docs/ (since 2d)
+lantern          main     paused  —      <span class="warn">1 failing</span>  lint drift on corpus/ (since 2d)
 
 WAVE     PROJECT          STATE     TASKS                     PRS         NEXT
 tp/16    tidepool         running   3 merged · 2 running · 1 queued   4 open   TP195 waits on TP151
@@ -216,9 +216,9 @@ oversized-output re-reads: 0 (baseline 146 over 67 launches)
 <pre class="term" id="t-corpus"><span class="p">$</span> <span class="c">brigade corpus tidepool --ref feat/tp189-seven-day-forecast -- status TASK --where STATUS==todo</span>
 <span class="tagc">cli</span>  ref feat/tp189-seven-day-forecast = 4aec7f9 · cache miss → git archive (0.6 s) → refs/tidepool/4aec7f9
 TASK (3 of 60):
-  @TASK.TP146  todo  ./docs/tasks.awawa:1108  incoming 0
-  @TASK.TP151  todo  ./docs/tasks.awawa:1138  incoming 5 (BEFORE 3)
-  @TASK.TP195  todo  ./docs/tasks.awawa:2915  incoming 0
+  @TASK.TP146  todo  ./corpus/tasks.awawa:1108  incoming 0
+  @TASK.TP151  todo  ./corpus/tasks.awawa:1138  incoming 5 (BEFORE 3)
+  @TASK.TP195  todo  ./corpus/tasks.awawa:2915  incoming 0
 
 <span class="p">$</span> <span class="c">brigade corpus tidepool --ref worktree:tp-16-tp151 -- show @TASK.TP151</span>
 <span class="tagc">cli</span>  worktree read in place (uncommitted edits included)

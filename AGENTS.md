@@ -2,7 +2,7 @@
 
 Project context for the AI agents working in this repository, in addition to the general instructions of
 `<rootDir>`. This file holds what a session needs *before* its first command; everything else lives in the corpus
-of `docs/` and is read with the tool.
+of `corpus/` and is read with the tool.
 
 ## What brigade is
 
@@ -12,7 +12,7 @@ registered project. The CLI does every mechanical step; a model is called only t
 
 ## The corpus
 
-The specification is the awawa corpus of `docs/`, written in English, entity names included. **The workspace root
+The specification is the awawa corpus of `corpus/`, written in English, entity names included. **The workspace root
 is the repository root**: every command takes `.` as its last argument from there, never a single file.
 
 ```
@@ -29,7 +29,8 @@ awawa fmt --check . && awawa lint --strict .                              # the 
 
 ## Layout
 
-- `docs/` — the corpus: the schema, the milestones, the tasks, the decisions of the plan.
+- `corpus/` — the corpus: the schema, the milestones, the tasks, the decisions of the plan
+  (@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus).
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint",
   <https://claude.ai/artifact/ENPmZkLZS85qhvVBakhXJe>; `index.html` is the page, `parts/` the fragments it fetches.
   A republish goes through the Artifact tool with `url` set to that address, after a read of it.

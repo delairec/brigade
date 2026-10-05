@@ -43,6 +43,8 @@ TASK B04
 	ROLE bastien
 	SPEC "project add discovers remote, main branch and corpus root and drafts ACCEPTANCE and SETUP"
 		+ "lines"
+	SPEC "project add --init-corpus creates the project's corpus in the folder its CORPUS field"
+		+ "names, corpus/ by default"
 	SPEC "list, show, pause, resume"
 	SPEC "every write goes through fmt, lint and a commit"
 	AFTER @TASK.B03
@@ -242,8 +244,8 @@ TASK B20
 		+ "the instructions-corpus change list and the parked questions"
 	SPEC "the report slot completes the narrative, the reasons, the manual tests in a tester's"
 		+ "words and the sampling suggestions; study answer refuses an answer that changed a"
-		+ "CLI-filled section, commits docs/waves/<n>-report.md on the integration branch and"
-		+ "updates the integration pull request"
+		+ "CLI-filled section, commits waves/<n>-report.md under the project's corpus folder on the"
+		+ "integration branch and updates the integration pull request"
 	SPEC "the tick runs it when every task of the wave is merged or parked"
 	AFTER @TASK.B17
 	AFTER @TASK.B48
