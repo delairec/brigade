@@ -75,6 +75,8 @@ def _check_scheduler(runtime) -> dict:
     systemd_state = record.stdout.strip().partition("\n")[0]
     if systemd_state in SYSTEMD_STATES_FIT_FOR_TIMERS:
         return _create_optional("scheduler", "ok", f"user systemd instance {systemd_state}", SCHEDULER_FALLBACK)
+    if not systemd_state:
+        return _create_optional("scheduler", "warning", "no user systemd instance", SCHEDULER_FALLBACK)
     return _create_optional("scheduler", "warning", f"no user systemd instance ({systemd_state})", SCHEDULER_FALLBACK)
 
 

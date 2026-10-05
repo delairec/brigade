@@ -14,6 +14,7 @@ AWAWA = str(EXECUTABLES / "awawa-2.7.0")
 AWAWA_BELOW_FLOOR = str(EXECUTABLES / "awawa-2.6.3")
 SYSTEMD_RUNNING = str(EXECUTABLES / "systemd-running")
 SYSTEMD_OFFLINE = str(EXECUTABLES / "systemd-offline")
+SYSTEMD_NO_BUS = str(EXECUTABLES / "systemd-no-bus")
 GH_ACTIVE = str(EXECUTABLES / "gh-active")
 GH_LOGGED_OUT = str(EXECUTABLES / "gh-logged-out")
 AWAWA_WEB = str(EXECUTABLES / "awawa-web")
@@ -201,6 +202,18 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
                     "kind": "optional",
                     "state": "warning",
                     "detail": "no user systemd instance (offline)",
+                    "fallback": "a cron line, or brigade tick --loop",
+                },
+            ),
+            (
+                "systemctl printing no state",
+                [GIT, AWAWA, SYSTEMD_NO_BUS, GH_ACTIVE, AWAWA_WEB],
+                SCHEDULER_ENTRY,
+                {
+                    "name": "scheduler",
+                    "kind": "optional",
+                    "state": "warning",
+                    "detail": "no user systemd instance",
                     "fallback": "a cron line, or brigade tick --loop",
                 },
             ),
