@@ -229,15 +229,85 @@ TASK B04
 		+ "2026-10-06 in the refinement of B04"
 
 TASK B05
-	TITLE "Ledger writer and reader"
-	STATUS draft
+	TITLE "brigade ledger: the append-only event journal, its writer, its overview and its views by"
+		+ "wave, project, budget and comparison"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ledger"
 	ROLE bastien
-	SPEC "append-only monthly JSONL"
-	SPEC "brigade ledger prints text and --json"
-	SPEC "p50 and p90 steps per procedure are computed from the events"
-	AFTER @TASK.B01
+	SPEC "one module of brigade/ledger declares every event name with the fields its readers need,"
+		+ "run.finished, wave.started, wave.paused, wave.resumed, task.parked, pr.merged,"
+		+ "order.done, signal.recorded, pattern.ratified and constraint.delivered to begin with;"
+		+ "the writer refuses a name it does not declare or a declared field missing"
+	SPEC "the writer appends one JSON line carrying schema_version, ts in ISO 8601 UTC with Z,"
+		+ "event and the event's fields to $XDG_STATE_HOME/brigade/ledger/<YYYY-MM>.jsonl, the"
+		+ "month of ts; the instant is given by its caller and the ledger never reads the clock;"
+		+ "the directory is created on the first write"
+	SPEC "a write holds an fcntl lock on $XDG_STATE_HOME/brigade/locks/ledger.lock, flushes its"
+		+ "line before the release and never rewrites a file: N processes appending M events each"
+		+ "leave N times M whole lines"
+	SPEC "the reader reads the monthly files in order and checks the envelope of each line; a line"
+		+ "that is not JSON, lacks schema_version, ts or event, or carries an unknown"
+		+ "schema_version is skipped and reported with its file and line number, on stderr and in"
+		+ "the document, and the command still exits 0"
+	SPEC "brigade ledger prints an overview: the events by name, the first and last instant, the"
+		+ "files read, the lines skipped, and the runs finished by outcome with the error classes"
+		+ "met; with no ledger it reports zero events and exits 0"
+	SPEC "brigade ledger --wave <id> prints the wave's tasks, pull requests and review rounds, p50"
+		+ "and p90 steps per slot and per role, the wall time from its first to its last event, its"
+		+ "pauses with their total duration, its hand-overs, runs of segment 2 or more, and its"
+		+ "parked tasks"
+	SPEC "brigade ledger --project <name> [--since <n>d|<YYYY-MM-DD>] counts the waves started, the"
+		+ "orders done by kind, the pull requests merged, the signals recorded, the patterns"
+		+ "ratified and the constraints delivered; now is read once, in the runtime"
+	SPEC "brigade ledger budgets [--last N], 20 by default, prints p50 and p90 steps per procedure"
+		+ "over the last N run.finished events of each, by nearest rank; runs with null steps are"
+		+ "left out and counted; a procedure with fewer than five runs is marked as an estimate"
+	SPEC "brigade ledger compare --before <YYYY-MM-DD> sets the events before that day, UTC,"
+		+ "against those from that day on: p50 and p90 steps per run, steps to first edit and steps"
+		+ "spent on oversized outputs where the runs report them, null otherwise; a period holding"
+		+ "no run.finished exits 1 with a message naming the empty period"
+	SPEC "every view prints text and --json; the JSON document carries schema_version"
+	AFTER @TASK.B03
+	AFTER @TASK.B04
+	RATIONALE "the ledger is the one source of every statistic of brigade; @TASK.B06, @TASK.B07,"
+		+ "@TASK.B22, @TASK.B27 and @TASK.B47 wait on it, @TASK.B31 renders its views"
+		REF @TASK.B06
+		REF @TASK.B07
+		REF @TASK.B22
+		REF @TASK.B27
+		REF @TASK.B47
+		REF @TASK.B31
+	RATIONALE "the user ruled that the event names are declared once in the code, not in a"
+		+ "decision; the task that writes an event completes its declaration, run.finished"
+		+ "@TASK.B06, wave.paused and wave.resumed @TASK.B19, order.done @TASK.B48"
+		REF @TASK.B06
+		REF @TASK.B19
+		REF @TASK.B48
+	RATIONALE "the four views are those of the Blueprint, plan section 14, as the user ruled;"
+		+ "@TASK.B37 keeps the pull request that writes the budgets into the procedures"
+		REF @TASK.B37
+	RATIONALE "compare reads the ledger alone: the user ruled that brigade invents no baseline, so"
+		+ "the figures of the notes of 2026-10-03 stay in the Blueprint and an empty period is a"
+		+ "failure to compare, not a zero"
+	RATIONALE "a skipped line does not refuse the read, the user's ruling, so that one line torn by"
+		+ "a crash leaves the ledger readable"
+	RATIONALE "nearest rank gives a number of steps actually observed; the five-run threshold is"
+		+ "the one the rule procedure_step_budget of the instructions corpus sets"
+	RATIONALE "the lock, the flushed line and the file never rewritten follow"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory; the instant given"
+		+ "by the caller and now read once follow @DECISION.TheClockIsReadOnceAndCarriedAsAFact;"
+		+ "schema_version, the envelope checked and ts in UTC follow"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.TheClockIsReadOnceAndCarriedAsAFact
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "@TASK.B03 delivers brigade/system/paths and @TASK.B04 the first fcntl lock, which"
+		+ "the ledger reuses"
+		REF @TASK.B03
+		REF @TASK.B04
+	SOURCE "the Artifact Brigade Blueprint, plan sections 3, 14 and 16; the user's rulings of"
+		+ "2026-10-06 in the refinement of B05"
 
 TASK B06
 	TITLE "brigade run: launch a role run and capture its result"
