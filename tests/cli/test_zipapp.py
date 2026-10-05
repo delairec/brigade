@@ -14,8 +14,7 @@ class BrigadeZipapp(unittest.TestCase):
         clone_root = Path(self.clone.name)
         shutil.copytree(REPOSITORY_ROOT / "brigade", clone_root / "brigade", ignore=shutil.ignore_patterns("__pycache__"))
         shutil.copy(REPOSITORY_ROOT / "build.py", clone_root / "build.py")
-        built = subprocess.run([sys.executable, "build.py"], cwd=clone_root, capture_output=True, text=True)
-        self.assertEqual(built.returncode, 0, built.stderr)
+        subprocess.run([sys.executable, "build.py"], cwd=clone_root, check=True, stdout=subprocess.DEVNULL)
 
     def tearDown(self):
         self.clone.cleanup()
