@@ -8,6 +8,7 @@ from brigade.ledger.format_instant import format_instant
 from brigade.runtime import build_runtime
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.repeat_until_signalled import repeat_until_signalled
+from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
@@ -93,7 +94,7 @@ def _tick_and_report() -> None:
 
 
 def _tick_in_loop() -> dict:
-    ticks_attempted = repeat_until_signalled(_tick_and_report, TICK_INTERVAL_S)
+    ticks_attempted = repeat_until_signalled(lambda: run_reporting_failure(_tick_and_report, "tick"), TICK_INTERVAL_S)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "mode": "loop", "ticks_attempted": ticks_attempted}
 
 

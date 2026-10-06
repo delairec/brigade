@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from brigade.corpus.format_files import format_files
 from brigade.corpus.lint_corpus import lint_corpus
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.restore_files import restore_files
 from brigade.system.hold_lock import hold_lock
@@ -36,7 +36,10 @@ def _read_text(path: Path) -> str:
 
 def _write_checked(run_process: Callable[[ProcessRequest], ProcessRecord], change: CorpusChange, text: str) -> None:
     path = change.repository / change.file_name
-    path.write_text(text, encoding="utf-8")
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as error:
+        raise CannotWrite(error.filename or path, error) from error
     format_files(run_process, (path,))
     report = lint_corpus(run_process, change.repository)
     if not report.clean:

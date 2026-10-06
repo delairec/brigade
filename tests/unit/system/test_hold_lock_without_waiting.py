@@ -1,8 +1,10 @@
 import fcntl
+import os
 import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 
 
@@ -55,3 +57,40 @@ class HoldLockWithoutWaiting(unittest.TestCase):
 
         # Assert
         self.assertTrue(acquired_by_another)
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class HoldLockWithoutWaitingWhereTheMachineRefusesTheWrite(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.state = Path(self.root.name) / "state"
+        self.state.mkdir()
+        self.addCleanup(self.state.chmod, 0o700)
+        self.locks = self.state / "locks"
+        self.lock_path = self.locks / "tick.lock"
+
+    def test_should_name_the_directory_it_cannot_create(self):
+        # Arrange
+        self.state.chmod(0o500)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            with hold_lock_without_waiting(self.lock_path):
+                pass
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.locks}: Permission denied")
+
+    def test_should_name_the_lock_it_cannot_open(self):
+        # Arrange
+        self.locks.mkdir()
+        self.lock_path.touch(mode=0o400)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            with hold_lock_without_waiting(self.lock_path):
+                pass
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")

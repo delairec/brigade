@@ -1,10 +1,12 @@
 import json
 import multiprocessing
+import os
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.ledger.append_event import LedgerEvent, LedgerEventRefused, append_event
 
 PARIS_SUMMER_TIME = timezone(timedelta(hours=2))
@@ -161,3 +163,42 @@ class AppendEventFromSeveralProcesses(AppendEventTestCase):
         # Assert
         lines = (self.ledger / "2026-10.jsonl").read_text().splitlines()
         self.assertEqual(len({json.loads(line)["wave"] for line in lines}), PROCESS_COUNT * EVENTS_PER_PROCESS)
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class AppendEventWhereTheMachineRefusesTheWrite(AppendEventTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.state_root / "locks").mkdir(parents=True)
+        self.event = LedgerEvent(
+            name="wave.paused",
+            instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+            fields={"wave": "tp/16"},
+        )
+
+    def tearDown(self):
+        self.state_root.chmod(0o700)
+        super().tearDown()
+
+    def test_should_name_the_ledger_directory_it_cannot_create(self):
+        # Arrange
+        self.state_root.chmod(0o500)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            append_event(self.state_root, self.event)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.ledger}: Permission denied")
+
+    def test_should_name_the_month_file_it_cannot_open(self):
+        # Arrange
+        self.ledger.mkdir()
+        (self.ledger / "2026-10.jsonl").touch(mode=0o400)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            append_event(self.state_root, self.event)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.ledger / '2026-10.jsonl'}: Permission denied")
