@@ -114,7 +114,9 @@ class BrigadeProjectAddOnAGitHubRepository(ProjectTestCase):
         self.run_project("add", str(self.project.path))
 
         # Act
-        completed = subprocess.run(["awawa", "lint", "--strict", str(self.machine.corpus)], capture_output=True, text=True)
+        completed = subprocess.run(
+            ["awawa", "lint", "--strict", str(self.machine.corpus)], capture_output=True, text=True
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
@@ -175,7 +177,9 @@ class BrigadeProjectAddOnAGitHubRepository(ProjectTestCase):
 
     def test_should_write_the_setup_commands_given_by_flags(self):
         # Act
-        completed = self.run_project("add", str(self.project.path), "--setup", "make deps", "--setup", "make tools", "--json")
+        completed = self.run_project(
+            "add", str(self.project.path), "--setup", "make deps", "--setup", "make tools", "--json"
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -246,7 +250,9 @@ class BrigadeProjectAddOnALocalRepository(ProjectTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["project"]["fields"][2], {"name": "CORPUS", "value": ".", "guessed": False})
+        self.assertEqual(
+            json.loads(completed.stdout)["project"]["fields"][2], {"name": "CORPUS", "value": ".", "guessed": False}
+        )
 
 
 class BrigadeProjectAddWhenThePathIsNotARepository(ProjectTestCase):
@@ -324,7 +330,11 @@ class BrigadeProjectAddWhenAlreadyRegistered(ProjectTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade project add: {self.project.path} is already registered as @PROJECT.app; --force replaces it\n"),
+            (
+                1,
+                "",
+                f"brigade project add: {self.project.path} is already registered as @PROJECT.app; --force replaces it\n",
+            ),
         )
         self.assertEqual((self.registry.read_text(), self.count_commits()), (self.registered, "2\n"))
 
@@ -374,7 +384,9 @@ class BrigadeProjectAddWhenTheCorpusFailsItsLint(ProjectTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertTrue(
-            completed.stderr.startswith("brigade project add: awawa lint --strict refused the change; the corpus is restored\n"),
+            completed.stderr.startswith(
+                "brigade project add: awawa lint --strict refused the change; the corpus is restored\n"
+            ),
             completed.stderr,
         )
         self.assertEqual(
@@ -507,9 +519,14 @@ class BrigadeProjectPauseAndResume(ProjectTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout), {"schema_version": 1, "project": "app", "status": "paused", "changed": True})
+        self.assertEqual(
+            json.loads(completed.stdout), {"schema_version": 1, "project": "app", "status": "paused", "changed": True}
+        )
         self.assertEqual(self.registry.read_text().splitlines()[-1], "\tSTATUS paused")
-        self.assertEqual(self.machine.read_git("log", "-1", "--format=%s", "--name-only"), "brigade project pause: app\n\nprojects.awawa\n")
+        self.assertEqual(
+            self.machine.read_git("log", "-1", "--format=%s", "--name-only"),
+            "brigade project pause: app\n\nprojects.awawa\n",
+        )
 
     def test_should_resume_a_paused_project(self):
         # Arrange
@@ -537,7 +554,12 @@ class BrigadeProjectPauseAndResume(ProjectTestCase):
 
                 # Assert
                 self.assertEqual(
-                    (completed.returncode, completed.stdout, self.registry.read_text().splitlines()[-1], self.count_commits()),
+                    (
+                        completed.returncode,
+                        completed.stdout,
+                        self.registry.read_text().splitlines()[-1],
+                        self.count_commits(),
+                    ),
                     (0, text, f"\tSTATUS {status}", commits),
                 )
 
@@ -567,7 +589,9 @@ class BrigadeProjectWhileTheCorpusIsLocked(ProjectTestCase):
             waiting = self.detect_waiting(["project", "pause", "app"])
 
         # Assert
-        self.assertEqual((len(lock_files), waiting, self.registry.read_text().splitlines()[-1]), (1, True, "\tSTATUS active"))
+        self.assertEqual(
+            (len(lock_files), waiting, self.registry.read_text().splitlines()[-1]), (1, True, "\tSTATUS active")
+        )
 
     def detect_waiting(self, arguments: list) -> bool:
         try:

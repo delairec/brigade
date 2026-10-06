@@ -43,7 +43,12 @@ class BuildPaths(unittest.TestCase):
             ("empty", {"HOME": "/home/ada", "XDG_CONFIG_HOME": "", "XDG_STATE_HOME": "", "XDG_CACHE_HOME": ""}),
             (
                 "relative",
-                {"HOME": "/home/ada", "XDG_CONFIG_HOME": "config", "XDG_STATE_HOME": "state", "XDG_CACHE_HOME": "cache"},
+                {
+                    "HOME": "/home/ada",
+                    "XDG_CONFIG_HOME": "config",
+                    "XDG_STATE_HOME": "state",
+                    "XDG_CACHE_HOME": "cache",
+                },
             ),
         ]
         for case, environment in rows:

@@ -22,7 +22,11 @@ def append_wave_starts(state_root: Path, writer: int) -> None:
             LedgerEvent(
                 name="wave.started",
                 instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
-                fields={"wave": f"w{writer}-{index}", "project": "tidepool", "padding": PADDING_LONGER_THAN_A_PIPE_BUFFER},
+                fields={
+                    "wave": f"w{writer}-{index}",
+                    "project": "tidepool",
+                    "padding": PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                },
             ),
         )
 
@@ -152,7 +156,10 @@ class AppendEventFromSeveralProcesses(AppendEventTestCase):
     def test_should_leave_every_line_whole(self):
         # Arrange
         context = multiprocessing.get_context("fork")
-        writers = [context.Process(target=append_wave_starts, args=(self.state_root, writer)) for writer in range(PROCESS_COUNT)]
+        writers = [
+            context.Process(target=append_wave_starts, args=(self.state_root, writer))
+            for writer in range(PROCESS_COUNT)
+        ]
 
         # Act
         for writer in writers:

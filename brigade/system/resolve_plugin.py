@@ -57,7 +57,9 @@ def _resolve_built_in(kind: str, name: str):
 
 
 def _resolve_client(name: str, runtime):
-    missing = BrigadeError(f"no client adapter {name}: no built-in module and no {CLIENT_EXECUTABLE_PREFIX}{name} on PATH")
+    missing = BrigadeError(
+        f"no client adapter {name}: no built-in module and no {CLIENT_EXECUTABLE_PREFIX}{name} on PATH"
+    )
     if not CLIENT_NAME_PATTERN.fullmatch(name):
         raise missing
     executable = shutil.which(f"{CLIENT_EXECUTABLE_PREFIX}{name}", path=runtime.paths.executable_search_path)

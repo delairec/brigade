@@ -46,7 +46,14 @@ from brigade.system.read_configuration import SLOTS
 DAY_FORMAT = "%Y-%m-%d"
 DAYS_SUFFIX = "d"
 LAST_RUNS_BY_DEFAULT = 20
-ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action", "scheduler_action", "runs_action", "adapter_action")
+ACTION_DESTINATIONS = (
+    "project_action",
+    "ledger_report",
+    "roles_action",
+    "scheduler_action",
+    "runs_action",
+    "adapter_action",
+)
 CORPUS_COMMAND = "corpus"
 PASSTHROUGH_SEPARATOR = "--"
 RUN_ARGUMENT_SEPARATOR = "="
@@ -128,14 +135,19 @@ def _add_ledger_parser(commands) -> None:
     )
     views = ledger_parser.add_mutually_exclusive_group()
     views.add_argument("--wave", help="the tasks, steps, pauses, hand-overs and parked tasks of a wave")
-    views.add_argument("--project", help="the waves, orders, pull requests, signals, patterns and constraints of a project")
+    views.add_argument(
+        "--project", help="the waves, orders, pull requests, signals, patterns and constraints of a project"
+    )
     ledger_parser.add_argument("--since", type=_read_since, help="with --project, <n>d or a day YYYY-MM-DD in UTC")
     reports = ledger_parser.add_subparsers(dest="ledger_report", metavar="report")
     budgets_parser = reports.add_parser(
         "budgets", parents=[_create_common_options()], help="p50 and p90 steps per procedure over its last runs"
     )
     budgets_parser.add_argument(
-        "--last", type=_read_positive_count, default=LAST_RUNS_BY_DEFAULT, help="the runs of each procedure, 20 by default"
+        "--last",
+        type=_read_positive_count,
+        default=LAST_RUNS_BY_DEFAULT,
+        help="the runs of each procedure, 20 by default",
     )
     compare_parser = reports.add_parser(
         "compare", parents=[_create_common_options()], help="the runs before a day against the runs from that day on"
@@ -146,8 +158,12 @@ def _add_ledger_parser(commands) -> None:
 def _add_roles_parser(commands) -> None:
     roles_parser = commands.add_parser("roles", help="list, show and lint the roles each slot resolves to")
     actions = roles_parser.add_subparsers(dest="roles_action", metavar="action", required=True)
-    actions.add_parser("list", parents=[_create_common_options()], help="list the role, the source and the model of each slot")
-    show_parser = actions.add_parser("show", parents=[_create_common_options()], help="print the role file a slot resolves to")
+    actions.add_parser(
+        "list", parents=[_create_common_options()], help="list the role, the source and the model of each slot"
+    )
+    show_parser = actions.add_parser(
+        "show", parents=[_create_common_options()], help="print the role file a slot resolves to"
+    )
     show_parser.add_argument("slot", choices=SLOTS)
     actions.add_parser("lint", parents=[_create_common_options()], help="check the built-in and the machine role files")
 
@@ -173,6 +189,8 @@ def _add_scheduler_parser(commands) -> None:
         "install", parents=[_create_common_options()], help="install the scheduler config.toml names, or the default"
     )
     actions.add_parser("status", parents=[_create_common_options()], help="report the scheduler installed")
+
+
 def _add_run_parser(commands) -> None:
     run_parser = commands.add_parser(
         "run", parents=[_create_common_options()], help="run a procedure as a slot through the client adapter"
@@ -348,8 +366,12 @@ COMMANDS = {
     "roles show": Command(_keep_options, roles_show.roles_show, render_roles_show_text, _decide_done),
     "roles lint": Command(_keep_options, roles_lint.roles_lint, render_roles_lint_text, _decide_roles_lint_exit_code),
     "tick": Command(_keep_options, tick.tick, render_tick_text, _decide_done),
-    "scheduler install": Command(_keep_options, scheduler_install.scheduler_install, render_scheduler_install_text, _decide_done),
-    "scheduler status": Command(_keep_options, scheduler_status.scheduler_status, render_scheduler_status_text, _decide_done),
+    "scheduler install": Command(
+        _keep_options, scheduler_install.scheduler_install, render_scheduler_install_text, _decide_done
+    ),
+    "scheduler status": Command(
+        _keep_options, scheduler_status.scheduler_status, render_scheduler_status_text, _decide_done
+    ),
     "corpus": Command(_keep_options, corpus.corpus, render_corpus_text, _decide_done),
     "run": Command(_keep_options, run.run, render_run_text, _decide_run_exit_code, _describe_run_warnings),
     "runs list": Command(_keep_options, runs_list.runs_list, render_runs_list_text, _decide_done),

@@ -34,7 +34,9 @@ class TemporaryMachine:
         configuration.write_text(content)
         return configuration
 
-    def run_brigade(self, entry_point: Path, *arguments: str, environment: dict | None = None, request: str | None = None):
+    def run_brigade(
+        self, entry_point: Path, *arguments: str, environment: dict | None = None, request: str | None = None
+    ):
         return subprocess.run(
             [sys.executable, str(entry_point), *arguments],
             capture_output=True,

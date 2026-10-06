@@ -65,11 +65,21 @@ class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=timezone.utc),
-                        record={"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.paused", "wave": "tp/16"},
+                        record={
+                            "schema_version": 1,
+                            "ts": "2026-10-01T00:15:00Z",
+                            "event": "wave.paused",
+                            "wave": "tp/16",
+                        },
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 20, tzinfo=timezone.utc),
-                        record={"schema_version": 1, "ts": "2026-10-01T00:20:00Z", "event": "study.done", "study": "health"},
+                        record={
+                            "schema_version": 1,
+                            "ts": "2026-10-01T00:20:00Z",
+                            "event": "study.done",
+                            "study": "health",
+                        },
                     ),
                 ),
                 files=(str(september), str(october)),
@@ -85,7 +95,10 @@ class ReadLedgerWhenALineFailsItsEnvelope(ReadLedgerTestCase):
             (b"\xff\xfe\n", "not JSON"),
             (b"\n", "not JSON"),
             (b"[1, 2]\n", "the document is a list, not an object"),
-            (b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n', "lacks the key schema_version"),
+            (
+                b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n',
+                "lacks the key schema_version",
+            ),
             (b'{"schema_version": 1, "event": "wave.paused", "wave": "tp/16"}\n', "lacks the key ts"),
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "wave": "tp/16"}\n', "lacks the key event"),
             (

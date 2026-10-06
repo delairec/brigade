@@ -47,12 +47,26 @@ class ValidateDocumentWhenTheDocumentDepartsFromItsShape(unittest.TestCase):
             ),
             (
                 "a wrong type",
-                {"schema_version": 1, "outcome": "done", "steps": "3", "argv": ["claude"], "usage": None, "content": ""},
+                {
+                    "schema_version": 1,
+                    "outcome": "done",
+                    "steps": "3",
+                    "argv": ["claude"],
+                    "usage": None,
+                    "content": "",
+                },
                 "steps is a string, not an integer",
             ),
             (
                 "a boolean for an integer",
-                {"schema_version": 1, "outcome": "done", "steps": True, "argv": ["claude"], "usage": None, "content": ""},
+                {
+                    "schema_version": 1,
+                    "outcome": "done",
+                    "steps": True,
+                    "argv": ["claude"],
+                    "usage": None,
+                    "content": "",
+                },
                 "steps is a boolean, not an integer",
             ),
             (
@@ -72,7 +86,14 @@ class ValidateDocumentWhenTheDocumentDepartsFromItsShape(unittest.TestCase):
             ),
             (
                 "a wrong list item",
-                {"schema_version": 1, "outcome": "done", "steps": 1, "argv": ["claude", 3], "usage": None, "content": ""},
+                {
+                    "schema_version": 1,
+                    "outcome": "done",
+                    "steps": 1,
+                    "argv": ["claude", 3],
+                    "usage": None,
+                    "content": "",
+                },
                 "argv[1] is an integer, not a string",
             ),
             (

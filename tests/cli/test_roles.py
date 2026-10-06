@@ -97,7 +97,10 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRole(RolesTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout), {"schema_version": 1, "roles": describe_built_in_roles("fable", "opus", "haiku")})
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {"schema_version": 1, "roles": describe_built_in_roles("fable", "opus", "haiku")},
+        )
 
     def test_should_print_one_line_per_slot_as_text(self):
         # Arrange
@@ -154,7 +157,8 @@ class BrigadeRolesFromTheMachineRolesDirectory(RolesTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            json.loads(completed.stdout)["roles"][0], {"slot": "plan", "role": "planner", "source": "machine", "model": None}
+            json.loads(completed.stdout)["roles"][0],
+            {"slot": "plan", "role": "planner", "source": "machine", "model": None},
         )
 
     def test_should_print_the_machine_role_file(self):
@@ -170,7 +174,9 @@ class BrigadeRolesFromTheMachineRolesDirectory(RolesTestCase):
 
     def test_should_refuse_a_machine_role_file_off_its_keys_naming_the_file_and_the_key(self):
         # Arrange
-        role_file = self.write_machine_role("planner.md", MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\nmodel: opus\n"))
+        role_file = self.write_machine_role(
+            "planner.md", MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\nmodel: opus\n")
+        )
 
         # Act
         completed = self.run_roles("list", "--json")
@@ -207,7 +213,8 @@ class BrigadeRolesFromTheInstructionsCorpus(RolesTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            json.loads(completed.stdout)["roles"][0], {"slot": "plan", "role": "planner", "source": "instructions", "model": None}
+            json.loads(completed.stdout)["roles"][0],
+            {"slot": "plan", "role": "planner", "source": "instructions", "model": None},
         )
 
     def test_should_leave_an_agent_entity_no_row_names_without_a_slot(self):
@@ -282,7 +289,8 @@ class BrigadeRolesFromTheInstructionsCorpus(RolesTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            completed.stderr, f"brigade roles list: slots.plan binds planner but no instructions corpus is set in {configuration}\n"
+            completed.stderr,
+            f"brigade roles list: slots.plan binds planner but no instructions corpus is set in {configuration}\n",
         )
 
 
@@ -314,9 +322,24 @@ class BrigadeRolesLint(RolesTestCase):
 
     def test_should_fail_naming_the_file_and_the_key_of_a_role_file_off_its_declaration(self):
         rows = [
-            ("a model named", MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\nmodel: opus\n"), "model", "names a model"),
-            ("a declared key missing", MACHINE_PLANNER.replace("returns: the wave plan\n", ""), "returns", "is missing"),
-            ("an unknown key", MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\ncolour: blue\n"), "colour", "is not a declared key"),
+            (
+                "a model named",
+                MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\nmodel: opus\n"),
+                "model",
+                "names a model",
+            ),
+            (
+                "a declared key missing",
+                MACHINE_PLANNER.replace("returns: the wave plan\n", ""),
+                "returns",
+                "is missing",
+            ),
+            (
+                "an unknown key",
+                MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\ncolour: blue\n"),
+                "colour",
+                "is not a declared key",
+            ),
             (
                 "a value outside its set",
                 MACHINE_PLANNER.replace("reasoning: light\n", "reasoning: huge\n"),
@@ -357,7 +380,9 @@ class BrigadeRolesLint(RolesTestCase):
 
     def test_should_print_each_finding_and_the_count_as_text(self):
         # Arrange
-        role_file = self.write_machine_role("planner.md", MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\nmodel: opus\n"))
+        role_file = self.write_machine_role(
+            "planner.md", MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\nmodel: opus\n")
+        )
 
         # Act
         completed = self.run_roles("lint")

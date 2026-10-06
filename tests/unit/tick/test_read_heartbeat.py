@@ -23,7 +23,9 @@ class ReadHeartbeat(unittest.TestCase):
 
     def test_should_read_the_last_tick(self):
         # Arrange
-        self.heartbeat.write_text('{"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 2}')
+        self.heartbeat.write_text(
+            '{"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 2}'
+        )
 
         # Act
         last_tick = read_heartbeat(self.heartbeat)

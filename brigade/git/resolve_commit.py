@@ -8,9 +8,7 @@ RESOLVED_OR_NOT = (0, 1)
 COMMIT_PEEL = "^{commit}"
 
 
-def resolve_commit(
-    run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, ref: str
-) -> Optional[str]:
+def resolve_commit(run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, ref: str) -> Optional[str]:
     record = run_process(
         ProcessRequest(
             argv=("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}{COMMIT_PEEL}"),

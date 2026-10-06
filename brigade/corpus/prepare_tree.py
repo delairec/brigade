@@ -57,9 +57,7 @@ class _CachedTree:
     size_bytes: int
 
 
-def _find_worktree(
-    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest
-) -> Worktree:
+def _find_worktree(run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest) -> Worktree:
     worktrees = list_worktrees(run_process, request.repository)
     if request.worktree is not None:
         wanted_path = request.worktree.resolve()
@@ -127,9 +125,7 @@ def _measure_file(path: str) -> int:
 
 
 def _measure_tree(root: Path) -> int:
-    return sum(
-        _measure_file(os.path.join(directory, name)) for directory, _, names in os.walk(root) for name in names
-    )
+    return sum(_measure_file(os.path.join(directory, name)) for directory, _, names in os.walk(root) for name in names)
 
 
 def _list_visible_directories(parent: Path) -> list[Path]:

@@ -93,7 +93,11 @@ class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
     def test_should_refuse_naming_the_key_and_the_file(self):
         rows = [
             ("an unknown key", "frobnicate = 1\n", "unknown key frobnicate"),
-            ("an unknown reasoning level", '[reasoning.ultra]\nmodel = "opus"\neffort = "max"\n', "unknown key reasoning.ultra"),
+            (
+                "an unknown reasoning level",
+                '[reasoning.ultra]\nmodel = "opus"\neffort = "max"\n',
+                "unknown key reasoning.ultra",
+            ),
             (
                 "an unknown key in a reasoning row",
                 '[reasoning.deep]\nmodel = "opus"\neffort = "max"\ntemperature = 1\n',
@@ -114,8 +118,16 @@ class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
             ),
             ("an unknown slot", '[slots]\ncook = "charlie"\n', "unknown key slots.cook"),
             ("a slot bound to no string", "[slots]\nplan = 1\n", "slots.plan is an integer, not a string,"),
-            ("a cache bound of the wrong type", 'refs_cache_mb = "1024"\n', "refs_cache_mb is a string, not an integer,"),
-            ("a cache bound that is a boolean", "refs_cache_mb = true\n", "refs_cache_mb is a boolean, not an integer,"),
+            (
+                "a cache bound of the wrong type",
+                'refs_cache_mb = "1024"\n',
+                "refs_cache_mb is a string, not an integer,",
+            ),
+            (
+                "a cache bound that is a boolean",
+                "refs_cache_mb = true\n",
+                "refs_cache_mb is a boolean, not an integer,",
+            ),
             ("a negative cache bound", "refs_cache_mb = -1\n", "refs_cache_mb is -1, not 0 or more,"),
         ]
         for case, content, expected_problem in rows:

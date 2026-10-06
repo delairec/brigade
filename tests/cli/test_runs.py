@@ -136,7 +136,11 @@ class BrigadeRunsLogs(RunsTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "run": run_id, "lines": [json.dumps(TURN_LIMIT_RESULT), json.dumps(TURN_LIMIT_RESULT)]},
+            {
+                "schema_version": 1,
+                "run": run_id,
+                "lines": [json.dumps(TURN_LIMIT_RESULT), json.dumps(TURN_LIMIT_RESULT)],
+            },
         )
 
     def test_should_exit_1_naming_an_unknown_run(self):

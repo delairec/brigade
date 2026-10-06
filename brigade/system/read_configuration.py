@@ -137,7 +137,5 @@ def read_configuration(path: Path) -> Configuration:
         reasoning=_read_reasoning(document.get("reasoning", {}), path),
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),
-        seconds_per_step=_read_seconds_per_step(
-            document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path
-        ),
+        seconds_per_step=_read_seconds_per_step(document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path),
     )

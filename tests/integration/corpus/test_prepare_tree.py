@@ -160,7 +160,9 @@ class PrepareTreeOfAWorktree(PrepareTreeTestCase):
         self.assertEqual(
             (tree, (tree.root / "corpus" / "tasks.awawa").read_text()),
             (
-                Tree(project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree),
+                Tree(
+                    project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree
+                ),
                 "edited on feature, not committed\n",
             ),
         )
@@ -174,9 +176,7 @@ class PrepareTreeOfAWorktree(PrepareTreeTestCase):
         tree = prepare_tree(run_process, self.create_request(worktree=detached_tree))
 
         # Assert
-        self.assertEqual(
-            tree, Tree(project="app", ref=None, sha=self.feature_sha, kind="worktree", root=detached_tree)
-        )
+        self.assertEqual(tree, Tree(project="app", ref=None, sha=self.feature_sha, kind="worktree", root=detached_tree))
 
     def test_should_refuse_a_branch_no_worktree_holds_naming_it(self):
         # Arrange

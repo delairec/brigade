@@ -8,7 +8,7 @@ from brigade.system.run_process import run_process
 
 SCHEMA = (
     'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\tFIELD LOADS @RULE\n'
-    '\tFIELD RATIONALE string\n\t\tCATEGORY reasoning\n\n'
+    "\tFIELD RATIONALE string\n\t\tCATEGORY reasoning\n\n"
     'SCHEMA RULE\n\tDESC "a rule"\n\tFIELD SPEC string\n'
 )
 AGENTS = (

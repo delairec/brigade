@@ -60,10 +60,14 @@ class ClaudeCodeProbe(unittest.TestCase):
         standard_row_set = {"standard": {"model": "sonnet", "effort": "low"}}
 
         # Act
-        probe = answer("probe", {"schema_version": 1, "reasoning_table": standard_row_set, "settings": {}, "home": "/home/ada"})
+        probe = answer(
+            "probe", {"schema_version": 1, "reasoning_table": standard_row_set, "settings": {}, "home": "/home/ada"}
+        )
 
         # Assert
-        self.assertEqual(probe["models"], {"deepest": "fable", "deep": "fable", "standard": "sonnet", "light": "sonnet"})
+        self.assertEqual(
+            probe["models"], {"deepest": "fable", "deep": "fable", "standard": "sonnet", "light": "sonnet"}
+        )
 
 
 class ClaudeCodeLaunch(unittest.TestCase):
@@ -246,7 +250,12 @@ class ClaudeCodeResult(unittest.TestCase):
                 "schema_version": 1,
                 "outcome": "failed",
                 "steps": 94,
-                "usage": {"input_tokens": 1, "output_tokens": 4, "cache_creation_input_tokens": 2, "cache_read_input_tokens": 3},
+                "usage": {
+                    "input_tokens": 1,
+                    "output_tokens": 4,
+                    "cache_creation_input_tokens": 2,
+                    "cache_read_input_tokens": 3,
+                },
                 "session_id": "ada28962",
                 "duration_ms": 600000,
                 "error_class": "turn_limit",
@@ -273,7 +282,12 @@ class ClaudeCodeResult(unittest.TestCase):
                 "schema_version": 1,
                 "outcome": "failed",
                 "steps": 3,
-                "usage": {"input_tokens": 1, "output_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0},
+                "usage": {
+                    "input_tokens": 1,
+                    "output_tokens": 0,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                },
                 "session_id": "ada28962",
                 "duration_ms": 800,
                 "error_class": "rate_limit",
@@ -323,7 +337,12 @@ class ClaudeCodeResult(unittest.TestCase):
                 "schema_version": 1,
                 "outcome": "failed",
                 "steps": 2,
-                "usage": {"input_tokens": 1, "output_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0},
+                "usage": {
+                    "input_tokens": 1,
+                    "output_tokens": 0,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                },
                 "session_id": "ada28962",
                 "duration_ms": 5000,
                 "error_class": "execution",

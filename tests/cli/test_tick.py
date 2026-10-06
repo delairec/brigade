@@ -95,7 +95,9 @@ class BrigadeTickOnce(TickTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertRegex(completed.stdout, r"^tick \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$")
+        self.assertRegex(
+            completed.stdout, r"^tick \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$"
+        )
 
 
 class BrigadeTickOnceWhileAnotherTickHoldsTheLock(TickTestCase):
@@ -190,9 +192,10 @@ class BrigadeTickLoop(TickTestCase):
 
         # Assert
         _, later_reports = loop.communicate(timeout=STOP_WAIT_S)
-        self.assertRegex(first_report, r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$")
+        self.assertRegex(
+            first_report, r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$"
+        )
         self.assertEqual(later_reports, "")
-
 
     def test_should_print_the_ticks_attempted_as_text(self):
         # Arrange
@@ -221,7 +224,11 @@ class BrigadeTickLoopWhileAnotherTickHoldsTheLock(TickTestCase):
         stdout, _ = loop.communicate(timeout=STOP_WAIT_S)
         self.assertEqual(
             (stand_down_line, loop.returncode, json.loads(stdout)),
-            (f"brigade tick: another tick holds {self.lock}\n", 0, {"schema_version": 1, "mode": "loop", "ticks_attempted": 1}),
+            (
+                f"brigade tick: another tick holds {self.lock}\n",
+                0,
+                {"schema_version": 1, "mode": "loop", "ticks_attempted": 1},
+            ),
         )
         self.assertFalse(self.heartbeat.exists())
 
@@ -260,7 +267,6 @@ class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectory(TickTestCase):
         )
 
 
-
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
 class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectory(TickTestCase):
     def setUp(self):
@@ -293,7 +299,12 @@ class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectory(TickTestCas
 
         # Assert
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr, sorted(path.name for path in self.state.iterdir())),
+            (
+                completed.returncode,
+                completed.stdout,
+                completed.stderr,
+                sorted(path.name for path in self.state.iterdir()),
+            ),
             (1, "", f"brigade tick: cannot write {self.heartbeat}: Permission denied\n", ["locks"]),
         )
 

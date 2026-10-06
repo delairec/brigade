@@ -26,7 +26,10 @@ class EnvironmentReadsGuard(unittest.TestCase):
             ("from os import getenv\n", "brigade/commands/doctor.py:1 reads os.getenv"),
             ("from pathlib import Path\nhome = Path.home()\n", "brigade/commands/doctor.py:2 reads Path.home"),
             ("import os\nhome = os.path.expanduser('~')\n", "brigade/commands/doctor.py:2 reads expanduser"),
-            ("from pathlib import Path\nhome = Path('~').expanduser()\n", "brigade/commands/doctor.py:2 reads expanduser"),
+            (
+                "from pathlib import Path\nhome = Path('~').expanduser()\n",
+                "brigade/commands/doctor.py:2 reads expanduser",
+            ),
         ]
         for source, expected_violation in rows:
             with self.subTest(source=source):
@@ -43,14 +46,20 @@ class EnvironmentReadsGuard(unittest.TestCase):
                     self.assertEqual(violations, [expected_violation])
 
     def test_should_let_the_paths_and_the_process_runner_read_the_environment(self):
-        rows = ["brigade/system/paths.py", "brigade/system/run_process.py", "brigade/system/build_process_environment.py"]
+        rows = [
+            "brigade/system/paths.py",
+            "brigade/system/run_process.py",
+            "brigade/system/build_process_environment.py",
+        ]
         for module_path in rows:
             with self.subTest(module=module_path):
                 with tempfile.TemporaryDirectory() as root:
                     # Arrange
                     module = Path(root) / module_path
                     module.parent.mkdir(parents=True)
-                    module.write_text("import os\nfrom pathlib import Path\nhome = os.environ.get('HOME') or Path.home()\n")
+                    module.write_text(
+                        "import os\nfrom pathlib import Path\nhome = os.environ.get('HOME') or Path.home()\n"
+                    )
 
                     # Act
                     violations = find_environment_reads(Path(root) / "brigade")
