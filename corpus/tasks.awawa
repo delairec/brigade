@@ -109,41 +109,205 @@ TASK B02
 	DELIVERED_BY 12
 
 TASK B03
-	TITLE "Operational corpus schema and brigade init"
-	STATUS draft
+	TITLE "brigade init: the operational corpus repository, its schema and config.toml"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
 	ROLE bastien
-	SPEC "brigade init creates the config corpus as a git repository with the schema template"
-		+ "installed"
-	SPEC "awawa lint --strict exits 0 on it"
-	SPEC "a second init changes nothing"
+	SPEC "brigade init creates $XDG_CONFIG_HOME/brigade/, ~/.config/brigade/ by default, as a git"
+		+ "repository holding _schema.awawa installed from the shipped template and a .gitignore"
+		+ "listing config.toml, both committed in one commit with the user's git identity"
+	SPEC "awawa lint --strict exits 0 on the created corpus"
+	SPEC "the schema template lives at brigade/corpus/data/schema.awawa.tpl and schema/ is gone"
+		+ "from the repository root; init run from the clone and from dist/brigade.pyz installs the"
+		+ "same file"
+	SPEC "init writes config.toml once from a shipped string.Template, every key commented out with"
+		+ "its meaning; tomllib reads it as an empty table"
+	SPEC "brigade/system/paths builds the config, state and cache roots from XDG_CONFIG_HOME,"
+		+ "XDG_STATE_HOME and XDG_CACHE_HOME with their defaults; the tests redirect brigade with"
+		+ "these variables alone"
+	SPEC "init creates neither $XDG_STATE_HOME/brigade/ nor $XDG_CACHE_HOME/brigade/"
+	SPEC "a second init rewrites nothing and commits nothing; a present file that differs from the"
+		+ "shipped one is left as it is and reported as a warning, exit 0"
+	SPEC "without a git user.name or user.email, init exits 1 with a message naming the missing"
+		+ "key, before creating anything"
+	SPEC "it prints text and --json; the JSON document carries schema_version and one entry per"
+		+ "item, the repository, the schema, the .gitignore and config.toml, each with its state:"
+		+ "created, present or differs"
 	AFTER @TASK.B01
+	AFTER @TASK.B02
+	RATIONALE "the registry, the policies, the studies, the orders and the requests are written"
+		+ "into this corpus; @TASK.B04 and @TASK.B43 wait on it"
+		REF @TASK.B04
+		REF @TASK.B43
+	RATIONALE "the template moves under the package because"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources rejects a root-level"
+		+ "schema/, absent from dist/brigade.pyz; the place of the corpus, its .gitignore and"
+		+ "config.toml written once at init follow"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables, which also leaves"
+		+ "the state and cache directories to their writers"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	RATIONALE "config.toml is written, not read: the frozen record and its validation arrive with"
+		+ "@TASK.B42, its first reader, whose doctor finding names brigade init when no client is"
+		+ "configured"
+		REF @TASK.B42
+	RATIONALE "a differing file is reported, never rewritten, so that a second init stays harmless;"
+		+ "upgrading an installed schema is left to a later task"
+	RATIONALE "the document and the exit codes follow"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	SOURCE "the Artifact Brigade Blueprint, plan sections 13 and 16; the user's rulings of"
+		+ "2026-10-05 in the refinement of B03"
 
 TASK B04
-	TITLE "Registry commands"
-	STATUS draft
+	TITLE "brigade project add, list, show, pause and resume: the registry in the operational"
+		+ "corpus"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "registry"
 	ROLE bastien
-	SPEC "project add discovers remote, main branch and corpus root and drafts ACCEPTANCE and SETUP"
-		+ "lines"
-	SPEC "project add --init-corpus creates the project's corpus in the folder its CORPUS field"
-		+ "names, corpus/ by default"
-	SPEC "list, show, pause, resume"
-	SPEC "every write goes through fmt, lint and a commit"
+	SPEC "brigade project add <path> appends a PROJECT entity to projects.awawa of the operational"
+		+ "corpus, named after the basename of the path with every character outside an identifier"
+		+ "replaced by _, or after --name; a --name that is not an identifier exits 2"
+	SPEC "it discovers PATH, absolute; REMOTE, owner/name of the origin remote; MAIN, the branch"
+		+ "origin/HEAD names, else the branch checked out; CORPUS, the folder holding the tracked"
+		+ ".awawa files, absent when there is none; FORGE github when the origin remote is on"
+		+ "github.com; STATUS active"
+	SPEC "--acceptance, --heavy and --setup, repeatable, write ACCEPTANCE, HEAVY and SETUP lines; a"
+		+ "field given no flag is guessed from the supported configurations, HEAVY never"
+	SPEC "a package.json at the root: the package manager is bun for a bun.lock or bun.lockb, pnpm"
+		+ "for a pnpm-lock.yaml, yarn for a yarn.lock, npm otherwise; ACCEPTANCE <pm> run <script>"
+		+ "for each of the scripts test, lint and typecheck it declares; SETUP npm ci with a"
+		+ "package-lock.json, npm install without one, <pm> install --frozen-lockfile for bun, pnpm"
+		+ "and yarn"
+	SPEC "a pyproject.toml, setup.py or requirements.txt at the root, or a test_*.py under a root"
+		+ "tests/ directory: ACCEPTANCE python3 -m pytest when pyproject.toml has a"
+		+ "[tool.pytest.ini_options] table or a pytest.ini or conftest.py sits at the root, python3"
+		+ "-m unittest otherwise; SETUP uv sync --frozen with a uv.lock, none otherwise"
+	SPEC "a Cargo.toml at the root: ACCEPTANCE cargo test; SETUP cargo fetch --locked with a"
+		+ "Cargo.lock, none otherwise"
+	SPEC "several configurations add their lines in the order package.json, Python, Rust; the"
+		+ "document marks every guessed line as guessed and says when no supported configuration"
+		+ "was found"
+	SPEC "a path or a name already registered exits 1 naming the PROJECT entity and writes nothing;"
+		+ "--force replaces that entity"
+	SPEC "brigade project list prints every project with its name, path and status; brigade project"
+		+ "show <name> prints its fields; an unknown name exits 1"
+	SPEC "brigade project pause <name> and resume <name> set STATUS paused and active; a project"
+		+ "already in that status is left as it is, exit 0"
+	SPEC "every write runs under the lock of the corpus repository in"
+		+ "$XDG_STATE_HOME/brigade/locks/, then awawa fmt, awawa lint --strict and one git commit;"
+		+ "a failing lint restores the corpus with git and exits 1"
+	SPEC "before brigade init, every project command exits 1 with a message naming brigade init"
+	SPEC "every command prints text and --json; the JSON document carries schema_version"
 	AFTER @TASK.B03
+	RATIONALE "the registry is the list of projects every wave, study and order points at;"
+		+ "@TASK.B08, @TASK.B10 and @TASK.B38 wait on it"
+		REF @TASK.B08
+		REF @TASK.B10
+		REF @TASK.B38
+	RATIONALE "the user ruled that the commands are given by flags and guessed only when absent,"
+		+ "from a short list of supported configurations, package.json, Python and Rust to begin"
+		+ "with; HEAVY is never guessed, a heavy suite being a judgment"
+	RATIONALE "--init-corpus left B04 for @TASK.B55: awawa's binary ships no starter, the WAVE"
+		+ "schema comes with @TASK.B10, and opening the pull request needs the forge adapter of"
+		+ "@TASK.B46"
+		REF @TASK.B55
+		REF @TASK.B10
+		REF @TASK.B46
+	RATIONALE "the name is turned into an identifier because awawa refuses another: PROJECT"
+		+ "my-app.v2 fails lint with L017"
+	RATIONALE "the lock, the rollback and the gateways follow"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory and"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa; the corpus folder"
+		+ "discovered follows @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
+	SOURCE "the Artifact Brigade Blueprint, plan sections 13 and 16; the user's rulings of"
+		+ "2026-10-06 in the refinement of B04"
 
 TASK B05
-	TITLE "Ledger writer and reader"
-	STATUS draft
+	TITLE "brigade ledger: the append-only event journal, its writer, its overview and its views by"
+		+ "wave, project, budget and comparison"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ledger"
 	ROLE bastien
-	SPEC "append-only monthly JSONL"
-	SPEC "brigade ledger prints text and --json"
-	SPEC "p50 and p90 steps per procedure are computed from the events"
-	AFTER @TASK.B01
+	SPEC "one module of brigade/ledger declares every event name with the fields its readers need,"
+		+ "run.finished, wave.started, wave.paused, wave.resumed, task.parked, pr.merged,"
+		+ "order.done, signal.recorded, pattern.ratified and constraint.delivered to begin with;"
+		+ "the writer refuses a name it does not declare or a declared field missing"
+	SPEC "the writer appends one JSON line carrying schema_version, ts in ISO 8601 UTC with Z,"
+		+ "event and the event's fields to $XDG_STATE_HOME/brigade/ledger/<YYYY-MM>.jsonl, the"
+		+ "month of ts; the instant is given by its caller and the ledger never reads the clock;"
+		+ "the directory is created on the first write"
+	SPEC "a write holds an fcntl lock on $XDG_STATE_HOME/brigade/locks/ledger.lock, flushes its"
+		+ "line before the release and never rewrites a file: N processes appending M events each"
+		+ "leave N times M whole lines"
+	SPEC "the reader reads the monthly files in order and checks the envelope of each line; a line"
+		+ "that is not JSON, lacks schema_version, ts or event, or carries an unknown"
+		+ "schema_version is skipped and reported with its file and line number, on stderr and in"
+		+ "the document, and the command still exits 0"
+	SPEC "brigade ledger prints an overview: the events by name, the first and last instant, the"
+		+ "files read, the lines skipped, and the runs finished by outcome with the error classes"
+		+ "met; with no ledger it reports zero events and exits 0"
+	SPEC "brigade ledger --wave <id> prints the wave's tasks, pull requests and review rounds, p50"
+		+ "and p90 steps per slot and per role, the wall time from its first to its last event, its"
+		+ "pauses with their total duration, its hand-overs, runs of segment 2 or more, and its"
+		+ "parked tasks"
+	SPEC "brigade ledger --project <name> [--since <n>d|<YYYY-MM-DD>] counts the waves started, the"
+		+ "orders done by kind, the pull requests merged, the signals recorded, the patterns"
+		+ "ratified and the constraints delivered; now is read once, in the runtime"
+	SPEC "brigade ledger budgets [--last N], 20 by default, prints p50 and p90 steps per procedure"
+		+ "over the last N run.finished events of each, by nearest rank; runs with null steps are"
+		+ "left out and counted; a procedure with fewer than five runs is marked as an estimate"
+	SPEC "brigade ledger compare --before <YYYY-MM-DD> sets the events before that day, UTC,"
+		+ "against those from that day on: p50 and p90 steps per run, steps to first edit and steps"
+		+ "spent on oversized outputs where the runs report them, null otherwise; a period holding"
+		+ "no run.finished exits 1 with a message naming the empty period"
+	SPEC "every view prints text and --json; the JSON document carries schema_version"
+	AFTER @TASK.B03
+	AFTER @TASK.B04
+	RATIONALE "the ledger is the one source of every statistic of brigade; @TASK.B06, @TASK.B07,"
+		+ "@TASK.B22, @TASK.B27 and @TASK.B47 wait on it, @TASK.B31 renders its views"
+		REF @TASK.B06
+		REF @TASK.B07
+		REF @TASK.B22
+		REF @TASK.B27
+		REF @TASK.B47
+		REF @TASK.B31
+	RATIONALE "the user ruled that the event names are declared once in the code, not in a"
+		+ "decision; the task that writes an event completes its declaration, run.finished"
+		+ "@TASK.B06, wave.paused and wave.resumed @TASK.B19, order.done @TASK.B48"
+		REF @TASK.B06
+		REF @TASK.B19
+		REF @TASK.B48
+	RATIONALE "the four views are those of the Blueprint, plan section 14, as the user ruled;"
+		+ "@TASK.B37 keeps the pull request that writes the budgets into the procedures"
+		REF @TASK.B37
+	RATIONALE "compare reads the ledger alone: the user ruled that brigade invents no baseline, so"
+		+ "the figures of the notes of 2026-10-03 stay in the Blueprint and an empty period is a"
+		+ "failure to compare, not a zero"
+	RATIONALE "a skipped line does not refuse the read, the user's ruling, so that one line torn by"
+		+ "a crash leaves the ledger readable"
+	RATIONALE "nearest rank gives a number of steps actually observed; the five-run threshold is"
+		+ "the one the rule procedure_step_budget of the instructions corpus sets"
+	RATIONALE "the lock, the flushed line and the file never rewritten follow"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory; the instant given"
+		+ "by the caller and now read once follow @DECISION.TheClockIsReadOnceAndCarriedAsAFact;"
+		+ "schema_version, the envelope checked and ts in UTC follow"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.TheClockIsReadOnceAndCarriedAsAFact
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "@TASK.B03 delivers brigade/system/paths and @TASK.B04 the first fcntl lock, which"
+		+ "the ledger reuses"
+		REF @TASK.B03
+		REF @TASK.B04
+	SOURCE "the Artifact Brigade Blueprint, plan sections 3, 14 and 16; the user's rulings of"
+		+ "2026-10-06 in the refinement of B05"
 
 TASK B06
 	TITLE "brigade run: launch a role run and capture its result"
@@ -155,6 +319,13 @@ TASK B06
 		+ "brigade-owned subprocess with its own session, log files and pid, or in the foreground"
 	SPEC "writes the normalised result to the ledger, null fields named with their reason"
 	SPEC "passes the role package as the adapter translates it"
+	SPEC "when the adapter's probe declares no step count, steps are null and the budget is held on"
+		+ "wall time; when it declares no per-tool grant, the run uses the client's unattended mode"
+		+ "and a reading slot runs in a disposable worktree; one test per fallback, through the"
+		+ "fake adapter"
+	SPEC "a project's PROJECT.CLIENT replaces the client of config.toml for its runs"
+	SPEC "a project's PROJECT.ROLE slot=name and PROJECT.ROLESET resolve before the machine's roles"
+		+ "for its runs"
 	AFTER @TASK.B05
 	AFTER @TASK.B42
 	AFTER @TASK.B43
@@ -629,50 +800,129 @@ TASK B41
 
 TASK B42
 	TITLE "Client adapter contract, the Claude Code adapter and the fake adapter"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "adapters"
 	ROLE bastien
 	SPEC "the contract is five operations answered as JSON documents, probe, launch, result, resume"
-		+ "and transcripts; brigade adapter probe|launch-argv|parse-result expose them on the"
-		+ "command line"
+		+ "and transcripts; brigade adapter probe|launch-argv|parse-result|resume-argv|transcripts"
+		+ "exposes each on the command line"
 	SPEC "the Claude Code adapter maps capabilities to tool grants, the reasoning level to a model"
 		+ "and an effort, passes the role package as an appended system prompt, caps the turns at"
 		+ "the budget plus a quarter, and normalises the result object into outcome, steps, usage,"
 		+ "session id, duration and error class, a rate limit classified and its reset hour parsed"
 		+ "when named"
-	SPEC "an adapter is a built-in module or an executable brigade-client-<name> on PATH;"
-		+ "config.toml selects it and PROJECT.CLIENT overrides it"
-	SPEC "the fake adapter replays recorded result documents and is the one the test suite launches"
-	SPEC "one test per fallback proves the core's behaviour when probe declares an operation absent"
-	SPEC "a guard script under tests fails when a module of the core imports an adapter module"
-	SPEC "brigade doctor checks the configured client adapter's probe as a prerequisite; a"
-		+ "config.toml absent or naming no client is a finding that names the config key and"
-		+ "brigade init"
+	SPEC "the reasoning-to-model table of the Claude Code adapter ships with defaults, deepest"
+		+ "fable and max, deep fable and high, standard opus and high, light sonnet and medium; a"
+		+ "level set in config.toml replaces its row"
+	SPEC "the Claude Code adapter resumes a session by its id and answers transcripts with the"
+		+ "messages of a session read from its JSONL file under the Claude Code projects directory;"
+		+ "its probe declares every operation present"
+	SPEC "an adapter is a built-in module or an executable brigade-client-<name> on PATH; the"
+		+ "client key of config.toml selects it"
+	SPEC "the fake adapter is a built-in module shipped in dist/brigade.pyz that replays the"
+		+ "recorded result documents of the directory a config.toml key names; the recordings of"
+		+ "the test suite live under tests/cli/fixtures and every test that launches a client"
+		+ "launches the fake"
+	SPEC "config.toml is read once into a frozen record with defaults; an unknown key or a value of"
+		+ "the wrong type is an error naming the key and the file"
+	SPEC "one validator module checks every adapter answer against the shape declared for its"
+		+ "operation, required keys, types and enumerations, before the core reads it; an answer"
+		+ "that fails is an error naming the adapter, the operation and the key"
+	SPEC "guards under tests/guards parse every module with ast and fail on a static import of"
+		+ "brigade.adapters, brigade.collectors, brigade.checks or brigade.outputs from outside its"
+		+ "own package, and on a read of os.environ, os.getenv, Path.home or expanduser outside"
+		+ "brigade/system/paths and the process runner"
+	SPEC "brigade doctor checks the configured client adapter's probe as a prerequisite; an absent"
+		+ "config.toml is a finding naming brigade init, a config.toml naming no client a finding"
+		+ "naming the client key and the file"
 	AFTER @TASK.B01
 	AFTER @TASK.B02
+	AFTER @TASK.B03
+	RATIONALE "the contract and the two adapters follow"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters and"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported; the guards are the"
+		+ "ones @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents and"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables give this task"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	RATIONALE "config.toml is read here because @TASK.B03 writes it and leaves its frozen record to"
+		+ "its first reader; the answers are validated as"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets, and no other"
+		+ "task carries the validator"
+		REF @TASK.B03
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "each fallback is proven by the task that builds its consumer: resume and the reset"
+		+ "hour by @TASK.B19, transcripts by @TASK.B35, the step count and the per-tool grant by"
+		+ "@TASK.B06; PROJECT.CLIENT is applied by @TASK.B06, the first launch that knows its"
+		+ "project"
+		REF @TASK.B19
+		REF @TASK.B35
+		REF @TASK.B06
+	RATIONALE "the fake adapter ships in the package because @TASK.B45 runs a wave on it from"
+		+ "dist/brigade.pyz; its recordings are fixtures of the test suite, never shipped"
+		REF @TASK.B45
+	RATIONALE "Claude Code 2.1.290 accepts --allowedTools, --model, --effort low to max,"
+		+ "--append-system-prompt, --resume and --max-turns, the last absent from --help but parsed"
+		+ "(claude -p --max-turns: argument missing), and keeps a session in"
+		+ "~/.claude/projects/<working directory, slashes and dots as dashes>/<session id>.jsonl,"
+		+ "read on 2026-10-06"
+	RATIONALE "the adapter reads no environment: the home directory it locates the transcripts from"
+		+ "reaches it in the request, built by brigade/system/paths"
+	SOURCE "pull request #3 of the brigade repository; the user's rulings of 2026-10-06 in the"
+		+ "refinement of B42"
 
 TASK B43
 	TITLE "Role files, slots and their resolution"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "roles"
 	ROLE bastien
-	SPEC "roles/ holds a built-in role file for each of the nine slots, flat front matter and"
-		+ "system prompt body"
-	SPEC "brigade roles list prints the slot, the role, its source and the model the adapter binds,"
-		+ "text and --json; brigade roles show <slot> prints the resolved file"
-	SPEC "an AGENT entity of the configured instructions corpus is read through awawa status and"
-		+ "context --json at launch time and resolves before the built-ins"
-	SPEC "a file of the machine's roles directory resolves before the corpus; PROJECT.ROLE"
-		+ "slot=name resolves first"
-	SPEC "a role file naming a model fails brigade roles lint"
+	SPEC "brigade ships a built-in role file for each of the nine slots under brigade/roles/data/:"
+		+ "ada plans, builder builds, verifier verifies, reviewer reviews, rebaser rebases, bilal"
+		+ "reports, mina triages, rulewriter writes rules, explorer explores"
+	SPEC "a role file is Markdown: a front matter between two --- lines, one key: value per line,"
+		+ "declaring name, slot, reasoning, capabilities comma-separated, budget and returns, then"
+		+ "the system prompt body"
+	SPEC "a slot resolves in order to a file of $XDG_CONFIG_HOME/brigade/roles/, then to the AGENT"
+		+ "entity of the configured instructions corpus that the slot table of config.toml binds to"
+		+ "it, then to the built-in role; on a machine that configures neither, every slot resolves"
+		+ "to its built-in role"
+	SPEC "an AGENT entity is read through awawa at each resolution, never cached: WORK, REASONING,"
+		+ "CAPABILITY, BUDGET and RETURNS fill the front matter and its awawa context package is"
+		+ "the body; an AGENT entity no row of the slot table names takes no slot"
+	SPEC "brigade roles list prints the slot, the role, its source and the model the configured"
+		+ "client adapter binds, text and --json; brigade roles show <slot> prints the resolved"
+		+ "file"
+	SPEC "brigade roles lint fails, naming the file and the key, on a role file that names a model,"
+		+ "lacks a declared key, carries an unknown one or a value outside its set"
 	SPEC "brigade doctor reports the configured instructions corpus as optional, awawa lint"
 		+ "--strict clean or not; none configured is a warning with its fallback, built-in roles"
 		+ "and no instructions package"
 	AFTER @TASK.B01
 	AFTER @TASK.B02
 	AFTER @TASK.B03
+	AFTER @TASK.B42
+	RATIONALE "the slots, the resolution order and the fields follow"
+		+ "@DECISION.RolesAreSlotsBoundToRoleFiles; the built-in files live under the package as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets"
+		REF @DECISION.RolesAreSlotsBoundToRoleFiles
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+	RATIONALE "brigade ships nothing of its author's machine: its built-in roles answer every slot"
+		+ "where nothing is configured, and an instructions corpus binds a slot only through a"
+		+ "table its user writes, an AGENT entity declaring no slot"
+	RATIONALE "the model roles list shows comes from the reasoning-to-model table of @TASK.B42;"
+		+ "PROJECT.ROLE and PROJECT.ROLESET are applied by @TASK.B06, the first launch that knows"
+		+ "its project, as PROJECT.CLIENT is"
+		REF @TASK.B42
+		REF @TASK.B06
+	RATIONALE "whether an installer asks for the built-in or the user's own roles stays"
+		+ "@OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles"
+		REF @OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles
+	SOURCE "pull request #3 of the brigade repository; the user's rulings of 2026-10-06 in the"
+		+ "refinement of B43"
 
 TASK B44
 	TITLE "Second client adapter and the rehearsal on it"
@@ -901,3 +1151,24 @@ TASK B54
 		+ "command of brigade"
 	SOURCE "the user's rulings of 2026-10-05, pull request #4 of the brigade repository"
 	DELIVERED_BY 5
+
+TASK B55
+	TITLE "brigade project add --init-corpus: a corpus for a project that has none"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "registry"
+	ROLE bastien
+	SPEC "project add --init-corpus installs brigade's project corpus template, TASK, WAVE,"
+		+ "DECISION and OPEN_QUESTION, in the folder CORPUS names, corpus/ by default, on a branch,"
+		+ "and opens a pull request through the forge adapter"
+	SPEC "awawa lint --strict exits 0 on the installed corpus"
+	AFTER @TASK.B04
+	AFTER @TASK.B10
+	AFTER @TASK.B46
+	RATIONALE "split from @TASK.B04 in its refinement: awawa's binary ships no starter, the WAVE"
+		+ "schema comes with @TASK.B10, and the pull request needs the forge adapter of @TASK.B46"
+		REF @TASK.B04
+		REF @TASK.B10
+		REF @TASK.B46
+	SOURCE "the Artifact Brigade Blueprint, plan section 13; the user's ruling of 2026-10-06 in the"
+		+ "refinement of B04"
