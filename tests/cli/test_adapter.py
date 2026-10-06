@@ -252,7 +252,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            completed.stderr, f"brigade adapter: no configuration at {self.machine.corpus / 'config.toml'}; run brigade init\n"
+            completed.stderr, f"brigade adapter probe: no configuration at {self.machine.corpus / 'config.toml'}; run brigade init\n"
         )
 
     def test_should_name_the_client_key_and_the_file_when_no_client_is_configured(self):
@@ -265,7 +265,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, f"brigade adapter: config.toml names no client: set the client key in {configuration}\n")
+        self.assertEqual(completed.stderr, f"brigade adapter probe: config.toml names no client: set the client key in {configuration}\n")
 
     def test_should_name_an_adapter_found_nowhere(self):
         # Arrange
@@ -278,7 +278,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(
             completed.stderr,
-            "brigade adapter: no client adapter frobnicate: no built-in module and no brigade-client-frobnicate on PATH\n",
+            "brigade adapter probe: no client adapter frobnicate: no built-in module and no brigade-client-frobnicate on PATH\n",
         )
 
     def test_should_not_take_a_helper_module_of_the_adapters_for_an_adapter(self):
@@ -292,7 +292,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(
             completed.stderr,
-            "brigade adapter: no client adapter describe-unreadable-output: no built-in module and no"
+            "brigade adapter probe: no client adapter describe-unreadable-output: no built-in module and no"
             " brigade-client-describe-unreadable-output on PATH\n",
         )
 
@@ -306,7 +306,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, "brigade adapter: client adapter broken answered probe: lacks the key version_argv\n")
+        self.assertEqual(completed.stderr, "brigade adapter probe: client adapter broken answered probe: lacks the key version_argv\n")
 
     def test_should_name_the_failed_command_of_an_executable_adapter(self):
         # Arrange
@@ -319,7 +319,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(
             completed.stderr,
-            f"brigade adapter: {SCRIPTED_CLIENT}/brigade-client-scripted launch-argv exited 3:"
+            f"brigade adapter launch-argv: {SCRIPTED_CLIENT}/brigade-client-scripted launch-argv exited 3:"
             " brigade-client-scripted answers probe only\n",
         )
 
@@ -332,7 +332,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stderr, "brigade adapter: the fake client adapter does not answer resume-argv\n")
+        self.assertEqual(completed.stderr, "brigade adapter resume-argv: the fake client adapter does not answer resume-argv\n")
 
     def test_should_name_the_key_a_request_lacks(self):
         # Arrange
@@ -345,7 +345,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stderr, "brigade adapter: the request on stdin: lacks the key role\n")
+        self.assertEqual(completed.stderr, "brigade adapter launch-argv: the request on stdin: lacks the key role\n")
 
     def test_should_refuse_an_invalid_request_before_reading_the_configuration(self):
         # Arrange
@@ -357,7 +357,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, "brigade adapter: the request on stdin: lacks the key role\n")
+        self.assertEqual(completed.stderr, "brigade adapter launch-argv: the request on stdin: lacks the key role\n")
 
     def test_should_refuse_a_request_that_is_not_json(self):
         # Arrange
@@ -368,7 +368,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertIn("brigade adapter: the request on stdin is not JSON: ", completed.stderr)
+        self.assertIn("brigade adapter launch-argv: the request on stdin is not JSON: ", completed.stderr)
 
 
 class BrigadeAdapterOnAnUnexpectedError(AdapterTestCase):

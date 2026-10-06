@@ -5,10 +5,11 @@ import traceback
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 from brigade import VERSION
 from brigade.commands import adapter, doctor, init, project_add, project_list, project_show, project_status
+from brigade.commands import adapter_matrix
 from brigade.commands import corpus, corpus_awawa
 from brigade.commands import ledger, ledger_budgets, ledger_compare
 from brigade.commands.describe_skipped_lines import describe_skipped_lines
@@ -16,6 +17,8 @@ from brigade.commands import roles_lint, roles_list, roles_show
 from brigade.commands import scheduler_install, scheduler_status, tick
 from brigade.commands import run, runs_list, runs_logs
 from brigade.commands.render_adapter_text import render_adapter_text
+from brigade.commands.render_adapter_matrix_markdown import render_adapter_matrix_markdown
+from brigade.commands.render_adapter_matrix_text import render_adapter_matrix_text
 from brigade.commands.render_corpus_text import render_corpus_text
 from brigade.commands.render_doctor_text import render_doctor_text
 from brigade.commands.render_init_text import render_init_text
@@ -43,7 +46,7 @@ from brigade.system.read_configuration import SLOTS
 DAY_FORMAT = "%Y-%m-%d"
 DAYS_SUFFIX = "d"
 LAST_RUNS_BY_DEFAULT = 20
-ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action", "scheduler_action", "runs_action")
+ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action", "scheduler_action", "runs_action", "adapter_action")
 CORPUS_COMMAND = "corpus"
 PASSTHROUGH_SEPARATOR = "--"
 RUN_ARGUMENT_SEPARATOR = "="
@@ -55,6 +58,23 @@ def _create_common_options():
         "--json", action="store_true", default=argparse.SUPPRESS, help="print the output as a JSON document"
     )
     return common_options
+
+
+def _add_adapter_parser(commands) -> None:
+    adapter_parser = commands.add_parser(
+        "adapter",
+        parents=[_create_common_options()],
+        help="answer one operation of the configured client adapter, or print the matrix of every adapter",
+    )
+    actions = adapter_parser.add_subparsers(dest="adapter_action", metavar="action", required=True)
+    for operation in adapter.OPERATIONS:
+        actions.add_parser(
+            operation, parents=[_create_common_options()], help=f"answer {operation}, the request read on stdin"
+        )
+    matrix_parser = actions.add_parser(
+        "matrix", parents=[_create_common_options()], help="print the capabilities every client adapter declares"
+    )
+    matrix_parser.add_argument("--markdown", action="store_true", help="print the matrix as Markdown tables")
 
 
 def _add_project_parser(commands) -> None:
@@ -205,12 +225,7 @@ def _create_parser():
         parents=[_create_common_options()],
         help="create the operational corpus repository, its schema and config.toml",
     )
-    adapter_parser = commands.add_parser(
-        "adapter",
-        parents=[_create_common_options()],
-        help="answer one operation of the configured client adapter, the request read on stdin",
-    )
-    adapter_parser.add_argument("operation", choices=adapter.OPERATIONS)
+    _add_adapter_parser(commands)
     _add_project_parser(commands)
     _add_ledger_parser(commands)
     _add_roles_parser(commands)
@@ -244,6 +259,12 @@ def _decide_roles_lint_exit_code(document: dict) -> int:
     return 0
 
 
+def _decide_adapter_matrix_exit_code(document: dict) -> int:
+    if any(row["error"] is not None for row in document["adapters"]):
+        return 1
+    return 0
+
+
 def _decide_run_exit_code(document: dict) -> int:
     if document.get("outcome", "done") != "done":
         return 1
@@ -273,8 +294,14 @@ def _read_ledger_request(options: argparse.Namespace) -> argparse.Namespace:
 
 
 def _read_adapter_request(options: argparse.Namespace) -> argparse.Namespace:
-    stdin = None if options.operation == "probe" else sys.stdin.read()
-    return argparse.Namespace(**vars(options), stdin=stdin)
+    stdin = None if options.adapter_action == "probe" else sys.stdin.read()
+    return argparse.Namespace(**vars(options), operation=options.adapter_action, stdin=stdin)
+
+
+def _read_adapter_matrix_request(options: argparse.Namespace) -> argparse.Namespace:
+    if options.markdown and options.json:
+        raise UsageError("--markdown and --json exclude each other")
+    return options
 
 
 def _describe_no_diagnostics(document: dict) -> list[str]:
@@ -288,12 +315,23 @@ class Command:
     render_text: Callable[[dict], str]
     decide_exit_code: Callable[[dict], int]
     describe_diagnostics: Callable[[dict], list[str]] = _describe_no_diagnostics
+    render_markdown: Optional[Callable[[dict], str]] = None
 
 
 COMMANDS = {
     "doctor": Command(_keep_options, doctor.doctor, render_doctor_text, _decide_doctor_exit_code),
     "init": Command(_keep_options, init.init, render_init_text, _decide_done),
-    "adapter": Command(_read_adapter_request, adapter.adapter, render_adapter_text, _decide_done),
+    **{
+        f"adapter {operation}": Command(_read_adapter_request, adapter.adapter, render_adapter_text, _decide_done)
+        for operation in adapter.OPERATIONS
+    },
+    "adapter matrix": Command(
+        _read_adapter_matrix_request,
+        adapter_matrix.adapter_matrix,
+        render_adapter_matrix_text,
+        _decide_adapter_matrix_exit_code,
+        render_markdown=render_adapter_matrix_markdown,
+    ),
     "project add": Command(_keep_options, project_add.project_add, render_project_add_text, _decide_done),
     "project list": Command(_keep_options, project_list.project_list, render_project_list_text, _decide_done),
     "project show": Command(_keep_options, project_show.project_show, render_project_show_text, _decide_done),
@@ -334,6 +372,8 @@ def _run_command(options: argparse.Namespace) -> int:
         sys.stderr.write(f"brigade {name}: {diagnostic}\n")
     if getattr(options, "json", False):
         print(json.dumps(document))
+    elif getattr(options, "markdown", False):
+        print(command.render_markdown(document))
     else:
         print(command.render_text(document))
     return command.decide_exit_code(document)

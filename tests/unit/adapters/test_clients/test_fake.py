@@ -1,6 +1,6 @@
 import unittest
 
-from brigade.adapters.clients.fake import answer
+from brigade.adapters.test_clients.fake import answer
 from brigade.errors import BrigadeError
 
 LAUNCH_REQUEST = {
