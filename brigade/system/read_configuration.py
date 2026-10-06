@@ -7,6 +7,7 @@ from typing import Optional
 from brigade.errors import BrigadeError
 
 STRING_KEYS = ("client", "scheduler", "forge_account", "instructions", "ide_link")
+REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
 SLOTS = ("plan", "build", "verify", "review", "rebase", "report", "triage", "rules", "explore")
@@ -35,6 +36,7 @@ class Configuration:
     forge_account: Optional[str] = None
     instructions: Optional[str] = None
     ide_link: Optional[str] = None
+    refs_cache_mb: int = 1024
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)
     slots: dict = field(default_factory=dict)
@@ -92,6 +94,15 @@ def _read_slots(table, path: Path) -> dict:
     return {slot: _require(name, str, "a string", f"slots.{slot}", path) for slot, name in table.items()}
 
 
+def _read_refs_cache_mb(document: dict, path: Path) -> int:
+    value = document.get(REFS_CACHE_MB_KEY, Configuration.refs_cache_mb)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise BrigadeError(f"{REFS_CACHE_MB_KEY} is {_name_toml_type(value)}, not an integer, in {path}")
+    if value < 0:
+        raise BrigadeError(f"{REFS_CACHE_MB_KEY} is {value}, not 0 or more, in {path}")
+    return value
+
+
 def _parse(path: Path) -> dict:
     try:
         content = path.read_text(encoding="utf-8")
@@ -105,10 +116,11 @@ def _parse(path: Path) -> dict:
 
 def read_configuration(path: Path) -> Configuration:
     document = _parse(path)
-    _refuse_unknown_keys(document, (*STRING_KEYS, "reasoning", "clients", "slots"), "", path)
+    _refuse_unknown_keys(document, (*STRING_KEYS, REFS_CACHE_MB_KEY, "reasoning", "clients", "slots"), "", path)
     strings = {key: _require(document[key], str, "a string", key, path) for key in STRING_KEYS if key in document}
     return Configuration(
         **strings,
+        refs_cache_mb=_read_refs_cache_mb(document, path),
         reasoning=_read_reasoning(document.get("reasoning", {}), path),
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),

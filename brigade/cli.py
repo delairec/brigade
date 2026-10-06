@@ -4,15 +4,18 @@ import sys
 import traceback
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Callable
 
 from brigade import VERSION
 from brigade.commands import adapter, doctor, init, project_add, project_list, project_show, project_status
+from brigade.commands import corpus, corpus_awawa
 from brigade.commands import ledger, ledger_budgets, ledger_compare
 from brigade.commands.describe_skipped_lines import describe_skipped_lines
 from brigade.commands import roles_lint, roles_list, roles_show
 from brigade.commands import scheduler_install, scheduler_status, tick
 from brigade.commands.render_adapter_text import render_adapter_text
+from brigade.commands.render_corpus_text import render_corpus_text
 from brigade.commands.render_doctor_text import render_doctor_text
 from brigade.commands.render_init_text import render_init_text
 from brigade.commands.render_ledger_budgets_text import render_ledger_budgets_text
@@ -37,6 +40,8 @@ DAY_FORMAT = "%Y-%m-%d"
 DAYS_SUFFIX = "d"
 LAST_RUNS_BY_DEFAULT = 20
 ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action", "scheduler_action")
+CORPUS_COMMAND = "corpus"
+PASSTHROUGH_SEPARATOR = "--"
 
 
 def _create_common_options():
@@ -145,6 +150,20 @@ def _add_scheduler_parser(commands) -> None:
     actions.add_parser("status", parents=[_create_common_options()], help="report the scheduler installed")
 
 
+def _add_corpus_parser(commands) -> None:
+    corpus_parser = commands.add_parser(
+        "corpus",
+        parents=[_create_common_options()],
+        help="read a registered project's tree at a branch, a SHA or a worktree; -- <awawa args> runs awawa there",
+    )
+    corpus_parser.add_argument("project")
+    trees = corpus_parser.add_mutually_exclusive_group(required=True)
+    trees.add_argument(
+        "--ref", help="a branch or a SHA, extracted to the cache; worktree:<branch> reads the worktree of that branch"
+    )
+    trees.add_argument("--worktree", type=Path, help="the path of a worktree of the project, read in place")
+
+
 def _create_parser():
     parser = argparse.ArgumentParser(prog="brigade")
     parser.add_argument("--version", action="store_true", help="print the version of brigade")
@@ -171,6 +190,7 @@ def _create_parser():
     _add_roles_parser(commands)
     _add_tick_parser(commands)
     _add_scheduler_parser(commands)
+    _add_corpus_parser(commands)
     return parser
 
 
@@ -254,6 +274,7 @@ COMMANDS = {
     "tick": Command(_keep_options, tick.run, render_tick_text, _decide_done),
     "scheduler install": Command(_keep_options, scheduler_install.run, render_scheduler_install_text, _decide_done),
     "scheduler status": Command(_keep_options, scheduler_status.run, render_scheduler_status_text, _decide_done),
+    "corpus": Command(_keep_options, corpus.run, render_corpus_text, _decide_done),
 }
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
@@ -277,15 +298,35 @@ def _run_command(options: argparse.Namespace) -> int:
     return command.decide_exit_code(document)
 
 
+def _split_awawa_arguments(arguments: list[str]):
+    command = next((argument for argument in arguments if not argument.startswith("-")), None)
+    if command != CORPUS_COMMAND or PASSTHROUGH_SEPARATOR not in arguments:
+        return arguments, None
+    separator = arguments.index(PASSTHROUGH_SEPARATOR)
+    return arguments[:separator], tuple(arguments[separator + 1 :])
+
+
+def _pass_awawa_through(options: argparse.Namespace, awawa_arguments: tuple[str, ...]) -> int:
+    request = argparse.Namespace(**vars(options), awawa_arguments=awawa_arguments)
+    passage = corpus_awawa.run(request, build_runtime())
+    sys.stderr.write(f"brigade {CORPUS_COMMAND}: @PROJECT.{passage.project} at {passage.sha}\n")
+    sys.stdout.write(passage.record.stdout)
+    sys.stderr.write(passage.record.stderr)
+    return passage.record.exit_code
+
+
 def main(arguments: list[str]) -> int:
     parser = _create_parser()
-    options = parser.parse_args(arguments)
+    own_arguments, awawa_arguments = _split_awawa_arguments(arguments)
+    options = parser.parse_args(own_arguments)
     if options.command is None:
         if not options.version:
             parser.error("no option given")
         print(_describe_version(options.json))
         return 0
     try:
+        if awawa_arguments is not None:
+            return _pass_awawa_through(options, awawa_arguments)
         return _run_command(options)
     except StandingDown as reason:
         sys.stderr.write(f"brigade {_name_command(options)}: {reason}\n")

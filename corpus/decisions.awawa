@@ -649,10 +649,14 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	DESC "a corpus write, edit, fmt, lint and commit, runs under the repository's lock and is"
 		+ "rolled back with git when lint fails, the one correction request of @TASK.B10"
 		REF @TASK.B10
-	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B13 and @TASK.B22"
+	DESC "the refs cache of brigade corpus has its lock,"
+		+ "$XDG_STATE_HOME/brigade/locks/refs-cache.lock: every placing, mark and removal of a"
+		+ "cached tree runs under it"
+	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13 and @TASK.B22"
 		REF @TASK.B04
 		REF @TASK.B05
 		REF @TASK.B07
+		REF @TASK.B08
 		REF @TASK.B13
 		REF @TASK.B22
 	REJECTED "locks under $XDG_CACHE_HOME, the Blueprint plan's place: a cache may be deleted at"
@@ -668,6 +672,8 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 		REF @TASK.B13
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's ruling of 2026-10-06 during wave M0, pull request #23 of the brigade"
+		+ "repository"
 
 DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 	TITLE "every file brigade ships lives in a data/ folder of the component that reads it, under"

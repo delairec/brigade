@@ -3,9 +3,9 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with nine commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
-`brigade adapter`, `brigade project`, `brigade ledger`, `brigade roles`, `brigade tick` and `brigade scheduler`;
-every other one is a task of the corpus.
+The entry point exists with ten commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter`, `brigade project`, `brigade ledger`, `brigade roles`, `brigade tick`, `brigade scheduler` and
+`brigade corpus`; every other one is a task of the corpus.
 
 ## Install
 
@@ -97,6 +97,30 @@ installed them with the `PATH`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CAC
 systemd or quoted for the shell and cron. Run again, it leaves one pair of units or one line. `scheduler status` reports
 the scheduler installed or `none`, its unit files or cron line, the next activation of the timer and the last tick read
 from the heartbeat, and exits 0.
+
+## A project's tree at a ref
+
+```
+brigade corpus <project> --ref <branch|sha> [--json] [-- <awawa args>]
+brigade corpus <project> --ref worktree:<branch> [--json] [-- <awawa args>]
+brigade corpus <project> --worktree <path> [--json] [-- <awawa args>]
+```
+
+`--ref <branch|sha>` resolves the ref to a commit of the project's repository and extracts `git archive` of that
+commit, the whole tree, into `$XDG_CACHE_HOME/brigade/refs/<project>/<sha>/`, once: a SHA already there is read from
+the cache. `--ref worktree:<branch>` reads in place the worktree where that branch is checked out, `--worktree <path>`
+the worktree at that path, a detached HEAD included; uncommitted edits are visible. The command prints the project,
+the ref, the SHA, the kind (`archive` or `worktree`) and the root of the tree, as text or, with `--json`, a JSON
+document; an unknown project, a ref that resolves to no commit, and a branch or a path no worktree holds exit 1.
+
+Given `-- <awawa args>`, it runs awawa with those arguments at the root of the tree instead, and passes its stdout,
+its stderr and its exit code through unchanged, after one stderr line naming the SHA it read.
+
+The cache holds at most `refs_cache_mb` of `config.toml`, 1024 by default: each read marks its SHA used, and after
+each extraction the least recently read SHAs are removed until the cache is under that bound. The reuse of a cached
+tree, the placing of an extracted one and the removals run under the lock `$XDG_STATE_HOME/brigade/locks/refs-cache.lock`;
+the reading of a tree after brigade printed its root does not, so another `brigade corpus` that prunes the cache can
+remove a tree still read through `-- <awawa args>` when the bound is too tight to hold both.
 
 ## Client adapters
 
