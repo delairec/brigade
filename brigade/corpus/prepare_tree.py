@@ -13,6 +13,7 @@ from brigade.errors import BrigadeError
 from brigade.git.archive_commit import archive_commit
 from brigade.git.list_worktrees import Worktree, list_worktrees
 from brigade.git.resolve_commit import resolve_commit
+from brigade.system.hold_lock import hold_lock
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 WORKTREE_PREFIX = "worktree:"
@@ -35,6 +36,7 @@ class TreeRequest:
     worktree: Optional[Path]
     cache: Path
     cache_bound_bytes: int
+    cache_lock: Path
     now: datetime
 
 
@@ -76,23 +78,20 @@ def _read_worktree(run_process: Callable[[ProcessRequest], ProcessRecord], reque
     return Tree(project=request.project, ref=request.ref, sha=worktree.head, kind=WORKTREE_KIND, root=worktree.path)
 
 
-def _extract(
-    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest, sha: str, root: Path
-) -> None:
-    staging = Path(tempfile.mkdtemp(prefix=HIDDEN_PREFIX, dir=root.parent))
-    try:
-        archive = staging / ARCHIVE_NAME
-        staged_tree = staging / STAGED_TREE_NAME
-        archive_commit(run_process, request.repository, sha, archive)
-        with tarfile.open(archive) as commit_tar:
-            commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)
-        try:
-            os.rename(staged_tree, root)
-        except OSError:
-            if not root.is_dir():
-                raise
-    finally:
-        shutil.rmtree(staging, ignore_errors=True)
+def _stage_tree(
+    run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, sha: str, staging: Path
+) -> Path:
+    archive = staging / ARCHIVE_NAME
+    staged_tree = staging / STAGED_TREE_NAME
+    archive_commit(run_process, repository, sha, archive)
+    with tarfile.open(archive) as commit_tar:
+        commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)
+    return staged_tree
+
+
+def _place_tree(staged_tree: Path, root: Path) -> None:
+    if not root.is_dir():
+        os.rename(staged_tree, root)
 
 
 def _mark_read(root: Path, now: datetime) -> None:
@@ -101,10 +100,7 @@ def _mark_read(root: Path, now: datetime) -> None:
 
 
 def _measure_file(path: str) -> int:
-    try:
-        status = os.lstat(path)
-    except FileNotFoundError:
-        return NOTHING_MEASURED
+    status = os.lstat(path)
     return status.st_size if stat.S_ISREG(status.st_mode) else NOTHING_MEASURED
 
 
@@ -128,10 +124,7 @@ def _list_cached_trees(cache: Path) -> list[_CachedTree]:
 
 def _remove_tree(root: Path) -> None:
     doomed = root.parent / f"{HIDDEN_PREFIX}{root.name}.{uuid.uuid4().hex}"
-    try:
-        os.rename(root, doomed)
-    except FileNotFoundError:
-        return
+    os.rename(root, doomed)
     shutil.rmtree(doomed, ignore_errors=True)
 
 
@@ -146,18 +139,36 @@ def _prune(cache: Path, bound_bytes: int, kept: Path) -> None:
         total_bytes -= tree.size_bytes
 
 
+def _extract_tree(
+    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest, sha: str, root: Path
+) -> None:
+    root.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=HIDDEN_PREFIX, dir=root.parent))
+    try:
+        staged_tree = _stage_tree(run_process, request.repository, sha, staging)
+        with hold_lock(request.cache_lock):
+            _place_tree(staged_tree, root)
+            _mark_read(root, request.now)
+            _prune(request.cache, request.cache_bound_bytes, root)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+
+def _reuse_cached_tree(root: Path, request: TreeRequest) -> bool:
+    with hold_lock(request.cache_lock):
+        if not root.is_dir():
+            return False
+        _mark_read(root, request.now)
+        return True
+
+
 def _read_archive(run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest) -> Tree:
     sha = resolve_commit(run_process, request.repository, request.ref)
     if sha is None:
         raise BrigadeError(f"the ref {request.ref} is not a commit of @PROJECT.{request.project}")
     root = request.cache / request.project / sha
-    extracted = not root.is_dir()
-    if extracted:
-        root.parent.mkdir(parents=True, exist_ok=True)
-        _extract(run_process, request, sha, root)
-    _mark_read(root, request.now)
-    if extracted:
-        _prune(request.cache, request.cache_bound_bytes, root)
+    if not _reuse_cached_tree(root, request):
+        _extract_tree(run_process, request, sha, root)
     return Tree(project=request.project, ref=request.ref, sha=sha, kind=ARCHIVE_KIND, root=root)
 
 

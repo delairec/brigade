@@ -1,6 +1,9 @@
+import fcntl
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +12,7 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 
 RELAY_EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables" / "awawa-relay"
+LOCK_WAIT_S = 5
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
@@ -152,6 +156,46 @@ class BrigadeCorpusUnderACacheBound(CorpusTestCase):
 
         # Assert
         self.assertEqual(os.listdir(self.refs / "app"), [self.project.run_git("rev-parse", "HEAD").strip()])
+
+
+class BrigadeCorpusWhileTheCacheIsLocked(CorpusTestCase):
+    def test_should_wait_for_the_lock_of_the_cache_before_pruning(self):
+        # Arrange
+        lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
+        lock_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_file, "a") as held_lock:
+            fcntl.flock(held_lock, fcntl.LOCK_EX)
+
+            # Act
+            waiting = self.detect_waiting(["app", "--ref", "main"])
+
+        # Assert
+        self.assertTrue(waiting)
+
+    def test_should_wait_for_the_lock_of_the_cache_before_reading_a_cached_tree(self):
+        # Arrange
+        self.run_corpus("app", "--ref", "main")
+        lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
+        with open(lock_file, "a") as held_lock:
+            fcntl.flock(held_lock, fcntl.LOCK_EX)
+
+            # Act
+            waiting = self.detect_waiting(["app", "--ref", "main"])
+
+        # Assert
+        self.assertTrue(waiting)
+
+    def detect_waiting(self, arguments: list) -> bool:
+        try:
+            subprocess.run(
+                [sys.executable, str(CLONE_ENTRY_POINT), "corpus", *arguments],
+                capture_output=True,
+                env=self.machine.describe_environment(),
+                timeout=LOCK_WAIT_S,
+            )
+        except subprocess.TimeoutExpired:
+            return True
+        return False
 
 
 class BrigadeCorpusOnWhatItCannotRead(CorpusTestCase):

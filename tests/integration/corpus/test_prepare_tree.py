@@ -51,6 +51,7 @@ class PrepareTreeTestCase(unittest.TestCase):
             worktree=None,
             cache=self.cache,
             cache_bound_bytes=ROOMY_BOUND_BYTES,
+            cache_lock=self.workspace / "locks" / "refs-cache.lock",
             now=FIRST_READ,
         )
         return replace(request, **changes)
@@ -110,6 +111,30 @@ class PrepareTreeAtABranchOrASha(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "the ref nowhere is not a commit of @PROJECT.app")
+
+
+class PrepareTreeWhenAnotherExtractionWinsTheRace(PrepareTreeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.sha = self.commit("corpus/tasks.awawa", "committed\n")
+
+    def run_process_extracting_first(self, request):
+        record = run_process(request)
+        if request.argv[:2] == ("git", "archive"):
+            winning_tree = self.cache / "app" / self.sha / "corpus"
+            winning_tree.mkdir(parents=True)
+            (winning_tree / "tasks.awawa").write_text("extracted by the winner\n")
+        return record
+
+    def test_should_read_the_tree_the_winner_renamed_into_place_and_leave_it_alone(self):
+        # Act
+        tree = prepare_tree(self.run_process_extracting_first, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual(
+            ((tree.root / "corpus" / "tasks.awawa").read_text(), os.listdir(self.cache / "app")),
+            ("extracted by the winner\n", [self.sha]),
+        )
 
 
 class PrepareTreeOfAWorktree(PrepareTreeTestCase):

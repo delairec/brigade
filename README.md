@@ -117,7 +117,10 @@ Given `-- <awawa args>`, it runs awawa with those arguments at the root of the t
 its stderr and its exit code through unchanged, after one stderr line naming the SHA it read.
 
 The cache holds at most `refs_cache_mb` of `config.toml`, 1024 by default: each read marks its SHA used, and after
-each extraction the least recently read SHAs are removed until the cache is under that bound.
+each extraction the least recently read SHAs are removed until the cache is under that bound. The reuse of a cached
+tree, the placing of an extracted one and the removals run under the lock `$XDG_STATE_HOME/brigade/locks/refs-cache.lock`;
+the reading of a tree after brigade printed its root does not, so another `brigade corpus` that prunes the cache can
+remove a tree still read through `-- <awawa args>` when the bound is too tight to hold both.
 
 ## Client adapters
 

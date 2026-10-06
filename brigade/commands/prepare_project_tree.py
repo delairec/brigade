@@ -10,6 +10,8 @@ REPOSITORY_FIELD = "PATH"
 CONFIGURATION_FILE = "config.toml"
 REFS_CACHE_DIRECTORY = "refs"
 BYTES_PER_MB = 1024 * 1024
+LOCK_DIRECTORY = "locks"
+CACHE_LOCK_FILE = "refs-cache.lock"
 
 
 def prepare_project_tree(request, runtime) -> Tree:
@@ -27,6 +29,7 @@ def prepare_project_tree(request, runtime) -> Tree:
             worktree=worktree,
             cache=runtime.paths.cache_root / REFS_CACHE_DIRECTORY,
             cache_bound_bytes=configuration.refs_cache_mb * BYTES_PER_MB,
+            cache_lock=runtime.paths.state_root / LOCK_DIRECTORY / CACHE_LOCK_FILE,
             now=runtime.now,
         ),
     )
