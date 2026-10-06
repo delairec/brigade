@@ -22,3 +22,8 @@
 # [reasoning.deep]
 # model = ""
 # effort = ""
+
+# The settings of a client adapter, one table per adapter, each value a string the adapter reads;
+# the fake adapter replays the recorded result documents of its recordings directory.
+# [clients.fake]
+# recordings = ""

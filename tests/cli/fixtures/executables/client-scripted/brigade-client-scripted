@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$1" in
+  probe) echo '{"schema_version":1,"client":"scripted","version_argv":null,"operations":["probe","launch","result"],"features":[]}' ;;
+  *) echo "brigade-client-scripted answers probe only" >&2; exit 3 ;;
+esac

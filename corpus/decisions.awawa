@@ -853,3 +853,46 @@ DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 	RATIONALE "the milestone view of GitHub groups the pull requests of a milestone; a pull request"
 		+ "carrying none is easily left out of it"
 	SOURCE "the user's ruling of 2026-10-06 during the launch of wave M0"
+
+DECISION ClientAdaptersAnswerEveryOperationThroughOneFunction
+	TITLE "a client adapter answers every operation through one function, answer(operation,"
+		+ "request), or as brigade-client-<name> <operation> with the request on stdin; the core"
+		+ "completes each request and runs what the adapter only names"
+	STATUS active
+	DESC "a built-in client adapter is a module of brigade/adapters/clients exposing"
+		+ "answer(operation, request); an external one is an executable run as"
+		+ "brigade-client-<name> <operation>, the request as JSON on stdin and the answer as JSON"
+		+ "on stdout; the operation names are those of brigade adapter: probe, launch-argv,"
+		+ "parse-result, resume-argv and transcripts"
+	DESC "the core completes every request with the reasoning table config.toml sets, the settings"
+		+ "of the table [clients.<name>] of config.toml and the home directory brigade/system/paths"
+		+ "builds; an adapter reads neither the environment nor config.toml"
+	DESC "the probe names the command that prints the client's version, version_argv, null for an"
+		+ "adapter with no client executable; brigade doctor runs it through the process runner"
+	DESC "the fake adapter reads the directory of its recordings from the setting recordings of"
+		+ "[clients.fake] and replays the recording named after the role, <recordings>/<role>.json"
+	DESC "binds @TASK.B42 and every task that launches, resumes or reads a client: @TASK.B06,"
+		+ "@TASK.B19, @TASK.B35 and @TASK.B45"
+		REF @TASK.B42
+		REF @TASK.B06
+		REF @TASK.B19
+		REF @TASK.B35
+		REF @TASK.B45
+	REJECTED "five exported functions per adapter module: the one-exported-function rule of the"
+		+ "instructions corpus, and a module answering as the executable does keeps the two forms"
+		+ "indistinguishable"
+	REJECTED "an adapter spawning its client's version check in probe: the core spawns and owns"
+		+ "every process, an adapter only translates"
+	REJECTED "a top-level config.toml key for the fake's recordings: the core would name one"
+		+ "adapter's setting; per-client tables carry any adapter's settings"
+	RATIONALE "it applies @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported and"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters to the client kind"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	RATIONALE "no rate-limit result was recorded on the reference machine on 2026-10-06; the reset"
+		+ "hour is read from the forms resets 3pm, resets 10:30am (UTC) and resets at 14:00, and a"
+		+ "message naming none leaves reset null, the fallback of"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	SOURCE "pull request #16 of the brigade repository, delivering @TASK.B42"
+		REF @TASK.B42

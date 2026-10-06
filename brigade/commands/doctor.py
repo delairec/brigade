@@ -1,9 +1,10 @@
 import sys
 
 from brigade.corpus.read_awawa_version import read_awawa_version
-from brigade.errors import ToolNotFound
+from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
+from brigade.system.ask_configured_client import ask_configured_client
 from brigade.system.resolve_plugin import resolve_plugin
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 
@@ -60,6 +61,25 @@ def _check_awawa(runtime) -> dict:
     return _create_prerequisite("awawa", state, f"{version} (floor {floor})")
 
 
+def _check_client(runtime) -> dict:
+    try:
+        probe = ask_configured_client(runtime, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+    except BrigadeError as error:
+        return _create_prerequisite("client", "finding", str(error))
+    name = probe.client_name
+    version_argv = probe.document["version_argv"]
+    if version_argv is None:
+        return _create_prerequisite("client", "ok", f"{name}: no client executable")
+    try:
+        record = runtime.run_process(
+            ProcessRequest(argv=tuple(version_argv), cwd=PROBE_DIRECTORY, timeout_s=PROBE_TIMEOUT_S)
+        )
+    except ToolFailure as error:
+        return _create_prerequisite("client", "finding", f"{name}: {error}")
+    first_line = record.stdout.strip().partition("\n")[0]
+    return _create_prerequisite("client", "ok", f"{name}: {first_line}")
+
+
 def _check_scheduler(runtime) -> dict:
     try:
         record = runtime.run_process(
@@ -81,7 +101,7 @@ def _check_scheduler(runtime) -> dict:
 
 
 def _check_forge(runtime) -> dict:
-    forge = resolve_plugin("forge", "github")
+    forge = resolve_plugin("forge", "github", runtime)
     try:
         account = forge.describe_account({"schema_version": 1}, runtime)
     except ToolNotFound:
@@ -106,6 +126,7 @@ def run(request, runtime) -> dict:
             _check_python(),
             _check_git(runtime),
             _check_awawa(runtime),
+            _check_client(runtime),
             _check_scheduler(runtime),
             _check_forge(runtime),
             _check_awawa_web(runtime),

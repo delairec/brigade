@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$*" in
+  "--version") echo "2.1.291 (Claude Code)" ;;
+  *) exit 2 ;;
+esac
