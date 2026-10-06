@@ -345,6 +345,18 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stderr, "brigade adapter: the request on stdin: lacks the key role\n")
 
+    def test_should_refuse_an_invalid_request_before_reading_the_configuration(self):
+        # Arrange
+        request_lacking_its_role = '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42."}'
+
+        # Act
+        completed = self.run_adapter("launch-argv", "--json", request=request_lacking_its_role)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, "brigade adapter: the request on stdin: lacks the key role\n")
+
     def test_should_refuse_a_request_that_is_not_json(self):
         # Arrange
         self.machine.write_configuration('client = "claude-code"\n')
