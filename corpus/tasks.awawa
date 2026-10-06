@@ -1856,17 +1856,116 @@ TASK B55
 		+ "refinement of B04"
 
 TASK B56
-	TITLE "a state directory brigade cannot write: exit 1 naming it, and brigade tick --loop ticks"
-		+ "again"
-	STATUS draft
+	TITLE "a state or configuration directory brigade cannot write: exit 1 naming the path, and"
+		+ "brigade tick --loop ticks again"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tick"
 	ROLE bastien
-	SPEC "a lock or a state file brigade cannot create or write under $XDG_STATE_HOME/brigade/"
-		+ "exits 1 with one stderr line naming the path, not 70 with a traceback; hold_lock and"
-		+ "hold_lock_without_waiting included"
-	SPEC "inside brigade tick --loop, a tick that fails, an action that failed or a state directory"
-		+ "it cannot write, is reported on stderr and the loop ticks again at the next interval"
+	SPEC "an OSError raised creating or writing a lock or a state file under"
+		+ "$XDG_STATE_HOME/brigade/ exits 1 with one stderr line, brigade <command>: cannot write"
+		+ "<path>: <reason>, not 70 with a traceback; hold_lock, hold_lock_without_waiting,"
+		+ "write_json_atomically and the ledger append included"
+	SPEC "an OSError raised creating or writing under $XDG_CONFIG_HOME/brigade/, by brigade init or"
+		+ "by the registry write of brigade project add and brigade project status, exits 1 the"
+		+ "same way"
+	SPEC "the path named is the one the operating system refused, a directory, a lock or a file,"
+		+ "except the temporary file of an atomic write, named by its target"
+	SPEC "inside brigade tick --loop, a tick that fails, by a BrigadeError, a state directory it"
+		+ "cannot write or an unexpected exception, is reported on stderr, one line or its"
+		+ "traceback, and the loop ticks again at the next interval"
+	SPEC "a tick that fails writes no heartbeat, and brigade tick --loop still exits 0 on SIGTERM"
+		+ "and SIGINT"
 	AFTER @TASK.B07
-	SOURCE "the review of pull request #21 of the brigade repository: brigade tick --once with"
-		+ "XDG_STATE_HOME unwritable exits 70, and the same PermissionError ends --loop"
+	RATIONALE "the exit table of"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable gives 1 to a"
+		+ "missing prerequisite and 70 to brigade's own defect: a directory the machine refuses is"
+		+ "the first, and a 70 under systemd or cron reports a defect of brigade where the user has"
+		+ "a permission to fix"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "every writer creates its directory when it writes, as"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables sets, and the locks"
+		+ "live under the state directory, as"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory sets: the writer"
+		+ "that touches the path translates the OSError into a BrigadeError naming it, and cli.py"
+		+ "catches no OSError, so a defect still exits 70 with its traceback"
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+	RATIONALE "every OSError, not PermissionError alone: a file system mounted read-only raises"
+		+ "EROFS, a full disk ENOSPC, a file in place of a directory ENOTDIR, each a fact of the"
+		+ "machine; the temporary file of an atomic write carries a random name the user cannot act"
+		+ "on, hence its target"
+	RATIONALE "brigade tick --loop survives every exception as the timer and the cron line do,"
+		+ "where each tick is a new process; the next tick recomputes from facts, as"
+		+ "@DECISION.ADeterministicTickReplacesTheCoordinatorAgent sets"
+		REF @DECISION.ADeterministicTickReplacesTheCoordinatorAgent
+	RATIONALE "on main at 4128bba, brigade tick --once exits 70 when it cannot create brigade/, the"
+		+ "lock or the temporary file of the heartbeat, or open a read-only tick.lock; brigade tick"
+		+ "--loop exits 70 at its first tick; brigade init exits 70 on a read-only"
+		+ "$XDG_CONFIG_HOME, and brigade project add on a read-only locks/ or projects.awawa"
+	RATIONALE "the writers of runs/ by @TASK.B06 and of the corpus cache by @TASK.B08, delivered in"
+		+ "parallel, are brought in line by @TASK.B57"
+		REF @TASK.B06
+		REF @TASK.B08
+		REF @TASK.B57
+	SOURCE "the review of pull request #21 of the brigade repository, which delivers @TASK.B07:"
+		+ "brigade tick --once with XDG_STATE_HOME unwritable exits 70, and the same"
+		+ "PermissionError ends --loop"
+		REF @TASK.B07
+	SOURCE "the user's rulings of 2026-10-06 in the refinement of B56"
+
+TASK B57
+	TITLE "the writers of runs/, of the corpus cache and of the scheduler units: exit 1 naming the"
+		+ "path they cannot write"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "system"
+	ROLE bastien
+	SPEC "an OSError raised creating or writing the run directory under"
+		+ "$XDG_STATE_HOME/brigade/runs/<id>/, its pid, role and progress files, its detached log"
+		+ "or a segment's directory, brief, stdout and stderr, exits 1 with one stderr line naming"
+		+ "the path, as for the state and the configuration"
+	SPEC "the process brigade run --detach starts exits 1 the same way, its line written to"
+		+ "brigade.log while that file can still be written, and brigade runs list shows that run"
+		+ "dead"
+	SPEC "an OSError raised creating, extracting, placing or dating a tree of the corpus cache"
+		+ "under $XDG_CACHE_HOME/brigade/ exits 1 the same way, a cache hit on a cache it cannot"
+		+ "date included"
+	SPEC "an OSError raised by brigade scheduler install creating or writing brigade.service or"
+		+ "brigade.timer under $XDG_CONFIG_HOME/systemd/user/ exits 1 the same way"
+	AFTER @TASK.B06
+	AFTER @TASK.B08
+	AFTER @TASK.B56
+	RATIONALE "@TASK.B56 brings the writers of the state and the configuration in line with the"
+		+ "exit table; @TASK.B06 and @TASK.B08 were being delivered in parallel, so their writers"
+		+ "are aligned here rather than in their own pull requests"
+		REF @TASK.B56
+		REF @TASK.B06
+		REF @TASK.B08
+	RATIONALE "the writers were read on the heads of pull requests #24 at ac415ee and #23 at"
+		+ "9109205, and main after #24, #23 and #26 holds them unchanged: create_run_directory,"
+		+ "detach_run, spawn_process and run_segment for runs/, and prepare_tree for the cache;"
+		+ "run.json and result.json go through write_json_atomically and the cache lock through"
+		+ "hold_lock, both brought in line by @TASK.B56, and git archive writing into the cache"
+		+ "already exits 1 through the runner"
+		REF @TASK.B56
+	RATIONALE "the files of runs/<id>/ are those"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast lists; the"
+		+ "process brigade run --detach starts writes its stdout and stderr to brigade.log in that"
+		+ "directory, and a run whose pid is gone without result.json is dead"
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+	RATIONALE "a detached run is a brigade process like any other: brigade run creates runs/<id>/"
+		+ "before it detaches, so an unwritable state directory fails in the foreground, and a"
+		+ "write that fails later is seen through the dead state of brigade runs list that"
+		+ "@TASK.B06 delivers"
+		REF @TASK.B06
+	RATIONALE "a cache hit dates the tree with os.utime for the least-recently-read pruning of"
+		+ "@TASK.B08; serving an undated tree would skew that order in silence"
+		REF @TASK.B08
+	RATIONALE "the scheduler units are the one writer of brigade outside its own directories,"
+		+ "written by @TASK.B07, and fall under neither the state nor the configuration of"
+		+ "@TASK.B56"
+		REF @TASK.B07
+		REF @TASK.B56
+	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57"
+		REF @TASK.B56
