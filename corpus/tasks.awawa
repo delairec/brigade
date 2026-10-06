@@ -2258,22 +2258,30 @@ TASK B61
 TASK B62
 	TITLE "the CI workflow hardened, permissions contents: read and persist-credentials: false, and"
 		+ "audited by zizmor; requirements-ci.txt and its dependabot entry created"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
 	ROLE bastien
 	SPEC ".github/workflows/ci.yml declares permissions: contents: read at its top level, and every"
 		+ "actions/checkout step passes persist-credentials: false"
+		IMPL ".github/workflows/ci.yml::contents: read"
+		IMPL ".github/workflows/ci.yml::persist-credentials: false"
 	SPEC "requirements-ci.txt at the repository root pins zizmor to one version, the one line of"
 		+ "the file; .github/dependabot.yml gains an entry for the pip ecosystem on the directory /"
 		+ "with the weekly schedule of its github-actions entry"
+		IMPL "requirements-ci.txt::zizmor=="
+		IMPL ".github/dependabot.yml::package-ecosystem: pip"
 	SPEC "a job of ci.yml of its own installs requirements-ci.txt by pip and runs zizmor on"
 		+ ".github/workflows/; a finding of any severity fails the job, zizmor exiting 11 to 14;"
 		+ "the tests and floor jobs run what they ran before"
+		IMPL ".github/workflows/ci.yml::python3 -m pip install -r requirements-ci.txt"
+		IMPL ".github/workflows/ci.yml::run: zizmor .github/workflows/"
 	SPEC "a finding of zizmor is fixed in the workflow; .github/zizmor.yml exists only for a"
 		+ "required exemption, the narrowest zizmor offers, commented with its cause and naming"
 		+ "what covers the case"
+		IMPL ".github/workflows/ci.yml::persist-credentials: false"
 	SPEC "the sentence of README.md on the CI names the zizmor audit"
+		IMPL "README.md::and audits its workflows"
 	RATIONALE "the hardening and the audit are one task: zizmor's excessive-permissions and"
 		+ "artipacked audits flag the missing permissions block and the persisted credentials, so"
 		+ "the audit would fail on the workflow it joins; the missing block was the one security"
@@ -2286,9 +2294,14 @@ TASK B62
 	RATIONALE "zizmor is configured by .github/zizmor.yml, which it discovers from the repository"
 		+ "root (docs.zizmor.sh/configuration, read 2026-10-06); its exit codes 11 to 14 name the"
 		+ "highest severity found (docs.zizmor.sh/usage, same day)"
+	RATIONALE "dependabot's pip updater detects requirements-ci.txt at the root: its fetcher keeps"
+		+ "every .txt file of the directory whose name matches /requirements/ (dependabot-core"
+		+ "python/lib/dependabot/python/shared_file_fetcher.rb, req_txt_and_in_files and"
+		+ "requirements_file?, at 47c1f006, read 2026-10-06)"
 	SOURCE "the user's ruling of 2026-10-06, \"tout ce que tu as mis en oui\", on the rows workflow"
 		+ "hardening and zizmor; \"tout ce qui est utile est bon à prendre\" on the row pins under"
 		+ "dependabot"
+	DELIVERED_BY 36
 
 TASK B63
 	TITLE "ruff check and ruff format --check in the CI, configured by ruff.toml for Python 3.11"

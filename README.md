@@ -260,7 +260,8 @@ python3 -m unittest                            # the tests: tests/cli runs briga
 awawa fmt --check . && awawa lint --strict .   # the checks of the corpus
 ```
 
-The CI runs the tests and the zipapp build on Python 3.11 and on the latest Python release, on every pull request.
+The CI runs the tests and the zipapp build on Python 3.11 and on the latest Python release, and audits its workflows
+with zizmor, on every pull request; zizmor is pinned in `requirements-ci.txt`, which dependabot keeps current.
 
 ## Layout
 
