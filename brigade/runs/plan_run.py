@@ -1,6 +1,7 @@
 import math
 import re
 from dataclasses import dataclass
+from importlib.resources import files
 from pathlib import Path
 from typing import Optional
 
@@ -12,7 +13,7 @@ from brigade.registry.require_operational_corpus import require_operational_corp
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, ResolvedRole, RoleBindings, resolve_role
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_handovers import read_handovers
-from brigade.runs.resolve_procedure import Procedure, resolve_procedure
+from brigade.runs.resolve_procedure import Procedure, ProcedureDirectories, resolve_procedure
 from brigade.runs.run_locations import DISPOSABLE_WORKTREE_DIRECTORY, RUNS_DIRECTORY
 from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
@@ -20,6 +21,7 @@ from brigade.system.read_configuration import Configuration, read_configuration
 
 CONFIGURATION_FILE = "config.toml"
 PROBE_REQUEST = {"schema_version": 1}
+SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
 STEP_COUNT_FEATURE = "step_count"
 TOOL_GRANTS_FEATURE = "tool_grants"
 WRITE_CAPABILITY = "write"
@@ -155,7 +157,8 @@ def plan_run(request: RunRequest, runtime) -> RunPlan:
     client = _read_value(project, "CLIENT") or configuration.client
     if client is None:
         raise BrigadeError(f"config.toml names no client: set the client key in {configuration_path}")
-    procedure = resolve_procedure(request.procedure, configuration.instructions)
+    directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=configuration.instructions)
+    procedure = resolve_procedure(request.procedure, directories)
     role = resolve_role(request.slot, runtime, _read_bindings(project))
     role_capabilities = _read_role_capabilities(role)
     capabilities = tuple(capability for capability in procedure.capabilities if capability in role_capabilities)

@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from importlib.resources import files
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Optional
 
 from brigade.errors import BrigadeError
 from brigade.roles.parse_role_file import RoleFileUnreadable, parse_role_file
 
-SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
 INSTRUCTIONS_PROCEDURES_DIRECTORY = "procedures"
 PROCEDURE_SUFFIX = ".md"
 PATH_SEPARATOR = "/"
@@ -23,6 +22,12 @@ class Procedure:
     capabilities: tuple[str, ...]
     budget: int
     body: str
+
+
+@dataclass(frozen=True)
+class ProcedureDirectories:
+    shipped: Traversable
+    instructions: Optional[str]
 
 
 @dataclass(frozen=True)
@@ -53,8 +58,9 @@ def _describe_missing(name: str, instructions: Optional[str]) -> str:
     return f"no procedure {name}: not shipped with brigade and not in {corpus_procedures}"
 
 
-def _find_named(name: str, instructions: Optional[str]) -> ProcedureSource:
-    shipped = SHIPPED_PROCEDURES / f"{name}{PROCEDURE_SUFFIX}"
+def _find_named(name: str, directories: ProcedureDirectories) -> ProcedureSource:
+    instructions = directories.instructions
+    shipped = directories.shipped / f"{name}{PROCEDURE_SUFFIX}"
     if shipped.is_file():
         return ProcedureSource(
             name=name, location=str(shipped), argument=name, text=shipped.read_text(encoding="utf-8")
@@ -82,8 +88,8 @@ def _read_budget(value: str, location: str) -> int:
     return int(value)
 
 
-def resolve_procedure(argument: str, instructions: Optional[str]) -> Procedure:
-    source = _read_path(argument) if _is_path(argument) else _find_named(argument, instructions)
+def resolve_procedure(argument: str, directories: ProcedureDirectories) -> Procedure:
+    source = _read_path(argument) if _is_path(argument) else _find_named(argument, directories)
     try:
         procedure_file = parse_role_file(source.text)
     except RoleFileUnreadable as unreadable:
