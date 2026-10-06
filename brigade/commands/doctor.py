@@ -1,10 +1,13 @@
 import sys
+from pathlib import Path
 
+from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.system.ask_configured_client import ask_configured_client
+from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.resolve_plugin import resolve_plugin
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 
@@ -16,6 +19,8 @@ SYSTEMD_STATES_FIT_FOR_TIMERS = ("running", "degraded")
 SCHEDULER_FALLBACK = "a cron line, or brigade tick --loop"
 FORGE_FALLBACK = "local mode without a forge"
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
+INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
+CONFIGURATION_FILE = "config.toml"
 
 
 def _format_version(version: tuple[int, ...]) -> str:
@@ -113,10 +118,29 @@ def _check_forge(runtime) -> dict:
 
 def _check_awawa_web(runtime) -> dict:
     try:
-        runtime.run_process(ProcessRequest(argv=("awawa-web", "--help"), cwd=PROBE_DIRECTORY, timeout_s=PROBE_TIMEOUT_S))
+        runtime.run_process(
+            ProcessRequest(argv=("awawa-web", "--help"), cwd=PROBE_DIRECTORY, timeout_s=PROBE_TIMEOUT_S)
+        )
     except ToolNotFound:
         return _create_optional("awawa-web", "warning", "not on PATH", AWAWA_WEB_FALLBACK)
     return _create_optional("awawa-web", "ok", "on PATH", AWAWA_WEB_FALLBACK)
+
+
+def _describe_instructions(state: str, detail: str) -> dict:
+    return _create_optional("instructions", state, detail, INSTRUCTIONS_FALLBACK)
+
+
+def _check_instructions(runtime) -> dict:
+    try:
+        configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
+        if configuration.instructions is None:
+            return _describe_instructions("warning", "none configured")
+        report = lint_corpus(runtime.run_process, Path(configuration.instructions))
+    except BrigadeError as error:
+        return _describe_instructions("warning", str(error))
+    if report.clean:
+        return _describe_instructions("ok", f"lint --strict clean in {configuration.instructions}")
+    return _describe_instructions("warning", f"lint --strict fails in {configuration.instructions}")
 
 
 def run(request, runtime) -> dict:
@@ -130,5 +154,6 @@ def run(request, runtime) -> dict:
             _check_scheduler(runtime),
             _check_forge(runtime),
             _check_awawa_web(runtime),
+            _check_instructions(runtime),
         ],
     }

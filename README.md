@@ -3,8 +3,8 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with six commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
-`brigade adapter`, `brigade project` and `brigade ledger`; every other one is a task of the corpus.
+The entry point exists with seven commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter`, `brigade project`, `brigade ledger` and `brigade roles`; every other one is a task of the corpus.
 
 ## Install
 
@@ -31,8 +31,8 @@ Below Python 3.11, brigade exits non-zero and names the version it needs and the
 `brigade doctor` (or `brigade doctor --json`) tells whether brigade can run on the machine: Python 3.11 or later, git,
 awawa 2.7 or later and the probe of the client adapter `config.toml` names are checked, a missing one is a finding and
 the exit code is 1; a user systemd instance, gh
-and the account it is logged in as, and awawa-web are optional, each reported with its fallback, a missing one a
-warning.
+and the account it is logged in as, awawa-web and the instructions corpus `config.toml` names, `awawa lint --strict`
+clean or not, are optional, each reported with its fallback, a missing one a warning.
 
 `brigade init` (or `brigade init --json`) creates the operational corpus in `$XDG_CONFIG_HOME/brigade/`,
 `~/.config/brigade/` by default: a git repository holding `_schema.awawa` and a `.gitignore`, committed with your git
@@ -77,7 +77,28 @@ of that adapter; the fake reads `recordings`, the directory whose `<role>.json` 
 a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv` and `transcripts`. An external adapter
 answers the same operations as `brigade-client-<name> <operation>`, the request on stdin and its answer, a JSON
 document, on stdout; brigade checks every answer against the shape of its operation and names the adapter, the
-operation and the key of an answer that departs from it.
+operation and the key of an answer that departs from it. The probe answers `models`, the model the adapter binds to
+each reasoning level.
+
+## Roles
+
+A procedure calls a slot, never a role: `plan`, `build`, `verify`, `review`, `rebase`, `report`, `triage`, `rules`
+and `explore`. A role is a Markdown file, a front matter between two `---` lines declaring `name`, `slot`, `work`,
+`reasoning` (`deepest`, `deep`, `standard`, `light`), `capabilities` (`read`, `write`, `shell`, `net`,
+comma-separated), `budget` and `returns`, then the system prompt; it never names a model, the client adapter binds
+one to its reasoning level. A slot resolves to the first of:
+
+1. the file of `$XDG_CONFIG_HOME/brigade/roles/` whose front matter declares that slot;
+2. the AGENT entity of the instructions corpus (the `instructions` key of `config.toml`) that the table `[slots]`
+   binds to it, `plan = "<agent name>"`, read through awawa at each resolution: its fields fill the front matter
+   and its `awawa context` package is the body;
+3. brigade's built-in role, under `brigade/roles/data/`.
+
+```
+brigade roles list [--json]          # the slot, the role, its source and the model of each slot
+brigade roles show <slot> [--json]   # the role file the slot resolves to
+brigade roles lint [--json]          # the built-in and the machine role files; exit 1 on a finding
+```
 
 ## Ledger
 
@@ -120,6 +141,7 @@ The CI runs the tests and the zipapp build on Python 3.11 and on the latest Pyth
   outside `brigade/system/paths.py` and the process runner.
 - `brigade/adapters/clients/` — the built-in client adapters, `claude_code.py` and `fake.py`, reached by name only;
   the recordings the test suite replays live in `tests/cli/fixtures/recordings/`.
+- `brigade/roles/data/` — the nine built-in role files, one per slot.
 - `corpus/` — the project's own awawa corpus: the schema, the milestones, the tasks, the decisions of the plan.
   Read it with `awawa status .` from this directory.
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board,

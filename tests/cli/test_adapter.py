@@ -26,6 +26,7 @@ FAKE_PROBE = {
     "version_argv": None,
     "operations": ["probe", "launch", "result"],
     "features": [],
+    "models": {},
 }
 
 
@@ -66,7 +67,7 @@ class BrigadeAdapterProbe(AdapterTestCase):
         self.assertEqual(
             completed.stdout,
             '{\n  "schema_version": 1,\n  "client": "fake",\n  "version_argv": null,\n  "operations": [\n'
-            '    "probe",\n    "launch",\n    "result"\n  ],\n  "features": []\n}\n',
+            '    "probe",\n    "launch",\n    "result"\n  ],\n  "features": [],\n  "models": {}\n}\n',
         )
 
     def test_should_answer_through_an_executable_adapter_on_path(self):
@@ -86,6 +87,7 @@ class BrigadeAdapterProbe(AdapterTestCase):
                 "version_argv": None,
                 "operations": ["probe", "launch", "result"],
                 "features": [],
+                "models": {},
             },
         )
 

@@ -30,13 +30,21 @@ ERROR_SUBTYPE_PREFIX = "error"
 TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
 
 
-def _probe() -> dict:
+def _bind_models(request: dict) -> dict:
+    return {
+        level: request["reasoning_table"].get(level, default_row)["model"]
+        for level, default_row in REASONING_DEFAULTS.items()
+    }
+
+
+def _probe(request: dict) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
         "client": CLIENT_NAME,
         "version_argv": [EXECUTABLE, "--version"],
         "operations": ["probe", "launch", "result", "resume", "transcripts"],
         "features": ["step_count", "tool_grants", "reset_hour"],
+        "models": _bind_models(request),
     }
 
 
@@ -156,7 +164,7 @@ def _read_transcripts(request: dict) -> dict:
 
 def answer(operation: str, request: dict) -> dict:
     if operation == "probe":
-        return _probe()
+        return _probe(request)
     if operation == "launch-argv":
         return _build_command(request, [])
     if operation == "resume-argv":

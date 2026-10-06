@@ -34,6 +34,7 @@ class ReadConfigurationWhenEveryKeyIsCommentedOut(ReadConfigurationTestCase):
                 ide_link=None,
                 reasoning={},
                 clients={},
+                slots={},
             ),
         )
 
@@ -52,6 +53,8 @@ class ReadConfigurationWhenEveryKeyIsSet(ReadConfigurationTestCase):
             'effort = "max"\n'
             "[clients.fake]\n"
             'recordings = "/srv/recordings"\n'
+            "[slots]\n"
+            'plan = "charlie"\n'
         )
 
         # Act
@@ -68,6 +71,7 @@ class ReadConfigurationWhenEveryKeyIsSet(ReadConfigurationTestCase):
                 ide_link="idea://open?file={path}&line={line}",
                 reasoning={"deep": ReasoningRow(model="opus", effort="max")},
                 clients={"fake": {"recordings": "/srv/recordings"}},
+                slots={"plan": "charlie"},
             ),
         )
 
@@ -105,6 +109,8 @@ class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
                 "[clients.fake]\nrecordings = true\n",
                 "clients.fake.recordings is a boolean, not a string,",
             ),
+            ("an unknown slot", '[slots]\ncook = "charlie"\n', "unknown key slots.cook"),
+            ("a slot bound to no string", "[slots]\nplan = 1\n", "slots.plan is an integer, not a string,"),
         ]
         for case, content, expected_problem in rows:
             with self.subTest(case=case):

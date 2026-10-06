@@ -34,6 +34,7 @@ class FakeProbe(unittest.TestCase):
                 "version_argv": None,
                 "operations": ["probe", "launch", "result"],
                 "features": [],
+                "models": {},
             },
         )
 

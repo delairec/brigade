@@ -10,6 +10,7 @@ from brigade import VERSION
 from brigade.commands import adapter, doctor, init, project_add, project_list, project_show, project_status
 from brigade.commands import ledger, ledger_budgets, ledger_compare
 from brigade.commands.describe_skipped_lines import describe_skipped_lines
+from brigade.commands import roles_lint, roles_list, roles_show
 from brigade.commands.render_adapter_text import render_adapter_text
 from brigade.commands.render_doctor_text import render_doctor_text
 from brigade.commands.render_init_text import render_init_text
@@ -20,14 +21,18 @@ from brigade.commands.render_project_add_text import render_project_add_text
 from brigade.commands.render_project_list_text import render_project_list_text
 from brigade.commands.render_project_show_text import render_project_show_text
 from brigade.commands.render_project_status_text import render_project_status_text
+from brigade.commands.render_roles_lint_text import render_roles_lint_text
+from brigade.commands.render_roles_list_text import render_roles_list_text
+from brigade.commands.render_roles_show_text import render_roles_show_text
 from brigade.errors import BrigadeError, UsageError
 from brigade.runtime import build_runtime
+from brigade.system.read_configuration import SLOTS
 
 
 DAY_FORMAT = "%Y-%m-%d"
 DAYS_SUFFIX = "d"
 LAST_RUNS_BY_DEFAULT = 20
-ACTION_DESTINATIONS = ("project_action", "ledger_report")
+ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action")
 
 
 def _create_common_options():
@@ -104,6 +109,15 @@ def _add_ledger_parser(commands) -> None:
     compare_parser.add_argument("--before", type=_read_day, required=True, help="a day YYYY-MM-DD in UTC")
 
 
+def _add_roles_parser(commands) -> None:
+    roles_parser = commands.add_parser("roles", help="list, show and lint the roles each slot resolves to")
+    actions = roles_parser.add_subparsers(dest="roles_action", metavar="action", required=True)
+    actions.add_parser("list", parents=[_create_common_options()], help="list the role, the source and the model of each slot")
+    show_parser = actions.add_parser("show", parents=[_create_common_options()], help="print the role file a slot resolves to")
+    show_parser.add_argument("slot", choices=SLOTS)
+    actions.add_parser("lint", parents=[_create_common_options()], help="check the built-in and the machine role files")
+
+
 def _create_parser():
     parser = argparse.ArgumentParser(prog="brigade")
     parser.add_argument("--version", action="store_true", help="print the version of brigade")
@@ -127,6 +141,7 @@ def _create_parser():
     adapter_parser.add_argument("operation", choices=adapter.OPERATIONS)
     _add_project_parser(commands)
     _add_ledger_parser(commands)
+    _add_roles_parser(commands)
     return parser
 
 
@@ -143,6 +158,12 @@ def _decide_doctor_exit_code(document: dict) -> int:
 
 
 def _decide_done(document: dict) -> int:
+    return 0
+
+
+def _decide_roles_lint_exit_code(document: dict) -> int:
+    if document["findings"]:
+        return 1
     return 0
 
 
@@ -198,6 +219,9 @@ COMMANDS = {
     "ledger compare": Command(
         _keep_options, ledger_compare.run, render_ledger_compare_text, _decide_done, describe_skipped_lines
     ),
+    "roles list": Command(_keep_options, roles_list.run, render_roles_list_text, _decide_done),
+    "roles show": Command(_keep_options, roles_show.run, render_roles_show_text, _decide_done),
+    "roles lint": Command(_keep_options, roles_lint.run, render_roles_lint_text, _decide_roles_lint_exit_code),
 }
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70

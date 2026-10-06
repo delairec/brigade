@@ -187,8 +187,8 @@ DECISION RolesAreSlotsBoundToRoleFiles
 		+ "BUDGET and RETURNS fill the front matter, its context package is the body"
 	DESC "the reasoning level maps to a model and an effort in the client adapter's table,"
 		+ "overridable in the machine config; a role file never names a model"
-	DESC "brigade ships a built-in role for every slot: ada plans, bilal reports, mina triages, and"
-		+ "one builder, verifier, reviewer, rebaser, rule writer and explorer"
+	DESC "brigade ships a built-in role for every slot, named after its work: planner, builder,"
+		+ "verifier, reviewer, rebaser, reporter, triager, rulewriter and explorer"
 	DESC "an AGENT entity declares no slot: it takes the slot a table of config.toml written by its"
 		+ "user binds it to; brigade ships no binding and no name of its author's agents"
 	REJECTED "roles living only in the instructions corpus: presupposes that corpus on every"
@@ -196,13 +196,16 @@ DECISION RolesAreSlotsBoundToRoleFiles
 	REJECTED "roles written in one client's agent-file format: bound to that client"
 	REJECTED "a model name in a role file: the depth is the role's and the model the adapter's, as"
 		+ "the AGENT schema of the instructions corpus already states"
-	RATIONALE "the user asked on 2026-10-05 for custom roles and for their own roles by default,"
-		+ "and named the reporter bilal; @SCHEMA.AGENT of the instructions corpus separates"
-		+ "REASONING from the model each adapter binds"
+	RATIONALE "the user asked on 2026-10-05 for custom roles and for their own roles by default;"
+		+ "@SCHEMA.AGENT of the instructions corpus separates REASONING from the model each adapter"
+		+ "binds"
 	REJECTED "built-in roles named after the agents of the author's instructions corpus, replaced"
 		+ "by name: brigade would ship its author's machine"
+	REJECTED "built-in roles with a person's name, ada, bilal and mina: the names of the author's"
+		+ "own agents, which say nothing of the work a slot does"
 	SOURCE "pull request #3 of the brigade repository"
 	SOURCE "DESC 7 added on the user's ruling of 2026-10-06 in the refinement of B43"
+	SOURCE "DESC 6 and the last REJECTED: the review of pull request #20 of the brigade repository"
 
 DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
 	TITLE "brigade installs on any Linux from one zipapp or a clone; Python 3.11 or later, git,"
@@ -953,3 +956,50 @@ DECISION EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
 		+ "run timeout, and agent harnesses set a wall limit per run as a backstop"
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B06, on the measurements of"
 		+ "transcripts and the client documentation read that day"
+
+DECISION ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
+	TITLE "the table [slots] of config.toml binds a slot to an AGENT entity; a machine role file"
+		+ "takes the slot its front matter declares; a role file declares work beside the six keys"
+		+ "of its first form"
+	STATUS active
+	DESC "[slots] maps a slot among the nine to the name of an AGENT entity of the instructions"
+		+ "corpus; an unknown slot or a value that is no string is an error naming the key and the"
+		+ "file; a row with no instructions key set is an error naming the row and the file"
+	DESC "a file of the machine's roles directory, any name ending in .md, takes the slot its front"
+		+ "matter declares; two files declaring one slot are an error naming both, and a finding of"
+		+ "brigade roles lint on the later one"
+	DESC "a role file declares name, slot, work, reasoning, capabilities, budget and returns; an"
+		+ "AGENT entity fills work with its WORK lines and returns with its RETURNS lines joined by"
+		+ "a semicolon, capabilities with its CAPABILITY lines joined by a comma"
+	DESC "the body of an AGENT entity's role is awawa context @AGENT.<name> --depth 2 --skip"
+		+ "reasoning on the instructions corpus, read at each resolution"
+	DESC "binds @TASK.B43 and @TASK.B06, which applies PROJECT.ROLE ahead of these sources"
+		REF @TASK.B43
+		REF @TASK.B06
+	REJECTED "a machine role file named after its slot, plan.md: the front matter already declares"
+		+ "the slot, and two spellings of it could disagree"
+	REJECTED "WORK left out of the front matter: the task's fourth SPEC names it among the fields"
+		+ "that fill it, and no other key holds the work of a role"
+	REJECTED "a key repeated once per value: a role file holds one key: value per line"
+	SOURCE "pull request #20 of the brigade repository, delivering @TASK.B43"
+		REF @TASK.B43
+
+DECISION TheProbeAnswersTheModelEachReasoningLevelBinds
+	TITLE "the probe of a client adapter answers models, the model it binds to each reasoning level"
+		+ "once the rows config.toml sets are applied"
+	STATUS active
+	DESC "models maps a reasoning level to a model name; an adapter that binds no model, the fake,"
+		+ "answers an empty object, and brigade roles list then shows no model"
+	DESC "the core reads the model of a role from the probe and never from the adapter's table"
+	DESC "binds @TASK.B43 and every adapter of"
+		+ "@DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction"
+		REF @TASK.B43
+		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
+	REJECTED "the model read out of the argv of launch-argv: it parses one client's flag in the"
+		+ "core, which names no client"
+	REJECTED "a sixth operation answering the table: one operation more for every adapter, where"
+		+ "the probe already declares what an adapter supports"
+	REJECTED "the core importing the reasoning table of the Claude Code adapter: the guard of"
+		+ "tests/guards refuses a static import of brigade.adapters from outside it"
+	SOURCE "pull request #20 of the brigade repository, delivering @TASK.B43"
+		REF @TASK.B43
