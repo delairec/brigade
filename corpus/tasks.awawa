@@ -2500,6 +2500,9 @@ TASK B66
 			+ "test_should_pass_on_the_coverage_configuration_of_a_measured_run"
 		IMPL "tests/unit/system/test_build_process_environment.py::def"
 			+ "test_should_pass_on_no_other_coverage_variable"
+	SPEC ".coveragerc sets [run] branch = True, and the report of the job shows the Branch and"
+		+ "BrPart columns"
+		IMPL ".coveragerc::branch = True"
 	AFTER @TASK.B65
 	RATIONALE "the user ruled report only, no threshold at first; a threshold comes once the real"
 		+ "figure is known and is never lowered, as"

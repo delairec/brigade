@@ -1,3 +1,4 @@
 [run]
 source = brigade
 patch = subprocess
+branch = True
