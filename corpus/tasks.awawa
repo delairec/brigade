@@ -2546,3 +2546,53 @@ TASK B68
 	SOURCE "the user's ruling of 2026-10-06, \"ok (mergé)\", on the session's recommendation after"
 		+ "the review of #38"
 	DELIVERED_BY 43
+
+TASK B69
+	TITLE "the flaky test of brigade runs list on a running detached run: its root cause found and"
+		+ "stated, the product or the test made deterministic, never a longer delay"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "runs"
+	ROLE bastien
+	SPEC "before any fix, the pull request states the root cause of"
+		+ "tests/cli/test_runs.py::BrigadeRunsListOfARunningRun::test_should_list_a_detached_run_whose_client_has_not_finished_as_running"
+		+ "listing the run dead, with its evidence: a reproduction, or a trace naming the read of"
+		+ "brigade runs list and the write it races with"
+	SPEC "where the cause is in the product, a detached run reported dead while its process lives,"
+		+ "brigade runs list is fixed, and a test reproduces the race deterministically: the two"
+		+ "sides of the race are ordered by the test, never by a sleep"
+	SPEC "where the cause is the test's own timing, the test is made deterministic: the fake client"
+		+ "blocks on a file the test releases once brigade runs list has answered, or an equivalent"
+		+ "that holds the client until the test lets it go; the delay setting of the fake client is"
+		+ "not raised"
+	SPEC "the test passes N consecutive runs under CPU load, N and the load stated in the pull"
+		+ "request"
+	SPEC "brigade runs list stays covered for a running, a finished and a dead run, in"
+		+ "tests/cli/test_runs.py"
+	AFTER @TASK.B06
+	AFTER @TASK.B57
+	RATIONALE "attempt 1 of CI run 37505590816 on pull request #40 at 3d9895c, a pull request"
+		+ "touching corpus/ alone, failed its job Tests and zipapp on Python 3.11 on that test with"
+		+ "AssertionError: 'dead' != 'running' at self.assertEqual(listed[\"state\"], \"running\"),"
+		+ "and attempt 2 of the same commit passed (gh run view 37505590816 --attempt 1, --attempt"
+		+ "2, 2026-10-06); the test configures the fake client with delay = \"2\", runs brigade run"
+		+ "--detach, then brigade runs list --json at once, then waits for result.json"
+	RATIONALE "at a352163 the candidates are not told apart: brigade/commands/run.py calls"
+		+ "create_run_directory, which writes pid with the pid of the foreground process, then"
+		+ "detach_run, which rewrites it with the pid of the spawned process; the spawned process,"
+		+ "re-executed with --run-id, calls create_run_directory again and rewrites pid through"
+		+ "write_text_file, not atomically; list_runs reads pid and reports dead on a file missing,"
+		+ "empty or not digits, as on a pid os.kill finds gone; the 2 s margin on a slow runner is"
+		+ "the other candidate;"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast makes a run"
+		+ "whose pid lives without result.json running"
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+	RATIONALE "the user ruled \"ok\" on the session's proposal, translated, \"have lex write a"
+		+ "correction task for this flaky test, root cause and fix, not just a longer delay\": a"
+		+ "longer delay would hide a product race behind a slower suite; @TASK.B06 delivered"
+		+ "brigade runs list and its states, @TASK.B57 the dead state of a detached run, so the"
+		+ "test and the code this task touches are theirs"
+		REF @TASK.B06
+		REF @TASK.B57
+	SOURCE "the user's ruling of 2026-10-06, \"ok\", on the session's proposal after attempt 1 of"
+		+ "CI run 37505590816 on pull request #40"
