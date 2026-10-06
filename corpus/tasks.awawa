@@ -1915,19 +1915,24 @@ TASK B56
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B56"
 
 TASK B57
-	TITLE "the writers of runs/ and of the corpus cache: exit 1 naming the path they cannot write"
-	STATUS draft
+	TITLE "the writers of runs/, of the corpus cache and of the scheduler units: exit 1 naming the"
+		+ "path they cannot write"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "system"
 	ROLE bastien
-	DESC "to be refined with the user once @TASK.B06 and @TASK.B08 are merged: the writers they"
-		+ "deliver are known only then"
-		REF @TASK.B06
-		REF @TASK.B08
-	SPEC "an OSError raised creating or writing under $XDG_STATE_HOME/brigade/runs/ exits 1 with"
-		+ "one stderr line naming the path, as @TASK.B56 sets for the state and the configuration"
-	SPEC "an OSError raised creating or writing the corpus cache under $XDG_CACHE_HOME/brigade/"
-		+ "exits 1 the same way"
+	SPEC "an OSError raised creating or writing the run directory under"
+		+ "$XDG_STATE_HOME/brigade/runs/<id>/, its pid, role and progress files, its detached log"
+		+ "or a segment's directory, brief, stdout and stderr, exits 1 with one stderr line naming"
+		+ "the path, as for the state and the configuration"
+	SPEC "the process brigade run --detach starts exits 1 the same way, its line written to"
+		+ "detached.log while that file can still be written, and brigade runs list shows that run"
+		+ "dead"
+	SPEC "an OSError raised creating, extracting, placing or dating a tree of the corpus cache"
+		+ "under $XDG_CACHE_HOME/brigade/ exits 1 the same way, a cache hit on a cache it cannot"
+		+ "date included"
+	SPEC "an OSError raised by brigade scheduler install creating or writing brigade.service or"
+		+ "brigade.timer under $XDG_CONFIG_HOME/systemd/user/ exits 1 the same way"
 	AFTER @TASK.B06
 	AFTER @TASK.B08
 	AFTER @TASK.B56
@@ -1937,5 +1942,25 @@ TASK B57
 		REF @TASK.B56
 		REF @TASK.B06
 		REF @TASK.B08
-	SOURCE "the user's ruling of 2026-10-06 in the refinement of B56"
+	RATIONALE "the writers were read on the heads of pull requests #24 at ac415ee and #23 at"
+		+ "9109205: create_run_directory, detach_run, spawn_process and run_segment for runs/, and"
+		+ "prepare_tree for the cache; run.json and result.json go through write_json_atomically"
+		+ "and the cache lock through hold_lock, both brought in line by @TASK.B56, and git archive"
+		+ "writing into the cache already exits 1 through the runner; a writer the review of those"
+		+ "pull requests adds or moves is checked again at delivery"
+		REF @TASK.B56
+	RATIONALE "a detached run is a brigade process like any other: brigade run creates runs/<id>/"
+		+ "before it detaches, so an unwritable state directory fails in the foreground, and a"
+		+ "write that fails later is seen through the dead state of brigade runs list that"
+		+ "@TASK.B06 delivers"
+		REF @TASK.B06
+	RATIONALE "a cache hit dates the tree with os.utime for the least-recently-read pruning of"
+		+ "@TASK.B08; serving an undated tree would skew that order in silence"
+		REF @TASK.B08
+	RATIONALE "the scheduler units are the one writer of brigade outside its own directories,"
+		+ "written by @TASK.B07, and fall under neither the state nor the configuration of"
+		+ "@TASK.B56"
+		REF @TASK.B07
+		REF @TASK.B56
+	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57"
 		REF @TASK.B56
