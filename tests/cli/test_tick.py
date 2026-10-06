@@ -4,15 +4,13 @@ import signal
 import subprocess
 import sys
 import tempfile
-import time
 import unittest
 from pathlib import Path
+from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 
 INSTANT = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
-FIRST_TICK_WAIT_S = 10
-POLL_INTERVAL_S = 0.05
 STOP_WAIT_S = 10
 
 
@@ -36,9 +34,9 @@ class TickTestCase(unittest.TestCase):
         self.addCleanup(holder.close)
         fcntl.flock(holder, fcntl.LOCK_EX)
 
-    def start_loop(self) -> subprocess.Popen:
+    def start_loop(self, *options: str) -> subprocess.Popen:
         loop = subprocess.Popen(
-            [sys.executable, str(CLONE_ENTRY_POINT), "tick", "--loop", "--json"],
+            [sys.executable, str(CLONE_ENTRY_POINT), "tick", "--loop", *options],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -47,10 +45,8 @@ class TickTestCase(unittest.TestCase):
         self.addCleanup(loop.kill)
         return loop
 
-    def wait_for_heartbeat(self) -> None:
-        deadline = time.monotonic() + FIRST_TICK_WAIT_S
-        while not self.heartbeat.exists() and time.monotonic() < deadline:
-            time.sleep(POLL_INTERVAL_S)
+    def wait_for_first_tick(self, loop: subprocess.Popen) -> str:
+        return loop.stderr.readline()
 
 
 class BrigadeTickOnce(TickTestCase):
@@ -63,10 +59,7 @@ class BrigadeTickOnce(TickTestCase):
         heartbeat = json.loads(self.heartbeat.read_text())
         self.assertRegex(heartbeat["ts"], INSTANT)
         self.assertIsInstance(heartbeat["duration_ms"], int)
-        self.assertEqual(
-            heartbeat,
-            {"schema_version": 1, "ts": heartbeat["ts"], "duration_ms": heartbeat["duration_ms"], "actions_applied": 0},
-        )
+        self.assertEqual(heartbeat, {"schema_version": 1, "ts": ANY, "duration_ms": ANY, "actions_applied": 0})
 
     def test_should_leave_the_lock_and_the_heartbeat_alone_in_the_state_directory(self):
         # Act
@@ -175,9 +168,8 @@ class BrigadeTickLoop(TickTestCase):
         for name, stop_signal in rows:
             with self.subTest(signal=name):
                 # Arrange
-                self.heartbeat.unlink(missing_ok=True)
-                loop = self.start_loop()
-                self.wait_for_heartbeat()
+                loop = self.start_loop("--json")
+                self.wait_for_first_tick(loop)
 
                 # Act
                 loop.send_signal(stop_signal)
@@ -189,23 +181,24 @@ class BrigadeTickLoop(TickTestCase):
 
     def test_should_report_each_tick_on_stderr(self):
         # Arrange
-        loop = self.start_loop()
-        self.wait_for_heartbeat()
+        loop = self.start_loop("--json")
+        first_report = self.wait_for_first_tick(loop)
 
         # Act
         loop.send_signal(signal.SIGTERM)
 
         # Assert
-        _, stderr = loop.communicate(timeout=STOP_WAIT_S)
-        self.assertRegex(stderr, r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$")
+        _, later_reports = loop.communicate(timeout=STOP_WAIT_S)
+        self.assertRegex(first_report, r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$")
+        self.assertEqual(later_reports, "")
 
 
 class BrigadeTickLoopWhileAnotherTickHoldsTheLock(TickTestCase):
     def test_should_stand_down_on_stderr_and_exit_0_on_a_signal(self):
         # Arrange
         self.hold_tick_lock()
-        loop = self.start_loop()
-        stand_down_line = loop.stderr.readline()
+        loop = self.start_loop("--json")
+        stand_down_line = self.wait_for_first_tick(loop)
 
         # Act
         loop.send_signal(signal.SIGTERM)

@@ -260,7 +260,7 @@ class BrigadeSchedulerInstallWithoutTheSchedulerKey(SchedulerTestCase):
         rows = [
             ("a running user instance", [SYSTEMD_USER_MANAGER, CRONTAB], "running", "systemd"),
             ("a degraded user instance", [SYSTEMD_USER_MANAGER, CRONTAB], "degraded", "systemd"),
-            ("an offline user instance", [SYSTEMD_OFFLINE, CRONTAB], "offline", "cron"),
+            ("an offline user instance", [SYSTEMD_USER_MANAGER, CRONTAB], "offline", "cron"),
             ("no systemctl", [CRONTAB], "running", "cron"),
         ]
         self.machine.write_configuration(NO_SCHEDULER_CONFIGURED)

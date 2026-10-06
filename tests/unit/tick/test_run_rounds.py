@@ -4,22 +4,28 @@ from datetime import datetime, timezone
 from brigade.tick.build_snapshot import Snapshot
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
 
-NOW = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
-SNAPSHOT = Snapshot(now=NOW)
+FIRST_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc))
+SECOND_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 1, tzinfo=timezone.utc))
+THIRD_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 2, tzinfo=timezone.utc))
 NO_ACTION = ()
 
 
-class ScriptedPlanner:
-    def __init__(self, plans: list, plan_after_the_script: tuple = NO_ACTION):
+class SnapshotBuilder:
+    def __init__(self, snapshots: list):
+        self.snapshots = iter(snapshots)
+
+    def build(self) -> Snapshot:
+        return next(self.snapshots)
+
+
+class PlannerBySnapshot:
+    def __init__(self, plans: dict):
         self.plans = plans
-        self.plan_after_the_script = plan_after_the_script
         self.snapshots_seen = []
 
     def plan(self, snapshot: Snapshot) -> tuple:
         self.snapshots_seen.append(snapshot)
-        if self.plans:
-            return self.plans.pop(0)
-        return self.plan_after_the_script
+        return self.plans[snapshot]
 
 
 class RecordingExecutor:
@@ -31,17 +37,18 @@ class RecordingExecutor:
         return len(actions)
 
 
-def create_rounds(planner: ScriptedPlanner, executor: RecordingExecutor, cap: int = 10) -> Rounds:
-    return Rounds(build_snapshot=lambda: SNAPSHOT, plan=planner.plan, apply=executor.apply, cap=cap)
+def create_rounds(snapshots: list, planner: PlannerBySnapshot, executor: RecordingExecutor, cap: int = 10) -> Rounds:
+    return Rounds(build_snapshot=SnapshotBuilder(snapshots).build, plan=planner.plan, apply=executor.apply, cap=cap)
 
 
 class RunRounds(unittest.TestCase):
     def test_should_stop_at_a_first_empty_plan_having_applied_nothing(self):
         # Arrange
         executor = RecordingExecutor()
+        planner = PlannerBySnapshot({FIRST_SNAPSHOT: NO_ACTION})
 
         # Act
-        outcome = run_rounds(create_rounds(ScriptedPlanner([]), executor))
+        outcome = run_rounds(create_rounds([FIRST_SNAPSHOT], planner, executor))
 
         # Assert
         self.assertEqual((outcome, executor.plans_applied), (RoundsOutcome(actions_applied=0, capped=False), []))
@@ -49,10 +56,12 @@ class RunRounds(unittest.TestCase):
     def test_should_apply_each_plan_until_the_plan_is_empty(self):
         # Arrange
         executor = RecordingExecutor()
-        planner = ScriptedPlanner([("merge", "launch"), ("launch",)])
+        planner = PlannerBySnapshot(
+            {FIRST_SNAPSHOT: ("merge", "launch"), SECOND_SNAPSHOT: ("launch",), THIRD_SNAPSHOT: NO_ACTION}
+        )
 
         # Act
-        outcome = run_rounds(create_rounds(planner, executor))
+        outcome = run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT], planner, executor))
 
         # Assert
         self.assertEqual(outcome, RoundsOutcome(actions_applied=3, capped=False))
@@ -60,21 +69,25 @@ class RunRounds(unittest.TestCase):
 
     def test_should_plan_every_round_on_a_snapshot_built_afresh(self):
         # Arrange
-        planner = ScriptedPlanner([("merge",), ("launch",)])
+        planner = PlannerBySnapshot(
+            {FIRST_SNAPSHOT: ("merge",), SECOND_SNAPSHOT: ("launch",), THIRD_SNAPSHOT: NO_ACTION}
+        )
 
         # Act
-        run_rounds(create_rounds(planner, RecordingExecutor()))
+        run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT], planner, RecordingExecutor()))
 
         # Assert
-        self.assertEqual(planner.snapshots_seen, [SNAPSHOT, SNAPSHOT, SNAPSHOT])
+        self.assertEqual(planner.snapshots_seen, [FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT])
 
     def test_should_stop_at_the_cap_when_the_plan_never_empties(self):
         # Arrange
         executor = RecordingExecutor()
-        planner = ScriptedPlanner([], plan_after_the_script=("launch",))
+        planner = PlannerBySnapshot(
+            {FIRST_SNAPSHOT: ("launch",), SECOND_SNAPSHOT: ("launch",), THIRD_SNAPSHOT: ("launch",)}
+        )
 
         # Act
-        outcome = run_rounds(create_rounds(planner, executor, cap=3))
+        outcome = run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT], planner, executor, cap=3))
 
         # Assert
         self.assertEqual(outcome, RoundsOutcome(actions_applied=3, capped=True))
