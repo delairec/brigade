@@ -3,8 +3,8 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with two commands so far, `brigade --version` and `brigade doctor`; every other one is a task
-of the corpus.
+The entry point exists with three commands so far, `brigade --version`, `brigade doctor` and `brigade init`; every
+other one is a task of the corpus.
 
 ## Install
 
@@ -33,6 +33,12 @@ and awawa 2.7 or later are checked, a missing one is a finding and the exit code
 and the account it is logged in as, and awawa-web are optional, each reported with its fallback, a missing one a
 warning.
 
+`brigade init` (or `brigade init --json`) creates the operational corpus in `$XDG_CONFIG_HOME/brigade/`,
+`~/.config/brigade/` by default: a git repository holding `_schema.awawa` and a `.gitignore`, committed with your git
+identity, and `config.toml`, the machine configuration, every key commented out and never committed. It needs
+`user.name` and `user.email` set in git. Run again, it rewrites nothing: a file that differs from the shipped one is
+left as it is and reported as a warning.
+
 ## Develop
 
 ```
@@ -50,8 +56,9 @@ The CI runs the tests and the zipapp build on Python 3.11 and on the latest Pyth
   Read it with `awawa status .` from this directory.
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board,
   demo, brief); `index.html` is the page, `parts/` the fragments it fetches.
-- `schema/_schema.awawa.tpl` — the schema of the operational corpus `brigade init` installs in the config directory
-  (kept as a template so it does not join this corpus).
+- `brigade/corpus/data/schema.awawa.tpl` — the schema of the operational corpus `brigade init` installs in the config
+  directory (kept as a template so it does not join this corpus); every file brigade ships lives in a `data/` folder
+  of the package, so the clone and the zipapp read the same files.
 - `HANDOFF.md` — the working notes of the planning run: what was asked, what was answered, what was decided, what remains.
 
 The status of a task is its `STATUS` in `corpus/tasks.awawa`, and nowhere else; the task board of the Artifact

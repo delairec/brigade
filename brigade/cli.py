@@ -3,8 +3,9 @@ import json
 import sys
 
 from brigade import VERSION
-from brigade.commands import doctor
+from brigade.commands import doctor, init
 from brigade.commands.render_doctor_text import render_doctor_text
+from brigade.commands.render_init_text import render_init_text
 from brigade.errors import BrigadeError
 from brigade.runtime import build_runtime
 
@@ -26,6 +27,11 @@ def _create_parser():
         "doctor",
         parents=[_create_common_options()],
         help="check the prerequisites and report the optional items with their fallback",
+    )
+    commands.add_parser(
+        "init",
+        parents=[_create_common_options()],
+        help="create the operational corpus repository, its schema and config.toml",
     )
     return parser
 
@@ -51,12 +57,27 @@ def _run_doctor(options):
     return _decide_doctor_exit_code(document)
 
 
+def _run_init(options):
+    document = init.run(options, build_runtime())
+    if getattr(options, "json", False):
+        print(json.dumps(document))
+    else:
+        print(render_init_text(document))
+    return 0
+
+
 def main(arguments: list[str]) -> int:
     parser = _create_parser()
     options = parser.parse_args(arguments)
     if options.command == "doctor":
         try:
             return _run_doctor(options)
+        except BrigadeError as error:
+            sys.stderr.write(f"brigade {options.command}: {error}\n")
+            return 1
+    if options.command == "init":
+        try:
+            return _run_init(options)
         except BrigadeError as error:
             sys.stderr.write(f"brigade {options.command}: {error}\n")
             return 1

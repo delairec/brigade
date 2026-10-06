@@ -1,6 +1,6 @@
 // Schema of the brigade operational corpus, installed by `brigade init` as _schema.awawa in the
-// config directory. Kept with a .tpl extension here so that it does not join this repository's own
-// corpus (two SCHEMA * in one workspace collide).
+// config directory from brigade/corpus/data/schema.awawa.tpl, a name that keeps it out of brigade's
+// own corpus (two SCHEMA * in one workspace collide).
 SCHEMA *
 	DESC "fields legal on every entity of the operational corpus"
 	FIELD DESC string
