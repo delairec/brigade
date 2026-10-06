@@ -17,6 +17,9 @@
 # The link the dashboard opens a file with, {path} and {line} replaced.
 # ide_link = ""
 
+# The bound, in MB, of the cache of the trees brigade corpus extracts; the least recently read are removed past it.
+# refs_cache_mb = 1024
+
 # The model and effort a reasoning level maps to, replacing that row of the client adapter's table;
 # levels deepest, deep, standard, light.
 # [reasoning.deep]

@@ -32,6 +32,7 @@ class ReadConfigurationWhenEveryKeyIsCommentedOut(ReadConfigurationTestCase):
                 forge_account=None,
                 instructions=None,
                 ide_link=None,
+                refs_cache_mb=1024,
                 reasoning={},
                 clients={},
                 slots={},
@@ -48,6 +49,7 @@ class ReadConfigurationWhenEveryKeyIsSet(ReadConfigurationTestCase):
             'forge_account = "octo-bot"\n'
             'instructions = "/home/ada/.ai"\n'
             'ide_link = "idea://open?file={path}&line={line}"\n'
+            "refs_cache_mb = 2048\n"
             "[reasoning.deep]\n"
             'model = "opus"\n'
             'effort = "max"\n'
@@ -69,6 +71,7 @@ class ReadConfigurationWhenEveryKeyIsSet(ReadConfigurationTestCase):
                 forge_account="octo-bot",
                 instructions="/home/ada/.ai",
                 ide_link="idea://open?file={path}&line={line}",
+                refs_cache_mb=2048,
                 reasoning={"deep": ReasoningRow(model="opus", effort="max")},
                 clients={"fake": {"recordings": "/srv/recordings"}},
                 slots={"plan": "charlie"},
@@ -111,6 +114,9 @@ class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
             ),
             ("an unknown slot", '[slots]\ncook = "charlie"\n', "unknown key slots.cook"),
             ("a slot bound to no string", "[slots]\nplan = 1\n", "slots.plan is an integer, not a string,"),
+            ("a cache bound of the wrong type", 'refs_cache_mb = "1024"\n', "refs_cache_mb is a string, not an integer,"),
+            ("a cache bound that is a boolean", "refs_cache_mb = true\n", "refs_cache_mb is a boolean, not an integer,"),
+            ("a negative cache bound", "refs_cache_mb = -1\n", "refs_cache_mb is -1, not 0 or more,"),
         ]
         for case, content, expected_problem in rows:
             with self.subTest(case=case):

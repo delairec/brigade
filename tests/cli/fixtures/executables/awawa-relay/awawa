@@ -1,0 +1,9 @@
+#!/bin/sh
+case "$1" in
+  lint)
+    printf 'awawa %s in %s\n' "$*" "$(pwd -P)"
+    printf 'awawa diagnostic\n' >&2
+    exit 3
+    ;;
+esac
+PATH="${PATH#*:}" exec awawa "$@"
