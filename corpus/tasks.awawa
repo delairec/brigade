@@ -1544,18 +1544,67 @@ TASK B48
 	AFTER @TASK.B47
 
 TASK B49
-	TITLE "Supported-clients table in the README, generated and tested"
-	STATUS draft
+	TITLE "brigade adapter matrix and the supported-clients table of the README, generated from the"
+		+ "probes"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "adapters"
 	ROLE bastien
-	SPEC "brigade adapter matrix prints, for every adapter shipped or found on PATH, one row per"
-		+ "adapter operation with the support level: full, the client offers it and the adapter"
-		+ "implements it; fallback, the recorded fallback applies; absent, neither"
-	SPEC "README.md holds the table between two marker comments; a test regenerates it and fails"
-		+ "when the README differs"
-	SPEC "the fake adapter is listed as the test suite's, not as a supported client"
+	SPEC "brigade adapter matrix prints one row per client adapter, built-in or an executable"
+		+ "brigade-client-<name> on PATH, and one column per capability, launch, result, resume,"
+		+ "transcripts, step count, tool grants and reset hour; a cell reads full when the probe"
+		+ "declares the capability, fallback when it does not and a fallback is recorded, absent"
+		+ "for launch or result undeclared"
+	SPEC "under the table, a legend names the fallback of each capability that has one: no resume,"
+		+ "a fresh launch from the progress file; no transcripts, brigade's own run logs; no step"
+		+ "count, steps null and the run held on the clock alone; no tool grants, the client's"
+		+ "unattended mode and a disposable worktree for a reading slot; no reset hour, now plus"
+		+ "thirty minutes"
+	SPEC "an adapter whose probe fails, no JSON document, an answer departing from the probe shape"
+		+ "or the timeout, gets a row naming the error; the other rows are printed and the command"
+		+ "exits 1"
+	SPEC "the fake adapter lives in brigade/adapters/test_clients, which the resolver searches"
+		+ "after brigade/adapters/clients; the client key fake of config.toml still selects it,"
+		+ "from the clone and from dist/brigade.pyz"
+	SPEC "every row of the matrix carries its audience, the test suite for an adapter of"
+		+ "brigade/adapters/test_clients, a supported client for the others; brigade adapter matrix"
+		+ "--markdown prints two Markdown tables, the supported clients then the adapters of the"
+		+ "test suite, and the legend"
+	SPEC "README.md holds, between two marker comments, the output of brigade adapter matrix"
+		+ "--markdown for the built-in adapters alone; a test of tests/guards regenerates it with"
+		+ "no executable adapter on PATH and fails when the README differs, printing the expected"
+		+ "block"
 	AFTER @TASK.B42
+	RATIONALE "the user ruled on 2026-10-05 that the README names the supported clients with their"
+		+ "level, DESC 5 of @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters, whose DESC 2"
+		+ "records the fallbacks the legend names; DESC 4 of"
+		+ "@DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap binds this task to show"
+		+ "the clock fallback of a client that counts no steps"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+		REF @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
+	RATIONALE "the columns, the levels, the package of the test suite and the Markdown rendering"
+		+ "are @DECISION.TheSupportedClientsTableIsGeneratedFromTheProbes; the probe answers five"
+		+ "operations and three features, step_count, tool_grants and reset_hour, as @TASK.B42"
+		+ "delivered them under @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction, and"
+		+ "is left unchanged"
+		REF @DECISION.TheSupportedClientsTableIsGeneratedFromTheProbes
+		REF @TASK.B42
+		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
+	RATIONALE "brigade/system/resolve_plugin.py resolves one named adapter and lists none: listing"
+		+ "the built-in adapters and the brigade-client-<name> executables of PATH is this task's;"
+		+ "brigade/adapters/clients also holds describe_unreadable_output.py, a helper that answers"
+		+ "nothing, and the IMPL anchors of @TASK.B42 that name fake.py follow the file it moves to"
+		REF @TASK.B42
+	RATIONALE "the test lives in tests/guards, which DESC 6 of"
+		+ "@DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents gives the README"
+		+ "table; the README is generated with no executable adapter on PATH so that it does not"
+		+ "depend on the machine; @TASK.B06 implements the fallbacks this table only describes, and"
+		+ "@TASK.B44 adds the row of the second client"
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+		REF @TASK.B06
+		REF @TASK.B44
+	SOURCE "pull request #3 of the brigade repository; the user's rulings of 2026-10-06 in the"
+		+ "refinement of B49"
 
 TASK B50
 	TITLE "Recipe files: format, resolution and lint"
