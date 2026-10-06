@@ -896,3 +896,22 @@ DECISION ClientAdaptersAnswerEveryOperationThroughOneFunction
 		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
 	SOURCE "pull request #16 of the brigade repository, delivering @TASK.B42"
 		REF @TASK.B42
+
+DECISION ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
+	TITLE "a corpus write formats, and on a failing lint restores, only the file brigade wrote; the"
+		+ "lint runs on the whole corpus"
+	STATUS active
+	DESC "brigade runs awawa fmt on the file it wrote, never on the corpus root; awawa lint"
+		+ "--strict runs on the corpus root"
+	DESC "a failing lint restores that file from HEAD, or removes it when HEAD does not hold it,"
+		+ "and nothing else"
+	DESC "the transaction is brigade/corpus/change_corpus_file, under the lock of the corpus"
+		+ "repository; binds @TASK.B04 and @TASK.B43"
+		REF @TASK.B04
+		REF @TASK.B43
+	REJECTED "awawa fmt over the corpus root: it rewrites the files the user edited by hand, which"
+		+ "the restore of one file then leaves rewritten and uncommitted"
+	REJECTED "a checkout of the whole corpus on a failing lint: it discards the user's uncommitted"
+		+ "edits"
+	SOURCE "pull request #17 of the brigade repository, delivering @TASK.B04"
+		REF @TASK.B04
