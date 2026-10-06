@@ -27,7 +27,11 @@ class BrigadeZipapp(unittest.TestCase):
     def test_should_print_the_version_from_the_built_archive(self):
         # Act
         completed = subprocess.run(
-            [sys.executable, "dist/brigade.pyz", "--version"], capture_output=True, text=True, cwd=self.clone.name
+            [sys.executable, "dist/brigade.pyz", "--version"],
+            capture_output=True,
+            text=True,
+            cwd=self.clone.name,
+            check=False,
         )
 
         # Assert

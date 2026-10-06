@@ -31,12 +31,11 @@ class TickTestCase(unittest.TestCase):
 
     def hold_tick_lock(self) -> None:
         self.lock.parent.mkdir(parents=True)
-        holder = open(self.lock, "a")
-        self.addCleanup(holder.close)
+        holder = self.enterContext(open(self.lock, "a"))
         fcntl.flock(holder, fcntl.LOCK_EX)
 
     def start_loop(self, *options: str) -> subprocess.Popen:
-        loop = subprocess.Popen(
+        loop = subprocess.Popen(  # noqa: S603 - the test's own command line
             [sys.executable, str(CLONE_ENTRY_POINT), "tick", "--loop", *options],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

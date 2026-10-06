@@ -51,11 +51,12 @@ class DoctorTestCase(unittest.TestCase):
 
     def run_doctor(self, path_directories, *options):
         environment = {"PATH": os.pathsep.join(path_directories), "XDG_CONFIG_HOME": self.config_home.name}
-        return subprocess.run(
+        return subprocess.run(  # noqa: S603 - the test's own command line
             [sys.executable, CLONE_ENTRY_POINT, "doctor", *options],
             capture_output=True,
             text=True,
             env=environment,
+            check=False,
         )
 
 

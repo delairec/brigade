@@ -138,7 +138,11 @@ class AppendEventWhenTheEventIsRefused(AppendEventTestCase):
             ),
             (
                 "an instant with no time zone",
-                LedgerEvent(name="wave.paused", instant=datetime(2026, 10, 6, 9, 30), fields={"wave": "tp/16"}),
+                LedgerEvent(
+                    name="wave.paused",
+                    instant=datetime(2026, 10, 6, 9, 30),  # noqa: DTZ001 - the naive instant is the input refused
+                    fields={"wave": "tp/16"},
+                ),
                 "the instant of the event wave.paused carries no time zone",
             ),
         ]

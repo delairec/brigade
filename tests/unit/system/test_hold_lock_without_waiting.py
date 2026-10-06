@@ -36,8 +36,7 @@ class HoldLockWithoutWaiting(unittest.TestCase):
     def test_should_give_up_at_once_when_another_holds_the_lock(self):
         # Arrange
         self.lock_path.parent.mkdir()
-        other_holder = open(self.lock_path, "a")
-        self.addCleanup(other_holder.close)
+        other_holder = self.enterContext(open(self.lock_path, "a"))
         fcntl.flock(other_holder, fcntl.LOCK_EX)
 
         # Act

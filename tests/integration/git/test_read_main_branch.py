@@ -8,7 +8,11 @@ from brigade.system.run_process import run_process
 
 
 def run_git(repository: Path, *arguments: str) -> None:
-    subprocess.run(["git", "-C", str(repository), *arguments], capture_output=True, check=True)
+    subprocess.run(  # noqa: S603 - the test's own command line
+        ["git", "-C", str(repository), *arguments],  # noqa: S607 - git found on the PATH of the test
+        capture_output=True,
+        check=True,
+    )
 
 
 class ReadMainBranch(unittest.TestCase):

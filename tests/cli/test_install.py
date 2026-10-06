@@ -23,11 +23,12 @@ class BrigadeInstallWhenLinkedIntoADirectoryOnPath(unittest.TestCase):
 
         # Act
         completed = subprocess.run(
-            ["brigade", "--version"],
+            ["brigade", "--version"],  # noqa: S607 - the PATH lookup is the behaviour under test
             capture_output=True,
             text=True,
             cwd=self.unrelated_working_directory.name,
             env=environment,
+            check=False,
         )
 
         # Assert

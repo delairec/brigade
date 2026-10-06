@@ -115,8 +115,11 @@ class BrigadeInitOnAFreshMachine(unittest.TestCase):
         self.machine.run_init()
 
         # Act
-        completed = subprocess.run(
-            ["awawa", "lint", "--strict", str(self.machine.corpus)], capture_output=True, text=True
+        completed = subprocess.run(  # noqa: S603 - the test's own command line
+            ["awawa", "lint", "--strict", str(self.machine.corpus)],  # noqa: S607 - awawa found on the PATH of the test
+            capture_output=True,
+            text=True,
+            check=False,
         )
 
         # Assert

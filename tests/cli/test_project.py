@@ -114,8 +114,11 @@ class BrigadeProjectAddOnAGitHubRepository(ProjectTestCase):
         self.run_project("add", str(self.project.path))
 
         # Act
-        completed = subprocess.run(
-            ["awawa", "lint", "--strict", str(self.machine.corpus)], capture_output=True, text=True
+        completed = subprocess.run(  # noqa: S603 - the test's own command line
+            ["awawa", "lint", "--strict", str(self.machine.corpus)],  # noqa: S607 - awawa found on the PATH of the test
+            capture_output=True,
+            text=True,
+            check=False,
         )
 
         # Assert
@@ -289,8 +292,10 @@ class BrigadeProjectAddWhenNoMainBranchCanBeTold(ProjectTestCase):
             (
                 1,
                 "",
-                f"brigade project add: {project.path} has neither an origin/HEAD nor a branch checked out;"
-                " check out its main branch\n",
+                (
+                    f"brigade project add: {project.path} has neither an origin/HEAD nor a branch checked out;"
+                    " check out its main branch\n"
+                ),
                 False,
             ),
         )
@@ -595,11 +600,12 @@ class BrigadeProjectWhileTheCorpusIsLocked(ProjectTestCase):
 
     def detect_waiting(self, arguments: list) -> bool:
         try:
-            subprocess.run(
+            subprocess.run(  # noqa: S603 - the test's own command line
                 [sys.executable, str(CLONE_ENTRY_POINT), *arguments],
                 capture_output=True,
                 env=self.machine.describe_environment(),
                 timeout=LOCK_WAIT_S,
+                check=False,
             )
         except subprocess.TimeoutExpired:
             return True

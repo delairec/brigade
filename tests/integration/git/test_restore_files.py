@@ -10,7 +10,12 @@ IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 
 
 def run_git(repository: Path, *arguments: str) -> str:
-    completed = subprocess.run(["git", "-C", str(repository), *arguments], capture_output=True, text=True, check=True)
+    completed = subprocess.run(  # noqa: S603 - the test's own command line
+        ["git", "-C", str(repository), *arguments],  # noqa: S607 - git found on the PATH of the test
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     return completed.stdout
 
 
