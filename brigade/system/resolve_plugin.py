@@ -8,7 +8,12 @@ from typing import Callable
 from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-BUILT_IN_PLUGIN_PACKAGES = {"forge": "brigade.adapters.forges", "client": "brigade.adapters.clients"}
+BUILT_IN_PLUGIN_PACKAGES = {
+    "forge": "brigade.adapters.forges",
+    "client": "brigade.adapters.clients",
+    "scheduler": "brigade.adapters.schedulers",
+}
+BUILT_IN_ENTRY_POINTS = {"forge": "describe_account", "scheduler": "install"}
 CLIENT_NAME_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
 CLIENT_EXECUTABLE_PREFIX = "brigade-client-"
 CLIENT_EXECUTABLE_DIRECTORY = "/"
@@ -47,10 +52,10 @@ def _import_built_in(kind: str, module_basename: str):
         return None
 
 
-def _resolve_forge(name: str):
-    plugin = _import_built_in("forge", name) if name.isidentifier() else None
-    if plugin is None:
-        raise BrigadeError(f"no forge plugin {name}")
+def _resolve_built_in(kind: str, name: str):
+    plugin = _import_built_in(kind, name) if name.isidentifier() else None
+    if not hasattr(plugin, BUILT_IN_ENTRY_POINTS[kind]):
+        raise BrigadeError(f"no {kind} plugin {name}")
     return plugin
 
 
@@ -68,8 +73,8 @@ def _resolve_client(name: str, runtime):
 
 
 def resolve_plugin(kind: str, name: str, runtime):
-    if kind == "forge":
-        return _resolve_forge(name)
+    if kind in BUILT_IN_ENTRY_POINTS:
+        return _resolve_built_in(kind, name)
     if kind == "client":
         return _resolve_client(name, runtime)
     raise BrigadeError(f"no plugin kind {kind}")

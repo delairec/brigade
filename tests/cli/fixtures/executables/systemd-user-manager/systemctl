@@ -1,0 +1,12 @@
+#!/bin/sh
+echo "$*" >> "$HOME/systemctl.calls"
+case "$*" in
+  "--user is-system-running")
+    state=running
+    if [ -f "$HOME/systemd-state" ]; then read -r state < "$HOME/systemd-state"; fi
+    echo "$state" ;;
+  "--user daemon-reload") ;;
+  "--user enable --now brigade.timer") ;;
+  "--user show brigade.timer --property=NextElapseUSecRealtime --value") echo "Tue 2026-10-06 12:05:00 UTC" ;;
+  *) exit 2 ;;
+esac
