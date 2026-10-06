@@ -258,10 +258,12 @@ of its two periods holds no finished run.
 python3 -m unittest                            # the tests: tests/cli runs brigade as a subprocess, tests/guards
                                                # checks the import graph and the environment reads
 awawa fmt --check . && awawa lint --strict .   # the checks of the corpus
+ruff check . && ruff format --check .          # the lint and the format, where ruff is installed
 ```
 
-The CI runs the tests and the zipapp build on Python 3.11 and on the latest Python release, and audits its workflows
-with zizmor, on every pull request; zizmor is pinned in `requirements-ci.txt`, which dependabot keeps current.
+The CI runs the tests and the zipapp build on Python 3.11 and on the latest Python release, lints and checks the format
+with ruff, configured by `ruff.toml`, and audits its workflows with zizmor, on every pull request; ruff and zizmor are
+pinned in `requirements-ci.txt`, which dependabot keeps current, and the pinned ruff gives the verdict that counts.
 
 ## Layout
 
