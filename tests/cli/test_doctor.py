@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -18,32 +19,49 @@ SYSTEMD_NO_BUS = str(EXECUTABLES / "systemd-no-bus")
 GH_ACTIVE = str(EXECUTABLES / "gh-active")
 GH_LOGGED_OUT = str(EXECUTABLES / "gh-logged-out")
 AWAWA_WEB = str(EXECUTABLES / "awawa-web")
+CLAUDE = str(EXECUTABLES / "claude-2.1.291")
+
+CLAUDE_CODE_CONFIGURATION = 'client = "claude-code"\n'
 
 PYTHON_ENTRY = 0
 GIT_ENTRY = 1
 AWAWA_ENTRY = 2
-SCHEDULER_ENTRY = 3
-FORGE_ENTRY = 4
-AWAWA_WEB_ENTRY = 5
+CLIENT_ENTRY = 3
+SCHEDULER_ENTRY = 4
+FORGE_ENTRY = 5
+AWAWA_WEB_ENTRY = 6
 
 
-def run_doctor(path_directories, *options):
-    environment = {"PATH": os.pathsep.join(path_directories)}
-    return subprocess.run(
-        [sys.executable, CLONE_ENTRY_POINT, "doctor", *options],
-        capture_output=True,
-        text=True,
-        env=environment,
-    )
+class DoctorTestCase(unittest.TestCase):
+    def setUp(self):
+        self.config_home = tempfile.TemporaryDirectory()
+        self.configuration = Path(self.config_home.name) / "brigade" / "config.toml"
+
+    def tearDown(self):
+        self.config_home.cleanup()
+
+    def write_configuration(self, content: str) -> None:
+        self.configuration.parent.mkdir(parents=True, exist_ok=True)
+        self.configuration.write_text(content)
+
+    def run_doctor(self, path_directories, *options):
+        environment = {"PATH": os.pathsep.join(path_directories), "XDG_CONFIG_HOME": self.config_home.name}
+        return subprocess.run(
+            [sys.executable, CLONE_ENTRY_POINT, "doctor", *options],
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
 
 
-class BrigadeDoctorOnAMachineWithEveryItem(unittest.TestCase):
+class BrigadeDoctorOnAMachineWithEveryItem(DoctorTestCase):
     def test_should_report_every_item_ok_in_the_versioned_document(self):
         # Arrange
-        every_item = [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+        every_item = [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 
         # Act
-        completed = run_doctor(every_item, "--json")
+        completed = self.run_doctor(every_item, "--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -64,6 +82,13 @@ class BrigadeDoctorOnAMachineWithEveryItem(unittest.TestCase):
                     },
                     {"name": "git", "kind": "prerequisite", "state": "ok", "detail": "2.47.3 (no floor)", "fallback": None},
                     {"name": "awawa", "kind": "prerequisite", "state": "ok", "detail": "2.7.0 (floor 2.7)", "fallback": None},
+                    {
+                        "name": "client",
+                        "kind": "prerequisite",
+                        "state": "ok",
+                        "detail": "claude-code: 2.1.291 (Claude Code)",
+                        "fallback": None,
+                    },
                     {
                         "name": "scheduler",
                         "kind": "optional",
@@ -91,10 +116,11 @@ class BrigadeDoctorOnAMachineWithEveryItem(unittest.TestCase):
 
     def test_should_print_the_report_as_text(self):
         # Arrange
-        every_item = [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+        every_item = [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 
         # Act
-        completed = run_doctor(every_item)
+        completed = self.run_doctor(every_item)
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -107,28 +133,29 @@ class BrigadeDoctorOnAMachineWithEveryItem(unittest.TestCase):
                 report_lines[1],
                 "ok       git          2.47.3 (no floor)",
                 "ok       awawa        2.7.0 (floor 2.7)",
+                "ok       client       claude-code: 2.1.291 (Claude Code)",
                 "optional",
                 "ok       scheduler    user systemd instance running       else: a cron line, or brigade tick --loop",
                 "ok       forge        gh as octo-bot                      else: local mode without a forge",
                 "ok       awawa-web    on PATH                             else: the dashboard's corpus view only",
                 "",
-                "doctor: 3 of 3 prerequisites ok · 0 optional items on their fallback",
+                "doctor: 4 of 4 prerequisites ok · 0 optional items on their fallback",
             ],
         )
 
 
-class BrigadeDoctorWhenAPrerequisiteFails(unittest.TestCase):
+class BrigadeDoctorWhenAPrerequisiteFails(DoctorTestCase):
     def test_should_report_the_finding_and_exit_1(self):
         rows = [
             (
                 "git missing",
-                [AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB],
+                [AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB],
                 GIT_ENTRY,
                 {"name": "git", "kind": "prerequisite", "state": "finding", "detail": "not on PATH", "fallback": None},
             ),
             (
                 "awawa missing",
-                [GIT, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB],
+                [GIT, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB],
                 AWAWA_ENTRY,
                 {
                     "name": "awawa",
@@ -140,7 +167,7 @@ class BrigadeDoctorWhenAPrerequisiteFails(unittest.TestCase):
             ),
             (
                 "awawa below its floor",
-                [GIT, AWAWA_BELOW_FLOOR, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB],
+                [GIT, AWAWA_BELOW_FLOOR, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB],
                 AWAWA_ENTRY,
                 {
                     "name": "awawa",
@@ -151,23 +178,25 @@ class BrigadeDoctorWhenAPrerequisiteFails(unittest.TestCase):
                 },
             ),
         ]
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
         for machine, path_directories, entry, expected_entry in rows:
             with self.subTest(machine=machine):
                 # Act
-                completed = run_doctor(path_directories, "--json")
+                completed = self.run_doctor(path_directories, "--json")
 
                 # Assert
                 self.assertEqual(completed.returncode, 1, completed.stderr)
                 self.assertEqual(json.loads(completed.stdout)["items"][entry], expected_entry)
 
 
-class BrigadeDoctorWhenAToolFails(unittest.TestCase):
+class BrigadeDoctorWhenAToolFails(DoctorTestCase):
     def test_should_name_the_failed_command_on_stderr_and_exit_1(self):
         # Arrange
-        git_failing = [GIT_FAILING, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+        git_failing = [GIT_FAILING, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 
         # Act
-        completed = run_doctor(git_failing, "--json")
+        completed = self.run_doctor(git_failing, "--json")
 
         # Assert
         self.assertEqual(completed.returncode, 1)
@@ -178,12 +207,12 @@ class BrigadeDoctorWhenAToolFails(unittest.TestCase):
         )
 
 
-class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
+class BrigadeDoctorWhenAnOptionalItemIsMissing(DoctorTestCase):
     def test_should_report_a_warning_with_its_fallback_and_exit_0(self):
         rows = [
             (
                 "systemctl missing",
-                [GIT, AWAWA, GH_ACTIVE, AWAWA_WEB],
+                [GIT, AWAWA, CLAUDE, GH_ACTIVE, AWAWA_WEB],
                 SCHEDULER_ENTRY,
                 {
                     "name": "scheduler",
@@ -195,7 +224,7 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
             ),
             (
                 "no user systemd instance",
-                [GIT, AWAWA, SYSTEMD_OFFLINE, GH_ACTIVE, AWAWA_WEB],
+                [GIT, AWAWA, CLAUDE, SYSTEMD_OFFLINE, GH_ACTIVE, AWAWA_WEB],
                 SCHEDULER_ENTRY,
                 {
                     "name": "scheduler",
@@ -207,7 +236,7 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
             ),
             (
                 "systemctl printing no state",
-                [GIT, AWAWA, SYSTEMD_NO_BUS, GH_ACTIVE, AWAWA_WEB],
+                [GIT, AWAWA, CLAUDE, SYSTEMD_NO_BUS, GH_ACTIVE, AWAWA_WEB],
                 SCHEDULER_ENTRY,
                 {
                     "name": "scheduler",
@@ -219,7 +248,7 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
             ),
             (
                 "gh missing",
-                [GIT, AWAWA, SYSTEMD_RUNNING, AWAWA_WEB],
+                [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, AWAWA_WEB],
                 FORGE_ENTRY,
                 {
                     "name": "forge",
@@ -231,7 +260,7 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
             ),
             (
                 "gh logged in to no account",
-                [GIT, AWAWA, SYSTEMD_RUNNING, GH_LOGGED_OUT, AWAWA_WEB],
+                [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_LOGGED_OUT, AWAWA_WEB],
                 FORGE_ENTRY,
                 {
                     "name": "forge",
@@ -243,7 +272,7 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
             ),
             (
                 "awawa-web missing",
-                [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE],
+                [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE],
                 AWAWA_WEB_ENTRY,
                 {
                     "name": "awawa-web",
@@ -254,23 +283,25 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(unittest.TestCase):
                 },
             ),
         ]
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
         for machine, path_directories, entry, expected_entry in rows:
             with self.subTest(machine=machine):
                 # Act
-                completed = run_doctor(path_directories, "--json")
+                completed = self.run_doctor(path_directories, "--json")
 
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assertEqual(json.loads(completed.stdout)["items"][entry], expected_entry)
 
 
-class BrigadeDoctorAsTextWithAFindingAndAWarning(unittest.TestCase):
+class BrigadeDoctorAsTextWithAFindingAndAWarning(DoctorTestCase):
     def test_should_name_the_fallback_and_count_what_failed(self):
         # Arrange
-        awawa_below_floor_and_no_awawa_web = [GIT, AWAWA_BELOW_FLOOR, SYSTEMD_RUNNING, GH_ACTIVE]
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+        awawa_below_floor_and_no_awawa_web = [GIT, AWAWA_BELOW_FLOOR, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE]
 
         # Act
-        completed = run_doctor(awawa_below_floor_and_no_awawa_web)
+        completed = self.run_doctor(awawa_below_floor_and_no_awawa_web)
 
         # Assert
         self.assertEqual(completed.returncode, 1, completed.stderr)
@@ -279,11 +310,109 @@ class BrigadeDoctorAsTextWithAFindingAndAWarning(unittest.TestCase):
             [
                 "ok       git          2.47.3 (no floor)",
                 "finding  awawa        2.6.3 (floor 2.7)",
+                "ok       client       claude-code: 2.1.291 (Claude Code)",
                 "optional",
                 "ok       scheduler    user systemd instance running       else: a cron line, or brigade tick --loop",
                 "ok       forge        gh as octo-bot                      else: local mode without a forge",
                 "warning  awawa-web    not on PATH                         fallback: the dashboard's corpus view only",
                 "",
-                "doctor: 2 of 3 prerequisites ok · 1 optional item on its fallback",
+                "doctor: 3 of 4 prerequisites ok · 1 optional item on its fallback",
             ],
+        )
+
+
+class BrigadeDoctorChecksTheClientAdapter(DoctorTestCase):
+    def test_should_report_a_finding_naming_brigade_init_when_no_configuration_exists(self):
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][CLIENT_ENTRY],
+            {
+                "name": "client",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": f"no configuration at {self.configuration}; run brigade init",
+                "fallback": None,
+            },
+        )
+
+    def test_should_report_a_finding_naming_the_client_key_and_the_file_when_no_client_is_configured(self):
+        # Arrange
+        self.write_configuration('# client = "claude-code"\n')
+
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][CLIENT_ENTRY],
+            {
+                "name": "client",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": f"config.toml names no client: set the client key in {self.configuration}",
+                "fallback": None,
+            },
+        )
+
+    def test_should_report_a_finding_when_the_probe_fails(self):
+        rows = [
+            ("the client executable missing", 'client = "claude-code"\n', "claude-code: claude not on PATH"),
+            (
+                "an adapter found nowhere",
+                'client = "frobnicate"\n',
+                "no client adapter frobnicate: no built-in module and no brigade-client-frobnicate on PATH",
+            ),
+        ]
+        for case, configuration, expected_detail in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.write_configuration(configuration)
+
+                # Act
+                completed = self.run_doctor([GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 1, completed.stderr)
+                self.assertEqual(
+                    json.loads(completed.stdout)["items"][CLIENT_ENTRY],
+                    {"name": "client", "kind": "prerequisite", "state": "finding", "detail": expected_detail, "fallback": None},
+                )
+
+    def test_should_report_a_finding_naming_the_key_of_a_configuration_off_its_shape(self):
+        # Arrange
+        self.write_configuration("client = 1\n")
+
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][CLIENT_ENTRY],
+            {
+                "name": "client",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": f"client is an integer, not a string, in {self.configuration}",
+                "fallback": None,
+            },
+        )
+
+    def test_should_report_an_adapter_with_no_client_executable_as_ok(self):
+        # Arrange
+        self.write_configuration('client = "fake"\n')
+
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][CLIENT_ENTRY],
+            {"name": "client", "kind": "prerequisite", "state": "ok", "detail": "fake: no client executable", "fallback": None},
         )

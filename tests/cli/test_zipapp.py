@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 import sys
@@ -44,4 +45,28 @@ class BrigadeZipapp(unittest.TestCase):
         self.assertEqual(
             (machine.corpus / "_schema.awawa").read_bytes(),
             (clone_root / "brigade" / "corpus" / "data" / "schema.awawa.tpl").read_bytes(),
+        )
+
+    def test_should_answer_through_the_fake_adapter_the_built_archive_ships(self):
+        # Arrange
+        clone_root = Path(self.clone.name)
+        machine_root = clone_root / "machine"
+        machine_root.mkdir()
+        machine = TemporaryMachine(machine_root)
+        machine.write_configuration('client = "fake"\n')
+
+        # Act
+        completed = machine.run_brigade(clone_root / "dist" / "brigade.pyz", "adapter", "probe", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "client": "fake",
+                "version_argv": None,
+                "operations": ["probe", "launch", "result"],
+                "features": [],
+            },
         )

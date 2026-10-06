@@ -16,6 +16,7 @@ class BuildPaths(unittest.TestCase):
         # Arrange
         environment = {
             "HOME": "/home/ada",
+            "PATH": "/usr/local/bin:/usr/bin",
             "XDG_CONFIG_HOME": "/srv/config",
             "XDG_STATE_HOME": "/srv/state",
             "XDG_CACHE_HOME": "/srv/cache",
@@ -31,10 +32,12 @@ class BuildPaths(unittest.TestCase):
                 config_root=Path("/srv/config/brigade"),
                 state_root=Path("/srv/state/brigade"),
                 cache_root=Path("/srv/cache/brigade"),
+                home=Path("/home/ada"),
+                executable_search_path="/usr/local/bin:/usr/bin",
             ),
         )
 
-    def test_should_fall_back_to_the_home_directories(self):
+    def test_should_fall_back_to_the_home_directories_and_the_default_search_path(self):
         rows = [
             ("unset", {"HOME": "/home/ada"}),
             ("empty", {"HOME": "/home/ada", "XDG_CONFIG_HOME": "", "XDG_STATE_HOME": "", "XDG_CACHE_HOME": ""}),
@@ -55,5 +58,7 @@ class BuildPaths(unittest.TestCase):
                         config_root=Path("/home/ada/.config/brigade"),
                         state_root=Path("/home/ada/.local/state/brigade"),
                         cache_root=Path("/home/ada/.cache/brigade"),
+                        home=Path("/home/ada"),
+                        executable_search_path="/bin:/usr/bin",
                     ),
                 )

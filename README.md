@@ -3,8 +3,8 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with three commands so far, `brigade --version`, `brigade doctor` and `brigade init`; every
-other one is a task of the corpus.
+The entry point exists with four commands so far, `brigade --version`, `brigade doctor`, `brigade init` and
+`brigade adapter`; every other one is a task of the corpus.
 
 ## Install
 
@@ -28,8 +28,9 @@ python3 dist/brigade.pyz --version
 
 Below Python 3.11, brigade exits non-zero and names the version it needs and the version it found.
 
-`brigade doctor` (or `brigade doctor --json`) tells whether brigade can run on the machine: Python 3.11 or later, git
-and awawa 2.7 or later are checked, a missing one is a finding and the exit code is 1; a user systemd instance, gh
+`brigade doctor` (or `brigade doctor --json`) tells whether brigade can run on the machine: Python 3.11 or later, git,
+awawa 2.7 or later and the probe of the client adapter `config.toml` names are checked, a missing one is a finding and
+the exit code is 1; a user systemd instance, gh
 and the account it is logged in as, and awawa-web are optional, each reported with its fallback, a missing one a
 warning.
 
@@ -39,10 +40,24 @@ identity, and `config.toml`, the machine configuration, every key commented out 
 `user.name` and `user.email` set in git. Run again, it rewrites nothing: a file that differs from the shipped one is
 left as it is and reported as a warning.
 
+## Client adapters
+
+brigade runs its agents through a client adapter, selected by the `client` key of `config.toml`: `claude-code` for
+Claude Code, `fake` for the adapter that replays recorded result documents, or any name `<name>` for which an
+executable `brigade-client-<name>` is on your `PATH`. The table `[clients.<name>]` of `config.toml` holds the settings
+of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays.
+
+`brigade adapter <operation>` (or with `--json`) answers one operation of the configured adapter, the request read as
+a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv` and `transcripts`. An external adapter
+answers the same operations as `brigade-client-<name> <operation>`, the request on stdin and its answer, a JSON
+document, on stdout; brigade checks every answer against the shape of its operation and names the adapter, the
+operation and the key of an answer that departs from it.
+
 ## Develop
 
 ```
-python3 -m unittest                            # the tests: tests/cli runs brigade as a subprocess
+python3 -m unittest                            # the tests: tests/cli runs brigade as a subprocess, tests/guards
+                                               # checks the import graph and the environment reads
 awawa fmt --check . && awawa lint --strict .   # the checks of the corpus
 ```
 
@@ -51,7 +66,12 @@ The CI runs the tests and the zipapp build on Python 3.11 and on the latest Pyth
 ## Layout
 
 - `bin/brigade` — the entry point of a clone; `brigade/` — the package; `build.py` — the zipapp build.
-- `tests/cli/` — black-box tests that run brigade as a subprocess; `tests/unit/` — tests of single modules.
+- `tests/cli/` — black-box tests that run brigade as a subprocess; `tests/unit/` — tests of single modules;
+  `tests/guards/` — the guards that parse every module of `brigade/`: no static import of `brigade.adapters`,
+  `brigade.collectors`, `brigade.checks` or `brigade.outputs` from outside its package, no read of the environment
+  outside `brigade/system/paths.py` and the process runner.
+- `brigade/adapters/clients/` — the built-in client adapters, `claude_code.py` and `fake.py`, reached by name only;
+  the recordings the test suite replays live in `tests/cli/fixtures/recordings/`.
 - `corpus/` — the project's own awawa corpus: the schema, the milestones, the tasks, the decisions of the plan.
   Read it with `awawa status .` from this directory.
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board,

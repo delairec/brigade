@@ -28,12 +28,19 @@ class TemporaryMachine:
             "XDG_CACHE_HOME": str(self.cache_home),
         }
 
-    def run_brigade(self, entry_point: Path, *arguments: str, environment: dict | None = None):
+    def write_configuration(self, content: str) -> Path:
+        configuration = self.corpus / "config.toml"
+        configuration.parent.mkdir(parents=True, exist_ok=True)
+        configuration.write_text(content)
+        return configuration
+
+    def run_brigade(self, entry_point: Path, *arguments: str, environment: dict | None = None, request: str | None = None):
         return subprocess.run(
             [sys.executable, str(entry_point), *arguments],
             capture_output=True,
             text=True,
             env=environment or self.describe_environment(),
+            input=request,
         )
 
     def run_init(self, *options: str):

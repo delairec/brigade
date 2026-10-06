@@ -2,6 +2,7 @@ import os
 import subprocess
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 from brigade.errors import ToolFailure, ToolNotFound
 
@@ -16,6 +17,7 @@ class ProcessRequest:
     cwd: str
     timeout_s: float
     acceptable_exit_codes: tuple[int, ...] = (0,)
+    stdin: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,12 @@ def _build_environment() -> dict[str, str]:
     }
 
 
+def _describe_input(stdin: Optional[str]) -> dict:
+    if stdin is None:
+        return {"stdin": subprocess.DEVNULL}
+    return {"input": stdin}
+
+
 def _describe_command(argv: tuple[str, ...]) -> str:
     return " ".join(argv)
 
@@ -52,7 +60,7 @@ def run_process(request: ProcessRequest) -> ProcessRecord:
             encoding="utf-8",
             errors="replace",
             timeout=request.timeout_s,
-            stdin=subprocess.DEVNULL,
+            **_describe_input(request.stdin),
         )
     except FileNotFoundError:
         raise ToolNotFound(f"{request.argv[0]} not on PATH") from None

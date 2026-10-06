@@ -1,21 +1,75 @@
 import importlib
-from types import ModuleType
+import json
+import re
+import shutil
+from dataclasses import dataclass
+from typing import Callable
 
 from brigade.errors import BrigadeError
+from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-BUILT_IN_PLUGIN_PACKAGES = {"forge": "brigade.adapters.forges"}
+BUILT_IN_PLUGIN_PACKAGES = {"forge": "brigade.adapters.forges", "client": "brigade.adapters.clients"}
+CLIENT_NAME_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
+CLIENT_EXECUTABLE_PREFIX = "brigade-client-"
+CLIENT_EXECUTABLE_DIRECTORY = "/"
+CLIENT_EXECUTABLE_TIMEOUT_S = 30.0
+CLIENT_ENTRY_POINT = "answer"
 
 
-def resolve_plugin(kind: str, name: str) -> ModuleType:
-    package = BUILT_IN_PLUGIN_PACKAGES.get(kind)
-    if package is None:
-        raise BrigadeError(f"no plugin kind {kind}")
-    if not name.isidentifier():
-        raise BrigadeError(f"no {kind} plugin {name}")
-    module_name = f"{package}.{name}"
+@dataclass(frozen=True)
+class ClientExecutableCaller:
+    name: str
+    executable: str
+    run_process: Callable[[ProcessRequest], ProcessRecord]
+
+    def answer(self, operation: str, request: dict) -> dict:
+        record = self.run_process(
+            ProcessRequest(
+                argv=(self.executable, operation),
+                cwd=CLIENT_EXECUTABLE_DIRECTORY,
+                timeout_s=CLIENT_EXECUTABLE_TIMEOUT_S,
+                stdin=json.dumps(request),
+            )
+        )
+        try:
+            return json.loads(record.stdout)
+        except ValueError:
+            raise BrigadeError(f"client adapter {self.name} answered {operation} with no JSON document") from None
+
+
+def _import_built_in(kind: str, module_basename: str):
+    module_name = f"{BUILT_IN_PLUGIN_PACKAGES[kind]}.{module_basename}"
     try:
         return importlib.import_module(module_name)
     except ModuleNotFoundError as error:
         if error.name != module_name:
             raise
-        raise BrigadeError(f"no {kind} plugin {name}") from None
+        return None
+
+
+def _resolve_forge(name: str):
+    plugin = _import_built_in("forge", name) if name.isidentifier() else None
+    if plugin is None:
+        raise BrigadeError(f"no forge plugin {name}")
+    return plugin
+
+
+def _resolve_client(name: str, runtime):
+    missing = BrigadeError(f"no client adapter {name}: no built-in module and no {CLIENT_EXECUTABLE_PREFIX}{name} on PATH")
+    if not CLIENT_NAME_PATTERN.fullmatch(name):
+        raise missing
+    executable = shutil.which(f"{CLIENT_EXECUTABLE_PREFIX}{name}", path=runtime.paths.executable_search_path)
+    if executable is not None:
+        return ClientExecutableCaller(name=name, executable=executable, run_process=runtime.run_process)
+    plugin = _import_built_in("client", name.replace("-", "_"))
+    if not hasattr(plugin, CLIENT_ENTRY_POINT):
+        raise missing
+    return plugin
+
+
+def resolve_plugin(kind: str, name: str, runtime):
+    if kind == "forge":
+        return _resolve_forge(name)
+    if kind == "client":
+        return _resolve_client(name, runtime)
+    raise BrigadeError(f"no plugin kind {kind}")
