@@ -1,4 +1,6 @@
 import json
+import shutil
+import unittest
 from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
@@ -512,6 +514,7 @@ class BrigadeRunWithAClientThatGrantsNoTools(RunTestCase):
         self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["worktree"], str(self.project.path))
 
 
+@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class BrigadeRunOfAProject(RunTestCase):
     def setUp(self):
         super().setUp()
