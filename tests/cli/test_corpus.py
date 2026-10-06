@@ -37,7 +37,7 @@ class CorpusTestCase(unittest.TestCase):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "corpus", *arguments, environment=environment)
 
 
-class BrigadeCorpusAtABranch(CorpusTestCase):
+class BrigadeCorpusAtABranchTest(CorpusTestCase):
     def test_should_print_the_document_of_the_extracted_tree(self):
         # Act
         completed = self.run_corpus("app", "--ref", "main", "--json")
@@ -74,7 +74,7 @@ class BrigadeCorpusAtABranch(CorpusTestCase):
         )
 
 
-class BrigadeCorpusOfAWorktree(CorpusTestCase):
+class BrigadeCorpusOfAWorktreeTest(CorpusTestCase):
     def test_should_read_the_worktree_of_the_branch_in_place(self):
         # Act
         completed = self.run_corpus("app", "--ref", "worktree:main", "--json")
@@ -124,7 +124,7 @@ class BrigadeCorpusOfAWorktree(CorpusTestCase):
         )
 
 
-class BrigadeCorpusWithAwawaArguments(CorpusTestCase):
+class BrigadeCorpusWithAwawaArgumentsTest(CorpusTestCase):
     def test_should_pass_the_output_and_the_exit_code_of_awawa_through_after_the_sha(self):
         # Arrange
         environment = {
@@ -146,7 +146,7 @@ class BrigadeCorpusWithAwawaArguments(CorpusTestCase):
         )
 
 
-class BrigadeCorpusUnderACacheBound(CorpusTestCase):
+class BrigadeCorpusUnderACacheBoundTest(CorpusTestCase):
     def test_should_keep_the_cache_under_refs_cache_mb(self):
         # Arrange
         self.machine.write_configuration("refs_cache_mb = 0\n")
@@ -161,7 +161,7 @@ class BrigadeCorpusUnderACacheBound(CorpusTestCase):
         self.assertEqual(os.listdir(self.refs / "app"), [self.project.run_git("rev-parse", "HEAD").strip()])
 
 
-class BrigadeCorpusWhileTheCacheIsLocked(CorpusTestCase):
+class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
     def test_should_wait_for_the_lock_of_the_cache_before_pruning(self):
         # Arrange
         lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
@@ -202,7 +202,7 @@ class BrigadeCorpusWhileTheCacheIsLocked(CorpusTestCase):
         return False
 
 
-class BrigadeCorpusOnWhatItCannotRead(CorpusTestCase):
+class BrigadeCorpusOnWhatItCannotReadTest(CorpusTestCase):
     def test_should_exit_1_naming_what_it_cannot_read(self):
         rows = [
             ("an unknown project", ("ghost", "--ref", "main"), "brigade corpus: @PROJECT.ghost is not registered\n"),
@@ -232,7 +232,7 @@ class BrigadeCorpusOnWhatItCannotRead(CorpusTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeCorpusWhereTheMachineRefusesTheCache(CorpusTestCase):
+class BrigadeCorpusWhereTheMachineRefusesTheCacheTest(CorpusTestCase):
     def setUp(self):
         super().setUp()
         self.machine.cache_home.mkdir(exist_ok=True)

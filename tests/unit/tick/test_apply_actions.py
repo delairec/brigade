@@ -10,7 +10,7 @@ class LaunchRun:
     pass
 
 
-class ApplyActions(unittest.TestCase):
+class ApplyActionsTest(unittest.TestCase):
     def test_should_apply_an_empty_plan_as_no_action(self):
         # Arrange
         empty_plan = ()

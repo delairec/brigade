@@ -29,7 +29,7 @@ class ReadLedgerTestCase(unittest.TestCase):
         return ledger_file
 
 
-class ReadLedgerWhenNoLedgerWasWritten(ReadLedgerTestCase):
+class ReadLedgerWhenNoLedgerWasWrittenTest(ReadLedgerTestCase):
     def test_should_read_nothing(self):
         # Act
         reading = read_ledger(self.state_root)
@@ -38,7 +38,7 @@ class ReadLedgerWhenNoLedgerWasWritten(ReadLedgerTestCase):
         self.assertEqual(reading, LedgerReading(entries=(), files=(), skipped=()))
 
 
-class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
+class ReadLedgerWhenEveryLineIsWholeTest(ReadLedgerTestCase):
     def test_should_read_the_monthly_files_in_order_and_ignore_the_other_files(self):
         # Arrange
         october = self.write_ledger("2026-10.jsonl", (WAVE_PAUSED + UNDECLARED_EVENT).encode())
@@ -88,7 +88,7 @@ class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
         )
 
 
-class ReadLedgerWhenALineFailsItsEnvelope(ReadLedgerTestCase):
+class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
     def test_should_skip_the_line_naming_its_file_its_number_and_the_reason(self):
         rows = [
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41\n', "not JSON"),

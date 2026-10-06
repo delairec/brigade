@@ -13,7 +13,7 @@ def _read_marked_block(readme: str) -> str:
     return readme.partition(BEGIN_MARKER)[2].partition(END_MARKER)[0]
 
 
-class ReadmeAdapterMatrix(unittest.TestCase):
+class ReadmeAdapterMatrixTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name)

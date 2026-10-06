@@ -73,7 +73,7 @@ class RolesTestCase(unittest.TestCase):
         return role_file
 
 
-class BrigadeRolesListOnAMachineThatConfiguresNoRole(RolesTestCase):
+class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
     def test_should_resolve_every_slot_to_its_built_in_role_with_no_model_bound(self):
         # Arrange
         no_model_bound = None
@@ -128,7 +128,7 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRole(RolesTestCase):
         )
 
 
-class BrigadeRolesShowOfABuiltInRole(RolesTestCase):
+class BrigadeRolesShowOfABuiltInRoleTest(RolesTestCase):
     def test_should_print_the_shipped_role_file(self):
         # Act
         completed = self.run_roles("show", "plan")
@@ -146,7 +146,7 @@ class BrigadeRolesShowOfABuiltInRole(RolesTestCase):
         self.assertIn("invalid choice: 'cook'", completed.stderr)
 
 
-class BrigadeRolesFromTheMachineRolesDirectory(RolesTestCase):
+class BrigadeRolesFromTheMachineRolesDirectoryTest(RolesTestCase):
     def test_should_resolve_the_slot_a_machine_role_file_declares(self):
         # Arrange
         self.write_machine_role("planner.md", MACHINE_PLANNER)
@@ -200,7 +200,7 @@ class BrigadeRolesFromTheMachineRolesDirectory(RolesTestCase):
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
-class BrigadeRolesFromTheInstructionsCorpus(RolesTestCase):
+class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
     def setUp(self):
         super().setUp()
         self.instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
@@ -294,7 +294,7 @@ class BrigadeRolesFromTheInstructionsCorpus(RolesTestCase):
         )
 
 
-class BrigadeRolesLint(RolesTestCase):
+class BrigadeRolesLintTest(RolesTestCase):
     def test_should_find_the_built_in_role_files_clean(self):
         # Act
         completed = self.run_roles("lint", "--json")

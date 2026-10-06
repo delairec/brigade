@@ -16,7 +16,7 @@ class RunsTestCase(RunTestCase):
         return json.loads(completed.stdout)["run"]
 
 
-class BrigadeRunsListOfAFinishedRun(RunsTestCase):
+class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT)
@@ -77,7 +77,7 @@ class BrigadeRunsListOfAFinishedRun(RunsTestCase):
         self.assertEqual(listed["state"], "dead")
 
 
-class BrigadeRunsListOfARunningRun(RunsTestCase):
+class BrigadeRunsListOfARunningRunTest(RunsTestCase):
     def test_should_list_a_detached_run_whose_client_has_not_finished_as_running(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n')
@@ -94,7 +94,7 @@ class BrigadeRunsListOfARunningRun(RunsTestCase):
         self.assertEqual(listed["state"], "running")
 
 
-class BrigadeRunsLogs(RunsTestCase):
+class BrigadeRunsLogsTest(RunsTestCase):
     def test_should_print_the_output_of_the_client_as_a_document(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT)

@@ -7,7 +7,7 @@ from pathlib import Path
 CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
 
 
-class BrigadeInstallWhenLinkedIntoADirectoryOnPath(unittest.TestCase):
+class BrigadeInstallWhenLinkedIntoADirectoryOnPathTest(unittest.TestCase):
     def setUp(self):
         self.path_directory = tempfile.TemporaryDirectory()
         self.unrelated_working_directory = tempfile.TemporaryDirectory()

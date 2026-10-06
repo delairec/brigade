@@ -17,7 +17,7 @@ def try_lock(path: Path) -> bool:
         return True
 
 
-class HoldLockWithoutWaiting(unittest.TestCase):
+class HoldLockWithoutWaitingTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.lock_path = Path(self.root.name) / "locks" / "tick.lock"
@@ -59,7 +59,7 @@ class HoldLockWithoutWaiting(unittest.TestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class HoldLockWithoutWaitingWhereTheMachineRefusesTheWrite(unittest.TestCase):
+class HoldLockWithoutWaitingWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)

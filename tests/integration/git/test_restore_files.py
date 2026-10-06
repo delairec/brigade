@@ -19,7 +19,7 @@ def run_git(repository: Path, *arguments: str) -> str:
     return completed.stdout
 
 
-class RestoreFiles(unittest.TestCase):
+class RestoreFilesTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.repository = Path(self.root.name)

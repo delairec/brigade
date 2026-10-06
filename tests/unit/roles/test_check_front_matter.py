@@ -13,7 +13,7 @@ DECLARED = {
 }
 
 
-class CheckFrontMatter(unittest.TestCase):
+class CheckFrontMatterTest(unittest.TestCase):
     def test_should_find_nothing_in_a_front_matter_declaring_every_key_within_its_set(self):
         # Act
         problems = check_front_matter(DECLARED)

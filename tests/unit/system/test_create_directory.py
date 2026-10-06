@@ -7,7 +7,7 @@ from brigade.errors import CannotWrite
 from brigade.system.create_directory import create_directory
 
 
-class CreateDirectory(unittest.TestCase):
+class CreateDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
@@ -45,7 +45,7 @@ class CreateDirectory(unittest.TestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class CreateDirectoryWhereTheMachineRefusesTheWrite(unittest.TestCase):
+class CreateDirectoryWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)

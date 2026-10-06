@@ -5,7 +5,8 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 
-STRING_KEYS = ("client", "scheduler", "forge_account", "instructions", "ide_link")
+STRING_KEYS = ("client", "scheduler", "instructions")
+UNREAD_STRING_KEYS = ("forge_account", "ide_link")
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
@@ -34,9 +35,7 @@ class ReasoningRow:
 class Configuration:
     client: str | None = None
     scheduler: str | None = None
-    forge_account: str | None = None
     instructions: str | None = None
-    ide_link: str | None = None
     refs_cache_mb: int = 1024
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)
@@ -127,8 +126,14 @@ def _parse(path: Path) -> dict:
 def read_configuration(path: Path) -> Configuration:
     document = _parse(path)
     _refuse_unknown_keys(
-        document, (*STRING_KEYS, REFS_CACHE_MB_KEY, "reasoning", "clients", "slots", SECONDS_PER_STEP_KEY), "", path
+        document,
+        (*STRING_KEYS, *UNREAD_STRING_KEYS, REFS_CACHE_MB_KEY, "reasoning", "clients", "slots", SECONDS_PER_STEP_KEY),
+        "",
+        path,
     )
+    for key in UNREAD_STRING_KEYS:
+        if key in document:
+            _require(document[key], str, "a string", key, path)
     strings = {key: _require(document[key], str, "a string", key, path) for key in STRING_KEYS if key in document}
     return Configuration(
         **strings,

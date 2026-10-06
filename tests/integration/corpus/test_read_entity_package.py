@@ -18,7 +18,7 @@ AGENTS = (
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
-class ReadEntityPackage(unittest.TestCase):
+class ReadEntityPackageTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)

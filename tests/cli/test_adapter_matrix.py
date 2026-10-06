@@ -74,7 +74,7 @@ class AdapterMatrixTestCase(unittest.TestCase):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "adapter", "matrix", *arguments, environment=environment)
 
 
-class BrigadeAdapterMatrixOfTheBuiltInAdapters(AdapterMatrixTestCase):
+class BrigadeAdapterMatrixOfTheBuiltInAdaptersTest(AdapterMatrixTestCase):
     def test_should_print_a_row_per_adapter_and_a_column_per_capability_then_the_fallbacks(self):
         # Act
         completed = self.run_matrix()
@@ -153,7 +153,7 @@ class BrigadeAdapterMatrixOfTheBuiltInAdapters(AdapterMatrixTestCase):
         )
 
 
-class BrigadeAdapterMatrixWithAnExecutableAdapterOnPath(AdapterMatrixTestCase):
+class BrigadeAdapterMatrixWithAnExecutableAdapterOnPathTest(AdapterMatrixTestCase):
     def test_should_add_the_executable_as_a_supported_client(self):
         # Act
         completed = self.run_matrix("--json", path_directories=(SCRIPTED_CLIENT,))
@@ -194,7 +194,7 @@ class BrigadeAdapterMatrixWithAnExecutableAdapterOnPath(AdapterMatrixTestCase):
         self.assertEqual(json.loads(completed.stdout)["adapters"], [CLAUDE_CODE_ROW, FAKE_ROW])
 
 
-class BrigadeAdapterMatrixWhenAProbeFails(AdapterMatrixTestCase):
+class BrigadeAdapterMatrixWhenAProbeFailsTest(AdapterMatrixTestCase):
     def test_should_name_the_error_of_an_answer_off_the_probe_shape_print_the_other_rows_and_exit_1(self):
         # Act
         completed = self.run_matrix(path_directories=(BROKEN_CLIENT,))
@@ -254,7 +254,7 @@ class BrigadeAdapterMatrixWhenAProbeFails(AdapterMatrixTestCase):
         )
 
 
-class BrigadeAdapterMatrixOptions(AdapterMatrixTestCase):
+class BrigadeAdapterMatrixOptionsTest(AdapterMatrixTestCase):
     def test_should_refuse_markdown_and_json_together(self):
         # Act
         completed = self.run_matrix("--markdown", "--json")

@@ -5,7 +5,7 @@ from pathlib import Path
 CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
 
 
-class BrigadeUsageWhenNoOptionIsGiven(unittest.TestCase):
+class BrigadeUsageWhenNoOptionIsGivenTest(unittest.TestCase):
     def test_should_refuse_with_its_usage(self):
         # Act
         completed = subprocess.run(  # noqa: S603 - the test's own command line
@@ -18,7 +18,7 @@ class BrigadeUsageWhenNoOptionIsGiven(unittest.TestCase):
         self.assertIn("usage: brigade", completed.stderr)
 
 
-class BrigadeUsageWhenAnUnknownOptionIsGiven(unittest.TestCase):
+class BrigadeUsageWhenAnUnknownOptionIsGivenTest(unittest.TestCase):
     def test_should_refuse_naming_the_option(self):
         # Act
         completed = subprocess.run(  # noqa: S603 - the test's own command line
@@ -31,7 +31,7 @@ class BrigadeUsageWhenAnUnknownOptionIsGiven(unittest.TestCase):
         self.assertIn("unrecognized arguments: --frobnicate", completed.stderr)
 
 
-class BrigadeUsageWhenOnlyTheJsonOptionIsGiven(unittest.TestCase):
+class BrigadeUsageWhenOnlyTheJsonOptionIsGivenTest(unittest.TestCase):
     def test_should_refuse_as_when_no_option_is_given(self):
         # Act
         completed = subprocess.run(  # noqa: S603 - the test's own command line

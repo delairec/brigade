@@ -22,7 +22,7 @@ def break_the_planner() -> None:
     raise RuntimeError("the planner broke")
 
 
-class RunReportingFailure(unittest.TestCase):
+class RunReportingFailureTest(unittest.TestCase):
     def test_should_run_the_action_and_report_nothing_when_it_succeeds(self):
         # Arrange
         calls = []

@@ -4,7 +4,7 @@ from pathlib import Path
 from brigade.registry.derive_project_name import derive_project_name
 
 
-class DeriveProjectName(unittest.TestCase):
+class DeriveProjectNameTest(unittest.TestCase):
     def test_should_turn_the_basename_into_an_identifier(self):
         rows = [
             ("/srv/brigade", "brigade"),

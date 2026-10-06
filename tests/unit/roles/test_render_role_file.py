@@ -3,7 +3,7 @@ import unittest
 from brigade.roles.render_role_file import render_role_file
 
 
-class RenderRoleFile(unittest.TestCase):
+class RenderRoleFileTest(unittest.TestCase):
     def test_should_write_the_front_matter_between_two_lines_then_the_body(self):
         # Arrange
         front_matter = {"name": "ada", "slot": "plan", "budget": "40"}

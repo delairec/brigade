@@ -19,7 +19,7 @@ class SignallingAction:
             os.kill(os.getpid(), self.stop_signal)
 
 
-class RepeatUntilSignalled(unittest.TestCase):
+class RepeatUntilSignalledTest(unittest.TestCase):
     def setUp(self):
         self.handlers_before = (signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT))
 

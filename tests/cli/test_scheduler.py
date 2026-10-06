@@ -76,7 +76,7 @@ class SchedulerTestCase(unittest.TestCase):
         )
 
 
-class BrigadeSchedulerInstallWithSystemdConfigured(SchedulerTestCase):
+class BrigadeSchedulerInstallWithSystemdConfiguredTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(SYSTEMD_CONFIGURED)
@@ -146,7 +146,7 @@ class BrigadeSchedulerInstallWithSystemdConfigured(SchedulerTestCase):
         self.assertEqual(sorted(path.name for path in self.units.iterdir()), ["brigade.service", "brigade.timer"])
 
 
-class BrigadeSchedulerInstallWithCronConfigured(SchedulerTestCase):
+class BrigadeSchedulerInstallWithCronConfiguredTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(CRON_CONFIGURED)
@@ -201,7 +201,7 @@ class BrigadeSchedulerInstallWithCronConfigured(SchedulerTestCase):
         )
 
 
-class BrigadeSchedulerInstallWithCronConfiguredOnAnEmptyCrontab(SchedulerTestCase):
+class BrigadeSchedulerInstallWithCronConfiguredOnAnEmptyCrontabTest(SchedulerTestCase):
     def test_should_write_the_tick_line_alone(self):
         # Arrange
         self.machine.write_configuration(CRON_CONFIGURED)
@@ -214,7 +214,7 @@ class BrigadeSchedulerInstallWithCronConfiguredOnAnEmptyCrontab(SchedulerTestCas
         self.assertEqual(self.crontab.read_text(), f"{self.describe_cron_line(CRONTAB)}\n")
 
 
-class BrigadeSchedulerInstallWithTheLoopConfigured(SchedulerTestCase):
+class BrigadeSchedulerInstallWithTheLoopConfiguredTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(LOOP_CONFIGURED)
@@ -255,7 +255,7 @@ class BrigadeSchedulerInstallWithTheLoopConfigured(SchedulerTestCase):
         )
 
 
-class BrigadeSchedulerInstallWithoutTheSchedulerKey(SchedulerTestCase):
+class BrigadeSchedulerInstallWithoutTheSchedulerKeyTest(SchedulerTestCase):
     def test_should_choose_systemd_where_the_user_instance_runs_else_cron(self):
         rows = [
             ("a running user instance", [SYSTEMD_USER_MANAGER, CRONTAB], "running", "systemd"),
@@ -291,7 +291,7 @@ class BrigadeSchedulerInstallWithoutTheSchedulerKey(SchedulerTestCase):
         )
 
 
-class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSign(SchedulerTestCase):
+class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSignTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         machine_root = Path(self.root.name).resolve() / "a 100% b"
@@ -337,7 +337,7 @@ class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSign(Sched
         )
 
 
-class BrigadeSchedulerInstallWhenTheConfigurationNamesAnUnknownScheduler(SchedulerTestCase):
+class BrigadeSchedulerInstallWhenTheConfigurationNamesAnUnknownSchedulerTest(SchedulerTestCase):
     def test_should_exit_1_naming_the_scheduler(self):
         rows = [
             ('scheduler = "launchd"\n', "brigade scheduler install: no scheduler plugin launchd\n"),
@@ -356,7 +356,7 @@ class BrigadeSchedulerInstallWhenTheConfigurationNamesAnUnknownScheduler(Schedul
                 self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_stderr))
 
 
-class BrigadeSchedulerInstallWhenCrontabCannotBeListed(SchedulerTestCase):
+class BrigadeSchedulerInstallWhenCrontabCannotBeListedTest(SchedulerTestCase):
     def test_should_exit_1_naming_the_crontab_failure(self):
         # Arrange
         self.machine.write_configuration(CRON_CONFIGURED)
@@ -372,7 +372,7 @@ class BrigadeSchedulerInstallWhenCrontabCannotBeListed(SchedulerTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectory(SchedulerTestCase):
+class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectoryTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(SYSTEMD_CONFIGURED)
@@ -396,7 +396,7 @@ class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectory(SchedulerTes
         )
 
 
-class BrigadeSchedulerInstallOverAUnitItCannotWrite(SchedulerTestCase):
+class BrigadeSchedulerInstallOverAUnitItCannotWriteTest(SchedulerTestCase):
     def test_should_exit_1_naming_the_unit_it_cannot_write(self):
         rows = ["brigade.service", "brigade.timer"]
         for unit in rows:
@@ -418,7 +418,7 @@ class BrigadeSchedulerInstallOverAUnitItCannotWrite(SchedulerTestCase):
                 )
 
 
-class BrigadeSchedulerInstallBeforeInit(SchedulerTestCase):
+class BrigadeSchedulerInstallBeforeInitTest(SchedulerTestCase):
     def test_should_install_the_scheduler_the_probe_chooses(self):
         # Act
         completed = self.run_scheduler([SYSTEMD_OFFLINE, CRONTAB], "install", "--json")
@@ -438,7 +438,7 @@ class BrigadeSchedulerInstallBeforeInit(SchedulerTestCase):
         )
 
 
-class BrigadeSchedulerStatusWhenNothingIsInstalled(SchedulerTestCase):
+class BrigadeSchedulerStatusWhenNothingIsInstalledTest(SchedulerTestCase):
     def test_should_report_none_and_no_tick_yet_and_exit_0(self):
         rows = [("every tool", [SYSTEMD_USER_MANAGER, CRONTAB]), ("no tool", [])]
         for machine, path_directories in rows:
@@ -469,7 +469,7 @@ class BrigadeSchedulerStatusWhenNothingIsInstalled(SchedulerTestCase):
         self.assertEqual(completed.stdout.splitlines(), ["scheduler  none", "last tick  never"])
 
 
-class BrigadeSchedulerStatusWithSystemdInstalled(SchedulerTestCase):
+class BrigadeSchedulerStatusWithSystemdInstalledTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(SYSTEMD_CONFIGURED)
@@ -522,7 +522,7 @@ class BrigadeSchedulerStatusWithSystemdInstalled(SchedulerTestCase):
         )
 
 
-class BrigadeSchedulerStatusWithCronInstalled(SchedulerTestCase):
+class BrigadeSchedulerStatusWithCronInstalledTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(CRON_CONFIGURED)

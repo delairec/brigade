@@ -15,7 +15,7 @@ def run_git(repository: Path, *arguments: str) -> None:
     )
 
 
-class ReadMainBranch(unittest.TestCase):
+class ReadMainBranchTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.repository = Path(self.root.name)

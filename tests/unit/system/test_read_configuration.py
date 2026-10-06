@@ -15,7 +15,7 @@ class ReadConfigurationTestCase(unittest.TestCase):
         self.directory.cleanup()
 
 
-class ReadConfigurationWhenEveryKeyIsCommentedOut(ReadConfigurationTestCase):
+class ReadConfigurationWhenEveryKeyIsCommentedOutTest(ReadConfigurationTestCase):
     def test_should_answer_the_defaults(self):
         # Arrange
         self.path.write_text('# client = "claude-code"\n')
@@ -29,9 +29,7 @@ class ReadConfigurationWhenEveryKeyIsCommentedOut(ReadConfigurationTestCase):
             Configuration(
                 client=None,
                 scheduler=None,
-                forge_account=None,
                 instructions=None,
-                ide_link=None,
                 refs_cache_mb=1024,
                 reasoning={},
                 clients={},
@@ -40,7 +38,7 @@ class ReadConfigurationWhenEveryKeyIsCommentedOut(ReadConfigurationTestCase):
         )
 
 
-class ReadConfigurationWhenEveryKeyIsSet(ReadConfigurationTestCase):
+class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
     def test_should_answer_a_record_of_every_key(self):
         # Arrange
         self.path.write_text(
@@ -68,9 +66,7 @@ class ReadConfigurationWhenEveryKeyIsSet(ReadConfigurationTestCase):
             Configuration(
                 client="claude-code",
                 scheduler="cron",
-                forge_account="octo-bot",
                 instructions="/home/ada/.ai",
-                ide_link="idea://open?file={path}&line={line}",
                 refs_cache_mb=2048,
                 reasoning={"deep": ReasoningRow(model="opus", effort="max")},
                 clients={"fake": {"recordings": "/srv/recordings"}},
@@ -79,7 +75,7 @@ class ReadConfigurationWhenEveryKeyIsSet(ReadConfigurationTestCase):
         )
 
 
-class ReadConfigurationWhenTheFileIsAbsent(ReadConfigurationTestCase):
+class ReadConfigurationWhenTheFileIsAbsentTest(ReadConfigurationTestCase):
     def test_should_refuse_naming_the_file_and_brigade_init(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
@@ -89,7 +85,7 @@ class ReadConfigurationWhenTheFileIsAbsent(ReadConfigurationTestCase):
         self.assertEqual(str(raised.exception), f"no configuration at {self.path}; run brigade init")
 
 
-class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
+class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
     def test_should_refuse_naming_the_key_and_the_file(self):
         rows = [
             ("an unknown key", "frobnicate = 1\n", "unknown key frobnicate"),
@@ -104,6 +100,8 @@ class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
                 "unknown key reasoning.deep.temperature",
             ),
             ("a client of the wrong type", "client = 1\n", "client is an integer, not a string,"),
+            ("a forge account of the wrong type", "forge_account = 1\n", "forge_account is an integer, not a string,"),
+            ("an IDE link of the wrong type", "ide_link = true\n", "ide_link is a boolean, not a string,"),
             ("a reasoning table of the wrong type", 'reasoning = "deep"\n', "reasoning is a string, not a table,"),
             (
                 "a model of the wrong type",
@@ -154,7 +152,7 @@ class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
         self.assertIn(f"{self.path} is not valid TOML: ", str(raised.exception))
 
 
-class ReadConfigurationOfTheSecondsPerStep(ReadConfigurationTestCase):
+class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
     def test_should_answer_30_when_the_key_is_absent(self):
         # Arrange
         self.path.write_text('client = "fake"\n')

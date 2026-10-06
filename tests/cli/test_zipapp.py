@@ -11,7 +11,7 @@ from tests.cli.temporary_machine import TemporaryMachine
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
-class BrigadeZipapp(unittest.TestCase):
+class BrigadeZipappTest(unittest.TestCase):
     def setUp(self):
         self.clone = tempfile.TemporaryDirectory()
         clone_root = Path(self.clone.name)

@@ -6,7 +6,7 @@ from brigade.errors import BrigadeError
 from brigade.tick.read_heartbeat import read_heartbeat
 
 
-class ReadHeartbeat(unittest.TestCase):
+class ReadHeartbeatTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.heartbeat = Path(self.root.name) / "tick.json"
