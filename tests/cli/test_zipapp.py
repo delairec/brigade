@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.cli.temporary_machine import TemporaryMachine
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -26,3 +28,20 @@ class BrigadeZipapp(unittest.TestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stdout, "brigade 0.1.0\n")
+
+    def test_should_install_the_schema_the_clone_ships_from_the_built_archive(self):
+        # Arrange
+        clone_root = Path(self.clone.name)
+        machine_root = clone_root / "machine"
+        machine_root.mkdir()
+        machine = TemporaryMachine(machine_root)
+
+        # Act
+        completed = machine.run_brigade(clone_root / "dist" / "brigade.pyz", "init")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            (machine.corpus / "_schema.awawa").read_bytes(),
+            (clone_root / "brigade" / "corpus" / "data" / "schema.awawa.tpl").read_bytes(),
+        )
