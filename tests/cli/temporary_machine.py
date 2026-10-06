@@ -26,6 +26,7 @@ class TemporaryMachine:
             "XDG_CONFIG_HOME": str(self.config_home),
             "XDG_STATE_HOME": str(self.state_home),
             "XDG_CACHE_HOME": str(self.cache_home),
+            **{name: os.environ[name] for name in ("COVERAGE_PROCESS_CONFIG",) if name in os.environ},
         }
 
     def write_configuration(self, content: str) -> Path:
