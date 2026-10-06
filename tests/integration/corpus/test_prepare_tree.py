@@ -284,6 +284,60 @@ class PrepareTreeWhereTheMachineRefusesAWrite(PrepareTreeTestCase):
         self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Permission denied")
 
 
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class PrepareTreeWhereTheMachineRefusesThePruning(PrepareTreeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.commit("corpus/tasks.awawa", "committed\n")
+        self.stale_project = self.cache / "other"
+        self.stale_tree = self.stale_project / ("0" * 40)
+        (self.stale_tree / "corpus").mkdir(parents=True)
+        (self.stale_tree / "corpus" / "tasks.awawa").write_text("stale\n")
+
+    def tearDown(self):
+        self.refused.chmod(0o700)
+        super().tearDown()
+
+    def restrict(self, directory: Path, mode: int) -> None:
+        directory.chmod(mode)
+        self.refused = directory
+
+    def test_should_name_the_tree_it_cannot_remove(self):
+        # Arrange
+        self.restrict(self.stale_project, 0o500)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main", cache_bound_bytes=0))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.stale_tree}: Permission denied")
+
+    def test_should_name_the_project_cache_it_cannot_list(self):
+        # Arrange
+        self.restrict(self.stale_project, 0o300)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main", cache_bound_bytes=0))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.stale_project}: Permission denied")
+
+    def test_should_name_the_file_it_cannot_measure(self):
+        # Arrange
+        self.restrict(self.stale_tree / "corpus", 0o600)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main", cache_bound_bytes=0))
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), f"cannot write {self.stale_tree / 'corpus' / 'tasks.awawa'}: Permission denied"
+        )
+
+
 class PrepareTreeOverAnEntryOfTheCacheItCannotUse(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()

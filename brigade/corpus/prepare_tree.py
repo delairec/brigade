@@ -137,16 +137,22 @@ def _list_visible_directories(parent: Path) -> list[Path]:
 
 
 def _list_cached_trees(cache: Path) -> list[_CachedTree]:
-    return [
-        _CachedTree(path=tree, last_read_ns=tree.stat().st_mtime_ns, size_bytes=_measure_tree(tree))
-        for project in _list_visible_directories(cache)
-        for tree in _list_visible_directories(project)
-    ]
+    try:
+        return [
+            _CachedTree(path=tree, last_read_ns=tree.stat().st_mtime_ns, size_bytes=_measure_tree(tree))
+            for project in _list_visible_directories(cache)
+            for tree in _list_visible_directories(project)
+        ]
+    except OSError as error:
+        raise CannotWrite(error.filename or cache, error) from error
 
 
 def _remove_tree(root: Path) -> None:
     doomed = root.parent / f"{HIDDEN_PREFIX}{root.name}.{uuid.uuid4().hex}"
-    os.rename(root, doomed)
+    try:
+        os.rename(root, doomed)
+    except OSError as error:
+        raise CannotWrite(root, error) from error
     shutil.rmtree(doomed, ignore_errors=True)
 
 
