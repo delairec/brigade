@@ -703,7 +703,7 @@ TASK B08
 		+ "the user's rulings of 2026-10-06 in the refinement of B08"
 
 TASK B09
-	TITLE "Built-in roles ada, bilal and mina"
+	TITLE "Built-in roles planner, reporter and triager"
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "roles"
@@ -1274,9 +1274,9 @@ TASK B43
 	COMPONENT "roles"
 	ROLE bastien
 	SPEC "brigade ships a built-in role file for each of the nine slots under brigade/roles/data/:"
-		+ "ada plans, builder builds, verifier verifies, reviewer reviews, rebaser rebases, bilal"
-		+ "reports, mina triages, rulewriter writes rules, explorer explores"
-		IMPL "brigade/roles/data/ada.md::slot: plan"
+		+ "planner plans, builder builds, verifier verifies, reviewer reviews, rebaser rebases,"
+		+ "reporter reports, triager triages, rulewriter writes rules, explorer explores"
+		IMPL "brigade/roles/data/planner.md::slot: plan"
 		IMPL "tests/cli/test_roles.py::def test_should_find_the_built_in_role_files_clean(self):"
 		IMPL "tests/cli/test_zipapp.py::def"
 			+ "test_should_print_the_built_in_role_the_built_archive_ships(self):"

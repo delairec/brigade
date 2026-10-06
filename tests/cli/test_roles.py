@@ -42,13 +42,13 @@ PLANNER_PACKAGE = (
 
 def describe_built_in_roles(model_of_deep, model_of_standard, model_of_light) -> list:
     return [
-        {"slot": "plan", "role": "ada", "source": "built-in", "model": model_of_deep},
+        {"slot": "plan", "role": "planner", "source": "built-in", "model": model_of_deep},
         {"slot": "build", "role": "builder", "source": "built-in", "model": model_of_standard},
         {"slot": "verify", "role": "verifier", "source": "built-in", "model": model_of_deep},
         {"slot": "review", "role": "reviewer", "source": "built-in", "model": model_of_deep},
         {"slot": "rebase", "role": "rebaser", "source": "built-in", "model": model_of_light},
-        {"slot": "report", "role": "bilal", "source": "built-in", "model": model_of_standard},
-        {"slot": "triage", "role": "mina", "source": "built-in", "model": model_of_standard},
+        {"slot": "report", "role": "reporter", "source": "built-in", "model": model_of_standard},
+        {"slot": "triage", "role": "triager", "source": "built-in", "model": model_of_standard},
         {"slot": "rules", "role": "rulewriter", "source": "built-in", "model": model_of_deep},
         {"slot": "explore", "role": "explorer", "source": "built-in", "model": model_of_light},
     ]
@@ -112,13 +112,13 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRole(RolesTestCase):
             completed.stdout.splitlines(),
             [
                 "slot     role        source        model",
-                "plan     ada         built-in      fable",
+                "plan     planner     built-in      fable",
                 "build    builder     built-in      opus",
                 "verify   verifier    built-in      fable",
                 "review   reviewer    built-in      fable",
                 "rebase   rebaser     built-in      sonnet",
-                "report   bilal       built-in      opus",
-                "triage   mina        built-in      opus",
+                "report   reporter    built-in      opus",
+                "triage   triager     built-in      opus",
                 "rules    rulewriter  built-in      fable",
                 "explore  explorer    built-in      sonnet",
             ],
@@ -132,7 +132,7 @@ class BrigadeRolesShowOfABuiltInRole(RolesTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, (BUILT_IN_ROLES / "ada.md").read_text())
+        self.assertEqual(completed.stdout, (BUILT_IN_ROLES / "planner.md").read_text())
 
     def test_should_refuse_a_slot_outside_the_nine(self):
         # Act
@@ -218,7 +218,7 @@ class BrigadeRolesFromTheInstructionsCorpus(RolesTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             [row["role"] for row in json.loads(completed.stdout)["roles"]],
-            ["planner", "builder", "verifier", "reviewer", "rebaser", "bilal", "mina", "rulewriter", "explorer"],
+            ["planner", "builder", "verifier", "reviewer", "rebaser", "reporter", "triager", "rulewriter", "explorer"],
         )
 
     def test_should_fill_the_front_matter_from_the_entity_and_the_body_from_its_package(self):
@@ -298,14 +298,14 @@ class BrigadeRolesLint(RolesTestCase):
             {
                 "schema_version": 1,
                 "files": [
-                    "brigade/roles/data/ada.md",
-                    "brigade/roles/data/bilal.md",
                     "brigade/roles/data/builder.md",
                     "brigade/roles/data/explorer.md",
-                    "brigade/roles/data/mina.md",
+                    "brigade/roles/data/planner.md",
                     "brigade/roles/data/rebaser.md",
+                    "brigade/roles/data/reporter.md",
                     "brigade/roles/data/reviewer.md",
                     "brigade/roles/data/rulewriter.md",
+                    "brigade/roles/data/triager.md",
                     "brigade/roles/data/verifier.md",
                 ],
                 "findings": [],

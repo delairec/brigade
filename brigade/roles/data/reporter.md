@@ -1,5 +1,5 @@
 ---
-name: bilal
+name: reporter
 slot: report
 work: reports what a wave cost and returned
 reasoning: standard

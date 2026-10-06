@@ -1,5 +1,5 @@
 ---
-name: ada
+name: planner
 slot: plan
 work: plans the waves
 reasoning: deep

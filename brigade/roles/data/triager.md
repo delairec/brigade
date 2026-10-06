@@ -1,5 +1,5 @@
 ---
-name: mina
+name: triager
 slot: triage
 work: triages incoming issues and findings
 reasoning: standard
