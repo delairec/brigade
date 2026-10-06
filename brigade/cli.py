@@ -2,23 +2,40 @@ import argparse
 import json
 import sys
 import traceback
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade import VERSION
-from brigade.commands import adapter, doctor, init, project_add, project_list, project_show, project_status
-from brigade.commands import adapter_matrix
-from brigade.commands import corpus, corpus_awawa
-from brigade.commands import ledger, ledger_budgets, ledger_compare
+from brigade.commands import (
+    adapter,
+    adapter_matrix,
+    corpus,
+    corpus_awawa,
+    doctor,
+    init,
+    ledger,
+    ledger_budgets,
+    ledger_compare,
+    project_add,
+    project_list,
+    project_show,
+    project_status,
+    roles_lint,
+    roles_list,
+    roles_show,
+    run,
+    runs_list,
+    runs_logs,
+    scheduler_install,
+    scheduler_status,
+    tick,
+)
 from brigade.commands.describe_skipped_lines import describe_skipped_lines
-from brigade.commands import roles_lint, roles_list, roles_show
-from brigade.commands import scheduler_install, scheduler_status, tick
-from brigade.commands import run, runs_list, runs_logs
-from brigade.commands.render_adapter_text import render_adapter_text
 from brigade.commands.render_adapter_matrix_markdown import render_adapter_matrix_markdown
 from brigade.commands.render_adapter_matrix_text import render_adapter_matrix_text
+from brigade.commands.render_adapter_text import render_adapter_text
 from brigade.commands.render_corpus_text import render_corpus_text
 from brigade.commands.render_doctor_text import render_doctor_text
 from brigade.commands.render_init_text import render_init_text
@@ -32,16 +49,15 @@ from brigade.commands.render_project_status_text import render_project_status_te
 from brigade.commands.render_roles_lint_text import render_roles_lint_text
 from brigade.commands.render_roles_list_text import render_roles_list_text
 from brigade.commands.render_roles_show_text import render_roles_show_text
-from brigade.commands.render_scheduler_install_text import render_scheduler_install_text
-from brigade.commands.render_scheduler_status_text import render_scheduler_status_text
-from brigade.commands.render_tick_text import render_tick_text
 from brigade.commands.render_run_text import render_run_text
 from brigade.commands.render_runs_list_text import render_runs_list_text
 from brigade.commands.render_runs_logs_text import render_runs_logs_text
+from brigade.commands.render_scheduler_install_text import render_scheduler_install_text
+from brigade.commands.render_scheduler_status_text import render_scheduler_status_text
+from brigade.commands.render_tick_text import render_tick_text
 from brigade.errors import BrigadeError, StandingDown, UsageError
 from brigade.runtime import build_runtime
 from brigade.system.read_configuration import SLOTS
-
 
 DAY_FORMAT = "%Y-%m-%d"
 DAYS_SUFFIX = "d"
@@ -333,7 +349,7 @@ class Command:
     render_text: Callable[[dict], str]
     decide_exit_code: Callable[[dict], int]
     describe_diagnostics: Callable[[dict], list[str]] = _describe_no_diagnostics
-    render_markdown: Optional[Callable[[dict], str]] = None
+    render_markdown: Callable[[dict], str] | None = None
 
 
 COMMANDS = {

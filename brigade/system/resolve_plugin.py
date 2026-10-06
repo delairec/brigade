@@ -2,8 +2,8 @@ import importlib
 import json
 import re
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord, ProcessRequest

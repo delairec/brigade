@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 

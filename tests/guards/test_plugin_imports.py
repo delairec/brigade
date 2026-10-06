@@ -42,18 +42,17 @@ class PluginImportsGuard(unittest.TestCase):
             ),
         ]
         for module_path, source, expected_violation in rows:
-            with self.subTest(module=module_path, source=source):
-                with tempfile.TemporaryDirectory() as root:
-                    # Arrange
-                    module = Path(root) / module_path
-                    module.parent.mkdir(parents=True)
-                    module.write_text(source)
+            with self.subTest(module=module_path, source=source), tempfile.TemporaryDirectory() as root:
+                # Arrange
+                module = Path(root) / module_path
+                module.parent.mkdir(parents=True)
+                module.write_text(source)
 
-                    # Act
-                    violations = find_plugin_imports(Path(root) / "brigade")
+                # Act
+                violations = find_plugin_imports(Path(root) / "brigade")
 
-                    # Assert
-                    self.assertEqual(violations, [expected_violation])
+                # Assert
+                self.assertEqual(violations, [expected_violation])
 
     def test_should_let_a_plugin_import_its_own_package_and_the_core_and_the_resolver_import_by_name(self):
         rows = [
@@ -68,15 +67,14 @@ class PluginImportsGuard(unittest.TestCase):
             ),
         ]
         for module_path, source in rows:
-            with self.subTest(module=module_path):
-                with tempfile.TemporaryDirectory() as root:
-                    # Arrange
-                    module = Path(root) / module_path
-                    module.parent.mkdir(parents=True)
-                    module.write_text(source)
+            with self.subTest(module=module_path), tempfile.TemporaryDirectory() as root:
+                # Arrange
+                module = Path(root) / module_path
+                module.parent.mkdir(parents=True)
+                module.write_text(source)
 
-                    # Act
-                    violations = find_plugin_imports(Path(root) / "brigade")
+                # Act
+                violations = find_plugin_imports(Path(root) / "brigade")
 
-                    # Assert
-                    self.assertEqual(violations, [])
+                # Assert
+                self.assertEqual(violations, [])

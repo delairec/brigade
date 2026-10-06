@@ -2,7 +2,7 @@ import subprocess
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO, Optional
+from typing import BinaryIO
 
 from brigade.errors import CannotWrite, ToolNotFound
 from brigade.system.build_process_environment import build_process_environment
@@ -13,7 +13,7 @@ class SpawnRequest:
     argv: tuple[str, ...]
     cwd: str
     environment: dict
-    stdin: Optional[str]
+    stdin: str | None
     stdout: Path
     stderr: Path
 
@@ -30,7 +30,7 @@ def _feed(pipe: BinaryIO, data: bytes) -> None:
             pass
 
 
-def _choose_input(stdin: Optional[str]) -> int:
+def _choose_input(stdin: str | None) -> int:
     if stdin is None:
         return subprocess.DEVNULL
     return subprocess.PIPE

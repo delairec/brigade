@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade.corpus.format_files import format_files
 from brigade.corpus.lint_corpus import lint_corpus
@@ -20,7 +20,7 @@ class CorpusChange:
     lock_directory: Path
     file_name: str
     message: str
-    rewrite: Callable[[str], Optional[str]]
+    rewrite: Callable[[str], str | None]
 
 
 def _locate_lock(change: CorpusChange) -> Path:

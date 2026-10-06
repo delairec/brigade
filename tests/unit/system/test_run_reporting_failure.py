@@ -1,7 +1,7 @@
 import contextlib
 import io
 import unittest
-from typing import Callable
+from collections.abc import Callable
 
 from brigade.errors import BrigadeError
 from brigade.system.run_reporting_failure import run_reporting_failure

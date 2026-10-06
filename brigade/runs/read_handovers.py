@@ -1,12 +1,10 @@
-from typing import Optional
-
 from brigade.corpus.read_entities import read_entities
 
 POLICY_TYPE = "POLICY"
 HANDOVERS_BY_DEFAULT = 2
 
 
-def read_handovers(runtime, project: Optional[str]) -> int:
+def read_handovers(runtime, project: str | None) -> int:
     if project is None:
         return HANDOVERS_BY_DEFAULT
     reference = f"@PROJECT.{project}"

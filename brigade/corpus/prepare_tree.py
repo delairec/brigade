@@ -4,10 +4,10 @@ import stat
 import tarfile
 import tempfile
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.archive_commit import archive_commit
@@ -23,7 +23,7 @@ ARCHIVE_NAME = "commit.tar"
 STAGED_TREE_NAME = "tree"
 ARCHIVE_KIND = "archive"
 WORKTREE_KIND = "worktree"
-EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 NANOSECONDS_PER_MICROSECOND = 1000
 NOTHING_MEASURED = 0
 TRUSTED_EXTRACTION = {"filter": "fully_trusted"} if hasattr(tarfile, "fully_trusted_filter") else {}
@@ -33,8 +33,8 @@ TRUSTED_EXTRACTION = {"filter": "fully_trusted"} if hasattr(tarfile, "fully_trus
 class TreeRequest:
     project: str
     repository: Path
-    ref: Optional[str]
-    worktree: Optional[Path]
+    ref: str | None
+    worktree: Path | None
     cache: Path
     cache_bound_bytes: int
     cache_lock: Path
@@ -44,7 +44,7 @@ class TreeRequest:
 @dataclass(frozen=True)
 class Tree:
     project: str
-    ref: Optional[str]
+    ref: str | None
     sha: str
     kind: str
     root: Path

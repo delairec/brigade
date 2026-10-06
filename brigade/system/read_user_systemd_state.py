@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
 

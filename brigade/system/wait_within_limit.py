@@ -1,7 +1,6 @@
 import os
 import signal
 import subprocess
-from typing import Optional
 
 GRACE_BEFORE_KILL_S = 30.0
 
@@ -13,7 +12,7 @@ def _signal_group(process: subprocess.Popen, signal_number: int) -> None:
         pass
 
 
-def wait_within_limit(process: subprocess.Popen, limit_s: float) -> Optional[int]:
+def wait_within_limit(process: subprocess.Popen, limit_s: float) -> int | None:
     try:
         return process.wait(timeout=limit_s)
     except subprocess.TimeoutExpired:

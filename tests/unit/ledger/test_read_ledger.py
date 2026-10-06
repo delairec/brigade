@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.read_ledger import LedgerEntry, LedgerReading, SkippedLine, read_ledger
@@ -54,7 +54,7 @@ class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
             LedgerReading(
                 entries=(
                     LedgerEntry(
-                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=timezone.utc),
+                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
                         record={
                             "schema_version": 1,
                             "ts": "2026-09-30T22:00:00Z",
@@ -64,7 +64,7 @@ class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
                         },
                     ),
                     LedgerEntry(
-                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=timezone.utc),
+                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
                         record={
                             "schema_version": 1,
                             "ts": "2026-10-01T00:15:00Z",
@@ -73,7 +73,7 @@ class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
                         },
                     ),
                     LedgerEntry(
-                        instant=datetime(2026, 10, 1, 0, 20, tzinfo=timezone.utc),
+                        instant=datetime(2026, 10, 1, 0, 20, tzinfo=UTC),
                         record={
                             "schema_version": 1,
                             "ts": "2026-10-01T00:20:00Z",

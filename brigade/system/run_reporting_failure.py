@@ -1,6 +1,6 @@
 import sys
 import traceback
-from typing import Callable
+from collections.abc import Callable
 
 from brigade.errors import BrigadeError
 

@@ -57,9 +57,8 @@ class HoldLock(unittest.TestCase):
         refused_elsewhere = PermissionError(13, "Permission denied", "/srv/elsewhere")
 
         # Act
-        with self.assertRaises(PermissionError) as raised:
-            with hold_lock(self.lock_path):
-                raise refused_elsewhere
+        with self.assertRaises(PermissionError) as raised, hold_lock(self.lock_path):
+            raise refused_elsewhere
 
         # Assert
         self.assertIs(raised.exception, refused_elsewhere)
@@ -81,9 +80,8 @@ class HoldLockWhereTheMachineRefusesTheWrite(unittest.TestCase):
         self.state.chmod(0o500)
 
         # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            with hold_lock(self.lock_path):
-                pass
+        with self.assertRaises(BrigadeError) as refusal, hold_lock(self.lock_path):
+            pass
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.locks}: Permission denied")
@@ -94,9 +92,8 @@ class HoldLockWhereTheMachineRefusesTheWrite(unittest.TestCase):
         self.lock_path.touch(mode=0o400)
 
         # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            with hold_lock(self.lock_path):
-                pass
+        with self.assertRaises(BrigadeError) as refusal, hold_lock(self.lock_path):
+            pass
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")

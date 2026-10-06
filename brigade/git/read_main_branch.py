@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
@@ -27,6 +27,6 @@ def _read_current_branch(run_process: Callable[[ProcessRequest], ProcessRecord],
     return record.stdout.strip()
 
 
-def read_main_branch(run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path) -> Optional[str]:
+def read_main_branch(run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path) -> str | None:
     branch = _read_origin_head(run_process, repository) or _read_current_branch(run_process, repository)
     return branch or None

@@ -3,7 +3,7 @@ import multiprocessing
 import os
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 from brigade.errors import BrigadeError
@@ -21,7 +21,7 @@ def append_wave_starts(state_root: Path, writer: int) -> None:
             state_root,
             LedgerEvent(
                 name="wave.started",
-                instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+                instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
                 fields={
                     "wave": f"w{writer}-{index}",
                     "project": "tidepool",
@@ -46,7 +46,7 @@ class AppendEventWhenTheEventIsDeclared(AppendEventTestCase):
         # Arrange
         event = LedgerEvent(
             name="wave.started",
-            instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+            instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
             fields={"wave": "tp/16", "project": "tidepool"},
         )
 
@@ -91,7 +91,7 @@ class AppendEventWhenTheEventIsDeclared(AppendEventTestCase):
         (self.ledger / "2026-10.jsonl").write_text(earlier_line)
         event = LedgerEvent(
             name="wave.paused",
-            instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+            instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
             fields={"wave": "tp/16"},
         )
 
@@ -113,7 +113,7 @@ class AppendEventWhenTheEventIsRefused(AppendEventTestCase):
                 "an undeclared name",
                 LedgerEvent(
                     name="wave.exploded",
-                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
                     fields={"wave": "tp/16"},
                 ),
                 "the event wave.exploded is not declared",
@@ -122,7 +122,7 @@ class AppendEventWhenTheEventIsRefused(AppendEventTestCase):
                 "a declared field missing",
                 LedgerEvent(
                     name="pr.merged",
-                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
                     fields={"project": "tidepool", "wave": "tp/16", "pr": 291},
                 ),
                 "the event pr.merged lacks task, rounds",
@@ -131,7 +131,7 @@ class AppendEventWhenTheEventIsRefused(AppendEventTestCase):
                 "a field named as the envelope",
                 LedgerEvent(
                     name="wave.paused",
-                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
                     fields={"wave": "tp/16", "ts": "2026-10-06T09:30:00Z"},
                 ),
                 "the event wave.paused carries the envelope key ts",
@@ -179,7 +179,7 @@ class AppendEventWhereTheMachineRefusesTheWrite(AppendEventTestCase):
         (self.state_root / "locks").mkdir(parents=True)
         self.event = LedgerEvent(
             name="wave.paused",
-            instant=datetime(2026, 10, 6, 9, 30, tzinfo=timezone.utc),
+            instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
             fields={"wave": "tp/16"},
         )
 

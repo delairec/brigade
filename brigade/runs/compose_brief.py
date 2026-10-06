@@ -1,17 +1,16 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 ARGUMENT_SEPARATOR = "="
 
 
 @dataclass(frozen=True)
 class BriefParts:
-    progress: Optional[str]
+    progress: str | None
     procedure: str
     procedure_body: str
     arguments: dict
-    brief: Optional[str]
+    brief: str | None
     progress_file: Path
 
 

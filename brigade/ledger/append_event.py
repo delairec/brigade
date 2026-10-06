@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError, CannotWrite
@@ -38,7 +38,7 @@ def _refuse_malformed(event: LedgerEvent) -> None:
 
 def append_event(state_root: Path, event: LedgerEvent) -> None:
     _refuse_malformed(event)
-    instant = event.instant.astimezone(timezone.utc)
+    instant = event.instant.astimezone(UTC)
     line = json.dumps(
         {"schema_version": LEDGER_SCHEMA_VERSION, "ts": format_instant(instant), "event": event.name, **event.fields}
     )

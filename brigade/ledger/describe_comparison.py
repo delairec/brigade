@@ -1,5 +1,4 @@
-from datetime import date, datetime, time, timezone
-from typing import Optional
+from datetime import UTC, date, datetime, time
 
 from brigade.errors import BrigadeError
 from brigade.ledger.declared_events import RUN_FINISHED
@@ -9,7 +8,7 @@ from brigade.ledger.summarize_steps import summarize_steps
 REPORTED_MEASURES = ("steps_to_first_edit", "oversized_output_steps")
 
 
-def _summarize_reported(runs: list[dict], measure: str) -> Optional[dict]:
+def _summarize_reported(runs: list[dict], measure: str) -> dict | None:
     summary = summarize_steps(run.get(measure) for run in runs)
     if summary["measured"] == 0:
         return None
@@ -25,7 +24,7 @@ def _describe_period(runs: list[dict]) -> dict:
 
 
 def describe_comparison(reading: LedgerReading, before: date) -> dict:
-    boundary = datetime.combine(before, time(), tzinfo=timezone.utc)
+    boundary = datetime.combine(before, time(), tzinfo=UTC)
     runs = [entry for entry in reading.entries if entry.record["event"] == RUN_FINISHED]
     earlier_runs = [entry.record for entry in runs if entry.instant < boundary]
     later_runs = [entry.record for entry in runs if entry.instant >= boundary]

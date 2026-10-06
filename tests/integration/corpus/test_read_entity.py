@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.corpus.read_entity import read_entity
 from brigade.corpus.read_entities import Entity, EntityField
+from brigade.corpus.read_entity import read_entity
 from brigade.system.run_process import run_process
 
 SCHEMA = 'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\t\tREPEATABLE\n\tFIELD BUDGET uint\n'

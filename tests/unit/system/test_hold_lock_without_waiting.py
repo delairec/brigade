@@ -75,9 +75,8 @@ class HoldLockWithoutWaitingWhereTheMachineRefusesTheWrite(unittest.TestCase):
         self.state.chmod(0o500)
 
         # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            with hold_lock_without_waiting(self.lock_path):
-                pass
+        with self.assertRaises(BrigadeError) as refusal, hold_lock_without_waiting(self.lock_path):
+            pass
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.locks}: Permission denied")
@@ -88,9 +87,8 @@ class HoldLockWithoutWaitingWhereTheMachineRefusesTheWrite(unittest.TestCase):
         self.lock_path.touch(mode=0o400)
 
         # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            with hold_lock_without_waiting(self.lock_path):
-                pass
+        with self.assertRaises(BrigadeError) as refusal, hold_lock_without_waiting(self.lock_path):
+            pass
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")

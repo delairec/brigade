@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 from brigade.errors import BrigadeError
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY, SEGMENTS_DIRECTORY, STDERR_FILE, STDOUT_FILE
@@ -15,7 +14,7 @@ def _order_segment(segment_directory: Path) -> int:
     return int(segment_directory.name)
 
 
-def read_run_logs(state_root: Path, run_id: str, tail: Optional[int]) -> list[str]:
+def read_run_logs(state_root: Path, run_id: str, tail: int | None) -> list[str]:
     run_directory = state_root / RUNS_DIRECTORY / run_id
     if Path(run_id).name != run_id or not (run_directory / RUN_RECORD_FILE).is_file():
         raise BrigadeError(f"no run {run_id}")

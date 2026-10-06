@@ -1,7 +1,6 @@
 import subprocess
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from brigade.errors import ToolFailure, ToolNotFound
 from brigade.system.build_process_environment import build_process_environment
@@ -15,7 +14,7 @@ class ProcessRequest:
     cwd: str
     timeout_s: float
     acceptable_exit_codes: tuple[int, ...] = (0,)
-    stdin: Optional[str] = None
+    stdin: str | None = None
 
 
 @dataclass(frozen=True)
@@ -28,7 +27,7 @@ class ProcessRecord:
     duration_ms: int
 
 
-def _describe_input(stdin: Optional[str]) -> dict:
+def _describe_input(stdin: str | None) -> dict:
     if stdin is None:
         return {"stdin": subprocess.DEVNULL}
     return {"input": stdin}

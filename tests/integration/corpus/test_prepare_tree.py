@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 import unittest
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.corpus.prepare_tree import Tree, TreeRequest, prepare_tree
@@ -11,10 +11,10 @@ from brigade.errors import BrigadeError, CannotWrite
 from brigade.system.run_process import run_process
 
 IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
-FIRST_READ = datetime(2026, 10, 6, 9, 0, tzinfo=timezone.utc)
-SECOND_READ = datetime(2026, 10, 6, 10, 0, tzinfo=timezone.utc)
-THIRD_READ = datetime(2026, 10, 6, 11, 0, tzinfo=timezone.utc)
-FOURTH_READ = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+FIRST_READ = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
+SECOND_READ = datetime(2026, 10, 6, 10, 0, tzinfo=UTC)
+THIRD_READ = datetime(2026, 10, 6, 11, 0, tzinfo=UTC)
+FOURTH_READ = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 ROOMY_BOUND_BYTES = 1024 * 1024 * 1024
 A_DIRECTORY_OF_ANOTHER_OWNER = Path("/")
 

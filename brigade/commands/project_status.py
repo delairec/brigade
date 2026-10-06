@@ -1,5 +1,3 @@
-from typing import Optional
-
 from brigade.errors import BrigadeError
 from brigade.registry.change_registry import REGISTRY_FILE, change_registry
 from brigade.registry.find_project import find_project
@@ -12,7 +10,7 @@ ACTIONS = {"paused": "pause", "active": "resume"}
 
 
 def _build_rewrite(runtime, name: str, status: str):
-    def rewrite(text: str) -> Optional[str]:
+    def rewrite(text: str) -> str | None:
         project = find_project(read_projects(runtime), name)
         if any(field.name == "STATUS" and field.value == status for field in project.fields):
             return None

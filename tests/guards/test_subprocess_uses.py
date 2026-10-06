@@ -52,18 +52,17 @@ class SubprocessUsesGuard(unittest.TestCase):
             ),
         ]
         for module_path, source, expected_violation in rows:
-            with self.subTest(module=module_path, source=source):
-                with tempfile.TemporaryDirectory() as root:
-                    # Arrange
-                    module = Path(root) / module_path
-                    module.parent.mkdir(parents=True)
-                    module.write_text(source)
+            with self.subTest(module=module_path, source=source), tempfile.TemporaryDirectory() as root:
+                # Arrange
+                module = Path(root) / module_path
+                module.parent.mkdir(parents=True)
+                module.write_text(source)
 
-                    # Act
-                    violations = find_subprocess_uses(Path(root) / "brigade")
+                # Act
+                violations = find_subprocess_uses(Path(root) / "brigade")
 
-                    # Assert
-                    self.assertEqual(violations, [expected_violation])
+                # Assert
+                self.assertEqual(violations, [expected_violation])
 
     def test_should_let_the_system_package_import_subprocess_without_a_shell(self):
         rows = [
@@ -71,15 +70,14 @@ class SubprocessUsesGuard(unittest.TestCase):
             ("brigade/system/process/wait_within_limit.py", "from subprocess import Popen, TimeoutExpired\n"),
         ]
         for module_path, source in rows:
-            with self.subTest(module=module_path, source=source):
-                with tempfile.TemporaryDirectory() as root:
-                    # Arrange
-                    module = Path(root) / module_path
-                    module.parent.mkdir(parents=True)
-                    module.write_text(source)
+            with self.subTest(module=module_path, source=source), tempfile.TemporaryDirectory() as root:
+                # Arrange
+                module = Path(root) / module_path
+                module.parent.mkdir(parents=True)
+                module.write_text(source)
 
-                    # Act
-                    violations = find_subprocess_uses(Path(root) / "brigade")
+                # Act
+                violations = find_subprocess_uses(Path(root) / "brigade")
 
-                    # Assert
-                    self.assertEqual(violations, [])
+                # Assert
+                self.assertEqual(violations, [])

@@ -1,7 +1,7 @@
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 

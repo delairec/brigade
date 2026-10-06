@@ -2,7 +2,6 @@ import shlex
 from importlib.resources import files
 from pathlib import Path
 from string import Template
-from typing import Optional
 
 from brigade.errors import ToolFailure, ToolNotFound
 from brigade.system.run_process import ProcessRequest
@@ -68,7 +67,7 @@ def install(request: dict, runtime) -> dict:
     }
 
 
-def _find_cron_line(runtime) -> Optional[str]:
+def _find_cron_line(runtime) -> str | None:
     try:
         lines = _list_crontab(runtime)
     except ToolNotFound:

@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
@@ -17,14 +17,14 @@ BARE_LINE = "bare"
 class Worktree:
     path: Path
     head: str
-    branch: Optional[str]
+    branch: str | None
 
 
-def _read_line(lines: list[str], prefix: str) -> Optional[str]:
+def _read_line(lines: list[str], prefix: str) -> str | None:
     return next((line[len(prefix) :] for line in lines if line.startswith(prefix)), None)
 
 
-def _parse_record(record: str) -> Optional[Worktree]:
+def _parse_record(record: str) -> Worktree | None:
     lines = record.split(LINE_SEPARATOR)
     if BARE_LINE in lines:
         return None

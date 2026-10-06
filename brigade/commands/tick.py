@@ -1,7 +1,6 @@
 import dataclasses
 import sys
 import time
-from typing import Optional
 
 from brigade.errors import StandingDown
 from brigade.ledger.format_instant import format_instant
@@ -31,7 +30,7 @@ def _locate_lock(runtime):
     return runtime.paths.state_root / LOCK_DIRECTORY / LOCK_NAME
 
 
-def _tick(runtime) -> Optional[dict]:
+def _tick(runtime) -> dict | None:
     started = time.monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
