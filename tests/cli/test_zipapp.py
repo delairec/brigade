@@ -85,3 +85,39 @@ class BrigadeZipapp(unittest.TestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stdout, (clone_root / "brigade" / "roles" / "data" / "planner.md").read_text())
+
+    def test_should_list_the_built_in_adapters_the_built_archive_ships_with_their_audience(self):
+        # Arrange
+        clone_root = Path(self.clone.name)
+        machine_root = clone_root / "machine"
+        machine_root.mkdir()
+        directory_without_adapter = machine_root / "bin"
+        directory_without_adapter.mkdir()
+        machine = TemporaryMachine(machine_root)
+        environment = {**machine.describe_environment(), "PATH": str(directory_without_adapter)}
+
+        # Act
+        completed = machine.run_brigade(
+            clone_root / "dist" / "brigade.pyz", "adapter", "matrix", "--markdown", environment=environment
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout,
+            "| Supported client | Launch | Result | Resume | Transcripts | Step count | Tool grants | Reset hour |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| claude-code | full | full | full | full | full | full | full |\n"
+            "\n"
+            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Step count | Tool grants | Reset hour |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| fake | full | full | fallback | fallback | fallback | fallback | fallback |\n"
+            "\n"
+            "Fallbacks:\n"
+            "\n"
+            "- no resume: a fresh launch from the progress file\n"
+            "- no transcripts: brigade's own run logs\n"
+            "- no step count: steps null and the run held on the clock alone\n"
+            "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
+            "- no reset hour: now plus thirty minutes\n",
+        )

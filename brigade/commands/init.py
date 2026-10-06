@@ -1,7 +1,7 @@
 from importlib.resources import files
 from string import Template
 
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
 from brigade.git.read_git_identity import read_git_identity
@@ -28,7 +28,10 @@ def _ensure_repository(runtime) -> dict:
     item = {"name": "repository", "path": str(config_root)}
     if (config_root / ".git").exists():
         return {**item, "state": "present"}
-    config_root.mkdir(parents=True, exist_ok=True)
+    try:
+        config_root.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise CannotWrite(error.filename or config_root, error) from error
     create_repository(runtime.run_process, config_root)
     return {**item, "state": "created"}
 
@@ -42,7 +45,10 @@ def _ensure_file(runtime, name: str, file_name: str, content: bytes) -> dict:
     path = runtime.paths.config_root / file_name
     item = {"name": name, "path": str(path)}
     if not path.exists():
-        path.write_bytes(content)
+        try:
+            path.write_bytes(content)
+        except OSError as error:
+            raise CannotWrite(error.filename or path, error) from error
         return {**item, "state": "created"}
     if path.read_bytes() == content:
         return {**item, "state": "present"}

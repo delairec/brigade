@@ -1,5 +1,6 @@
 import fcntl
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -579,6 +580,60 @@ class BrigadeProjectWhileTheCorpusIsLocked(ProjectTestCase):
         except subprocess.TimeoutExpired:
             return True
         return False
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class BrigadeProjectWhereTheMachineRefusesTheWrite(ProjectTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.state_home.mkdir()
+
+    def tearDown(self):
+        self.machine.state_home.chmod(0o700)
+        super().tearDown()
+
+    def test_should_exit_1_naming_the_registry_project_add_cannot_write(self):
+        # Arrange
+        self.run_project("add", str(self.create_project("app").path))
+        web = self.create_project("web")
+        self.registry.chmod(0o400)
+
+        # Act
+        completed = self.run_project("add", str(web.path))
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade project add: cannot write {self.registry}: Permission denied\n"),
+        )
+
+    def test_should_exit_1_naming_the_registry_project_pause_cannot_write(self):
+        # Arrange
+        self.run_project("add", str(self.create_project("app").path))
+        self.registry.chmod(0o400)
+
+        # Act
+        completed = self.run_project("pause", "app")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade project pause: cannot write {self.registry}: Permission denied\n"),
+        )
+
+    def test_should_exit_1_naming_the_state_directory_where_its_lock_goes(self):
+        # Arrange
+        project = self.create_project("app")
+        self.machine.state_home.chmod(0o500)
+
+        # Act
+        completed = self.run_project("add", str(project.path))
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade project add: cannot write {self.machine.state_home / 'brigade'}: Permission denied\n"),
+        )
 
 
 class BrigadeProjectBeforeInit(unittest.TestCase):

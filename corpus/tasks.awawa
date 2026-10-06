@@ -1405,7 +1405,7 @@ TASK B42
 		+ "recorded result documents of the directory a config.toml key names; the recordings of"
 		+ "the test suite live under tests/cli/fixtures and every test that launches a client"
 		+ "launches the fake"
-		IMPL "brigade/adapters/clients/fake.py::def _build_launch(request: dict) -> dict:"
+		IMPL "brigade/adapters/test_clients/fake.py::def _build_launch(request: dict) -> dict:"
 		IMPL "tests/cli/fixtures/recordings/bastien.json::fake-session-bastien"
 		IMPL "tests/cli/test_zipapp.py::def"
 			+ "test_should_answer_through_the_fake_adapter_the_built_archive_ships"
@@ -1680,7 +1680,7 @@ TASK B48
 TASK B49
 	TITLE "brigade adapter matrix and the supported-clients table of the README, generated from the"
 		+ "probes"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "adapters"
 	ROLE bastien
@@ -1689,25 +1689,60 @@ TASK B49
 		+ "transcripts, step count, tool grants and reset hour; a cell reads full when the probe"
 		+ "declares the capability, fallback when it does not and a fallback is recorded, absent"
 		+ "for launch or result undeclared"
+		IMPL "brigade/system/list_client_adapters.py::def list_client_adapters(runtime) ->"
+			+ "tuple[ClientAdapter, ...]:"
+		IMPL "brigade/commands/adapter_matrix.py::def _grade(capability: str, declared: list[str])"
+			+ "-> str:"
+		IMPL "tests/cli/test_adapter_matrix.py::class"
+			+ "BrigadeAdapterMatrixOfTheBuiltInAdapters(AdapterMatrixTestCase):"
+		IMPL "tests/cli/test_adapter_matrix.py::class"
+			+ "BrigadeAdapterMatrixWithAnExecutableAdapterOnPath(AdapterMatrixTestCase):"
 	SPEC "under the table, a legend names the fallback of each capability that has one: no resume,"
 		+ "a fresh launch from the progress file; no transcripts, brigade's own run logs; no step"
 		+ "count, steps null and the run held on the clock alone; no tool grants, the client's"
 		+ "unattended mode and a disposable worktree for a reading slot; no reset hour, now plus"
 		+ "thirty minutes"
+		IMPL "brigade/commands/adapter_matrix.py::FALLBACKS = {"
+		IMPL "tests/cli/test_adapter_matrix.py::TEXT_LEGEND = ("
 	SPEC "an adapter whose probe fails, no JSON document, an answer departing from the probe shape"
 		+ "or the timeout, gets a row naming the error; the other rows are printed and the command"
 		+ "exits 1"
+		IMPL "brigade/commands/adapter_matrix.py::def _describe_adapter(runtime, configuration:"
+			+ "Configuration, adapter: ClientAdapter) -> dict:"
+		IMPL "tests/cli/test_adapter_matrix.py::class"
+			+ "BrigadeAdapterMatrixWhenAProbeFails(AdapterMatrixTestCase):"
+		IMPL "tests/unit/commands/test_adapter_matrix.py::class"
+			+ "AdapterMatrixWhenAProbeTimesOut(unittest.TestCase):"
 	SPEC "the fake adapter lives in brigade/adapters/test_clients, which the resolver searches"
 		+ "after brigade/adapters/clients; the client key fake of config.toml still selects it,"
 		+ "from the clone and from dist/brigade.pyz"
+		IMPL "brigade/system/resolve_plugin.py::CLIENT_PACKAGES = (\"brigade.adapters.clients\","
+			+ "\"brigade.adapters.test_clients\")"
+		IMPL "brigade/adapters/test_clients/fake.py::def answer(operation: str, request: dict) ->"
+			+ "dict:"
+		IMPL "tests/cli/test_adapter.py::def"
+			+ "test_should_point_the_fake_at_the_recording_of_the_role_in_the_configured_directory"
+		IMPL "tests/cli/test_zipapp.py::def"
+			+ "test_should_answer_through_the_fake_adapter_the_built_archive_ships"
 	SPEC "every row of the matrix carries its audience, the test suite for an adapter of"
 		+ "brigade/adapters/test_clients, a supported client for the others; brigade adapter matrix"
 		+ "--markdown prints two Markdown tables, the supported clients then the adapters of the"
 		+ "test suite, and the legend"
+		IMPL "brigade/system/list_client_adapters.py::PACKAGE_AUDIENCES = dict(zip(CLIENT_PACKAGES,"
+			+ "(SUPPORTED_CLIENT, TEST_SUITE)))"
+		IMPL "brigade/commands/render_adapter_matrix_markdown.py::def"
+			+ "render_adapter_matrix_markdown(document: dict) -> str:"
+		IMPL "tests/cli/test_adapter_matrix.py::def"
+			+ "test_should_print_the_supported_clients_then_the_adapters_of_the_test_suite_as_markdown(self):"
+		IMPL "tests/cli/test_zipapp.py::def"
+			+ "test_should_list_the_built_in_adapters_the_built_archive_ships_with_their_audience(self):"
 	SPEC "README.md holds, between two marker comments, the output of brigade adapter matrix"
 		+ "--markdown for the built-in adapters alone; a test of tests/guards regenerates it with"
 		+ "no executable adapter on PATH and fails when the README differs, printing the expected"
 		+ "block"
+		IMPL "README.md::<!-- adapter matrix: begin -->"
+		IMPL "tests/guards/test_readme_adapter_matrix.py::class"
+			+ "ReadmeAdapterMatrix(unittest.TestCase):"
 	AFTER @TASK.B42
 	RATIONALE "the user ruled on 2026-10-05 that the README names the supported clients with their"
 		+ "level, DESC 5 of @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters, whose DESC 2"
@@ -1739,6 +1774,7 @@ TASK B49
 		REF @TASK.B44
 	SOURCE "pull request #3 of the brigade repository; the user's rulings of 2026-10-06 in the"
 		+ "refinement of B49"
+	DELIVERED_BY 30
 
 TASK B50
 	TITLE "Recipe files: format, resolution and lint"
@@ -1864,7 +1900,7 @@ TASK B55
 TASK B56
 	TITLE "a state or configuration directory brigade cannot write: exit 1 naming the path, and"
 		+ "brigade tick --loop ticks again"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tick"
 	ROLE bastien
@@ -1872,16 +1908,63 @@ TASK B56
 		+ "$XDG_STATE_HOME/brigade/ exits 1 with one stderr line, brigade <command>: cannot write"
 		+ "<path>: <reason>, not 70 with a traceback; hold_lock, hold_lock_without_waiting,"
 		+ "write_json_atomically and the ledger append included"
+		IMPL "brigade/errors.py::class CannotWrite(BrigadeError):"
+		IMPL "brigade/system/hold_lock.py::def hold_lock(path: Path) -> Iterator[None]:"
+		IMPL "brigade/system/hold_lock_without_waiting.py::def hold_lock_without_waiting(path:"
+			+ "Path) -> Iterator[bool]:"
+		IMPL "brigade/system/write_json_atomically.py::def write_json_atomically(path: Path,"
+			+ "document: dict) -> None:"
+		IMPL "brigade/ledger/append_event.py::def append_event(state_root: Path, event:"
+			+ "LedgerEvent) -> None:"
+		IMPL "tests/unit/system/test_hold_lock.py::class"
+			+ "HoldLockWhereTheMachineRefusesTheWrite(unittest.TestCase):"
+		IMPL "tests/unit/system/test_hold_lock.py::def"
+			+ "test_should_let_an_error_raised_while_held_through_as_it_is(self):"
+		IMPL "tests/unit/system/test_hold_lock_without_waiting.py::class"
+			+ "HoldLockWithoutWaitingWhereTheMachineRefusesTheWrite(unittest.TestCase):"
+		IMPL "tests/unit/ledger/test_append_event.py::class"
+			+ "AppendEventWhereTheMachineRefusesTheWrite(AppendEventTestCase):"
+		IMPL "tests/cli/test_tick.py::class"
+			+ "BrigadeTickOnceWhereTheMachineRefusesTheStateDirectory(TickTestCase):"
 	SPEC "an OSError raised creating or writing under $XDG_CONFIG_HOME/brigade/, by brigade init or"
 		+ "by the registry write of brigade project add and brigade project status, exits 1 the"
 		+ "same way"
+		IMPL "brigade/commands/init.py::def _ensure_repository(runtime) -> dict:"
+		IMPL "brigade/commands/init.py::def _ensure_file(runtime, name: str, file_name: str,"
+			+ "content: bytes) -> dict:"
+		IMPL "brigade/corpus/change_corpus_file.py::def _write_checked("
+		IMPL "tests/cli/test_init.py::class"
+			+ "BrigadeInitWhereTheMachineRefusesTheConfigurationDirectory(unittest.TestCase):"
+		IMPL "tests/cli/test_init.py::class"
+			+ "BrigadeInitWhereTheMachineRefusesAFileOfTheCorpus(unittest.TestCase):"
+		IMPL "tests/cli/test_project.py::class"
+			+ "BrigadeProjectWhereTheMachineRefusesTheWrite(ProjectTestCase):"
 	SPEC "the path named is the one the operating system refused, a directory, a lock or a file,"
 		+ "except the temporary file of an atomic write, named by its target"
+		IMPL "brigade/system/write_json_atomically.py::def _fill_and_replace("
+		IMPL "tests/unit/system/test_write_json_atomically.py::class"
+			+ "WriteJsonAtomicallyWhereTheMachineRefusesTheWrite(unittest.TestCase):"
+		IMPL "tests/unit/system/test_write_json_atomically.py::def"
+			+ "test_should_name_the_target_it_cannot_replace_and_leave_no_temporary_file(self):"
+		IMPL "tests/cli/test_tick.py::class"
+			+ "BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectory(TickTestCase):"
 	SPEC "inside brigade tick --loop, a tick that fails, by a BrigadeError, a state directory it"
 		+ "cannot write or an unexpected exception, is reported on stderr, one line or its"
 		+ "traceback, and the loop ticks again at the next interval"
+		IMPL "brigade/system/run_reporting_failure.py::def run_reporting_failure(action:"
+			+ "Callable[[], None], command: str) -> None:"
+		IMPL "brigade/commands/tick.py::def _tick_in_loop() -> dict:"
+		IMPL "tests/unit/system/test_run_reporting_failure.py::class"
+			+ "RunReportingFailure(unittest.TestCase):"
+		IMPL "tests/cli/test_tick.py::class"
+			+ "BrigadeTickLoopWhereTheMachineRefusesTheWrite(TickTestCase):"
 	SPEC "a tick that fails writes no heartbeat, and brigade tick --loop still exits 0 on SIGTERM"
 		+ "and SIGINT"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_report_the_failed_tick_and_keep_ticking_until_a_signal(self):"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_exit_1_naming_the_heartbeat_it_cannot_write_and_write_none(self):"
+		IMPL "tests/cli/test_tick.py::class BrigadeTickLoop(TickTestCase):"
 	AFTER @TASK.B07
 	RATIONALE "the exit table of"
 		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable gives 1 to a"
@@ -1919,6 +2002,7 @@ TASK B56
 		+ "PermissionError ends --loop"
 		REF @TASK.B07
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B56"
+	DELIVERED_BY 29
 
 TASK B57
 	TITLE "the writers of runs/, of the corpus cache and of the scheduler units: exit 1 naming the"
@@ -2036,3 +2120,70 @@ TASK B60
 	SOURCE "the user's ruling of 2026-10-06 after wave M0: a draft task for the retention of runs/,"
 		+ "placed in its milestone, and one line for the worktrees the scheduler of @TASK.B12 cuts"
 		REF @TASK.B12
+
+TASK B61
+	TITLE "the foundations of M0 reviewed read-only by the role of the deepest reasoning against"
+		+ "the plan and every active decision, last of M0"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "review"
+	ROLE none
+	SPEC "the review is one run of the role max of the instructions corpus, deepest reasoning,"
+		+ "read-only, launched with the user's permission; the run changes no file of the"
+		+ "repository, and the session that launched it commits the report"
+	SPEC "the report is a dated file under docs/, docs/<date>-foundations-review.md, delivered by a"
+		+ "pull request of its own that changes no code and no corpus entity"
+	SPEC "the report names the commit of main it read; the code of brigade/ at that commit is"
+		+ "checked against each section of the plan, artifact/parts/plan.html as brought in line"
+		+ "with the decisions, and against every active DECISION of corpus/decisions.awawa; each"
+		+ "departure names the file and the function or the line, and the plan section or the"
+		+ "decision it departs from"
+	SPEC "each risk the foundations carry for a later milestone, M1 to M8, or for the goal of the"
+		+ "tool, the CLI doing the mechanical work and waves running unattended on one machine"
+		+ "across every registered project, names its evidence, a file, a command with its output"
+		+ "or a decision, and the milestone it threatens"
+	SPEC "the report grades each component on a scale it states: the subpackages of brigade/,"
+		+ "adapters, commands, corpus, git, ledger, registry, roles, runs, system and tick, and"
+		+ "cli.py with launcher.py; each grade carries the evidence it rests on"
+	SPEC "each finding names what it becomes once the user has ruled: a draft TASK, an"
+		+ "OPEN_QUESTION or an amendment of a DECISION; the review's pull request fixes nothing it"
+		+ "found"
+	SPEC "the report opens on its verdict, then the table of grades; one fact per line, each figure"
+		+ "with its perimeter and the command that produced it"
+	AFTER @TASK.B01
+	AFTER @TASK.B02
+	AFTER @TASK.B03
+	AFTER @TASK.B04
+	AFTER @TASK.B05
+	AFTER @TASK.B06
+	AFTER @TASK.B07
+	AFTER @TASK.B08
+	AFTER @TASK.B42
+	AFTER @TASK.B43
+	AFTER @TASK.B49
+	AFTER @TASK.B54
+	AFTER @TASK.B56
+	AFTER @TASK.B57
+	RATIONALE "the user ruled on 2026-10-06 that a review by max closes M0, after every other task"
+		+ "of the milestone: its goal is to check that the foundations are solid, that they match"
+		+ "the initial plan and the architectural decisions max ruled, and to name the risks they"
+		+ "carry for the rest of the plan and for the goal of the tool; the foundations must be"
+		+ "solid because everything later rests on them"
+	RATIONALE "the plan, HANDOFF.md section 6c, and the architectural decisions sourced in pull"
+		+ "request #9 are max's: the same role, of the deepest reasoning, reviews what was built on"
+		+ "them; a role of the deepest reasoning is launched only with the user's permission, as"
+		+ "the instructions corpus binds it"
+	RATIONALE "max writes nothing, hence a report the session commits; a review that fixed what it"
+		+ "found would verify its own work, hence findings that become draft tasks, open questions"
+		+ "or decision amendments after the user's ruling, never a fix in the review's own pull"
+		+ "request"
+	RATIONALE "ROLE none: the schema admits ada, bastien, lex, prudence, remi, manu, bilal, mina,"
+		+ "dora or none, and max is not among them; the role is named in the first SPEC"
+	RATIONALE "the report lands under docs/:"
+		+ "@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus refuses docs/ for the"
+		+ "corpus alone, and a dated report is never rewritten"
+		REF @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
+	RATIONALE "the plan was brought in line with every active decision in the pull request that"
+		+ "writes this task, so that the review reads one reference where the plan and the"
+		+ "decisions agree; the decisions prevail where a passage of the plan still differs"
+	SOURCE "the user's ruling of 2026-10-06 after wave M0"
