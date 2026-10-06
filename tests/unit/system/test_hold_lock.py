@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.system.hold_lock import hold_lock
 
 
@@ -50,3 +51,52 @@ class HoldLock(unittest.TestCase):
 
         # Assert
         self.assertEqual(content, f"{os.getpid()}\n")
+
+    def test_should_let_an_error_raised_while_held_through_as_it_is(self):
+        # Arrange
+        refused_elsewhere = PermissionError(13, "Permission denied", "/srv/elsewhere")
+
+        # Act
+        with self.assertRaises(PermissionError) as raised:
+            with hold_lock(self.lock_path):
+                raise refused_elsewhere
+
+        # Assert
+        self.assertIs(raised.exception, refused_elsewhere)
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class HoldLockWhereTheMachineRefusesTheWrite(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.state = Path(self.root.name) / "state"
+        self.state.mkdir()
+        self.addCleanup(self.state.chmod, 0o700)
+        self.locks = self.state / "locks"
+        self.lock_path = self.locks / "corpus.lock"
+
+    def test_should_name_the_directory_it_cannot_create(self):
+        # Arrange
+        self.state.chmod(0o500)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            with hold_lock(self.lock_path):
+                pass
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.locks}: Permission denied")
+
+    def test_should_name_the_lock_it_cannot_open(self):
+        # Arrange
+        self.locks.mkdir()
+        self.lock_path.touch(mode=0o400)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            with hold_lock(self.lock_path):
+                pass
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")

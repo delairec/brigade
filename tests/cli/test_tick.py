@@ -1,5 +1,6 @@
 import fcntl
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -233,3 +234,93 @@ class BrigadeTickWithoutAMode(TickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 2)
         self.assertIn("one of the arguments --once --dry-run --loop is required", completed.stderr)
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectory(TickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.state_home.mkdir()
+
+    def tearDown(self):
+        self.machine.state_home.chmod(0o700)
+        super().tearDown()
+
+    def test_should_exit_1_naming_the_state_directory_it_cannot_create(self):
+        # Arrange
+        self.machine.state_home.chmod(0o500)
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade tick: cannot write {self.state}: Permission denied\n"),
+        )
+
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectory(TickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.lock.parent.mkdir(parents=True)
+
+    def tearDown(self):
+        self.state.chmod(0o700)
+        super().tearDown()
+
+    def test_should_exit_1_naming_the_lock_it_cannot_open(self):
+        # Arrange
+        self.lock.touch(mode=0o400)
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade tick: cannot write {self.lock}: Permission denied\n"),
+        )
+
+    def test_should_exit_1_naming_the_heartbeat_it_cannot_write_and_write_none(self):
+        # Arrange
+        self.state.chmod(0o500)
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr, sorted(path.name for path in self.state.iterdir())),
+            (1, "", f"brigade tick: cannot write {self.heartbeat}: Permission denied\n", ["locks"]),
+        )
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class BrigadeTickLoopWhereTheMachineRefusesTheWrite(TickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.state_home.mkdir()
+        self.machine.state_home.chmod(0o500)
+
+    def tearDown(self):
+        self.machine.state_home.chmod(0o700)
+        super().tearDown()
+
+    def test_should_report_the_failed_tick_and_keep_ticking_until_a_signal(self):
+        # Arrange
+        loop = self.start_loop("--json")
+        failure_line = self.wait_for_first_tick(loop)
+
+        # Act
+        loop.send_signal(signal.SIGTERM)
+
+        # Assert
+        stdout, later_reports = loop.communicate(timeout=STOP_WAIT_S)
+        self.assertEqual(
+            (failure_line, later_reports, loop.returncode, self.state.exists()),
+            (f"brigade tick: cannot write {self.state}: Permission denied\n", "", 0, False),
+        )
+        self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
