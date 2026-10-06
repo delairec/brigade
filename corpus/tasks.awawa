@@ -2039,9 +2039,9 @@ TASK B57
 		IMPL "brigade/runs/detach_run.py::def detach_run(plan: RunPlan, runtime) -> int:"
 		IMPL "tests/cli/test_run.py::class"
 			+ "BrigadeRunDetachedWhereTheMachineRefusesASegment(RunTestCase):"
-	SPEC "an OSError raised creating, extracting, placing or dating a tree of the corpus cache"
-		+ "under $XDG_CACHE_HOME/brigade/ exits 1 the same way, a cache hit on a cache it cannot"
-		+ "date included"
+	SPEC "an OSError raised creating, extracting, placing, dating or pruning a tree of the corpus"
+		+ "cache under $XDG_CACHE_HOME/brigade/ exits 1 the same way, a cache hit on a cache it"
+		+ "cannot date included"
 		IMPL "brigade/corpus/prepare_tree.py::def _create_staging(root: Path) -> Path:"
 		IMPL "brigade/corpus/prepare_tree.py::def _unpack(archive: Path, staged_tree: Path, root:"
 			+ "Path) -> None:"
@@ -2095,7 +2095,8 @@ TASK B57
 		+ "@TASK.B56"
 		REF @TASK.B07
 		REF @TASK.B56
-	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57"
+	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57, and on pull request"
+		+ "#34"
 		REF @TASK.B56
 	DELIVERED_BY 34
 
