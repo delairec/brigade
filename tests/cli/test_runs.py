@@ -63,7 +63,7 @@ class BrigadeRunsListOfAFinishedRun(RunsTestCase):
     def test_should_list_a_run_whose_process_is_gone_without_a_result_as_dead(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
-        gone = subprocess.Popen(["true"])
+        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
         (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
@@ -136,7 +136,11 @@ class BrigadeRunsLogs(RunsTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "run": run_id, "lines": [json.dumps(TURN_LIMIT_RESULT), json.dumps(TURN_LIMIT_RESULT)]},
+            {
+                "schema_version": 1,
+                "run": run_id,
+                "lines": [json.dumps(TURN_LIMIT_RESULT), json.dumps(TURN_LIMIT_RESULT)],
+            },
         )
 
     def test_should_exit_1_naming_an_unknown_run(self):

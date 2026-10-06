@@ -11,7 +11,9 @@ HEARTBEAT_NAME = "tick.json"
 def _find_installed(runtime):
     request = {"schema_version": DOCUMENT_SCHEMA_VERSION, "unit_directory": str(locate_unit_directory(runtime.paths))}
     for name in SCHEDULERS_ASKED:
-        status = ask_scheduler(SchedulerQuestion(scheduler_name=name, operation="read_status", request=request), runtime)
+        status = ask_scheduler(
+            SchedulerQuestion(scheduler_name=name, operation="read_status", request=request), runtime
+        )
         if status["installed"]:
             return name, status
     return NO_SCHEDULER, {"unit_files": [], "cron_line": None, "next_activation": None}

@@ -39,28 +39,36 @@ class GuessCommands(unittest.TestCase):
                 "bun.lock",
                 {"package.json": TEST_SCRIPT, "bun.lock": ""},
                 CommandGuess(
-                    configurations=("package.json",), acceptance=("bun run test",), setup=("bun install --frozen-lockfile",)
+                    configurations=("package.json",),
+                    acceptance=("bun run test",),
+                    setup=("bun install --frozen-lockfile",),
                 ),
             ),
             (
                 "bun.lockb",
                 {"package.json": TEST_SCRIPT, "bun.lockb": ""},
                 CommandGuess(
-                    configurations=("package.json",), acceptance=("bun run test",), setup=("bun install --frozen-lockfile",)
+                    configurations=("package.json",),
+                    acceptance=("bun run test",),
+                    setup=("bun install --frozen-lockfile",),
                 ),
             ),
             (
                 "pnpm",
                 {"package.json": TEST_SCRIPT, "pnpm-lock.yaml": ""},
                 CommandGuess(
-                    configurations=("package.json",), acceptance=("pnpm run test",), setup=("pnpm install --frozen-lockfile",)
+                    configurations=("package.json",),
+                    acceptance=("pnpm run test",),
+                    setup=("pnpm install --frozen-lockfile",),
                 ),
             ),
             (
                 "yarn",
                 {"package.json": TEST_SCRIPT, "yarn.lock": ""},
                 CommandGuess(
-                    configurations=("package.json",), acceptance=("yarn run test",), setup=("yarn install --frozen-lockfile",)
+                    configurations=("package.json",),
+                    acceptance=("yarn run test",),
+                    setup=("yarn install --frozen-lockfile",),
                 ),
             ),
             (
@@ -110,7 +118,9 @@ class GuessCommands(unittest.TestCase):
             (
                 "uv.lock",
                 {"pyproject.toml": NO_PYTEST_TABLE, "uv.lock": ""},
-                CommandGuess(configurations=("Python",), acceptance=("python3 -m unittest",), setup=("uv sync --frozen",)),
+                CommandGuess(
+                    configurations=("Python",), acceptance=("python3 -m unittest",), setup=("uv sync --frozen",)
+                ),
             ),
         ]
         for case, files, expected in rows:
@@ -144,7 +154,9 @@ class GuessCommands(unittest.TestCase):
         # Arrange
         root = tempfile.TemporaryDirectory()
         self.addCleanup(root.cleanup)
-        create_files(Path(root.name), {"Cargo.toml": "", "pyproject.toml": NO_PYTEST_TABLE, "package.json": TEST_SCRIPT})
+        create_files(
+            Path(root.name), {"Cargo.toml": "", "pyproject.toml": NO_PYTEST_TABLE, "package.json": TEST_SCRIPT}
+        )
 
         # Act
         guess = guess_commands(Path(root.name))

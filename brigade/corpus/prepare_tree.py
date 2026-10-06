@@ -4,10 +4,10 @@ import stat
 import tarfile
 import tempfile
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.archive_commit import archive_commit
@@ -23,7 +23,7 @@ ARCHIVE_NAME = "commit.tar"
 STAGED_TREE_NAME = "tree"
 ARCHIVE_KIND = "archive"
 WORKTREE_KIND = "worktree"
-EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 NANOSECONDS_PER_MICROSECOND = 1000
 NOTHING_MEASURED = 0
 TRUSTED_EXTRACTION = {"filter": "fully_trusted"} if hasattr(tarfile, "fully_trusted_filter") else {}
@@ -33,8 +33,8 @@ TRUSTED_EXTRACTION = {"filter": "fully_trusted"} if hasattr(tarfile, "fully_trus
 class TreeRequest:
     project: str
     repository: Path
-    ref: Optional[str]
-    worktree: Optional[Path]
+    ref: str | None
+    worktree: Path | None
     cache: Path
     cache_bound_bytes: int
     cache_lock: Path
@@ -44,7 +44,7 @@ class TreeRequest:
 @dataclass(frozen=True)
 class Tree:
     project: str
-    ref: Optional[str]
+    ref: str | None
     sha: str
     kind: str
     root: Path
@@ -57,9 +57,7 @@ class _CachedTree:
     size_bytes: int
 
 
-def _find_worktree(
-    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest
-) -> Worktree:
+def _find_worktree(run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest) -> Worktree:
     worktrees = list_worktrees(run_process, request.repository)
     if request.worktree is not None:
         wanted_path = request.worktree.resolve()
@@ -89,7 +87,9 @@ def _create_staging(root: Path) -> Path:
 def _unpack(archive: Path, staged_tree: Path, root: Path) -> None:
     with tarfile.open(archive) as commit_tar:
         try:
-            commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)
+            # S202: the archive is git archive of a commit of the project, extracted as a checkout of that commit
+            # writes it; the worktree kind reads the same tree in place
+            commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)  # noqa: S202
         except OSError as error:
             raise CannotWrite(root, error) from error
 
@@ -127,9 +127,7 @@ def _measure_file(path: str) -> int:
 
 
 def _measure_tree(root: Path) -> int:
-    return sum(
-        _measure_file(os.path.join(directory, name)) for directory, _, names in os.walk(root) for name in names
-    )
+    return sum(_measure_file(os.path.join(directory, name)) for directory, _, names in os.walk(root) for name in names)
 
 
 def _list_visible_directories(parent: Path) -> list[Path]:

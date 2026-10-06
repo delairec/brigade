@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from brigade.tick.build_snapshot import build_snapshot
 
@@ -7,7 +7,7 @@ from brigade.tick.build_snapshot import build_snapshot
 class BuildSnapshot(unittest.TestCase):
     def test_should_carry_now_as_an_utc_instant_in_its_document(self):
         # Arrange
-        now = datetime(2026, 10, 6, 12, 0, 7, 250000, tzinfo=timezone.utc)
+        now = datetime(2026, 10, 6, 12, 0, 7, 250000, tzinfo=UTC)
 
         # Act
         snapshot = build_snapshot(now)

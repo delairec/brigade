@@ -13,7 +13,7 @@ from brigade.system.resolve_plugin import (
 
 SUPPORTED_CLIENT = "supported_client"
 TEST_SUITE = "test_suite"
-PACKAGE_AUDIENCES = dict(zip(CLIENT_PACKAGES, (SUPPORTED_CLIENT, TEST_SUITE)))
+PACKAGE_AUDIENCES = dict(zip(CLIENT_PACKAGES, (SUPPORTED_CLIENT, TEST_SUITE), strict=True))
 MODULE_SUFFIX = ".py"
 PRIVATE_MODULE_PREFIX = "_"
 MODULE_WORD_SEPARATOR = "_"
@@ -66,7 +66,9 @@ def _list_module_basenames(package: str) -> list[str]:
 
 def _list_built_in_adapters(package: str) -> list[ClientAdapter]:
     return [
-        ClientAdapter(name=basename.replace(MODULE_WORD_SEPARATOR, NAME_WORD_SEPARATOR), audience=PACKAGE_AUDIENCES[package])
+        ClientAdapter(
+            name=basename.replace(MODULE_WORD_SEPARATOR, NAME_WORD_SEPARATOR), audience=PACKAGE_AUDIENCES[package]
+        )
         for basename in _list_module_basenames(package)
         if hasattr(importlib.import_module(f"{package}.{basename}"), CLIENT_ENTRY_POINT)
     ]
@@ -74,7 +76,10 @@ def _list_built_in_adapters(package: str) -> list[ClientAdapter]:
 
 def list_client_adapters(runtime) -> tuple[ClientAdapter, ...]:
     candidates = [
-        *(ClientAdapter(name=name, audience=SUPPORTED_CLIENT) for name in _list_executable_names(runtime.paths.executable_search_path)),
+        *(
+            ClientAdapter(name=name, audience=SUPPORTED_CLIENT)
+            for name in _list_executable_names(runtime.paths.executable_search_path)
+        ),
         *(adapter for package in CLIENT_PACKAGES for adapter in _list_built_in_adapters(package)),
     ]
     adapters = {}

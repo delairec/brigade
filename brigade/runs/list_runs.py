@@ -1,14 +1,13 @@
 import json
 import os
 from pathlib import Path
-from typing import Optional
 
 from brigade.runs.run_locations import PID_FILE, RESULT_FILE, RUN_RECORD_FILE, RUNS_DIRECTORY
 
 NO_SIGNAL = 0
 
 
-def _read_pid(run_directory: Path) -> Optional[int]:
+def _read_pid(run_directory: Path) -> int | None:
     try:
         text = (run_directory / PID_FILE).read_text(encoding="utf-8").strip()
     except FileNotFoundError:
@@ -18,7 +17,7 @@ def _read_pid(run_directory: Path) -> Optional[int]:
     return int(text)
 
 
-def _is_alive(pid: Optional[int]) -> bool:
+def _is_alive(pid: int | None) -> bool:
     if pid is None:
         return False
     try:

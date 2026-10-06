@@ -39,8 +39,13 @@ class AdapterTestCase(unittest.TestCase):
         self.root.cleanup()
 
     def run_adapter(self, *arguments: str, request: str | None = None, path_directories: tuple = ()):
-        environment = {**self.machine.describe_environment(), "PATH": os.pathsep.join([*path_directories, os.environ["PATH"]])}
-        return self.machine.run_brigade(CLONE_ENTRY_POINT, "adapter", *arguments, environment=environment, request=request)
+        environment = {
+            **self.machine.describe_environment(),
+            "PATH": os.pathsep.join([*path_directories, os.environ["PATH"]]),
+        }
+        return self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "adapter", *arguments, environment=environment, request=request
+        )
 
 
 class BrigadeAdapterProbe(AdapterTestCase):
@@ -95,7 +100,9 @@ class BrigadeAdapterProbe(AdapterTestCase):
 class BrigadeAdapterLaunchArgv(AdapterTestCase):
     def test_should_take_the_reasoning_row_config_toml_sets(self):
         # Arrange
-        self.machine.write_configuration('client = "claude-code"\n[reasoning.standard]\nmodel = "sonnet"\neffort = "low"\n')
+        self.machine.write_configuration(
+            'client = "claude-code"\n[reasoning.standard]\nmodel = "sonnet"\neffort = "low"\n'
+        )
 
         # Act
         completed = self.run_adapter("launch-argv", "--json", request=LAUNCH_REQUEST)
@@ -138,7 +145,12 @@ class BrigadeAdapterLaunchArgv(AdapterTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "argv": ["cat", "--", f"{RECORDINGS}/bastien.json"], "environment": {}, "stdin": None},
+            {
+                "schema_version": 1,
+                "argv": ["cat", "--", f"{RECORDINGS}/bastien.json"],
+                "environment": {},
+                "stdin": None,
+            },
         )
 
 
@@ -146,7 +158,9 @@ class BrigadeAdapterParseResult(AdapterTestCase):
     def test_should_normalise_a_recorded_claude_code_result(self):
         # Arrange
         self.machine.write_configuration('client = "claude-code"\n')
-        request = json.dumps({"schema_version": 1, "exit_code": 0, "stdout": CLAUDE_CODE_RESULT.read_text(), "stderr": ""})
+        request = json.dumps(
+            {"schema_version": 1, "exit_code": 0, "stdout": CLAUDE_CODE_RESULT.read_text(), "stderr": ""}
+        )
 
         # Act
         completed = self.run_adapter("parse-result", "--json", request=request)
@@ -176,7 +190,9 @@ class BrigadeAdapterParseResult(AdapterTestCase):
     def test_should_replay_the_recorded_result_document_through_the_fake(self):
         # Arrange
         self.machine.write_configuration('client = "fake"\n')
-        request = json.dumps({"schema_version": 1, "exit_code": 0, "stdout": (RECORDINGS / "bastien.json").read_text(), "stderr": ""})
+        request = json.dumps(
+            {"schema_version": 1, "exit_code": 0, "stdout": (RECORDINGS / "bastien.json").read_text(), "stderr": ""}
+        )
 
         # Act
         completed = self.run_adapter("parse-result", "--json", request=request)
@@ -238,7 +254,9 @@ class BrigadeAdapterTranscripts(AdapterTestCase):
             json.loads(completed.stdout),
             {
                 "schema_version": 1,
-                "messages": [{"role": "user", "timestamp": "2026-10-06T10:00:00.000Z", "content": "Deliver the task B42."}],
+                "messages": [
+                    {"role": "user", "timestamp": "2026-10-06T10:00:00.000Z", "content": "Deliver the task B42."}
+                ],
             },
         )
 
@@ -252,7 +270,8 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            completed.stderr, f"brigade adapter probe: no configuration at {self.machine.corpus / 'config.toml'}; run brigade init\n"
+            completed.stderr,
+            f"brigade adapter probe: no configuration at {self.machine.corpus / 'config.toml'}; run brigade init\n",
         )
 
     def test_should_name_the_client_key_and_the_file_when_no_client_is_configured(self):
@@ -265,7 +284,10 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, f"brigade adapter probe: config.toml names no client: set the client key in {configuration}\n")
+        self.assertEqual(
+            completed.stderr,
+            f"brigade adapter probe: config.toml names no client: set the client key in {configuration}\n",
+        )
 
     def test_should_name_an_adapter_found_nowhere(self):
         # Arrange
@@ -306,14 +328,19 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, "brigade adapter probe: client adapter broken answered probe: lacks the key version_argv\n")
+        self.assertEqual(
+            completed.stderr,
+            "brigade adapter probe: client adapter broken answered probe: lacks the key version_argv\n",
+        )
 
     def test_should_name_the_failed_command_of_an_executable_adapter(self):
         # Arrange
         self.machine.write_configuration('client = "scripted"\n')
 
         # Act
-        completed = self.run_adapter("launch-argv", "--json", request=LAUNCH_REQUEST, path_directories=(SCRIPTED_CLIENT,))
+        completed = self.run_adapter(
+            "launch-argv", "--json", request=LAUNCH_REQUEST, path_directories=(SCRIPTED_CLIENT,)
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 1)
@@ -332,7 +359,9 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stderr, "brigade adapter resume-argv: the fake client adapter does not answer resume-argv\n")
+        self.assertEqual(
+            completed.stderr, "brigade adapter resume-argv: the fake client adapter does not answer resume-argv\n"
+        )
 
     def test_should_name_the_key_a_request_lacks(self):
         # Arrange
@@ -340,7 +369,9 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
 
         # Act
         completed = self.run_adapter(
-            "launch-argv", "--json", request='{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42."}'
+            "launch-argv",
+            "--json",
+            request='{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42."}',
         )
 
         # Assert

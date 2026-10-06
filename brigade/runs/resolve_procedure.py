@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Optional
 
 from brigade.errors import BrigadeError
 from brigade.roles.parse_role_file import RoleFileUnreadable, parse_role_file
@@ -27,7 +26,7 @@ class Procedure:
 @dataclass(frozen=True)
 class ProcedureDirectories:
     shipped: Traversable
-    instructions: Optional[str]
+    instructions: str | None
 
 
 @dataclass(frozen=True)
@@ -51,7 +50,7 @@ def _read_path(argument: str) -> ProcedureSource:
     )
 
 
-def _describe_missing(name: str, instructions: Optional[str]) -> str:
+def _describe_missing(name: str, instructions: str | None) -> str:
     if instructions is None:
         return f"no procedure {name}: not shipped with brigade and no instructions corpus set in config.toml"
     corpus_procedures = f"{instructions}/{INSTRUCTIONS_PROCEDURES_DIRECTORY}"

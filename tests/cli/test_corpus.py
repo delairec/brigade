@@ -127,7 +127,10 @@ class BrigadeCorpusOfAWorktree(CorpusTestCase):
 class BrigadeCorpusWithAwawaArguments(CorpusTestCase):
     def test_should_pass_the_output_and_the_exit_code_of_awawa_through_after_the_sha(self):
         # Arrange
-        environment = {**self.machine.describe_environment(), "PATH": f"{RELAY_EXECUTABLES}{os.pathsep}{os.environ['PATH']}"}
+        environment = {
+            **self.machine.describe_environment(),
+            "PATH": f"{RELAY_EXECUTABLES}{os.pathsep}{os.environ['PATH']}",
+        }
 
         # Act
         completed = self.run_corpus("app", "--ref", "main", "--", "lint", "--strict", ".", environment=environment)
@@ -187,11 +190,12 @@ class BrigadeCorpusWhileTheCacheIsLocked(CorpusTestCase):
 
     def detect_waiting(self, arguments: list) -> bool:
         try:
-            subprocess.run(
+            subprocess.run(  # noqa: S603 - the test's own command line
                 [sys.executable, str(CLONE_ENTRY_POINT), "corpus", *arguments],
                 capture_output=True,
                 env=self.machine.describe_environment(),
                 timeout=LOCK_WAIT_S,
+                check=False,
             )
         except subprocess.TimeoutExpired:
             return True

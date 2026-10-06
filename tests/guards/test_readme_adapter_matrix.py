@@ -30,7 +30,9 @@ class ReadmeAdapterMatrix(unittest.TestCase):
         readme = README.read_text(encoding="utf-8")
 
         # Act
-        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "adapter", "matrix", "--markdown", environment=environment)
+        completed = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "adapter", "matrix", "--markdown", environment=environment
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)

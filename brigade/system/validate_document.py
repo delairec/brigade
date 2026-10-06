@@ -16,8 +16,8 @@ class DocumentInvalid(BrigadeError):
 class Field:
     kinds: tuple
     nullable: bool = False
-    values: Optional[tuple] = None
-    fields: Optional[dict] = None
+    values: tuple | None = None
+    fields: dict | None = None
     items: Optional["Field"] = None
     non_empty: bool = False
 

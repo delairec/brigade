@@ -1,6 +1,6 @@
 import sys
 import traceback
-from typing import Callable
+from collections.abc import Callable
 
 from brigade.errors import BrigadeError
 
@@ -10,5 +10,5 @@ def run_reporting_failure(action: Callable[[], None], command: str) -> None:
         action()
     except BrigadeError as error:
         sys.stderr.write(f"brigade {command}: {error}\n")
-    except Exception:
+    except Exception:  # noqa: BLE001 - one failed tick of the loop: the traceback is printed, the next tick runs
         traceback.print_exc()

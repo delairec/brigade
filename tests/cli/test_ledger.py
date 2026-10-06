@@ -319,7 +319,6 @@ class BrigadeLedgerWaveStillPaused(LedgerTestCase):
             ([{"paused_at": "2026-09-30T22:15:00Z", "resumed_at": None, "duration_ms": None}], 0),
         )
 
-
     def test_should_print_the_open_pause_as_text(self):
         # Arrange
         self.write_ledger("2026-09", WAVE_SEPTEMBER_LINES)

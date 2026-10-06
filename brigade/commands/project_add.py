@@ -1,7 +1,6 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError, UsageError
@@ -35,7 +34,7 @@ class _Registration:
         self.force = force
         self.replaced = False
 
-    def _find_registered(self) -> Optional[str]:
+    def _find_registered(self) -> str | None:
         projects = read_projects(self.runtime)
         path = next(field for field in self.entity.fields if field.name == "PATH")
         same_path = [project.name for project in projects if path in project.fields]

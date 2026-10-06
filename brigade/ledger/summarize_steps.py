@@ -1,16 +1,16 @@
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 PERCENTILES = {"p50": 50, "p90": 90}
 
 
-def _take_nearest_rank(measured: list[int], percentile: int) -> Optional[int]:
+def _take_nearest_rank(measured: list[int], percentile: int) -> int | None:
     if not measured:
         return None
     rank = -(-percentile * len(measured) // 100)
     return measured[rank - 1]
 
 
-def summarize_steps(steps: Iterable[Optional[int]]) -> dict:
+def summarize_steps(steps: Iterable[int | None]) -> dict:
     all_steps = list(steps)
     measured = sorted(step for step in all_steps if step is not None)
     return {

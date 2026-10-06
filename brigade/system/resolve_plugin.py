@@ -2,8 +2,8 @@ import importlib
 import json
 import re
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord, ProcessRequest
@@ -57,7 +57,9 @@ def _resolve_built_in(kind: str, name: str):
 
 
 def _resolve_client(name: str, runtime):
-    missing = BrigadeError(f"no client adapter {name}: no built-in module and no {CLIENT_EXECUTABLE_PREFIX}{name} on PATH")
+    missing = BrigadeError(
+        f"no client adapter {name}: no built-in module and no {CLIENT_EXECUTABLE_PREFIX}{name} on PATH"
+    )
     if not CLIENT_NAME_PATTERN.fullmatch(name):
         raise missing
     executable = shutil.which(f"{CLIENT_EXECUTABLE_PREFIX}{name}", path=runtime.paths.executable_search_path)

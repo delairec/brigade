@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 
@@ -6,7 +6,7 @@ REGISTRY_FILE = "projects.awawa"
 LOCK_DIRECTORY = "locks"
 
 
-def change_registry(runtime, message: str, rewrite: Callable[[str], Optional[str]]) -> bool:
+def change_registry(runtime, message: str, rewrite: Callable[[str], str | None]) -> bool:
     return change_corpus_file(
         runtime.run_process,
         CorpusChange(

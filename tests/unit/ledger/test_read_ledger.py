@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.read_ledger import LedgerEntry, LedgerReading, SkippedLine, read_ledger
@@ -54,7 +54,7 @@ class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
             LedgerReading(
                 entries=(
                     LedgerEntry(
-                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=timezone.utc),
+                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
                         record={
                             "schema_version": 1,
                             "ts": "2026-09-30T22:00:00Z",
@@ -64,12 +64,22 @@ class ReadLedgerWhenEveryLineIsWhole(ReadLedgerTestCase):
                         },
                     ),
                     LedgerEntry(
-                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=timezone.utc),
-                        record={"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.paused", "wave": "tp/16"},
+                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
+                        record={
+                            "schema_version": 1,
+                            "ts": "2026-10-01T00:15:00Z",
+                            "event": "wave.paused",
+                            "wave": "tp/16",
+                        },
                     ),
                     LedgerEntry(
-                        instant=datetime(2026, 10, 1, 0, 20, tzinfo=timezone.utc),
-                        record={"schema_version": 1, "ts": "2026-10-01T00:20:00Z", "event": "study.done", "study": "health"},
+                        instant=datetime(2026, 10, 1, 0, 20, tzinfo=UTC),
+                        record={
+                            "schema_version": 1,
+                            "ts": "2026-10-01T00:20:00Z",
+                            "event": "study.done",
+                            "study": "health",
+                        },
                     ),
                 ),
                 files=(str(september), str(october)),
@@ -85,7 +95,10 @@ class ReadLedgerWhenALineFailsItsEnvelope(ReadLedgerTestCase):
             (b"\xff\xfe\n", "not JSON"),
             (b"\n", "not JSON"),
             (b"[1, 2]\n", "the document is a list, not an object"),
-            (b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n', "lacks the key schema_version"),
+            (
+                b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n',
+                "lacks the key schema_version",
+            ),
             (b'{"schema_version": 1, "event": "wave.paused", "wave": "tp/16"}\n', "lacks the key ts"),
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "wave": "tp/16"}\n', "lacks the key event"),
             (

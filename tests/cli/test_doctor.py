@@ -51,11 +51,12 @@ class DoctorTestCase(unittest.TestCase):
 
     def run_doctor(self, path_directories, *options):
         environment = {"PATH": os.pathsep.join(path_directories), "XDG_CONFIG_HOME": self.config_home.name}
-        return subprocess.run(
+        return subprocess.run(  # noqa: S603 - the test's own command line
             [sys.executable, CLONE_ENTRY_POINT, "doctor", *options],
             capture_output=True,
             text=True,
             env=environment,
+            check=False,
         )
 
 
@@ -89,8 +90,20 @@ class BrigadeDoctorOnAMachineWithEveryItem(DoctorTestCase):
                         "detail": python_detail,
                         "fallback": None,
                     },
-                    {"name": "git", "kind": "prerequisite", "state": "ok", "detail": "2.47.3 (no floor)", "fallback": None},
-                    {"name": "awawa", "kind": "prerequisite", "state": "ok", "detail": "2.7.0 (floor 2.7)", "fallback": None},
+                    {
+                        "name": "git",
+                        "kind": "prerequisite",
+                        "state": "ok",
+                        "detail": "2.47.3 (no floor)",
+                        "fallback": None,
+                    },
+                    {
+                        "name": "awawa",
+                        "kind": "prerequisite",
+                        "state": "ok",
+                        "detail": "2.7.0 (floor 2.7)",
+                        "fallback": None,
+                    },
                     {
                         "name": "client",
                         "kind": "prerequisite",
@@ -398,7 +411,13 @@ class BrigadeDoctorChecksTheClientAdapter(DoctorTestCase):
                 self.assertEqual(completed.returncode, 1, completed.stderr)
                 self.assertEqual(
                     json.loads(completed.stdout)["items"][CLIENT_ENTRY],
-                    {"name": "client", "kind": "prerequisite", "state": "finding", "detail": expected_detail, "fallback": None},
+                    {
+                        "name": "client",
+                        "kind": "prerequisite",
+                        "state": "finding",
+                        "detail": expected_detail,
+                        "fallback": None,
+                    },
                 )
 
     def test_should_report_a_finding_naming_the_key_of_a_configuration_off_its_shape(self):
@@ -432,7 +451,13 @@ class BrigadeDoctorChecksTheClientAdapter(DoctorTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout)["items"][CLIENT_ENTRY],
-            {"name": "client", "kind": "prerequisite", "state": "ok", "detail": "fake: no client executable", "fallback": None},
+            {
+                "name": "client",
+                "kind": "prerequisite",
+                "state": "ok",
+                "detail": "fake: no client executable",
+                "fallback": None,
+            },
         )
 
     def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
@@ -484,7 +509,13 @@ class BrigadeDoctorReportsTheInstructionsCorpus(DoctorTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout)["items"][INSTRUCTIONS_ENTRY],
-            {"name": "instructions", "kind": "optional", "state": "warning", "detail": "none configured", "fallback": INSTRUCTIONS_FALLBACK},
+            {
+                "name": "instructions",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "none configured",
+                "fallback": INSTRUCTIONS_FALLBACK,
+            },
         )
 
     def test_should_report_whether_the_configured_corpus_lints_clean(self):

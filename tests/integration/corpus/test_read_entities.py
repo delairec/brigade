@@ -20,7 +20,7 @@ PROJECTS = (
     '\tMAIN "trunk"\n'
     "\tSTATUS active\n"
 )
-POLICY = 'POLICY alpha_policy\n\tPROJECT @PROJECT.alpha\n'
+POLICY = "POLICY alpha_policy\n\tPROJECT @PROJECT.alpha\n"
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")

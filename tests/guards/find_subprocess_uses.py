@@ -23,8 +23,7 @@ def _shell_keywords(node: ast.AST) -> list[ast.keyword]:
     return [
         keyword
         for keyword in node.keywords
-        if keyword.arg == "shell"
-        and not (isinstance(keyword.value, ast.Constant) and keyword.value.value is False)
+        if keyword.arg == "shell" and not (isinstance(keyword.value, ast.Constant) and keyword.value.value is False)
     ]
 
 
@@ -37,7 +36,11 @@ def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
             findings.append((node.lineno, node.col_offset, f"{location}:{node.lineno} imports subprocess"))
         for keyword in _shell_keywords(node):
             findings.append(
-                (keyword.lineno, keyword.col_offset, f"{location}:{keyword.lineno} passes shell={ast.unparse(keyword.value)}")
+                (
+                    keyword.lineno,
+                    keyword.col_offset,
+                    f"{location}:{keyword.lineno} passes shell={ast.unparse(keyword.value)}",
+                )
             )
     return [violation for _, _, violation in sorted(findings)]
 

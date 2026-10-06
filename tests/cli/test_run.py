@@ -39,8 +39,16 @@ class BrigadeRunOfAProcedureGivenByPath(RunTestCase):
 
     def run_deliver(self, *options: str):
         return self.run_brigade(
-            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--brief", str(self.brief),
-            "task=B06", *options,
+            "run",
+            str(self.procedure),
+            "--slot",
+            "build",
+            "--cwd",
+            str(self.workspace),
+            "--brief",
+            str(self.brief),
+            "task=B06",
+            *options,
         )
 
     def test_should_print_the_run_as_a_document(self):
@@ -72,7 +80,9 @@ class BrigadeRunOfAProcedureGivenByPath(RunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertRegex(completed.stdout, r"^run \d{8}T\d{6}Z-[0-9a-f]{6}: deliver as builder \(build\) done after 1 segment\n$")
+        self.assertRegex(
+            completed.stdout, r"^run \d{8}T\d{6}Z-[0-9a-f]{6}: deliver as builder \(build\) done after 1 segment\n$"
+        )
 
     def test_should_record_the_finished_run_in_the_ledger(self):
         # Act
@@ -224,7 +234,9 @@ class BrigadeRunOfAProcedureOffItsDeclaration(RunTestCase):
                 self.procedure.write_text(content)
 
                 # Act
-                completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace))
+                completed = self.run_brigade(
+                    "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace)
+                )
 
                 # Assert
                 self.assertEqual(completed.returncode, 1)
@@ -274,7 +286,9 @@ class BrigadeRunDetached(RunTestCase):
         self.record("builder", DONE_RESULT)
 
         # Act
-        completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach")
+        completed = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach"
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -458,7 +472,9 @@ class BrigadeRunWithAClientThatCountsNoSteps(RunTestCase):
 
     def test_should_warn_that_the_budget_is_held_on_the_clock(self):
         # Act
-        completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json")
+        completed = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json"
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -470,7 +486,9 @@ class BrigadeRunWithAClientThatCountsNoSteps(RunTestCase):
 
     def test_should_record_null_steps_with_their_reason(self):
         # Act
-        completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json")
+        completed = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json"
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -641,7 +659,9 @@ class BrigadeRunOfAProject(RunTestCase):
         self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
         self.record("builder", TURN_LIMIT_RESULT)
         self.register()
-        (self.machine.corpus / "policies.awawa").write_text("POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tHANDOVERS 1\n")
+        (self.machine.corpus / "policies.awawa").write_text(
+            "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tHANDOVERS 1\n"
+        )
 
         # Act
         completed = self.run_slot()
@@ -749,8 +769,16 @@ class BrigadeRunDetachedWhereTheMachineRefusesASegment(RunTestCase):
 
         # Act
         started = self.run_brigade(
-            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace),
-            "--run-id", DETACHED_REFUSED_RUN, "--detach", "--json",
+            "run",
+            str(self.procedure),
+            "--slot",
+            "build",
+            "--cwd",
+            str(self.workspace),
+            "--run-id",
+            DETACHED_REFUSED_RUN,
+            "--detach",
+            "--json",
         )
 
         # Assert

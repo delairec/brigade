@@ -55,8 +55,10 @@ def _render_wave(document: dict) -> list[str]:
         f"{item['task']} {item['role']} {item['slot']} segment {item['segment']}" for item in document["hand_overs"]
     ]
     return [
-        f"wave {document['wave']}: {document['first']} to {document['last']},"
-        f" wall time {_format_duration(document['wall_time_ms'])}",
+        (
+            f"wave {document['wave']}: {document['first']} to {document['last']},"
+            f" wall time {_format_duration(document['wall_time_ms'])}"
+        ),
         f"tasks: {_join_or_none(document['tasks'])}",
         f"pull requests: {_join_or_none(pull_requests)}",
         *_render_steps("steps by slot", document["steps"]["by_slot"]),

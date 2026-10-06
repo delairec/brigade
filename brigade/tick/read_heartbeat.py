@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Optional
 
 from brigade.errors import BrigadeError
 from brigade.system.validate_document import DocumentInvalid, Field, validate_document
@@ -13,7 +12,7 @@ HEARTBEAT_SHAPE = {
 }
 
 
-def read_heartbeat(path: Path) -> Optional[dict]:
+def read_heartbeat(path: Path) -> dict | None:
     try:
         content = path.read_text(encoding="utf-8")
     except FileNotFoundError:

@@ -2,7 +2,6 @@ import datetime
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from brigade.errors import BrigadeError
 
@@ -33,11 +32,11 @@ class ReasoningRow:
 
 @dataclass(frozen=True)
 class Configuration:
-    client: Optional[str] = None
-    scheduler: Optional[str] = None
-    forge_account: Optional[str] = None
-    instructions: Optional[str] = None
-    ide_link: Optional[str] = None
+    client: str | None = None
+    scheduler: str | None = None
+    forge_account: str | None = None
+    instructions: str | None = None
+    ide_link: str | None = None
     refs_cache_mb: int = 1024
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)
@@ -137,7 +136,5 @@ def read_configuration(path: Path) -> Configuration:
         reasoning=_read_reasoning(document.get("reasoning", {}), path),
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),
-        seconds_per_step=_read_seconds_per_step(
-            document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path
-        ),
+        seconds_per_step=_read_seconds_per_step(document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path),
     )

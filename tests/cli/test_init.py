@@ -70,7 +70,10 @@ class BrigadeInitOnAFreshMachine(unittest.TestCase):
         history = self.machine.read_git("log", "--format=%an <%ae>%n%s", "--name-only")
 
         # Assert
-        self.assertEqual(history, "Ada Lovelace <ada@example.org>\nbrigade init: the operational corpus\n\n.gitignore\n_schema.awawa\n")
+        self.assertEqual(
+            history,
+            "Ada Lovelace <ada@example.org>\nbrigade init: the operational corpus\n\n.gitignore\n_schema.awawa\n",
+        )
 
     def test_should_install_the_shipped_schema(self):
         # Act
@@ -112,7 +115,12 @@ class BrigadeInitOnAFreshMachine(unittest.TestCase):
         self.machine.run_init()
 
         # Act
-        completed = subprocess.run(["awawa", "lint", "--strict", str(self.machine.corpus)], capture_output=True, text=True)
+        completed = subprocess.run(  # noqa: S603 - the test's own command line
+            ["awawa", "lint", "--strict", str(self.machine.corpus)],  # noqa: S607 - awawa found on the PATH of the test
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
@@ -251,7 +259,10 @@ class BrigadeInitWhenTheSchemaIsMissingFromAnExistingRepository(unittest.TestCas
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["items"][SCHEMA_ENTRY]["state"], "created")
-        self.assertEqual(self.machine.read_git("log", "-1", "--format=%s", "--name-only"), "brigade init: the operational corpus\n\n_schema.awawa\n")
+        self.assertEqual(
+            self.machine.read_git("log", "-1", "--format=%s", "--name-only"),
+            "brigade init: the operational corpus\n\n_schema.awawa\n",
+        )
 
     def test_should_create_it_again_without_a_commit_when_the_repository_still_holds_it(self):
         # Arrange
@@ -269,8 +280,16 @@ class BrigadeInitWhenTheSchemaIsMissingFromAnExistingRepository(unittest.TestCas
 class BrigadeInitWithoutAGitIdentity(unittest.TestCase):
     def test_should_exit_1_naming_the_missing_key_before_creating_anything(self):
         rows = [
-            ("user.name", "[user]\n\temail = ada@example.org\n", "brigade init: the git identity lacks user.name; set it with git config --global\n"),
-            ("user.email", "[user]\n\tname = Ada Lovelace\n", "brigade init: the git identity lacks user.email; set it with git config --global\n"),
+            (
+                "user.name",
+                "[user]\n\temail = ada@example.org\n",
+                "brigade init: the git identity lacks user.name; set it with git config --global\n",
+            ),
+            (
+                "user.email",
+                "[user]\n\tname = Ada Lovelace\n",
+                "brigade init: the git identity lacks user.email; set it with git config --global\n",
+            ),
             (
                 "both",
                 "",
@@ -315,7 +334,6 @@ class BrigadeInitWhereTheMachineRefusesTheConfigurationDirectory(unittest.TestCa
             (completed.returncode, completed.stdout, completed.stderr),
             (1, "", f"brigade init: cannot write {self.machine.corpus}: Permission denied\n"),
         )
-
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")

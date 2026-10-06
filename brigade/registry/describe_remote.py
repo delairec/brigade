@@ -1,6 +1,5 @@
 import re
 from dataclasses import dataclass
-from typing import Optional
 from urllib.parse import urlsplit
 
 GITHUB_HOST = "github.com"
@@ -13,11 +12,11 @@ GIT_SUFFIX = ".git"
 
 @dataclass(frozen=True)
 class RemoteDescription:
-    remote: Optional[str]
+    remote: str | None
     forge: str
 
 
-def _split_host(url: str) -> tuple[Optional[str], str]:
+def _split_host(url: str) -> tuple[str | None, str]:
     if URL_SCHEME_SEPARATOR in url:
         parts = urlsplit(url)
         return parts.hostname, parts.path
@@ -27,7 +26,7 @@ def _split_host(url: str) -> tuple[Optional[str], str]:
     return None, url
 
 
-def describe_remote(url: Optional[str]) -> RemoteDescription:
+def describe_remote(url: str | None) -> RemoteDescription:
     if url is None:
         return RemoteDescription(remote=None, forge=NO_FORGE)
     host, path = _split_host(url)

@@ -84,7 +84,10 @@ class FakeProbeOfDeclaredFeatures(unittest.TestCase):
 class FakeLaunchOfASlowClientWritingProgress(unittest.TestCase):
     def test_should_wait_append_the_progress_line_then_print_the_recording(self):
         # Arrange
-        request = {**LAUNCH_REQUEST, "settings": {"recordings": "/srv/recordings", "delay": "5", "progress": "step 1 done"}}
+        request = {
+            **LAUNCH_REQUEST,
+            "settings": {"recordings": "/srv/recordings", "delay": "5", "progress": "step 1 done"},
+        }
 
         # Act
         launch = answer("launch-argv", request)
@@ -120,7 +123,15 @@ class FakeResult(unittest.TestCase):
         # Act
         result = answer(
             "parse-result",
-            {"schema_version": 1, "exit_code": 0, "stdout": recording, "stderr": "", "reasoning_table": {}, "settings": {}, "home": "/home/ada"},
+            {
+                "schema_version": 1,
+                "exit_code": 0,
+                "stdout": recording,
+                "stderr": "",
+                "reasoning_table": {},
+                "settings": {},
+                "home": "/home/ada",
+            },
         )
 
         # Assert

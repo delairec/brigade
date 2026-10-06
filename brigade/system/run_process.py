@@ -1,7 +1,6 @@
 import subprocess
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from brigade.errors import ToolFailure, ToolNotFound
 from brigade.system.build_process_environment import build_process_environment
@@ -15,7 +14,7 @@ class ProcessRequest:
     cwd: str
     timeout_s: float
     acceptable_exit_codes: tuple[int, ...] = (0,)
-    stdin: Optional[str] = None
+    stdin: str | None = None
 
 
 @dataclass(frozen=True)
@@ -28,7 +27,7 @@ class ProcessRecord:
     duration_ms: int
 
 
-def _describe_input(stdin: Optional[str]) -> dict:
+def _describe_input(stdin: str | None) -> dict:
     if stdin is None:
         return {"stdin": subprocess.DEVNULL}
     return {"input": stdin}
@@ -41,7 +40,8 @@ def _describe_command(argv: tuple[str, ...]) -> str:
 def run_process(request: ProcessRequest) -> ProcessRecord:
     started = time.monotonic()
     try:
-        completed = subprocess.run(
+        # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
+        completed = subprocess.run(  # noqa: S603
             list(request.argv),
             cwd=request.cwd,
             env=build_process_environment(),
@@ -50,6 +50,7 @@ def run_process(request: ProcessRequest) -> ProcessRecord:
             encoding="utf-8",
             errors="replace",
             timeout=request.timeout_s,
+            check=False,
             **_describe_input(request.stdin),
         )
     except FileNotFoundError:

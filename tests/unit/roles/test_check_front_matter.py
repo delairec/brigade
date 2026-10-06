@@ -24,11 +24,34 @@ class CheckFrontMatter(unittest.TestCase):
     def test_should_name_the_key_of_each_problem(self):
         rows = [
             ("a model named", {**DECLARED, "model": "opus"}, RoleProblem(key="model", problem="names a model")),
-            ("an unknown key", {**DECLARED, "colour": "blue"}, RoleProblem(key="colour", problem="is not a declared key")),
-            ("a reasoning level outside its set", {**DECLARED, "reasoning": "huge"}, RoleProblem(key="reasoning", problem="is huge, not one of deepest, deep, standard, light")),
-            ("a capability outside its set", {**DECLARED, "capabilities": "read, fly"}, RoleProblem(key="capabilities", problem="is fly, not one of read, write, shell, net")),
-            ("a slot outside its set", {**DECLARED, "slot": "cook"}, RoleProblem(key="slot", problem="is cook, not one of plan, build, verify, review, rebase, report, triage, rules, explore")),
-            ("a budget that is no count of steps", {**DECLARED, "budget": "lots"}, RoleProblem(key="budget", problem="is lots, not a positive integer")),
+            (
+                "an unknown key",
+                {**DECLARED, "colour": "blue"},
+                RoleProblem(key="colour", problem="is not a declared key"),
+            ),
+            (
+                "a reasoning level outside its set",
+                {**DECLARED, "reasoning": "huge"},
+                RoleProblem(key="reasoning", problem="is huge, not one of deepest, deep, standard, light"),
+            ),
+            (
+                "a capability outside its set",
+                {**DECLARED, "capabilities": "read, fly"},
+                RoleProblem(key="capabilities", problem="is fly, not one of read, write, shell, net"),
+            ),
+            (
+                "a slot outside its set",
+                {**DECLARED, "slot": "cook"},
+                RoleProblem(
+                    key="slot",
+                    problem="is cook, not one of plan, build, verify, review, rebase, report, triage, rules, explore",
+                ),
+            ),
+            (
+                "a budget that is no count of steps",
+                {**DECLARED, "budget": "lots"},
+                RoleProblem(key="budget", problem="is lots, not a positive integer"),
+            ),
             ("an empty value", {**DECLARED, "returns": ""}, RoleProblem(key="returns", problem="is empty")),
         ]
         for case, front_matter, expected_problem in rows:

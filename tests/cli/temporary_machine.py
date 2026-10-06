@@ -34,21 +34,24 @@ class TemporaryMachine:
         configuration.write_text(content)
         return configuration
 
-    def run_brigade(self, entry_point: Path, *arguments: str, environment: dict | None = None, request: str | None = None):
-        return subprocess.run(
+    def run_brigade(
+        self, entry_point: Path, *arguments: str, environment: dict | None = None, request: str | None = None
+    ):
+        return subprocess.run(  # noqa: S603 - the test's own command line
             [sys.executable, str(entry_point), *arguments],
             capture_output=True,
             text=True,
             env=environment or self.describe_environment(),
             input=request,
+            check=False,
         )
 
     def run_init(self, *options: str):
         return self.run_brigade(CLONE_ENTRY_POINT, "init", *options)
 
     def read_git(self, *arguments: str) -> str:
-        completed = subprocess.run(
-            ["git", "-C", str(self.corpus), *arguments],
+        completed = subprocess.run(  # noqa: S603 - the test's own command line
+            ["git", "-C", str(self.corpus), *arguments],  # noqa: S607 - git found on the PATH of the test
             capture_output=True,
             text=True,
             check=True,

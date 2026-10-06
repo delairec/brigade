@@ -1,12 +1,12 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from brigade.tick.build_snapshot import Snapshot
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
 
-FIRST_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc))
-SECOND_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 1, tzinfo=timezone.utc))
-THIRD_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 2, tzinfo=timezone.utc))
+FIRST_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 0, tzinfo=UTC))
+SECOND_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 1, tzinfo=UTC))
+THIRD_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 2, tzinfo=UTC))
 NO_ACTION = ()
 
 

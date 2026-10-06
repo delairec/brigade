@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
@@ -11,11 +11,11 @@ KEY_ABSENT = 1
 
 @dataclass(frozen=True)
 class GitIdentity:
-    name: Optional[str]
-    email: Optional[str]
+    name: str | None
+    email: str | None
 
 
-def _read_key(run_process: Callable[[ProcessRequest], ProcessRecord], key: str) -> Optional[str]:
+def _read_key(run_process: Callable[[ProcessRequest], ProcessRecord], key: str) -> str | None:
     record = run_process(
         ProcessRequest(
             argv=("git", "config", "--get", key),

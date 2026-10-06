@@ -1,6 +1,5 @@
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.plan_run import RunPlan
@@ -22,7 +21,7 @@ WALL_LIMIT_OUTCOME = "wall_limit"
 class SegmentRecord:
     number: int
     result: dict
-    exit_code: Optional[int]
+    exit_code: int | None
     measured_ms: int
 
 

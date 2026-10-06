@@ -1,7 +1,7 @@
 import os
 import select
 import signal
-from typing import Callable
+from collections.abc import Callable
 
 STOP_SIGNALS = (signal.SIGTERM, signal.SIGINT)
 

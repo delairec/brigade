@@ -3,7 +3,6 @@ import re
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
-from typing import Optional
 
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError, UsageError
@@ -36,11 +35,11 @@ RUN_ID_PATTERN = re.compile(r"\d{8}T\d{6}Z-[0-9a-f]{6}")
 class RunRequest:
     procedure: str
     slot: str
-    project: Optional[str]
-    cwd: Optional[str]
-    brief: Optional[str]
+    project: str | None
+    cwd: str | None
+    brief: str | None
     arguments: tuple[str, ...]
-    run_id: Optional[str]
+    run_id: str | None
 
 
 @dataclass(frozen=True)
@@ -52,31 +51,31 @@ class RunPlan:
     role: ResolvedRole
     client: str
     configuration: Configuration
-    project: Optional[str]
+    project: str | None
     cwd: Path
     worktree: Path
     disposable_worktree: bool
     capabilities: tuple[str, ...]
     wall_limit_s: float
     arguments: dict
-    brief_path: Optional[Path]
-    brief: Optional[str]
+    brief_path: Path | None
+    brief: str | None
     counts_steps: bool
     handovers: int
     warnings: tuple[str, ...]
 
 
-def _read_values(project: Optional[Entity], field_name: str) -> list[str]:
+def _read_values(project: Entity | None, field_name: str) -> list[str]:
     if project is None:
         return []
     return [field.value for field in project.fields if field.name == field_name]
 
 
-def _read_value(project: Optional[Entity], field_name: str) -> Optional[str]:
+def _read_value(project: Entity | None, field_name: str) -> str | None:
     return next(iter(_read_values(project, field_name)), None)
 
 
-def _read_project(name: Optional[str], runtime) -> Optional[Entity]:
+def _read_project(name: str | None, runtime) -> Entity | None:
     if name is None:
         return None
     require_operational_corpus(runtime.paths.config_root)
@@ -90,7 +89,7 @@ def _read_role_binding(project: Entity, value: str) -> tuple[str, str]:
     return slot.strip(), name.strip()
 
 
-def _read_bindings(project: Optional[Entity]) -> RoleBindings:
+def _read_bindings(project: Entity | None) -> RoleBindings:
     if project is None:
         return NO_PROJECT_BINDINGS
     path = _read_value(project, "PATH")
@@ -102,7 +101,7 @@ def _read_bindings(project: Optional[Entity]) -> RoleBindings:
     )
 
 
-def _locate_cwd(cwd: Optional[str], project: Optional[Entity]) -> Path:
+def _locate_cwd(cwd: str | None, project: Entity | None) -> Path:
     project_path = _read_value(project, "PATH")
     if cwd is not None:
         directory = Path(cwd).absolute()
@@ -115,7 +114,7 @@ def _locate_cwd(cwd: Optional[str], project: Optional[Entity]) -> Path:
     return directory
 
 
-def _read_brief(brief: Optional[str]) -> tuple[Optional[Path], Optional[str]]:
+def _read_brief(brief: str | None) -> tuple[Path | None, str | None]:
     if brief is None:
         return None, None
     path = Path(brief).absolute()
@@ -131,7 +130,7 @@ def _read_argument(argument: str) -> tuple[str, str]:
     return key, value
 
 
-def _choose_run_id(run_id: Optional[str], runtime) -> str:
+def _choose_run_id(run_id: str | None, runtime) -> str:
     if run_id is None:
         return create_run_id(runtime.now)
     if not RUN_ID_PATTERN.fullmatch(run_id):

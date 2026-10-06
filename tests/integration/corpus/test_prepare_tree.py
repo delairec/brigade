@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 import unittest
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.corpus.prepare_tree import Tree, TreeRequest, prepare_tree
@@ -11,16 +11,21 @@ from brigade.errors import BrigadeError, CannotWrite
 from brigade.system.run_process import run_process
 
 IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
-FIRST_READ = datetime(2026, 10, 6, 9, 0, tzinfo=timezone.utc)
-SECOND_READ = datetime(2026, 10, 6, 10, 0, tzinfo=timezone.utc)
-THIRD_READ = datetime(2026, 10, 6, 11, 0, tzinfo=timezone.utc)
-FOURTH_READ = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+FIRST_READ = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
+SECOND_READ = datetime(2026, 10, 6, 10, 0, tzinfo=UTC)
+THIRD_READ = datetime(2026, 10, 6, 11, 0, tzinfo=UTC)
+FOURTH_READ = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 ROOMY_BOUND_BYTES = 1024 * 1024 * 1024
 A_DIRECTORY_OF_ANOTHER_OWNER = Path("/")
 
 
 def run_git(repository: Path, *arguments: str) -> str:
-    completed = subprocess.run(["git", "-C", str(repository), *arguments], capture_output=True, text=True, check=True)
+    completed = subprocess.run(  # noqa: S603 - the test's own command line
+        ["git", "-C", str(repository), *arguments],  # noqa: S607 - git found on the PATH of the test
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     return completed.stdout
 
 
@@ -160,7 +165,9 @@ class PrepareTreeOfAWorktree(PrepareTreeTestCase):
         self.assertEqual(
             (tree, (tree.root / "corpus" / "tasks.awawa").read_text()),
             (
-                Tree(project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree),
+                Tree(
+                    project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree
+                ),
                 "edited on feature, not committed\n",
             ),
         )
@@ -174,9 +181,7 @@ class PrepareTreeOfAWorktree(PrepareTreeTestCase):
         tree = prepare_tree(run_process, self.create_request(worktree=detached_tree))
 
         # Assert
-        self.assertEqual(
-            tree, Tree(project="app", ref=None, sha=self.feature_sha, kind="worktree", root=detached_tree)
-        )
+        self.assertEqual(tree, Tree(project="app", ref=None, sha=self.feature_sha, kind="worktree", root=detached_tree))
 
     def test_should_refuse_a_branch_no_worktree_holds_naming_it(self):
         # Arrange

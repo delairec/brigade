@@ -1,6 +1,6 @@
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from brigade.corpus.read_entity import Entity, EntityField, read_entity
 from brigade.system.run_process import ProcessRecord, ProcessRequest

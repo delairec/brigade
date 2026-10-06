@@ -1,7 +1,7 @@
 import argparse
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.commands.adapter_matrix import adapter_matrix
@@ -33,7 +33,7 @@ class AdapterMatrixWhenAProbeTimesOut(unittest.TestCase):
                 home=root,
                 executable_search_path=str(search_directory),
             ),
-            now=datetime(2026, 10, 6, 9, 0, tzinfo=timezone.utc),
+            now=datetime(2026, 10, 6, 9, 0, tzinfo=UTC),
             entry_point=Path("/srv/brigade/bin/brigade"),
         )
 

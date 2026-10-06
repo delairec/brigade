@@ -1,0 +1,11 @@
+target-version = "py311"
+line-length = 120
+
+[per-file-target-version]
+# py37, the oldest target ruff accepts: these two modules run before the floor check, so they must parse under the
+# interpreters they refuse; the floor job of ci.yml proves the refusal on Python 3.10.
+"brigade/launcher.py" = "py37"
+"brigade/python_floor.py" = "py37"
+
+[lint]
+extend-select = ["S", "B", "UP", "C901"]

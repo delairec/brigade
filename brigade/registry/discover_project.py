@@ -1,7 +1,7 @@
 import posixpath
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade.errors import BrigadeError
 from brigade.git.list_tracked_files import list_tracked_files
@@ -17,13 +17,13 @@ REPOSITORY_ROOT = "."
 @dataclass(frozen=True)
 class ProjectDiscovery:
     path: Path
-    remote: Optional[str]
+    remote: str | None
     main: str
-    corpus: Optional[str]
+    corpus: str | None
     forge: str
 
 
-def _locate_corpus(files: tuple[str, ...]) -> Optional[str]:
+def _locate_corpus(files: tuple[str, ...]) -> str | None:
     if not files:
         return None
     return posixpath.commonpath([posixpath.dirname(file) for file in files]) or REPOSITORY_ROOT

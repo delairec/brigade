@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.corpus.read_entity_package import read_entity_package
@@ -29,10 +29,10 @@ AGENT_FIELDS = (
 
 @dataclass(frozen=True)
 class RoleBindings:
-    project: Optional[str]
+    project: str | None
     roles: dict
-    roleset: Optional[str]
-    project_path: Optional[Path]
+    roleset: str | None
+    project_path: Path | None
 
 
 NO_PROJECT_BINDINGS = RoleBindings(project=None, roles={}, roleset=None, project_path=None)
@@ -41,8 +41,8 @@ NO_PROJECT_BINDINGS = RoleBindings(project=None, roles={}, roleset=None, project
 @dataclass(frozen=True)
 class RoleSource:
     label: str
-    find_by_slot: Callable[[str], Optional[RoleFile]]
-    find_by_name: Callable[[str], Optional[RoleFile]]
+    find_by_slot: Callable[[str], RoleFile | None]
+    find_by_name: Callable[[str], RoleFile | None]
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ def _read_role_files(paths: tuple[Path, ...]) -> list[tuple[Path, RoleFile]]:
     return [(path, _read_role_file(path)) for path in paths]
 
 
-def _find_declaring(role_files: list[tuple[Path, RoleFile]], slot: str) -> Optional[RoleFile]:
+def _find_declaring(role_files: list[tuple[Path, RoleFile]], slot: str) -> RoleFile | None:
     declaring = [(path, role_file) for path, role_file in role_files if role_file.front_matter["slot"] == slot]
     if len(declaring) > 1:
         raise BrigadeError(f"slot {slot} is declared by both {declaring[0][0]} and {declaring[1][0]}")
@@ -84,7 +84,7 @@ def _find_declaring(role_files: list[tuple[Path, RoleFile]], slot: str) -> Optio
     return declaring[0][1]
 
 
-def _find_named(role_files: list[tuple[Path, RoleFile]], name: str) -> Optional[RoleFile]:
+def _find_named(role_files: list[tuple[Path, RoleFile]], name: str) -> RoleFile | None:
     return next((role_file for _, role_file in role_files if role_file.front_matter["name"] == name), None)
 
 
@@ -126,7 +126,7 @@ def _read_agent(name: str, slot: str, root: Path, runtime) -> RoleFile:
     return RoleFile(front_matter=front_matter, body=body)
 
 
-def _find_bound_agent(lookup: AgentLookup, slot: str) -> Optional[RoleFile]:
+def _find_bound_agent(lookup: AgentLookup, slot: str) -> RoleFile | None:
     configuration = read_optional_configuration(lookup.configuration_path)
     if slot not in configuration.slots:
         return None
@@ -138,7 +138,7 @@ def _find_bound_agent(lookup: AgentLookup, slot: str) -> Optional[RoleFile]:
     return _read_agent(name, slot, Path(configuration.instructions), lookup.runtime)
 
 
-def _find_named_agent(lookup: AgentLookup, slot: str, name: str) -> Optional[RoleFile]:
+def _find_named_agent(lookup: AgentLookup, slot: str, name: str) -> RoleFile | None:
     configuration = read_optional_configuration(lookup.configuration_path)
     if configuration.instructions is None:
         return None

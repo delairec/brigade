@@ -1,5 +1,5 @@
 from collections import Counter
-from typing import Iterable
+from collections.abc import Iterable
 
 
 def count_by_name(names: Iterable) -> dict:

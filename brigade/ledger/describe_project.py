@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from brigade.ledger.count_by_name import count_by_name
 from brigade.ledger.format_instant import format_instant
@@ -15,7 +14,7 @@ COUNTED_EVENTS = {
 ORDER_DONE = "order.done"
 
 
-def describe_project(reading: LedgerReading, project: str, since: Optional[datetime]) -> dict:
+def describe_project(reading: LedgerReading, project: str, since: datetime | None) -> dict:
     records = [
         entry.record
         for entry in reading.entries
