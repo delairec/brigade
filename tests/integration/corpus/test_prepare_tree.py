@@ -74,7 +74,7 @@ class PrepareTreeTestCase(unittest.TestCase):
         return replace(request, **changes)
 
 
-class PrepareTreeAtABranchOrASha(PrepareTreeTestCase):
+class PrepareTreeAtABranchOrAShaTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.commit("src/app.py", "print('app')\n")
@@ -130,7 +130,7 @@ class PrepareTreeAtABranchOrASha(PrepareTreeTestCase):
         self.assertEqual(str(raised.exception), "the ref nowhere is not a commit of @PROJECT.app")
 
 
-class PrepareTreeOfACommitHoldingALinkInsideItsTree(PrepareTreeTestCase):
+class PrepareTreeOfACommitHoldingALinkInsideItsTreeTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.commit("src/app.py", "print('app')\n")
@@ -145,7 +145,7 @@ class PrepareTreeOfACommitHoldingALinkInsideItsTree(PrepareTreeTestCase):
 
 
 @unittest.skipUnless(hasattr(tarfile, "data_filter"), "tarfile has no data filter before Python 3.11.4")
-class PrepareTreeOfACommitHoldingALinkOutsideItsTree(PrepareTreeTestCase):
+class PrepareTreeOfACommitHoldingALinkOutsideItsTreeTest(PrepareTreeTestCase):
     def test_should_refuse_the_link_naming_the_project_and_the_member(self):
         for target in ["../../../.ssh/id_ed25519", "/home/someone/.ssh/id_ed25519"]:
             with self.subTest(target=target):
@@ -174,7 +174,7 @@ class PrepareTreeOfACommitHoldingALinkOutsideItsTree(PrepareTreeTestCase):
         self.assertEqual(os.listdir(self.cache / "app"), [])
 
 
-class PrepareTreeWhenAnotherExtractionWinsTheRace(PrepareTreeTestCase):
+class PrepareTreeWhenAnotherExtractionWinsTheRaceTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.sha = self.commit("corpus/tasks.awawa", "committed\n")
@@ -198,7 +198,7 @@ class PrepareTreeWhenAnotherExtractionWinsTheRace(PrepareTreeTestCase):
         )
 
 
-class PrepareTreeOfAWorktree(PrepareTreeTestCase):
+class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.commit("corpus/tasks.awawa", "committed on main\n")
@@ -261,7 +261,7 @@ class PrepareTreeOfAWorktree(PrepareTreeTestCase):
         self.assertEqual(str(raised.exception), f"no worktree of @PROJECT.app is at {elsewhere}")
 
 
-class PrepareTreeOverTheCacheBound(PrepareTreeTestCase):
+class PrepareTreeOverTheCacheBoundTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.sha_a = self.commit("tasks.awawa", "a" * 1000)
@@ -293,7 +293,7 @@ class PrepareTreeOverTheCacheBound(PrepareTreeTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class PrepareTreeWhereTheMachineRefusesAWrite(PrepareTreeTestCase):
+class PrepareTreeWhereTheMachineRefusesAWriteTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.sha = self.commit("corpus/tasks.awawa", "committed\n")
@@ -345,7 +345,7 @@ class PrepareTreeWhereTheMachineRefusesAWrite(PrepareTreeTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class PrepareTreeWhereTheMachineRefusesThePruning(PrepareTreeTestCase):
+class PrepareTreeWhereTheMachineRefusesThePruningTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.commit("corpus/tasks.awawa", "committed\n")
@@ -398,7 +398,7 @@ class PrepareTreeWhereTheMachineRefusesThePruning(PrepareTreeTestCase):
         )
 
 
-class PrepareTreeOverAnEntryOfTheCacheItCannotUse(PrepareTreeTestCase):
+class PrepareTreeOverAnEntryOfTheCacheItCannotUseTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.sha = self.commit("corpus/tasks.awawa", "committed\n")

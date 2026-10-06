@@ -137,7 +137,7 @@ class LedgerTestCase(unittest.TestCase):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "ledger", *arguments)
 
 
-class BrigadeLedgerOverview(LedgerTestCase):
+class BrigadeLedgerOverviewTest(LedgerTestCase):
     def setUp(self):
         super().setUp()
         self.september = self.write_ledger("2026-09", WAVE_SEPTEMBER_LINES)
@@ -203,7 +203,7 @@ class BrigadeLedgerOverview(LedgerTestCase):
         )
 
 
-class BrigadeLedgerOverviewWithNoLedger(LedgerTestCase):
+class BrigadeLedgerOverviewWithNoLedgerTest(LedgerTestCase):
     def test_should_report_zero_events_and_exit_0(self):
         # Act
         completed = self.run_ledger("--json")
@@ -235,7 +235,7 @@ class BrigadeLedgerOverviewWithNoLedger(LedgerTestCase):
         )
 
 
-class BrigadeLedgerWave(LedgerTestCase):
+class BrigadeLedgerWaveTest(LedgerTestCase):
     def setUp(self):
         super().setUp()
         self.write_ledger("2026-09", WAVE_SEPTEMBER_LINES)
@@ -303,7 +303,7 @@ class BrigadeLedgerWave(LedgerTestCase):
         )
 
 
-class BrigadeLedgerWaveStillPaused(LedgerTestCase):
+class BrigadeLedgerWaveStillPausedTest(LedgerTestCase):
     def test_should_leave_the_open_pause_out_of_the_total(self):
         # Arrange
         self.write_ledger("2026-09", WAVE_SEPTEMBER_LINES)
@@ -345,7 +345,7 @@ class BrigadeLedgerWaveStillPaused(LedgerTestCase):
         )
 
 
-class BrigadeLedgerWaveWithARepeatedPause(LedgerTestCase):
+class BrigadeLedgerWaveWithARepeatedPauseTest(LedgerTestCase):
     def setUp(self):
         super().setUp()
         self.write_ledger("2026-10", REPEATED_PAUSE_LINES)
@@ -386,7 +386,7 @@ class BrigadeLedgerWaveWithARepeatedPause(LedgerTestCase):
         )
 
 
-class BrigadeLedgerWaveUnknown(LedgerTestCase):
+class BrigadeLedgerWaveUnknownTest(LedgerTestCase):
     def test_should_exit_1_naming_the_wave(self):
         # Arrange
         self.write_ledger("2026-09", WAVE_SEPTEMBER_LINES)
@@ -401,7 +401,7 @@ class BrigadeLedgerWaveUnknown(LedgerTestCase):
         )
 
 
-class BrigadeLedgerProject(LedgerTestCase):
+class BrigadeLedgerProjectTest(LedgerTestCase):
     def setUp(self):
         super().setUp()
         self.write_ledger("2026-09", PROJECT_SEPTEMBER_LINES)
@@ -458,7 +458,7 @@ class BrigadeLedgerProject(LedgerTestCase):
         )
 
 
-class BrigadeLedgerProjectWithNoEvent(LedgerTestCase):
+class BrigadeLedgerProjectWithNoEventTest(LedgerTestCase):
     def test_should_print_zero_counts_as_text(self):
         # Act
         completed = self.run_ledger("--project", "tidepool")
@@ -481,7 +481,7 @@ class BrigadeLedgerProjectWithNoEvent(LedgerTestCase):
         )
 
 
-class BrigadeLedgerProjectSinceADayCount(LedgerTestCase):
+class BrigadeLedgerProjectSinceADayCountTest(LedgerTestCase):
     def test_should_count_the_days_back_from_now(self):
         rows = [("1d", 0), ("36500d", 1)]
         for since, expected_waves_started in rows:
@@ -497,7 +497,7 @@ class BrigadeLedgerProjectSinceADayCount(LedgerTestCase):
                 self.assertEqual(json.loads(completed.stdout)["waves_started"], expected_waves_started)
 
 
-class BrigadeLedgerBudgets(LedgerTestCase):
+class BrigadeLedgerBudgetsTest(LedgerTestCase):
     def setUp(self):
         super().setUp()
         self.write_ledger("2026-10", BUDGET_LINES)
@@ -547,7 +547,7 @@ class BrigadeLedgerBudgets(LedgerTestCase):
         )
 
 
-class BrigadeLedgerBudgetsWithNoMeasuredRun(LedgerTestCase):
+class BrigadeLedgerBudgetsWithNoMeasuredRunTest(LedgerTestCase):
     def test_should_print_no_percentile_for_a_procedure_whose_runs_report_no_steps(self):
         # Arrange
         self.write_ledger("2026-10", UNMEASURED_RUN_LINES)
@@ -575,7 +575,7 @@ class BrigadeLedgerBudgetsWithNoMeasuredRun(LedgerTestCase):
         )
 
 
-class BrigadeLedgerCompare(LedgerTestCase):
+class BrigadeLedgerCompareTest(LedgerTestCase):
     def setUp(self):
         super().setUp()
         self.write_ledger("2026-10", COMPARISON_LINES)
@@ -642,7 +642,7 @@ class BrigadeLedgerCompare(LedgerTestCase):
                 self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_message))
 
 
-class BrigadeLedgerUsage(LedgerTestCase):
+class BrigadeLedgerUsageTest(LedgerTestCase):
     def test_should_refuse_an_option_out_of_its_place_with_exit_2(self):
         rows = [
             (("--since", "7d"), "--since needs --project"),

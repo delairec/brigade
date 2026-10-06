@@ -41,7 +41,7 @@ def create_rounds(snapshots: list, planner: PlannerBySnapshot, executor: Recordi
     return Rounds(build_snapshot=SnapshotBuilder(snapshots).build, plan=planner.plan, apply=executor.apply, cap=cap)
 
 
-class RunRounds(unittest.TestCase):
+class RunRoundsTest(unittest.TestCase):
     def test_should_stop_at_a_first_empty_plan_having_applied_nothing(self):
         # Arrange
         executor = RecordingExecutor()

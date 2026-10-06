@@ -24,7 +24,7 @@ POLICY = "POLICY alpha_policy\n\tPROJECT @PROJECT.alpha\n"
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
-class ReadEntities(unittest.TestCase):
+class ReadEntitiesTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)

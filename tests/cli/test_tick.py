@@ -49,7 +49,7 @@ class TickTestCase(unittest.TestCase):
         return loop.stderr.readline()
 
 
-class BrigadeTickOnce(TickTestCase):
+class BrigadeTickOnceTest(TickTestCase):
     def test_should_write_the_heartbeat_of_a_tick_that_applied_no_action(self):
         # Act
         completed = self.run_tick("--once")
@@ -99,7 +99,7 @@ class BrigadeTickOnce(TickTestCase):
         )
 
 
-class BrigadeTickOnceWhileAnotherTickHoldsTheLock(TickTestCase):
+class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
     def test_should_exit_0_with_one_stderr_line_and_write_nothing(self):
         # Arrange
         self.hold_tick_lock()
@@ -115,7 +115,7 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLock(TickTestCase):
         self.assertFalse(self.heartbeat.exists())
 
 
-class BrigadeTickDryRun(TickTestCase):
+class BrigadeTickDryRunTest(TickTestCase):
     def test_should_print_the_snapshot_and_the_empty_plan_in_the_versioned_document(self):
         # Act
         completed = self.run_tick("--dry-run", "--json")
@@ -164,7 +164,7 @@ class BrigadeTickDryRun(TickTestCase):
         self.assertEqual(report_lines, ["snapshot", report_lines[1], "plan", "  no action"])
 
 
-class BrigadeTickLoop(TickTestCase):
+class BrigadeTickLoopTest(TickTestCase):
     def test_should_tick_at_once_and_exit_0_on_a_signal(self):
         rows = [("SIGTERM", signal.SIGTERM), ("SIGINT", signal.SIGINT)]
         for name, stop_signal in rows:
@@ -209,7 +209,7 @@ class BrigadeTickLoop(TickTestCase):
         self.assertEqual((loop.returncode, stdout), (0, "tick --loop: 1 ticks attempted\n"), stderr)
 
 
-class BrigadeTickLoopWhileAnotherTickHoldsTheLock(TickTestCase):
+class BrigadeTickLoopWhileAnotherTickHoldsTheLockTest(TickTestCase):
     def test_should_stand_down_on_stderr_and_exit_0_on_a_signal(self):
         # Arrange
         self.hold_tick_lock()
@@ -232,7 +232,7 @@ class BrigadeTickLoopWhileAnotherTickHoldsTheLock(TickTestCase):
         self.assertFalse(self.heartbeat.exists())
 
 
-class BrigadeTickWithoutAMode(TickTestCase):
+class BrigadeTickWithoutAModeTest(TickTestCase):
     def test_should_refuse_with_its_usage(self):
         # Act
         completed = self.run_tick()
@@ -243,7 +243,7 @@ class BrigadeTickWithoutAMode(TickTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectory(TickTestCase):
+class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectoryTest(TickTestCase):
     def setUp(self):
         super().setUp()
         self.machine.state_home.mkdir()
@@ -267,7 +267,7 @@ class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectory(TickTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectory(TickTestCase):
+class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTestCase):
     def setUp(self):
         super().setUp()
         self.lock.parent.mkdir(parents=True)
@@ -309,7 +309,7 @@ class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectory(TickTestCas
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickLoopWhereTheMachineRefusesTheWrite(TickTestCase):
+class BrigadeTickLoopWhereTheMachineRefusesTheWriteTest(TickTestCase):
     def setUp(self):
         super().setUp()
         self.machine.state_home.mkdir()

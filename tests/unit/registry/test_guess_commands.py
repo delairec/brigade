@@ -18,7 +18,7 @@ def create_files(root: Path, files: dict) -> None:
         file.write_text(content)
 
 
-class GuessCommands(unittest.TestCase):
+class GuessCommandsTest(unittest.TestCase):
     def test_should_guess_the_commands_of_a_package_json(self):
         rows = [
             (

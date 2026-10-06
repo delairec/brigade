@@ -1185,3 +1185,22 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	SOURCE "the user's rulings of 2026-10-06 on the CI tooling proposals: \"tout ce que tu as mis"
 		+ "en oui\", then \"tout ce qui est utile est bon à prendre\""
+
+DECISION TestClassNamesCarryTheSuffixTestThatVultureReads
+	TITLE "every unittest.TestCase class of tests/ is named after the behaviour it pins, then the"
+		+ "suffix Test, the name vulture reads to spare a test class"
+	STATUS active
+	DESC "a test class is named after the behaviour it pins, then Test: BrigadeVersionTest,"
+		+ "PrepareTreeOfAWorktreeTest"
+	DESC "vulture spares a class of a test file only when its name contains Test; the vulture job"
+		+ "of B65 fails on a test class named otherwise"
+		REF @TASK.B65
+	REJECTED "a whitelist entry or --ignore-names per test class: a list kept by hand beside every"
+		+ "new test, and the gate widened; the whitelist holds only names the plugin resolver"
+		+ "reaches"
+	REJECTED "# noqa: V103 on each class line: one exemption per test class instead of a name the"
+		+ "tool reads"
+	REJECTED "the prefix Test, TestBrigadeVersion: the behaviour stays first in the name, as the"
+		+ "test titles read"
+	SOURCE "the user's ruling of 2026-10-06, \"ok\", on the suffix Test proposed for the test"
+		+ "classes vulture reported in pull request #42 of the brigade repository"

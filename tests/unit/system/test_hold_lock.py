@@ -17,7 +17,7 @@ def try_lock(path: Path) -> bool:
         return True
 
 
-class HoldLock(unittest.TestCase):
+class HoldLockTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.lock_path = Path(self.root.name) / "locks" / "corpus.lock"
@@ -65,7 +65,7 @@ class HoldLock(unittest.TestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class HoldLockWhereTheMachineRefusesTheWrite(unittest.TestCase):
+class HoldLockWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)

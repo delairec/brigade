@@ -39,7 +39,7 @@ class ProjectTestCase(unittest.TestCase):
         return self.machine.read_git("rev-list", "--count", "HEAD")
 
 
-class BrigadeProjectAddOnAGitHubRepository(ProjectTestCase):
+class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.project = self.create_project("my-app.v2")
@@ -195,7 +195,7 @@ class BrigadeProjectAddOnAGitHubRepository(ProjectTestCase):
         )
 
 
-class BrigadeProjectAddOnALocalRepository(ProjectTestCase):
+class BrigadeProjectAddOnALocalRepositoryTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.project = self.create_project("notes")
@@ -258,7 +258,7 @@ class BrigadeProjectAddOnALocalRepository(ProjectTestCase):
         )
 
 
-class BrigadeProjectAddWhenThePathIsNotARepository(ProjectTestCase):
+class BrigadeProjectAddWhenThePathIsNotARepositoryTest(ProjectTestCase):
     def test_should_exit_1_naming_the_path_and_write_nothing(self):
         # Arrange
         plain_directory = self.projects / "plain"
@@ -274,7 +274,7 @@ class BrigadeProjectAddWhenThePathIsNotARepository(ProjectTestCase):
         )
 
 
-class BrigadeProjectAddWhenNoMainBranchCanBeTold(ProjectTestCase):
+class BrigadeProjectAddWhenNoMainBranchCanBeToldTest(ProjectTestCase):
     def test_should_exit_1_naming_the_path_and_write_nothing(self):
         # Arrange
         project = self.create_project("detached")
@@ -301,7 +301,7 @@ class BrigadeProjectAddWhenNoMainBranchCanBeTold(ProjectTestCase):
         )
 
 
-class BrigadeProjectAddWithANameThatIsNotAnIdentifier(ProjectTestCase):
+class BrigadeProjectAddWithANameThatIsNotAnIdentifierTest(ProjectTestCase):
     def test_should_exit_2_and_write_nothing(self):
         # Arrange
         project = self.create_project("app")
@@ -321,7 +321,7 @@ class BrigadeProjectAddWithANameThatIsNotAnIdentifier(ProjectTestCase):
         )
 
 
-class BrigadeProjectAddWhenAlreadyRegistered(ProjectTestCase):
+class BrigadeProjectAddWhenAlreadyRegisteredTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.project = self.create_project("app")
@@ -375,7 +375,7 @@ class BrigadeProjectAddWhenAlreadyRegistered(ProjectTestCase):
         )
 
 
-class BrigadeProjectAddWhenTheCorpusFailsItsLint(ProjectTestCase):
+class BrigadeProjectAddWhenTheCorpusFailsItsLintTest(ProjectTestCase):
     def test_should_restore_the_corpus_and_exit_1(self):
         # Arrange
         (self.machine.corpus / "broken.awawa").write_text(INVALID_ENTITY)
@@ -400,7 +400,7 @@ class BrigadeProjectAddWhenTheCorpusFailsItsLint(ProjectTestCase):
         )
 
 
-class BrigadeProjectList(ProjectTestCase):
+class BrigadeProjectListTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.beta = self.create_project("beta")
@@ -454,7 +454,7 @@ class BrigadeProjectList(ProjectTestCase):
         self.assertEqual((completed.returncode, completed.stdout), (0, "no project registered\n"))
 
 
-class BrigadeProjectShow(ProjectTestCase):
+class BrigadeProjectShowTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.project = self.create_project("app")
@@ -512,7 +512,7 @@ class BrigadeProjectShow(ProjectTestCase):
         )
 
 
-class BrigadeProjectPauseAndResume(ProjectTestCase):
+class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.project = self.create_project("app")
@@ -581,7 +581,7 @@ class BrigadeProjectPauseAndResume(ProjectTestCase):
                 )
 
 
-class BrigadeProjectWhileTheCorpusIsLocked(ProjectTestCase):
+class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
     def test_should_wait_for_the_lock_of_the_corpus_repository(self):
         # Arrange
         project = self.create_project("app")
@@ -613,7 +613,7 @@ class BrigadeProjectWhileTheCorpusIsLocked(ProjectTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeProjectWhereTheMachineRefusesTheWrite(ProjectTestCase):
+class BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.machine.state_home.mkdir()
@@ -666,7 +666,7 @@ class BrigadeProjectWhereTheMachineRefusesTheWrite(ProjectTestCase):
         )
 
 
-class BrigadeProjectBeforeInit(unittest.TestCase):
+class BrigadeProjectBeforeInitTest(unittest.TestCase):
     def test_should_exit_1_naming_brigade_init(self):
         rows = [
             ("add", ("add", "/srv/app")),

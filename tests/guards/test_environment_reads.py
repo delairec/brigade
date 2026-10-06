@@ -7,7 +7,7 @@ from tests.guards.find_environment_reads import find_environment_reads
 PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "brigade"
 
 
-class EnvironmentReadsOfThePackage(unittest.TestCase):
+class EnvironmentReadsOfThePackageTest(unittest.TestCase):
     def test_should_find_no_read_of_the_environment_outside_the_paths_and_the_process_runner(self):
         # Act
         violations = find_environment_reads(PACKAGE_ROOT)
@@ -16,7 +16,7 @@ class EnvironmentReadsOfThePackage(unittest.TestCase):
         self.assertEqual(violations, [])
 
 
-class EnvironmentReadsGuard(unittest.TestCase):
+class EnvironmentReadsGuardTest(unittest.TestCase):
     def test_should_flag_each_way_of_reading_the_environment(self):
         rows = [
             ("import os\nhome = os.environ['HOME']\n", "brigade/commands/doctor.py:2 reads os.environ"),

@@ -8,7 +8,7 @@ from brigade.errors import BrigadeError
 from brigade.system.write_json_atomically import write_json_atomically
 
 
-class WriteJsonAtomically(unittest.TestCase):
+class WriteJsonAtomicallyTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.state = Path(self.root.name) / "state"
@@ -57,7 +57,7 @@ class WriteJsonAtomically(unittest.TestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class WriteJsonAtomicallyWhereTheMachineRefusesTheWrite(unittest.TestCase):
+class WriteJsonAtomicallyWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)

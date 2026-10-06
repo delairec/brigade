@@ -60,7 +60,7 @@ class DoctorTestCase(unittest.TestCase):
         )
 
 
-class BrigadeDoctorOnAMachineWithEveryItem(DoctorTestCase):
+class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
     def setUp(self):
         super().setUp()
         self.instructions = self.config_home.name
@@ -174,7 +174,7 @@ class BrigadeDoctorOnAMachineWithEveryItem(DoctorTestCase):
         )
 
 
-class BrigadeDoctorWhenAPrerequisiteFails(DoctorTestCase):
+class BrigadeDoctorWhenAPrerequisiteFailsTest(DoctorTestCase):
     def test_should_report_the_finding_and_exit_1(self):
         rows = [
             (
@@ -219,7 +219,7 @@ class BrigadeDoctorWhenAPrerequisiteFails(DoctorTestCase):
                 self.assertEqual(json.loads(completed.stdout)["items"][entry], expected_entry)
 
 
-class BrigadeDoctorWhenAToolFails(DoctorTestCase):
+class BrigadeDoctorWhenAToolFailsTest(DoctorTestCase):
     def test_should_name_the_failed_command_on_stderr_and_exit_1(self):
         # Arrange
         self.write_configuration(CLAUDE_CODE_CONFIGURATION)
@@ -237,7 +237,7 @@ class BrigadeDoctorWhenAToolFails(DoctorTestCase):
         )
 
 
-class BrigadeDoctorWhenAnOptionalItemIsMissing(DoctorTestCase):
+class BrigadeDoctorWhenAnOptionalItemIsMissingTest(DoctorTestCase):
     def test_should_report_a_warning_with_its_fallback_and_exit_0(self):
         rows = [
             (
@@ -324,7 +324,7 @@ class BrigadeDoctorWhenAnOptionalItemIsMissing(DoctorTestCase):
                 self.assertEqual(json.loads(completed.stdout)["items"][entry], expected_entry)
 
 
-class BrigadeDoctorAsTextWithAFindingAndAWarning(DoctorTestCase):
+class BrigadeDoctorAsTextWithAFindingAndAWarningTest(DoctorTestCase):
     def test_should_name_the_fallback_and_count_what_failed(self):
         # Arrange
         self.write_configuration(CLAUDE_CODE_CONFIGURATION)
@@ -352,7 +352,7 @@ class BrigadeDoctorAsTextWithAFindingAndAWarning(DoctorTestCase):
         )
 
 
-class BrigadeDoctorChecksTheClientAdapter(DoctorTestCase):
+class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
     def test_should_report_a_finding_naming_brigade_init_when_no_configuration_exists(self):
         # Act
         completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
@@ -490,7 +490,7 @@ AGENT_LACKING_ITS_REASONING = 'AGENT planner\n\tWORK "the plan of a wave"\n'
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
-class BrigadeDoctorReportsTheInstructionsCorpus(DoctorTestCase):
+class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
     def setUp(self):
         super().setUp()
         self.instructions = Path(self.config_home.name) / "instructions"

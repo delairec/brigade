@@ -3,7 +3,7 @@ import unittest
 from brigade.registry.describe_remote import RemoteDescription, describe_remote
 
 
-class DescribeRemote(unittest.TestCase):
+class DescribeRemoteTest(unittest.TestCase):
     def test_should_name_the_owner_and_the_repository_and_tell_the_forge(self):
         rows = [
             ("https://github.com/acme/app.git", RemoteDescription(remote="acme/app", forge="github")),

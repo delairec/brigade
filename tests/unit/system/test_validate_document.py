@@ -12,7 +12,7 @@ SHAPE = {
 }
 
 
-class ValidateDocumentWhenTheDocumentFitsItsShape(unittest.TestCase):
+class ValidateDocumentWhenTheDocumentFitsItsShapeTest(unittest.TestCase):
     def test_should_accept_it(self):
         # Arrange
         document = {
@@ -32,7 +32,7 @@ class ValidateDocumentWhenTheDocumentFitsItsShape(unittest.TestCase):
         self.assertIsNone(verdict)
 
 
-class ValidateDocumentWhenTheDocumentDepartsFromItsShape(unittest.TestCase):
+class ValidateDocumentWhenTheDocumentDepartsFromItsShapeTest(unittest.TestCase):
     def test_should_name_the_key_and_what_is_wrong_with_it(self):
         rows = [
             (

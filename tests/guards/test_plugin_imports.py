@@ -7,7 +7,7 @@ from tests.guards.find_plugin_imports import find_plugin_imports
 PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "brigade"
 
 
-class PluginImportsOfThePackage(unittest.TestCase):
+class PluginImportsOfThePackageTest(unittest.TestCase):
     def test_should_find_no_static_import_of_a_plugin_package_from_outside_it(self):
         # Act
         violations = find_plugin_imports(PACKAGE_ROOT)
@@ -16,7 +16,7 @@ class PluginImportsOfThePackage(unittest.TestCase):
         self.assertEqual(violations, [])
 
 
-class PluginImportsGuard(unittest.TestCase):
+class PluginImportsGuardTest(unittest.TestCase):
     def test_should_flag_a_static_import_of_a_plugin_package_from_outside_it(self):
         rows = [
             (

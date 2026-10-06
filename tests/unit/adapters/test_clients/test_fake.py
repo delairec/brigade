@@ -20,7 +20,7 @@ LAUNCH_REQUEST = {
 }
 
 
-class FakeProbe(unittest.TestCase):
+class FakeProbeTest(unittest.TestCase):
     def test_should_declare_the_operations_it_replays(self):
         # Act
         probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": {}, "home": "/home/ada"})
@@ -39,7 +39,7 @@ class FakeProbe(unittest.TestCase):
         )
 
 
-class FakeLaunch(unittest.TestCase):
+class FakeLaunchTest(unittest.TestCase):
     def test_should_print_the_recording_named_after_the_role(self):
         # Act
         launch = answer("launch-argv", LAUNCH_REQUEST)
@@ -69,7 +69,7 @@ class FakeLaunch(unittest.TestCase):
         )
 
 
-class FakeProbeOfDeclaredFeatures(unittest.TestCase):
+class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
     def test_should_declare_the_features_its_settings_name(self):
         # Arrange
         settings = {"features": "step_count,tool_grants"}
@@ -81,7 +81,7 @@ class FakeProbeOfDeclaredFeatures(unittest.TestCase):
         self.assertEqual(probe["features"], ["step_count", "tool_grants"])
 
 
-class FakeLaunchOfASlowClientWritingProgress(unittest.TestCase):
+class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
     def test_should_wait_append_the_progress_line_then_print_the_recording(self):
         # Arrange
         request = {
@@ -112,7 +112,7 @@ class FakeLaunchOfASlowClientWritingProgress(unittest.TestCase):
         )
 
 
-class FakeResult(unittest.TestCase):
+class FakeResultTest(unittest.TestCase):
     def test_should_answer_the_recorded_result_document_as_it_is(self):
         # Arrange
         recording = (
@@ -151,7 +151,7 @@ class FakeResult(unittest.TestCase):
         )
 
 
-class FakeUnsupportedOperations(unittest.TestCase):
+class FakeUnsupportedOperationsTest(unittest.TestCase):
     def test_should_refuse_the_operations_it_does_not_replay(self):
         rows = ["resume-argv", "transcripts"]
         for operation in rows:

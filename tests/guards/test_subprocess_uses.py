@@ -7,7 +7,7 @@ from tests.guards.find_subprocess_uses import find_subprocess_uses
 PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "brigade"
 
 
-class SubprocessUsesOfThePackage(unittest.TestCase):
+class SubprocessUsesOfThePackageTest(unittest.TestCase):
     def test_should_find_no_subprocess_import_outside_the_system_package_and_no_shell_anywhere(self):
         # Act
         violations = find_subprocess_uses(PACKAGE_ROOT)
@@ -16,7 +16,7 @@ class SubprocessUsesOfThePackage(unittest.TestCase):
         self.assertEqual(violations, [])
 
 
-class SubprocessUsesGuard(unittest.TestCase):
+class SubprocessUsesGuardTest(unittest.TestCase):
     def test_should_flag_a_subprocess_import_outside_the_system_package_and_a_shell_anywhere(self):
         rows = [
             ("brigade/commands/doctor.py", "import subprocess\n", "brigade/commands/doctor.py:1 imports subprocess"),

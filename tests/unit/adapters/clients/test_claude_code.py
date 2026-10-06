@@ -37,7 +37,7 @@ def parse_claude_output(stdout: str, stderr: str = "", exit_code: int = 0) -> di
     )
 
 
-class ClaudeCodeProbe(unittest.TestCase):
+class ClaudeCodeProbeTest(unittest.TestCase):
     def test_should_declare_every_operation_present(self):
         # Act
         probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": {}, "home": "/home/ada"})
@@ -70,7 +70,7 @@ class ClaudeCodeProbe(unittest.TestCase):
         )
 
 
-class ClaudeCodeLaunch(unittest.TestCase):
+class ClaudeCodeLaunchTest(unittest.TestCase):
     def test_should_translate_the_role_into_an_unattended_command_reading_the_brief(self):
         # Act
         launch = answer("launch-argv", LAUNCH_REQUEST)
@@ -162,7 +162,7 @@ class ClaudeCodeLaunch(unittest.TestCase):
                 self.assertEqual(launch["argv"][8:10], ["--max-turns", expected_max_turns])
 
 
-class ClaudeCodeResume(unittest.TestCase):
+class ClaudeCodeResumeTest(unittest.TestCase):
     def test_should_resume_the_session_by_its_id(self):
         # Arrange
         request = {**LAUNCH_REQUEST, "brief": "Carry on from the progress file.", "session_id": "ada28962"}
@@ -199,7 +199,7 @@ class ClaudeCodeResume(unittest.TestCase):
         )
 
 
-class ClaudeCodeResult(unittest.TestCase):
+class ClaudeCodeResultTest(unittest.TestCase):
     def test_should_normalise_a_successful_result(self):
         # Arrange
         stdout = (
@@ -375,7 +375,7 @@ class ClaudeCodeResult(unittest.TestCase):
         )
 
 
-class ClaudeCodeTranscripts(unittest.TestCase):
+class ClaudeCodeTranscriptsTest(unittest.TestCase):
     def setUp(self):
         self.home = tempfile.TemporaryDirectory()
 

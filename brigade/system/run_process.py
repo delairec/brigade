@@ -1,5 +1,4 @@
 import subprocess
-import time
 from dataclasses import dataclass
 
 from brigade.errors import ToolFailure, ToolNotFound
@@ -24,7 +23,6 @@ class ProcessRecord:
     exit_code: int
     stdout: str
     stderr: str
-    duration_ms: int
 
 
 def _describe_input(stdin: str | None) -> dict:
@@ -38,7 +36,6 @@ def _describe_command(argv: tuple[str, ...]) -> str:
 
 
 def run_process(request: ProcessRequest) -> ProcessRecord:
-    started = time.monotonic()
     try:
         # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
         # subprocess-injection: a Django rule whose taint source is any parameter named request, the S603 case
@@ -65,7 +62,6 @@ def run_process(request: ProcessRequest) -> ProcessRecord:
         exit_code=completed.returncode,
         stdout=completed.stdout,
         stderr=completed.stderr,
-        duration_ms=round((time.monotonic() - started) * 1000),
     )
     if record.exit_code not in request.acceptable_exit_codes:
         raise ToolFailure(f"{_describe_command(request.argv)} exited {record.exit_code}: {record.stderr.strip()}")

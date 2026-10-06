@@ -15,7 +15,7 @@ def _time_out(request: ProcessRequest):
     raise ToolFailure(f"{' '.join(request.argv)} timed out after 30 s")
 
 
-class AdapterMatrixWhenAProbeTimesOut(unittest.TestCase):
+class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name)

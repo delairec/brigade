@@ -41,7 +41,7 @@ class AppendEventTestCase(unittest.TestCase):
         self.root.cleanup()
 
 
-class AppendEventWhenTheEventIsDeclared(AppendEventTestCase):
+class AppendEventWhenTheEventIsDeclaredTest(AppendEventTestCase):
     def test_should_create_the_ledger_and_append_the_versioned_line_to_the_month_file(self):
         # Arrange
         event = LedgerEvent(
@@ -106,7 +106,7 @@ class AppendEventWhenTheEventIsDeclared(AppendEventTestCase):
         )
 
 
-class AppendEventWhenTheEventIsRefused(AppendEventTestCase):
+class AppendEventWhenTheEventIsRefusedTest(AppendEventTestCase):
     def test_should_refuse_it_by_name_and_write_nothing(self):
         rows = [
             (
@@ -156,7 +156,7 @@ class AppendEventWhenTheEventIsRefused(AppendEventTestCase):
                 self.assertEqual((str(refusal.exception), self.ledger.exists()), (expected_message, False))
 
 
-class AppendEventFromSeveralProcesses(AppendEventTestCase):
+class AppendEventFromSeveralProcessesTest(AppendEventTestCase):
     def test_should_leave_every_line_whole(self):
         # Arrange
         context = multiprocessing.get_context("fork")
@@ -177,7 +177,7 @@ class AppendEventFromSeveralProcesses(AppendEventTestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class AppendEventWhereTheMachineRefusesTheWrite(AppendEventTestCase):
+class AppendEventWhereTheMachineRefusesTheWriteTest(AppendEventTestCase):
     def setUp(self):
         super().setUp()
         (self.state_root / "locks").mkdir(parents=True)

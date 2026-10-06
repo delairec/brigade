@@ -7,7 +7,7 @@ from brigade.errors import CannotWrite
 from brigade.system.write_text_file import write_text_file
 
 
-class WriteTextFile(unittest.TestCase):
+class WriteTextFileTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
@@ -43,7 +43,7 @@ class WriteTextFile(unittest.TestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class WriteTextFileWhereTheMachineRefusesTheWrite(unittest.TestCase):
+class WriteTextFileWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)

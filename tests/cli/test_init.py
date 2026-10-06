@@ -9,13 +9,12 @@ from pathlib import Path
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 
-REPOSITORY_ENTRY = 0
 SCHEMA_ENTRY = 1
 GITIGNORE_ENTRY = 2
 CONFIGURATION_ENTRY = 3
 
 
-class BrigadeInitOnAFreshMachine(unittest.TestCase):
+class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
@@ -126,7 +125,7 @@ class BrigadeInitOnAFreshMachine(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
 
 
-class BrigadeInitWithoutXdgVariables(unittest.TestCase):
+class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
@@ -149,7 +148,7 @@ class BrigadeInitWithoutXdgVariables(unittest.TestCase):
         )
 
 
-class BrigadeInitRunTwice(unittest.TestCase):
+class BrigadeInitRunTwiceTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
@@ -183,7 +182,7 @@ class BrigadeInitRunTwice(unittest.TestCase):
         self.assertEqual(self.machine.read_git("rev-list", "--count", "HEAD"), "1\n")
 
 
-class BrigadeInitWhenAFileDiffersFromTheShippedOne(unittest.TestCase):
+class BrigadeInitWhenAFileDiffersFromTheShippedOneTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
@@ -239,7 +238,7 @@ class BrigadeInitWhenAFileDiffersFromTheShippedOne(unittest.TestCase):
         )
 
 
-class BrigadeInitWhenTheSchemaIsMissingFromAnExistingRepository(unittest.TestCase):
+class BrigadeInitWhenTheSchemaIsMissingFromAnExistingRepositoryTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
@@ -277,7 +276,7 @@ class BrigadeInitWhenTheSchemaIsMissingFromAnExistingRepository(unittest.TestCas
         self.assertEqual(self.machine.read_git("rev-list", "--count", "HEAD"), "1\n")
 
 
-class BrigadeInitWithoutAGitIdentity(unittest.TestCase):
+class BrigadeInitWithoutAGitIdentityTest(unittest.TestCase):
     def test_should_exit_1_naming_the_missing_key_before_creating_anything(self):
         rows = [
             (
@@ -312,7 +311,7 @@ class BrigadeInitWithoutAGitIdentity(unittest.TestCase):
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeInitWhereTheMachineRefusesTheConfigurationDirectory(unittest.TestCase):
+class BrigadeInitWhereTheMachineRefusesTheConfigurationDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
@@ -337,7 +336,7 @@ class BrigadeInitWhereTheMachineRefusesTheConfigurationDirectory(unittest.TestCa
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeInitWhereTheMachineRefusesAFileOfTheCorpus(unittest.TestCase):
+class BrigadeInitWhereTheMachineRefusesAFileOfTheCorpusTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))

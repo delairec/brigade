@@ -5,7 +5,7 @@ from unittest import mock
 from brigade.system.build_process_environment import build_process_environment
 
 
-class BuildProcessEnvironment(unittest.TestCase):
+class BuildProcessEnvironmentTest(unittest.TestCase):
     def test_should_keep_only_the_whitelisted_variables(self):
         # Arrange
         environment = {

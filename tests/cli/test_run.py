@@ -29,7 +29,7 @@ MACHINE_BUILDER = (
 )
 
 
-class BrigadeRunOfAProcedureGivenByPath(RunTestCase):
+class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT)
@@ -186,7 +186,7 @@ class BrigadeRunOfAProcedureGivenByPath(RunTestCase):
         self.assertEqual(json.loads((run_directory / "result.json").read_text()), DONE_RESULT)
 
 
-class BrigadeRunOfAProcedureGivenByName(RunTestCase):
+class BrigadeRunOfAProcedureGivenByNameTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.instructions = Path(self.root.name) / "instructions"
@@ -220,7 +220,7 @@ class BrigadeRunOfAProcedureGivenByName(RunTestCase):
 PROCEDURE_OF_THE_CORPUS = "---\ncapabilities: read\nbudget: 30\n---\nReview the pull request.\n"
 
 
-class BrigadeRunOfAProcedureOffItsDeclaration(RunTestCase):
+class BrigadeRunOfAProcedureOffItsDeclarationTest(RunTestCase):
     def test_should_exit_1_naming_the_procedure_and_what_it_lacks(self):
         rows = [
             ("no budget", "---\ncapabilities: read\n---\nBody.\n", "lacks budget in its front matter"),
@@ -243,7 +243,7 @@ class BrigadeRunOfAProcedureOffItsDeclaration(RunTestCase):
                 self.assertEqual(completed.stderr, f"brigade run: the procedure {self.procedure} {problem}\n")
 
 
-class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedure(RunTestCase):
+class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):
     def test_should_record_the_capabilities_the_procedure_declares_that_the_role_allows(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT)
@@ -279,7 +279,7 @@ class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedure(RunTestCase):
         )
 
 
-class BrigadeRunDetached(RunTestCase):
+class BrigadeRunDetachedTest(RunTestCase):
     def test_should_print_the_run_id_and_exit_0_while_the_run_finishes_in_the_background(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT)
@@ -300,7 +300,7 @@ class BrigadeRunDetached(RunTestCase):
         self.assertEqual(finished["run"], run_id)
 
 
-class BrigadeRunHandOver(RunTestCase):
+class BrigadeRunHandOverTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.record("builder", TURN_LIMIT_RESULT)
@@ -401,7 +401,7 @@ class BrigadeRunHandOver(RunTestCase):
         )
 
 
-class BrigadeRunOnTheClock(RunTestCase):
+class BrigadeRunOnTheClockTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT + 'delay = "10"\n', keys="seconds_per_step = 0.2\n")
@@ -464,7 +464,7 @@ class BrigadeRunOnTheClock(RunTestCase):
         self.assertEqual(signal["budget"], 1)
 
 
-class BrigadeRunWithAClientThatCountsNoSteps(RunTestCase):
+class BrigadeRunWithAClientThatCountsNoStepsTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake('features = "tool_grants"\n')
@@ -496,7 +496,7 @@ class BrigadeRunWithAClientThatCountsNoSteps(RunTestCase):
         self.assertEqual(finished["nulls"]["steps"], "the client counts no steps")
 
 
-class BrigadeRunWithAClientThatGrantsNoTools(RunTestCase):
+class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake('features = "step_count"\n')
@@ -534,7 +534,7 @@ class BrigadeRunWithAClientThatGrantsNoTools(RunTestCase):
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
-class BrigadeRunOfAProject(RunTestCase):
+class BrigadeRunOfAProjectTest(RunTestCase):
     def setUp(self):
         super().setUp()
         initialised = self.machine.run_init()
@@ -681,7 +681,7 @@ DETACHED_REFUSED_RUN = "20261006T120000Z-b57020"
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeRunWhereTheMachineRefusesTheRunsDirectory(RunTestCase):
+class BrigadeRunWhereTheMachineRefusesTheRunsDirectoryTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT)
@@ -707,7 +707,7 @@ class BrigadeRunWhereTheMachineRefusesTheRunsDirectory(RunTestCase):
         )
 
 
-class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWrite(RunTestCase):
+class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWriteTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT)
@@ -758,7 +758,7 @@ class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWrite(RunTestCase):
         )
 
 
-class BrigadeRunDetachedWhereTheMachineRefusesASegment(RunTestCase):
+class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
     def test_should_log_the_write_refused_to_the_detached_run_and_leave_it_dead(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT)

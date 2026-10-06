@@ -3,7 +3,7 @@ import unittest
 from brigade.ledger.summarize_steps import summarize_steps
 
 
-class SummarizeSteps(unittest.TestCase):
+class SummarizeStepsTest(unittest.TestCase):
     def test_should_give_the_p50_and_p90_by_nearest_rank_and_count_the_runs_without_steps(self):
         rows = [
             ([], {"measured": 0, "unmeasured": 0, "p50": None, "p90": None}),

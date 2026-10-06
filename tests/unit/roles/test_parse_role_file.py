@@ -17,7 +17,7 @@ ROLE_FILE = (
 )
 
 
-class ParseRoleFile(unittest.TestCase):
+class ParseRoleFileTest(unittest.TestCase):
     def test_should_read_the_front_matter_and_the_body(self):
         # Act
         role_file = parse_role_file(ROLE_FILE)

@@ -48,7 +48,7 @@ class AdapterTestCase(unittest.TestCase):
         )
 
 
-class BrigadeAdapterProbe(AdapterTestCase):
+class BrigadeAdapterProbeTest(AdapterTestCase):
     def test_should_print_the_probe_of_the_configured_client_as_a_document(self):
         # Arrange
         self.machine.write_configuration('client = "fake"\n')
@@ -97,7 +97,7 @@ class BrigadeAdapterProbe(AdapterTestCase):
         )
 
 
-class BrigadeAdapterLaunchArgv(AdapterTestCase):
+class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
     def test_should_take_the_reasoning_row_config_toml_sets(self):
         # Arrange
         self.machine.write_configuration(
@@ -154,7 +154,7 @@ class BrigadeAdapterLaunchArgv(AdapterTestCase):
         )
 
 
-class BrigadeAdapterParseResult(AdapterTestCase):
+class BrigadeAdapterParseResultTest(AdapterTestCase):
     def test_should_normalise_a_recorded_claude_code_result(self):
         # Arrange
         self.machine.write_configuration('client = "claude-code"\n')
@@ -220,7 +220,7 @@ class BrigadeAdapterParseResult(AdapterTestCase):
         )
 
 
-class BrigadeAdapterResumeArgv(AdapterTestCase):
+class BrigadeAdapterResumeArgvTest(AdapterTestCase):
     def test_should_resume_the_session_the_request_names(self):
         # Arrange
         self.machine.write_configuration('client = "claude-code"\n')
@@ -233,7 +233,7 @@ class BrigadeAdapterResumeArgv(AdapterTestCase):
         self.assertEqual(json.loads(completed.stdout)["argv"][4:6], ["--resume", "s1"])
 
 
-class BrigadeAdapterTranscripts(AdapterTestCase):
+class BrigadeAdapterTranscriptsTest(AdapterTestCase):
     def test_should_read_the_session_under_the_home_directory_of_the_machine(self):
         # Arrange
         self.machine.write_configuration('client = "claude-code"\n')
@@ -261,7 +261,7 @@ class BrigadeAdapterTranscripts(AdapterTestCase):
         )
 
 
-class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
+class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
     def test_should_name_brigade_init_when_no_configuration_exists(self):
         # Act
         completed = self.run_adapter("probe", "--json")
@@ -402,7 +402,7 @@ class BrigadeAdapterWhenItCannotAnswer(AdapterTestCase):
         self.assertIn("brigade adapter launch-argv: the request on stdin is not JSON: ", completed.stderr)
 
 
-class BrigadeAdapterOnAnUnexpectedError(AdapterTestCase):
+class BrigadeAdapterOnAnUnexpectedErrorTest(AdapterTestCase):
     def test_should_exit_70_with_the_traceback(self):
         # Arrange
         (self.machine.corpus / "config.toml").mkdir(parents=True)

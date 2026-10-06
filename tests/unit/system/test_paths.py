@@ -11,7 +11,7 @@ def build_paths_under(environment: dict) -> Paths:
         return build_paths()
 
 
-class BuildPaths(unittest.TestCase):
+class BuildPathsTest(unittest.TestCase):
     def test_should_build_the_roots_from_the_xdg_variables(self):
         # Arrange
         environment = {

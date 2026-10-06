@@ -3,7 +3,7 @@ import unittest
 from brigade.python_floor import describe_python_floor_breach
 
 
-class PythonFloor(unittest.TestCase):
+class PythonFloorTest(unittest.TestCase):
     def test_should_name_the_floor_and_the_running_version_below_it(self):
         rows = [
             ((3, 10, 14), "brigade needs Python 3.11 or later; this is Python 3.10.14"),
@@ -18,7 +18,7 @@ class PythonFloor(unittest.TestCase):
                 self.assertEqual(breach, expected_breach)
 
 
-class PythonFloorWhenTheRunningVersionReachesIt(unittest.TestCase):
+class PythonFloorWhenTheRunningVersionReachesItTest(unittest.TestCase):
     def test_should_describe_no_breach(self):
         no_breach = None
         rows = [(3, 11, 0), (3, 13, 5)]

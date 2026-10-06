@@ -26,7 +26,7 @@ class ResolveProcedureByNameTestCase(unittest.TestCase):
         self.root.cleanup()
 
 
-class ResolveProcedureShippedAndInTheCorpus(ResolveProcedureByNameTestCase):
+class ResolveProcedureShippedAndInTheCorpusTest(ResolveProcedureByNameTestCase):
     def test_should_resolve_the_procedure_brigade_ships(self):
         # Act
         procedure = resolve_procedure("review", self.directories)
@@ -35,7 +35,7 @@ class ResolveProcedureShippedAndInTheCorpus(ResolveProcedureByNameTestCase):
         self.assertEqual(procedure.location, str(self.shipped / "review.md"))
 
 
-class ResolveProcedureOnlyInTheCorpus(ResolveProcedureByNameTestCase):
+class ResolveProcedureOnlyInTheCorpusTest(ResolveProcedureByNameTestCase):
     def test_should_fall_through_to_the_procedures_of_the_instructions_corpus(self):
         # Act
         procedure = resolve_procedure("triage", self.directories)
@@ -44,7 +44,7 @@ class ResolveProcedureOnlyInTheCorpus(ResolveProcedureByNameTestCase):
         self.assertEqual(procedure.location, str(self.instructions / "procedures" / "triage.md"))
 
 
-class ResolveProcedureFoundNowhere(ResolveProcedureByNameTestCase):
+class ResolveProcedureFoundNowhereTest(ResolveProcedureByNameTestCase):
     def test_should_refuse_naming_the_procedure_and_where_it_was_sought(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
