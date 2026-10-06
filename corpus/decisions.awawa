@@ -595,6 +595,11 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	DESC "binds @TASK.B02 first, which introduces the renderer, the exit mapping, the parent parser"
 		+ "and the runtime builder, then every command task"
 		REF @TASK.B02
+	DESC "brigade corpus given -- <awawa args> is the one command that passes another tool's"
+		+ "stdout, stderr and exit code through unchanged: its reader is a person at a terminal,"
+		+ "brigade's own readers call the gateway; without those args it returns its document, as"
+		+ "@TASK.B08 sets"
+		REF @TASK.B08
 	REJECTED "three codes 0, 1 and 2: the plan's reference already documents 3 and 4 for the wave"
 		+ "commands, and a crash exiting 1 passes for findings in a test and under systemd"
 	REJECTED "an error document on stdout under --json: awawa, which the agents already read,"
@@ -606,6 +611,7 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "document; the rules cli_exit_codes_and_streams, cli_parsing_handling_rendering_separated"
 		+ "and cli_arguments_validated of the instructions corpus shape the rest"
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "DESC 9 added on the user's ruling of 2026-10-06 in the refinement of B08"
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"
@@ -915,3 +921,35 @@ DECISION ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
 		+ "edits"
 	SOURCE "pull request #17 of the brigade repository, delivering @TASK.B04"
 		REF @TASK.B04
+
+DECISION EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
+	TITLE "every run is cut on the clock of the machine at its step cap times seconds_per_step, 30"
+		+ "by default, and a client that counts no steps is reported as held on the clock alone"
+	STATUS active
+	CLOSES @OPEN_QUESTION.WallTimeBudgetOfAClientThatCountsNoSteps
+	DESC "the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_step, the step cap of"
+		+ "the Claude Code adapter times a config.toml key defaulting to 30 s; brigade measures it"
+		+ "on the machine's clock, whatever the client"
+	DESC "the limit holds every client, those that count their steps included, as a bound against a"
+		+ "client stuck on a command"
+	DESC "at the limit brigade sends SIGTERM to the client's process group and SIGKILL 30 s later;"
+		+ "the segment ends with outcome wall_limit, distinct from the step cap"
+	DESC "a client whose probe declares no step count is held by the clock alone: brigade doctor"
+		+ "and brigade run warn so, and the supported-clients table shows the fallback"
+	DESC "binds @TASK.B06 and @TASK.B49"
+		REF @TASK.B06
+		REF @TASK.B49
+	REJECTED "20 s per step, the measured p90 rounded: a run of 77 steps would be cut at 1920 s,"
+		+ "under the 2762 s of active time measured at most"
+	REJECTED "a p90 of seconds per step read from the ledger per procedure: a client that counts no"
+		+ "steps gives no denominator"
+	REJECTED "a max_wall key in every procedure: a third required key repeating the budget;"
+		+ "max_wall stays the recipes' own"
+	REJECTED "a warning without a limit: a stuck client keeps its slot, and a run of 9 h was"
+		+ "measured, mostly waiting"
+	RATIONALE "686 unattended Claude Code subagent runs of this machine took 10.1 s per active step"
+		+ "at the median and 18.1 s at p90, 2762 s of active time at most; 30 s per step covers"
+		+ "that maximum for a run of p90 length; Codex exec, Gemini CLI and OpenCode document no"
+		+ "run timeout, and agent harnesses set a wall limit per run as a backstop"
+	SOURCE "the user's rulings of 2026-10-06 in the refinement of B06, on the measurements of"
+		+ "transcripts and the client documentation read that day"

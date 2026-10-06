@@ -404,48 +404,243 @@ TASK B05
 		+ "2026-10-06 in the refinement of B05"
 
 TASK B06
-	TITLE "brigade run: launch a role run and capture its result"
-	STATUS draft
+	TITLE "brigade run and runs list|logs: launch a slot's run through the client adapter, relaunch"
+		+ "it on hand-over and capture its result"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "runs"
 	ROLE bastien
-	SPEC "runs a procedure as a slot through the configured client adapter, detached as a"
-		+ "brigade-owned subprocess with its own session, log files and pid, or in the foreground"
-	SPEC "writes the normalised result to the ledger, null fields named with their reason"
-	SPEC "passes the role package as the adapter translates it"
-	SPEC "when the adapter's probe declares no step count, steps are null and the budget is held on"
-		+ "wall time; when it declares no per-tool grant, the run uses the client's unattended mode"
-		+ "and a reading slot runs in a disposable worktree; one test per fallback, through the"
-		+ "fake adapter"
+	SPEC "brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>]"
+		+ "[--detach] [key=value ...] runs the procedure as that slot through the client adapter; a"
+		+ "name resolves to brigade's shipped procedures, then to the procedures/ of the"
+		+ "instructions corpus config.toml names; a path is taken as it is; the ledger records the"
+		+ "name without .md"
+	SPEC "a procedure is Markdown with a front matter declaring capabilities and budget; a"
+		+ "procedure that resolves nowhere, or lacks either key, exits 1 naming it"
+	SPEC "each run writes $XDG_STATE_HOME/brigade/runs/<run id>/: the brief, the role package, the"
+		+ "client's stdout and stderr, the progress file whose path the run receives, and the"
+		+ "normalised result"
+	SPEC "--detach re-executes brigade run in the foreground in a new session, writes its pid into"
+		+ "the run directory, prints the run id and exits 0; that process waits for the client,"
+		+ "writes the result and the ledger events, as the command does without --detach"
+	SPEC "the role package of the resolved role is passed as the adapter translates it, with the"
+		+ "capabilities the procedure declares that the role allows"
+	SPEC "a segment that ends on the step cap or the wall-time limit with a non-empty progress file"
+		+ "is relaunched as a fresh run with that file as its first context, up to the project's"
+		+ "POLICY.HANDOVERS, 2 without one; each segment writes one run.finished"
+	SPEC "a segment that reaches its budget writes a signal.recorded event naming the procedure,"
+		+ "the run and the budget, so that the user decides case by case between a budget too tight"
+		+ "and a task to split"
+	SPEC "run.finished carries run, segment, procedure, slot, role, client, project, session,"
+		+ "steps, duration_ms, usage, outcome, error class and exit; a null field is named in nulls"
+		+ "with its reason"
+	SPEC "every run is held on the clock of the machine: at ceil(budget × 1.25) × seconds_per_step,"
+		+ "a config.toml key defaulting to 30, brigade sends SIGTERM to the client's process group,"
+		+ "SIGKILL 30 s later, and the segment ends with outcome wall_limit, followed by the"
+		+ "hand-over and the signal above"
+	SPEC "when the adapter's probe declares no step count, steps are null, the clock is the run's"
+		+ "only bound, and brigade doctor and brigade run warn that the budget is held on the clock"
+		+ "and the run cut at its limit; when it declares no per-tool grant, the run uses the"
+		+ "client's unattended mode and a reading slot, a role without write, runs in a disposable"
+		+ "worktree removed after it; one test per fallback, through the fake adapter"
 	SPEC "a project's PROJECT.CLIENT replaces the client of config.toml for its runs"
-	SPEC "a project's PROJECT.ROLE slot=name and PROJECT.ROLESET resolve before the machine's roles"
-		+ "for its runs"
+	SPEC "a project's PROJECT.ROLE slot=name binds the slot to the role of that name, sought in the"
+		+ "order of resolution; PROJECT.ROLESET builtin resolves to the built-in roles, corpus to"
+		+ "the AGENT entity the slot table binds then the built-in role, a directory to its role"
+		+ "file for the slot then the built-in role; the machine's roles/ is skipped when a ROLESET"
+		+ "is given"
+	SPEC "brigade runs list prints every run with its id, procedure, slot, role, project, state,"
+		+ "running, finished or dead when its pid is gone without a result, and outcome; brigade"
+		+ "runs logs <id> [--tail N] prints its log; text and --json; an unknown id exits 1"
+	AFTER @TASK.B04
 	AFTER @TASK.B05
 	AFTER @TASK.B42
 	AFTER @TASK.B43
+	RATIONALE "the Blueprint is the reference the user named: brigade run, its hand-over by"
+		+ "segments up to POLICY.HANDOVERS, runs list and runs logs are those of plan sections 5,"
+		+ "14 and 16; runs resume stays with @TASK.B19, which builds the resume of a paused run"
+		REF @TASK.B19
+	RATIONALE "the shipped procedures live in a data/ folder of the package, as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets: the user kept it,"
+		+ "the Blueprint's root layout predating that decision; the field names of the ledger"
+		+ "follow @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry, kept over"
+		+ "the examples of plan section 14"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "the slot is given by the caller, a wave, recipe or study step, since a procedure"
+		+ "calls a slot and names no role; the capabilities are the intersection so that a reading"
+		+ "role gains no write through its procedure"
+	RATIONALE "the detached process is brigade itself, so that the result and the ledger are"
+		+ "written without a tick, the tick of @TASK.B07 being a skeleton in M0; the spawn is the"
+		+ "one function DESC 4 of @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa"
+		+ "names"
+		REF @TASK.B07
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	RATIONALE "a progress file is written after each major step and kept at completion, so a"
+		+ "non-empty file alone does not mean an early stop: the budget reached is the condition,"
+		+ "the file what the next segment reads"
+	RATIONALE "@TASK.B42 leaves the step-count and per-tool-grant fallbacks and PROJECT.CLIENT to"
+		+ "this task, @TASK.B43 PROJECT.ROLE and PROJECT.ROLESET, as the first launch that knows"
+		+ "its project; @TASK.B04 holds the registry they are read from, and @TASK.B05 lets this"
+		+ "task declare run.finished; the adapters and the core follow"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters and"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported"
+		REF @TASK.B42
+		REF @TASK.B43
+		REF @TASK.B04
+		REF @TASK.B05
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	RATIONALE "the clock limit and the warning follow"
+		+ "@DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap"
+		REF @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
+	SOURCE "the Artifact Brigade Blueprint, plan sections 5, 14, 16 and 17; the user's rulings of"
+		+ "2026-10-06 in the refinement of B06"
 
 TASK B07
-	TITLE "Tick skeleton and scheduler install"
-	STATUS draft
+	TITLE "brigade tick on an empty planner with its heartbeat, and brigade scheduler install and"
+		+ "status"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tick"
 	ROLE bastien
-	SPEC "brigade tick --once takes a lock, reconciles nothing yet and records a ledger event"
-	SPEC "brigade scheduler install writes the user systemd timer and service where a user instance"
-		+ "runs, else a cron line; brigade tick --loop is the third scheduler"
-	SPEC "the journal or the tick log shows one tick every five minutes"
-	AFTER @TASK.B05
+	SPEC "brigade tick --once takes $XDG_STATE_HOME/brigade/locks/tick.lock without blocking; when"
+		+ "another process holds it, it exits 0 with one stderr line and writes nothing"
+	SPEC "a tick reads now once in UTC, builds a snapshot carrying it, plans with a pure"
+		+ "plan(snapshot) that returns no action yet and applies the plan through an executor, in"
+		+ "plan and apply rounds up to a cap, until the plan is empty"
+	SPEC "every tick that held the lock writes $XDG_STATE_HOME/brigade/tick.json atomically with"
+		+ "schema_version, ts, duration_ms and the number of actions applied, and writes no ledger"
+		+ "line"
+	SPEC "brigade tick --dry-run prints the snapshot and the plan, text and --json, takes no lock,"
+		+ "applies nothing and writes no heartbeat"
+	SPEC "brigade tick --loop runs a tick every five minutes in the foreground, reads now once per"
+		+ "tick, and exits 0 on SIGTERM and SIGINT"
+	SPEC "brigade scheduler install installs the scheduler config.toml's scheduler key names,"
+		+ "systemd, cron or loop; without the key, systemd where the user instance is running or"
+		+ "degraded as brigade doctor probes it, else cron; loop installs nothing and prints the"
+		+ "command to keep running"
+	SPEC "systemd: brigade.service and brigade.timer under $XDG_CONFIG_HOME/systemd/user/, the"
+		+ "timer OnCalendar=*:0/5 with Persistent=true, the service running brigade tick --once by"
+		+ "the absolute path of the brigade that installed it with the PATH and the XDG variables"
+		+ "of the install, then systemctl --user daemon-reload and enable --now brigade.timer"
+	SPEC "cron: one */5 line running the same command with the same environment, appended through"
+		+ "crontab, its stderr appended to $XDG_STATE_HOME/brigade/tick.log, the line recognised by"
+		+ "a marker comment"
+	SPEC "install run twice leaves one pair of units or one cron line"
+	SPEC "brigade scheduler status prints the scheduler installed, systemd, cron or none, its unit"
+		+ "files or its cron line, the next activation where systemd gives it, and the last tick"
+		+ "read from tick.json, text and --json, and exits 0 installed or not"
+	SPEC "tests/cli prove install and status against fake systemctl and crontab executables on PATH"
+		+ "in a temporary machine; no test reaches the user's systemd instance or crontab"
+	AFTER @TASK.B04
+	RATIONALE "the tick is the coordinator of"
+		+ "@DECISION.ADeterministicTickReplacesTheCoordinatorAgent; its shape, a snapshot, a pure"
+		+ "planner and an executor in rounds, and --dry-run follow"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction, delivered empty so"
+		+ "that @TASK.B12 and @TASK.B48 add facts and actions without changing it"
+		REF @DECISION.ADeterministicTickReplacesTheCoordinatorAgent
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+		REF @TASK.B12
+		REF @TASK.B48
+	RATIONALE "the plan of 2026-10-04 had every tick record a ledger event; the user kept DESC 7 of"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction, the heartbeat as a"
+		+ "state file and no ledger line per empty tick, and tick.json is what the last tick of"
+		+ "@TASK.B28 reads; the ledger receives the outcome of each action, none yet, so the task"
+		+ "follows @TASK.B04, which delivers the first fcntl lock, and not @TASK.B05"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+		REF @TASK.B28
+		REF @TASK.B04
+		REF @TASK.B05
+	RATIONALE "the lock, the non-blocking exit and the atomic heartbeat follow"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory; now read once"
+		+ "follows @DECISION.TheClockIsReadOnceAndCarriedAsAFact; --loop's exit on a signal and the"
+		+ "journal or the cron file as the only log follow"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.TheClockIsReadOnceAndCarriedAsAFact
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "the schedulers are plugins of kind scheduler under brigade/adapters/schedulers,"
+		+ "resolved by name as @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported"
+		+ "sets; the unit and cron templates are string.Template files of a data/ folder, as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets; systemctl and"
+		+ "crontab run through the runner of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	RATIONALE "the unit carries the PATH of the install because the user systemd manager's PATH"
+		+ "lacks ~/.local/bin, where awawa lives on the reference machine (systemctl --user"
+		+ "show-environment, 2026-10-06), and cron's default PATH lacks it too; systemd is the"
+		+ "default where it runs since Persistent=true fires a tick missed while the machine was"
+		+ "off, which cron cannot, and no scheduler is a prerequisite, as"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites rules"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "the Artifact Brigade Blueprint, plan sections 15, 16 and 17; the user's rulings of"
+		+ "2026-10-06 in the refinement of B07"
 
 TASK B08
-	TITLE "Corpus-at-ref reader"
-	STATUS draft
+	TITLE "brigade corpus: a registered project's tree at a branch, a SHA or a worktree, cached per"
+		+ "SHA"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
 	ROLE bastien
-	SPEC "brigade corpus <project> --ref <branch|sha|worktree:name> -- <awawa args> runs awawa on a"
-		+ "git archive cached per SHA, or in place for a worktree"
-	SPEC "the cache is pruned by size"
+	SPEC "brigade corpus <project> --ref <branch|sha> resolves the ref to a commit SHA in the"
+		+ "project's repository, extracts git archive of that SHA, the whole tree, into"
+		+ "$XDG_CACHE_HOME/brigade/refs/<project>/<sha>/ unless it is there, and prints a document"
+		+ "carrying schema_version, project, ref, sha, kind archive and root, text and --json"
+	SPEC "--ref worktree:<branch> names the project's worktree where that branch is checked out;"
+		+ "--worktree <path> names one by its path, a detached HEAD included; either is read in"
+		+ "place, uncommitted edits visible, with kind worktree and sha its HEAD; --ref and"
+		+ "--worktree together exit 2"
+	SPEC "given -- <awawa args>, it runs awawa with those args at the root of the tree and passes"
+		+ "its stdout, stderr and exit code through unchanged, the resolved SHA on one stderr line"
+	SPEC "an extraction is written to a temporary directory of the project's cache and renamed into"
+		+ "place: concurrent readers meet a whole tree or none"
+	SPEC "the cache holds at most refs_cache_mb of config.toml, 1024 by default; each read marks"
+		+ "its SHA used, and after each extraction the least recently used SHAs are removed until"
+		+ "the cache is under the bound, never the SHA being read"
+	SPEC "an unknown project, a ref the repository does not resolve, and a branch or a path no"
+		+ "worktree of the project holds exit 1 naming it"
+	SPEC "tests/integration prove the extraction, the worktree read in place and the pruning"
+		+ "against a real git repository in a temporary directory"
 	AFTER @TASK.B04
+	RATIONALE "a corpus is read at a version other than the checkout without a checkout or a new"
+		+ "worktree: the dashboard's branch selector of @TASK.B30 through @TASK.B27, the lint of a"
+		+ "pull request's branch in the preflight of @TASK.B15, and the corpus collector of"
+		+ "@TASK.B47; these call one function of the brigade/corpus gateway returning project, sha,"
+		+ "kind and root, and only a person at a terminal reads the command"
+		REF @TASK.B30
+		REF @TASK.B27
+		REF @TASK.B15
+		REF @TASK.B47
+	RATIONALE "the SHA is the cache key, an archive of a SHA staying valid forever where a branch"
+		+ "moves, and the fact a verdict or a study names, a lint green on one commit saying"
+		+ "nothing of the next push"
+	RATIONALE "the whole tree is archived because awawa resolves the anchors of IMPL into the code:"
+		+ "git archive of corpus/ alone left 132 L016 on this repository's main, the whole tree,"
+		+ "928 KB, lints clean (2026-10-06)"
+	RATIONALE "the user ruled both forms: the document by default, awawa's own output given --"
+		+ "<awawa args>, the exception DESC 9 of"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable records; a"
+		+ "worktree by its branch by default, by its path for a detached HEAD; a worktree brigade"
+		+ "cuts is named by @TASK.B12"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+		REF @TASK.B12
+	RATIONALE "awawa and git run through the gateways of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa, which also sets the"
+		+ "integration tests; the cache sits under $XDG_CACHE_HOME as"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites places the refs; the atomic"
+		+ "rename follows @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory;"
+		+ "refs_cache_mb joins the frozen record of"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables and its template"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	SOURCE "the Artifact Brigade Blueprint, plan sections 4, 7, 15 and 16; HANDOFF.md section 6c;"
+		+ "the user's rulings of 2026-10-06 in the refinement of B08"
 
 TASK B09
 	TITLE "Built-in roles ada, bilal and mina"
