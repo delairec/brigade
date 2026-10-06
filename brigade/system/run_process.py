@@ -1,13 +1,11 @@
-import os
 import subprocess
 import time
 from dataclasses import dataclass
 from typing import Optional
 
 from brigade.errors import ToolFailure, ToolNotFound
+from brigade.system.build_process_environment import build_process_environment
 
-INHERITED_VARIABLES = ("PATH", "HOME", "LANG")
-INHERITED_PREFIXES = ("LC_", "XDG_", "BRIGADE_")
 EVERY_EXIT_CODE = tuple(range(256))
 
 
@@ -28,14 +26,6 @@ class ProcessRecord:
     stdout: str
     stderr: str
     duration_ms: int
-
-
-def build_process_environment() -> dict[str, str]:
-    return {
-        name: value
-        for name, value in os.environ.items()
-        if name in INHERITED_VARIABLES or name.startswith(INHERITED_PREFIXES)
-    }
 
 
 def _describe_input(stdin: Optional[str]) -> dict:

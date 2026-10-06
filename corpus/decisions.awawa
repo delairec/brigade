@@ -730,8 +730,9 @@ DECISION OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 		+ "every call, UTF-8 text with replacement; it returns a record, argv, cwd, exit code,"
 		+ "stdout, stderr and duration, and raises ToolFailure on an exit code the caller did not"
 		+ "declare acceptable, awawa lint 1 or gh pr view 1 on not found"
-	DESC "the runner reads os.environ to build that environment: it is, with paths, one of the two"
-		+ "modules the environment-read guard of"
+	DESC "the runner builds that environment through brigade/system/build_process_environment, its"
+		+ "environment module, exported alone: run_process and build_process_environment are, with"
+		+ "paths, the modules the environment-read guard of"
 		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables allows"
 		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 	DESC "git and awawa have gateway modules, brigade/git/ and brigade/corpus/, exposing named"
@@ -759,6 +760,8 @@ DECISION OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 		+ "command that proves a fact: one runner records every call, and real git and awawa in a"
 		+ "temporary directory answer the gateway tests"
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's ruling of 2026-10-06 on pull request #24 of the brigade repository: one"
+		+ "export per module, the environment of the runner in a module of its own"
 
 DECISION TheClockIsReadOnceAndCarriedAsAFact
 	TITLE "now is read once per command, or per tick of a loop, in UTC, and carried as a fact in"
@@ -790,8 +793,9 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 	STATUS active
 	DESC "brigade/system/paths builds the roots once from XDG_CONFIG_HOME, XDG_STATE_HOME and"
 		+ "XDG_CACHE_HOME with their defaults; no module other than paths and the process runner of"
-		+ "brigade/system reads os.environ, os.getenv, Path.home or expanduser, a guard of"
-		+ "tests/guards checks it; every function takes the paths it needs as arguments"
+		+ "brigade/system, run_process and build_process_environment, its environment module, reads"
+		+ "os.environ, os.getenv, Path.home or expanduser, a guard of tests/guards checks it; every"
+		+ "function takes the paths it needs as arguments"
 	DESC "tests redirect brigade with the XDG variables alone; no brigade-specific override"
 		+ "variable"
 	DESC "config.toml is read with tomllib into one frozen record with defaults; an unknown key or"
@@ -802,10 +806,11 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites rules; roles/, collectors/,"
 		+ "checks/ and recipes/ are versioned with it"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
-	DESC "binds @TASK.B02, @TASK.B03, @TASK.B04, @TASK.B42 and @TASK.B43"
+	DESC "binds @TASK.B02, @TASK.B03, @TASK.B04, @TASK.B06, @TASK.B42 and @TASK.B43"
 		REF @TASK.B02
 		REF @TASK.B03
 		REF @TASK.B04
+		REF @TASK.B06
 		REF @TASK.B42
 		REF @TASK.B43
 	DESC "brigade init creates the operational corpus repository and config.toml only; every writer"
@@ -823,6 +828,8 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "the user's ruling of 2026-10-05 in the refinement of B03"
+	SOURCE "the user's ruling of 2026-10-06 on pull request #24 of the brigade repository: one"
+		+ "export per module, the environment of the runner in a module of its own"
 
 DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	TITLE "every document brigade writes or reads carries an integer schema_version per kind, an"

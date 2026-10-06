@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import BinaryIO, Optional
 
 from brigade.errors import ToolNotFound
-from brigade.system.run_process import build_process_environment
+from brigade.system.build_process_environment import build_process_environment
 
 
 @dataclass(frozen=True)

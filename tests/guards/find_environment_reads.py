@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 
-MODULES_ALLOWED_TO_READ = ("system/paths.py", "system/run_process.py")
+MODULES_ALLOWED_TO_READ = ("system/paths.py", "system/run_process.py", "system/build_process_environment.py")
 OS_READS = ("environ", "getenv")
 EXPANDUSER = "expanduser"
 
