@@ -1154,6 +1154,14 @@ TASK B27
 	COMPONENT "dashboard"
 	ROLE bastien
 	SPEC "a loopback server"
+	SPEC "the server binds 127.0.0.1 only, never 0.0.0.0 nor an address of the machine"
+	SPEC "a request whose Host header is not the loopback host and port the server listens on is"
+		+ "refused with 400 before any routing: a page reaching the port by DNS rebinding gets"
+		+ "nothing"
+	SPEC "a GET request changes no state of brigade; a state-changing request is a POST"
+	SPEC "every string read from the corpus, the ledger, a run or a report is escaped on render; no"
+		+ "content becomes HTML, markup written by an agent included"
+	SPEC "no response carries a CORS header, whatever the Origin of the request"
 	SPEC "/api/status, /api/waves/<id>, /api/inbox, /api/corpus, /api/ledger, /api/reports"
 	SPEC "a polling page shell with theme tokens"
 	AFTER @TASK.B05
@@ -1170,6 +1178,9 @@ TASK B28
 	SPEC "a board of tasks by state with pull request, rounds and steps"
 	SPEC "a timeline"
 	SPEC "pause, resume and retry actions through the CLI"
+	SPEC "pause, resume and retry are POST requests carrying the token the server generated at its"
+		+ "start, handed to the page it serves, and an Origin header equal to the loopback origin;"
+		+ "a request missing either is refused with 403 and changes nothing"
 	AFTER @TASK.B27
 	AFTER @TASK.B14
 
@@ -2214,6 +2225,12 @@ TASK B61
 	AFTER @TASK.B54
 	AFTER @TASK.B56
 	AFTER @TASK.B57
+	AFTER @TASK.B62
+	AFTER @TASK.B63
+	AFTER @TASK.B64
+	AFTER @TASK.B65
+	AFTER @TASK.B66
+	AFTER @TASK.B67
 	RATIONALE "the user ruled on 2026-10-06 that a review by max closes M0, after every other task"
 		+ "of the milestone: its goal is to check that the foundations are solid, that they match"
 		+ "the initial plan and the architectural decisions max ruled, and to name the risks they"
@@ -2237,3 +2254,190 @@ TASK B61
 		+ "writes this task, so that the review reads one reference where the plan and the"
 		+ "decisions agree; the decisions prevail where a passage of the plan still differs"
 	SOURCE "the user's ruling of 2026-10-06 after wave M0"
+
+TASK B62
+	TITLE "the CI workflow hardened, permissions contents: read and persist-credentials: false, and"
+		+ "audited by zizmor; requirements-ci.txt and its dependabot entry created"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "ci"
+	ROLE bastien
+	SPEC ".github/workflows/ci.yml declares permissions: contents: read at its top level, and every"
+		+ "actions/checkout step passes persist-credentials: false"
+	SPEC "requirements-ci.txt at the repository root pins zizmor to one version, the one line of"
+		+ "the file; .github/dependabot.yml gains an entry for the pip ecosystem on the directory /"
+		+ "with the weekly schedule of its github-actions entry"
+	SPEC "a job of ci.yml of its own installs requirements-ci.txt by pip and runs zizmor on"
+		+ ".github/workflows/; a finding of any severity fails the job, zizmor exiting 11 to 14;"
+		+ "the tests and floor jobs run what they ran before"
+	SPEC "a finding of zizmor is fixed in the workflow; .github/zizmor.yml exists only for a"
+		+ "required exemption, the narrowest zizmor offers, commented with its cause and naming"
+		+ "what covers the case"
+	SPEC "the sentence of README.md on the CI names the zizmor audit"
+	RATIONALE "the hardening and the audit are one task: zizmor's excessive-permissions and"
+		+ "artipacked audits flag the missing permissions block and the persisted credentials, so"
+		+ "the audit would fail on the workflow it joins; the missing block was the one security"
+		+ "gap of ci.yml at cfa0635, every uses: being pinned by SHA and dependabot already"
+		+ "covering github-actions"
+	RATIONALE "the first tool task creates requirements-ci.txt and the dependabot entry, as"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade binds; the later"
+		+ "tool tasks add their line to the file"
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+	RATIONALE "zizmor is configured by .github/zizmor.yml, which it discovers from the repository"
+		+ "root (docs.zizmor.sh/configuration, read 2026-10-06); its exit codes 11 to 14 name the"
+		+ "highest severity found (docs.zizmor.sh/usage, same day)"
+	SOURCE "the user's ruling of 2026-10-06, \"tout ce que tu as mis en oui\", on the rows workflow"
+		+ "hardening and zizmor; \"tout ce qui est utile est bon à prendre\" on the row pins under"
+		+ "dependabot"
+
+TASK B63
+	TITLE "ruff check and ruff format --check in the CI, configured by ruff.toml for Python 3.11"
+		+ "with the S, B, C901 and UP rules, the code brought to conformance"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "ci"
+	ROLE bastien
+	SPEC "ruff.toml at the repository root sets target-version = \"py311\" and selects, besides"
+		+ "ruff's default rules, the sets S, B and UP and the rule C901"
+	SPEC "requirements-ci.txt pins ruff to one version; a job of ci.yml of its own installs the"
+		+ "file by pip and runs ruff check . then ruff format --check .; either exit fails the job"
+	SPEC "brigade/launcher.py and brigade/python_floor.py, which run before the floor check, are"
+		+ "declared under per-file-target-version at the oldest version they must parse under,"
+		+ "stated in a comment beside the entry; no UP rule is ignored for them"
+	SPEC "every finding of ruff check is fixed in the code; a required exemption is the narrowest"
+		+ "ruff offers, a noqa for one rule on one line before a per-file-ignores entry, each"
+		+ "commented with its cause and what covers the case; ruff.toml holds no ignore added to"
+		+ "make the run pass"
+	SPEC "a fix that changes a behaviour, an S or a B finding answered, is named in the pull"
+		+ "request body with the finding it answers; python3 -m unittest passes on every commit"
+	SPEC "ruff format --check . exits 0 on every tracked .py file of the merged pull request"
+	SPEC "the Develop block of README.md names ruff check . && ruff format --check . as the local"
+		+ "check to run when ruff is installed, and the sentence on the CI names ruff"
+	AFTER @TASK.B62
+	RATIONALE "the user ruled the rule sets: S the bandit equivalent, B bugbear, C901 complexity,"
+		+ "UP with the 3.11 target; ruff.toml because the repository has no pyproject.toml; ruff"
+		+ "resolves the closest ruff.toml up the directory hierarchy from each file, so one file at"
+		+ "the root covers brigade/ and tests/ (docs.astral.sh/ruff/configuration, read 2026-10-06)"
+	RATIONALE "ruff comes first among the code tools because its fixes touch the most files: 243"
+		+ ".py files under brigade/ and tests/ at cfa0635, the longest line 193 characters at"
+		+ "tests/unit/roles/test_check_front_matter.py:30"
+	RATIONALE "per-file-target-version is the declaration ruff reads, the fix the rule"
+		+ "quality_gate_never_widened of the instructions corpus asks for instead of an ignore:"
+		+ "python_floor.py imports Optional and Tuple from typing and uses str.format, which UP006,"
+		+ "UP007 and UP032 would rewrite into syntax the interpreters it refuses may not parse"
+	SOURCE "the user's ruling of 2026-10-06, \"tout ce que tu as mis en oui\", on the row ruff"
+
+TASK B64
+	TITLE "semgrep CE in the CI with the Python and security rule packs, findings fixed at their"
+		+ "source"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "ci"
+	ROLE bastien
+	SPEC "requirements-ci.txt pins semgrep to one version; a job of ci.yml of its own installs the"
+		+ "file by pip and runs semgrep scan from the repository root with --config p/python,"
+		+ "--config p/security-audit, --error and --metrics=off; exit 1, findings, fails the job"
+	SPEC "every finding is fixed in the code; a nosemgrep comment is the narrowest exemption, one"
+		+ "rule on one line, commented with its cause and what covers the case; a .semgrepignore"
+		+ "exists only for a path semgrep cannot read, commented"
+	SPEC "a fix that changes a behaviour is named in the pull request body with the finding it"
+		+ "answers; python3 -m unittest passes on every commit"
+	SPEC "the sentence of README.md on the CI names semgrep"
+	AFTER @TASK.B63
+	RATIONALE "the user adopted semgrep CE as the security scan a private repository gets for free,"
+		+ "CodeQL needing paid GitHub Advanced Security; semgrep scan with --error exits 1 on"
+		+ "findings and 0 otherwise, --metrics=off keeps the registry pull from reporting"
+		+ "(semgrep.dev/docs/cli-reference, read 2026-10-06); it runs after ruff so that the S"
+		+ "rules have already answered what both tools see"
+	SOURCE "the user's ruling of 2026-10-06, \"tout ce qui est utile est bon à prendre\", on the"
+		+ "row semgrep CE"
+
+TASK B65
+	TITLE "vulture in the CI: the dead code of brigade/ and tests/ reported and removed, the job"
+		+ "failing on a finding"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "ci"
+	ROLE bastien
+	SPEC "requirements-ci.txt pins vulture to one version; a job of ci.yml of its own installs the"
+		+ "file by pip and runs vulture on brigade/ and tests/ at its default minimum confidence,"
+		+ "its arguments on the command line of the step; exit 3, dead code found, fails the job"
+	SPEC "every function vulture reports and nothing reaches is removed with its module and its"
+		+ "test; a name reached only through the plugin resolver is declared in one whitelist file"
+		+ "vulture reads, one name per line with a comment naming the resolver call that reaches"
+		+ "it, and the whitelist holds nothing else"
+	SPEC "no --min-confidence, --ignore-names or --ignore-decorators argument hides a finding"
+	SPEC "the sentence of README.md on the CI names vulture, run in the CI only"
+	AFTER @TASK.B64
+	RATIONALE "vulture reads its configuration from pyproject.toml alone (its README, read"
+		+ "2026-10-06), which the repository does not have: the arguments stay on the command line;"
+		+ "vulture exits 3 on dead code found; a whole-repository dead-code analysis is left to the"
+		+ "CI by the rule heavy_tests_not_run_locally of the instructions corpus"
+	RATIONALE "with one public function per module, an uncalled function is a dead module: the"
+		+ "finding removes the module"
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+	SOURCE "the user's ruling of 2026-10-06, \"tout ce que tu as mis en oui\", on the row vulture"
+
+TASK B66
+	TITLE "coverage.py in the CI, report only: the whole suite measured, the subprocesses of"
+		+ "tests/cli included, no threshold"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "ci"
+	ROLE bastien
+	SPEC ".coveragerc at the repository root sets [run] source = brigade and [run] patch ="
+		+ "subprocess; requirements-ci.txt pins coverage to one version of 7.10.0 or later, the"
+		+ "first that knows patch"
+	SPEC "a job of ci.yml of its own, on Python 3.11, installs requirements-ci.txt by pip and runs"
+		+ "coverage run -m unittest, coverage combine, then coverage report; the report stands in"
+		+ "the job log and lists every module of brigade/, an unexecuted one at 0%"
+	SPEC ".coveragerc sets no fail_under and the step passes no --fail-under: the job fails only"
+		+ "when a test fails"
+	SPEC "the pull request body quotes the total of coverage report at the same commit with and"
+		+ "without patch = subprocess, and the one with it is the higher"
+	SPEC ".gitignore ignores .coverage and .coverage.*, written without leading slash"
+	SPEC "the sentence of README.md on the CI names the coverage report, read in the job log only"
+	AFTER @TASK.B65
+	RATIONALE "the user ruled report only, no threshold at first; a threshold comes once the real"
+		+ "figure is known and is never lowered, as"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade binds"
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+	RATIONALE "tests/cli runs brigade as a subprocess, so without the patch the acceptance suite"
+		+ "counts as zero coverage; [run] patch = subprocess arrived in coverage 7.10.0 of"
+		+ "2025-07-24 and sets parallel = True, hence coverage combine before the report"
+		+ "(coverage.readthedocs.io, changes and config pages, read 2026-10-06; 7.16.2 is current"
+		+ "on PyPI)"
+	SOURCE "the user's ruling of 2026-10-06, \"tout ce que tu as mis en oui\", on the row"
+		+ "coverage.py"
+
+TASK B67
+	TITLE "a guard of tests/guards: import subprocess only under brigade/system/, shell=True"
+		+ "nowhere under brigade/"
+	STATUS todo
+	MILESTONE @MILESTONE.M0
+	COMPONENT "guards"
+	ROLE bastien
+	SPEC "tests/guards/find_subprocess_uses.py exposes one function that parses every module under"
+		+ "a package root with ast and returns one line per violation, path:line and what it"
+		+ "imports or passes: an import of subprocess, import or from, in a module outside"
+		+ "brigade/system/, and a call passing the keyword shell=True anywhere"
+	SPEC "tests/guards/test_subprocess_uses.py asserts the guard finds nothing under brigade/, and"
+		+ "proves the guard on temporary packages: rows under subTest for an import outside"
+		+ "brigade/system/, a from-import outside it, a shell=True call inside brigade/system/, and"
+		+ "an import inside brigade/system/ that passes"
+	SPEC "the guard runs with python3 -m unittest, like the plugin-import and environment-read"
+		+ "guards, and the CI job tests runs it"
+	RATIONALE "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa refuses shell=True"
+		+ "and routes every subprocess through brigade/system, and nothing enforced it: at cfa0635"
+		+ "the only imports of subprocess under brigade/ are brigade/system/run_process.py,"
+		+ "brigade/system/spawn_process.py and brigade/system/wait_within_limit.py, and no"
+		+ "shell=True exists (grep, 2026-10-06); the rule repository_rule_has_a_guard of the"
+		+ "instructions corpus wants a guard for a convention no linter enforces"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	RATIONALE "the pattern is tests/guards/find_plugin_imports.py with test_plugin_imports.py and"
+		+ "find_environment_reads.py with test_environment_reads.py of @TASK.B42: a finder module"
+		+ "and a test of the package plus tests of the finder; the task touches no ci.yml and needs"
+		+ "no order against the CI tasks"
+		REF @TASK.B42
+	SOURCE "the user's ruling of 2026-10-06, \"tout ce qui est utile est bon à prendre\", on the"
+		+ "row subprocess guard"
