@@ -980,7 +980,13 @@ TASK B14
 	ROLE bastien
 	SPEC "the tick finds the pull request of a task branch, reads its checks and review state"
 		+ "through the forge adapter, records ledger events and moves the task state"
+	SPEC "the worktree the scheduler cut for the task is removed once its pull request is merged or"
+		+ "closed, never while a run holds it"
 	AFTER @TASK.B12
+	RATIONALE "the removal of the worktree sits here and not on @TASK.B12 because merged or closed"
+		+ "is a forge fact this task reads; the scheduler sees git alone, which shows no closed"
+		+ "pull request"
+		REF @TASK.B12
 
 TASK B15
 	TITLE "brigade verify preflight"
@@ -1969,3 +1975,64 @@ TASK B57
 		REF @TASK.B56
 	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57"
 		REF @TASK.B56
+
+TASK B60
+	TITLE "retention of runs/: after each result written, the finished and dead runs beyond"
+		+ "runs_kept are removed, a running run never"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "runs"
+	ROLE bastien
+	DESC "draft: the key runs_kept, its default of 100 and the lock name are proposals for the"
+		+ "refinement"
+	DESC "for the refinement: a run @TASK.B19 resumes from its progress file and a study @TASK.B48"
+		+ "restarts at its first undone step hold no live pid; whether the retention spares them"
+		REF @TASK.B19
+		REF @TASK.B48
+	SPEC "after brigade run writes result.json, the finished and dead runs of"
+		+ "$XDG_STATE_HOME/brigade/runs/ beyond runs_kept of config.toml, 100 by default, are"
+		+ "removed, oldest first by the time of result.json or, dead, of run.json; finished and"
+		+ "dead are those of brigade runs list"
+	SPEC "a running run, its pid alive without result.json, is never removed; runs_kept below 1 is"
+		+ "an error naming the key and the file"
+	SPEC "a removal runs under $XDG_STATE_HOME/brigade/locks/runs.lock and renames the directory"
+		+ "out of runs/ before deleting it: brigade runs list meets a whole run or none"
+	SPEC "tests/cli prove the removal beyond the bound, the running run kept, the dead run removed"
+		+ "and the bound read from config.toml, through the fake adapter in a temporary state"
+		+ "directory"
+	AFTER @TASK.B06
+	RATIONALE "the refs cache is the one bounded store, refs_cache_mb of @TASK.B08; nothing bounds"
+		+ "runs/, which @TASK.B06 fills with the brief, the role package, stdout, stderr and"
+		+ "brigade.log of every segment, the files"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast lists; the"
+		+ "ledger stays unbounded on purpose: small lines, the history @TASK.B37 reads"
+		REF @TASK.B08
+		REF @TASK.B06
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+		REF @TASK.B37
+	RATIONALE "M1 because the waves of @TASK.B12 are what fills runs/ unattended; @MILESTONE.M6"
+		+ "holds budgets and documentation"
+		REF @TASK.B12
+		REF @MILESTONE.M6
+	RATIONALE "the writer prunes after each write, the pattern of @TASK.B08 for the refs cache:"
+		+ "brigade run bounds runs/ with or without a scheduler, where the tick of @TASK.B07 would"
+		+ "record a prune action in the ledger at each tick and plans nothing before @TASK.B12 adds"
+		+ "its facts; a brigade runs prune command is a second entry to the same function, left to"
+		+ "the refinement"
+		REF @TASK.B08
+		REF @TASK.B07
+		REF @TASK.B12
+	RATIONALE "a count rather than a size: a run is worth the same for a diagnosis whatever its"
+		+ "logs weigh, and a count walks no directory; the time of result.json orders the finished"
+		+ "runs, a dead run having none"
+	RATIONALE "the lock and the rename follow"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory, which gains"
+		+ "runs.lock at delivery as it gained refs-cache.lock from @TASK.B08; runs_kept joins the"
+		+ "frozen record of @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables"
+		+ "and its template"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @TASK.B08
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	SOURCE "the user's ruling of 2026-10-06 after wave M0: a draft task for the retention of runs/,"
+		+ "placed in its milestone, and one line for the worktrees the scheduler of @TASK.B12 cuts"
+		REF @TASK.B12
