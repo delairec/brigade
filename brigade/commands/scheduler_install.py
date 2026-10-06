@@ -36,7 +36,7 @@ def _describe_install_request(runtime) -> dict:
     }
 
 
-def run(request, runtime) -> dict:
+def scheduler_install(request, runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
     if configuration.scheduler is not None:
         name, chosen_by = configuration.scheduler, "configuration"

@@ -87,7 +87,7 @@ def _choose_name(request, path: Path) -> str:
     return request.name
 
 
-def run(request, runtime) -> dict:
+def project_add(request, runtime) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     path = Path(request.path).resolve()
     name = _choose_name(request, path)

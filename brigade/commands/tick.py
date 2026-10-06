@@ -97,7 +97,7 @@ def _tick_in_loop() -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "mode": "loop", "ticks_attempted": ticks_attempted}
 
 
-def run(request, runtime) -> dict:
+def tick(request, runtime) -> dict:
     if request.mode == "once":
         return _tick_once(runtime)
     if request.mode == "dry-run":

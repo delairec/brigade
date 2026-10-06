@@ -49,7 +49,7 @@ def _ensure_file(runtime, name: str, file_name: str, content: bytes) -> dict:
     return {**item, "state": "differs"}
 
 
-def run(request, runtime) -> dict:
+def init(request, runtime) -> dict:
     _require_identity(runtime)
     repository = _ensure_repository(runtime)
     shipped_files = [

@@ -5,7 +5,7 @@ from brigade.registry.require_operational_corpus import require_operational_corp
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def run(request, runtime) -> dict:
+def project_show(request, runtime) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     project = find_project(read_projects(runtime), request.name)
     return {

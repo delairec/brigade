@@ -576,10 +576,10 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "once as text, and exits by one table of codes mapped in cli.py from the exceptions run"
 		+ "raises"
 	STATUS active
-	DESC "a command module exposes run(request, runtime) -> document, a JSON-compatible dict"
-		+ "carrying schema_version, or raises, an error or a stand-down, and returns none; --json"
-		+ "prints it; the text is rendered from the document, so the text never shows a fact the"
-		+ "document lacks"
+	DESC "a command module exports one function named after the module, (request, runtime) ->"
+		+ "document, a JSON-compatible dict carrying schema_version, or raises, an error or a"
+		+ "stand-down, and returns none; --json prints it; the text is rendered from the document,"
+		+ "so the text never shows a fact the document lacks"
 	DESC "a document is bounded: a long result goes to a file under $XDG_STATE_HOME/brigade/ and"
 		+ "the document carries its path and a summary"
 	DESC "stdout carries the document only; stderr carries diagnostics and errors; under --json an"
@@ -631,6 +631,8 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "which delivers @TASK.B07; the stdout of the cron line in DESC 7 on the user's ruling of"
 		+ "2026-10-06 in the review of that pull request"
 		REF @TASK.B07
+	SOURCE "the user's ruling of 2026-10-06 after wave M0: command modules follow"
+		+ "one_exported_function_per_file, pull request #26"
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"

@@ -3,7 +3,7 @@ from brigade.runs.read_run_logs import read_run_logs
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def run(request, runtime) -> dict:
+def runs_logs(request, runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "run": request.run,

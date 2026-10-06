@@ -15,7 +15,7 @@ def _read_bound_models(runtime) -> dict:
     return ask_configured_client(runtime, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION}).document["models"]
 
 
-def run(request, runtime) -> dict:
+def roles_list(request, runtime) -> dict:
     resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS) for slot in SLOTS]
     models = _read_bound_models(runtime)
     return {

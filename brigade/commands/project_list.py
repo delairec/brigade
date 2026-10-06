@@ -10,7 +10,7 @@ def _read_field(project: Entity, name: str) -> str:
     return next((field.value for field in project.fields if field.name == name), NO_VALUE)
 
 
-def run(request, runtime) -> dict:
+def project_list(request, runtime) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

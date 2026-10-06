@@ -25,7 +25,7 @@ def _check_role_file(file: str, text: str, first_declarations: dict) -> list[dic
     return findings
 
 
-def run(request, runtime) -> dict:
+def roles_lint(request, runtime) -> dict:
     built_in_files = [
         (f"{BUILT_IN_DIRECTORY}/{entry.name}", entry.read_text(encoding="utf-8"))
         for entry in list_built_in_role_files()

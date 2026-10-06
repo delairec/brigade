@@ -24,7 +24,7 @@ def _build_rewrite(runtime, name: str, status: str):
     return rewrite
 
 
-def run(request, runtime) -> dict:
+def project_status(request, runtime) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     changed = change_registry(
         runtime,
