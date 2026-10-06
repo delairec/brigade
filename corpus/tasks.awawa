@@ -2426,20 +2426,27 @@ TASK B66
 TASK B67
 	TITLE "a guard of tests/guards: import subprocess only under brigade/system/, shell=True"
 		+ "nowhere under brigade/"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "guards"
 	ROLE bastien
+	DELIVERED_BY 37
 	SPEC "tests/guards/find_subprocess_uses.py exposes one function that parses every module under"
 		+ "a package root with ast and returns one line per violation, path:line and what it"
 		+ "imports or passes: an import of subprocess, import or from, in a module outside"
 		+ "brigade/system/, and a call passing the keyword shell=True anywhere"
+		IMPL "tests/guards/find_subprocess_uses.py::def find_subprocess_uses(package_root: Path) ->"
+			+ "list[str]:"
 	SPEC "tests/guards/test_subprocess_uses.py asserts the guard finds nothing under brigade/, and"
 		+ "proves the guard on temporary packages: rows under subTest for an import outside"
 		+ "brigade/system/, a from-import outside it, a shell=True call inside brigade/system/, and"
 		+ "an import inside brigade/system/ that passes"
+		IMPL "tests/guards/test_subprocess_uses.py::class"
+			+ "SubprocessUsesOfThePackage(unittest.TestCase):"
+		IMPL "tests/guards/test_subprocess_uses.py::class SubprocessUsesGuard(unittest.TestCase):"
 	SPEC "the guard runs with python3 -m unittest, like the plugin-import and environment-read"
 		+ "guards, and the CI job tests runs it"
+		IMPL ".github/workflows/ci.yml::- run: python3 -m unittest -v"
 	RATIONALE "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa refuses shell=True"
 		+ "and routes every subprocess through brigade/system, and nothing enforced it: at cfa0635"
 		+ "the only imports of subprocess under brigade/ are brigade/system/run_process.py,"
