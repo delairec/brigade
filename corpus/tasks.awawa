@@ -1740,7 +1740,7 @@ TASK B49
 		+ "--markdown prints two Markdown tables, the supported clients then the adapters of the"
 		+ "test suite, and the legend"
 		IMPL "brigade/system/list_client_adapters.py::PACKAGE_AUDIENCES = dict(zip(CLIENT_PACKAGES,"
-			+ "(SUPPORTED_CLIENT, TEST_SUITE)))"
+			+ "(SUPPORTED_CLIENT, TEST_SUITE), strict=True))"
 		IMPL "brigade/commands/render_adapter_matrix_markdown.py::def"
 			+ "render_adapter_matrix_markdown(document: dict) -> str:"
 		IMPL "tests/cli/test_adapter_matrix.py::def"

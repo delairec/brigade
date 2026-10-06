@@ -87,7 +87,9 @@ def _create_staging(root: Path) -> Path:
 def _unpack(archive: Path, staged_tree: Path, root: Path) -> None:
     with tarfile.open(archive) as commit_tar:
         try:
-            commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)
+            # S202: the archive is git archive of a commit of the project, extracted as a checkout of that commit
+            # writes it; the worktree kind reads the same tree in place
+            commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)  # noqa: S202
         except OSError as error:
             raise CannotWrite(root, error) from error
 

@@ -46,7 +46,8 @@ def _open_output(path: Path) -> BinaryIO:
 def spawn_process(request: SpawnRequest) -> subprocess.Popen:
     with _open_output(request.stdout) as stdout_file, _open_output(request.stderr) as stderr_file:
         try:
-            process = subprocess.Popen(
+            # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
+            process = subprocess.Popen(  # noqa: S603
                 list(request.argv),
                 cwd=request.cwd,
                 env={**build_process_environment(), **request.environment},

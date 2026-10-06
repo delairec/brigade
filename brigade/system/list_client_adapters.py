@@ -13,7 +13,7 @@ from brigade.system.resolve_plugin import (
 
 SUPPORTED_CLIENT = "supported_client"
 TEST_SUITE = "test_suite"
-PACKAGE_AUDIENCES = dict(zip(CLIENT_PACKAGES, (SUPPORTED_CLIENT, TEST_SUITE)))
+PACKAGE_AUDIENCES = dict(zip(CLIENT_PACKAGES, (SUPPORTED_CLIENT, TEST_SUITE), strict=True))
 MODULE_SUFFIX = ".py"
 PRIVATE_MODULE_PREFIX = "_"
 MODULE_WORD_SEPARATOR = "_"

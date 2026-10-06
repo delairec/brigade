@@ -66,7 +66,7 @@ def init(request, runtime) -> dict:
     file_items = [_ensure_file(runtime, name, file_name, content) for name, file_name, content in shipped_files]
     created_to_commit = tuple(
         file_name
-        for (_, file_name, _), item in zip(shipped_files, file_items)
+        for (_, file_name, _), item in zip(shipped_files, file_items, strict=True)
         if file_name in COMMITTED_FILES and item["state"] == "created"
     )
     if created_to_commit:

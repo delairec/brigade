@@ -4,7 +4,7 @@ import sys
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from brigade import VERSION
@@ -130,7 +130,7 @@ def _read_positive_count(text: str) -> int:
 
 def _read_day(text: str) -> date:
     try:
-        return datetime.strptime(text, DAY_FORMAT).date()
+        return datetime.strptime(text, DAY_FORMAT).replace(tzinfo=UTC).date()
     except ValueError:
         raise argparse.ArgumentTypeError(f"{text!r} is not a day YYYY-MM-DD") from None
 
@@ -464,6 +464,6 @@ def main(arguments: list[str]) -> int:
     except BrigadeError as error:
         sys.stderr.write(f"brigade {_name_command(options)}: {error}\n")
         return 1
-    except Exception:
+    except Exception:  # noqa: BLE001 - the last resort of main: the traceback is printed, the exit code is 70
         traceback.print_exc()
         return UNEXPECTED_ERROR_EXIT_CODE

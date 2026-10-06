@@ -40,7 +40,8 @@ def _describe_command(argv: tuple[str, ...]) -> str:
 def run_process(request: ProcessRequest) -> ProcessRecord:
     started = time.monotonic()
     try:
-        completed = subprocess.run(
+        # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
+        completed = subprocess.run(  # noqa: S603
             list(request.argv),
             cwd=request.cwd,
             env=build_process_environment(),
@@ -49,6 +50,7 @@ def run_process(request: ProcessRequest) -> ProcessRecord:
             encoding="utf-8",
             errors="replace",
             timeout=request.timeout_s,
+            check=False,
             **_describe_input(request.stdin),
         )
     except FileNotFoundError:

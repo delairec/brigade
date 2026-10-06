@@ -31,7 +31,7 @@ def _measure_columns(adapters: list[dict]) -> list[int]:
 
 
 def _join_cells(cells: tuple[str, ...], widths: list[int]) -> str:
-    padded = [f"{cell:<{width + COLUMN_GAP}}" for cell, width in zip(cells[:-1], widths)]
+    padded = [f"{cell:<{width + COLUMN_GAP}}" for cell, width in zip(cells[:-1], widths, strict=False)]
     return "".join([*padded, cells[-1]])
 
 
