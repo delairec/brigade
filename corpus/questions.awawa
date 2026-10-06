@@ -1,0 +1,7 @@
+OPEN_QUESTION InitAsksForBuiltInOrCustomRoles
+	QUESTION "does brigade init, or an installer if one comes, ask whether to use the built-in"
+		+ "roles or the user's own, and write the answer into config.toml?"
+	STATUS open
+	RATIONALE "the user ruled on 2026-10-06 that brigade defines default roles and that a user who"
+		+ "wants their own configures them, and left open whether an installer asks"
+	SOURCE "the user's ruling of 2026-10-06 in the refinement of B43"

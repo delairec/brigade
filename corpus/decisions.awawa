@@ -189,6 +189,8 @@ DECISION RolesAreSlotsBoundToRoleFiles
 		+ "overridable in the machine config; a role file never names a model"
 	DESC "brigade ships a built-in role for every slot: ada plans, bilal reports, mina triages, and"
 		+ "one builder, verifier, reviewer, rebaser, rule writer and explorer"
+	DESC "an AGENT entity declares no slot: it takes the slot a table of config.toml written by its"
+		+ "user binds it to; brigade ships no binding and no name of its author's agents"
 	REJECTED "roles living only in the instructions corpus: presupposes that corpus on every"
 		+ "machine"
 	REJECTED "roles written in one client's agent-file format: bound to that client"
@@ -197,7 +199,10 @@ DECISION RolesAreSlotsBoundToRoleFiles
 	RATIONALE "the user asked on 2026-10-05 for custom roles and for their own roles by default,"
 		+ "and named the reporter bilal; @SCHEMA.AGENT of the instructions corpus separates"
 		+ "REASONING from the model each adapter binds"
+	REJECTED "built-in roles named after the agents of the author's instructions corpus, replaced"
+		+ "by name: brigade would ship its author's machine"
 	SOURCE "pull request #3 of the brigade repository"
+	SOURCE "DESC 7 added on the user's ruling of 2026-10-06 in the refinement of B43"
 
 DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
 	TITLE "brigade installs on any Linux from one zipapp or a clone; Python 3.11 or later, git,"

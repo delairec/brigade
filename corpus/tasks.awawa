@@ -324,6 +324,8 @@ TASK B06
 		+ "and a reading slot runs in a disposable worktree; one test per fallback, through the"
 		+ "fake adapter"
 	SPEC "a project's PROJECT.CLIENT replaces the client of config.toml for its runs"
+	SPEC "a project's PROJECT.ROLE slot=name and PROJECT.ROLESET resolve before the machine's roles"
+		+ "for its runs"
 	AFTER @TASK.B05
 	AFTER @TASK.B42
 	AFTER @TASK.B43
@@ -874,25 +876,53 @@ TASK B42
 
 TASK B43
 	TITLE "Role files, slots and their resolution"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "roles"
 	ROLE bastien
-	SPEC "roles/ holds a built-in role file for each of the nine slots, flat front matter and"
-		+ "system prompt body"
-	SPEC "brigade roles list prints the slot, the role, its source and the model the adapter binds,"
-		+ "text and --json; brigade roles show <slot> prints the resolved file"
-	SPEC "an AGENT entity of the configured instructions corpus is read through awawa status and"
-		+ "context --json at launch time and resolves before the built-ins"
-	SPEC "a file of the machine's roles directory resolves before the corpus; PROJECT.ROLE"
-		+ "slot=name resolves first"
-	SPEC "a role file naming a model fails brigade roles lint"
+	SPEC "brigade ships a built-in role file for each of the nine slots under brigade/roles/data/:"
+		+ "ada plans, builder builds, verifier verifies, reviewer reviews, rebaser rebases, bilal"
+		+ "reports, mina triages, rulewriter writes rules, explorer explores"
+	SPEC "a role file is Markdown: a front matter between two --- lines, one key: value per line,"
+		+ "declaring name, slot, reasoning, capabilities comma-separated, budget and returns, then"
+		+ "the system prompt body"
+	SPEC "a slot resolves in order to a file of $XDG_CONFIG_HOME/brigade/roles/, then to the AGENT"
+		+ "entity of the configured instructions corpus that the slot table of config.toml binds to"
+		+ "it, then to the built-in role; on a machine that configures neither, every slot resolves"
+		+ "to its built-in role"
+	SPEC "an AGENT entity is read through awawa at each resolution, never cached: WORK, REASONING,"
+		+ "CAPABILITY, BUDGET and RETURNS fill the front matter and its awawa context package is"
+		+ "the body; an AGENT entity no row of the slot table names takes no slot"
+	SPEC "brigade roles list prints the slot, the role, its source and the model the configured"
+		+ "client adapter binds, text and --json; brigade roles show <slot> prints the resolved"
+		+ "file"
+	SPEC "brigade roles lint fails, naming the file and the key, on a role file that names a model,"
+		+ "lacks a declared key, carries an unknown one or a value outside its set"
 	SPEC "brigade doctor reports the configured instructions corpus as optional, awawa lint"
 		+ "--strict clean or not; none configured is a warning with its fallback, built-in roles"
 		+ "and no instructions package"
 	AFTER @TASK.B01
 	AFTER @TASK.B02
 	AFTER @TASK.B03
+	AFTER @TASK.B42
+	RATIONALE "the slots, the resolution order and the fields follow"
+		+ "@DECISION.RolesAreSlotsBoundToRoleFiles; the built-in files live under the package as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets"
+		REF @DECISION.RolesAreSlotsBoundToRoleFiles
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+	RATIONALE "brigade ships nothing of its author's machine: its built-in roles answer every slot"
+		+ "where nothing is configured, and an instructions corpus binds a slot only through a"
+		+ "table its user writes, an AGENT entity declaring no slot"
+	RATIONALE "the model roles list shows comes from the reasoning-to-model table of @TASK.B42;"
+		+ "PROJECT.ROLE and PROJECT.ROLESET are applied by @TASK.B06, the first launch that knows"
+		+ "its project, as PROJECT.CLIENT is"
+		REF @TASK.B42
+		REF @TASK.B06
+	RATIONALE "whether an installer asks for the built-in or the user's own roles stays"
+		+ "@OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles"
+		REF @OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles
+	SOURCE "pull request #3 of the brigade repository; the user's rulings of 2026-10-06 in the"
+		+ "refinement of B43"
 
 TASK B44
 	TITLE "Second client adapter and the rehearsal on it"
