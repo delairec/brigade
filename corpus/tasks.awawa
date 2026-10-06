@@ -110,30 +110,56 @@ TASK B02
 
 TASK B03
 	TITLE "brigade init: the operational corpus repository, its schema and config.toml"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
 	ROLE bastien
 	SPEC "brigade init creates $XDG_CONFIG_HOME/brigade/, ~/.config/brigade/ by default, as a git"
 		+ "repository holding _schema.awawa installed from the shipped template and a .gitignore"
 		+ "listing config.toml, both committed in one commit with the user's git identity"
+		IMPL "brigade/commands/init.py::def run(request, runtime) -> dict:"
+		IMPL "brigade/git/commit_files.py::def commit_files("
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_commit_the_schema_and_the_gitignore_in_one_commit_with_the_user_identity"
+		IMPL "tests/cli/test_init.py::def test_should_keep_the_configuration_out_of_the_repository"
 	SPEC "awawa lint --strict exits 0 on the created corpus"
+		IMPL "tests/cli/test_init.py::def test_should_create_a_corpus_that_lints_clean"
 	SPEC "the schema template lives at brigade/corpus/data/schema.awawa.tpl and schema/ is gone"
 		+ "from the repository root; init run from the clone and from dist/brigade.pyz installs the"
 		+ "same file"
+		IMPL "brigade/corpus/data/schema.awawa.tpl::SCHEMA *"
+		IMPL "tests/cli/test_init.py::def test_should_install_the_shipped_schema"
+		IMPL "tests/cli/test_zipapp.py::def"
+			+ "test_should_install_the_schema_the_clone_ships_from_the_built_archive"
 	SPEC "init writes config.toml once from a shipped string.Template, every key commented out with"
 		+ "its meaning; tomllib reads it as an empty table"
+		IMPL "brigade/corpus/data/config.toml.tpl::# The client adapter that runs the agents"
+		IMPL "tests/cli/test_init.py::def test_should_write_a_configuration_read_as_an_empty_table"
 	SPEC "brigade/system/paths builds the config, state and cache roots from XDG_CONFIG_HOME,"
 		+ "XDG_STATE_HOME and XDG_CACHE_HOME with their defaults; the tests redirect brigade with"
 		+ "these variables alone"
+		IMPL "brigade/system/paths.py::def build_paths() -> Paths:"
+		IMPL "tests/unit/system/test_paths.py::class BuildPaths(unittest.TestCase)"
+		IMPL "tests/cli/temporary_machine.py::def describe_environment(self) -> dict:"
 	SPEC "init creates neither $XDG_STATE_HOME/brigade/ nor $XDG_CACHE_HOME/brigade/"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_create_neither_the_state_root_nor_the_cache_root"
 	SPEC "a second init rewrites nothing and commits nothing; a present file that differs from the"
 		+ "shipped one is left as it is and reported as a warning, exit 0"
+		IMPL "tests/cli/test_init.py::class BrigadeInitRunTwice(unittest.TestCase)"
+		IMPL "tests/cli/test_init.py::class"
+			+ "BrigadeInitWhenAFileDiffersFromTheShippedOne(unittest.TestCase)"
 	SPEC "without a git user.name or user.email, init exits 1 with a message naming the missing"
 		+ "key, before creating anything"
+		IMPL "brigade/commands/init.py::def _require_identity(runtime) -> None:"
+		IMPL "tests/cli/test_init.py::class BrigadeInitWithoutAGitIdentity(unittest.TestCase)"
 	SPEC "it prints text and --json; the JSON document carries schema_version and one entry per"
 		+ "item, the repository, the schema, the .gitignore and config.toml, each with its state:"
 		+ "created, present or differs"
+		IMPL "brigade/commands/render_init_text.py::def render_init_text(document: dict) -> str:"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_report_every_item_created_in_the_versioned_document"
+		IMPL "tests/cli/test_init.py::def test_should_print_the_report_as_text"
 	AFTER @TASK.B01
 	AFTER @TASK.B02
 	RATIONALE "the registry, the policies, the studies, the orders and the requests are written"
@@ -159,6 +185,7 @@ TASK B03
 		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	SOURCE "the Artifact Brigade Blueprint, plan sections 13 and 16; the user's rulings of"
 		+ "2026-10-05 in the refinement of B03"
+	DELIVERED_BY 15
 
 TASK B04
 	TITLE "brigade project add, list, show, pause and resume: the registry in the operational"
