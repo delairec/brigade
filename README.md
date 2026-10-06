@@ -244,8 +244,9 @@ The CI runs the tests and the zipapp build on Python 3.11 and on the latest Pyth
   `tests/guards/` — the guards that parse every module of `brigade/`: no static import of `brigade.adapters`,
   `brigade.collectors`, `brigade.checks` or `brigade.outputs` from outside its package, no read of the environment
   outside `brigade/system/paths.py` and the process runner.
-- `brigade/adapters/clients/` — the built-in client adapters, `claude_code.py` and `fake.py`, reached by name only;
-  the recordings the test suite replays live in `tests/cli/fixtures/recordings/`.
+- `brigade/adapters/clients/` — the built-in client adapters, `claude_code.py`, reached by name only;
+  `brigade/adapters/test_clients/` — the adapters of the test suite, `fake.py`, which the resolver searches after
+  `brigade/adapters/clients/`; the recordings the test suite replays live in `tests/cli/fixtures/recordings/`.
 - `brigade/roles/data/` — the nine built-in role files, one per slot.
 - `brigade/adapters/schedulers/` — the scheduler plugins, `systemd.py`, `cron.py` and `loop.py`, reached by name only;
   the templates of the units and of the cron line live in its `data/` folder.

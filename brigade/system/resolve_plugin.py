@@ -8,11 +8,8 @@ from typing import Callable
 from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-BUILT_IN_PLUGIN_PACKAGES = {
-    "forge": "brigade.adapters.forges",
-    "client": "brigade.adapters.clients",
-    "scheduler": "brigade.adapters.schedulers",
-}
+BUILT_IN_PLUGIN_PACKAGES = {"forge": "brigade.adapters.forges", "scheduler": "brigade.adapters.schedulers"}
+CLIENT_PACKAGES = ("brigade.adapters.clients", "brigade.adapters.test_clients")
 BUILT_IN_ENTRY_POINTS = {"forge": "describe_account", "scheduler": "install"}
 CLIENT_NAME_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
 CLIENT_EXECUTABLE_PREFIX = "brigade-client-"
@@ -42,8 +39,8 @@ class ClientExecutableCaller:
             raise BrigadeError(f"client adapter {self.name} answered {operation} with no JSON document") from None
 
 
-def _import_built_in(kind: str, module_basename: str):
-    module_name = f"{BUILT_IN_PLUGIN_PACKAGES[kind]}.{module_basename}"
+def _import_module(package: str, module_basename: str):
+    module_name = f"{package}.{module_basename}"
     try:
         return importlib.import_module(module_name)
     except ModuleNotFoundError as error:
@@ -53,7 +50,7 @@ def _import_built_in(kind: str, module_basename: str):
 
 
 def _resolve_built_in(kind: str, name: str):
-    plugin = _import_built_in(kind, name) if name.isidentifier() else None
+    plugin = _import_module(BUILT_IN_PLUGIN_PACKAGES[kind], name) if name.isidentifier() else None
     if not hasattr(plugin, BUILT_IN_ENTRY_POINTS[kind]):
         raise BrigadeError(f"no {kind} plugin {name}")
     return plugin
@@ -66,8 +63,9 @@ def _resolve_client(name: str, runtime):
     executable = shutil.which(f"{CLIENT_EXECUTABLE_PREFIX}{name}", path=runtime.paths.executable_search_path)
     if executable is not None:
         return ClientExecutableCaller(name=name, executable=executable, run_process=runtime.run_process)
-    plugin = _import_built_in("client", name.replace("-", "_"))
-    if not hasattr(plugin, CLIENT_ENTRY_POINT):
+    modules = (_import_module(package, name.replace("-", "_")) for package in CLIENT_PACKAGES)
+    plugin = next((module for module in modules if hasattr(module, CLIENT_ENTRY_POINT)), None)
+    if plugin is None:
         raise missing
     return plugin
 

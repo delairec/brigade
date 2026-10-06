@@ -1399,7 +1399,7 @@ TASK B42
 		+ "recorded result documents of the directory a config.toml key names; the recordings of"
 		+ "the test suite live under tests/cli/fixtures and every test that launches a client"
 		+ "launches the fake"
-		IMPL "brigade/adapters/clients/fake.py::def _build_launch(request: dict) -> dict:"
+		IMPL "brigade/adapters/test_clients/fake.py::def _build_launch(request: dict) -> dict:"
 		IMPL "tests/cli/fixtures/recordings/bastien.json::fake-session-bastien"
 		IMPL "tests/cli/test_zipapp.py::def"
 			+ "test_should_answer_through_the_fake_adapter_the_built_archive_ships"
