@@ -498,16 +498,86 @@ TASK B06
 		+ "2026-10-06 in the refinement of B06"
 
 TASK B07
-	TITLE "Tick skeleton and scheduler install"
-	STATUS draft
+	TITLE "brigade tick on an empty planner with its heartbeat, and brigade scheduler install and"
+		+ "status"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tick"
 	ROLE bastien
-	SPEC "brigade tick --once takes a lock, reconciles nothing yet and records a ledger event"
-	SPEC "brigade scheduler install writes the user systemd timer and service where a user instance"
-		+ "runs, else a cron line; brigade tick --loop is the third scheduler"
-	SPEC "the journal or the tick log shows one tick every five minutes"
-	AFTER @TASK.B05
+	SPEC "brigade tick --once takes $XDG_STATE_HOME/brigade/locks/tick.lock without blocking; when"
+		+ "another process holds it, it exits 0 with one stderr line and writes nothing"
+	SPEC "a tick reads now once in UTC, builds a snapshot carrying it, plans with a pure"
+		+ "plan(snapshot) that returns no action yet and applies the plan through an executor, in"
+		+ "plan and apply rounds up to a cap, until the plan is empty"
+	SPEC "every tick that held the lock writes $XDG_STATE_HOME/brigade/tick.json atomically with"
+		+ "schema_version, ts, duration_ms and the number of actions applied, and writes no ledger"
+		+ "line"
+	SPEC "brigade tick --dry-run prints the snapshot and the plan, text and --json, takes no lock,"
+		+ "applies nothing and writes no heartbeat"
+	SPEC "brigade tick --loop runs a tick every five minutes in the foreground, reads now once per"
+		+ "tick, and exits 0 on SIGTERM and SIGINT"
+	SPEC "brigade scheduler install installs the scheduler config.toml's scheduler key names,"
+		+ "systemd, cron or loop; without the key, systemd where the user instance is running or"
+		+ "degraded as brigade doctor probes it, else cron; loop installs nothing and prints the"
+		+ "command to keep running"
+	SPEC "systemd: brigade.service and brigade.timer under $XDG_CONFIG_HOME/systemd/user/, the"
+		+ "timer OnCalendar=*:0/5 with Persistent=true, the service running brigade tick --once by"
+		+ "the absolute path of the brigade that installed it with the PATH and the XDG variables"
+		+ "of the install, then systemctl --user daemon-reload and enable --now brigade.timer"
+	SPEC "cron: one */5 line running the same command with the same environment, appended through"
+		+ "crontab, its stderr appended to $XDG_STATE_HOME/brigade/tick.log, the line recognised by"
+		+ "a marker comment"
+	SPEC "install run twice leaves one pair of units or one cron line"
+	SPEC "brigade scheduler status prints the scheduler installed, systemd, cron or none, its unit"
+		+ "files or its cron line, the next activation where systemd gives it, and the last tick"
+		+ "read from tick.json, text and --json, and exits 0 installed or not"
+	SPEC "tests/cli prove install and status against fake systemctl and crontab executables on PATH"
+		+ "in a temporary machine; no test reaches the user's systemd instance or crontab"
+	AFTER @TASK.B04
+	RATIONALE "the tick is the coordinator of"
+		+ "@DECISION.ADeterministicTickReplacesTheCoordinatorAgent; its shape, a snapshot, a pure"
+		+ "planner and an executor in rounds, and --dry-run follow"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction, delivered empty so"
+		+ "that @TASK.B12 and @TASK.B48 add facts and actions without changing it"
+		REF @DECISION.ADeterministicTickReplacesTheCoordinatorAgent
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+		REF @TASK.B12
+		REF @TASK.B48
+	RATIONALE "the plan of 2026-10-04 had every tick record a ledger event; the user kept DESC 7 of"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction, the heartbeat as a"
+		+ "state file and no ledger line per empty tick, and tick.json is what the last tick of"
+		+ "@TASK.B28 reads; the ledger receives the outcome of each action, none yet, so the task"
+		+ "follows @TASK.B04, which delivers the first fcntl lock, and not @TASK.B05"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+		REF @TASK.B28
+		REF @TASK.B04
+		REF @TASK.B05
+	RATIONALE "the lock, the non-blocking exit and the atomic heartbeat follow"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory; now read once"
+		+ "follows @DECISION.TheClockIsReadOnceAndCarriedAsAFact; --loop's exit on a signal and the"
+		+ "journal or the cron file as the only log follow"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.TheClockIsReadOnceAndCarriedAsAFact
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "the schedulers are plugins of kind scheduler under brigade/adapters/schedulers,"
+		+ "resolved by name as @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported"
+		+ "sets; the unit and cron templates are string.Template files of a data/ folder, as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets; systemctl and"
+		+ "crontab run through the runner of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	RATIONALE "the unit carries the PATH of the install because the user systemd manager's PATH"
+		+ "lacks ~/.local/bin, where awawa lives on the reference machine (systemctl --user"
+		+ "show-environment, 2026-10-06), and cron's default PATH lacks it too; systemd is the"
+		+ "default where it runs since Persistent=true fires a tick missed while the machine was"
+		+ "off, which cron cannot, and no scheduler is a prerequisite, as"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites rules"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "the Artifact Brigade Blueprint, plan sections 15, 16 and 17; the user's rulings of"
+		+ "2026-10-06 in the refinement of B07"
 
 TASK B08
 	TITLE "Corpus-at-ref reader"
