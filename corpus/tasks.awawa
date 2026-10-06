@@ -1963,7 +1963,7 @@ TASK B56
 			+ "BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):"
 	SPEC "the path named is the one the operating system refused, a directory, a lock or a file,"
 		+ "except the temporary file of an atomic write, named by its target"
-		IMPL "brigade/system/write_json_atomically.py::def _fill_and_replace("
+		IMPL "brigade/system/write_text_atomically.py::def _fill_and_replace("
 		IMPL "tests/unit/system/test_write_json_atomically.py::class"
 			+ "WriteJsonAtomicallyWhereTheMachineRefusesTheWriteTest(unittest.TestCase):"
 		IMPL "tests/unit/system/test_write_json_atomically.py::def"
