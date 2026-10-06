@@ -2470,6 +2470,8 @@ TASK B66
 		+ "first that knows patch"
 		IMPL ".coveragerc::source = brigade"
 		IMPL ".coveragerc::patch = subprocess"
+		IMPL "tests/cli/forward_coverage_environment.py::COVERAGE_VARIABLE ="
+			+ "\"COVERAGE_PROCESS_CONFIG\""
 		IMPL "requirements-ci.txt::coverage=="
 	SPEC "a job of ci.yml of its own, on Python 3.11, installs requirements-ci.txt by pip and runs"
 		+ "coverage run -m unittest, coverage combine, then coverage report; the report stands in"
@@ -2487,7 +2489,7 @@ TASK B66
 	SPEC ".gitignore ignores .coverage and .coverage.*, written without leading slash"
 		IMPL ".gitignore::.coverage.*"
 	SPEC "the sentence of README.md on the CI names the coverage report, read in the job log only"
-		IMPL "README.md::a report read in"
+		IMPL "README.md::report read in the job log only"
 	AFTER @TASK.B65
 	RATIONALE "the user ruled report only, no threshold at first; a threshold comes once the real"
 		+ "figure is known and is never lowered, as"

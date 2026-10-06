@@ -7,6 +7,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
+from tests.cli.forward_coverage_environment import forward_coverage_environment
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 
 SCHEMA_ENTRY = 1
@@ -135,7 +136,11 @@ class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
 
     def test_should_create_the_corpus_under_the_home_configuration_directory(self):
         # Arrange
-        home_only = {"PATH": self.machine.describe_environment()["PATH"], "HOME": str(self.machine.home)}
+        home_only = {
+            "PATH": self.machine.describe_environment()["PATH"],
+            "HOME": str(self.machine.home),
+            **forward_coverage_environment(),
+        }
 
         # Act
         completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "init", environment=home_only)

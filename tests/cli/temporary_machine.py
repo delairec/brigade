@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.cli.forward_coverage_environment import forward_coverage_environment
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
 SHIPPED_SCHEMA = REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
@@ -26,6 +28,7 @@ class TemporaryMachine:
             "XDG_CONFIG_HOME": str(self.config_home),
             "XDG_STATE_HOME": str(self.state_home),
             "XDG_CACHE_HOME": str(self.cache_home),
+            **forward_coverage_environment(),
         }
 
     def write_configuration(self, content: str) -> Path:
