@@ -262,8 +262,9 @@ ruff check . && ruff format --check .          # the lint and the format, where 
 ```
 
 The CI runs the tests and the zipapp build on Python 3.11 and on the latest Python release, lints and checks the format
-with ruff, configured by `ruff.toml`, and audits its workflows with zizmor, on every pull request; ruff and zizmor are
-pinned in `requirements-ci.txt`, which dependabot keeps current, and the pinned ruff gives the verdict that counts.
+with ruff, configured by `ruff.toml`, scans the repository with semgrep under its Python and security-audit rule packs,
+and audits its workflows with zizmor, on every pull request; ruff, semgrep and zizmor are pinned in
+`requirements-ci.txt`, which dependabot keeps current, and the pinned ruff gives the verdict that counts.
 
 ## Layout
 
