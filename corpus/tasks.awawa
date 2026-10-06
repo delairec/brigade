@@ -319,6 +319,11 @@ TASK B06
 		+ "brigade-owned subprocess with its own session, log files and pid, or in the foreground"
 	SPEC "writes the normalised result to the ledger, null fields named with their reason"
 	SPEC "passes the role package as the adapter translates it"
+	SPEC "when the adapter's probe declares no step count, steps are null and the budget is held on"
+		+ "wall time; when it declares no per-tool grant, the run uses the client's unattended mode"
+		+ "and a reading slot runs in a disposable worktree; one test per fallback, through the"
+		+ "fake adapter"
+	SPEC "a project's PROJECT.CLIENT replaces the client of config.toml for its runs"
 	AFTER @TASK.B05
 	AFTER @TASK.B42
 	AFTER @TASK.B43
@@ -793,28 +798,79 @@ TASK B41
 
 TASK B42
 	TITLE "Client adapter contract, the Claude Code adapter and the fake adapter"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "adapters"
 	ROLE bastien
 	SPEC "the contract is five operations answered as JSON documents, probe, launch, result, resume"
-		+ "and transcripts; brigade adapter probe|launch-argv|parse-result expose them on the"
-		+ "command line"
+		+ "and transcripts; brigade adapter probe|launch-argv|parse-result|resume-argv|transcripts"
+		+ "exposes each on the command line"
 	SPEC "the Claude Code adapter maps capabilities to tool grants, the reasoning level to a model"
 		+ "and an effort, passes the role package as an appended system prompt, caps the turns at"
 		+ "the budget plus a quarter, and normalises the result object into outcome, steps, usage,"
 		+ "session id, duration and error class, a rate limit classified and its reset hour parsed"
 		+ "when named"
-	SPEC "an adapter is a built-in module or an executable brigade-client-<name> on PATH;"
-		+ "config.toml selects it and PROJECT.CLIENT overrides it"
-	SPEC "the fake adapter replays recorded result documents and is the one the test suite launches"
-	SPEC "one test per fallback proves the core's behaviour when probe declares an operation absent"
-	SPEC "a guard script under tests fails when a module of the core imports an adapter module"
-	SPEC "brigade doctor checks the configured client adapter's probe as a prerequisite; a"
-		+ "config.toml absent or naming no client is a finding that names the config key and"
-		+ "brigade init"
+	SPEC "the reasoning-to-model table of the Claude Code adapter ships with defaults, deepest"
+		+ "fable and max, deep fable and high, standard opus and high, light sonnet and medium; a"
+		+ "level set in config.toml replaces its row"
+	SPEC "the Claude Code adapter resumes a session by its id and answers transcripts with the"
+		+ "messages of a session read from its JSONL file under the Claude Code projects directory;"
+		+ "its probe declares every operation present"
+	SPEC "an adapter is a built-in module or an executable brigade-client-<name> on PATH; the"
+		+ "client key of config.toml selects it"
+	SPEC "the fake adapter is a built-in module shipped in dist/brigade.pyz that replays the"
+		+ "recorded result documents of the directory a config.toml key names; the recordings of"
+		+ "the test suite live under tests/cli/fixtures and every test that launches a client"
+		+ "launches the fake"
+	SPEC "config.toml is read once into a frozen record with defaults; an unknown key or a value of"
+		+ "the wrong type is an error naming the key and the file"
+	SPEC "one validator module checks every adapter answer against the shape declared for its"
+		+ "operation, required keys, types and enumerations, before the core reads it; an answer"
+		+ "that fails is an error naming the adapter, the operation and the key"
+	SPEC "guards under tests/guards parse every module with ast and fail on a static import of"
+		+ "brigade.adapters, brigade.collectors, brigade.checks or brigade.outputs from outside its"
+		+ "own package, and on a read of os.environ, os.getenv, Path.home or expanduser outside"
+		+ "brigade/system/paths and the process runner"
+	SPEC "brigade doctor checks the configured client adapter's probe as a prerequisite; an absent"
+		+ "config.toml is a finding naming brigade init, a config.toml naming no client a finding"
+		+ "naming the client key and the file"
 	AFTER @TASK.B01
 	AFTER @TASK.B02
+	AFTER @TASK.B03
+	RATIONALE "the contract and the two adapters follow"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters and"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported; the guards are the"
+		+ "ones @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents and"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables give this task"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	RATIONALE "config.toml is read here because @TASK.B03 writes it and leaves its frozen record to"
+		+ "its first reader; the answers are validated as"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets, and no other"
+		+ "task carries the validator"
+		REF @TASK.B03
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "each fallback is proven by the task that builds its consumer: resume and the reset"
+		+ "hour by @TASK.B19, transcripts by @TASK.B35, the step count and the per-tool grant by"
+		+ "@TASK.B06; PROJECT.CLIENT is applied by @TASK.B06, the first launch that knows its"
+		+ "project"
+		REF @TASK.B19
+		REF @TASK.B35
+		REF @TASK.B06
+	RATIONALE "the fake adapter ships in the package because @TASK.B45 runs a wave on it from"
+		+ "dist/brigade.pyz; its recordings are fixtures of the test suite, never shipped"
+		REF @TASK.B45
+	RATIONALE "Claude Code 2.1.290 accepts --allowedTools, --model, --effort low to max,"
+		+ "--append-system-prompt, --resume and --max-turns, the last absent from --help but parsed"
+		+ "(claude -p --max-turns: argument missing), and keeps a session in"
+		+ "~/.claude/projects/<working directory, slashes and dots as dashes>/<session id>.jsonl,"
+		+ "read on 2026-10-06"
+	RATIONALE "the adapter reads no environment: the home directory it locates the transcripts from"
+		+ "reaches it in the request, built by brigade/system/paths"
+	SOURCE "pull request #3 of the brigade repository; the user's rulings of 2026-10-06 in the"
+		+ "refinement of B42"
 
 TASK B43
 	TITLE "Role files, slots and their resolution"
