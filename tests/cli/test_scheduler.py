@@ -372,15 +372,22 @@ class BrigadeSchedulerInstallWhenCrontabCannotBeListed(SchedulerTestCase):
 
 
 class BrigadeSchedulerInstallBeforeInit(SchedulerTestCase):
-    def test_should_exit_1_naming_brigade_init(self):
+    def test_should_install_the_scheduler_the_probe_chooses(self):
         # Act
-        completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install")
+        completed = self.run_scheduler([SYSTEMD_OFFLINE, CRONTAB], "install", "--json")
 
         # Assert
-        configuration = self.machine.corpus / "config.toml"
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade scheduler install: no configuration at {configuration}; run brigade init\n"),
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "scheduler": "cron",
+                "chosen_by": "probe",
+                "unit_files": [],
+                "cron_line": self.describe_cron_line(f"{SYSTEMD_OFFLINE}:{CRONTAB}"),
+                "keep_running": None,
+            },
         )
 
 

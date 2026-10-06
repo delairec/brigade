@@ -4,7 +4,7 @@ from pathlib import Path
 from brigade.errors import ToolNotFound
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
-from brigade.system.read_configuration import read_configuration
+from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -37,7 +37,7 @@ def _describe_install_request(runtime) -> dict:
 
 
 def run(request, runtime) -> dict:
-    configuration = read_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
+    configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
     if configuration.scheduler is not None:
         name, chosen_by = configuration.scheduler, "configuration"
     else:
