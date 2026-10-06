@@ -16,7 +16,7 @@ WRITE_CALL = "write"
 def list_state_at_the_first_write(state_root: Path, run_directory: Path, pid: int) -> list[str]:
     states = []
 
-    def list_runs_on_the_first_write(frame, event, called) -> None:
+    def list_runs_on_the_first_write(_frame, event, called) -> None:
         if event == "c_call" and called.__name__ == WRITE_CALL and not states:
             states.extend(run["state"] for run in list_runs(state_root))
 
