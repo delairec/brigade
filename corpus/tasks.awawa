@@ -2593,7 +2593,7 @@ TASK B69
 	COMPONENT "runs"
 	ROLE bastien
 	SPEC "before any fix, the pull request states the root cause of"
-		+ "tests/cli/test_runs.py::BrigadeRunsListOfARunningRun::test_should_list_a_detached_run_whose_client_has_not_finished_as_running"
+		+ "tests/cli/test_runs.py::BrigadeRunsListOfARunningRunTest::test_should_list_a_detached_run_whose_client_has_not_finished_as_running"
 		+ "listing the run dead, with its evidence: a reproduction, or a trace naming the read of"
 		+ "brigade runs list and the write it races with"
 	SPEC "where the cause is in the product, a detached run reported dead while its process lives,"
