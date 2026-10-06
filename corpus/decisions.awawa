@@ -1080,3 +1080,27 @@ DECISION TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
 	RATIONALE "the user ruled for the local run alone and gave no further reason; the ruling is"
 		+ "recorded so that no review proposes installing awawa in the CI again"
 	SOURCE "the user's ruling of 2026-10-06 during wave M0"
+
+DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+	TITLE "a run keeps one directory under runs/<id>/ for all its segments, one folder"
+		+ "segments/<n>/ per segment, and result.json written last marks it finished"
+	STATUS active
+	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md,"
+		+ "segments/<n>/ with brief.md, stdout.log and stderr.log of each segment, and result.json,"
+		+ "the normalised result of the last segment"
+	DESC "result.json is written atomically after the ledger events of the run: a run with a result"
+		+ "is finished, one whose pid lives without it is running, any other is dead"
+	DESC "a hand-over keeps the run id and numbers the segment; the brief of segment n opens on the"
+		+ "progress file"
+	DESC "binds @TASK.B06, and every task that reads a run, @TASK.B07 and @TASK.B19"
+		REF @TASK.B06
+		REF @TASK.B07
+		REF @TASK.B19
+	REJECTED "a new run id per segment: the ledger's segment field and runs list would split one"
+		+ "run into several, and the progress file would move at each hand-over"
+	REJECTED "one stdout.log and stderr.log appended across segments: runs logs could no longer"
+		+ "tell which segment printed a line, and the brief each segment received would be lost"
+	REJECTED "a state file rewritten as the run advances: the pid and the result already answer"
+		+ "running, finished and dead, without a write a crash could leave half done"
+	SOURCE "pull request #24 of the brigade repository, delivering @TASK.B06"
+		REF @TASK.B06
