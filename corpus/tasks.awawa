@@ -2053,3 +2053,70 @@ TASK B57
 		REF @TASK.B56
 	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57"
 		REF @TASK.B56
+
+TASK B61
+	TITLE "the foundations of M0 reviewed read-only by the role of the deepest reasoning against"
+		+ "the plan and every active decision, last of M0"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "review"
+	ROLE none
+	SPEC "the review is one run of the role max of the instructions corpus, deepest reasoning,"
+		+ "read-only, launched with the user's permission; the run changes no file of the"
+		+ "repository, and the session that launched it commits the report"
+	SPEC "the report is a dated file under docs/, docs/<date>-foundations-review.md, delivered by a"
+		+ "pull request of its own that changes no code and no corpus entity"
+	SPEC "the report names the commit of main it read; the code of brigade/ at that commit is"
+		+ "checked against each section of the plan, artifact/parts/plan.html as brought in line"
+		+ "with the decisions, and against every active DECISION of corpus/decisions.awawa; each"
+		+ "departure names the file and the function or the line, and the plan section or the"
+		+ "decision it departs from"
+	SPEC "each risk the foundations carry for a later milestone, M1 to M8, or for the goal of the"
+		+ "tool, the CLI doing the mechanical work and waves running unattended on one machine"
+		+ "across every registered project, names its evidence, a file, a command with its output"
+		+ "or a decision, and the milestone it threatens"
+	SPEC "the report grades each component on a scale it states: the subpackages of brigade/,"
+		+ "adapters, commands, corpus, git, ledger, registry, roles, runs, system and tick, and"
+		+ "cli.py with launcher.py; each grade carries the evidence it rests on"
+	SPEC "each finding names what it becomes once the user has ruled: a draft TASK, an"
+		+ "OPEN_QUESTION or an amendment of a DECISION; the review's pull request fixes nothing it"
+		+ "found"
+	SPEC "the report opens on its verdict, then the table of grades; one fact per line, each figure"
+		+ "with its perimeter and the command that produced it"
+	AFTER @TASK.B01
+	AFTER @TASK.B02
+	AFTER @TASK.B03
+	AFTER @TASK.B04
+	AFTER @TASK.B05
+	AFTER @TASK.B06
+	AFTER @TASK.B07
+	AFTER @TASK.B08
+	AFTER @TASK.B42
+	AFTER @TASK.B43
+	AFTER @TASK.B49
+	AFTER @TASK.B54
+	AFTER @TASK.B56
+	AFTER @TASK.B57
+	RATIONALE "the user ruled on 2026-10-06 that a review by max closes M0, after every other task"
+		+ "of the milestone: its goal is to check that the foundations are solid, that they match"
+		+ "the initial plan and the architectural decisions max ruled, and to name the risks they"
+		+ "carry for the rest of the plan and for the goal of the tool; the foundations must be"
+		+ "solid because everything later rests on them"
+	RATIONALE "the plan, HANDOFF.md section 6c, and the architectural decisions sourced in pull"
+		+ "request #9 are max's: the same role, of the deepest reasoning, reviews what was built on"
+		+ "them; a role of the deepest reasoning is launched only with the user's permission, as"
+		+ "the instructions corpus binds it"
+	RATIONALE "max writes nothing, hence a report the session commits; a review that fixed what it"
+		+ "found would verify its own work, hence findings that become draft tasks, open questions"
+		+ "or decision amendments after the user's ruling, never a fix in the review's own pull"
+		+ "request"
+	RATIONALE "ROLE none: the schema admits ada, bastien, lex, prudence, remi, manu, bilal, mina,"
+		+ "dora or none, and max is not among them; the role is named in the first SPEC"
+	RATIONALE "the report lands under docs/:"
+		+ "@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus refuses docs/ for the"
+		+ "corpus alone, and a dated report is never rewritten"
+		REF @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
+	RATIONALE "the plan was brought in line with every active decision in the pull request that"
+		+ "writes this task, so that the review reads one reference where the plan and the"
+		+ "decisions agree; the decisions prevail where a passage of the plan still differs"
+	SOURCE "the user's ruling of 2026-10-06 after wave M0"
