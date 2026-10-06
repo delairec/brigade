@@ -8,3 +8,7 @@ class ToolFailure(BrigadeError):
 
 class ToolNotFound(ToolFailure):
     pass
+
+
+class UsageError(BrigadeError):
+    pass

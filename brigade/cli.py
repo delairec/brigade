@@ -6,11 +6,15 @@ from dataclasses import dataclass
 from typing import Callable
 
 from brigade import VERSION
-from brigade.commands import adapter, doctor, init
+from brigade.commands import adapter, doctor, init, project_add, project_list, project_show, project_status
 from brigade.commands.render_adapter_text import render_adapter_text
 from brigade.commands.render_doctor_text import render_doctor_text
 from brigade.commands.render_init_text import render_init_text
-from brigade.errors import BrigadeError
+from brigade.commands.render_project_add_text import render_project_add_text
+from brigade.commands.render_project_list_text import render_project_list_text
+from brigade.commands.render_project_show_text import render_project_show_text
+from brigade.commands.render_project_status_text import render_project_status_text
+from brigade.errors import BrigadeError, UsageError
 from brigade.runtime import build_runtime
 
 
@@ -20,6 +24,28 @@ def _create_common_options():
         "--json", action="store_true", default=argparse.SUPPRESS, help="print the output as a JSON document"
     )
     return common_options
+
+
+def _add_project_parser(commands) -> None:
+    project_parser = commands.add_parser("project", help="register the projects brigade works on, list and show them")
+    actions = project_parser.add_subparsers(dest="project_action", metavar="action", required=True)
+    add_parser = actions.add_parser(
+        "add", parents=[_create_common_options()], help="register a git repository in the operational corpus"
+    )
+    add_parser.add_argument("path")
+    add_parser.add_argument("--name", help="the name of the PROJECT entity; the basename of the path by default")
+    add_parser.add_argument("--acceptance", action="append", default=[], help="a light command run by task check")
+    add_parser.add_argument("--heavy", action="append", default=[], help="a suite left to continuous integration")
+    add_parser.add_argument("--setup", action="append", default=[], help="a per-worktree command")
+    add_parser.add_argument("--force", action="store_true", help="replace the project already registered")
+    actions.add_parser("list", parents=[_create_common_options()], help="list every registered project")
+    for action, help_text in (
+        ("show", "print the fields of a project"),
+        ("pause", "pause a project"),
+        ("resume", "resume a paused project"),
+    ):
+        action_parser = actions.add_parser(action, parents=[_create_common_options()], help=help_text)
+        action_parser.add_argument("name")
 
 
 def _create_parser():
@@ -43,6 +69,7 @@ def _create_parser():
         help="answer one operation of the configured client adapter, the request read on stdin",
     )
     adapter_parser.add_argument("operation", choices=adapter.OPERATIONS)
+    _add_project_parser(commands)
     return parser
 
 
@@ -66,6 +93,14 @@ def _keep_options(options: argparse.Namespace) -> argparse.Namespace:
     return options
 
 
+def _ask_paused(options: argparse.Namespace) -> argparse.Namespace:
+    return argparse.Namespace(**vars(options), status="paused")
+
+
+def _ask_active(options: argparse.Namespace) -> argparse.Namespace:
+    return argparse.Namespace(**vars(options), status="active")
+
+
 def _read_adapter_request(options: argparse.Namespace) -> argparse.Namespace:
     stdin = None if options.operation == "probe" else sys.stdin.read()
     return argparse.Namespace(**vars(options), stdin=stdin)
@@ -83,12 +118,25 @@ COMMANDS = {
     "doctor": Command(_keep_options, doctor.run, render_doctor_text, _decide_doctor_exit_code),
     "init": Command(_keep_options, init.run, render_init_text, _decide_done),
     "adapter": Command(_read_adapter_request, adapter.run, render_adapter_text, _decide_done),
+    "project add": Command(_keep_options, project_add.run, render_project_add_text, _decide_done),
+    "project list": Command(_keep_options, project_list.run, render_project_list_text, _decide_done),
+    "project show": Command(_keep_options, project_show.run, render_project_show_text, _decide_done),
+    "project pause": Command(_ask_paused, project_status.run, render_project_status_text, _decide_done),
+    "project resume": Command(_ask_active, project_status.run, render_project_status_text, _decide_done),
 }
+USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
 
 
+def _name_command(options: argparse.Namespace) -> str:
+    action = getattr(options, "project_action", None)
+    if action is None:
+        return options.command
+    return f"{options.command} {action}"
+
+
 def _run_command(options: argparse.Namespace) -> int:
-    command = COMMANDS[options.command]
+    command = COMMANDS[_name_command(options)]
     document = command.run(command.read_request(options), build_runtime())
     if getattr(options, "json", False):
         print(json.dumps(document))
@@ -107,8 +155,11 @@ def main(arguments: list[str]) -> int:
         return 0
     try:
         return _run_command(options)
+    except UsageError as error:
+        sys.stderr.write(f"brigade {_name_command(options)}: {error}\n")
+        return USAGE_EXIT_CODE
     except BrigadeError as error:
-        sys.stderr.write(f"brigade {options.command}: {error}\n")
+        sys.stderr.write(f"brigade {_name_command(options)}: {error}\n")
         return 1
     except Exception:
         traceback.print_exc()

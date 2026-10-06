@@ -3,8 +3,8 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with four commands so far, `brigade --version`, `brigade doctor`, `brigade init` and
-`brigade adapter`; every other one is a task of the corpus.
+The entry point exists with five commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter` and `brigade project`; every other one is a task of the corpus.
 
 ## Install
 
@@ -40,6 +40,32 @@ identity, and `config.toml`, the machine configuration, every key commented out 
 `user.name` and `user.email` set in git. Run again, it rewrites nothing: a file that differs from the shipped one is
 left as it is and reported as a warning.
 
+## Projects
+
+The projects brigade works on are `PROJECT` entities of `projects.awawa` in the operational corpus, the registry.
+Every command below exits 1 naming `brigade init` until the corpus exists, and prints text or, with `--json`, a
+JSON document.
+
+```
+brigade project add <path> [--name N] [--acceptance CMD]... [--heavy CMD]... [--setup CMD]... [--force]
+brigade project list
+brigade project show <name>
+brigade project pause <name>
+brigade project resume <name>
+```
+
+`project add` registers a git repository under the basename of its path, every character outside letters, digits and
+`_` turned into `_`, or under `--name`. It discovers the absolute path, the `owner/name` of the `origin` remote, the
+main branch (`origin/HEAD`, else the branch checked out), the folder holding the tracked `.awawa` files and the forge,
+`github` for a remote on github.com. The acceptance commands and the per-worktree setup commands not given by flags are
+guessed from a `package.json`, a Python project or a `Cargo.toml` at the root, and marked as guessed; the heavy suites
+left to continuous integration are never guessed. A path or a name already registered is refused unless `--force`
+replaces it. `pause` and `resume` set the status of a project.
+
+Every write takes the lock of the corpus repository in `$XDG_STATE_HOME/brigade/locks/`, runs `awawa fmt` on
+`projects.awawa` and `awawa lint --strict` on the corpus, then commits; a failing lint restores the file and exits 1.
+These commands need awawa on `PATH`.
+
 ## Client adapters
 
 brigade runs its agents through a client adapter, selected by the `client` key of `config.toml`: `claude-code` for
@@ -67,6 +93,7 @@ The CI runs the tests and the zipapp build on Python 3.11 and on the latest Pyth
 
 - `bin/brigade` — the entry point of a clone; `brigade/` — the package; `build.py` — the zipapp build.
 - `tests/cli/` — black-box tests that run brigade as a subprocess; `tests/unit/` — tests of single modules;
+  `tests/integration/` — the git and awawa gateways against a real repository or corpus in a temporary directory;
   `tests/guards/` — the guards that parse every module of `brigade/`: no static import of `brigade.adapters`,
   `brigade.collectors`, `brigade.checks` or `brigade.outputs` from outside its package, no read of the environment
   outside `brigade/system/paths.py` and the process runner.
