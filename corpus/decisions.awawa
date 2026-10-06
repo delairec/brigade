@@ -1117,3 +1117,71 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		+ "running, finished and dead, without a write a crash could leave half done"
 	SOURCE "pull request #24 of the brigade repository, delivering @TASK.B06"
 		REF @TASK.B06
+
+DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+	TITLE "the CI runs zizmor, ruff, semgrep, vulture and coverage.py, each installed by pip from"
+		+ "requirements-ci.txt under dependabot; none is a dependency of brigade, and coverage"
+		+ "reports without a threshold"
+	STATUS active
+	DESC "the CI runs five development tools on every pull request and every push to main: zizmor"
+		+ "on .github/workflows/, ruff check and ruff format --check, semgrep scan with the Python"
+		+ "and security rule packs, vulture, and coverage.py in report mode; @TASK.B62 to @TASK.B66"
+		+ "deliver them, one tool per pull request"
+		REF @TASK.B62
+		REF @TASK.B63
+		REF @TASK.B64
+		REF @TASK.B65
+		REF @TASK.B66
+	DESC "each tool is installed by pip in its CI job from requirements-ci.txt at the repository"
+		+ "root, every line pinned to one version; .github/dependabot.yml carries a pip entry for"
+		+ "that file next to its github-actions entry, so the pins stay current and covered by"
+		+ "dependabot alerts"
+	DESC "nothing under brigade/ imports a tool, dist/brigade.pyz ships none and brigade doctor"
+		+ "checks none: @DECISION.PythonStandardLibraryOnly binds the program, not the workflow"
+		+ "that checks it"
+		REF @DECISION.PythonStandardLibraryOnly
+	DESC "a tool is configured in the file it resolves from the repository root, ruff.toml,"
+		+ ".coveragerc, .github/zizmor.yml; vulture, which reads only pyproject.toml, takes its"
+		+ "arguments on the command line of its step; the repository still has no pyproject.toml"
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+	DESC ".github/workflows/ci.yml declares permissions: contents: read at its top level and"
+		+ "persist-credentials: false on every actions/checkout step"
+	DESC "coverage reports and does not fail the run: no fail_under until the real figure is known;"
+		+ "a threshold, once set, is never lowered"
+	DESC "ruff check and ruff format --check run locally before a push wherever a ruff binary is"
+		+ "present, on the same ruff.toml, the version pinned in requirements-ci.txt giving the"
+		+ "verdict that counts; zizmor, semgrep, vulture and coverage run in the CI only"
+	REJECTED "CodeQL and GitHub secret scanning: the repository is private and both need GitHub"
+		+ "Advanced Security, paid; semgrep CE scans a private repository for free"
+	REJECTED "pip-audit or another CVE scan of dependencies: brigade has no dependency to scan, and"
+		+ "the pins of requirements-ci.txt are covered by dependabot alerts"
+	REJECTED "a duplication detector: not among the rows the user adopted on 2026-10-06"
+	REJECTED "a coverage threshold from the first run: the real figure is unknown; it comes once"
+		+ "known"
+	REJECTED "the versions pinned inline in the run: lines of ci.yml: dependabot reads no pin"
+		+ "there, one requirements file is what it reads"
+	RATIONALE "the user ruled twice on 2026-10-06 on the proposal tables of the session: \"tout ce"
+		+ "que tu as mis en oui\" adopted the workflow hardening, zizmor, ruff with the S, B, C901"
+		+ "and UP rules, vulture and coverage in report mode; then \"tout ce qui est utile est bon"
+		+ "à prendre\" adopted the pins under dependabot, semgrep CE, the subprocess guard of"
+		+ "@TASK.B67 and the security criteria of @TASK.B27 and @TASK.B28; the rule"
+		+ "tool_introduction_is_the_users_call of the instructions corpus made that ruling the"
+		+ "condition of every tool"
+		REF @TASK.B67
+		REF @TASK.B27
+		REF @TASK.B28
+	RATIONALE "the local and the CI setups diverge on purpose: on the reference machine none of the"
+		+ "five tools, nor pip, pipx or uv, is installed (command -v ruff vulture coverage zizmor"
+		+ "semgrep pip pipx uv, 2026-10-06, printed nothing), and"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites refused pip there; vulture and"
+		+ "semgrep are the whole-repository analyses the rule heavy_tests_not_run_locally of the"
+		+ "instructions corpus leaves to the CI, coverage doubles the test run for a figure read in"
+		+ "the job log alone, and zizmor audits a workflow only the CI executes; ruff is the light"
+		+ "lint that rule keeps local"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "vulture earns its place by"
+		+ "@DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents: with one public"
+		+ "function per module, an uncalled function is a dead module"
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+	SOURCE "the user's rulings of 2026-10-06 on the CI tooling proposals: \"tout ce que tu as mis"
+		+ "en oui\", then \"tout ce qui est utile est bon à prendre\""
