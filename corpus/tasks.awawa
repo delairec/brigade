@@ -2490,6 +2490,16 @@ TASK B66
 		IMPL ".gitignore::.coverage.*"
 	SPEC "the sentence of README.md on the CI names the coverage report, read in the job log only"
 		IMPL "README.md::report read in the job log only"
+	SPEC "the environments tests/cli builds for a brigade subprocess and build_process_environment"
+		+ "carry COVERAGE_PROCESS_CONFIG when it is set in their own environment and lack it"
+		+ "otherwise; no other coverage variable passes"
+		IMPL "tests/cli/forward_coverage_environment.py::COVERAGE_VARIABLE ="
+			+ "\"COVERAGE_PROCESS_CONFIG\""
+		IMPL "brigade/system/build_process_environment.py::\"COVERAGE_PROCESS_CONFIG\""
+		IMPL "tests/unit/system/test_build_process_environment.py::def"
+			+ "test_should_pass_on_the_coverage_configuration_of_a_measured_run"
+		IMPL "tests/unit/system/test_build_process_environment.py::def"
+			+ "test_should_pass_on_no_other_coverage_variable"
 	AFTER @TASK.B65
 	RATIONALE "the user ruled report only, no threshold at first; a threshold comes once the real"
 		+ "figure is known and is never lowered, as"
@@ -2502,6 +2512,9 @@ TASK B66
 		+ "on PyPI)"
 	SOURCE "the user's ruling of 2026-10-06, \"tout ce que tu as mis en oui\", on the row"
 		+ "coverage.py"
+	SOURCE "the user's ruling of 2026-10-06, \"je veux que ça soit fait dans la même pr\", on the"
+		+ "proposal to forward COVERAGE_PROCESS_CONFIG in build_process_environment and set branch"
+		+ "= True, for the exact figure, pull request #44"
 	DELIVERED_BY 44
 
 TASK B67

@@ -263,9 +263,9 @@ ruff check . && ruff format --check .          # the lint and the format, where 
 
 The CI runs the tests and the zipapp build on Python 3.11 and on the latest Python release, lints and checks the format
 with ruff, configured by `ruff.toml`, scans the repository with semgrep under its Python and security-audit rule packs,
-reports the dead code of `brigade/` and `tests/` with vulture, run in the CI only, measures the coverage of `brigade/` by
-the whole suite with coverage.py, configured by `.coveragerc`, the brigade subprocesses `tests/cli` launches included, a
-report read in the job log only and failing on no threshold, and audits its workflows with zizmor, on every pull request; ruff, semgrep,
+reports the dead code of `brigade/` and `tests/` with vulture, run in the CI only, measures the coverage of
+`brigade/` by the whole suite with coverage.py, configured by `.coveragerc`, the brigade subprocesses `tests/cli` launches
+and their own children included, a report read in the job log only and failing on no threshold, and audits its workflows with zizmor, on every pull request; ruff, semgrep,
 vulture, coverage and zizmor are pinned in `requirements-ci.txt`, which dependabot keeps current, and the pinned ruff
 gives the verdict that counts.
 
