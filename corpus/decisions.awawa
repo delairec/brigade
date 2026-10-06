@@ -978,6 +978,8 @@ DECISION ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
 	REJECTED "WORK left out of the front matter: the task's fourth SPEC names it among the fields"
 		+ "that fill it, and no other key holds the work of a role"
 	REJECTED "a key repeated once per value: a role file holds one key: value per line"
+	SOURCE "pull request #20 of the brigade repository, delivering @TASK.B43"
+		REF @TASK.B43
 
 DECISION TheProbeAnswersTheModelEachReasoningLevelBinds
 	TITLE "the probe of a client adapter answers models, the model it binds to each reasoning level"
@@ -996,3 +998,5 @@ DECISION TheProbeAnswersTheModelEachReasoningLevelBinds
 		+ "the probe already declares what an adapter supports"
 	REJECTED "the core importing the reasoning table of the Claude Code adapter: the guard of"
 		+ "tests/guards refuses a static import of brigade.adapters from outside it"
+	SOURCE "pull request #20 of the brigade repository, delivering @TASK.B43"
+		REF @TASK.B43

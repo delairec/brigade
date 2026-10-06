@@ -1269,31 +1269,66 @@ TASK B42
 
 TASK B43
 	TITLE "Role files, slots and their resolution"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "roles"
 	ROLE bastien
 	SPEC "brigade ships a built-in role file for each of the nine slots under brigade/roles/data/:"
 		+ "ada plans, builder builds, verifier verifies, reviewer reviews, rebaser rebases, bilal"
 		+ "reports, mina triages, rulewriter writes rules, explorer explores"
+		IMPL "brigade/roles/data/ada.md::slot: plan"
+		IMPL "tests/cli/test_roles.py::def test_should_find_the_built_in_role_files_clean(self):"
+		IMPL "tests/cli/test_zipapp.py::def"
+			+ "test_should_print_the_built_in_role_the_built_archive_ships(self):"
 	SPEC "a role file is Markdown: a front matter between two --- lines, one key: value per line,"
 		+ "declaring name, slot, reasoning, capabilities comma-separated, budget and returns, then"
 		+ "the system prompt body"
+		IMPL "brigade/roles/parse_role_file.py::def parse_role_file(text: str) -> RoleFile:"
+		IMPL "tests/unit/roles/test_parse_role_file.py::class ParseRoleFile(unittest.TestCase):"
 	SPEC "a slot resolves in order to a file of $XDG_CONFIG_HOME/brigade/roles/, then to the AGENT"
 		+ "entity of the configured instructions corpus that the slot table of config.toml binds to"
 		+ "it, then to the built-in role; on a machine that configures neither, every slot resolves"
 		+ "to its built-in role"
+		IMPL "brigade/roles/resolve_role.py::def resolve_role(slot: str, runtime) -> ResolvedRole:"
+		IMPL "tests/cli/test_roles.py::class"
+			+ "BrigadeRolesListOnAMachineThatConfiguresNoRole(RolesTestCase):"
+		IMPL "tests/cli/test_roles.py::class"
+			+ "BrigadeRolesFromTheMachineRolesDirectory(RolesTestCase):"
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_prefer_the_machine_role_file_to_the_agent_entity(self):"
 	SPEC "an AGENT entity is read through awawa at each resolution, never cached: WORK, REASONING,"
 		+ "CAPABILITY, BUDGET and RETURNS fill the front matter and its awawa context package is"
 		+ "the body; an AGENT entity no row of the slot table names takes no slot"
+		IMPL "brigade/corpus/read_entity_package.py::def read_entity_package("
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_fill_the_front_matter_from_the_entity_and_the_body_from_its_package(self):"
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_read_the_entity_again_at_each_resolution(self):"
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_leave_an_agent_entity_no_row_names_without_a_slot(self):"
 	SPEC "brigade roles list prints the slot, the role, its source and the model the configured"
 		+ "client adapter binds, text and --json; brigade roles show <slot> prints the resolved"
 		+ "file"
+		IMPL "brigade/commands/roles_list.py::def _read_bound_models(runtime) -> dict:"
+		IMPL "brigade/adapters/clients/claude_code.py::\"models\": _bind_models(request),"
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_show_the_model_the_configured_client_adapter_binds(self):"
+		IMPL "tests/cli/test_roles.py::def test_should_print_one_line_per_slot_as_text(self):"
+		IMPL "tests/cli/test_roles.py::class BrigadeRolesShowOfABuiltInRole(RolesTestCase):"
 	SPEC "brigade roles lint fails, naming the file and the key, on a role file that names a model,"
 		+ "lacks a declared key, carries an unknown one or a value outside its set"
+		IMPL "brigade/roles/check_front_matter.py::def check_front_matter(front_matter: dict) ->"
+			+ "tuple[RoleProblem, ...]:"
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_fail_naming_the_file_and_the_key_of_a_role_file_off_its_declaration(self):"
+		IMPL "tests/unit/roles/test_check_front_matter.py::class"
+			+ "CheckFrontMatter(unittest.TestCase):"
 	SPEC "brigade doctor reports the configured instructions corpus as optional, awawa lint"
 		+ "--strict clean or not; none configured is a warning with its fallback, built-in roles"
 		+ "and no instructions package"
+		IMPL "brigade/commands/doctor.py::def _check_instructions(runtime) -> dict:"
+		IMPL "tests/cli/test_doctor.py::class"
+			+ "BrigadeDoctorReportsTheInstructionsCorpus(DoctorTestCase):"
 	AFTER @TASK.B01
 	AFTER @TASK.B02
 	AFTER @TASK.B03
@@ -1316,6 +1351,7 @@ TASK B43
 		REF @OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles
 	SOURCE "pull request #3 of the brigade repository; the user's rulings of 2026-10-06 in the"
 		+ "refinement of B43"
+	DELIVERED_BY 20
 
 TASK B44
 	TITLE "Second client adapter and the rehearsal on it"
