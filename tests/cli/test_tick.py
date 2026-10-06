@@ -200,6 +200,25 @@ class BrigadeTickLoop(TickTestCase):
         self.assertRegex(stderr, r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$")
 
 
+class BrigadeTickLoopWhileAnotherTickHoldsTheLock(TickTestCase):
+    def test_should_stand_down_on_stderr_and_exit_0_on_a_signal(self):
+        # Arrange
+        self.hold_tick_lock()
+        loop = self.start_loop()
+        stand_down_line = loop.stderr.readline()
+
+        # Act
+        loop.send_signal(signal.SIGTERM)
+
+        # Assert
+        stdout, _ = loop.communicate(timeout=STOP_WAIT_S)
+        self.assertEqual(
+            (stand_down_line, loop.returncode, json.loads(stdout)),
+            (f"brigade tick: another tick holds {self.lock}\n", 0, {"schema_version": 1, "mode": "loop", "ticks": 1}),
+        )
+        self.assertFalse(self.heartbeat.exists())
+
+
 class BrigadeTickWithoutAMode(TickTestCase):
     def test_should_refuse_with_its_usage(self):
         # Act

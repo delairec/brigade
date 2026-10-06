@@ -10,6 +10,7 @@ EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables"
 SYSTEMD_USER_MANAGER = str(EXECUTABLES / "systemd-user-manager")
 SYSTEMD_OFFLINE = str(EXECUTABLES / "systemd-offline")
 CRONTAB = str(EXECUTABLES / "crontab")
+CRONTAB_FAILING = str(EXECUTABLES / "crontab-failing")
 
 SYSTEMD_CONFIGURED = 'scheduler = "systemd"\n'
 CRON_CONFIGURED = 'scheduler = "cron"\n'
@@ -338,16 +339,35 @@ class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSign(Sched
 
 class BrigadeSchedulerInstallWhenTheConfigurationNamesAnUnknownScheduler(SchedulerTestCase):
     def test_should_exit_1_naming_the_scheduler(self):
+        rows = [
+            ('scheduler = "launchd"\n', "brigade scheduler install: no scheduler plugin launchd\n"),
+            ('scheduler = "data"\n', "brigade scheduler install: no scheduler plugin data\n"),
+            ('scheduler = "__init__"\n', "brigade scheduler install: no scheduler plugin __init__\n"),
+        ]
+        for configuration, expected_stderr in rows:
+            with self.subTest(configuration=configuration):
+                # Arrange
+                self.machine.write_configuration(configuration)
+
+                # Act
+                completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install")
+
+                # Assert
+                self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_stderr))
+
+
+class BrigadeSchedulerInstallWhenCrontabCannotBeListed(SchedulerTestCase):
+    def test_should_exit_1_naming_the_crontab_failure(self):
         # Arrange
-        self.machine.write_configuration('scheduler = "launchd"\n')
+        self.machine.write_configuration(CRON_CONFIGURED)
 
         # Act
-        completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install")
+        completed = self.run_scheduler([CRONTAB_FAILING], "install")
 
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade scheduler install: no scheduler plugin launchd\n"),
+            (1, "", "brigade scheduler install: crontab -l exited 1: crontab: cannot open the spool directory\n"),
         )
 
 
