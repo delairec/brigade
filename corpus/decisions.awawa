@@ -573,11 +573,13 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 
 DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	TITLE "every command returns one document carrying schema_version, printed as JSON or rendered"
-		+ "once as text, and exits by one table of codes mapped from one exception family in cli.py"
+		+ "once as text, and exits by one table of codes mapped in cli.py from the exceptions run"
+		+ "raises"
 	STATUS active
 	DESC "a command module exposes run(request, runtime) -> document, a JSON-compatible dict"
-		+ "carrying schema_version; --json prints it; the text is rendered from the document, so"
-		+ "the text never shows a fact the document lacks"
+		+ "carrying schema_version, or raises, an error or a stand-down, and returns none; --json"
+		+ "prints it; the text is rendered from the document, so the text never shows a fact the"
+		+ "document lacks"
 	DESC "a document is bounded: a long result goes to a file under $XDG_STATE_HOME/brigade/ and"
 		+ "the document carries its path and a summary"
 	DESC "stdout carries the document only; stderr carries diagnostics and errors; under --json an"
@@ -596,7 +598,9 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		REF @TASK.B01
 	DESC "a long-lived command, tick --loop or serve, writes diagnostics to stderr and exits 0 on"
 		+ "SIGTERM and SIGINT; brigade keeps no log file of its own besides runs/<id>/; the"
-		+ "scheduler adapter decides where stderr goes, the journal or the file the cron line names"
+		+ "scheduler adapter decides where stderr goes, the journal or the file the cron line"
+		+ "names; the cron line discards the stdout of each tick, its document, which the heartbeat"
+		+ "tick.json already records"
 	DESC "binds @TASK.B02 first, which introduces the renderer, the exit mapping, the parent parser"
 		+ "and the runtime builder, then every command task"
 		REF @TASK.B02
@@ -612,6 +616,9 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	REJECTED "a stand-down as a BrigadeError exiting 1: a timer firing while a long tick holds the"
 		+ "lock is the normal case, and systemd and cron would record every such firing as a"
 		+ "failure"
+	REJECTED "the tick's stdout appended to tick.log with 2>&1 on the cron line: a text document"
+		+ "every five minutes in the file meant for diagnostics, which the heartbeat already"
+		+ "records; left to cron, stdout is mailed to the user at every firing"
 	REJECTED "replacing argparse's usage exit: its exit 2 and usage message are the table's row,"
 		+ "and the tests of B01 pin them"
 	RATIONALE "the plan's exit-code line of the Blueprint, plan section 16, reads 0 done, 1"
@@ -621,7 +628,8 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "DESC 9 added on the user's ruling of 2026-10-06 in the refinement of B08"
 	SOURCE "the stand-down of DESC 4 and 5 added in pull request #21 of the brigade repository,"
-		+ "which delivers @TASK.B07"
+		+ "which delivers @TASK.B07; the stdout of the cron line in DESC 7 on the user's ruling of"
+		+ "2026-10-06 in the review of that pull request"
 		REF @TASK.B07
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory

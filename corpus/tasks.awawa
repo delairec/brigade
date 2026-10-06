@@ -621,6 +621,9 @@ TASK B07
 			+ "BrigadeSchedulerInstallWithTheLoopConfigured(SchedulerTestCase):"
 		IMPL "tests/cli/test_scheduler.py::class"
 			+ "BrigadeSchedulerInstallWhenTheConfigurationNamesAnUnknownScheduler(SchedulerTestCase):"
+		IMPL "brigade/commands/scheduler_install.py::configuration = read_optional_configuration("
+		IMPL "tests/cli/test_scheduler.py::class"
+			+ "BrigadeSchedulerInstallBeforeInit(SchedulerTestCase):"
 	SPEC "systemd: brigade.service and brigade.timer under $XDG_CONFIG_HOME/systemd/user/, the"
 		+ "timer OnCalendar=*:0/5 with Persistent=true, the service running brigade tick --once by"
 		+ "the absolute path of the brigade that installed it with the PATH and the XDG variables"
@@ -1674,3 +1677,19 @@ TASK B55
 		REF @TASK.B46
 	SOURCE "the Artifact Brigade Blueprint, plan section 13; the user's ruling of 2026-10-06 in the"
 		+ "refinement of B04"
+
+TASK B56
+	TITLE "a state directory brigade cannot write: exit 1 naming it, and brigade tick --loop ticks"
+		+ "again"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "tick"
+	ROLE bastien
+	SPEC "a lock or a state file brigade cannot create or write under $XDG_STATE_HOME/brigade/"
+		+ "exits 1 with one stderr line naming the path, not 70 with a traceback; hold_lock and"
+		+ "hold_lock_without_waiting included"
+	SPEC "inside brigade tick --loop, a tick that fails, an action that failed or a state directory"
+		+ "it cannot write, is reported on stderr and the loop ticks again at the next interval"
+	AFTER @TASK.B07
+	SOURCE "the review of pull request #21 of the brigade repository: brigade tick --once with"
+		+ "XDG_STATE_HOME unwritable exits 70, and the same PermissionError ends --loop"

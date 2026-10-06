@@ -83,19 +83,20 @@ brigade scheduler status
 `tick --once` takes the lock without waiting: when another tick holds it, it writes one line naming the lock on stderr,
 writes nothing and exits 0. Otherwise it writes the heartbeat `$XDG_STATE_HOME/brigade/tick.json` atomically:
 `schema_version`, `ts`, `duration_ms` and `actions_applied`. `--dry-run` takes no lock and writes nothing. `--loop`
-reports each tick on stderr; a signal lets the tick under way finish, then the loop exits 0 with the number of ticks.
-Every mode prints text or, with `--json`, a JSON document.
+reports each tick on stderr; a signal lets the tick under way finish, then the loop exits 0 with the number of ticks
+attempted, stand-downs included. Every mode prints text or, with `--json`, a JSON document.
 
 `scheduler install` installs what fires `brigade tick --once` every five minutes, chosen by the `scheduler` key of
-`config.toml`, else by a probe: `systemd` where `systemctl --user is-system-running` answers `running` or `degraded`,
-`cron` otherwise. `systemd` writes `brigade.service` and `brigade.timer` in `$XDG_CONFIG_HOME/systemd/user/`, then
-reloads the user manager and enables the timer now; `cron` replaces the crontab line marked
-`# brigade scheduler install`, keeping every other line, and sends the stderr of each tick to
-`$XDG_STATE_HOME/brigade/tick.log`; `loop` installs nothing and names the `brigade tick --loop` command to keep running.
-The unit and the cron line run the brigade that installed them with the `PATH`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and
-`XDG_CACHE_HOME` of the install, escaped for systemd or quoted for the shell and cron. Run again, it leaves one pair of
-units or one line. `scheduler status` reports the scheduler installed or `none`, its unit files or cron line, the next
-activation of the timer and the last tick read from the heartbeat, and exits 0.
+`config.toml`, else, without the key or without `config.toml`, by a probe: `systemd` where `systemctl --user
+is-system-running` answers `running` or `degraded`, `cron` otherwise. `systemd` writes `brigade.service` and
+`brigade.timer` in `$XDG_CONFIG_HOME/systemd/user/`, then reloads the user manager and enables the timer now; `cron`
+replaces the crontab line marked `# brigade scheduler install`, keeping every other line, appends the stderr of each
+tick to `$XDG_STATE_HOME/brigade/tick.log` and discards its stdout, the heartbeat keeping the last tick; `loop` installs
+nothing and names the `brigade tick --loop` command to keep running. The unit and the cron line run the brigade that
+installed them with the `PATH`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CACHE_HOME` of the install, escaped for
+systemd or quoted for the shell and cron. Run again, it leaves one pair of units or one line. `scheduler status` reports
+the scheduler installed or `none`, its unit files or cron line, the next activation of the timer and the last tick read
+from the heartbeat, and exits 0.
 
 ## Client adapters
 
