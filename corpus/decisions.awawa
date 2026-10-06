@@ -1216,3 +1216,23 @@ DECISION TestClassNamesCarryTheSuffixTestThatVultureReads
 		+ "test titles read"
 	SOURCE "the user's ruling of 2026-10-06, \"ok\", on the suffix Test proposed for the test"
 		+ "classes vulture reported in pull request #42 of the brigade repository"
+
+DECISION ThePidOfARunIsReplacedAtomically
+	TITLE "the pid file of a run is replaced atomically, never rewritten in place, so brigade runs"
+		+ "list never reads it empty"
+	STATUS active
+	DESC "every write of runs/<id>/pid, by the foreground process, by brigade run --detach and by"
+		+ "the process it re-executes with --run-id, goes through record_run_pid, which writes a"
+		+ "temporary file and renames it over pid"
+		REF @TASK.B69
+	DESC "runs list reports dead a run whose pid file is missing, empty or not digits; an in-place"
+		+ "rewrite truncates the file before writing it, and a listing between the two reported a"
+		+ "living detached run dead"
+	REJECTED "runs list reading an empty pid as running: a run that died before writing its pid"
+		+ "would then read running forever"
+	REJECTED "the process re-executed with --run-id skipping the write of pid: brigade run --run-id"
+		+ "without --detach has no earlier process to write it"
+	REJECTED "a longer delay of the fake client in the test: the race is in the product, and a"
+		+ "slower suite would only hide it"
+	SOURCE "pull request #45 of the brigade repository, delivering @TASK.B69"
+		REF @TASK.B69
