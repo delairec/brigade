@@ -633,6 +633,10 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		REF @TASK.B07
 	SOURCE "the user's ruling of 2026-10-06 after wave M0: command modules follow"
 		+ "one_exported_function_per_file, pull request #26"
+	DESC "brigade tick --loop is the one catch outside cli.py: each tick runs through"
+		+ "run_reporting_failure, a BrigadeError one stderr line, any other exception its"
+		+ "traceback, and the loop ticks again; the table applies to the exit of the loop"
+		REF @TASK.B56
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"
