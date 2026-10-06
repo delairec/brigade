@@ -1963,7 +1963,7 @@ TASK B56
 			+ "BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):"
 	SPEC "the path named is the one the operating system refused, a directory, a lock or a file,"
 		+ "except the temporary file of an atomic write, named by its target"
-		IMPL "brigade/system/write_json_atomically.py::def _fill_and_replace("
+		IMPL "brigade/system/write_text_atomically.py::def _fill_and_replace("
 		IMPL "tests/unit/system/test_write_json_atomically.py::class"
 			+ "WriteJsonAtomicallyWhereTheMachineRefusesTheWriteTest(unittest.TestCase):"
 		IMPL "tests/unit/system/test_write_json_atomically.py::def"
@@ -2618,7 +2618,7 @@ TASK B68
 TASK B69
 	TITLE "the flaky test of brigade runs list on a running detached run: its root cause found and"
 		+ "stated, the product or the test made deterministic, never a longer delay"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "runs"
 	ROLE bastien
@@ -2626,17 +2626,39 @@ TASK B69
 		+ "tests/cli/test_runs.py::BrigadeRunsListOfARunningRunTest::test_should_list_a_detached_run_whose_client_has_not_finished_as_running"
 		+ "listing the run dead, with its evidence: a reproduction, or a trace naming the read of"
 		+ "brigade runs list and the write it races with"
+		IMPL "brigade/runs/list_runs.py::def _read_pid(run_directory: Path) -> int | None:"
+		IMPL "tests/unit/runs/test_record_run_pid.py::def"
+			+ "test_should_keep_a_living_run_listed_as_running_while_its_pid_is_written_again(self):"
 	SPEC "where the cause is in the product, a detached run reported dead while its process lives,"
 		+ "brigade runs list is fixed, and a test reproduces the race deterministically: the two"
 		+ "sides of the race are ordered by the test, never by a sleep"
+		IMPL "brigade/runs/record_run_pid.py::def record_run_pid(run_directory: Path, pid: int) ->"
+			+ "None:"
+		IMPL "brigade/system/write_text_atomically.py::def write_text_atomically(path: Path,"
+			+ "content: str) -> None:"
+		IMPL "brigade/runs/create_run_directory.py::record_run_pid(plan.run_directory, os.getpid())"
+		IMPL "brigade/runs/detach_run.py::record_run_pid(plan.run_directory, process.pid)"
+		IMPL "tests/unit/runs/test_record_run_pid.py::def list_state_at_the_first_write("
+		IMPL "tests/unit/system/test_write_text_atomically.py::def"
+			+ "test_should_keep_the_previous_text_whole_when_the_new_one_cannot_be_written(self):"
 	SPEC "where the cause is the test's own timing, the test is made deterministic: the fake client"
 		+ "blocks on a file the test releases once brigade runs list has answered, or an equivalent"
 		+ "that holds the client until the test lets it go; the delay setting of the fake client is"
 		+ "not raised"
+		IMPL "tests/cli/test_runs.py::class BrigadeRunsListOfARunningRunTest(RunsTestCase):"
 	SPEC "the test passes N consecutive runs under CPU load, N and the load stated in the pull"
 		+ "request"
+		IMPL "tests/cli/test_runs.py::def"
+			+ "test_should_list_a_detached_run_whose_client_has_not_finished_as_running(self):"
 	SPEC "brigade runs list stays covered for a running, a finished and a dead run, in"
 		+ "tests/cli/test_runs.py"
+		IMPL "tests/cli/test_runs.py::def"
+			+ "test_should_list_the_run_with_its_state_and_outcome(self):"
+		IMPL "tests/cli/test_runs.py::def"
+			+ "test_should_list_a_run_whose_process_is_gone_without_a_result_as_dead(self):"
+		IMPL "tests/cli/test_runs.py::def"
+			+ "test_should_list_a_detached_run_whose_client_has_not_finished_as_running(self):"
+	DELIVERED_BY 45
 	AFTER @TASK.B06
 	AFTER @TASK.B57
 	RATIONALE "attempt 1 of CI run 37505590816 on pull request #40 at 3d9895c, a pull request"
