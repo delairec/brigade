@@ -2686,3 +2686,73 @@ TASK B69
 		REF @TASK.B57
 	SOURCE "the user's ruling of 2026-10-06, \"ok\", on the session's proposal after attempt 1 of"
 		+ "CI run 37505590816 on pull request #40"
+
+TASK B70
+	TITLE "100% line and branch coverage of brigade/ measured locally on the full suite: every"
+		+ "uncovered line or branch covered by a test written first, failing on the missing"
+		+ "behaviour, or deleted when nothing demands it"
+	STATUS draft
+	MILESTONE @MILESTONE.M0
+	COMPONENT "tests"
+	ROLE bastien
+	SPEC "coverage run -m unittest, coverage combine, then coverage report -m, run locally with"
+		+ "awawa on PATH so that the tests that need it do not skip, print TOTAL at 100% for the"
+		+ "lines and the branches of brigade/; the pull request body quotes the three commands, the"
+		+ "coverage version, the head commit and the TOTAL line"
+	SPEC "every test added fails when the line or the branch it covers is removed: a test that"
+		+ "still passes without the code it covers is not the test of that code"
+	SPEC "every line or branch deleted is justified in the pull request body, one line each: the"
+		+ "file and the lines, and why nothing demands them, no caller reaching them, a condition"
+		+ "that cannot hold, or a behaviour no entity of the corpus asks for"
+	SPEC "brigade/ holds no # pragma: no cover, and .coveragerc sets no exclude_lines, no"
+		+ "partial_branches and no omit: every line and every branch of brigade/ counts"
+	SPEC "the tests that need awawa still skip without it: the coverage job of the CI passes"
+		+ "without awawa, and the pull request body quotes its TOTAL next to the local one"
+	AFTER @TASK.B66
+	AFTER @TASK.B69
+	RATIONALE "the user ruled on 2026-10-07: « la définition du TDD est: pas de ligne de code sans"
+		+ "qu'un test échoue d'abord, donc une ligne de code doit avoir son test, je suis pas"
+		+ "d'accord là », in English: the definition of TDD is no line of code without a test"
+		+ "failing first, so a line of code must have its test, I disagree there; then « oui » to"
+		+ "the session's proposal, translated, a task cover or delete: for every branch not covered"
+		+ "locally (94 lines, 53 partial branches), either write the test that justifies it or"
+		+ "delete it; the rule itself the user ruled « général », and it belongs to the"
+		+ "instructions corpus, not to this one"
+	RATIONALE "measured by the session on 2026-10-07 at 2dcbc20, the head of ci/b66-coverage merged"
+		+ "as 89a792f, with coverage 7.16.2 and the .coveragerc of @TASK.B66 (branch = True, patch"
+		+ "= subprocess): coverage run -m unittest, coverage combine, coverage report -m, with"
+		+ "awawa on PATH, give TOTAL 3679 statements, 94 missed, 594 branches, 53 partial, 97%; the"
+		+ "coverage job of the CI reports 89% at the same commit because 64 tests skip without"
+		+ "awawa, as @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa binds; the local"
+		+ "figure is the one this task brings to 100%"
+		REF @TASK.B66
+		REF @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
+	RATIONALE "the largest gaps of that report: brigade/system/spawn_process.py at 70% (lines 22-30"
+		+ "_feed, 36, 61-62 ToolNotFound, 64 the stdin thread: no tested caller passes stdin,"
+		+ "although run_segment.py forwards launch[\"stdin\"]); brigade/runs/list_runs.py at 78%"
+		+ "(13-14, 16, 22, 27-28, 55: pid missing, not digits, None, PermissionError);"
+		+ "brigade/system/wait_within_limit.py at 76% (11-12, 23-25);"
+		+ "brigade/system/hold_lock_without_waiting.py at 88% (27-28, 33-34);"
+		+ "brigade/roles/resolve_role.py at 90% (66-67, 93, 124, 145-150, 176, 219);"
+		+ "brigade/runs/plan_run.py at 91% (88, 111, 113, 122, 129, 137, 158); then about 25"
+		+ "modules missing one to three lines or branches each; git blame puts the lines of"
+		+ "list_runs.py and spawn_process.py in 66adab3, @TASK.B06 on pull request #24"
+		REF @TASK.B06
+	RATIONALE "_read_pid of list_runs.py returning None on an empty pid file, one of those"
+		+ "uncovered branches, was the root cause of the flaky test @TASK.B69 fixes on pull request"
+		+ "#45: an uncovered branch is one the suite never exercised, and the task follows B69 so"
+		+ "that it measures the fixed code; it follows @TASK.B66 for the .coveragerc it measures"
+		+ "with"
+		REF @TASK.B69
+		REF @TASK.B66
+	RATIONALE "two points are left to the refinement of this draft: a threshold, which"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade foresees once the"
+		+ "real figure is known and never lowered, the session proposing fail_under at the figure"
+		+ "of the CI once this task lands, the user not having ruled whether this task sets it nor"
+		+ "at which figure; and exclusions, on which the user has not ruled: the SPEC refuses #"
+		+ "pragma: no cover and exclude_lines because an excluded line is neither covered nor"
+		+ "deleted, and a ruling otherwise reopens that SPEC"
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+	SOURCE "the user's words of 2026-10-07, « la définition du TDD est: pas de ligne de code sans"
+		+ "qu'un test échoue d'abord, donc une ligne de code doit avoir son test, je suis pas"
+		+ "d'accord là », then « oui » and « général » on the session's proposal"
