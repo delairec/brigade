@@ -69,6 +69,46 @@ class FakeLaunch(unittest.TestCase):
         )
 
 
+class FakeProbeOfDeclaredFeatures(unittest.TestCase):
+    def test_should_declare_the_features_its_settings_name(self):
+        # Arrange
+        settings = {"features": "step_count,tool_grants"}
+
+        # Act
+        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/home/ada"})
+
+        # Assert
+        self.assertEqual(probe["features"], ["step_count", "tool_grants"])
+
+
+class FakeLaunchOfASlowClientWritingProgress(unittest.TestCase):
+    def test_should_wait_append_the_progress_line_then_print_the_recording(self):
+        # Arrange
+        request = {**LAUNCH_REQUEST, "settings": {"recordings": "/srv/recordings", "delay": "5", "progress": "step 1 done"}}
+
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        self.assertEqual(
+            launch,
+            {
+                "schema_version": 1,
+                "argv": [
+                    "sh",
+                    "-c",
+                    'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi; cat -- "$3"',
+                    "fake",
+                    "5",
+                    "step 1 done",
+                    "/srv/recordings/bastien.json",
+                ],
+                "environment": {},
+                "stdin": None,
+            },
+        )
+
+
 class FakeResult(unittest.TestCase):
     def test_should_answer_the_recorded_result_document_as_it_is(self):
         # Arrange

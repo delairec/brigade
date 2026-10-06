@@ -3,9 +3,9 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with ten commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
-`brigade adapter`, `brigade project`, `brigade ledger`, `brigade roles`, `brigade tick`, `brigade scheduler` and
-`brigade corpus`; every other one is a task of the corpus.
+The entry point exists with twelve commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter`, `brigade project`, `brigade ledger`, `brigade roles`, `brigade tick`, `brigade scheduler`,
+`brigade corpus`, `brigade run` and `brigade runs`; every other one is a task of the corpus.
 
 ## Install
 
@@ -127,7 +127,10 @@ remove a tree still read through `-- <awawa args>` when the bound is too tight t
 brigade runs its agents through a client adapter, selected by the `client` key of `config.toml`: `claude-code` for
 Claude Code, `fake` for the adapter that replays recorded result documents, or any name `<name>` for which an
 executable `brigade-client-<name>` is on your `PATH`. The table `[clients.<name>]` of `config.toml` holds the settings
-of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays.
+of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays, `features`, the
+comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`; none by default), and, for
+tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, and `progress`, a line it
+appends to the progress file of the run.
 
 `brigade adapter <operation>` (or with `--json`) answers one operation of the configured adapter, the request read as
 a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv` and `transcripts`. An external adapter
@@ -155,6 +158,52 @@ brigade roles list [--json]          # the slot, the role, its source and the mo
 brigade roles show <slot> [--json]   # the role file the slot resolves to
 brigade roles lint [--json]          # the built-in and the machine role files; exit 1 on a finding
 ```
+
+## Runs
+
+```
+brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--detach] [key=value ...]
+brigade runs list [--json]                       # every run: id, procedure, slot, role, project, state, outcome
+brigade runs logs <id> [--tail N] [--json]       # the client's stdout then stderr, segment by segment
+```
+
+`brigade run` runs a procedure as a slot through the client adapter. A procedure is a Markdown file whose front matter
+declares `capabilities` (`read`, `write`, `shell`, `net`, comma-separated) and `budget`, its steps; the body is what
+the agent is asked to do. An argument holding a `/` or ending in `.md` is the path of that file; any other is a name,
+sought among the procedures brigade ships, then in `procedures/<name>.md` of the instructions corpus `config.toml`
+names. The ledger records the name, the file name without `.md`. A procedure found nowhere, or lacking either key,
+exits 1 naming it.
+
+The slot resolves to its role as `brigade roles` shows, unless the project given by `--project` binds it otherwise:
+`ROLE "slot=name"` binds the slot to the role of that name, sought in the order of resolution; `ROLESET builtin` keeps
+the built-in roles only, `ROLESET corpus` the AGENT entity the table `[slots]` binds then the built-in role, and any
+other `ROLESET` is a directory of role files, relative to the project's `PATH`, whose file declaring the slot comes
+before the built-in role; the machine's `roles/` is skipped whenever a `ROLESET` is given. The project's `CLIENT`
+replaces the client of `config.toml`. The client receives the role, the capabilities the procedure declares that the
+role allows, and a brief made of the procedure, the `key=value` arguments, the text of `--brief` and the path of the
+progress file, exported to it as `BRIGADE_PROGRESS_FILE`. It runs in `--cwd`, else the project's `PATH`, else the
+current directory.
+
+Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.json` (what was resolved), `pid`,
+`role.md` (the role file passed), `progress.md`, `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`) and,
+written last, `result.json`, the normalised result of the last segment. Each segment appends one `run.finished` to the
+ledger, every null field named in `nulls` with its reason. The command prints the run, text or `--json`, and exits 1
+when its outcome is not `done`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and
+exits 0, while brigade itself, started again in a new session with its output in `brigade.log`, runs the procedure to
+its end, writing the result and the ledger as the foreground command does. `runs list` reports a run `finished` once it
+has a result, `running` while its process lives, `dead` when the process is gone without one.
+
+Every run is held on the clock: at `ceil(budget × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
+`config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the
+segment ends with the outcome `wall_limit`. A segment that ends on its budget, the client's step cap or the clock,
+records a `signal.recorded` `budget_reached` naming the procedure, the run and the budget; when its progress file holds
+something, it is launched again as a fresh segment whose brief opens on that file, up to the `HANDOVERS` of the
+project's `POLICY`, 2 without one.
+
+Two fallbacks follow the probe of the adapter. A client that counts no steps records null steps, the clock is the
+run's only bound, and `brigade run` and `brigade doctor` warn that the budget is held on the clock. A client that grants
+no tool one by one runs in its unattended mode, and a slot whose capabilities lack `write` then runs in a disposable
+git worktree of the directory's `HEAD`, `runs/<run id>/worktree`, removed after the run.
 
 ## Ledger
 
@@ -200,6 +249,8 @@ The CI runs the tests and the zipapp build on Python 3.11 and on the latest Pyth
 - `brigade/roles/data/` — the nine built-in role files, one per slot.
 - `brigade/adapters/schedulers/` — the scheduler plugins, `systemd.py`, `cron.py` and `loop.py`, reached by name only;
   the templates of the units and of the cron line live in its `data/` folder.
+- `brigade/runs/` — the run machinery: the procedure resolution, the brief, the segments and their hand-over, the run
+  directory read by `runs list` and `runs logs`.
 - `corpus/` — the project's own awawa corpus: the schema, the milestones, the tasks, the decisions of the plan.
   Read it with `awawa status .` from this directory.
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board,

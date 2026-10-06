@@ -21,6 +21,8 @@ FORGE_FALLBACK = "local mode without a forge"
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 CONFIGURATION_FILE = "config.toml"
+STEPS_FALLBACK = "the wall-time limit of each run"
+STEP_COUNT_FEATURE = "step_count"
 
 
 def _format_version(version: tuple[int, ...]) -> str:
@@ -135,6 +137,17 @@ def _check_instructions(runtime) -> dict:
     return _describe_instructions("warning", f"lint --strict fails in {configuration.instructions}")
 
 
+def _check_steps(runtime) -> list[dict]:
+    try:
+        probe = ask_configured_client(runtime, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+    except BrigadeError:
+        return []
+    if STEP_COUNT_FEATURE in probe.document["features"]:
+        return []
+    detail = f"{probe.client_name} counts no steps: the budget is held on the clock and the run cut at its limit"
+    return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
+
+
 def run(request, runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -147,5 +160,6 @@ def run(request, runtime) -> dict:
             _check_forge(runtime),
             _check_awawa_web(runtime),
             _check_instructions(runtime),
+            *_check_steps(runtime),
         ],
     }

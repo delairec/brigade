@@ -140,3 +140,43 @@ class ReadConfigurationWhenAKeyIsWrong(ReadConfigurationTestCase):
 
         # Assert
         self.assertIn(f"{self.path} is not valid TOML: ", str(raised.exception))
+
+
+class ReadConfigurationOfTheSecondsPerStep(ReadConfigurationTestCase):
+    def test_should_answer_30_when_the_key_is_absent(self):
+        # Arrange
+        self.path.write_text('client = "fake"\n')
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.seconds_per_step, 30)
+
+    def test_should_answer_the_number_the_key_sets(self):
+        # Arrange
+        self.path.write_text("seconds_per_step = 0.5\n")
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.seconds_per_step, 0.5)
+
+    def test_should_refuse_a_value_that_is_no_positive_number_naming_the_key_and_the_file(self):
+        rows = [
+            ("a string", 'seconds_per_step = "30"\n', "seconds_per_step is a string, not a number,"),
+            ("zero", "seconds_per_step = 0\n", "seconds_per_step is 0, not a positive number,"),
+            ("a boolean", "seconds_per_step = true\n", "seconds_per_step is a boolean, not a number,"),
+        ]
+        for case, content, expected_problem in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.path.write_text(content)
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    read_configuration(self.path)
+
+                # Assert
+                self.assertEqual(str(raised.exception), f"{expected_problem} in {self.path}")

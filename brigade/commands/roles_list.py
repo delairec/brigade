@@ -1,4 +1,4 @@
-from brigade.roles.resolve_role import resolve_role
+from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
 from brigade.system.ask_configured_client import ask_configured_client
 from brigade.system.read_configuration import SLOTS
 from brigade.system.read_optional_configuration import read_optional_configuration
@@ -16,7 +16,7 @@ def _read_bound_models(runtime) -> dict:
 
 
 def run(request, runtime) -> dict:
-    resolved_roles = [resolve_role(slot, runtime) for slot in SLOTS]
+    resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS) for slot in SLOTS]
     models = _read_bound_models(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

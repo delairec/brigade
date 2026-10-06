@@ -10,6 +10,8 @@ STRING_KEYS = ("client", "scheduler", "forge_account", "instructions", "ide_link
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
+SECONDS_PER_STEP_KEY = "seconds_per_step"
+SECONDS_PER_STEP_BY_DEFAULT = 30
 SLOTS = ("plan", "build", "verify", "review", "rebase", "report", "triage", "rules", "explore")
 TOML_TYPE_NAMES = (
     (bool, "a boolean"),
@@ -40,6 +42,7 @@ class Configuration:
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)
     slots: dict = field(default_factory=dict)
+    seconds_per_step: int | float = SECONDS_PER_STEP_BY_DEFAULT
 
 
 def _name_toml_type(value) -> str:
@@ -103,6 +106,14 @@ def _read_refs_cache_mb(document: dict, path: Path) -> int:
     return value
 
 
+def _read_seconds_per_step(value, path: Path) -> int | float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise BrigadeError(f"{SECONDS_PER_STEP_KEY} is {_name_toml_type(value)}, not a number, in {path}")
+    if value <= 0:
+        raise BrigadeError(f"{SECONDS_PER_STEP_KEY} is {value}, not a positive number, in {path}")
+    return value
+
+
 def _parse(path: Path) -> dict:
     try:
         content = path.read_text(encoding="utf-8")
@@ -116,7 +127,9 @@ def _parse(path: Path) -> dict:
 
 def read_configuration(path: Path) -> Configuration:
     document = _parse(path)
-    _refuse_unknown_keys(document, (*STRING_KEYS, REFS_CACHE_MB_KEY, "reasoning", "clients", "slots"), "", path)
+    _refuse_unknown_keys(
+        document, (*STRING_KEYS, REFS_CACHE_MB_KEY, "reasoning", "clients", "slots", SECONDS_PER_STEP_KEY), "", path
+    )
     strings = {key: _require(document[key], str, "a string", key, path) for key in STRING_KEYS if key in document}
     return Configuration(
         **strings,
@@ -124,4 +137,7 @@ def read_configuration(path: Path) -> Configuration:
         reasoning=_read_reasoning(document.get("reasoning", {}), path),
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),
+        seconds_per_step=_read_seconds_per_step(
+            document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path
+        ),
     )

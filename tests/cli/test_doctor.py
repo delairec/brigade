@@ -32,6 +32,8 @@ SCHEDULER_ENTRY = 4
 FORGE_ENTRY = 5
 AWAWA_WEB_ENTRY = 6
 INSTRUCTIONS_ENTRY = 7
+STEPS_ENTRY = 8
+EVERY_TOOL_BUT_THE_CLIENT = [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 
 
@@ -431,6 +433,26 @@ class BrigadeDoctorChecksTheClientAdapter(DoctorTestCase):
         self.assertEqual(
             json.loads(completed.stdout)["items"][CLIENT_ENTRY],
             {"name": "client", "kind": "prerequisite", "state": "ok", "detail": "fake: no client executable", "fallback": None},
+        )
+
+    def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
+        # Arrange
+        self.write_configuration('client = "fake"\n')
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_BUT_THE_CLIENT, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][STEPS_ENTRY],
+            {
+                "name": "steps",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "fake counts no steps: the budget is held on the clock and the run cut at its limit",
+                "fallback": "the wall-time limit of each run",
+            },
         )
 
 

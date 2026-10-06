@@ -1,0 +1,38 @@
+import os
+
+from brigade.roles.render_role_file import render_role_file
+from brigade.runs.plan_run import RunPlan
+from brigade.runs.run_locations import PID_FILE, PROGRESS_FILE, ROLE_FILE, RUN_RECORD_FILE
+from brigade.system.write_json_atomically import write_json_atomically
+
+RECORD_SCHEMA_VERSION = 1
+
+
+def _describe_run(plan: RunPlan) -> dict:
+    return {
+        "schema_version": RECORD_SCHEMA_VERSION,
+        "run": plan.run_id,
+        "procedure": plan.procedure.name,
+        "procedure_path": plan.procedure.location,
+        "slot": plan.slot,
+        "role": plan.role.role,
+        "role_source": plan.role.source,
+        "client": plan.client,
+        "project": plan.project,
+        "cwd": str(plan.cwd),
+        "worktree": str(plan.worktree),
+        "capabilities": list(plan.capabilities),
+        "budget": plan.procedure.budget,
+        "wall_limit_s": plan.wall_limit_s,
+        "arguments": plan.arguments,
+    }
+
+
+def create_run_directory(plan: RunPlan) -> None:
+    plan.run_directory.mkdir(parents=True, exist_ok=True)
+    write_json_atomically(plan.run_directory / RUN_RECORD_FILE, _describe_run(plan))
+    (plan.run_directory / PID_FILE).write_text(f"{os.getpid()}\n", encoding="utf-8")
+    (plan.run_directory / ROLE_FILE).write_text(
+        render_role_file(plan.role.front_matter, plan.role.body), encoding="utf-8"
+    )
+    (plan.run_directory / PROGRESS_FILE).write_text("", encoding="utf-8")
