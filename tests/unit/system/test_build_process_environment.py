@@ -35,3 +35,25 @@ class BuildProcessEnvironmentTest(unittest.TestCase):
                 "BRIGADE_COLLECTOR": "ci",
             },
         )
+
+    def test_should_pass_on_the_coverage_configuration_of_a_measured_run(self):
+        # Arrange
+        environment = {"PATH": "/usr/bin", "COVERAGE_PROCESS_CONFIG": "[run]\nsource = brigade\n"}
+
+        # Act
+        with mock.patch.dict(os.environ, environment, clear=True):
+            built = build_process_environment()
+
+        # Assert
+        self.assertEqual(built, {"PATH": "/usr/bin", "COVERAGE_PROCESS_CONFIG": "[run]\nsource = brigade\n"})
+
+    def test_should_pass_on_no_other_coverage_variable(self):
+        # Arrange
+        environment = {"PATH": "/usr/bin", "COVERAGE_RCFILE": "/home/ada/.coveragerc"}
+
+        # Act
+        with mock.patch.dict(os.environ, environment, clear=True):
+            built = build_process_environment()
+
+        # Assert
+        self.assertEqual(built, {"PATH": "/usr/bin"})

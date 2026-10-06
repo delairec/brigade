@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.cli.forward_coverage_environment import forward_coverage_environment
+
 CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
 EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables"
 
@@ -50,7 +52,11 @@ class DoctorTestCase(unittest.TestCase):
         self.configuration.write_text(content)
 
     def run_doctor(self, path_directories, *options):
-        environment = {"PATH": os.pathsep.join(path_directories), "XDG_CONFIG_HOME": self.config_home.name}
+        environment = {
+            "PATH": os.pathsep.join(path_directories),
+            "XDG_CONFIG_HOME": self.config_home.name,
+            **forward_coverage_environment(),
+        }
         return subprocess.run(  # noqa: S603 - the test's own command line
             [sys.executable, CLONE_ENTRY_POINT, "doctor", *options],
             capture_output=True,
