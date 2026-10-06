@@ -41,6 +41,8 @@ def run_process(request: ProcessRequest) -> ProcessRecord:
     started = time.monotonic()
     try:
         # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
+        # subprocess-injection: a Django rule whose taint source is any parameter named request, the S603 case
+        # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection
         completed = subprocess.run(  # noqa: S603
             list(request.argv),
             cwd=request.cwd,
