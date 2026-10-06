@@ -93,8 +93,8 @@ def _tick_and_report() -> None:
 
 
 def _tick_in_loop() -> dict:
-    ticks = repeat_until_signalled(_tick_and_report, TICK_INTERVAL_S)
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "mode": "loop", "ticks": ticks}
+    ticks_attempted = repeat_until_signalled(_tick_and_report, TICK_INTERVAL_S)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "mode": "loop", "ticks_attempted": ticks_attempted}
 
 
 def run(request, runtime) -> dict:

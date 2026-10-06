@@ -9,7 +9,7 @@ def _render_dry_run(document: dict) -> list[str]:
 
 
 def _render_loop(document: dict) -> list[str]:
-    return [f"tick --loop: {document['ticks']} ticks"]
+    return [f"tick --loop: {document['ticks_attempted']} ticks attempted"]
 
 
 RENDERERS = {"once": _render_once, "dry-run": _render_dry_run, "loop": _render_loop}
