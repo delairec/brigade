@@ -5,3 +5,14 @@ OPEN_QUESTION InitAsksForBuiltInOrCustomRoles
 	RATIONALE "the user ruled on 2026-10-06 that brigade defines default roles and that a user who"
 		+ "wants their own configures them, and left open whether an installer asks"
 	SOURCE "the user's ruling of 2026-10-06 in the refinement of B43"
+
+OPEN_QUESTION WallTimeBudgetOfAClientThatCountsNoSteps
+	QUESTION "when a client reports no step count, how does the step budget of a procedure become"
+		+ "the wall-time limit of its run?"
+	STATUS open
+	RATIONALE "the Blueprint, plan section 17, holds the budget on wall time without a conversion,"
+		+ "and only a recipe declares a duration, max_wall; the user left the conversion to a"
+		+ "sourced study, measured runs and the documentation of the clients, in the refinement of"
+		+ "@TASK.B06"
+		REF @TASK.B06
+	SOURCE "the user's ruling of 2026-10-06 in the refinement of B06"
