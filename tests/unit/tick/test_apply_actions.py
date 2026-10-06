@@ -1,5 +1,4 @@
 import unittest
-from dataclasses import dataclass
 
 from brigade.errors import BrigadeError
 from brigade.tick.apply_actions import apply_actions
@@ -7,9 +6,8 @@ from brigade.tick.apply_actions import apply_actions
 NO_RUNTIME_NEEDED = None
 
 
-@dataclass(frozen=True)
 class LaunchRun:
-    task: str
+    pass
 
 
 class ApplyActions(unittest.TestCase):
@@ -25,7 +23,7 @@ class ApplyActions(unittest.TestCase):
 
     def test_should_refuse_an_action_it_has_no_executor_for(self):
         # Arrange
-        plan = (LaunchRun(task="B07"),)
+        plan = (LaunchRun(),)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:

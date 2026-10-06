@@ -9,7 +9,6 @@ from pathlib import Path
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 
-REPOSITORY_ENTRY = 0
 SCHEMA_ENTRY = 1
 GITIGNORE_ENTRY = 2
 CONFIGURATION_ENTRY = 3

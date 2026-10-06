@@ -23,7 +23,7 @@ def repeat_until_signalled(action: Callable[[], None], interval_s: float) -> int
     previous_wakeup_descriptor = signal.set_wakeup_fd(write_descriptor)
     try:
         for stop_signal in STOP_SIGNALS:
-            signal.signal(stop_signal, lambda received, frame: signalled.append(received))
+            signal.signal(stop_signal, lambda received, _frame: signalled.append(received))
         repetitions = 0
         while True:
             action()
