@@ -3,6 +3,7 @@ import sys
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import DETACHED_LOG_FILE, PID_FILE
 from brigade.system.spawn_process import SpawnRequest, spawn_process
+from brigade.system.write_text_file import write_text_file
 
 ARGUMENT_SEPARATOR = "="
 NO_EXTRA_VARIABLES = {}
@@ -28,5 +29,5 @@ def detach_run(plan: RunPlan, runtime) -> int:
             stderr=log,
         )
     )
-    (plan.run_directory / PID_FILE).write_text(f"{process.pid}\n", encoding="utf-8")
+    write_text_file(plan.run_directory / PID_FILE, f"{process.pid}\n")
     return process.pid

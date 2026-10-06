@@ -225,3 +225,27 @@ class BrigadeCorpusOnWhatItCannotRead(CorpusTestCase):
 
                 # Assert
                 self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_error))
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class BrigadeCorpusWhereTheMachineRefusesTheCache(CorpusTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.cache_home.mkdir(exist_ok=True)
+
+    def tearDown(self):
+        self.machine.cache_home.chmod(0o700)
+        super().tearDown()
+
+    def test_should_exit_1_naming_the_cache_directory_it_cannot_create(self):
+        # Arrange
+        self.machine.cache_home.chmod(0o500)
+
+        # Act
+        completed = self.run_corpus("app", "--ref", "main")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade corpus: cannot write {self.machine.cache_home / 'brigade'}: Permission denied\n"),
+        )

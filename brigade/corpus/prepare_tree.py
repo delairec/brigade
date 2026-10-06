@@ -9,10 +9,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.archive_commit import archive_commit
 from brigade.git.list_worktrees import Worktree, list_worktrees
 from brigade.git.resolve_commit import resolve_commit
+from brigade.system.create_directory import create_directory
 from brigade.system.hold_lock import hold_lock
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
@@ -78,25 +79,46 @@ def _read_worktree(run_process: Callable[[ProcessRequest], ProcessRecord], reque
     return Tree(project=request.project, ref=request.ref, sha=worktree.head, kind=WORKTREE_KIND, root=worktree.path)
 
 
+def _create_staging(root: Path) -> Path:
+    try:
+        return Path(tempfile.mkdtemp(prefix=HIDDEN_PREFIX, dir=root.parent))
+    except OSError as error:
+        raise CannotWrite(root, error) from error
+
+
+def _unpack(archive: Path, staged_tree: Path, root: Path) -> None:
+    with tarfile.open(archive) as commit_tar:
+        try:
+            commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)
+        except OSError as error:
+            raise CannotWrite(root, error) from error
+
+
 def _stage_tree(
-    run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, sha: str, staging: Path
+    run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, sha: str, staging: Path, root: Path
 ) -> Path:
     archive = staging / ARCHIVE_NAME
     staged_tree = staging / STAGED_TREE_NAME
     archive_commit(run_process, repository, sha, archive)
-    with tarfile.open(archive) as commit_tar:
-        commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)
+    _unpack(archive, staged_tree, root)
     return staged_tree
 
 
 def _place_tree(staged_tree: Path, root: Path) -> None:
-    if not root.is_dir():
+    if root.is_dir():
+        return
+    try:
         os.rename(staged_tree, root)
+    except OSError as error:
+        raise CannotWrite(root, error) from error
 
 
 def _mark_read(root: Path, now: datetime) -> None:
     read_ns = (now - EPOCH) // timedelta(microseconds=1) * NANOSECONDS_PER_MICROSECOND
-    os.utime(root, ns=(read_ns, read_ns))
+    try:
+        os.utime(root, ns=(read_ns, read_ns))
+    except OSError as error:
+        raise CannotWrite(root, error) from error
 
 
 def _measure_file(path: str) -> int:
@@ -142,10 +164,10 @@ def _prune(cache: Path, bound_bytes: int, kept: Path) -> None:
 def _extract_tree(
     run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest, sha: str, root: Path
 ) -> None:
-    root.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(tempfile.mkdtemp(prefix=HIDDEN_PREFIX, dir=root.parent))
+    create_directory(root.parent)
+    staging = _create_staging(root)
     try:
-        staged_tree = _stage_tree(run_process, request.repository, sha, staging)
+        staged_tree = _stage_tree(run_process, request.repository, sha, staging, root)
         with hold_lock(request.cache_lock):
             _place_tree(staged_tree, root)
             _mark_read(root, request.now)

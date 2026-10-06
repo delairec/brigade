@@ -7,8 +7,10 @@ from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import BRIEF_FILE, PROGRESS_FILE, SEGMENTS_DIRECTORY, STDERR_FILE, STDOUT_FILE
 from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.create_directory import create_directory
 from brigade.system.spawn_process import SpawnRequest, spawn_process
 from brigade.system.wait_within_limit import wait_within_limit
+from brigade.system.write_text_file import write_text_file
 
 REQUEST_SCHEMA_VERSION = 1
 FIRST_SEGMENT = 1
@@ -69,9 +71,9 @@ def _describe_cut(plan: RunPlan, measured_ms: int) -> dict:
 
 def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
     segment_directory = plan.run_directory / SEGMENTS_DIRECTORY / str(number)
-    segment_directory.mkdir(parents=True, exist_ok=True)
+    create_directory(segment_directory)
     brief = _compose_segment_brief(plan, number)
-    (segment_directory / BRIEF_FILE).write_text(brief, encoding="utf-8")
+    write_text_file(segment_directory / BRIEF_FILE, brief)
     launch = _ask_client(
         plan,
         runtime,

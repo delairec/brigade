@@ -371,6 +371,53 @@ class BrigadeSchedulerInstallWhenCrontabCannotBeListed(SchedulerTestCase):
         )
 
 
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectory(SchedulerTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.write_configuration(SYSTEMD_CONFIGURED)
+        self.units.parent.mkdir(parents=True)
+
+    def tearDown(self):
+        self.units.parent.chmod(0o700)
+        super().tearDown()
+
+    def test_should_exit_1_naming_the_unit_directory_it_cannot_create(self):
+        # Arrange
+        self.units.parent.chmod(0o500)
+
+        # Act
+        completed = self.run_scheduler([SYSTEMD_USER_MANAGER], "install")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade scheduler install: cannot write {self.units}: Permission denied\n"),
+        )
+
+
+class BrigadeSchedulerInstallOverAUnitItCannotWrite(SchedulerTestCase):
+    def test_should_exit_1_naming_the_unit_it_cannot_write(self):
+        rows = ["brigade.service", "brigade.timer"]
+        for unit in rows:
+            with self.subTest(unit=unit):
+                # Arrange
+                machine_root = Path(self.root.name).resolve() / unit
+                machine_root.mkdir()
+                self.create_machine(machine_root)
+                self.machine.write_configuration(SYSTEMD_CONFIGURED)
+                (self.units / unit).mkdir(parents=True)
+
+                # Act
+                completed = self.run_scheduler([SYSTEMD_USER_MANAGER], "install")
+
+                # Assert
+                self.assertEqual(
+                    (completed.returncode, completed.stdout, completed.stderr),
+                    (1, "", f"brigade scheduler install: cannot write {self.units / unit}: Is a directory\n"),
+                )
+
+
 class BrigadeSchedulerInstallBeforeInit(SchedulerTestCase):
     def test_should_install_the_scheduler_the_probe_chooses(self):
         # Act

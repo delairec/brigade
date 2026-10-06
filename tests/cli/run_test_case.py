@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import time
 import unittest
@@ -37,6 +38,7 @@ TURN_LIMIT_RESULT = {
 COUNTING_CLIENT = 'features = "step_count,tool_grants"\n'
 FILE_WAIT_S = 20.0
 FILE_POLL_S = 0.05
+NO_SIGNAL = 0
 
 
 class RunTestCase(unittest.TestCase):
@@ -80,4 +82,15 @@ class RunTestCase(unittest.TestCase):
         while not path.exists():
             if time.monotonic() > deadline:
                 self.fail(f"{path} never appeared")
+            time.sleep(FILE_POLL_S)
+
+    def wait_for_exit(self, pid: int) -> None:
+        deadline = time.monotonic() + FILE_WAIT_S
+        while True:
+            try:
+                os.kill(pid, NO_SIGNAL)
+            except ProcessLookupError:
+                return
+            if time.monotonic() > deadline:
+                self.fail(f"the process {pid} never exited")
             time.sleep(FILE_POLL_S)

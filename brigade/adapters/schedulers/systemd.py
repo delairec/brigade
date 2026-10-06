@@ -3,7 +3,9 @@ from pathlib import Path
 from string import Template
 
 from brigade.errors import ToolNotFound
+from brigade.system.create_directory import create_directory
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
+from brigade.system.write_text_file import write_text_file
 
 SHIPPED_DATA = files("brigade.adapters.schedulers") / "data"
 SERVICE_NAME = "brigade.service"
@@ -47,12 +49,12 @@ def install(request: dict, runtime) -> dict:
     environment = "\n".join(
         f'Environment="{_escape(f"{name}={value}", UNIT_ESCAPES)}"' for name, value in request["environment"].items()
     )
-    service.parent.mkdir(parents=True, exist_ok=True)
-    service.write_text(
+    create_directory(service.parent)
+    write_text_file(
+        service,
         _render("brigade.service.tpl", environment=environment, brigade=_escape(request["brigade"], COMMAND_ESCAPES)),
-        encoding="utf-8",
     )
-    timer.write_text(_render("brigade.timer.tpl"), encoding="utf-8")
+    write_text_file(timer, _render("brigade.timer.tpl"))
     _run_systemctl(runtime, "daemon-reload")
     _run_systemctl(runtime, "enable", "--now", TIMER_NAME)
     return {
