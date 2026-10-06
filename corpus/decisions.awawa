@@ -915,3 +915,35 @@ DECISION ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
 		+ "edits"
 	SOURCE "pull request #17 of the brigade repository, delivering @TASK.B04"
 		REF @TASK.B04
+
+DECISION EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
+	TITLE "every run is cut on the clock of the machine at its step cap times seconds_per_step, 30"
+		+ "by default, and a client that counts no steps is reported as held on the clock alone"
+	STATUS active
+	CLOSES @OPEN_QUESTION.WallTimeBudgetOfAClientThatCountsNoSteps
+	DESC "the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_step, the step cap of"
+		+ "the Claude Code adapter times a config.toml key defaulting to 30 s; brigade measures it"
+		+ "on the machine's clock, whatever the client"
+	DESC "the limit holds every client, those that count their steps included, as a bound against a"
+		+ "client stuck on a command"
+	DESC "at the limit brigade sends SIGTERM to the client's process group and SIGKILL 30 s later;"
+		+ "the segment ends with outcome wall_limit, distinct from the step cap"
+	DESC "a client whose probe declares no step count is held by the clock alone: brigade doctor"
+		+ "and brigade run warn so, and the supported-clients table shows the fallback"
+	DESC "binds @TASK.B06 and @TASK.B49"
+		REF @TASK.B06
+		REF @TASK.B49
+	REJECTED "20 s per step, the measured p90 rounded: a run of 77 steps would be cut at 1920 s,"
+		+ "under the 2762 s of active time measured at most"
+	REJECTED "a p90 of seconds per step read from the ledger per procedure: a client that counts no"
+		+ "steps gives no denominator"
+	REJECTED "a max_wall key in every procedure: a third required key repeating the budget;"
+		+ "max_wall stays the recipes' own"
+	REJECTED "a warning without a limit: a stuck client keeps its slot, and a run of 9 h was"
+		+ "measured, mostly waiting"
+	RATIONALE "686 unattended Claude Code subagent runs of this machine took 10.1 s per active step"
+		+ "at the median and 18.1 s at p90, 2762 s of active time at most; 30 s per step covers"
+		+ "that maximum for a run of p90 length; Codex exec, Gemini CLI and OpenCode document no"
+		+ "run timeout, and agent harnesses set a wall limit per run as a backstop"
+	SOURCE "the user's rulings of 2026-10-06 in the refinement of B06, on the measurements of"
+		+ "transcripts and the client documentation read that day"

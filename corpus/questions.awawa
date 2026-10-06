@@ -9,7 +9,7 @@ OPEN_QUESTION InitAsksForBuiltInOrCustomRoles
 OPEN_QUESTION WallTimeBudgetOfAClientThatCountsNoSteps
 	QUESTION "when a client reports no step count, how does the step budget of a procedure become"
 		+ "the wall-time limit of its run?"
-	STATUS open
+	STATUS closed
 	RATIONALE "the Blueprint, plan section 17, holds the budget on wall time without a conversion,"
 		+ "and only a recipe declares a duration, max_wall; the user left the conversion to a"
 		+ "sourced study, measured runs and the documentation of the clients, in the refinement of"
