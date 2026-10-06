@@ -836,3 +836,20 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		REF @TASK.B01
 		REF @TASK.B02
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+
+DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
+	TITLE "the pull request of a task carries the GitHub milestone named after the TITLE of the"
+		+ "task's MILESTONE"
+	STATUS active
+	DESC "the pull request delivering a task is assigned the GitHub milestone whose name is the"
+		+ "TITLE of the task's MILESTONE: @TASK.B03 belongs to @MILESTONE.M0, TITLE Foundations, so"
+		+ "its pull request carries the GitHub milestone Foundations"
+		REF @TASK.B03
+		REF @MILESTONE.M0
+	REJECTED "the id of the corpus milestone, M0, as the name of the GitHub milestone: the user"
+		+ "named Foundations, the TITLE"
+	REJECTED "a rule of the instructions corpus binding every project: asked whether the ruling was"
+		+ "general or brigade's, the user placed it in brigade"
+	RATIONALE "the milestone view of GitHub groups the pull requests of a milestone; a pull request"
+		+ "carrying none is easily left out of it"
+	SOURCE "the user's ruling of 2026-10-06 during the launch of wave M0"
