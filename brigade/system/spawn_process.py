@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Optional
 
-from brigade.errors import ToolNotFound
+from brigade.errors import CannotWrite, ToolNotFound
 from brigade.system.build_process_environment import build_process_environment
 
 
@@ -36,8 +36,15 @@ def _choose_input(stdin: Optional[str]) -> int:
     return subprocess.PIPE
 
 
+def _open_output(path: Path) -> BinaryIO:
+    try:
+        return open(path, "ab")
+    except OSError as error:
+        raise CannotWrite(error.filename or path, error) from error
+
+
 def spawn_process(request: SpawnRequest) -> subprocess.Popen:
-    with open(request.stdout, "ab") as stdout_file, open(request.stderr, "ab") as stderr_file:
+    with _open_output(request.stdout) as stdout_file, _open_output(request.stderr) as stderr_file:
         try:
             process = subprocess.Popen(
                 list(request.argv),

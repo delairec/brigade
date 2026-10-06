@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import unittest
 from pathlib import Path
@@ -652,3 +653,111 @@ class BrigadeRunOfAProject(RunTestCase):
     def write_role_file(self, directory: Path, name: str, slot: str) -> None:
         directory.mkdir(parents=True, exist_ok=True)
         (directory / f"{name}.md").write_text(MACHINE_BUILDER.format(name=name, slot=slot))
+
+
+REFUSED_RUN = "20261006T120000Z-b57000"
+SEGMENT_REFUSED_RUN = "20261006T120000Z-b57010"
+DETACHED_REFUSED_RUN = "20261006T120000Z-b57020"
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class BrigadeRunWhereTheMachineRefusesTheRunsDirectory(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.runs.mkdir(parents=True)
+
+    def tearDown(self):
+        self.runs.chmod(0o700)
+        super().tearDown()
+
+    def test_should_exit_1_naming_the_run_directory_it_cannot_create(self):
+        # Arrange
+        self.runs.chmod(0o500)
+
+        # Act
+        completed = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--run-id", REFUSED_RUN
+        )
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade run: cannot write {self.runs / REFUSED_RUN}: Permission denied\n"),
+        )
+
+
+class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWrite(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+
+    def run_deliver(self, run_id: str, *options: str):
+        return self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--run-id", run_id, *options
+        )
+
+    def test_should_exit_1_naming_the_file_of_the_run_it_cannot_write(self):
+        rows = [
+            ("20261006T120000Z-b57001", "pid", ()),
+            ("20261006T120000Z-b57002", "role.md", ()),
+            ("20261006T120000Z-b57003", "progress.md", ()),
+            ("20261006T120000Z-b57004", "segments/1/brief.md", ()),
+            ("20261006T120000Z-b57005", "segments/1/stdout.log", ()),
+            ("20261006T120000Z-b57006", "segments/1/stderr.log", ()),
+            ("20261006T120000Z-b57007", "brigade.log", ("--detach",)),
+        ]
+        for run_id, entry, options in rows:
+            with self.subTest(entry=entry):
+                # Arrange
+                (self.runs / run_id / entry).mkdir(parents=True)
+
+                # Act
+                completed = self.run_deliver(run_id, *options)
+
+                # Assert
+                self.assertEqual(
+                    (completed.returncode, completed.stdout, completed.stderr),
+                    (1, "", f"brigade run: cannot write {self.runs / run_id / entry}: Is a directory\n"),
+                )
+
+    def test_should_exit_1_naming_the_segment_directory_it_cannot_create(self):
+        # Arrange
+        segments = self.runs / SEGMENT_REFUSED_RUN / "segments"
+        segments.parent.mkdir(parents=True)
+        segments.write_text("")
+
+        # Act
+        completed = self.run_deliver(SEGMENT_REFUSED_RUN)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade run: cannot write {segments / '1'}: Not a directory\n"),
+        )
+
+
+class BrigadeRunDetachedWhereTheMachineRefusesASegment(RunTestCase):
+    def test_should_log_the_write_refused_to_the_detached_run_and_leave_it_dead(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        run_directory = self.runs / DETACHED_REFUSED_RUN
+        run_directory.mkdir(parents=True)
+        (run_directory / "segments").write_text("")
+
+        # Act
+        started = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace),
+            "--run-id", DETACHED_REFUSED_RUN, "--detach", "--json",
+        )
+
+        # Assert
+        self.assertEqual(started.returncode, 0, started.stderr)
+        self.wait_for_exit(json.loads(started.stdout)["pid"])
+        listed = self.run_brigade("runs", "list", "--json")
+        self.assertEqual(
+            ((run_directory / "brigade.log").read_text(), json.loads(listed.stdout)["runs"][0]["state"]),
+            (f"brigade run: cannot write {run_directory / 'segments' / '1'}: Not a directory\n", "dead"),
+        )

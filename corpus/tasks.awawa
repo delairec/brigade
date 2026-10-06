@@ -2007,7 +2007,7 @@ TASK B56
 TASK B57
 	TITLE "the writers of runs/, of the corpus cache and of the scheduler units: exit 1 naming the"
 		+ "path they cannot write"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "system"
 	ROLE bastien
@@ -2015,14 +2015,57 @@ TASK B57
 		+ "$XDG_STATE_HOME/brigade/runs/<id>/, its pid, role and progress files, its detached log"
 		+ "or a segment's directory, brief, stdout and stderr, exits 1 with one stderr line naming"
 		+ "the path, as for the state and the configuration"
+		IMPL "brigade/system/create_directory.py::def create_directory(path: Path) -> None:"
+		IMPL "brigade/system/write_text_file.py::def write_text_file(path: Path, content: str) ->"
+			+ "None:"
+		IMPL "brigade/runs/create_run_directory.py::def create_run_directory(plan: RunPlan) ->"
+			+ "None:"
+		IMPL "brigade/runs/run_segment.py::def run_segment(plan: RunPlan, number: int, runtime) ->"
+			+ "SegmentRecord:"
+		IMPL "brigade/system/spawn_process.py::def _open_output(path: Path) -> BinaryIO:"
+		IMPL "tests/unit/system/test_create_directory.py::class"
+			+ "CreateDirectoryWhereTheMachineRefusesTheWrite(unittest.TestCase):"
+		IMPL "tests/unit/system/test_write_text_file.py::class"
+			+ "WriteTextFileWhereTheMachineRefusesTheWrite(unittest.TestCase):"
+		IMPL "tests/cli/test_run.py::class"
+			+ "BrigadeRunWhereTheMachineRefusesTheRunsDirectory(RunTestCase):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_exit_1_naming_the_file_of_the_run_it_cannot_write(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_exit_1_naming_the_segment_directory_it_cannot_create(self):"
 	SPEC "the process brigade run --detach starts exits 1 the same way, its line written to"
 		+ "brigade.log while that file can still be written, and brigade runs list shows that run"
 		+ "dead"
-	SPEC "an OSError raised creating, extracting, placing or dating a tree of the corpus cache"
-		+ "under $XDG_CACHE_HOME/brigade/ exits 1 the same way, a cache hit on a cache it cannot"
-		+ "date included"
+		IMPL "brigade/runs/detach_run.py::def detach_run(plan: RunPlan, runtime) -> int:"
+		IMPL "tests/cli/test_run.py::class"
+			+ "BrigadeRunDetachedWhereTheMachineRefusesASegment(RunTestCase):"
+	SPEC "an OSError raised creating, extracting, placing, dating or pruning a tree of the corpus"
+		+ "cache under $XDG_CACHE_HOME/brigade/ exits 1 the same way, a cache hit on a cache it"
+		+ "cannot date included"
+		IMPL "brigade/corpus/prepare_tree.py::def _create_staging(root: Path) -> Path:"
+		IMPL "brigade/corpus/prepare_tree.py::def _unpack(archive: Path, staged_tree: Path, root:"
+			+ "Path) -> None:"
+		IMPL "brigade/corpus/prepare_tree.py::def _place_tree(staged_tree: Path, root: Path) ->"
+			+ "None:"
+		IMPL "brigade/corpus/prepare_tree.py::def _mark_read(root: Path, now: datetime) -> None:"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::class"
+			+ "PrepareTreeWhereTheMachineRefusesAWrite(PrepareTreeTestCase):"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::class"
+			+ "PrepareTreeOverAnEntryOfTheCacheItCannotUse(PrepareTreeTestCase):"
+		IMPL "tests/cli/test_corpus.py::class"
+			+ "BrigadeCorpusWhereTheMachineRefusesTheCache(CorpusTestCase):"
+		IMPL "brigade/corpus/prepare_tree.py::def _list_cached_trees(cache: Path) ->"
+			+ "list[_CachedTree]:"
+		IMPL "brigade/corpus/prepare_tree.py::def _remove_tree(root: Path) -> None:"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::class"
+			+ "PrepareTreeWhereTheMachineRefusesThePruning(PrepareTreeTestCase):"
 	SPEC "an OSError raised by brigade scheduler install creating or writing brigade.service or"
 		+ "brigade.timer under $XDG_CONFIG_HOME/systemd/user/ exits 1 the same way"
+		IMPL "brigade/adapters/schedulers/systemd.py::def install(request: dict, runtime) -> dict:"
+		IMPL "tests/cli/test_scheduler.py::class"
+			+ "BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectory(SchedulerTestCase):"
+		IMPL "tests/cli/test_scheduler.py::class"
+			+ "BrigadeSchedulerInstallOverAUnitItCannotWrite(SchedulerTestCase):"
 	AFTER @TASK.B06
 	AFTER @TASK.B08
 	AFTER @TASK.B56
@@ -2057,8 +2100,10 @@ TASK B57
 		+ "@TASK.B56"
 		REF @TASK.B07
 		REF @TASK.B56
-	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57"
+	SOURCE "the user's rulings of 2026-10-06 in the refinements of B56 and B57, and on pull request"
+		+ "#34"
 		REF @TASK.B56
+	DELIVERED_BY 34
 
 TASK B60
 	TITLE "retention of runs/: after each result written, the finished and dead runs beyond"

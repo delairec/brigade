@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from brigade.corpus.prepare_tree import Tree, TreeRequest, prepare_tree
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, CannotWrite
 from brigade.system.run_process import run_process
 
 IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
@@ -16,6 +16,7 @@ SECOND_READ = datetime(2026, 10, 6, 10, 0, tzinfo=timezone.utc)
 THIRD_READ = datetime(2026, 10, 6, 11, 0, tzinfo=timezone.utc)
 FOURTH_READ = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
 ROOMY_BOUND_BYTES = 1024 * 1024 * 1024
+A_DIRECTORY_OF_ANOTHER_OWNER = Path("/")
 
 
 def run_git(repository: Path, *arguments: str) -> str:
@@ -229,3 +230,140 @@ class PrepareTreeOverTheCacheBound(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(os.listdir(self.cache / "app"), [self.sha_b])
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class PrepareTreeWhereTheMachineRefusesAWrite(PrepareTreeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.sha = self.commit("corpus/tasks.awawa", "committed\n")
+
+    def tearDown(self):
+        self.refused.chmod(0o700)
+        super().tearDown()
+
+    def refuse_writes_in(self, directory: Path) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
+        directory.chmod(0o500)
+        self.refused = directory
+
+    def run_process_refusing_the_extraction(self, request):
+        record = run_process(request)
+        if request.argv[:2] == ("git", "archive"):
+            self.refuse_writes_in(Path(request.argv[3].removeprefix("--output=")).parent)
+        return record
+
+    def test_should_name_the_cache_it_cannot_create(self):
+        # Arrange
+        self.refuse_writes_in(self.cache.parent)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.cache}: Permission denied")
+
+    def test_should_name_the_tree_it_cannot_stage(self):
+        # Arrange
+        self.refuse_writes_in(self.cache / "app")
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Permission denied")
+
+    def test_should_name_the_tree_it_cannot_extract(self):
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(self.run_process_refusing_the_extraction, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Permission denied")
+
+
+@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
+class PrepareTreeWhereTheMachineRefusesThePruning(PrepareTreeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.commit("corpus/tasks.awawa", "committed\n")
+        self.stale_project = self.cache / "other"
+        self.stale_tree = self.stale_project / ("0" * 40)
+        (self.stale_tree / "corpus").mkdir(parents=True)
+        (self.stale_tree / "corpus" / "tasks.awawa").write_text("stale\n")
+
+    def tearDown(self):
+        self.refused.chmod(0o700)
+        super().tearDown()
+
+    def restrict(self, directory: Path, mode: int) -> None:
+        directory.chmod(mode)
+        self.refused = directory
+
+    def test_should_name_the_tree_it_cannot_remove(self):
+        # Arrange
+        self.restrict(self.stale_project, 0o500)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main", cache_bound_bytes=0))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.stale_tree}: Permission denied")
+
+    def test_should_name_the_project_cache_it_cannot_list(self):
+        # Arrange
+        self.restrict(self.stale_project, 0o300)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main", cache_bound_bytes=0))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.stale_project}: Permission denied")
+
+    def test_should_name_the_file_it_cannot_measure(self):
+        # Arrange
+        self.restrict(self.stale_tree / "corpus", 0o600)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main", cache_bound_bytes=0))
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), f"cannot write {self.stale_tree / 'corpus' / 'tasks.awawa'}: Permission denied"
+        )
+
+
+class PrepareTreeOverAnEntryOfTheCacheItCannotUse(PrepareTreeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.sha = self.commit("corpus/tasks.awawa", "committed\n")
+        self.tree_root = self.cache / "app" / self.sha
+        self.tree_root.parent.mkdir(parents=True)
+
+    def test_should_name_the_tree_it_cannot_place(self):
+        # Arrange
+        self.tree_root.write_text("")
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.tree_root}: Not a directory")
+
+    @unittest.skipIf(os.geteuid() == 0, "root dates what another user owns")
+    def test_should_name_the_cached_tree_it_cannot_date(self):
+        # Arrange
+        self.tree_root.symlink_to(A_DIRECTORY_OF_ANOTHER_OWNER)
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            prepare_tree(run_process, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {self.tree_root}: Operation not permitted")
