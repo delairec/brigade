@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tarfile
 import tempfile
 import unittest
 from dataclasses import replace
@@ -45,6 +46,16 @@ class PrepareTreeTestCase(unittest.TestCase):
         file = self.repository / relative_path
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(content)
+        return self.record(relative_path)
+
+    def commit_link(self, relative_path: str, target: str) -> str:
+        link = self.repository / relative_path
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.unlink(missing_ok=True)
+        link.symlink_to(target)
+        return self.record(relative_path)
+
+    def record(self, relative_path: str) -> str:
         run_git(self.repository, "add", "--", relative_path)
         run_git(self.repository, *IDENTITY, "commit", "--quiet", "-m", f"write {relative_path}")
         return run_git(self.repository, "rev-parse", "HEAD").strip()
@@ -117,6 +128,50 @@ class PrepareTreeAtABranchOrASha(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "the ref nowhere is not a commit of @PROJECT.app")
+
+
+class PrepareTreeOfACommitHoldingALinkInsideItsTree(PrepareTreeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.commit("src/app.py", "print('app')\n")
+        self.commit_link("docs/app.py", "../src/app.py")
+
+    def test_should_extract_the_link_reading_through_it_to_the_file_of_the_tree(self):
+        # Act
+        tree = prepare_tree(run_process, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual((tree.root / "docs" / "app.py").read_text(), "print('app')\n")
+
+
+@unittest.skipUnless(hasattr(tarfile, "data_filter"), "tarfile has no data filter before Python 3.11.4")
+class PrepareTreeOfACommitHoldingALinkOutsideItsTree(PrepareTreeTestCase):
+    def test_should_refuse_the_link_naming_the_project_and_the_member(self):
+        for target in ["../../../.ssh/id_ed25519", "/home/someone/.ssh/id_ed25519"]:
+            with self.subTest(target=target):
+                # Arrange
+                self.commit_link("corpus/keys", target)
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    prepare_tree(run_process, self.create_request(ref="main"))
+
+                # Assert
+                self.assertEqual(
+                    str(raised.exception),
+                    "the archive of @PROJECT.app holds corpus/keys, a member tarfile's data filter refuses",
+                )
+
+    def test_should_leave_nothing_of_the_refused_archive_in_the_cache(self):
+        # Arrange
+        self.commit_link("corpus/keys", "../../../.ssh/id_ed25519")
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            prepare_tree(run_process, self.create_request(ref="main"))
+
+        # Assert
+        self.assertEqual(os.listdir(self.cache / "app"), [])
 
 
 class PrepareTreeWhenAnotherExtractionWinsTheRace(PrepareTreeTestCase):

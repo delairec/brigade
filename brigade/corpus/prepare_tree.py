@@ -26,7 +26,8 @@ WORKTREE_KIND = "worktree"
 EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 NANOSECONDS_PER_MICROSECOND = 1000
 NOTHING_MEASURED = 0
-TRUSTED_EXTRACTION = {"filter": "fully_trusted"} if hasattr(tarfile, "fully_trusted_filter") else {}
+DATA_EXTRACTION = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
+MEMBER_REFUSAL = getattr(tarfile, "FilterError", ())
 
 
 @dataclass(frozen=True)
@@ -87,20 +88,26 @@ def _create_staging(root: Path) -> Path:
 def _unpack(archive: Path, staged_tree: Path, root: Path) -> None:
     with tarfile.open(archive) as commit_tar:
         try:
-            # S202: the archive is git archive of a commit of the project, extracted as a checkout of that commit
-            # writes it; the worktree kind reads the same tree in place
-            commit_tar.extractall(staged_tree, **TRUSTED_EXTRACTION)  # noqa: S202
+            # S202: the archive is git archive of a commit of the project; from Python 3.11.4 tarfile's data filter
+            # refuses a link out of the tree, an absolute or .. path and a device file; 3.11.0 to 3.11.3 extract as is
+            commit_tar.extractall(staged_tree, **DATA_EXTRACTION)  # noqa: S202
         except OSError as error:
             raise CannotWrite(root, error) from error
 
 
 def _stage_tree(
-    run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, sha: str, staging: Path, root: Path
+    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest, sha: str, staging: Path, root: Path
 ) -> Path:
     archive = staging / ARCHIVE_NAME
     staged_tree = staging / STAGED_TREE_NAME
-    archive_commit(run_process, repository, sha, archive)
-    _unpack(archive, staged_tree, root)
+    archive_commit(run_process, request.repository, sha, archive)
+    try:
+        _unpack(archive, staged_tree, root)
+    except MEMBER_REFUSAL as error:
+        raise BrigadeError(
+            f"the archive of @PROJECT.{request.project} holds {error.tarinfo.name}, a member tarfile's data filter"
+            " refuses"
+        ) from error
     return staged_tree
 
 
@@ -171,7 +178,7 @@ def _extract_tree(
     create_directory(root.parent)
     staging = _create_staging(root)
     try:
-        staged_tree = _stage_tree(run_process, request.repository, sha, staging, root)
+        staged_tree = _stage_tree(run_process, request, sha, staging, root)
         with hold_lock(request.cache_lock):
             _place_tree(staged_tree, root)
             _mark_read(root, request.now)
