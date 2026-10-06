@@ -20,6 +20,9 @@
 # The bound, in MB, of the cache of the trees brigade corpus extracts; the least recently read are removed past it.
 # refs_cache_mb = 1024
 
+# The seconds a run is given per step of its budget: the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_step.
+# seconds_per_step = 30
+
 # The model and effort a reasoning level maps to, replacing that row of the client adapter's table;
 # levels deepest, deep, standard, light.
 # [reasoning.deep]

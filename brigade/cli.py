@@ -14,6 +14,7 @@ from brigade.commands import ledger, ledger_budgets, ledger_compare
 from brigade.commands.describe_skipped_lines import describe_skipped_lines
 from brigade.commands import roles_lint, roles_list, roles_show
 from brigade.commands import scheduler_install, scheduler_status, tick
+from brigade.commands import run, runs_list, runs_logs
 from brigade.commands.render_adapter_text import render_adapter_text
 from brigade.commands.render_corpus_text import render_corpus_text
 from brigade.commands.render_doctor_text import render_doctor_text
@@ -31,6 +32,9 @@ from brigade.commands.render_roles_show_text import render_roles_show_text
 from brigade.commands.render_scheduler_install_text import render_scheduler_install_text
 from brigade.commands.render_scheduler_status_text import render_scheduler_status_text
 from brigade.commands.render_tick_text import render_tick_text
+from brigade.commands.render_run_text import render_run_text
+from brigade.commands.render_runs_list_text import render_runs_list_text
+from brigade.commands.render_runs_logs_text import render_runs_logs_text
 from brigade.errors import BrigadeError, StandingDown, UsageError
 from brigade.runtime import build_runtime
 from brigade.system.read_configuration import SLOTS
@@ -39,9 +43,10 @@ from brigade.system.read_configuration import SLOTS
 DAY_FORMAT = "%Y-%m-%d"
 DAYS_SUFFIX = "d"
 LAST_RUNS_BY_DEFAULT = 20
-ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action", "scheduler_action")
+ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action", "scheduler_action", "runs_action")
 CORPUS_COMMAND = "corpus"
 PASSTHROUGH_SEPARATOR = "--"
+RUN_ARGUMENT_SEPARATOR = "="
 
 
 def _create_common_options():
@@ -148,6 +153,27 @@ def _add_scheduler_parser(commands) -> None:
         "install", parents=[_create_common_options()], help="install the scheduler config.toml names, or the default"
     )
     actions.add_parser("status", parents=[_create_common_options()], help="report the scheduler installed")
+def _add_run_parser(commands) -> None:
+    run_parser = commands.add_parser(
+        "run", parents=[_create_common_options()], help="run a procedure as a slot through the client adapter"
+    )
+    run_parser.add_argument("procedure", help="a procedure name, or the path of its Markdown file")
+    run_parser.add_argument("--slot", required=True, choices=SLOTS, help="the slot the run takes its role from")
+    run_parser.add_argument("--project", help="the registered project the run belongs to")
+    run_parser.add_argument("--cwd", help="the directory the client runs in; the project's path, else the current one")
+    run_parser.add_argument("--brief", help="a file whose text the run receives as its brief")
+    run_parser.add_argument("--detach", action="store_true", help="run in the background and print the run id")
+    run_parser.add_argument("--run-id", help=argparse.SUPPRESS)
+    run_parser.add_argument("arguments", nargs="*", metavar="key=value", help="an argument of the procedure")
+
+
+def _add_runs_parser(commands) -> None:
+    runs_parser = commands.add_parser("runs", help="list the runs and print their logs")
+    actions = runs_parser.add_subparsers(dest="runs_action", metavar="action", required=True)
+    actions.add_parser("list", parents=[_create_common_options()], help="list every run with its state and outcome")
+    logs_parser = actions.add_parser("logs", parents=[_create_common_options()], help="print the log of a run")
+    logs_parser.add_argument("run")
+    logs_parser.add_argument("--tail", type=_read_positive_count, help="the last N lines only")
 
 
 def _add_corpus_parser(commands) -> None:
@@ -191,6 +217,8 @@ def _create_parser():
     _add_tick_parser(commands)
     _add_scheduler_parser(commands)
     _add_corpus_parser(commands)
+    _add_run_parser(commands)
+    _add_runs_parser(commands)
     return parser
 
 
@@ -214,6 +242,16 @@ def _decide_roles_lint_exit_code(document: dict) -> int:
     if document["findings"]:
         return 1
     return 0
+
+
+def _decide_run_exit_code(document: dict) -> int:
+    if document.get("outcome", "done") != "done":
+        return 1
+    return 0
+
+
+def _describe_run_warnings(document: dict) -> list[str]:
+    return document.get("warnings", [])
 
 
 def _keep_options(options: argparse.Namespace) -> argparse.Namespace:
@@ -275,6 +313,9 @@ COMMANDS = {
     "scheduler install": Command(_keep_options, scheduler_install.run, render_scheduler_install_text, _decide_done),
     "scheduler status": Command(_keep_options, scheduler_status.run, render_scheduler_status_text, _decide_done),
     "corpus": Command(_keep_options, corpus.run, render_corpus_text, _decide_done),
+    "run": Command(_keep_options, run.run, render_run_text, _decide_run_exit_code, _describe_run_warnings),
+    "runs list": Command(_keep_options, runs_list.run, render_runs_list_text, _decide_done),
+    "runs logs": Command(_keep_options, runs_logs.run, render_runs_logs_text, _decide_done),
 }
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
@@ -315,10 +356,18 @@ def _pass_awawa_through(options: argparse.Namespace, awawa_arguments: tuple[str,
     return passage.record.exit_code
 
 
+def _is_option(extra: str) -> bool:
+    return extra.startswith("-") or RUN_ARGUMENT_SEPARATOR not in extra
+
+
 def main(arguments: list[str]) -> int:
     parser = _create_parser()
     own_arguments, awawa_arguments = _split_awawa_arguments(arguments)
-    options = parser.parse_args(own_arguments)
+    options, extras = parser.parse_known_args(own_arguments)
+    if extras and (options.command != "run" or any(_is_option(extra) for extra in extras)):
+        parser.error(f"unrecognized arguments: {' '.join(extras)}")
+    if options.command == "run":
+        options.arguments = [*options.arguments, *extras]
     if options.command is None:
         if not options.version:
             parser.error("no option given")

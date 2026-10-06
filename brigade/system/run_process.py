@@ -30,7 +30,7 @@ class ProcessRecord:
     duration_ms: int
 
 
-def _build_environment() -> dict[str, str]:
+def build_process_environment() -> dict[str, str]:
     return {
         name: value
         for name, value in os.environ.items()
@@ -54,7 +54,7 @@ def run_process(request: ProcessRequest) -> ProcessRecord:
         completed = subprocess.run(
             list(request.argv),
             cwd=request.cwd,
-            env=_build_environment(),
+            env=build_process_environment(),
             capture_output=True,
             text=True,
             encoding="utf-8",
