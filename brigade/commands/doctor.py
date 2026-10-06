@@ -8,14 +8,14 @@ from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.system.ask_configured_client import ask_configured_client
 from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.resolve_plugin import resolve_plugin
-from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
+from brigade.system.run_process import ProcessRequest
 
 DOCUMENT_SCHEMA_VERSION = 1
 AWAWA_FLOOR = (2, 7)
 PROBE_DIRECTORY = "/"
 PROBE_TIMEOUT_S = 10.0
-SYSTEMD_STATES_FIT_FOR_TIMERS = ("running", "degraded")
 SCHEDULER_FALLBACK = "a cron line, or brigade tick --loop"
 FORGE_FALLBACK = "local mode without a forge"
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
@@ -87,17 +87,9 @@ def _check_client(runtime) -> dict:
 
 def _check_scheduler(runtime) -> dict:
     try:
-        record = runtime.run_process(
-            ProcessRequest(
-                argv=("systemctl", "--user", "is-system-running"),
-                cwd=PROBE_DIRECTORY,
-                timeout_s=PROBE_TIMEOUT_S,
-                acceptable_exit_codes=EVERY_EXIT_CODE,
-            )
-        )
+        systemd_state = read_user_systemd_state(runtime.run_process)
     except ToolNotFound:
         return _create_optional("scheduler", "warning", "systemctl not on PATH", SCHEDULER_FALLBACK)
-    systemd_state = record.stdout.strip().partition("\n")[0]
     if systemd_state in SYSTEMD_STATES_FIT_FOR_TIMERS:
         return _create_optional("scheduler", "ok", f"user systemd instance {systemd_state}", SCHEDULER_FALLBACK)
     if not systemd_state:

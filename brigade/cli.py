@@ -11,6 +11,7 @@ from brigade.commands import adapter, doctor, init, project_add, project_list, p
 from brigade.commands import ledger, ledger_budgets, ledger_compare
 from brigade.commands.describe_skipped_lines import describe_skipped_lines
 from brigade.commands import roles_lint, roles_list, roles_show
+from brigade.commands import scheduler_install, scheduler_status, tick
 from brigade.commands.render_adapter_text import render_adapter_text
 from brigade.commands.render_doctor_text import render_doctor_text
 from brigade.commands.render_init_text import render_init_text
@@ -24,7 +25,10 @@ from brigade.commands.render_project_status_text import render_project_status_te
 from brigade.commands.render_roles_lint_text import render_roles_lint_text
 from brigade.commands.render_roles_list_text import render_roles_list_text
 from brigade.commands.render_roles_show_text import render_roles_show_text
-from brigade.errors import BrigadeError, UsageError
+from brigade.commands.render_scheduler_install_text import render_scheduler_install_text
+from brigade.commands.render_scheduler_status_text import render_scheduler_status_text
+from brigade.commands.render_tick_text import render_tick_text
+from brigade.errors import BrigadeError, StandingDown, UsageError
 from brigade.runtime import build_runtime
 from brigade.system.read_configuration import SLOTS
 
@@ -32,7 +36,7 @@ from brigade.system.read_configuration import SLOTS
 DAY_FORMAT = "%Y-%m-%d"
 DAYS_SUFFIX = "d"
 LAST_RUNS_BY_DEFAULT = 20
-ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action")
+ACTION_DESTINATIONS = ("project_action", "ledger_report", "roles_action", "scheduler_action")
 
 
 def _create_common_options():
@@ -118,6 +122,29 @@ def _add_roles_parser(commands) -> None:
     actions.add_parser("lint", parents=[_create_common_options()], help="check the built-in and the machine role files")
 
 
+def _add_tick_parser(commands) -> None:
+    tick_parser = commands.add_parser(
+        "tick", parents=[_create_common_options()], help="plan and apply what the facts call for, once or in a loop"
+    )
+    modes = tick_parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument("--once", dest="mode", action="store_const", const="once", help="run one tick")
+    modes.add_argument(
+        "--dry-run", dest="mode", action="store_const", const="dry-run", help="print the snapshot and the plan"
+    )
+    modes.add_argument(
+        "--loop", dest="mode", action="store_const", const="loop", help="run a tick every five minutes until a signal"
+    )
+
+
+def _add_scheduler_parser(commands) -> None:
+    scheduler_parser = commands.add_parser("scheduler", help="install what fires the tick, and report it")
+    actions = scheduler_parser.add_subparsers(dest="scheduler_action", metavar="action", required=True)
+    actions.add_parser(
+        "install", parents=[_create_common_options()], help="install the scheduler config.toml names, or the default"
+    )
+    actions.add_parser("status", parents=[_create_common_options()], help="report the scheduler installed")
+
+
 def _create_parser():
     parser = argparse.ArgumentParser(prog="brigade")
     parser.add_argument("--version", action="store_true", help="print the version of brigade")
@@ -142,6 +169,8 @@ def _create_parser():
     _add_project_parser(commands)
     _add_ledger_parser(commands)
     _add_roles_parser(commands)
+    _add_tick_parser(commands)
+    _add_scheduler_parser(commands)
     return parser
 
 
@@ -222,6 +251,9 @@ COMMANDS = {
     "roles list": Command(_keep_options, roles_list.run, render_roles_list_text, _decide_done),
     "roles show": Command(_keep_options, roles_show.run, render_roles_show_text, _decide_done),
     "roles lint": Command(_keep_options, roles_lint.run, render_roles_lint_text, _decide_roles_lint_exit_code),
+    "tick": Command(_keep_options, tick.run, render_tick_text, _decide_done),
+    "scheduler install": Command(_keep_options, scheduler_install.run, render_scheduler_install_text, _decide_done),
+    "scheduler status": Command(_keep_options, scheduler_status.run, render_scheduler_status_text, _decide_done),
 }
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
@@ -255,6 +287,9 @@ def main(arguments: list[str]) -> int:
         return 0
     try:
         return _run_command(options)
+    except StandingDown as reason:
+        sys.stderr.write(f"brigade {_name_command(options)}: {reason}\n")
+        return 0
     except UsageError as error:
         sys.stderr.write(f"brigade {_name_command(options)}: {error}\n")
         return USAGE_EXIT_CODE

@@ -1,0 +1,9 @@
+#!/bin/sh
+case "$*" in
+  "-l")
+    if [ ! -f "$HOME/crontab" ]; then echo "no crontab for ada" >&2; exit 1; fi
+    while IFS= read -r line; do printf '%s\n' "$line"; done < "$HOME/crontab" ;;
+  "-")
+    while IFS= read -r line; do printf '%s\n' "$line"; done > "$HOME/crontab" ;;
+  *) exit 2 ;;
+esac

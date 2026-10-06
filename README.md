@@ -3,8 +3,9 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with seven commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
-`brigade adapter`, `brigade project`, `brigade ledger` and `brigade roles`; every other one is a task of the corpus.
+The entry point exists with nine commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter`, `brigade project`, `brigade ledger`, `brigade roles`, `brigade tick` and `brigade scheduler`;
+every other one is a task of the corpus.
 
 ## Install
 
@@ -65,6 +66,37 @@ replaces it. `pause` and `resume` set the status of a project.
 Every write takes the lock of the corpus repository in `$XDG_STATE_HOME/brigade/locks/`, runs `awawa fmt` on
 `projects.awawa` and `awawa lint --strict` on the corpus, then commits; a failing lint restores the file and exits 1.
 These commands need awawa on `PATH`.
+
+## Tick and scheduler
+
+A tick builds a snapshot of the facts, plans the actions they call for and applies them, round after round until the
+plan is empty or ten rounds have passed. The planner plans no action yet.
+
+```
+brigade tick --once       # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock
+brigade tick --dry-run    # the snapshot and the plan, applied to nothing
+brigade tick --loop       # a tick at once, then one every five minutes, until SIGTERM or SIGINT
+brigade scheduler install
+brigade scheduler status
+```
+
+`tick --once` takes the lock without waiting: when another tick holds it, it writes one line naming the lock on stderr,
+writes nothing and exits 0. Otherwise it writes the heartbeat `$XDG_STATE_HOME/brigade/tick.json` atomically:
+`schema_version`, `ts`, `duration_ms` and `actions_applied`. `--dry-run` takes no lock and writes nothing. `--loop`
+reports each tick on stderr; a signal lets the tick under way finish, then the loop exits 0 with the number of ticks
+attempted, stand-downs included. Every mode prints text or, with `--json`, a JSON document.
+
+`scheduler install` installs what fires `brigade tick --once` every five minutes, chosen by the `scheduler` key of
+`config.toml`, else, without the key or without `config.toml`, by a probe: `systemd` where `systemctl --user
+is-system-running` answers `running` or `degraded`, `cron` otherwise. `systemd` writes `brigade.service` and
+`brigade.timer` in `$XDG_CONFIG_HOME/systemd/user/`, then reloads the user manager and enables the timer now; `cron`
+replaces the crontab line marked `# brigade scheduler install`, keeping every other line, appends the stderr of each
+tick to `$XDG_STATE_HOME/brigade/tick.log` and discards its stdout, the heartbeat keeping the last tick; `loop` installs
+nothing and names the `brigade tick --loop` command to keep running. The unit and the cron line run the brigade that
+installed them with the `PATH`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CACHE_HOME` of the install, escaped for
+systemd or quoted for the shell and cron. Run again, it leaves one pair of units or one line. `scheduler status` reports
+the scheduler installed or `none`, its unit files or cron line, the next activation of the timer and the last tick read
+from the heartbeat, and exits 0.
 
 ## Client adapters
 
@@ -142,6 +174,8 @@ The CI runs the tests and the zipapp build on Python 3.11 and on the latest Pyth
 - `brigade/adapters/clients/` — the built-in client adapters, `claude_code.py` and `fake.py`, reached by name only;
   the recordings the test suite replays live in `tests/cli/fixtures/recordings/`.
 - `brigade/roles/data/` — the nine built-in role files, one per slot.
+- `brigade/adapters/schedulers/` — the scheduler plugins, `systemd.py`, `cron.py` and `loop.py`, reached by name only;
+  the templates of the units and of the cron line live in its `data/` folder.
 - `corpus/` — the project's own awawa corpus: the schema, the milestones, the tasks, the decisions of the plan.
   Read it with `awawa status .` from this directory.
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board,

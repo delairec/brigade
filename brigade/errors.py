@@ -12,3 +12,7 @@ class ToolNotFound(ToolFailure):
 
 class UsageError(BrigadeError):
     pass
+
+
+class StandingDown(Exception):
+    pass
