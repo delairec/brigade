@@ -51,8 +51,19 @@ class ClaudeCodeProbe(unittest.TestCase):
                 "version_argv": ["claude", "--version"],
                 "operations": ["probe", "launch", "result", "resume", "transcripts"],
                 "features": ["step_count", "tool_grants", "reset_hour"],
+                "models": {"deepest": "fable", "deep": "fable", "standard": "opus", "light": "sonnet"},
             },
         )
+
+    def test_should_bind_the_model_of_the_reasoning_row_config_toml_sets(self):
+        # Arrange
+        standard_row_set = {"standard": {"model": "sonnet", "effort": "low"}}
+
+        # Act
+        probe = answer("probe", {"schema_version": 1, "reasoning_table": standard_row_set, "settings": {}, "home": "/home/ada"})
+
+        # Assert
+        self.assertEqual(probe["models"], {"deepest": "fable", "deep": "fable", "standard": "sonnet", "light": "sonnet"})
 
 
 class ClaudeCodeLaunch(unittest.TestCase):

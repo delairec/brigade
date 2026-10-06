@@ -9,6 +9,7 @@ from brigade.errors import BrigadeError
 STRING_KEYS = ("client", "scheduler", "forge_account", "instructions", "ide_link")
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
+SLOTS = ("plan", "build", "verify", "review", "rebase", "report", "triage", "rules", "explore")
 TOML_TYPE_NAMES = (
     (bool, "a boolean"),
     (int, "an integer"),
@@ -36,6 +37,7 @@ class Configuration:
     ide_link: Optional[str] = None
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)
+    slots: dict = field(default_factory=dict)
 
 
 def _name_toml_type(value) -> str:
@@ -84,6 +86,12 @@ def _read_clients(table, path: Path) -> dict:
     return {name: _read_client_settings(settings, name, path) for name, settings in table.items()}
 
 
+def _read_slots(table, path: Path) -> dict:
+    _require(table, dict, "a table", "slots", path)
+    _refuse_unknown_keys(table, SLOTS, "slots.", path)
+    return {slot: _require(name, str, "a string", f"slots.{slot}", path) for slot, name in table.items()}
+
+
 def _parse(path: Path) -> dict:
     try:
         content = path.read_text(encoding="utf-8")
@@ -97,10 +105,11 @@ def _parse(path: Path) -> dict:
 
 def read_configuration(path: Path) -> Configuration:
     document = _parse(path)
-    _refuse_unknown_keys(document, (*STRING_KEYS, "reasoning", "clients"), "", path)
+    _refuse_unknown_keys(document, (*STRING_KEYS, "reasoning", "clients", "slots"), "", path)
     strings = {key: _require(document[key], str, "a string", key, path) for key in STRING_KEYS if key in document}
     return Configuration(
         **strings,
         reasoning=_read_reasoning(document.get("reasoning", {}), path),
         clients=_read_clients(document.get("clients", {}), path),
+        slots=_read_slots(document.get("slots", {}), path),
     )

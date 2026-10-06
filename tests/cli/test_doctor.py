@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -30,6 +31,8 @@ CLIENT_ENTRY = 3
 SCHEDULER_ENTRY = 4
 FORGE_ENTRY = 5
 AWAWA_WEB_ENTRY = 6
+INSTRUCTIONS_ENTRY = 7
+INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 
 
 class DoctorTestCase(unittest.TestCase):
@@ -55,9 +58,13 @@ class DoctorTestCase(unittest.TestCase):
 
 
 class BrigadeDoctorOnAMachineWithEveryItem(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.instructions = self.config_home.name
+
     def test_should_report_every_item_ok_in_the_versioned_document(self):
         # Arrange
-        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+        self.write_configuration(f'client = "claude-code"\ninstructions = "{self.instructions}"\n')
         every_item = [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 
         # Act
@@ -110,13 +117,20 @@ class BrigadeDoctorOnAMachineWithEveryItem(DoctorTestCase):
                         "detail": "on PATH",
                         "fallback": "the dashboard's corpus view only",
                     },
+                    {
+                        "name": "instructions",
+                        "kind": "optional",
+                        "state": "ok",
+                        "detail": f"lint --strict clean in {self.instructions}",
+                        "fallback": "built-in roles and no instructions package",
+                    },
                 ],
             },
         )
 
     def test_should_print_the_report_as_text(self):
         # Arrange
-        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+        self.write_configuration(f'client = "claude-code"\ninstructions = "{self.instructions}"\n')
         every_item = [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 
         # Act
@@ -138,6 +152,7 @@ class BrigadeDoctorOnAMachineWithEveryItem(DoctorTestCase):
                 "ok       scheduler    user systemd instance running       else: a cron line, or brigade tick --loop",
                 "ok       forge        gh as octo-bot                      else: local mode without a forge",
                 "ok       awawa-web    on PATH                             else: the dashboard's corpus view only",
+                f"ok       instructions lint --strict clean in {self.instructions} else: built-in roles and no instructions package",
                 "",
                 "doctor: 4 of 4 prerequisites ok · 0 optional items on their fallback",
             ],
@@ -315,8 +330,9 @@ class BrigadeDoctorAsTextWithAFindingAndAWarning(DoctorTestCase):
                 "ok       scheduler    user systemd instance running       else: a cron line, or brigade tick --loop",
                 "ok       forge        gh as octo-bot                      else: local mode without a forge",
                 "warning  awawa-web    not on PATH                         fallback: the dashboard's corpus view only",
+                "warning  instructions none configured                     fallback: built-in roles and no instructions package",
                 "",
-                "doctor: 3 of 4 prerequisites ok · 1 optional item on its fallback",
+                "doctor: 3 of 4 prerequisites ok · 2 optional items on their fallback",
             ],
         )
 
@@ -416,3 +432,62 @@ class BrigadeDoctorChecksTheClientAdapter(DoctorTestCase):
             json.loads(completed.stdout)["items"][CLIENT_ENTRY],
             {"name": "client", "kind": "prerequisite", "state": "ok", "detail": "fake: no client executable", "fallback": None},
         )
+
+
+INSTRUCTIONS_SCHEMA = (
+    'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\t\tREQUIRED\n\t\tREPEATABLE\n'
+    "\tFIELD REASONING deepest|deep|standard|light\n\t\tREQUIRED\n"
+)
+CLEAN_AGENT = 'AGENT planner\n\tWORK "the plan of a wave"\n\tREASONING deep\n'
+AGENT_LACKING_ITS_REASONING = 'AGENT planner\n\tWORK "the plan of a wave"\n'
+
+
+@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
+class BrigadeDoctorReportsTheInstructionsCorpus(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.instructions = Path(self.config_home.name) / "instructions"
+        self.instructions.mkdir()
+        (self.instructions / "_schema.awawa").write_text(INSTRUCTIONS_SCHEMA)
+        self.machine_with_awawa = [GIT, os.path.dirname(shutil.which("awawa")), SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+
+    def test_should_report_a_warning_with_its_fallback_when_none_is_configured(self):
+        # Arrange
+        self.write_configuration('client = "fake"\n')
+
+        # Act
+        completed = self.run_doctor(self.machine_with_awawa, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][INSTRUCTIONS_ENTRY],
+            {"name": "instructions", "kind": "optional", "state": "warning", "detail": "none configured", "fallback": INSTRUCTIONS_FALLBACK},
+        )
+
+    def test_should_report_whether_the_configured_corpus_lints_clean(self):
+        rows = [
+            ("a corpus that lints clean", CLEAN_AGENT, "ok", "lint --strict clean in"),
+            ("a corpus with an error", AGENT_LACKING_ITS_REASONING, "warning", "lint --strict fails in"),
+        ]
+        self.write_configuration(f'client = "fake"\ninstructions = "{self.instructions}"\n')
+        for corpus, agents, expected_state, expected_verdict in rows:
+            with self.subTest(corpus=corpus):
+                # Arrange
+                (self.instructions / "agents.awawa").write_text(agents)
+
+                # Act
+                completed = self.run_doctor(self.machine_with_awawa, "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(
+                    json.loads(completed.stdout)["items"][INSTRUCTIONS_ENTRY],
+                    {
+                        "name": "instructions",
+                        "kind": "optional",
+                        "state": expected_state,
+                        "detail": f"{expected_verdict} {self.instructions}",
+                        "fallback": INSTRUCTIONS_FALLBACK,
+                    },
+                )

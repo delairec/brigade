@@ -43,6 +43,7 @@ CLIENT_ANSWER_SHAPES = {
             kinds=(list,), items=Field(kinds=(str,), values=("probe", "launch", "result", "resume", "transcripts"))
         ),
         "features": Field(kinds=(list,), items=Field(kinds=(str,), values=("step_count", "tool_grants", "reset_hour"))),
+        "models": Field(kinds=(dict,)),
     },
     "launch-argv": COMMAND_ANSWER,
     "resume-argv": COMMAND_ANSWER,

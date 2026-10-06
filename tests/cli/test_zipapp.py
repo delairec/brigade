@@ -68,5 +68,20 @@ class BrigadeZipapp(unittest.TestCase):
                 "version_argv": None,
                 "operations": ["probe", "launch", "result"],
                 "features": [],
+                "models": {},
             },
         )
+
+    def test_should_print_the_built_in_role_the_built_archive_ships(self):
+        # Arrange
+        clone_root = Path(self.clone.name)
+        machine_root = clone_root / "machine"
+        machine_root.mkdir()
+        machine = TemporaryMachine(machine_root)
+
+        # Act
+        completed = machine.run_brigade(clone_root / "dist" / "brigade.pyz", "roles", "show", "plan")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, (clone_root / "brigade" / "roles" / "data" / "ada.md").read_text())

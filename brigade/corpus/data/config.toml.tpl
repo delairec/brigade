@@ -27,3 +27,8 @@
 # the fake adapter replays the recorded result documents of its recordings directory.
 # [clients.fake]
 # recordings = ""
+
+# The role a slot runs, read from an AGENT entity of the instructions corpus, one key per slot bound;
+# slots plan, build, verify, review, rebase, report, triage, rules, explore.
+# [slots]
+# plan = ""

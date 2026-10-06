@@ -9,7 +9,8 @@ def _render_prerequisite(item: dict) -> str:
 
 def _render_optional(item: dict) -> str:
     label = "else" if item["state"] == "ok" else "fallback"
-    return f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['detail']:<{DETAIL_WIDTH}}{label}: {item['fallback']}"
+    columns = f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['detail']:<{DETAIL_WIDTH - 1}}"
+    return f"{columns} {label}: {item['fallback']}"
 
 
 def _summarise(prerequisites: list[dict], optional_items: list[dict]) -> str:

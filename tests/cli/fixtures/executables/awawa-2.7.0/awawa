@@ -1,5 +1,6 @@
 #!/bin/sh
 case "$*" in
   "--version") echo "awawa 2.7.0" ;;
+  "lint --strict "*) exit 0 ;;
   *) exit 2 ;;
 esac

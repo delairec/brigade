@@ -14,6 +14,7 @@ def _probe() -> dict:
         "version_argv": None,
         "operations": ["probe", "launch", "result"],
         "features": [],
+        "models": {},
     }
 
 
