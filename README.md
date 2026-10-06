@@ -139,6 +139,32 @@ document, on stdout; brigade checks every answer against the shape of its operat
 operation and the key of an answer that departs from it. The probe answers `models`, the model the adapter binds to
 each reasoning level.
 
+`brigade adapter matrix` prints one row per client adapter, built-in or `brigade-client-<name>` on your `PATH`, and one
+column per capability, read from its probe with the settings of `config.toml`: `full` when the probe declares it,
+`fallback` when brigade replaces it, `absent` for a launch or a result it cannot do; the legend names each fallback.
+Every row carries its audience, a supported client or an adapter of the test suite, the modules of
+`brigade/adapters/test_clients/`. An adapter whose probe fails gets a row naming the error, and the command exits 1.
+`--json` prints the document, `--markdown` the two tables below, which are its output for the built-in adapters; a
+test of `tests/guards/` fails when they drift.
+
+<!-- adapter matrix: begin -->
+| Supported client | Launch | Result | Resume | Transcripts | Step count | Tool grants | Reset hour |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| claude-code | full | full | full | full | full | full | full |
+
+| Test-suite adapter | Launch | Result | Resume | Transcripts | Step count | Tool grants | Reset hour |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| fake | full | full | fallback | fallback | fallback | fallback | fallback |
+
+Fallbacks:
+
+- no resume: a fresh launch from the progress file
+- no transcripts: brigade's own run logs
+- no step count: steps null and the run held on the clock alone
+- no tool grants: the client's unattended mode and a disposable worktree for a reading slot
+- no reset hour: now plus thirty minutes
+<!-- adapter matrix: end -->
+
 ## Roles
 
 A procedure calls a slot, never a role: `plan`, `build`, `verify`, `review`, `rebase`, `report`, `triage`, `rules`

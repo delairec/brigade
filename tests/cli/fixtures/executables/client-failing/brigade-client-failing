@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "no probe | no answer" >&2
+exit 3
