@@ -595,6 +595,11 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	DESC "binds @TASK.B02 first, which introduces the renderer, the exit mapping, the parent parser"
 		+ "and the runtime builder, then every command task"
 		REF @TASK.B02
+	DESC "brigade corpus given -- <awawa args> is the one command that passes another tool's"
+		+ "stdout, stderr and exit code through unchanged: its reader is a person at a terminal,"
+		+ "brigade's own readers call the gateway; without those args it returns its document, as"
+		+ "@TASK.B08 sets"
+		REF @TASK.B08
 	REJECTED "three codes 0, 1 and 2: the plan's reference already documents 3 and 4 for the wave"
 		+ "commands, and a crash exiting 1 passes for findings in a test and under systemd"
 	REJECTED "an error document on stdout under --json: awawa, which the agents already read,"
@@ -606,6 +611,7 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "document; the rules cli_exit_codes_and_streams, cli_parsing_handling_rendering_separated"
 		+ "and cli_arguments_validated of the instructions corpus shape the rest"
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "DESC 9 added on the user's ruling of 2026-10-06 in the refinement of B08"
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"

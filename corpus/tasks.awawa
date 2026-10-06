@@ -580,15 +580,67 @@ TASK B07
 		+ "2026-10-06 in the refinement of B07"
 
 TASK B08
-	TITLE "Corpus-at-ref reader"
-	STATUS draft
+	TITLE "brigade corpus: a registered project's tree at a branch, a SHA or a worktree, cached per"
+		+ "SHA"
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
 	ROLE bastien
-	SPEC "brigade corpus <project> --ref <branch|sha|worktree:name> -- <awawa args> runs awawa on a"
-		+ "git archive cached per SHA, or in place for a worktree"
-	SPEC "the cache is pruned by size"
+	SPEC "brigade corpus <project> --ref <branch|sha> resolves the ref to a commit SHA in the"
+		+ "project's repository, extracts git archive of that SHA, the whole tree, into"
+		+ "$XDG_CACHE_HOME/brigade/refs/<project>/<sha>/ unless it is there, and prints a document"
+		+ "carrying schema_version, project, ref, sha, kind archive and root, text and --json"
+	SPEC "--ref worktree:<branch> names the project's worktree where that branch is checked out;"
+		+ "--worktree <path> names one by its path, a detached HEAD included; either is read in"
+		+ "place, uncommitted edits visible, with kind worktree and sha its HEAD; --ref and"
+		+ "--worktree together exit 2"
+	SPEC "given -- <awawa args>, it runs awawa with those args at the root of the tree and passes"
+		+ "its stdout, stderr and exit code through unchanged, the resolved SHA on one stderr line"
+	SPEC "an extraction is written to a temporary directory of the project's cache and renamed into"
+		+ "place: concurrent readers meet a whole tree or none"
+	SPEC "the cache holds at most refs_cache_mb of config.toml, 1024 by default; each read marks"
+		+ "its SHA used, and after each extraction the least recently used SHAs are removed until"
+		+ "the cache is under the bound, never the SHA being read"
+	SPEC "an unknown project, a ref the repository does not resolve, and a branch or a path no"
+		+ "worktree of the project holds exit 1 naming it"
+	SPEC "tests/integration prove the extraction, the worktree read in place and the pruning"
+		+ "against a real git repository in a temporary directory"
 	AFTER @TASK.B04
+	RATIONALE "a corpus is read at a version other than the checkout without a checkout or a new"
+		+ "worktree: the dashboard's branch selector of @TASK.B30 through @TASK.B27, the lint of a"
+		+ "pull request's branch in the preflight of @TASK.B15, and the corpus collector of"
+		+ "@TASK.B47; these call one function of the brigade/corpus gateway returning project, sha,"
+		+ "kind and root, and only a person at a terminal reads the command"
+		REF @TASK.B30
+		REF @TASK.B27
+		REF @TASK.B15
+		REF @TASK.B47
+	RATIONALE "the SHA is the cache key, an archive of a SHA staying valid forever where a branch"
+		+ "moves, and the fact a verdict or a study names, a lint green on one commit saying"
+		+ "nothing of the next push"
+	RATIONALE "the whole tree is archived because awawa resolves the anchors of IMPL into the code:"
+		+ "git archive of corpus/ alone left 132 L016 on this repository's main, the whole tree,"
+		+ "928 KB, lints clean (2026-10-06)"
+	RATIONALE "the user ruled both forms: the document by default, awawa's own output given --"
+		+ "<awawa args>, the exception DESC 9 of"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable records; a"
+		+ "worktree by its branch by default, by its path for a detached HEAD; a worktree brigade"
+		+ "cuts is named by @TASK.B12"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+		REF @TASK.B12
+	RATIONALE "awawa and git run through the gateways of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa, which also sets the"
+		+ "integration tests; the cache sits under $XDG_CACHE_HOME as"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites places the refs; the atomic"
+		+ "rename follows @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory;"
+		+ "refs_cache_mb joins the frozen record of"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables and its template"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	SOURCE "the Artifact Brigade Blueprint, plan sections 4, 7, 15 and 16; HANDOFF.md section 6c;"
+		+ "the user's rulings of 2026-10-06 in the refinement of B08"
 
 TASK B09
 	TITLE "Built-in roles ada, bilal and mina"
