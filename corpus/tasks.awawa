@@ -2361,19 +2361,30 @@ TASK B63
 TASK B64
 	TITLE "semgrep CE in the CI with the Python and security rule packs, findings fixed at their"
 		+ "source"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
 	ROLE bastien
 	SPEC "requirements-ci.txt pins semgrep to one version; a job of ci.yml of its own installs the"
 		+ "file by pip and runs semgrep scan from the repository root with --config p/python,"
 		+ "--config p/security-audit, --error and --metrics=off; exit 1, findings, fails the job"
+		IMPL "requirements-ci.txt::semgrep=="
+		IMPL ".github/workflows/ci.yml::name: Security scan by semgrep"
+		IMPL ".github/workflows/ci.yml::run: semgrep scan --config p/python --config"
+			+ "p/security-audit --error --metrics=off"
 	SPEC "every finding is fixed in the code; a nosemgrep comment is the narrowest exemption, one"
 		+ "rule on one line, commented with its cause and what covers the case; a .semgrepignore"
 		+ "exists only for a path semgrep cannot read, commented"
+		IMPL "brigade/system/run_process.py::# nosemgrep:"
+			+ "python.django.security.injection.command.subprocess-injection.subprocess-injection"
+		IMPL "brigade/system/spawn_process.py::# nosemgrep:"
+			+ "python.django.security.injection.command.subprocess-injection.subprocess-injection"
 	SPEC "a fix that changes a behaviour is named in the pull request body with the finding it"
 		+ "answers; python3 -m unittest passes on every commit"
+		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
 	SPEC "the sentence of README.md on the CI names semgrep"
+		IMPL "README.md::scans the repository with semgrep under its Python and security-audit rule"
+			+ "packs"
 	AFTER @TASK.B63
 	RATIONALE "the user adopted semgrep CE as the security scan a private repository gets for free,"
 		+ "CodeQL needing paid GitHub Advanced Security; semgrep scan with --error exits 1 on"
@@ -2382,6 +2393,7 @@ TASK B64
 		+ "rules have already answered what both tools see"
 	SOURCE "the user's ruling of 2026-10-06, \"tout ce qui est utile est bon à prendre\", on the"
 		+ "row semgrep CE"
+	DELIVERED_BY 39
 
 TASK B65
 	TITLE "vulture in the CI: the dead code of brigade/ and tests/ reported and removed, the job"
