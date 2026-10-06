@@ -6,7 +6,7 @@ from brigade.ledger.read_ledger import read_ledger
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def run(request, runtime) -> dict:
+def ledger_budgets(request, runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

@@ -12,7 +12,7 @@ class AwawaPassage:
     record: ProcessRecord
 
 
-def run(request, runtime) -> AwawaPassage:
+def corpus_awawa(request, runtime) -> AwawaPassage:
     tree = prepare_project_tree(request, runtime)
     record = run_awawa(runtime.run_process, tree.root, request.awawa_arguments)
     return AwawaPassage(project=tree.project, sha=tree.sha, record=record)

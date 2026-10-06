@@ -24,7 +24,7 @@ def _describe_last_tick(runtime):
     return {key: value for key, value in heartbeat.items() if key != "schema_version"}
 
 
-def run(request, runtime) -> dict:
+def scheduler_status(request, runtime) -> dict:
     name, status = _find_installed(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

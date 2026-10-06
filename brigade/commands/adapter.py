@@ -23,5 +23,5 @@ def _read_client_request(request) -> dict:
     return document
 
 
-def run(request, runtime) -> dict:
+def adapter(request, runtime) -> dict:
     return ask_configured_client(runtime, request.operation, _read_client_request(request)).document

@@ -148,7 +148,7 @@ def _check_steps(runtime) -> list[dict]:
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
 
 
-def run(request, runtime) -> dict:
+def doctor(request, runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "items": [

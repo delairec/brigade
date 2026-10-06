@@ -291,31 +291,31 @@ class Command:
 
 
 COMMANDS = {
-    "doctor": Command(_keep_options, doctor.run, render_doctor_text, _decide_doctor_exit_code),
-    "init": Command(_keep_options, init.run, render_init_text, _decide_done),
-    "adapter": Command(_read_adapter_request, adapter.run, render_adapter_text, _decide_done),
-    "project add": Command(_keep_options, project_add.run, render_project_add_text, _decide_done),
-    "project list": Command(_keep_options, project_list.run, render_project_list_text, _decide_done),
-    "project show": Command(_keep_options, project_show.run, render_project_show_text, _decide_done),
-    "project pause": Command(_ask_paused, project_status.run, render_project_status_text, _decide_done),
-    "project resume": Command(_ask_active, project_status.run, render_project_status_text, _decide_done),
-    "ledger": Command(_read_ledger_request, ledger.run, render_ledger_text, _decide_done, describe_skipped_lines),
+    "doctor": Command(_keep_options, doctor.doctor, render_doctor_text, _decide_doctor_exit_code),
+    "init": Command(_keep_options, init.init, render_init_text, _decide_done),
+    "adapter": Command(_read_adapter_request, adapter.adapter, render_adapter_text, _decide_done),
+    "project add": Command(_keep_options, project_add.project_add, render_project_add_text, _decide_done),
+    "project list": Command(_keep_options, project_list.project_list, render_project_list_text, _decide_done),
+    "project show": Command(_keep_options, project_show.project_show, render_project_show_text, _decide_done),
+    "project pause": Command(_ask_paused, project_status.project_status, render_project_status_text, _decide_done),
+    "project resume": Command(_ask_active, project_status.project_status, render_project_status_text, _decide_done),
+    "ledger": Command(_read_ledger_request, ledger.ledger, render_ledger_text, _decide_done, describe_skipped_lines),
     "ledger budgets": Command(
-        _keep_options, ledger_budgets.run, render_ledger_budgets_text, _decide_done, describe_skipped_lines
+        _keep_options, ledger_budgets.ledger_budgets, render_ledger_budgets_text, _decide_done, describe_skipped_lines
     ),
     "ledger compare": Command(
-        _keep_options, ledger_compare.run, render_ledger_compare_text, _decide_done, describe_skipped_lines
+        _keep_options, ledger_compare.ledger_compare, render_ledger_compare_text, _decide_done, describe_skipped_lines
     ),
-    "roles list": Command(_keep_options, roles_list.run, render_roles_list_text, _decide_done),
-    "roles show": Command(_keep_options, roles_show.run, render_roles_show_text, _decide_done),
-    "roles lint": Command(_keep_options, roles_lint.run, render_roles_lint_text, _decide_roles_lint_exit_code),
-    "tick": Command(_keep_options, tick.run, render_tick_text, _decide_done),
-    "scheduler install": Command(_keep_options, scheduler_install.run, render_scheduler_install_text, _decide_done),
-    "scheduler status": Command(_keep_options, scheduler_status.run, render_scheduler_status_text, _decide_done),
-    "corpus": Command(_keep_options, corpus.run, render_corpus_text, _decide_done),
+    "roles list": Command(_keep_options, roles_list.roles_list, render_roles_list_text, _decide_done),
+    "roles show": Command(_keep_options, roles_show.roles_show, render_roles_show_text, _decide_done),
+    "roles lint": Command(_keep_options, roles_lint.roles_lint, render_roles_lint_text, _decide_roles_lint_exit_code),
+    "tick": Command(_keep_options, tick.tick, render_tick_text, _decide_done),
+    "scheduler install": Command(_keep_options, scheduler_install.scheduler_install, render_scheduler_install_text, _decide_done),
+    "scheduler status": Command(_keep_options, scheduler_status.scheduler_status, render_scheduler_status_text, _decide_done),
+    "corpus": Command(_keep_options, corpus.corpus, render_corpus_text, _decide_done),
     "run": Command(_keep_options, run.run, render_run_text, _decide_run_exit_code, _describe_run_warnings),
-    "runs list": Command(_keep_options, runs_list.run, render_runs_list_text, _decide_done),
-    "runs logs": Command(_keep_options, runs_logs.run, render_runs_logs_text, _decide_done),
+    "runs list": Command(_keep_options, runs_list.runs_list, render_runs_list_text, _decide_done),
+    "runs logs": Command(_keep_options, runs_logs.runs_logs, render_runs_logs_text, _decide_done),
 }
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
@@ -349,7 +349,7 @@ def _split_awawa_arguments(arguments: list[str]):
 
 def _pass_awawa_through(options: argparse.Namespace, awawa_arguments: tuple[str, ...]) -> int:
     request = argparse.Namespace(**vars(options), awawa_arguments=awawa_arguments)
-    passage = corpus_awawa.run(request, build_runtime())
+    passage = corpus_awawa.corpus_awawa(request, build_runtime())
     sys.stderr.write(f"brigade {CORPUS_COMMAND}: @PROJECT.{passage.project} at {passage.sha}\n")
     sys.stdout.write(passage.record.stdout)
     sys.stderr.write(passage.record.stderr)

@@ -18,7 +18,7 @@ def _resolve_since(since: Union[None, timedelta, date], now: datetime) -> Option
     return datetime.combine(since, time(), tzinfo=timezone.utc)
 
 
-def run(request, runtime) -> dict:
+def ledger(request, runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     if request.wave is not None:
         view = describe_wave(reading, request.wave)
