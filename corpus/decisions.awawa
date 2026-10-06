@@ -1068,3 +1068,15 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
 		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B49"
+
+DECISION TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
+	TITLE "a test that needs awawa skips when awawa is not on PATH; the CI installs no awawa; the"
+		+ "tests that need it run locally before a push"
+	STATUS active
+	DESC "a test that needs awawa skips when awawa is not on PATH"
+	DESC ".github/workflows/ci.yml installs no awawa: the tests that need it are skipped there"
+	DESC "the tests that need awawa run locally before a push"
+	REJECTED "installing awawa in .github/workflows/ci.yml: the user ruled for the local run alone"
+	RATIONALE "the user ruled for the local run alone and gave no further reason; the ruling is"
+		+ "recorded so that no review proposes installing awawa in the CI again"
+	SOURCE "the user's ruling of 2026-10-06 during wave M0"
