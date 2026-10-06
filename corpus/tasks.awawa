@@ -2495,24 +2495,42 @@ TASK B67
 TASK B68
 	TITLE "the archive of a registered project is extracted under tarfile's data filter: a member"
 		+ "escaping the tree is refused, naming the project and the member"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
 	ROLE bastien
 	SPEC "brigade/corpus/prepare_tree.py extracts the git archive of a commit with filter=\"data\""
 		+ "where tarfile has data_filter, Python 3.11.4 and later: a symbolic link pointing outside"
 		+ "the extraction directory, an absolute or .. member and a device file are refused"
+		IMPL "brigade/corpus/prepare_tree.py::DATA_EXTRACTION = {\"filter\": \"data\"} if"
+			+ "hasattr(tarfile, \"data_filter\") else {}"
+		IMPL "brigade/corpus/prepare_tree.py::commit_tar.extractall(staged_tree, **DATA_EXTRACTION)"
 	SPEC "an archive the filter refuses exits 1 by a BrigadeError naming the project and the"
 		+ "offending member, never a traceback; nothing of it reaches the cache"
+		IMPL "brigade/corpus/prepare_tree.py::except MEMBER_REFUSAL as error:"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::def"
+			+ "test_should_refuse_the_link_naming_the_project_and_the_member"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::def"
+			+ "test_should_leave_nothing_of_the_refused_archive_in_the_cache"
 	SPEC "an ordinary archive, a symbolic link inside the tree included, still extracts"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::def"
+			+ "test_should_extract_the_link_reading_through_it_to_the_file_of_the_tree"
 	SPEC "the conditional and the noqa: S202 stay: on Python 3.11.0 to 3.11.3, where tarfile has no"
 		+ "filter argument, the extraction is unchanged, an accepted limit; the comment of the noqa"
 		+ "opens as today, # S202: the archive is git archive of a commit, so the IMPL anchor of"
 		+ "B63 on it keeps resolving, and names the data filter as what covers the case from 3.11.4"
+		IMPL "brigade/corpus/prepare_tree.py::# S202: the archive is git archive of a commit of the"
+			+ "project; from Python 3.11.4"
+		IMPL "brigade/corpus/prepare_tree.py::MEMBER_REFUSAL = getattr(tarfile, \"FilterError\","
+			+ "())"
 	SPEC "tests/integration prove, against a real git repository, the refusal of a commit holding a"
 		+ "symbolic link to a path outside its tree, the relative target and the absolute target"
 		+ "two rows under subTest, and the extraction of an ordinary commit; the refusal test is"
 		+ "skipped where tarfile lacks data_filter"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::for target in"
+			+ "[\"../../../.ssh/id_ed25519\", \"/home/someone/.ssh/id_ed25519\"]:"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::@unittest.skipUnless(hasattr(tarfile,"
+			+ "\"data_filter\")"
 	AFTER @TASK.B08
 	AFTER @TASK.B63
 	RATIONALE "a repository whose content agents write could carry a link such as corpus/x ->"
@@ -2527,3 +2545,4 @@ TASK B68
 		+ "through today"
 	SOURCE "the user's ruling of 2026-10-06, \"ok (mergé)\", on the session's recommendation after"
 		+ "the review of #38"
+	DELIVERED_BY 43
