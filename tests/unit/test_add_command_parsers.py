@@ -42,6 +42,20 @@ def _create_common_options() -> argparse.ArgumentParser:
     return common_options
 
 
+class AddCommandParsersOfAGroupDeclaredByTheRecordsOfItsLinesTest(unittest.TestCase):
+    def test_should_list_the_group_with_the_help_its_lines_declare(self):
+        # Arrange
+        show = _create_command(("project", "show"), "print a project", group_help="the registered projects")
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (show,), _create_common_options())
+
+        # Act
+        help_text = parser.format_help()
+
+        # Assert
+        self.assertIn("the registered projects", help_text)
+
+
 class AddCommandParsersWhenTwoRecordsDeclareOnePathTest(unittest.TestCase):
     def test_should_refuse_naming_the_command_line(self):
         # Arrange
