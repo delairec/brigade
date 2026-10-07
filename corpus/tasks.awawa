@@ -2846,12 +2846,12 @@ TASK B70
 		+ "= subprocess): coverage run -m unittest, coverage combine, coverage report -m, with"
 		+ "awawa on PATH, give TOTAL 3679 statements, 94 missed, 594 branches, 53 partial, 97%; the"
 		+ "coverage job of the CI reports 89% at the same commit because 64 tests skip without"
-		+ "awawa, as @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa binds; the local"
-		+ "figure is the one this task brings to 100%; measured again at c7cdec5, the head of main"
-		+ "after @TASK.B69, the local run gives 3688 statements, 102 missed, 594 branches, 55"
+		+ "awawa, as @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere binds; the"
+		+ "local figure is the one this task brings to 100%; measured again at c7cdec5, the head of"
+		+ "main after @TASK.B69, the local run gives 3688 statements, 102 missed, 594 branches, 55"
 		+ "partial, 96%, and the CI run 37542826149 gives 89%, 318 missed"
 		REF @TASK.B66
-		REF @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
+		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
 		REF @TASK.B69
 	RATIONALE "the largest gaps of the report at 2dcbc20: brigade/system/spawn_process.py at 70%"
 		+ "(lines 22-30 _feed, 36, 61-62 ToolNotFound, 64 the stdin thread: no tested caller passes"
@@ -3893,3 +3893,69 @@ TASK B94
 		REF @TASK.B28
 	SOURCE "item 15 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B95
+	TITLE "awawa in the CI from the asset of a private release, pinned to one version, and a corpus"
+		+ "job running awawa fmt --check and awawa lint --strict"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "ci"
+	ROLE ada
+	SPEC "one step of .github/workflows/ci.yml, run by every job that needs awawa, downloads the"
+		+ "awawa binary from the asset of a release of a private repository with the token the"
+		+ "workflow already holds, checks it against the version and the checksum pinned in the"
+		+ "workflow, puts it on PATH and prints awawa --version; the step fails on a version or a"
+		+ "checksum that differs"
+	SPEC "a corpus job runs awawa fmt --check . and awawa lint --strict . on every pull request and"
+		+ "every push to main, and fails on a would-change or a lint error"
+	SPEC "the test jobs of the matrix and the coverage job skip no test for want of awawa: the log"
+		+ "of each reads OK without skipped=, and a test that needs awawa still skips on a machine"
+		+ "without it"
+	SPEC "the README names the private release the CI reads and the way its asset is renewed when"
+		+ "the pinned awawa is bumped"
+	SPEC "nothing under brigade/ changes: awawa stays a prerequisite checked by brigade doctor,"
+		+ "never shipped in dist/brigade.pyz"
+	RATIONALE "found in the review of pull request #56: every CI job skipped 70 tests, OK"
+		+ "(skipped=70) on main 3deeea2 and on #56, and no job ran awawa fmt --check or awawa lint"
+		+ "--strict, so #52 merged with two L016 that broke lint --strict on main; the ruling of"
+		+ "2026-10-06 that kept awawa out of the CI is replaced in place by"
+		+ "@DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere, which this task"
+		+ "binds; the repository that holds the private release is the refinement's"
+		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
+	RATIONALE "the asset is downloaded, never built: @DECISION.AwawaIsWrappedAsItIs; the pin and"
+		+ "the checksum follow the pinned tools of"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade, though awawa, a"
+		+ "prerequisite of brigade, is not one of them"
+		REF @DECISION.AwawaIsWrappedAsItIs
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+	SOURCE "item 8 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
+		+ "the user's words of 2026-10-07, \"A moins que ça ne coute rien d'avoir une copie d'awawa"
+		+ "embarquée ... Si on peut l'avoir en privé\", and the answer chosen, \"Copie privée"
+		+ "(licence OK)\""
+
+TASK B96
+	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, with awawa on its PATH,"
+		+ "fails below the figure of B70"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "ci"
+	ROLE ada
+	SPEC ".coveragerc sets fail_under = 100 and the coverage job of the CI passes at that threshold"
+		+ "with awawa on PATH; the pull request body quotes the TOTAL line of the job next to the"
+		+ "local one of @TASK.B70's commands"
+	SPEC "the README sentence on coverage, as @TASK.B80 leaves it, reads the threshold of 100"
+	AFTER @TASK.B95
+	AFTER @TASK.B80
+	RATIONALE "found in the review of pull request #56: .coveragerc sets fail_under = 93, the"
+		+ "figure @TASK.B70 read in a CI without awawa, and the coverage job printed 94 % on #56,"
+		+ "job 112779485130; the 100 % of @TASK.B70 and of SPEC 7 of @TASK.B82 held only on a"
+		+ "machine with awawa on PATH; DESC 6 of"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade now names this"
+		+ "task as the one that raises the threshold once @TASK.B95 puts awawa on the CI's PATH;"
+		+ "SPEC 6 and 7 of @TASK.B70, implemented, stay the record of its delivery"
+		REF @TASK.B70
+		REF @TASK.B82
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+		REF @TASK.B95
+	SOURCE "item 9 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
+		+ "the user's answer of 2026-10-07, \"Copie privée (licence OK)\""
