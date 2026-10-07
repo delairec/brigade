@@ -2880,7 +2880,7 @@ TASK B71
 	TITLE "Claude Code launch options: the permission mode dontAsk, the progress file the one write"
 		+ "granted beyond the role's capabilities, the role package handed as a file, rehearsed on"
 		+ "one real run that hands over"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE bastien
@@ -2931,9 +2931,11 @@ TASK B71
 		+ "budget front matter is small enough that its first segment ends on the turn limit, on"
 		+ "the explore slot bound to a role whose capabilities are read alone: the first segment"
 		+ "hands over, runs/<id>/progress.md holds what the client wrote in it, the second segment"
-		+ "is a resume, and the procedure file, the ledger lines of that run, run.finished among"
-		+ "them, and the permission_denials of each segment's result are quoted in the pull request"
-		+ "body"
+		+ "is a fresh launch, another session, that reads the progress file, and the procedure"
+		+ "file, the ledger lines of that run, run.finished among them, and the permission_denials"
+		+ "of each segment's result are quoted in the pull request body"
+		IMPL "docs/rehearsals/2026-10-07-b71-hand-over.md::## Segments"
+		IMPL "docs/rehearsals/2026-10-07-b71-hand-over.md::## Ledger lines of the run"
 	RATIONALE "F1 and F22 of the foundations review: brigade/adapters/clients/claude_code.py:57-67"
 		+ "builds claude --print --output-format json --model … --effort … --max-turns …"
 		+ "--append-system-prompt <package> --allowedTools … with no --permission-mode, while"
@@ -2978,6 +2980,13 @@ TASK B71
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 	SOURCE "the user's answers of 2026-10-07 at the refinement of this task: dontAsk, remove"
 		+ "--add-dir, a read-only slot for the rehearsal, fields added to the request"
+	SOURCE "the user's answer of 2026-10-07 after the rehearsal: SPEC 6 said the second segment is"
+		+ "a resume, while a hand-over is a fresh launch reading the progress file (@TASK.B06), the"
+		+ "resume belonging to the quota pause of @TASK.B19; the user ruled the sentence corrected"
+		+ "and the task promoted"
+		REF @TASK.B06
+		REF @TASK.B19
+	DELIVERED_BY 52
 
 TASK B72
 	TITLE "ProcessRecord carries the duration, and --verbose on the common options prints every"
