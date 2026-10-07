@@ -89,8 +89,6 @@ def _find_named(role_files: list[tuple[Path, RoleFile]], name: str) -> RoleFile 
 
 
 def _list_directory_role_files(directory: Path) -> tuple[Path, ...]:
-    if not directory.is_dir():
-        return ()
     return tuple(sorted(directory.glob(ROLE_FILE_PATTERN)))
 
 

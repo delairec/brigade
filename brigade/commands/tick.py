@@ -39,7 +39,7 @@ def _tick(runtime) -> dict | None:
             Rounds(
                 build_snapshot=lambda: build_snapshot(runtime.now),
                 plan=plan,
-                apply=lambda actions: apply_actions(actions, runtime),
+                apply=apply_actions,
                 cap=ROUND_CAP,
             )
         )
@@ -50,8 +50,6 @@ def _tick(runtime) -> dict | None:
             "actions_applied": outcome.actions_applied,
         }
         write_json_atomically(_locate_heartbeat(runtime), heartbeat)
-    if outcome.capped:
-        sys.stderr.write(f"brigade tick: the plan was not empty after {ROUND_CAP} rounds\n")
     return heartbeat
 
 

@@ -6,6 +6,7 @@ from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
+from brigade.system.resolve_plugin import resolve_plugin
 
 DOCUMENT_SCHEMA_VERSION = 1
 CONFIGURATION_FILE = "config.toml"
@@ -43,6 +44,7 @@ def scheduler_install(request, runtime) -> dict:
     else:
         name, chosen_by = _probe_scheduler(runtime), "probe"
     answer = ask_scheduler(
+        resolve_plugin("scheduler", name, runtime),
         SchedulerQuestion(scheduler_name=name, operation="install", request=_describe_install_request(runtime)),
         runtime,
     )

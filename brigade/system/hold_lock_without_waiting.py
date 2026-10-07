@@ -21,15 +21,12 @@ def hold_lock_without_waiting(path: Path) -> Iterator[bool]:
     with _open_lock_file(path) as lock_file:
         try:
             fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            yield False
-            return
-        except OSError as error:
-            raise CannotWrite(path, error) from error
-        try:
             lock_file.truncate(0)
             lock_file.write(f"{os.getpid()}\n")
             lock_file.flush()
+        except BlockingIOError:
+            yield False
+            return
         except OSError as error:
             raise CannotWrite(path, error) from error
         try:

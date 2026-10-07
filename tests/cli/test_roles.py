@@ -217,6 +217,21 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
             {"slot": "plan", "role": "planner", "source": "instructions", "model": None},
         )
 
+    def test_should_refuse_an_agent_entity_off_the_role_keys_naming_the_entity_and_the_key(self):
+        # Arrange
+        self.instructions.write_agents(
+            'AGENT planner\n\tWORK "the plan of a wave"\n\tREASONING deep\n\tCAPABILITY read\n'
+            '\tRETURNS "the wave plan"\n'
+        )
+
+        # Act
+        completed = self.run_roles("list")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr), (1, "brigade roles list: @AGENT.planner: budget is missing\n")
+        )
+
     def test_should_leave_an_agent_entity_no_row_names_without_a_slot(self):
         # Act
         completed = self.run_roles("list", "--json")
@@ -376,6 +391,25 @@ class BrigadeRolesLintTest(RolesTestCase):
         self.assertEqual(
             json.loads(completed.stdout)["findings"],
             [{"file": str(second), "key": "slot", "problem": f"plan is also declared by {first}"}],
+        )
+
+    def test_should_find_no_shared_slot_between_two_machine_role_files_declaring_none(self):
+        # Arrange
+        planner_without_slot = MACHINE_PLANNER.replace("slot: plan\n", "")
+        first = self.write_machine_role("a-planner.md", planner_without_slot)
+        second = self.write_machine_role("b-planner.md", planner_without_slot)
+
+        # Act
+        completed = self.run_roles("lint", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["findings"],
+            [
+                {"file": str(first), "key": "slot", "problem": "is missing"},
+                {"file": str(second), "key": "slot", "problem": "is missing"},
+            ],
         )
 
     def test_should_print_each_finding_and_the_count_as_text(self):

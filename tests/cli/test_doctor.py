@@ -16,6 +16,7 @@ GIT = str(EXECUTABLES / "git-2.47.3")
 GIT_FAILING = str(EXECUTABLES / "git-failing")
 AWAWA = str(EXECUTABLES / "awawa-2.7.0")
 AWAWA_BELOW_FLOOR = str(EXECUTABLES / "awawa-2.6.3")
+AWAWA_NIGHTLY = str(EXECUTABLES / "awawa-nightly")
 SYSTEMD_RUNNING = str(EXECUTABLES / "systemd-running")
 SYSTEMD_OFFLINE = str(EXECUTABLES / "systemd-offline")
 SYSTEMD_NO_BUS = str(EXECUTABLES / "systemd-no-bus")
@@ -210,6 +211,18 @@ class BrigadeDoctorWhenAPrerequisiteFailsTest(DoctorTestCase):
                     "kind": "prerequisite",
                     "state": "finding",
                     "detail": "2.6.3 (floor 2.7)",
+                    "fallback": None,
+                },
+            ),
+            (
+                "awawa with a version that is no release",
+                [GIT, AWAWA_NIGHTLY, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB],
+                AWAWA_ENTRY,
+                {
+                    "name": "awawa",
+                    "kind": "prerequisite",
+                    "state": "finding",
+                    "detail": "nightly (floor 2.7)",
                     "fallback": None,
                 },
             ),

@@ -3,8 +3,6 @@ import unittest
 from brigade.errors import BrigadeError
 from brigade.tick.apply_actions import apply_actions
 
-NO_RUNTIME_NEEDED = None
-
 
 class LaunchRun:
     pass
@@ -16,7 +14,7 @@ class ApplyActionsTest(unittest.TestCase):
         empty_plan = ()
 
         # Act
-        actions_applied = apply_actions(empty_plan, NO_RUNTIME_NEEDED)
+        actions_applied = apply_actions(empty_plan)
 
         # Assert
         self.assertEqual(actions_applied, 0)
@@ -27,7 +25,7 @@ class ApplyActionsTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            apply_actions(plan, NO_RUNTIME_NEEDED)
+            apply_actions(plan)
 
         # Assert
         self.assertEqual(str(refusal.exception), "the tick has no executor for the action LaunchRun")

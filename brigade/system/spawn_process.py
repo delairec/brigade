@@ -1,5 +1,7 @@
+import contextlib
 import subprocess
-import threading
+import tempfile
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -18,22 +20,15 @@ class SpawnRequest:
     stderr: Path
 
 
-def _feed(pipe: BinaryIO, data: bytes) -> None:
-    try:
-        pipe.write(data)
-    except BrokenPipeError:
-        pass
-    finally:
-        try:
-            pipe.close()
-        except BrokenPipeError:
-            pass
-
-
-def _choose_input(stdin: str | None) -> int:
+@contextlib.contextmanager
+def _open_input(stdin: str | None) -> Iterator[BinaryIO | int]:
     if stdin is None:
-        return subprocess.DEVNULL
-    return subprocess.PIPE
+        yield subprocess.DEVNULL
+        return
+    with tempfile.TemporaryFile() as input_file:
+        input_file.write(stdin.encode("utf-8"))
+        input_file.seek(0)
+        yield input_file
 
 
 def _open_output(path: Path) -> BinaryIO:
@@ -44,7 +39,11 @@ def _open_output(path: Path) -> BinaryIO:
 
 
 def spawn_process(request: SpawnRequest) -> subprocess.Popen:
-    with _open_output(request.stdout) as stdout_file, _open_output(request.stderr) as stderr_file:
+    with (
+        _open_output(request.stdout) as stdout_file,
+        _open_output(request.stderr) as stderr_file,
+        _open_input(request.stdin) as stdin_file,
+    ):
         try:
             # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
             # subprocess-injection: a Django rule whose taint source is any parameter named request, the S603 case
@@ -53,13 +52,11 @@ def spawn_process(request: SpawnRequest) -> subprocess.Popen:
                 list(request.argv),
                 cwd=request.cwd,
                 env={**build_process_environment(), **request.environment},
-                stdin=_choose_input(request.stdin),
+                stdin=stdin_file,
                 stdout=stdout_file,
                 stderr=stderr_file,
                 start_new_session=True,
             )
         except FileNotFoundError:
             raise ToolNotFound(f"{request.argv[0]} not on PATH") from None
-    if request.stdin is not None:
-        threading.Thread(target=_feed, args=(process.stdin, request.stdin.encode("utf-8")), daemon=True).start()
     return process

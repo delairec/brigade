@@ -8,13 +8,14 @@ from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.create_directory import create_directory
 from brigade.system.spawn_process import SpawnRequest, spawn_process
-from brigade.system.wait_within_limit import wait_within_limit
+from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 from brigade.system.write_text_file import write_text_file
 
 REQUEST_SCHEMA_VERSION = 1
 FIRST_SEGMENT = 1
 PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
 WALL_LIMIT_OUTCOME = "wall_limit"
+GRACE_BEFORE_KILL_S = 30.0
 
 
 @dataclass(frozen=True)
@@ -95,7 +96,9 @@ def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
             stderr=segment_directory / STDERR_FILE,
         )
     )
-    exit_code = wait_within_limit(process, plan.wall_limit_s)
+    exit_code = wait_within_limit(
+        process, WallLimit(limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S)
+    )
     measured_ms = round((time.monotonic() - started) * 1000)
     if exit_code is None:
         cut = _describe_cut(plan, measured_ms)

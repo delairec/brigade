@@ -2,3 +2,6 @@
 source = brigade
 patch = subprocess
 branch = True
+
+[report]
+fail_under = 93

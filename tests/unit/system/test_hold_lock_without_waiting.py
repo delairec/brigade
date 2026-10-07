@@ -91,3 +91,17 @@ class HoldLockWithoutWaitingWhereTheMachineRefusesTheWriteTest(unittest.TestCase
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")
+
+
+@unittest.skipUnless(Path("/dev/full").exists(), "no device refusing every write")
+class HoldLockWithoutWaitingOnADeviceRefusingEveryWriteTest(unittest.TestCase):
+    def test_should_name_the_lock_it_cannot_write_its_pid_in(self):
+        # Arrange
+        device_full = Path("/dev/full")
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal, hold_lock_without_waiting(device_full):
+            pass
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "cannot write /dev/full: Invalid argument")

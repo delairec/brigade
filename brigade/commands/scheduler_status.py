@@ -1,5 +1,6 @@
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
+from brigade.system.resolve_plugin import resolve_plugin
 from brigade.tick.read_heartbeat import read_heartbeat
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -12,7 +13,9 @@ def _find_installed(runtime):
     request = {"schema_version": DOCUMENT_SCHEMA_VERSION, "unit_directory": str(locate_unit_directory(runtime.paths))}
     for name in SCHEDULERS_ASKED:
         status = ask_scheduler(
-            SchedulerQuestion(scheduler_name=name, operation="read_status", request=request), runtime
+            resolve_plugin("scheduler", name, runtime),
+            SchedulerQuestion(scheduler_name=name, operation="read_status", request=request),
+            runtime,
         )
         if status["installed"]:
             return name, status

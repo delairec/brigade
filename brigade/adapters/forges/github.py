@@ -13,10 +13,7 @@ def _read_active_login(hosts_document: str):
         accounts = json.loads(hosts_document)["hosts"][HOST]
     except (ValueError, KeyError, TypeError):
         return None
-    for account in accounts:
-        if account.get("active"):
-            return account.get("login")
-    return None
+    return next((account.get("login") for account in accounts if account.get("active")), None)
 
 
 def describe_account(request: dict, runtime) -> dict:

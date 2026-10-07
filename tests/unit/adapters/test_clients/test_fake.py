@@ -150,6 +150,37 @@ class FakeResultTest(unittest.TestCase):
             },
         )
 
+    def test_should_report_a_recording_that_holds_no_json_document(self):
+        # Act
+        result = answer(
+            "parse-result",
+            {
+                "schema_version": 1,
+                "exit_code": 1,
+                "stdout": "",
+                "stderr": "cat: /srv/recordings/builder.json: No such file or directory\n",
+                "reasoning_table": {},
+                "settings": {},
+                "home": "/home/ada",
+            },
+        )
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "failed",
+                "steps": None,
+                "usage": None,
+                "session_id": None,
+                "duration_ms": None,
+                "error_class": "unreadable_output",
+                "reset": None,
+                "message": "cat: /srv/recordings/builder.json: No such file or directory",
+            },
+        )
+
 
 class FakeUnsupportedOperationsTest(unittest.TestCase):
     def test_should_refuse_the_operations_it_does_not_replay(self):
