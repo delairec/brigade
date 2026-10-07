@@ -9,18 +9,18 @@ WAVE_SEPTEMBER_LINES = (
     '{"schema_version": 1, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tp/16",'
     ' "project": "tidepool"}\n'
     '{"schema_version": 1, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "failed",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
     ' "error_class": "rate_limit", "steps": 50}\n'
     '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.paused", "wave": "tp/16"}\n'
 )
 WAVE_OCTOBER_LINES = (
     '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "tp/16"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 2, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 2, "outcome": "done",'
     ' "error_class": null, "steps": 30}\n'
     '{"schema_version": 1, "ts": "2026-10-01T00:41\n'
     '{"schema_version": 1, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
@@ -29,52 +29,52 @@ WAVE_OCTOBER_LINES = (
     ' "task": "TP146", "pr": 291, "rounds": 1}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:40:00Z", "event": "task.parked", "wave": "tp/16", "task": "TP147"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tp/17", "task": "TP150",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 20}\n'
 )
 BUDGET_LINES = (
     '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 90}\n'
     '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 80}\n'
     '{"schema_version": 1, "ts": "2026-10-01T10:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 12}\n'
     '{"schema_version": 1, "ts": "2026-10-01T11:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP148",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T12:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP149",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 10}\n'
     '{"schema_version": 1, "ts": "2026-10-01T13:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 8}\n'
     '{"schema_version": 1, "ts": "2026-10-01T14:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP150",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 20}\n'
     '{"schema_version": 1, "ts": "2026-10-01T15:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP151",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 30}\n'
 )
 COMPARISON_LINES = (
     '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tp/16",'
     ' "project": "tidepool"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 40, "steps_to_first_edit": 12}\n'
     '{"schema_version": 1, "ts": "2026-10-02T09:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 60}\n'
     '{"schema_version": 1, "ts": "2026-10-02T23:59:59Z", "event": "run.finished", "wave": "tp/16", "task": "TP148",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": null}\n'
     '{"schema_version": 1, "ts": "2026-10-03T00:00:00Z", "event": "run.finished", "wave": "tp/17", "task": "TP150",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 20, "steps_to_first_edit": 4, "oversized_output_steps": 1}\n'
     '{"schema_version": 1, "ts": "2026-10-04T09:00:00Z", "event": "run.finished", "wave": "tp/17", "task": "TP151",'
-    ' "procedure": "awawa-task", "role": "bastien", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 30}\n'
 )
 PROJECT_SEPTEMBER_LINES = (
@@ -264,7 +264,7 @@ class BrigadeLedgerWaveTest(LedgerTestCase):
                         "review": {"measured": 1, "unmeasured": 0, "p50": 12, "p90": 12},
                     },
                     "by_role": {
-                        "bastien": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50},
+                        "builder": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50},
                         "remi": {"measured": 1, "unmeasured": 0, "p50": 12, "p90": 12},
                     },
                 },
@@ -272,7 +272,7 @@ class BrigadeLedgerWaveTest(LedgerTestCase):
                     {"paused_at": "2026-09-30T22:15:00Z", "resumed_at": "2026-10-01T00:15:00Z", "duration_ms": 7200000}
                 ],
                 "paused_ms": 7200000,
-                "hand_overs": [{"task": "TP146", "role": "bastien", "slot": "build", "segment": 2}],
+                "hand_overs": [{"task": "TP146", "role": "builder", "slot": "build", "segment": 2}],
                 "parked": ["TP147"],
                 "skipped": [{"file": str(self.october), "line": 3, "reason": "not JSON"}],
             },
@@ -293,11 +293,11 @@ class BrigadeLedgerWaveTest(LedgerTestCase):
                 "  build   p50 30  p90 50  measured 2  unmeasured 1",
                 "  review  p50 12  p90 12  measured 1  unmeasured 0",
                 "steps by role:",
-                "  bastien  p50 30  p90 50  measured 2  unmeasured 1",
+                "  builder  p50 30  p90 50  measured 2  unmeasured 1",
                 "  remi     p50 12  p90 12  measured 1  unmeasured 0",
                 "pauses: 1, 2h00m in all",
                 "  2026-09-30T22:15:00Z to 2026-10-01T00:15:00Z  2h00m",
-                "hand-overs: TP146 bastien build segment 2",
+                "hand-overs: TP146 builder build segment 2",
                 "parked: TP147",
             ],
         )
@@ -336,7 +336,7 @@ class BrigadeLedgerWaveStillPausedTest(LedgerTestCase):
                 "steps by slot:",
                 "  build  p50 50  p90 50  measured 1  unmeasured 0",
                 "steps by role:",
-                "  bastien  p50 50  p90 50  measured 1  unmeasured 0",
+                "  builder  p50 50  p90 50  measured 1  unmeasured 0",
                 "pauses: 1, 0h00m in all",
                 "  2026-09-30T22:15:00Z, still paused",
                 "hand-overs: none",
