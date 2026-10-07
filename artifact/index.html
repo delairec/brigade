@@ -211,6 +211,15 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 .dlog li { margin-bottom: 2px; }
 .dlog .cli { color: var(--accent-ink); } .dlog .ai { color: var(--brass); } .dlog .warn { color: var(--warn); }
 
+.verdicts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; margin: 18px 0; }
+.verdict { background: var(--surface); border: 1px solid var(--rule); border-top: 3px solid var(--tone); border-radius: 10px; padding: 14px 18px; min-width: 0; }
+.verdict.v-ok { --tone: var(--ok); } .verdict.v-warn { --tone: var(--warn); }
+.verdict .sl { margin: 0; } .verdict .vh { font-family: var(--display); font-size: 21px; font-weight: 600; color: var(--tone); margin: 2px 0 8px; } .verdict p { font-size: 15.5px; }
+.grade { display: inline-grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 6px; font-family: var(--display); font-weight: 700; border: 1px solid var(--tone); color: var(--tone); }
+.grade.g-A { --tone: var(--ok); } .grade.g-B { --tone: var(--accent-ink); } .grade.g-C { --tone: var(--warn); } .grade.g-D { --tone: var(--err); }
+.sev { font-family: var(--mono); font-size: 11.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--tone); color: var(--tone); }
+.sev.s-low { --tone: var(--muted); } .sev.s-medium { --tone: var(--warn); } .sev.s-high, .sev.s-critical { --tone: var(--err); }
+#pane-review section > ul li, #pane-review section > p { max-width: 90ch; }
 #pane-brief details { border: 1px solid var(--rule); border-radius: 8px; padding: 8px 14px; margin-bottom: 8px; background: var(--surface); }
 #pane-brief summary { cursor: pointer; }
 #pane-brief details p, #pane-brief details ul { margin-top: 8px; }
@@ -225,6 +234,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
       <a href="#mockups" data-tab="mockups">Mockups</a>
       <a href="#tasks" data-tab="tasks">Tasks</a>
       <a href="#demo" data-tab="demo">Demo</a>
+      <a href="#review" data-tab="review">Review</a>
       <a href="#brief" data-tab="brief" class="appendix">Brief</a>
     </nav>
   </div>
@@ -310,7 +320,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 
   <div class="callout">
     <h3>How to read this Artifact</h3>
-    <p><b>Plan</b> is the specification, twenty-two sections with diagrams and the savings estimates. <b>Mockups</b> shows the terminal and the dashboard with sample data. <b>Tasks</b> is the board of the tasks, a view of the corpus: each status is the one <code>corpus/tasks.awawa</code> holds. <b>Demo</b> replays the commands and a wave. <b>Brief</b> is the appendix: what this plan was asked to be.</p>
+    <p><b>Plan</b> is the specification, twenty-two sections with diagrams and the savings estimates. <b>Mockups</b> shows the terminal and the dashboard with sample data. <b>Tasks</b> is the board of the tasks, a view of the corpus: each status is the one <code>corpus/tasks.awawa</code> holds. <b>Demo</b> replays the commands and a wave. <b>Review</b> is the review of the foundations that closes M0, dated 2026-10-07. <b>Brief</b> is the appendix: what this plan was asked to be.</p>
   </div>
 </div>
 
@@ -318,6 +328,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 <div class="pane" id="pane-mockups" data-pane="mockups" data-src="parts/mockups.html" hidden><p class="loading">Loading the mockups…</p></div>
 <div class="pane" id="pane-demo" data-pane="demo" data-src="parts/demo.html" hidden><p class="loading">Loading the demo…</p></div>
 <div class="pane" id="pane-brief" data-pane="brief" data-src="parts/brief.html" hidden><p class="loading">Loading the brief…</p></div>
+<div class="pane" id="pane-review" data-pane="review" data-src="parts/review.html" hidden><p class="loading">Loading the review…</p></div>
 
 <div class="pane" id="pane-tasks" data-pane="tasks" hidden>
   <header class="doc-head">
@@ -343,8 +354,8 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
 <script>
 (function () {
   'use strict';
-  var TABS = ['overview', 'plan', 'mockups', 'tasks', 'demo', 'brief'];
-  var PREFIX = { p: 'plan', m: 'mockups', b: 'brief' };
+  var TABS = ['overview', 'plan', 'mockups', 'tasks', 'demo', 'review', 'brief'];
+  var PREFIX = { p: 'plan', m: 'mockups', b: 'brief', r: 'review' };
   var loaded = {};
   var loading = {};
 
@@ -371,7 +382,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
     var h = (hash || '').replace(/^#/, '');
     if (!h) { return { tab: 'overview', anchor: null }; }
     if (TABS.indexOf(h) >= 0) { return { tab: h, anchor: null }; }
-    var m = /^([pmb])-/.exec(h);
+    var m = /^([pmbr])-/.exec(h);
     if (m) { return { tab: PREFIX[m[1]], anchor: h }; }
     if (/^(t|s)-/.test(h)) { return { tab: 'mockups', anchor: h }; }
     return { tab: 'overview', anchor: h };
@@ -399,7 +410,7 @@ pre.term.demo { border-radius: 10px; min-height: 320px; max-height: 520px; overf
   function route() { var r = resolve(location.hash); show(r.tab, r.anchor); }
   window.addEventListener('hashchange', route);
   route();
-  window.setTimeout(function () { ['plan', 'mockups', 'brief', 'demo'].forEach(ensure); }, 800);
+  window.setTimeout(function () { ['plan', 'mockups', 'brief', 'demo', 'review'].forEach(ensure); }, 800);
 
   var STATUS_TONES = { draft: '--muted', todo: '--accent', implemented: '--ok', archived: '--faint' };
   var DELIVERED_STATUS = 'implemented';
