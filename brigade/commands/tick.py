@@ -5,10 +5,12 @@ import time
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.errors import StandingDown
 from brigade.ledger.format_instant import format_instant
-from brigade.runtime import build_runtime
+from brigade.runtime import Invocation, build_runtime
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
+from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
+from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
@@ -21,6 +23,7 @@ ROUND_CAP = 10
 HEARTBEAT_NAME = "tick.json"
 LOCK_DIRECTORY = "locks"
 LOCK_NAME = "tick.lock"
+COMMAND_NAME = "tick"
 
 
 def _locate_heartbeat(runtime):
@@ -31,11 +34,16 @@ def _locate_lock(runtime):
     return runtime.paths.state_root / LOCK_DIRECTORY / LOCK_NAME
 
 
+def _locate_trail(runtime):
+    return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(TRAIL_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
+
+
 def _tick(runtime) -> dict | None:
     started = time.monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
             return None
+        runtime.trail.locate(_locate_trail(runtime))
         outcome = run_rounds(
             Rounds(
                 build_snapshot=lambda: build_snapshot(runtime.now),
@@ -78,8 +86,9 @@ def _plan_dry(runtime) -> dict:
     }
 
 
-def _tick_and_report() -> None:
-    runtime = build_runtime()
+def _tick_and_report(verbose: bool) -> None:
+    runtime = build_runtime(Invocation(command=COMMAND_NAME, verbose=verbose))
+    remove_expired_trails(runtime.paths, runtime.now)
     heartbeat = _tick(runtime)
     if heartbeat is None:
         sys.stderr.write(f"brigade tick: another tick holds {_locate_lock(runtime)}\n")
@@ -91,8 +100,10 @@ def _tick_and_report() -> None:
     sys.stderr.flush()
 
 
-def _tick_in_loop() -> dict:
-    ticks_attempted = repeat_until_signalled(lambda: run_reporting_failure(_tick_and_report, "tick"), TICK_INTERVAL_S)
+def _tick_in_loop(verbose: bool) -> dict:
+    ticks_attempted = repeat_until_signalled(
+        lambda: run_reporting_failure(lambda: _tick_and_report(verbose), COMMAND_NAME), TICK_INTERVAL_S
+    )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "mode": "loop", "ticks_attempted": ticks_attempted}
 
 
@@ -130,7 +141,7 @@ def tick(request, runtime) -> dict:
         return _tick_once(runtime)
     if request.mode == "dry-run":
         return _plan_dry(runtime)
-    return _tick_in_loop()
+    return _tick_in_loop(getattr(request, "verbose", False))
 
 
 COMMAND = Command(

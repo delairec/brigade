@@ -82,7 +82,7 @@ brigade scheduler status
 
 `tick --once` takes the lock without waiting: when another tick holds it, it writes one line naming the lock on stderr,
 writes nothing and exits 0. Otherwise it writes the heartbeat `$XDG_STATE_HOME/brigade/tick.json` atomically:
-`schema_version`, `ts`, `duration_ms` and `actions_applied`. `--dry-run` takes no lock and writes nothing. `--loop`
+`schema_version`, `ts`, `duration_ms` and `actions_applied`. `--dry-run` takes no lock and writes neither the heartbeat nor a tick trail, its records going to the trail of a command. `--loop`
 reports each tick on stderr; a signal lets the tick under way finish, then the loop exits 0 with the number of ticks
 attempted, stand-downs included. Every mode prints text or, with `--json`, a JSON document.
 
@@ -211,7 +211,7 @@ progress file, exported to it as `BRIGADE_PROGRESS_FILE`. It runs in `--cwd`, el
 current directory.
 
 Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.json` (what was resolved), `pid`,
-`role.md` (the role file passed), `progress.md`, `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`) and,
+`role.md` (the role file passed), `progress.md`, `processes.jsonl` (its trail), `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`) and,
 written last, `result.json`, the normalised result of the last segment. Each segment appends one `run.finished` to the
 ledger, every null field named in `nulls` with its reason. The command prints the run, text or `--json`, and exits 1
 when its outcome is not `done`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and
@@ -230,6 +230,33 @@ Two fallbacks follow the probe of the adapter. A client that counts no steps rec
 run's only bound, and `brigade run` and `brigade doctor` warn that the budget is held on the clock. A client that grants
 no tool one by one runs in its unattended mode, and a slot whose capabilities lack `write` then runs in a disposable
 git worktree of the directory's `HEAD`, `runs/<run id>/worktree`, removed after the run.
+
+## Trails
+
+Every subprocess brigade starts appends one JSON line to the trail of the invocation that started it, whatever its
+exit code: `schema_version`, `argv`, `cwd`, `exit` (null when there is none), `duration_ms` (null for a spawned run),
+`outcome` (`exited`, `timed_out`, `not_found`, `cut` for a client segment stopped by its wall limit, `spawned` for a
+detached run) and, for a spawned run alone, `pid`. A record carries no instant: the name of its trail and the order of
+its lines date it.
+
+| Invocation          | Trail                                                       |
+|---------------------|-------------------------------------------------------------|
+| `brigade run`       | `$XDG_STATE_HOME/brigade/runs/<run id>/processes.jsonl`     |
+| a tick, each round of `tick --loop` included | `$XDG_STATE_HOME/brigade/ticks/<instant>.jsonl` |
+| any other command   | `$XDG_STATE_HOME/brigade/commands/<instant>-<command>.jsonl` |
+
+`<instant>` is the UTC compact form, `20261007T120000Z`, of the instant the command or the tick read. At each tick and
+each command, the trails of `ticks/` and `commands/` older than `trail_days` of `config.toml`, 7 by default, are
+removed; the trail of a run goes with its run. A detached run's records are written by the process it re-executes.
+
+`--verbose`, accepted by every command, prints on stderr one line per record the command writes, stdout keeping the
+document alone:
+
+```
+brigade run: ran claude -p --output-format json, exit 0 in 41250 ms
+brigade run: ran /usr/bin/python3 /opt/brigade/bin/brigade run deliver --run-id 20261007T120000Z-48201, spawned pid 48213
+brigade scheduler status: ran crontab -l, not on PATH
+```
 
 ## Ledger
 

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.git.restore_files import restore_files
-from brigade.system.run_process import run_process
+from tests.integration.run_process_without_trail import run_process_without_trail
 
 IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 
@@ -36,7 +36,7 @@ class RestoreFilesTest(unittest.TestCase):
         (self.repository / "projects.awawa").write_text("edited\n")
 
         # Act
-        restore_files(run_process, self.repository, ("projects.awawa",))
+        restore_files(run_process_without_trail, self.repository, ("projects.awawa",))
 
         # Assert
         self.assertEqual(
@@ -49,7 +49,7 @@ class RestoreFilesTest(unittest.TestCase):
         (self.repository / "policies.awawa").write_text("new\n")
 
         # Act
-        restore_files(run_process, self.repository, ("policies.awawa",))
+        restore_files(run_process_without_trail, self.repository, ("policies.awawa",))
 
         # Assert
         self.assertEqual(

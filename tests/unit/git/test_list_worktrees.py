@@ -10,7 +10,9 @@ BARE_AND_LINKED = (
 
 
 def answer_git(request):
-    return ProcessRecord(argv=request.argv, cwd=request.cwd, exit_code=0, stdout=BARE_AND_LINKED, stderr="")
+    return ProcessRecord(
+        argv=request.argv, cwd=request.cwd, exit_code=0, stdout=BARE_AND_LINKED, stderr="", duration_ms=0
+    )
 
 
 class ListWorktreesOfABareRepositoryTest(unittest.TestCase):

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField, read_entities
-from brigade.system.run_process import run_process
+from tests.integration.run_process_without_trail import run_process_without_trail
 
 SHIPPED_SCHEMA = Path(__file__).resolve().parents[3] / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
 PROJECTS = (
@@ -39,7 +39,7 @@ class ReadEntitiesTest(unittest.TestCase):
         (self.corpus / "policies.awawa").write_text(POLICY)
 
         # Act
-        entities = read_entities(run_process, self.corpus, "PROJECT")
+        entities = read_entities(run_process_without_trail, self.corpus, "PROJECT")
 
         # Assert
         self.assertEqual(
@@ -68,7 +68,7 @@ class ReadEntitiesTest(unittest.TestCase):
 
     def test_should_read_none_when_no_entity_has_the_type(self):
         # Act
-        entities = read_entities(run_process, self.corpus, "PROJECT")
+        entities = read_entities(run_process_without_trail, self.corpus, "PROJECT")
 
         # Assert
         self.assertEqual(entities, ())

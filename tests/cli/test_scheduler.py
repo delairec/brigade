@@ -475,7 +475,7 @@ class BrigadeSchedulerStatusWithSystemdInstalledTest(SchedulerTestCase):
         self.machine.write_configuration(SYSTEMD_CONFIGURED)
         self.run_scheduler([SYSTEMD_USER_MANAGER], "install")
         heartbeat = self.machine.state_home / "brigade" / "tick.json"
-        heartbeat.parent.mkdir(parents=True)
+        heartbeat.parent.mkdir(parents=True, exist_ok=True)
         heartbeat.write_text(LAST_TICK)
 
     def test_should_report_the_units_the_next_activation_and_the_last_tick(self):

@@ -1,8 +1,10 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import ANY
 
 from brigade.errors import ToolNotFound
+from brigade.system.process_trace import ProcessTrace
 from brigade.system.spawn_process import SpawnRequest, spawn_process
 
 PROCESS_WAIT_S = 10.0
@@ -16,12 +18,14 @@ class SpawnProcessTestCase(unittest.TestCase):
         self.addCleanup(self.root.cleanup)
         self.stdout = Path(self.root.name) / "stdout.log"
         self.stderr = Path(self.root.name) / "stderr.log"
+        self.traces = []
 
     def spawn(self, argv: tuple, stdin):
         process = spawn_process(
             SpawnRequest(
                 argv=argv, cwd=self.root.name, environment={}, stdin=stdin, stdout=self.stdout, stderr=self.stderr
-            )
+            ),
+            self.traces.append,
         )
         self.addCleanup(process.wait)
         self.addCleanup(process.kill)
@@ -58,19 +62,49 @@ class SpawnProcessWithABriefTest(SpawnProcessTestCase):
 
 
 class SpawnProcessOfAMissingToolTest(SpawnProcessTestCase):
+    def spawn_missing_tool(self):
+        spawn_process(
+            SpawnRequest(
+                argv=("brigade-no-such-tool",),
+                cwd=self.root.name,
+                environment={},
+                stdin=None,
+                stdout=self.stdout,
+                stderr=self.stderr,
+            ),
+            self.traces.append,
+        )
+
     def test_should_refuse_naming_the_tool_not_on_path(self):
         # Act
         with self.assertRaises(ToolNotFound) as refusal:
-            spawn_process(
-                SpawnRequest(
-                    argv=("brigade-no-such-tool",),
-                    cwd=self.root.name,
-                    environment={},
-                    stdin=None,
-                    stdout=self.stdout,
-                    stderr=self.stderr,
-                )
-            )
+            self.spawn_missing_tool()
 
         # Assert
         self.assertEqual(str(refusal.exception), "brigade-no-such-tool not on PATH")
+
+    def test_should_trace_the_tool_not_found_before_refusing_it(self):
+        # Act
+        with self.assertRaises(ToolNotFound):
+            self.spawn_missing_tool()
+
+        # Assert
+        self.assertEqual(
+            self.traces,
+            [
+                ProcessTrace(
+                    argv=("brigade-no-such-tool",),
+                    cwd=self.root.name,
+                    outcome="not_found",
+                    exit_code=None,
+                    duration_ms=ANY,
+                )
+            ],
+        )
+
+    def test_should_trace_nothing_for_a_tool_it_spawns(self):
+        # Act
+        self.spawn(("true",), None)
+
+        # Assert
+        self.assertEqual(self.traces, [])

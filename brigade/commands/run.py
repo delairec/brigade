@@ -4,6 +4,7 @@ from brigade.command import Argument, Command
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.detach_run import detach_run
 from brigade.runs.plan_run import RunPlan, RunRequest, plan_run
+from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.system.read_configuration import SLOTS
 
@@ -66,6 +67,7 @@ def _describe_diagnostics(document: dict) -> list[str]:
 def run(request, runtime) -> dict:
     plan = plan_run(_read_run_request(request), runtime)
     create_run_directory(plan)
+    runtime.trail.locate(plan.run_directory / PROCESSES_FILE)
     if request.detach:
         pid = detach_run(plan, runtime)
         return _attach_warnings({"schema_version": DOCUMENT_SCHEMA_VERSION, "run": plan.run_id, "pid": pid}, plan)

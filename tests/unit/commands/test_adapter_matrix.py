@@ -9,6 +9,7 @@ from brigade.errors import ToolFailure
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.run_process import ProcessRecord, ProcessRequest
+from brigade.system.trail_writer import TrailWriter
 
 BARE_PROBE = (
     '{"schema_version": 1, "client": "bare", "version_argv": null, "operations": ["probe"], "features": [],'
@@ -16,12 +17,16 @@ BARE_PROBE = (
 )
 
 
+def _keep_no_trace(trace) -> None:
+    pass
+
+
 def _time_out(request: ProcessRequest):
     raise ToolFailure(f"{' '.join(request.argv)} timed out after 30 s")
 
 
 def _answer_the_bare_probe(request: ProcessRequest) -> ProcessRecord:
-    return ProcessRecord(argv=request.argv, cwd=request.cwd, exit_code=0, stdout=BARE_PROBE, stderr="")
+    return ProcessRecord(argv=request.argv, cwd=request.cwd, exit_code=0, stdout=BARE_PROBE, stderr="", duration_ms=0)
 
 
 class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
@@ -45,6 +50,7 @@ class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
             ),
             now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
             entry_point=Path("/srv/brigade/bin/brigade"),
+            trail=TrailWriter(_keep_no_trace),
         )
 
     def test_should_grade_absent_an_operation_with_no_fallback(self):
@@ -94,6 +100,7 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
             ),
             now=datetime(2026, 10, 6, 9, 0, tzinfo=UTC),
             entry_point=Path("/srv/brigade/bin/brigade"),
+            trail=TrailWriter(_keep_no_trace),
         )
 
     def tearDown(self):

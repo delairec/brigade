@@ -61,13 +61,13 @@ class BrigadeTickOnceTest(TickTestCase):
         self.assertIsInstance(heartbeat["duration_ms"], int)
         self.assertEqual(heartbeat, {"schema_version": 1, "ts": ANY, "duration_ms": ANY, "actions_applied": 0})
 
-    def test_should_leave_the_lock_and_the_heartbeat_alone_in_the_state_directory(self):
+    def test_should_leave_the_lock_the_heartbeat_and_the_trails_alone_in_the_state_directory(self):
         # Act
         completed = self.run_tick("--once")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(sorted(path.name for path in self.state.iterdir()), ["locks", "tick.json"])
+        self.assertEqual(sorted(path.name for path in self.state.iterdir()), ["locks", "tick.json", "ticks"])
 
     def test_should_report_the_tick_it_recorded_in_the_versioned_document(self):
         # Act
@@ -112,7 +112,7 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
             (completed.returncode, completed.stdout, completed.stderr),
             (0, "", f"brigade tick: another tick holds {self.lock}\n"),
         )
-        self.assertFalse(self.heartbeat.exists())
+        self.assertEqual(sorted(os.listdir(self.state)), ["locks"])
 
 
 class BrigadeTickDryRunTest(TickTestCase):
@@ -289,7 +289,7 @@ class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTes
             (1, "", f"brigade tick: cannot write {self.lock}: Permission denied\n"),
         )
 
-    def test_should_exit_1_naming_the_heartbeat_it_cannot_write_and_write_none(self):
+    def test_should_exit_1_naming_the_trail_directory_it_cannot_create_and_write_no_heartbeat(self):
         # Arrange
         self.state.chmod(0o500)
 
@@ -304,7 +304,7 @@ class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTes
                 completed.stderr,
                 sorted(path.name for path in self.state.iterdir()),
             ),
-            (1, "", f"brigade tick: cannot write {self.heartbeat}: Permission denied\n", ["locks"]),
+            (1, "", f"brigade tick: cannot write {self.state / 'ticks'}: Permission denied\n", ["locks"]),
         )
 
 

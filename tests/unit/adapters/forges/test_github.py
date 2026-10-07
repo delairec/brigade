@@ -9,7 +9,9 @@ DESCRIBE_REQUEST = {"schema_version": 1}
 
 def create_runtime(hosts_document: str) -> SimpleNamespace:
     def run_gh(request):
-        return ProcessRecord(argv=request.argv, cwd=request.cwd, exit_code=0, stdout=hosts_document, stderr="")
+        return ProcessRecord(
+            argv=request.argv, cwd=request.cwd, exit_code=0, stdout=hosts_document, stderr="", duration_ms=0
+        )
 
     return SimpleNamespace(run_process=run_gh)
 

@@ -23,6 +23,9 @@
 # The seconds a run is given per step of its budget: the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_step.
 # seconds_per_step = 30
 
+# The days a trail of ticks/ and commands/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
+# trail_days = 7
+
 # The model and effort a reasoning level maps to, replacing that row of the client adapter's table;
 # levels deepest, deep, standard, light.
 # [reasoning.deep]

@@ -632,10 +632,10 @@ class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
 class BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
-        self.machine.state_home.mkdir()
+        self.state_root = self.machine.state_home / "brigade"
 
     def tearDown(self):
-        self.machine.state_home.chmod(0o700)
+        self.state_root.chmod(0o700)
         super().tearDown()
 
     def test_should_exit_1_naming_the_registry_project_add_cannot_write(self):
@@ -670,7 +670,7 @@ class BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):
     def test_should_exit_1_naming_the_state_directory_where_its_lock_goes(self):
         # Arrange
         project = self.create_project("app")
-        self.machine.state_home.chmod(0o500)
+        self.state_root.chmod(0o500)
 
         # Act
         completed = self.run_project("add", str(project.path))
@@ -678,7 +678,7 @@ class BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade project add: cannot write {self.machine.state_home / 'brigade'}: Permission denied\n"),
+            (1, "", f"brigade project add: cannot write {self.state_root / 'locks'}: Permission denied\n"),
         )
 
 

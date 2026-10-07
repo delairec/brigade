@@ -14,6 +14,7 @@ from brigade.runs.run_locations import (
 from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.create_directory import create_directory
+from brigade.system.process_trace import CUT, EXITED, ProcessTrace
 from brigade.system.spawn_process import SpawnRequest, spawn_process
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 from brigade.system.write_text_file import write_text_file
@@ -95,21 +96,22 @@ def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
             "role": _describe_role(plan),
         },
     )
-    started = time.monotonic()
-    process = spawn_process(
-        SpawnRequest(
-            argv=tuple(launch["argv"]),
-            cwd=str(plan.worktree),
-            environment={**launch["environment"], PROGRESS_FILE_VARIABLE: progress_file},
-            stdin=launch["stdin"],
-            stdout=segment_directory / STDOUT_FILE,
-            stderr=segment_directory / STDERR_FILE,
-        )
+    request = SpawnRequest(
+        argv=tuple(launch["argv"]),
+        cwd=str(plan.worktree),
+        environment={**launch["environment"], PROGRESS_FILE_VARIABLE: progress_file},
+        stdin=launch["stdin"],
+        stdout=segment_directory / STDOUT_FILE,
+        stderr=segment_directory / STDERR_FILE,
     )
+    started = time.monotonic()
+    process = spawn_process(request, runtime.trail.append)
     exit_code = wait_within_limit(
         process, WallLimit(limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S)
     )
     measured_ms = round((time.monotonic() - started) * 1000)
+    outcome = CUT if exit_code is None else EXITED
+    runtime.trail.append(ProcessTrace(request.argv, request.cwd, outcome, exit_code=exit_code, duration_ms=measured_ms))
     if exit_code is None:
         cut = _describe_cut(plan, measured_ms)
         return SegmentRecord(number=number, result=cut, exit_code=None, measured_ms=measured_ms)

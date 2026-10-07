@@ -1,14 +1,18 @@
 import argparse
+import contextlib
 import importlib
 import json
 import sys
 import traceback
 from importlib.resources import files
+from pathlib import Path
 
 from brigade import VERSION
 from brigade.add_command_parsers import add_command_parsers
-from brigade.errors import BrigadeError, StandingDown, UsageError
-from brigade.runtime import build_runtime
+from brigade.errors import BrigadeError, CannotWrite, StandingDown, UsageError
+from brigade.runtime import Invocation, Runtime, build_runtime
+from brigade.system.remove_expired_trails import remove_expired_trails
+from brigade.system.trail_locations import COMMANDS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 
 COMMANDS_PACKAGE = "brigade.commands"
 MODULE_SUFFIX = ".py"
@@ -30,6 +34,12 @@ def _create_common_options():
     common_options = argparse.ArgumentParser(add_help=False)
     common_options.add_argument(
         "--json", action="store_true", default=argparse.SUPPRESS, help="print the output as a JSON document"
+    )
+    common_options.add_argument(
+        "--verbose",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="print every subprocess the command runs on stderr",
     )
     return common_options
 
@@ -64,8 +74,27 @@ def _find_passthrough(arguments: list[str], passthroughs: list):
     )
 
 
+def _locate_command_trail(command, runtime: Runtime) -> Path:
+    instant = runtime.now.strftime(TRAIL_INSTANT_FORMAT)
+    return runtime.paths.state_root / COMMANDS_DIRECTORY / f"{instant}-{'-'.join(command.path)}{TRAIL_SUFFIX}"
+
+
+def _run_and_settle_trail(command, options: argparse.Namespace):
+    runtime = build_runtime(Invocation(command=_name(command), verbose=getattr(options, "verbose", False)))
+    trail = _locate_command_trail(command, runtime)
+    try:
+        remove_expired_trails(runtime.paths, runtime.now)
+        document = command.run(command.read_request(options), runtime)
+    except BaseException:
+        with contextlib.suppress(CannotWrite):
+            runtime.trail.settle(trail)
+        raise
+    runtime.trail.settle(trail)
+    return document
+
+
 def _run_command(command, options: argparse.Namespace) -> int:
-    document = command.run(command.read_request(options), build_runtime())
+    document = _run_and_settle_trail(command, options)
     for diagnostic in command.describe_diagnostics(document):
         sys.stderr.write(f"brigade {_name(command)}: {diagnostic}\n")
     if command.render_passed_stderr is not None:
