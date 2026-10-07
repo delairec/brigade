@@ -3,7 +3,7 @@ TASK B01
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade --version prints the version; brigade --version --json prints a JSON document"
 		+ "carrying schema_version and version"
 		IMPL "brigade/cli.py::def _describe_version(as_json):"
@@ -55,7 +55,7 @@ TASK B02
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade doctor checks Python 3.11 or later, git and awawa 2.7 or later, each line naming"
 		+ "the version found and its floor"
 		IMPL "brigade/commands/doctor.py::AWAWA_FLOOR = (2, 7)"
@@ -113,7 +113,7 @@ TASK B03
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade init creates $XDG_CONFIG_HOME/brigade/, ~/.config/brigade/ by default, as a git"
 		+ "repository holding _schema.awawa installed from the shipped template and a .gitignore"
 		+ "listing config.toml, both committed in one commit with the user's git identity"
@@ -193,7 +193,7 @@ TASK B04
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "registry"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade project add <path> appends a PROJECT entity to projects.awawa of the operational"
 		+ "corpus, named after the basename of the path with every character outside an identifier"
 		+ "replaced by _, or after --name; a --name that is not an identifier exits 2"
@@ -330,7 +330,7 @@ TASK B05
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ledger"
-	ROLE bastien
+	ROLE ada
 	SPEC "one module of brigade/ledger declares every event name with the fields its readers need,"
 		+ "run.finished, wave.started, wave.paused, wave.resumed, task.parked, pr.merged,"
 		+ "order.done, signal.recorded, pattern.ratified and constraint.delivered to begin with;"
@@ -473,7 +473,7 @@ TASK B06
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "runs"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>]"
 		+ "[--detach] [key=value ...] runs the procedure as that slot through the client adapter; a"
 		+ "name resolves to brigade's shipped procedures, then to the procedures/ of the"
@@ -653,7 +653,7 @@ TASK B07
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tick"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade tick --once takes $XDG_STATE_HOME/brigade/locks/tick.lock without blocking; when"
 		+ "another process holds it, it exits 0 with one stderr line and writes nothing"
 		IMPL "brigade/commands/tick.py::def _tick_once(runtime) -> dict:"
@@ -811,7 +811,7 @@ TASK B08
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade corpus <project> --ref <branch|sha> resolves the ref to a commit SHA in the"
 		+ "project's repository, extracts git archive of that SHA, the whole tree, into"
 		+ "$XDG_CACHE_HOME/brigade/refs/<project>/<sha>/ unless it is there, and prints a document"
@@ -915,7 +915,7 @@ TASK B09
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "roles"
-	ROLE bastien
+	ROLE ada
 	ROLE lex
 	SPEC "three role files under roles/, slots plan, report and triage, with work, reasoning,"
 		+ "capabilities, budget and returns, their bodies self-contained"
@@ -929,7 +929,7 @@ TASK B10
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
-	ROLE bastien
+	ROLE ada
 	SPEC "plan context prints the planning package"
 	SPEC "plan record --file validates the plan JSON against the TASK and WAVE schema, writes the"
 		+ "entities, runs fmt and lint, creates the integration branch and commits"
@@ -942,7 +942,7 @@ TASK B11
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
-	ROLE bastien
+	ROLE ada
 	SPEC "a request becomes a REQUEST entity and a planned wave"
 	SPEC "show prints the task table with states from the ledger"
 	SPEC "POLICY.PLAN_REVIEW ask|auto is honoured"
@@ -953,7 +953,7 @@ TASK B12
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
-	ROLE bastien
+	ROLE ada
 	SPEC "startable means every AFTER merged and no live BLOCKED_BY"
 	SPEC "the overlap order comes from the plan"
 	SPEC "a worktree is cut from the integration head with the SETUP commands run and ancestry"
@@ -985,7 +985,7 @@ TASK B13
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
-	ROLE bastien
+	ROLE ada
 	SPEC "context prints the whole starting package in one command"
 	SPEC "check runs the ACCEPTANCE commands plus fmt --check and lint --strict with a bounded"
 		+ "summary"
@@ -1005,7 +1005,7 @@ TASK B14
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
-	ROLE bastien
+	ROLE ada
 	SPEC "the tick finds the pull request of a task branch, reads its checks and review state"
 		+ "through the forge adapter, records ledger events and moves the task state"
 	SPEC "the worktree the scheduler cut for the task is removed once its pull request is merged or"
@@ -1025,7 +1025,7 @@ TASK B15
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
-	ROLE bastien
+	ROLE ada
 	SPEC "the eight deterministic checks (ancestry, checks, corpus, promotion, untouched files,"
 		+ "privacy, body, size) with a findings JSON and exit 1 on failure"
 	AFTER @TASK.B08
@@ -1036,7 +1036,7 @@ TASK B16
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
-	ROLE bastien
+	ROLE ada
 	ROLE lex
 	SPEC "the verify slot receives the verification package and posts approve or request changes"
 		+ "through verdict, recorded in the ledger event"
@@ -1053,7 +1053,7 @@ TASK B17
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
-	ROLE bastien
+	ROLE ada
 	SPEC "approve plus green checks merge the pull request with PROJECT.MERGE"
 	SPEC "the task becomes merged"
 	SPEC "its dependents become startable in the same tick"
@@ -1068,7 +1068,7 @@ TASK B18
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
-	ROLE bastien
+	ROLE ada
 	SPEC "changes requested starts a run of the review slot through review context|reply"
 	SPEC "a failing check starts a fix by the build slot"
 	SPEC "a branch behind integration is rebased by git and the rebase slot runs only on a conflict"
@@ -1081,7 +1081,7 @@ TASK B19
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
-	ROLE bastien
+	ROLE ada
 	SPEC "a rate-limit result pauses the wave with resume_at parsed from the message or set to now"
 		+ "plus 30 minutes"
 	SPEC "the first tick after resume_at resumes each suspended run through the adapter's resume,"
@@ -1098,7 +1098,7 @@ TASK B20
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "the collectors ledger, pr-list, corpus and git-diff-stat fill the template skeleton: the"
 		+ "task table, the statistics, the dependency graph, the manual-test table from SPEC lines,"
 		+ "the instructions-corpus change list and the parked questions"
@@ -1138,7 +1138,7 @@ TASK B22
 	STATUS draft
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
-	ROLE bastien
+	ROLE ada
 	SPEC "signals JSONL with fingerprint, count, age and status"
 	SPEC "note appends"
 	SPEC "inbox lists, shows and dismisses"
@@ -1150,7 +1150,7 @@ TASK B23
 	STATUS draft
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
-	ROLE bastien
+	ROLE ada
 	DESC "delivered as the built-in collector pr-threads, run every tick and reused by studies and"
 		+ "recipes"
 	SPEC "unresolved review threads on open pull requests of registered projects become signals"
@@ -1164,7 +1164,7 @@ TASK B24
 	STATUS draft
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
-	ROLE bastien
+	ROLE ada
 	DESC "delivered as the built-in collector check-runs, run every tick and reused by studies and"
 		+ "recipes"
 	SPEC "failing check runs on open pull requests and on main become signals carrying the first"
@@ -1178,7 +1178,7 @@ TASK B25
 	STATUS draft
 	MILESTONE @MILESTONE.M2
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "the collector inbox-families groups the signals deterministically, same rule cited, same"
 		+ "file, same check name, same correction marker, with their evidence"
 	SPEC "the triage slot writes PATTERN entities with evidence and an ACTION through study answer,"
@@ -1193,7 +1193,7 @@ TASK B26
 	STATUS draft
 	MILESTONE @MILESTONE.M2
 	COMPONENT "triage"
-	ROLE bastien
+	ROLE ada
 	SPEC "inbox ratify <P> turns a pattern into a REQUEST on its target, or into a CONSTRAINT with"
 		+ "its request"
 	SPEC "the wave engine delivers it and the report lists the constraint with its reason"
@@ -1205,7 +1205,7 @@ TASK B27
 	STATUS draft
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
-	ROLE bastien
+	ROLE ada
 	SPEC "a loopback server"
 	SPEC "the server binds 127.0.0.1 only, never 0.0.0.0 nor an address of the machine"
 	SPEC "a request whose Host header is not the loopback host and port the server listens on is"
@@ -1225,7 +1225,7 @@ TASK B28
 	STATUS draft
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
-	ROLE bastien
+	ROLE ada
 	SPEC "projects, waves, inbox count, quota, last tick, due studies and orders, failing scans,"
 		+ "parked orders"
 	SPEC "a board of tasks by state with pull request, rounds and steps"
@@ -1242,7 +1242,7 @@ TASK B29
 	STATUS draft
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
-	ROLE bastien
+	ROLE ada
 	SPEC "signals grouped and patterns proposed"
 	SPEC "ratify and dismiss call the CLI"
 	AFTER @TASK.B27
@@ -1253,7 +1253,7 @@ TASK B30
 	STATUS draft
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
-	ROLE bastien
+	ROLE ada
 	SPEC "project, ref (branch, worktree, sha) and type selectors"
 	SPEC "tree, board by field and dependencies, read-only"
 	SPEC "the board by field, type TASK and field STATUS, shows every task of the selected corpus"
@@ -1269,7 +1269,7 @@ TASK B31
 	STATUS draft
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
-	ROLE bastien
+	ROLE ada
 	SPEC "steps p50 and p90 by role and procedure, waves per month, pauses and the baseline"
 		+ "comparison"
 	SPEC "wave reports, study answers and order outputs rendered with their manual-test tables"
@@ -1290,7 +1290,7 @@ TASK B33
 	STATUS draft
 	MILESTONE @MILESTONE.M4
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "a scan is a STUDY with SLOT none and OUTPUT inbox, run by the tick when due; a non-empty"
 		+ "collector output becomes a signal with the collector's fingerprint"
 	SPEC "the first four scans ship as built-in studies, corpus-lint, corpus-fmt, stale-branches"
@@ -1303,7 +1303,7 @@ TASK B34
 	STATUS draft
 	MILESTONE @MILESTONE.M4
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "failing scans appear on Home with their age"
 	SPEC "a scan signal appears in the inbox"
 	AFTER @TASK.B33
@@ -1314,7 +1314,7 @@ TASK B35
 	STATUS draft
 	MILESTONE @MILESTONE.M5
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "transcripts reads sessions since a watermark through the client adapter's transcripts"
 		+ "operation, else brigade's own run logs"
 	SPEC "transcript-findings detects corrections, refusals, repeated commands and oversized-output"
@@ -1331,7 +1331,7 @@ TASK B36
 	STATUS draft
 	MILESTONE @MILESTONE.M5
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "SLOT triage, OUTPUT entity:PATTERN, scheduled weekly by default; the triage slot groups"
 		+ "the findings into patterns and constraint candidates"
 	SPEC "ratified constraints follow the ratification path"
@@ -1343,7 +1343,7 @@ TASK B37
 	STATUS draft
 	MILESTONE @MILESTONE.M6
 	COMPONENT "ledger"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade ledger budgets proposes p90 steps per procedure"
 	SPEC "a pull request updates the front matter of each procedure"
 	AFTER @TASK.B21
@@ -1353,7 +1353,7 @@ TASK B38
 	STATUS draft
 	MILESTONE @MILESTONE.M6
 	COMPONENT "registry"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade project add --init-decisions drafts in the project's corpus the three decisions a"
 		+ "wave needs, the plan travels on the integration branch, the forge account merges into"
 		+ "integration, the auto-merge policy; the draft goes through fmt, lint and a pull request"
@@ -1398,7 +1398,7 @@ TASK B41
 	STATUS archived
 	MILESTONE @MILESTONE.M3
 	COMPONENT "artifact"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade board sync reads every TASK of the repository corpus through the corpus reader"
 		+ "and writes its STATUS to the field status of the document tasks/<id> of the board's"
 		+ "tasks collection; a second sync writes nothing"
@@ -1425,7 +1425,7 @@ TASK B42
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "adapters"
-	ROLE bastien
+	ROLE ada
 	SPEC "the contract is five operations answered as JSON documents, probe, launch, result, resume"
 		+ "and transcripts; brigade adapter probe|launch-argv|parse-result|resume-argv|transcripts"
 		+ "exposes each on the command line"
@@ -1546,7 +1546,7 @@ TASK B43
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "roles"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade ships a built-in role file for each of the nine slots under brigade/roles/data/:"
 		+ "planner plans, builder builds, verifier verifies, reviewer reviews, rebaser rebases,"
 		+ "reporter reports, triager triages, rulewriter writes rules, explorer explores"
@@ -1633,7 +1633,7 @@ TASK B44
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "adapters"
-	ROLE bastien
+	ROLE ada
 	DESC "candidates read on 2026-10-05: OpenCode (run --format json, agent files with per-tool"
 		+ "permission, --session), Codex (exec --json, exec resume, sandbox modes), Gemini CLI (-p"
 		+ "--output-format json); none installed on the reference machine"
@@ -1669,7 +1669,7 @@ TASK B46
 	STATUS draft
 	MILESTONE @MILESTONE.M7
 	COMPONENT "adapters"
-	ROLE bastien
+	ROLE ada
 	SPEC "the GitHub adapter wraps gh as today"
 	SPEC "brigade doctor reports whether gh is active as the account config.toml names; a mismatch"
 		+ "is a warning with its fallback, the user's account recorded in the ledger"
@@ -1696,7 +1696,7 @@ TASK B47
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "a collector is an executable or a built-in that reads BRIGADE_PROJECT_PATH,"
 		+ "BRIGADE_SINCE, BRIGADE_RUN_DIR and BRIGADE_PARAMS from its environment and prints one"
 		+ "JSON document with schema, collector, collected_at, summary and items"
@@ -1723,7 +1723,7 @@ TASK B48
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
-	ROLE bastien
+	ROLE ada
 	SPEC "study new records a STUDY entity through fmt, lint and a commit, with the question"
 		+ "verbatim, the project when there is one, the collectors, the slot or none, the schedule"
 		+ "or none, the output and the template, and runs it once unless --every is given"
@@ -1756,7 +1756,7 @@ TASK B49
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "adapters"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade adapter matrix prints one row per client adapter, built-in or an executable"
 		+ "brigade-client-<name> on PATH, and one column per capability, launch, result, resume,"
 		+ "transcripts, step count, tool grants and reset hour; a cell reads full when the probe"
@@ -1854,7 +1854,7 @@ TASK B50
 	STATUS draft
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
-	ROLE bastien
+	ROLE ada
 	SPEC "a recipe is a TOML file with schema, name, description, params, max_wall and ordered step"
 		+ "tables of the kinds collect, command, gate, judge, output, order, corpus and op, op"
 		+ "being one of worktree, commit, pull-request and merge; a value substitutes {param} from"
@@ -1879,7 +1879,7 @@ TASK B51
 	STATUS draft
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade order new <recipe> [--project] [--every] [key=value...] [text] records an ORDER"
 		+ "entity through fmt, lint and a commit and runs it once unless --every is given; order"
 		+ "run, list, show, pause, resume and cancel"
@@ -1902,7 +1902,7 @@ TASK B52
 	STATUS draft
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
-	ROLE bastien
+	ROLE ada
 	ROLE prudence
 	SPEC "recipes/examples/pr-usage-report.toml: the collectors ledger, pr-threads and corpus for"
 		+ "one pull request, the gate pr-is-reviewed, one judge step on the report slot with a"
@@ -1917,7 +1917,7 @@ TASK B53
 	STATUS draft
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
-	ROLE bastien
+	ROLE ada
 	SPEC "PATTERN.ACTION accepts order and PATTERN.RECIPE names the recipe; brigade inbox ratify"
 		+ "places the order with the pattern's evidence as parameters"
 	SPEC "the order's output names the pattern it came from"
@@ -1929,7 +1929,7 @@ TASK B54
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "artifact"
-	ROLE bastien
+	ROLE ada
 	SPEC "the board renders the corpus's statuses, draft, todo, implemented and archived, as they"
 		+ "are or through one mapping declared in one place of the page"
 		IMPL "artifact/index.html::var STATUS_TONES = {"
@@ -1954,7 +1954,7 @@ TASK B55
 	STATUS draft
 	MILESTONE @MILESTONE.M7
 	COMPONENT "registry"
-	ROLE bastien
+	ROLE ada
 	SPEC "project add --init-corpus installs brigade's project corpus template, TASK, WAVE,"
 		+ "DECISION and OPEN_QUESTION, in the folder CORPUS names, corpus/ by default, on a branch,"
 		+ "and opens a pull request through the forge adapter"
@@ -1976,7 +1976,7 @@ TASK B56
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tick"
-	ROLE bastien
+	ROLE ada
 	SPEC "an OSError raised creating or writing a lock or a state file under"
 		+ "$XDG_STATE_HOME/brigade/ exits 1 with one stderr line, brigade <command>: cannot write"
 		+ "<path>: <reason>, not 70 with a traceback; hold_lock, hold_lock_without_waiting,"
@@ -2083,7 +2083,7 @@ TASK B57
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "system"
-	ROLE bastien
+	ROLE ada
 	SPEC "an OSError raised creating or writing the run directory under"
 		+ "$XDG_STATE_HOME/brigade/runs/<id>/, its pid, role and progress files, its detached log"
 		+ "or a segment's directory, brief, stdout and stderr, exits 1 with one stderr line naming"
@@ -2184,7 +2184,7 @@ TASK B60
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
-	ROLE bastien
+	ROLE ada
 	DESC "draft: the key runs_kept, its default of 100 and the lock name are proposals for the"
 		+ "refinement"
 	DESC "for the refinement: a run @TASK.B19 resumes from its progress file and a study @TASK.B48"
@@ -2325,8 +2325,8 @@ TASK B61
 		+ "found would verify its own work, hence findings that become draft tasks, open questions"
 		+ "or decision amendments after the user's ruling, never a fix in the review's own pull"
 		+ "request"
-	RATIONALE "ROLE none: the schema admits ada, bastien, lex, prudence, remi, manu, bilal, mina,"
-		+ "dora or none, and max is not among them; the role is named in the first SPEC"
+	RATIONALE "ROLE none: the schema admits ada, lex, prudence, remi, manu, bilal, mina, dora or"
+		+ "none, and max is not among them; the role is named in the first SPEC"
 	RATIONALE "the report lands under docs/:"
 		+ "@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus refuses docs/ for the"
 		+ "corpus alone, and a dated report is never rewritten"
@@ -2352,7 +2352,7 @@ TASK B62
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
-	ROLE bastien
+	ROLE ada
 	SPEC ".github/workflows/ci.yml declares permissions: contents: read at its top level, and every"
 		+ "actions/checkout step passes persist-credentials: false"
 		IMPL ".github/workflows/ci.yml::contents: read"
@@ -2400,7 +2400,7 @@ TASK B63
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
-	ROLE bastien
+	ROLE ada
 	SPEC "ruff.toml at the repository root sets target-version = \"py311\" and selects, besides"
 		+ "ruff's default rules, the sets S, B and UP and the rule C901"
 		IMPL "ruff.toml::target-version = \"py311\""
@@ -2455,7 +2455,7 @@ TASK B64
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
-	ROLE bastien
+	ROLE ada
 	SPEC "requirements-ci.txt pins semgrep to one version; a job of ci.yml of its own installs the"
 		+ "file by pip and runs semgrep scan from the repository root with --config p/python,"
 		+ "--config p/security-audit, --error and --metrics=off; exit 1, findings, fails the job"
@@ -2492,7 +2492,7 @@ TASK B65
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
-	ROLE bastien
+	ROLE ada
 	SPEC "requirements-ci.txt pins vulture to one version; a job of ci.yml of its own installs the"
 		+ "file by pip and runs vulture on brigade/ and tests/ at its default minimum confidence,"
 		+ "its arguments on the command line of the step; exit 3, dead code found, fails the job"
@@ -2544,7 +2544,7 @@ TASK B66
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
-	ROLE bastien
+	ROLE ada
 	SPEC ".coveragerc at the repository root sets [run] source = brigade and [run] patch ="
 		+ "subprocess; requirements-ci.txt pins coverage to one version of 7.10.0 or later, the"
 		+ "first that knows patch"
@@ -2606,7 +2606,7 @@ TASK B67
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "guards"
-	ROLE bastien
+	ROLE ada
 	DELIVERED_BY 37
 	SPEC "tests/guards/find_subprocess_uses.py exposes one function that parses every module under"
 		+ "a package root with ast and returns one line per violation, path:line and what it"
@@ -2646,7 +2646,7 @@ TASK B68
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade/corpus/prepare_tree.py extracts the git archive of a commit with filter=\"data\""
 		+ "where tarfile has data_filter, Python 3.11.4 and later: a symbolic link pointing outside"
 		+ "the extraction directory, an absolute or .. member and a device file are refused"
@@ -2701,7 +2701,7 @@ TASK B69
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "runs"
-	ROLE bastien
+	ROLE ada
 	SPEC "before any fix, the pull request states the root cause of"
 		+ "tests/cli/test_runs.py::BrigadeRunsListOfARunningRunTest::test_should_list_a_detached_run_whose_client_has_not_finished_as_running"
 		+ "listing the run dead, with its evidence: a reproduction, or a trace naming the read of"
@@ -2774,7 +2774,7 @@ TASK B70
 	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tests"
-	ROLE bastien
+	ROLE ada
 	SPEC "coverage run -m unittest, coverage combine, then coverage report -m, run locally with"
 		+ "awawa on PATH so that the tests that need it do not skip, and with coverage at the"
 		+ "version requirements-ci.txt pins, print TOTAL at 100% for the lines and the branches of"
@@ -2883,7 +2883,7 @@ TASK B71
 	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
-	ROLE bastien
+	ROLE ada
 	SPEC "the launch argv of the Claude Code adapter carries --permission-mode dontAsk and no"
 		+ "--add-dir; brigade adapter launch-argv prints it, and a unit row of"
 		+ "tests/unit/adapters/clients/test_claude_code.py pins it"
@@ -2994,7 +2994,7 @@ TASK B72
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "system"
-	ROLE bastien
+	ROLE ada
 	SPEC "ProcessRecord of brigade/system/run_process.py carries duration_ms, the integer"
 		+ "milliseconds between the start and the end of the subprocess measured with"
 		+ "time.monotonic"
@@ -3032,7 +3032,7 @@ TASK B73
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
-	ROLE bastien
+	ROLE ada
 	SPEC "Runtime of brigade/runtime.py carries, besides run_process, paths, now and entry_point,"
 		+ "the plugin resolver and the renderer of the command; build_runtime is called in cli.py"
 		+ "alone"
@@ -3080,7 +3080,7 @@ TASK B74
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "system"
-	ROLE bastien
+	ROLE ada
 	SPEC "every document kind the core reads or writes, the client answers probe, launch, result,"
 		+ "resume and transcripts, the ledger event, the run record and result, the heartbeat"
 		+ "tick.json and the snapshot of the tick, has one module declaring its frozen dataclass"
@@ -3126,7 +3126,7 @@ TASK B75
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
-	ROLE bastien
+	ROLE ada
 	SPEC "Configuration of brigade/system/read_configuration.py stores forge_account, the key"
 		+ "config.toml already accepts and type-checks; forge_account leaves UNREAD_STRING_KEYS"
 	SPEC "every gh subprocess of the GitHub forge adapter runs with GH_TOKEN set to the token gh"
@@ -3187,7 +3187,7 @@ TASK B76
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "system"
-	ROLE bastien
+	ROLE ada
 	SPEC "resolve_plugin(\"forge\", name, runtime) and resolve_plugin(\"scheduler\", name, runtime)"
 		+ "search brigade-forge-<name> and brigade-scheduler-<name> on the executable search path"
 		+ "of the paths before the built-in modules, as _resolve_client does for"
@@ -3217,7 +3217,7 @@ TASK B77
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "system"
-	ROLE bastien
+	ROLE ada
 	SPEC "a command that needs config.toml reads it once, in its command module, and passes the"
 		+ "Configuration record to resolve_role, plan_run, roles_list and ask_configured_client,"
 		+ "which take it as an argument and parse no file; grep -rn read_configuration brigade/"
@@ -3255,7 +3255,7 @@ TASK B78
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "roles"
-	ROLE bastien
+	ROLE ada
 	SPEC "resolve_role on a slot whose agent is named lets a ToolFailure of awawa, a corpus that"
 		+ "fails lint, an unreadable file, an exit other than not found, propagate as the error"
 		+ "naming the command and its stderr; it tries the next source only when awawa answers that"
@@ -3282,7 +3282,7 @@ TASK B79
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade runs logs <id> without --tail returns a document carrying, per segment, the path"
 		+ "of its stdout and stderr files under runs/<id>/ and their line counts, and no line; with"
 		+ "--tail N it returns the last N lines as today"
@@ -3313,7 +3313,7 @@ TASK B80
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "docs"
-	ROLE bastien
+	ROLE ada
 	SPEC "the sentence of README.md on the CI's coverage job no longer reads \"failing on no"
 		+ "threshold\": it names fail_under of .coveragerc as the threshold the job fails below and"
 		+ "says the threshold is never lowered; it quotes no figure, .coveragerc being the figure's"
@@ -3338,7 +3338,7 @@ TASK B81
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "registry"
-	ROLE bastien
+	ROLE ada
 	SPEC "brigade project add <path> --init-corpus, on a repository whose corpus folder holds no"
 		+ ".awawa file, writes the starter corpus brigade ships as a resource, a schema declaring"
 		+ "the entity types a wave needs, into that folder on a branch, formats and lints it"
@@ -3377,7 +3377,7 @@ TASK B82
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
-	ROLE bastien
+	ROLE ada
 	SPEC "each module of brigade/commands/ exports its one public function and declares, as a"
 		+ "module-level frozen record, the arguments of its subcommand, its request reader, its"
 		+ "text renderer and its exit decision, the reader, the renderer and the decision being"
