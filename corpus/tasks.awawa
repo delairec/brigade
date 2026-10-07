@@ -960,9 +960,25 @@ TASK B12
 		+ "asserted"
 	SPEC "the brief is filled from a template"
 	SPEC "the build slot is launched through brigade run within the slot cap"
+	SPEC "the lock of each project's worktrees under $XDG_STATE_HOME/brigade/locks/ is taken by the"
+		+ "scheduler when it adds or removes a worktree of the project and by run_segments when it"
+		+ "adds or removes the disposable worktree of a reading slot"
 	AFTER @TASK.B06
 	AFTER @TASK.B07
 	AFTER @TASK.B11
+	AFTER @TASK.B74
+	AFTER @TASK.B77
+	RATIONALE "F16 of the foundations review: run_segments.py:101-109 adds and removes the"
+		+ "disposable worktree of a reading slot without a lock on the project's worktrees,"
+		+ "harmless until this task cuts worktrees from the tick; DESC 1 of"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory names \"each"
+		+ "project's worktrees\" among the shared resources with a lock; it follows @TASK.B74 so"
+		+ "that the snapshot and the actions are dataclasses from the start, and @TASK.B77 for the"
+		+ "configuration record read once per tick"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @TASK.B74
+		REF @TASK.B77
+	SOURCE "F16 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 
 TASK B13
 	TITLE "brigade task context|check|pr|promote"
@@ -974,8 +990,15 @@ TASK B13
 	SPEC "check runs the ACCEPTANCE commands plus fmt --check and lint --strict with a bounded"
 		+ "summary"
 	SPEC "pr pushes and opens the pull request with a templated body"
+	SPEC "the pull request pr opens carries the GitHub milestone named after the TITLE of the"
+		+ "task's MILESTONE"
 	SPEC "promote sets STATUS implemented and DELIVERED_BY, runs fmt and lint, commits and pushes"
 	AFTER @TASK.B12
+	RATIONALE "F6 of the foundations review: the task said nothing of the GitHub milestone the pull"
+		+ "request must carry, which"
+		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle rules"
+		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
+	SOURCE "F6 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 
 TASK B14
 	TITLE "Pull-request tracking in the tick"
@@ -988,6 +1011,10 @@ TASK B14
 	SPEC "the worktree the scheduler cut for the task is removed once its pull request is merged or"
 		+ "closed, never while a run holds it"
 	AFTER @TASK.B12
+	AFTER @TASK.B75
+	RATIONALE "it follows @TASK.B75: the forge facts it reads and the ledger events it records run"
+		+ "as the configured forge account, F5 of the foundations review"
+		REF @TASK.B75
 	RATIONALE "the removal of the worktree sits here and not on @TASK.B12 because merged or closed"
 		+ "is a forge fact this task reads; the scheduler sees git alone, which shows no closed"
 		+ "pull request"
@@ -1012,8 +1039,14 @@ TASK B16
 	ROLE bastien
 	ROLE lex
 	SPEC "the verify slot receives the verification package and posts approve or request changes"
-		+ "through verdict, as the configured forge account, recorded in the ledger event"
+		+ "through verdict, recorded in the ledger event"
 	AFTER @TASK.B15
+	AFTER @TASK.B75
+	RATIONALE "the clause \"as the configured forge account\" moved to @TASK.B75, which hands the"
+		+ "account's token to every gh subprocess and records the account on every write, F5 of the"
+		+ "foundations review; this task follows it"
+		REF @TASK.B75
+	SOURCE "F5 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 
 TASK B17
 	TITLE "Auto-merge into integration and scheduling of dependents"
@@ -1025,6 +1058,10 @@ TASK B17
 	SPEC "the task becomes merged"
 	SPEC "its dependents become startable in the same tick"
 	AFTER @TASK.B16
+	AFTER @TASK.B75
+	RATIONALE "it follows @TASK.B75: the merge runs as the configured forge account, F5 of the"
+		+ "foundations review"
+		REF @TASK.B75
 
 TASK B18
 	TITLE "Repair paths"
@@ -1051,6 +1088,10 @@ TASK B19
 		+ "or relaunches it from its progress file when the adapter has none"
 	SPEC "ledger events wave.paused and wave.resumed"
 	AFTER @TASK.B14
+	AFTER @TASK.B71
+	RATIONALE "it follows @TASK.B71: the resume from a progress file rests on the client being able"
+		+ "to write it, F1 of the foundations review"
+		REF @TASK.B71
 
 TASK B20
 	TITLE "Built-in study wave-report"
@@ -1084,6 +1125,13 @@ TASK B21
 	AFTER @TASK.B18
 	AFTER @TASK.B19
 	AFTER @TASK.B20
+	AFTER @TASK.B71
+	AFTER @TASK.B81
+	RATIONALE "it follows @TASK.B71, the launch options and the real run rehearsed, F1 and F22 of"
+		+ "the foundations review, and @TASK.B81, the starter corpus the sandbox repository needs,"
+		+ "F15"
+		REF @TASK.B71
+		REF @TASK.B81
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"
@@ -1622,8 +1670,7 @@ TASK B46
 	MILESTONE @MILESTONE.M7
 	COMPONENT "adapters"
 	ROLE bastien
-	SPEC "the GitHub adapter wraps gh as today; the account it acts as is config.toml's and the"
-		+ "ledger records it on every write"
+	SPEC "the GitHub adapter wraps gh as today"
 	SPEC "brigade doctor reports whether gh is active as the account config.toml names; a mismatch"
 		+ "is a warning with its fallback, the user's account recorded in the ledger"
 	SPEC "FORGE none runs a wave on local branches: the pass reads the acceptance results of task"
@@ -1631,14 +1678,18 @@ TASK B46
 		+ "integration is a git merge"
 	SPEC "the collectors pr-list, pr-threads and check-runs declare themselves absent under FORGE"
 		+ "none"
-	SPEC "Configuration gains back the field forge_account, which B65 removed while no command read"
-		+ "it; read_configuration stores the key it already accepts and type-checks"
 	AFTER @TASK.B02
 	AFTER @TASK.B17
 	AFTER @TASK.B42
+	RATIONALE "the account it acts as and the field forge_account moved to @TASK.B75, F5 of the"
+		+ "foundations review, which brings the account back before M1; this task keeps the local"
+		+ "mode and the doctor report, whose mismatch warning the refinement reconsiders once the"
+		+ "token of the configured account reaches every gh subprocess"
+		REF @TASK.B75
 	SOURCE "the user's ruling of 2026-10-06, \"ok\", on forge_account accepted and type-checked but"
 		+ "no longer stored until a command reads it, pull request #42"
 		REF @TASK.B65
+	SOURCE "F5 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 
 TASK B47
 	TITLE "Collector contract, runner and the built-in collectors"
@@ -2824,3 +2875,520 @@ TASK B70
 		+ "qu'un test échoue d'abord, donc une ligne de code doit avoir son test, je suis pas"
 		+ "d'accord là », then « oui » and « général » on the session's proposal"
 	DELIVERED_BY 49
+
+TASK B71
+	TITLE "Claude Code launch options: the permission mode dontAsk, the progress file the one write"
+		+ "granted beyond the role's capabilities, the role package handed as a file, rehearsed on"
+		+ "one real run that hands over"
+	STATUS todo
+	MILESTONE @MILESTONE.F0
+	COMPONENT "adapters"
+	ROLE bastien
+	SPEC "the launch argv of the Claude Code adapter carries --permission-mode dontAsk and no"
+		+ "--add-dir; brigade adapter launch-argv prints it, and a unit row of"
+		+ "tests/unit/adapters/clients/test_claude_code.py pins it"
+	SPEC "--allowedTools carries, beside the tools of the role's capabilities,"
+		+ "Write(/<progress_file>) and Edit(/<progress_file>), the absolute path of"
+		+ "runs/<id>/progress.md prefixed by one more slash as Claude Code's permission rules read"
+		+ "an absolute path; for a role whose capabilities are read alone, they are the only write"
+		+ "tools of the list; a unit row pins the list for a read-only role and for a role granted"
+		+ "write"
+	SPEC "the launch request of every client adapter gains progress_file, the absolute path of"
+		+ "runs/<id>/progress.md, and role.package_file, the absolute path of runs/<id>/role.md,"
+		+ "role.package kept and schema_version unchanged; the shapes of"
+		+ "brigade/system/client_shapes.py declare both and the fake adapter accepts them"
+	SPEC "the role package reaches Claude Code as role.package_file through"
+		+ "--append-system-prompt-file: no element of the launch argv holds the package text"
+	SPEC "brigade adapter resume-argv carries the same options as launch-argv, --resume <session>"
+		+ "added"
+	SPEC "one real run through brigade run on the reference machine, config.toml naming client ="
+		+ "\"claude-code\", of a rehearsal procedure given by the path of its Markdown file, whose"
+		+ "budget front matter is small enough that its first segment ends on the turn limit, on"
+		+ "the explore slot bound to a role whose capabilities are read alone: the first segment"
+		+ "hands over, runs/<id>/progress.md holds what the client wrote in it, the second segment"
+		+ "is a resume, and the procedure file, the ledger lines of that run, run.finished among"
+		+ "them, and the permission_denials of each segment's result are quoted in the pull request"
+		+ "body"
+	RATIONALE "F1 and F22 of the foundations review: brigade/adapters/clients/claude_code.py:57-67"
+		+ "builds claude --print --output-format json --model … --effort … --max-turns …"
+		+ "--append-system-prompt <package> --allowedTools … with no --permission-mode, while"
+		+ "run_segment.py:92-93 exports the progress file under $XDG_STATE_HOME/brigade/runs/<id>/,"
+		+ "outside the worktree the client runs in; claude_code.py:63-64 passes the whole package"
+		+ "inline in argv, visible in ps and bounded by the kernel's 128 KiB per argument, although"
+		+ "create_run_directory.py:38 already writes runs/<id>/role.md; the hand-over of @TASK.B06"
+		+ "and the resume of @TASK.B19 rest on the client writing the progress file"
+		REF @TASK.B06
+		REF @TASK.B19
+	RATIONALE "probed by the session on 2026-10-07 with claude 2.1.292, model haiku, the prompt on"
+		+ "stdin: with --allowedTools Read,Glob,Grep, acceptEdits let the client create a file and"
+		+ "dontAsk denied the Write, listed in permission_denials; with Write granted, dontAsk"
+		+ "wrote progress.md outside the working directory without --add-dir; with"
+		+ "Read,Glob,Grep,Write(//<state>/progress.md),Edit(//<state>/progress.md) under dontAsk,"
+		+ "progress.md was written and a Write into the working directory denied; without"
+		+ "--permission-mode the mode is the defaultMode of the user's settings, auto on the"
+		+ "reference machine, so the argv today grants whatever that setting grants"
+		REF @DECISION.TheClaudeCodeAdapterRunsInDontAskModeAndGrantsOnlyItsAllowedTools
+	RATIONALE "--append-system-prompt-file is accepted by claude 2.1.292 though its --help lists it"
+		+ "only as --append-system-prompt[-file]: on a missing file it prints \"Append system"
+		+ "prompt file not found\" and exits 1; on a resume the system prompt recorded at the first"
+		+ "request is sent again (--system-prompt-snapshot on by default), so the option on"
+		+ "resume-argv keeps the two argvs alike and changes nothing the client sends"
+	RATIONALE "the rehearsal is the one way to meet the risk R1 of the review before @TASK.B21: no"
+		+ "test launches a real client, every launch being the fake adapter of SPEC 6 of @TASK.B42,"
+		+ "as DESC 7 of @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters leaves the real client"
+		+ "to the rehearsal; a read-only role is the case the progress grant exists for, and the"
+		+ "explore slot the cheapest; the budget is read from the procedure's front matter"
+		+ "(brigade/runs/resolve_procedure.py:104) and brigade run takes the path of a Markdown"
+		+ "file as its procedure; @TASK.B19 and @TASK.B21 follow this task"
+		REF @TASK.B21
+		REF @TASK.B42
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+		REF @TASK.B19
+	RATIONALE "the user ruled on 2026-10-07, refining this draft: dontAsk, not acceptEdits; no"
+		+ "--add-dir; the rehearsal on a read-only slot alone; the request fields added beside"
+		+ "role.package rather than replacing it, so that no other adapter changes and the request"
+		+ "keeps schema_version 1"
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F1 and F22 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's answers of 2026-10-07 at the refinement of this task: dontAsk, remove"
+		+ "--add-dir, a read-only slot for the rehearsal, fields added to the request"
+
+TASK B72
+	TITLE "ProcessRecord carries the duration, and --verbose on the common options prints every"
+		+ "subprocess argv, exit code and duration on stderr"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "system"
+	ROLE bastien
+	SPEC "ProcessRecord of brigade/system/run_process.py carries duration_ms, the integer"
+		+ "milliseconds between the start and the end of the subprocess measured with"
+		+ "time.monotonic"
+	SPEC "--verbose is declared once on the common options next to --json and accepted by every"
+		+ "subcommand; brigade <command> --verbose prints on stderr one line per subprocess the"
+		+ "command ran, its argv, its exit code and its duration in milliseconds, and stdout"
+		+ "carries the document alone"
+	SPEC "without --verbose stderr carries no such line; under --json --verbose the lines still go"
+		+ "to stderr and stdout stays the JSON document"
+	AFTER @TASK.B82
+	RATIONALE "F2 of the foundations review: run_process.py:19-25 declares ProcessRecord with argv,"
+		+ "cwd, exit code, stdout and stderr and no duration; cli.py:78-83 declares --json alone on"
+		+ "the common options; 0 occurrences of verbose under brigade/; DESC 1 of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa reads \"exit code,"
+		+ "stdout, stderr and duration\" and DESC 5 \"--verbose prints every subprocess argv, exit"
+		+ "code and duration on stderr\"; plan section 4 line 253 and section 16 line 752"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	RATIONALE "the risk R4 of the review: without the trail a failing unattended tick leaves no"
+		+ "subprocess record, the ledger run.finished carrying the client's duration_ms alone,"
+		+ "run_segments.py:64"
+	RATIONALE "the alternative the report offers for the refinement round: DESC 1 and 5 of the"
+		+ "decision amended to drop the duration and --verbose until the tick needs a trail"
+	RATIONALE "it follows @TASK.B82, which moves the parsers into the command modules and keeps the"
+		+ "common options parent parser in cli.py, where --verbose is added once; what the line of"
+		+ "a run spawned detached by spawn_process carries, its exit code and duration being known"
+		+ "at wait only, is left to the refinement"
+		REF @TASK.B82
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F2 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B73
+	TITLE "Runtime carries the resolver and the renderer, the commands resolve the plugins and the"
+		+ "core receives resolved objects, and every public function annotates runtime: Runtime"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE bastien
+	SPEC "Runtime of brigade/runtime.py carries, besides run_process, paths, now and entry_point,"
+		+ "the plugin resolver and the renderer of the command; build_runtime is called in cli.py"
+		+ "alone"
+	SPEC "run_segment, run_segments and plan_run receive the resolved client object as an argument,"
+		+ "RunPlan carrying it, and call neither ask_named_client nor resolve_plugin; the command"
+		+ "module run resolves the client once through the runtime's resolver and passes it"
+	SPEC "a guard of tests/guards parses every module with ast and fails on a call of"
+		+ "resolve_plugin or of the runtime's resolver outside brigade/cli.py and brigade/commands/"
+	SPEC "run_segment has its unit test at tests/unit/runs/test_run_segment.py, passing a client"
+		+ "double and spawning no real process"
+	SPEC "every public function of brigade/ whose parameter is named runtime annotates it runtime:"
+		+ "Runtime, run_segment.py, plan_run.py, resolve_role.py, commands/doctor.py and every"
+		+ "command module among them; grep -rn \"runtime[,)]\" brigade/ --include=*.py prints no"
+		+ "def line without the annotation"
+	AFTER @TASK.B82
+	RATIONALE "F3 of the foundations review: run_segment.py:54-55 and plan_run.py:164 resolve the"
+		+ "client by name at each call through ask_named_client, whose line 15 calls"
+		+ "resolve_plugin, and runtime.py:11-16 holds run_process, paths, now and entry_point only,"
+		+ "no resolver and no renderer; DESC 5 of"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported reads \"the commands"
+		+ "build the runtime: paths, clock, process runner, renderer, resolver; a core function"
+		+ "receives resolved plugin objects as arguments and resolves nothing itself\"; the debt"
+		+ "costs now: run_segment has no unit test and every launch test goes through the CLI and"
+		+ "the fake"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	RATIONALE "F10 of the review: the runtime parameter of the public functions carries no"
+		+ "annotation, run_segment.py:72, plan_run.py:152, resolve_role.py:209,"
+		+ "commands/doctor.py:151 and every command module; DESC 7 of"
+		+ "@DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents reads \"public"
+		+ "functions, dataclasses and plugin operations carry type annotations read by the IDE\";"
+		+ "the two findings touch the same signatures and are one task"
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+	RATIONALE "the alternative the report offers for the refinement round: DESC 5 of the plugins"
+		+ "decision amended to \"the commands resolve, the core receives a name and the resolver\""
+	RATIONALE "it follows @TASK.B82, which restructures every command module and cli.py, so that"
+		+ "the resolution moved into the commands is written once into their final shape"
+		REF @TASK.B82
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F3 and F10 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B74
+	TITLE "One from_document and to_document pair per document kind: frozen dataclasses inside the"
+		+ "core, dicts at the edges"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "system"
+	ROLE bastien
+	SPEC "every document kind the core reads or writes, the client answers probe, launch, result,"
+		+ "resume and transcripts, the ledger event, the run record and result, the heartbeat"
+		+ "tick.json and the snapshot of the tick, has one module declaring its frozen dataclass"
+		+ "with a from_document and a to_document function; from_document is called once where the"
+		+ "document enters, after the validator, and to_document once where it leaves"
+	SPEC "inside the core no function takes or returns a document as a dict: SegmentRecord.result"
+		+ "of run_segment.py, the record read_ledger.py yields and the probe answer plan_run.py"
+		+ "reads are dataclass instances; dicts remain in the command modules, the adapters, the"
+		+ "validator and the pairs"
+	SPEC "to_document(from_document(document)) returns the document for every fixture of"
+		+ "tests/cli/fixtures of each kind, one unit test per pair proving it"
+	SPEC "build_snapshot of the tick has its from_document next to its to_document"
+	AFTER @TASK.B82
+	AFTER @TASK.B73
+	RATIONALE "F4 of the foundations review, medium and cross-cutting: run_segment.py:24 declares"
+		+ "result: dict, plan_run.py:164 reads [...][\"features\"], read_ledger.py:26 declares"
+		+ "record: dict, build_snapshot.py:13-14 has a to_document without from_document, and every"
+		+ "command module passes dicts; the validator runs on entry, ask_client.py:18,"
+		+ "read_ledger.py:63-66, read_heartbeat.py:25, and the conformity stops there; DESC 4 of"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry reads \"inside the"
+		+ "core a document becomes a frozen dataclass through one from_document and to_document"
+		+ "pair per kind; dicts stay at the edges\""
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "the alternative the report offers for the refinement round: DESC 4 narrowed to the"
+		+ "kinds the core computes with, the snapshot, the actions and the plan JSON of @TASK.B10,"
+		+ "the dict kept at the edges for adapter answers and ledger records"
+		REF @TASK.B10
+	RATIONALE "it precedes @TASK.B12, the risk R3 of the review: the snapshot and the action"
+		+ "vocabulary of the scheduler would each add a dict-shaped API unless the dataclass"
+		+ "convention is set first; it follows @TASK.B73, which rewrites the signatures of"
+		+ "run_segment and plan_run, and @TASK.B82 for the command modules"
+		REF @TASK.B12
+		REF @TASK.B73
+		REF @TASK.B82
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F4 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B75
+	TITLE "The forge account of config.toml stored and its token handed to every gh subprocess, so"
+		+ "that reviews and merges run as the configured account, recorded in the ledger on every"
+		+ "write"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "adapters"
+	ROLE bastien
+	SPEC "Configuration of brigade/system/read_configuration.py stores forge_account, the key"
+		+ "config.toml already accepts and type-checks; forge_account leaves UNREAD_STRING_KEYS"
+	SPEC "every gh subprocess of the GitHub forge adapter runs with GH_TOKEN set to the token gh"
+		+ "auth token --user <forge_account> prints, read once per command through the runner;"
+		+ "without forge_account the environment carries no GH_TOKEN and gh acts as its active"
+		+ "account"
+	SPEC "every write of the forge adapter, a review posted, a pull request opened, a merge,"
+		+ "records in its ledger event the login the write ran as, forge_account when set, else the"
+		+ "active account gh api user prints"
+	SPEC "tests/cli proves the environment of the gh subprocess with a fake gh on PATH that prints"
+		+ "its GH_TOKEN: with forge_account set, the token the fake gh auth token call printed;"
+		+ "without it, no GH_TOKEN"
+	AFTER @TASK.B77
+	RATIONALE "F5 of the foundations review, medium: the verify verdict and the merges of M1,"
+		+ "@TASK.B16 and @TASK.B17, would run gh as whatever account gh holds active, the runner"
+		+ "passing a whitelisted environment without GH_TOKEN, build_process_environment.py:3-4,"
+		+ "and the user's wrapper that injects the machine account living in ~/.zshrc under"
+		+ "$CLAUDECODE, which brigade's subprocesses never see; the live brigade doctor of"
+		+ "2026-10-07 printed forge ok gh as the user's account; SPEC 7 of @TASK.B65 accepts"
+		+ "forge_account and stores it no longer, read_configuration.py:9, until \"the task whose"
+		+ "command reads one adds its field back\", and the field came back in SPEC 5 of @TASK.B46,"
+		+ "M7; DESC 2 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites reads \"gh with"
+		+ "the machine account, else the user's gh account recorded in the ledger on every write\";"
+		+ "plan section 18 lets the forge account merge into integration/* only"
+		REF @TASK.B16
+		REF @TASK.B17
+		REF @TASK.B65
+		REF @TASK.B46
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "the option taken: the field comes back here, before M1, and @TASK.B14, @TASK.B16 and"
+		+ "@TASK.B17 follow this task; SPEC 5 of @TASK.B46 and the account clause of its SPEC 1 are"
+		+ "removed in the same change, B46 keeping the local mode and the doctor report; the"
+		+ "alternative the report offers for the refinement round: forge_account stored by B14 or"
+		+ "B16, or B46 moved to M1 before B16"
+		REF @TASK.B14
+		REF @TASK.B46
+	RATIONALE "gh auth token --user names no account of its own: the account reaches brigade as"
+		+ "configuration the user supplies, which keeps brigade free of its author's machine, and"
+		+ "the token never crosses the whitelist of the runner, the adapter adding it to the"
+		+ "environment of its own subprocesses as DESC 1 of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa allows, \"what the"
+		+ "adapter adds\""
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	RATIONALE "it follows @TASK.B77, which passes the frozen Configuration record down to the"
+		+ "functions that need it, the forge adapter among them"
+		REF @TASK.B77
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F5 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's ruling of 2026-10-06, \"ok\", on forge_account accepted and type-checked but"
+		+ "no longer stored until a command reads it, pull request #42, which SPEC 7 of @TASK.B65"
+		+ "records"
+		REF @TASK.B65
+
+TASK B76
+	TITLE "The forge and the scheduler kinds resolve an executable brigade-<kind>-<name> on PATH as"
+		+ "the client kind does"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "system"
+	ROLE bastien
+	SPEC "resolve_plugin(\"forge\", name, runtime) and resolve_plugin(\"scheduler\", name, runtime)"
+		+ "search brigade-forge-<name> and brigade-scheduler-<name> on the executable search path"
+		+ "of the paths before the built-in modules, as _resolve_client does for"
+		+ "brigade-client-<name>"
+	SPEC "an executable forge or scheduler answers the kind's operations as JSON documents on stdin"
+		+ "and stdout through the same caller as a client executable, validated on entry"
+	SPEC "a unit test per kind proves the resolution with a fake executable on a temporary PATH,"
+		+ "and a name matching no executable and no module raises the error naming both"
+	RATIONALE "F7 of the foundations review: resolve_plugin.py:50-54 resolves forge and scheduler"
+		+ "from the built-in modules alone, and lines 73-77 give the PATH search to the client kind"
+		+ "only; DESC 1 of @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported"
+		+ "reads \"a built-in plugin is a module under its kind's package, an external one an"
+		+ "executable brigade-<kind>-<name> on PATH\"; plan section 11 line 524; @TASK.B46, M7, is"
+		+ "the first to need it"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+		REF @TASK.B46
+	RATIONALE "the alternative the report offers for the refinement round: DESC 1 of the decision"
+		+ "amended to \"executables on PATH for the client kind until a second forge or scheduler"
+		+ "exists\", or the resolution given to B46"
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F7 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B77
+	TITLE "config.toml read once per command into a frozen record passed down, and the names of the"
+		+ "machine's files and directories owned in one place"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "system"
+	ROLE bastien
+	SPEC "a command that needs config.toml reads it once, in its command module, and passes the"
+		+ "Configuration record to resolve_role, plan_run, roles_list and ask_configured_client,"
+		+ "which take it as an argument and parse no file; grep -rn read_configuration brigade/"
+		+ "prints its module, the command modules and nothing else"
+	SPEC "the lookup of resolve_role carries the Configuration record in place of the configuration"
+		+ "path; a unit test of tests/unit/roles/test_resolve_role.py resolves a role with a record"
+		+ "and no file on disk"
+	SPEC "the names of the files and directories of the machine state, config.toml, locks,"
+		+ "tick.json, runs and the others, are declared once, in brigade/system/paths or in one"
+		+ "locations module per component; grep -rn over brigade/ finds each literal in one module"
+	AFTER @TASK.B82
+	RATIONALE "F8 of the foundations review: config.toml is parsed again at each role lookup,"
+		+ "resolve_role.py:128 and 140, and in each command that needs it, plan_run.py:154,"
+		+ "commands/roles_list.py:13, ask_configured_client.py:19, so that brigade run parses it in"
+		+ "plan_run and then once per agent lookup; DESC 3 of"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables reads \"config.toml"
+		+ "is read with tomllib into one frozen record\""
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	RATIONALE "F9 of the review: CONFIGURATION_FILE = \"config.toml\" is declared in 9 modules,"
+		+ "ask_configured_client.py:8, adapter_matrix.py:9, doctor.py:23, init.py:13,"
+		+ "prepare_project_tree.py:10, plan_run.py:21, resolve_role.py:14, roles_list.py:7,"
+		+ "scheduler_install.py:12, \"locks\" in 4, ledger_locations.py:2, change_registry.py:6,"
+		+ "prepare_project_tree.py:13, commands/tick.py:21, and \"tick.json\" in 2;"
+		+ "brigade/system/paths.py builds the roots and stops there; the title of the same decision"
+		+ "reads \"resolved in one place\"; the two findings edit the same modules and are one task"
+	RATIONALE "it follows @TASK.B82, which restructures the command modules it edits"
+		REF @TASK.B82
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F8 and F9 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B78
+	TITLE "_find_named_agent lets a ToolFailure of awawa through; only an unknown entity reads as"
+		+ "not found"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "roles"
+	ROLE bastien
+	SPEC "resolve_role on a slot whose agent is named lets a ToolFailure of awawa, a corpus that"
+		+ "fails lint, an unreadable file, an exit other than not found, propagate as the error"
+		+ "naming the command and its stderr; it tries the next source only when awawa answers that"
+		+ "the entity is unknown"
+	SPEC "a unit test of tests/unit/roles/test_resolve_role.py proves both: an unknown entity falls"
+		+ "through to the next source, a failing corpus raises"
+	SPEC "brigade roles show <slot> against an instructions corpus that fails lint exits 1 with"
+		+ "awawa's message on stderr, not with a built-in role"
+	RATIONALE "F11 of the foundations review: resolve_role.py:143-148 turns a ToolFailure of awawa"
+		+ "while reading a named AGENT entity into \"not found\" and tries the next source, so that"
+		+ "an unlinted instructions corpus and an unknown entity read alike, and a diagnosis in M1"
+		+ "would read \"a role found nowhere\"; the rule unattended_procedure_never_assumes of the"
+		+ "instructions corpus, which plan section 1 principle 6 adopts"
+	RATIONALE "awawa show exits 1 on an unresolved target and on a lint error alike: how the"
+		+ "gateway tells them apart, by the message or by a status call first, is left to the"
+		+ "refinement"
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F11 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B79
+	TITLE "runs logs without --tail and roles show bounded: the whole text stays in a file and the"
+		+ "document carries its path and a summary"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "commands"
+	ROLE bastien
+	SPEC "brigade runs logs <id> without --tail returns a document carrying, per segment, the path"
+		+ "of its stdout and stderr files under runs/<id>/ and their line counts, and no line; with"
+		+ "--tail N it returns the last N lines as today"
+	SPEC "brigade roles show <slot> writes the resolved role file atomically to a file under"
+		+ "$XDG_STATE_HOME/brigade/ and returns the front matter, the path of that file and the"
+		+ "line count of the body, not the body"
+	SPEC "the text rendering of each prints the summary and the path; --json prints the same"
+		+ "document"
+	AFTER @TASK.B82
+	RATIONALE "F12 of the foundations review: commands/runs_logs.py:6-11 and"
+		+ "runs/read_run_logs.py:32-35 return the whole text when --tail is absent, and"
+		+ "commands/roles_show.py returns the body in the document; DESC 2 of"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable reads \"a"
+		+ "document is bounded: a long result goes to a file under $XDG_STATE_HOME/brigade/ and the"
+		+ "document carries its path and a summary\""
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "the alternative the report offers for the refinement round: DESC 2 amended so that"
+		+ "runs logs and roles show are bounded by their reader, --tail and --json, the file rule"
+		+ "holding for the documents of M1"
+	RATIONALE "it follows @TASK.B82, which restructures the two command modules"
+		REF @TASK.B82
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F12 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B80
+	TITLE "The README sentence on coverage names the fail_under threshold of .coveragerc"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "docs"
+	ROLE bastien
+	SPEC "the sentence of README.md on the CI's coverage job no longer reads \"failing on no"
+		+ "threshold\": it names fail_under of .coveragerc as the threshold the job fails below and"
+		+ "says the threshold is never lowered; it quotes no figure, .coveragerc being the figure's"
+		+ "home"
+	SPEC "grep -n threshold README.md prints that sentence and no sentence contradicting"
+		+ ".coveragerc"
+	RATIONALE "F13 of the foundations review: README.md:266-268 reads \"a report read in the job"
+		+ "log only and failing on no threshold\" while .coveragerc:7 sets fail_under = 93 since"
+		+ "@TASK.B70; DESC 6 of"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade reads \"coverage"
+		+ "fails the run below the fail_under of .coveragerc\" and \"a threshold, once set, is"
+		+ "never lowered\""
+		REF @TASK.B70
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F13 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B81
+	TITLE "brigade project add --init-corpus writes a starter corpus into the project's corpus"
+		+ "folder on a branch and opens the pull request"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "registry"
+	ROLE bastien
+	SPEC "brigade project add <path> --init-corpus, on a repository whose corpus folder holds no"
+		+ ".awawa file, writes the starter corpus brigade ships as a resource, a schema declaring"
+		+ "the entity types a wave needs, into that folder on a branch, formats and lints it"
+		+ "through the corpus gateway, commits, pushes and opens a pull request through the forge"
+		+ "adapter; the document carries the branch and the pull request number"
+	SPEC "without --init-corpus project add writes no corpus; with it, on a corpus folder that"
+		+ "already holds a .awawa file, it refuses naming the folder and exits 1"
+	SPEC "the registration itself proceeds as today, and the project entity records the corpus"
+		+ "folder as @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus sets"
+	SPEC "tests/integration proves the write on a real git repository in a temporary directory;"
+		+ "tests/cli proves the refusal and the document, gh doubled by a fake executable on PATH"
+	AFTER @TASK.B82
+	RATIONALE "F15 of the foundations review: plan section 13 line 699 and the registry row of"
+		+ "section 16 name brigade project add --init-corpus, and none of the 48 task texts the"
+		+ "review read, M0, M1, M2, M6, M7 and B41, names it; @TASK.B21 needs it for \"a throwaway"
+		+ "repository with a starter corpus\" and @TASK.B45 for a project without a corpus; B21"
+		+ "follows this task"
+		REF @TASK.B21
+		REF @TASK.B45
+		REF @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
+	RATIONALE "the alternative the report offers for the refinement round: an amendment of"
+		+ "@TASK.B21 instead of a task of its own; what the starter corpus declares, the types the"
+		+ "plan names, TASK, WAVE, DECISION, OPEN_QUESTION, or those brigade's tick reads, is"
+		+ "settled at the refinement"
+		REF @TASK.B21
+	RATIONALE "it follows @TASK.B82, which restructures the command module and the parser it"
+		+ "extends"
+		REF @TASK.B82
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F15 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+
+TASK B82
+	TITLE "Each command module declares its parser, its renderer and its exit decision; cli.py"
+		+ "registers them; no renderer or helper module beside the command modules"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "commands"
+	ROLE bastien
+	SPEC "each module of brigade/commands/ exports its one public function and declares, as a"
+		+ "module-level frozen record, the arguments of its subcommand, its request reader, its"
+		+ "text renderer and its exit decision, the reader, the renderer and the decision being"
+		+ "underscored helpers of the module"
+	SPEC "brigade/cli.py builds the parser from those declarations, keeps the common options parent"
+		+ "parser and the exception-to-exit-code table, and holds no _add_<area>_parser function"
+		+ "and no hand-written table of commands; adding a command touches its command module, one"
+		+ "registration line and its tests"
+	SPEC "brigade/commands/ holds one module per command and nothing else: no render_*.py, no"
+		+ "describe_skipped_lines.py, format_steps_line.py or prepare_project_tree.py beside them;"
+		+ "a helper two commands share lives in the component it serves"
+	SPEC "tests/cli passes with no change to its expectations: the command lines, the documents,"
+		+ "the text renderings and the exit codes are those of the head this task starts from"
+	RATIONALE "F26 of the foundations review: 22 renderers and 3 helpers live beside the 22 command"
+		+ "modules of brigade/commands/; DESC 3 of"
+		+ "@DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents reads"
+		+ "\"brigade/commands/ one module per command\"; F27: every parser is hand-written in"
+		+ "cli.py, 10 _add_<area>_parser functions beside the 26-entry COMMANDS table of"
+		+ "cli.py:355-395, 469 lines for 12 commands, while plan section 16 lists about 60"
+		+ "subcommands, so the file heads for 1 500 lines and commands/ for 150 modules on the same"
+		+ "pattern; no decision rules F27, the finding is evolvability, to settle before the"
+		+ "subcommands of M1"
+		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+	RATIONALE "the shape keeps DESC 1 of"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable, one function"
+		+ "(request, runtime) -> document per command module, and DESC 4 of the flat-package"
+		+ "decision, one public function per module with the constants and frozen dataclasses it"
+		+ "declares and its helpers underscored: the arguments, the renderer and the exit decision"
+		+ "are a declared record and underscored helpers; DESC 3's \"brigade/cli.py the parser and"
+		+ "the exit mapping\" holds for the parser cli.py builds from the declarations and the"
+		+ "exception table it keeps"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "the alternatives the report offers for the refinement round: DESC 3 of the"
+		+ "flat-package decision amended to say where the renderers and the helpers of a command"
+		+ "live, and a decision ruling the declaration shape before the subcommands of M1"
+	RATIONALE "it goes first in F0: @TASK.B72, @TASK.B73, @TASK.B74, @TASK.B77, @TASK.B79 and"
+		+ "@TASK.B81 each edit command modules or cli.py and follow it, so that each writes into"
+		+ "the final shape once rather than being moved by it; @TASK.B71, @TASK.B75, @TASK.B76,"
+		+ "@TASK.B78 and @TASK.B80 touch neither and run in parallel with it"
+		REF @TASK.B72
+		REF @TASK.B73
+		REF @TASK.B74
+		REF @TASK.B77
+		REF @TASK.B79
+		REF @TASK.B81
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; F26 and F27 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"

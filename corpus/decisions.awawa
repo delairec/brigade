@@ -1247,3 +1247,25 @@ DECISION ThePidOfARunIsReplacedAtomically
 		+ "slower suite would only hide it"
 	SOURCE "pull request #45 of the brigade repository, delivering @TASK.B69"
 		REF @TASK.B69
+
+DECISION TheClaudeCodeAdapterRunsInDontAskModeAndGrantsOnlyItsAllowedTools
+	TITLE "the Claude Code adapter launches the client in the permission mode dontAsk, so"
+		+ "--allowedTools is the whole grant of a run"
+	STATUS active
+	DESC "every launch and resume argv of the Claude Code adapter carries --permission-mode"
+		+ "dontAsk: a tool call outside --allowedTools is denied, never prompted, never accepted by"
+		+ "the mode"
+		REF @TASK.B71
+	DESC "--allowedTools holds the tools of the role's capabilities, and Write and Edit scoped to"
+		+ "the run's progress file, the one write a role is granted beyond its capabilities"
+	DESC "the argv passes no --add-dir: the grants of --allowedTools reach the run directory"
+		+ "without it"
+	REJECTED "acceptEdits, the mode plan section 17 names: a role granted Read,Glob,Grep alone"
+		+ "created a file under it, so a read-only role would write"
+	REJECTED "no --permission-mode: the mode is then the defaultMode of the user's settings, a"
+		+ "setting of the machine brigade runs on, not of brigade"
+	REJECTED "--add-dir on the state root: not needed for the progress file, and it opens the"
+		+ "ledger and every other run to the client"
+	SOURCE "the user's answers of 2026-10-07 at the refinement of @TASK.B71, on the probes the"
+		+ "session ran with claude 2.1.292"
+		REF @TASK.B71

@@ -33,3 +33,16 @@ MILESTONE M7
 MILESTONE M8
 	TITLE "Recipes"
 	STATUS planned
+
+MILESTONE F0
+	TITLE "fix-foundations"
+	STATUS planned
+	DESC "the fixes of the findings of the foundations review of M0, one draft task per finding or"
+		+ "pair of findings, each bringing the code back to the decision it departs from"
+	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
+		+ "fix the issues reported by max in this milestone\"; the report"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the GitHub milestone fix-foundations, number 2, created by the user on 2026-10-07: by"
+		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle the GitHub"
+		+ "milestone is named after this TITLE"
+		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
