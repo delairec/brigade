@@ -1147,17 +1147,47 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B49"
 
-DECISION TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
-	TITLE "a test that needs awawa skips when awawa is not on PATH; the CI installs no awawa; the"
-		+ "tests that need it run locally before a push"
+DECISION TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
+	TITLE "the CI installs awawa from the asset of a private release, pinned to one version, so"
+		+ "that no test that needs awawa skips there and a corpus job runs fmt --check and lint"
+		+ "--strict; brigade embeds no awawa"
 	STATUS active
-	DESC "a test that needs awawa skips when awawa is not on PATH"
-	DESC ".github/workflows/ci.yml installs no awawa: the tests that need it are skipped there"
-	DESC "the tests that need awawa run locally before a push"
-	REJECTED "installing awawa in .github/workflows/ci.yml: the user ruled for the local run alone"
-	RATIONALE "the user ruled for the local run alone and gave no further reason; the ruling is"
-		+ "recorded so that no review proposes installing awawa in the CI again"
-	SOURCE "the user's ruling of 2026-10-06 during wave M0"
+	DESC "a test that needs awawa skips when awawa is not on PATH, so that the suite still runs on"
+		+ "a machine without it"
+	DESC ".github/workflows/ci.yml downloads the awawa binary, its version pinned, from the asset"
+		+ "of a release of a private repository of the user, with the token the workflow already"
+		+ "holds, before every job that runs the tests or the corpus checks; the repository holding"
+		+ "the release is named by @TASK.B95"
+		REF @TASK.B95
+	DESC "a corpus job runs awawa fmt --check and awawa lint --strict on every pull request and"
+		+ "every push to main"
+	DESC "the tests that need awawa still run locally before a push"
+	DESC "brigade embeds no awawa: awawa stays a prerequisite by"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, wrapped as it is by"
+		+ "@DECISION.AwawaIsWrappedAsItIs"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+		REF @DECISION.AwawaIsWrappedAsItIs
+	DESC "binds @TASK.B95 and @TASK.B96"
+		REF @TASK.B95
+		REF @TASK.B96
+	REJECTED "the CI without awawa, the ruling of 2026-10-06: pull request #52 merged with two L016"
+		+ "that broke awawa lint --strict on main, and every CI job skipped 70 tests, OK"
+		+ "(skipped=70) on main 3deeea2 and on #56"
+	REJECTED "awawa embedded in dist/brigade.pyz or in the repository: a zipapp cannot reasonably"
+		+ "carry a 1.6 MB native ELF, and awawa is a prerequisite wrapped as it is"
+	REJECTED "a Docker image carrying awawa for the CI: heavier than one release asset downloaded"
+		+ "in about five lines of YAML"
+	REJECTED "a public copy of awawa: a third party's tool; the copy stays private, as the private"
+		+ "repository allows"
+	RATIONALE "the user ruled on 2026-10-07: brigade will not embed awawa, the repository"
+		+ "delairec/brigade is private (gh repo view delairec/brigade --json visibility prints"
+		+ "PRIVATE), so a private copy costs little, and the licence of awawa allows it, which the"
+		+ "user confirmed; the incident of #52 is the evidence the ruling of 2026-10-06 lacked"
+	SOURCE "the user's words of 2026-10-07, \"A moins que ça ne coute rien d'avoir une copie"
+		+ "d'awawa embarquée, mais je ne sais pas ce qu'il faut faire pour que ça marche. Via"
+		+ "docker peut être? Si on peut l'avoir en privé\", and the answer chosen, \"Copie privée"
+		+ "(licence OK)\""
+	SOURCE "the user's ruling of 2026-10-06 during wave M0, the earlier form, replaced in place"
 
 DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	TITLE "a run keeps one directory under runs/<id>/ for all its segments, one folder"
@@ -1211,9 +1241,12 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC ".github/workflows/ci.yml declares permissions: contents: read at its top level and"
 		+ "persist-credentials: false on every actions/checkout step"
-	DESC "coverage fails the run below the fail_under of .coveragerc, which @TASK.B70 sets at the"
-		+ "figure of the CI once the real figure is known; a threshold, once set, is never lowered"
+	DESC "coverage fails the run below the fail_under of .coveragerc: @TASK.B70 set it at the"
+		+ "figure of the CI without awawa, 93, and @TASK.B96 sets it at 100 once awawa reaches the"
+		+ "CI by @TASK.B95; a threshold, once set, is never lowered"
 		REF @TASK.B70
+		REF @TASK.B96
+		REF @TASK.B95
 	DESC "ruff check and ruff format --check run locally before a push wherever a ruff binary is"
 		+ "present, on the same ruff.toml, the version pinned in requirements-ci.txt giving the"
 		+ "verdict that counts; zizmor, semgrep and vulture run in the CI only; coverage runs in"
@@ -1253,12 +1286,12 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		+ "function per module, an uncalled function is a dead module"
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	RATIONALE "the user ruled on 2026-10-07, refining @TASK.B70, which measures coverage with the"
-		+ "tests that need awawa, skipped in the CI by"
-		+ "@DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa: coverage runs locally in"
-		+ "a virtual environment outside the repository, and the threshold is set at the figure of"
-		+ "the CI"
+		+ "tests that need awawa, skipped in the CI by the earlier form of"
+		+ "@DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere: coverage runs"
+		+ "locally in a virtual environment outside the repository, and the threshold is set at the"
+		+ "figure of the CI"
 		REF @TASK.B70
-		REF @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
+		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
 	SOURCE "the user's rulings of 2026-10-06 on the CI tooling proposals: \"tout ce que tu as mis"
 		+ "en oui\", then \"tout ce qui est utile est bon à prendre\""
 

@@ -37,8 +37,9 @@ MILESTONE M8
 MILESTONE F0
 	TITLE "fix-foundations"
 	STATUS planned
-	DESC "the fixes of the findings of the foundations review of M0, one draft task per finding or"
-		+ "pair of findings, each bringing the code back to the decision it departs from"
+	DESC "the fixes of the findings of the foundations review of M0 and of the first runs of"
+		+ "brigade on itself, one draft task per finding or pair of findings, each bringing the"
+		+ "code back to the decision it departs from"
 	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
 		+ "fix the issues reported by max in this milestone\"; the report"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
@@ -46,3 +47,11 @@ MILESTONE F0
 		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle the GitHub"
 		+ "milestone is named after this TITLE"
 		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
+
+MILESTONE ADD0
+	TITLE "post-mvp"
+	STATUS planned
+	DESC "improvements found while running brigade on itself that no milestone of the MVP needs,"
+		+ "planned after M8"
+	SOURCE "the user's words of 2026-10-07, \"on va créer une milestone \\\"post-mvp\\\" avec comme"
+		+ "id \\\"ADD0\\\" je pense\"; docs/follow-up/2026-10-07-b82-run.md, items 5, 6, 7 and 13"

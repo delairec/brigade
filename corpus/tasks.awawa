@@ -2846,12 +2846,12 @@ TASK B70
 		+ "= subprocess): coverage run -m unittest, coverage combine, coverage report -m, with"
 		+ "awawa on PATH, give TOTAL 3679 statements, 94 missed, 594 branches, 53 partial, 97%; the"
 		+ "coverage job of the CI reports 89% at the same commit because 64 tests skip without"
-		+ "awawa, as @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa binds; the local"
-		+ "figure is the one this task brings to 100%; measured again at c7cdec5, the head of main"
-		+ "after @TASK.B69, the local run gives 3688 statements, 102 missed, 594 branches, 55"
+		+ "awawa, as @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere binds; the"
+		+ "local figure is the one this task brings to 100%; measured again at c7cdec5, the head of"
+		+ "main after @TASK.B69, the local run gives 3688 statements, 102 missed, 594 branches, 55"
 		+ "partial, 96%, and the CI run 37542826149 gives 89%, 318 missed"
 		REF @TASK.B66
-		REF @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
+		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
 		REF @TASK.B69
 	RATIONALE "the largest gaps of the report at 2dcbc20: brigade/system/spawn_process.py at 70%"
 		+ "(lines 22-30 _feed, 36, 61-62 ToolNotFound, 64 the stdin thread: no tested caller passes"
@@ -3564,5 +3564,398 @@ TASK B83
 	RATIONALE "left to the refinement: whether steps can be counted whole from the transcript of"
 		+ "the session, which the transcripts operation already reads, rather than reported null;"
 		+ "and whether total_cost_usd joins the ledger"
+	RATIONALE "a second occurrence on 2026-10-07: the review round of pull request #56, run"
+		+ "20261007T142949Z-327ab0, ran 10 min 23 s, brief at 16:29:50, stdout at 16:40:13, 2.10"
+		+ "USD, and the ledger of 2026-10 records 4 steps and 32 331 ms, the result object covering"
+		+ "only the turns after the last task notification; recorded in"
+		+ "docs/follow-up/2026-10-07-b82-run.md"
 	SOURCE "the user's answer of 2026-10-07, a draft in F0, on the session's report of the ledger"
 		+ "lines of run 20261007T101817Z-2ee96f"
+
+TASK B84
+	TITLE "A segment cut at the wall-time limit is measured: the session id is set at launch, and"
+		+ "its steps and its usage are read from the transcript"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "adapters"
+	ROLE ada
+	SPEC "the launch argv of the Claude Code adapter carries --session-id with a UUID brigade"
+		+ "generates, recorded for the segment before the client starts, so that the session of a"
+		+ "segment is known whatever ends it"
+	SPEC "a segment ending with outcome wall_limit is recorded in run.finished with its session id,"
+		+ "its steps counted from the transcript and its usage summed from it, read through the"
+		+ "transcripts operation of the adapter; steps and usage are null only when the transcript"
+		+ "cannot be read, nulls naming the reason"
+	SPEC "a unit row on a transcript fixture of a cut session pins the steps and the usage read;"
+		+ "the existing rows of tests/unit/adapters/clients/test_claude_code.py and of"
+		+ "tests/cli/test_run.py still pass"
+	AFTER @TASK.B83
+	RATIONALE "found on run 20261007T105605Z-396068, @TASK.B82 delivered by brigade run --slot"
+		+ "build awawa-task task=@TASK.B82 base=main, pull request #56: segment 1 ran 47 min and"
+		+ "was cut at the wall-time limit of 2 820 s; Claude Code writes its JSON result at the end"
+		+ "of the session only, so the cut lost it, and the run.finished line of segment 1 in the"
+		+ "ledger of 2026-10 holds session null, steps null, usage null and the reason \"cut at the"
+		+ "wall-time limit\"; segment 2, a fresh session resumed from progress.md, recorded 56"
+		+ "steps and 2.33 USD; the cost of segment 1 is unknown"
+		REF @TASK.B82
+	RATIONALE "@TASK.B83 records whole a session whose result object covers the turns after a task"
+		+ "notification, a different cause with the same effect, and leaves to its refinement"
+		+ "whether steps can be counted from the transcript; the transcripts operation of @TASK.B42"
+		+ "already reads a session's JSONL file by its id, which is what a cut segment lacks"
+		REF @TASK.B83
+		REF @TASK.B42
+	SOURCE "item 1 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B85
+	TITLE "A segment cut at the wall-time limit records a signal of its own, carrying the limit in"
+		+ "seconds, never budget_reached"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "a segment whose outcome is wall_limit appends to the ledger a signal.recorded event whose"
+		+ "signal names the wall-time cut and carries the limit in seconds the segment was held to;"
+		+ "budget_reached is appended only when the client reports its turn limit reached"
+	SPEC "the ledger lines of a segment cut at its limit and of one ending on the turn limit are"
+		+ "proven by unit rows on brigade/runs/run_segments.py, and the hand-over after a cut still"
+		+ "runs the next segment"
+	RATIONALE "the ledger of 2026-10 holds, for segment 1 of run 20261007T105605Z-396068,"
+		+ "run.finished outcome wall_limit followed by signal.recorded budget_reached budget 75,"
+		+ "though the segment ended on the clock, not on the step cap:"
+		+ "brigade/runs/run_segments.py:23-24 ends a segment on budget when the error class is the"
+		+ "turn limit or the outcome is wall_limit, and _describe_signal, lines 75-77, names"
+		+ "budget_reached for both; DESC 3 of"
+		+ "@DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap reads \"the segment"
+		+ "ends with outcome wall_limit, distinct from the step cap\""
+		REF @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
+	SOURCE "item 2 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B86
+	TITLE "brigade ledger counts runs and segments apart: a run cut and resumed counts once, by the"
+		+ "outcome of its last segment"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "ledger"
+	ROLE ada
+	SPEC "the overview of brigade ledger counts the runs finished by run id, the outcome of a run"
+		+ "being that of its last run.finished event, and counts the segments beside them; a run of"
+		+ "two segments ending wall_limit then done counts one run done and two segments"
+	SPEC "every view of brigade/ledger/ that reads run.finished events, describe_budgets,"
+		+ "describe_wave and describe_comparison, groups them by run through the function the"
+		+ "overview uses"
+	SPEC "the text rendering prints the runs by outcome and the segments as two lines, and the JSON"
+		+ "document carries both"
+	AFTER @TASK.B82
+	RATIONALE "brigade ledger printed on 2026-10-07 \"runs finished: done 3, failed 4, wall_limit"
+		+ "1\" on the ledger of 2026-10, the sum of its 8 run.finished events, one per segment: run"
+		+ "20261007T105605Z-396068 counts once as wall_limit, segment 1, and once as done, segment"
+		+ "2; brigade/ledger/describe_overview.py:10-18 counts the run.finished records by outcome,"
+		+ "one per segment, as the segment field of"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast makes them;"
+		+ "follows @TASK.B82, which moves the ledger renderers"
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+		REF @TASK.B82
+	SOURCE "item 3 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B87
+	TITLE "brigade doctor warns when the checkout it runs from is behind its upstream"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "install"
+	ROLE ada
+	SPEC "brigade doctor, run from a clone through bin/brigade or a link to it, reports as a"
+		+ "warning, never a finding, a checkout whose branch is behind its upstream as last"
+		+ "fetched, naming the checkout, its commit and the upstream's; a checkout up to date, a"
+		+ "detached one, a clone without an upstream and a brigade run from dist/brigade.pyz print"
+		+ "no such line, and the check never fetches"
+	SPEC "git is read through the runner and the git gateway, as every subprocess is;"
+		+ "tests/cli/test_doctor.py proves the warning on a temporary clone one commit behind a"
+		+ "bare upstream and its absence on one up to date"
+	AFTER @TASK.B82
+	RATIONALE "on 2026-10-07 ~/.local/bin/brigade was a link to bin/brigade of the main checkout of"
+		+ "the clone, which stood at 61100fd while origin/main stood at 3deeea2 with the fix of"
+		+ "@TASK.B71, pull request #52; the run of @TASK.B82 was launched from an extract of"
+		+ "origin/main instead; @TASK.B45 rehearses the install from dist/brigade.pyz in a fresh"
+		+ "account and plans no such check, and @TASK.B02 delivered doctor without it; the warning"
+		+ "form follows DESC 1 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, an"
+		+ "optional item reported with its fallback as a warning, never a finding"
+		REF @TASK.B71
+		REF @TASK.B82
+		REF @TASK.B45
+		REF @TASK.B02
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "item 4 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B88
+	TITLE "The extra arguments of brigade run are read the same way under every supported Python:"
+		+ "no path of brigade/ reachable under 3.11 alone"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "commands"
+	ROLE ada
+	SPEC "brigade run <procedure> key=value ..., with words after its options, gives one document"
+		+ "under Python 3.11 and 3.12, a test of tests/cli/test_run.py running on the matrix of the"
+		+ "CI proving it"
+	SPEC "no line or branch of brigade/cli.py or brigade/commands/run.py is reachable under 3.11"
+		+ "alone: the branch that 3.12 never reaches is removed, or the coverage job combines the"
+		+ "measures of 3.11 and 3.12 so that the 100 % of @TASK.B70 holds on the combined measure"
+	AFTER @TASK.B82
+	RATIONALE "found in the review of pull request #56: the extra arguments of brigade run after"
+		+ "its options, brigade/cli.py:179-184 and brigade/commands/run.py:52-53 at the head of"
+		+ "#56, are reachable under Python 3.11 only, since from 3.12 argparse hands those words to"
+		+ "the nargs=\"*\" positional; the coverage job of .github/workflows/ci.yml runs on 3.11"
+		+ "alone, python-version \"3.11\" at line 119, so the path counts as covered there and"
+		+ "never runs on 3.12"
+		REF @TASK.B70
+	SOURCE "item 10 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
+		+ "the user's words of 2026-10-07, \"seulement après la review on lancera lex pour"
+		+ "l'écriture dans le corpus\""
+
+TASK B89
+	TITLE "The help strings, the validation of runs logs --tail, the message of --since and the"
+		+ "modes of brigade tick are guarded by tests; an unknown tick mode is refused"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "tests"
+	ROLE ada
+	SPEC "a test of tests/cli reads brigade --help and the help of each group and asserts the help"
+		+ "each command record declares"
+	SPEC "the refusal of runs logs --tail with a value that is no positive count, and the message"
+		+ "of --since with a value that is no day, are asserted by tests of tests/cli"
+	SPEC "brigade/commands/tick.py dispatches once, dry-run and loop by name and raises on any"
+		+ "other mode, exiting by the exception-to-exit-code table and never entering the loop; a"
+		+ "unit test proves the refusal, and a test of tests/cli proves that brigade tick without a"
+		+ "mode exits 2"
+	AFTER @TASK.B82
+	AFTER @TASK.B79
+	RATIONALE "found in the review of pull request #56: no test reads brigade --help or the help of"
+		+ "a group, so the help strings the command records of @TASK.B82 declare are unguarded; the"
+		+ "validation of runs logs --tail and the message of --since are unasserted, both from"
+		+ "before B82; brigade/commands/tick.py:128-133 at the head of #56 sends any mode other"
+		+ "than once and dry-run into the loop, so a lost required=True makes brigade tick loop"
+		+ "forever, as a mutant of the implementing run did; @TASK.B79 rewrites runs logs without"
+		+ "--tail, and this task follows it"
+		REF @TASK.B82
+		REF @TASK.B79
+	SOURCE "item 11 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
+		+ "the user's words of 2026-10-07, \"seulement après la review on lancera lex pour"
+		+ "l'écriture dans le corpus\""
+
+TASK B90
+	TITLE "The review slot is the slot of the review round: the built-in reviewer answers the"
+		+ "review of a pull request, and a procedure that addresses the threads launches on it"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "roles"
+	ROLE ada
+	ROLE lex
+	SPEC "the built-in role of the review slot, brigade/roles/data/reviewer.md, declares the work"
+		+ "of answering the review of a pull request it did not review, with capabilities read,"
+		+ "write and shell, and its body says so; brigade roles lint stays green and brigade roles"
+		+ "show review prints it"
+	SPEC "the work of the verify slot stays the verdict on a pull request against its acceptance"
+		+ "criteria, as @TASK.B16 delivers it; no tenth slot is added"
+	SPEC "a run of a procedure that addresses the review threads of a pull request launches on the"
+		+ "review slot, proven by a test of tests/cli/test_run.py on the fake adapter"
+	RATIONALE "found while launching the review round of pull request #56 on 2026-10-07, run"
+		+ "20261007T142949Z-327ab0: the review slot binds the built-in reviewer, read-only, whose"
+		+ "work reads \"reviews a pull request\", so the procedure awawa-pr-review-round, which"
+		+ "addresses the threads, writes the corpus and pushes, was launched on the build slot;"
+		+ "@TASK.B18 already plans \"changes requested starts a run of the review slot through"
+		+ "review context|reply\" and @TASK.B16 the verdict on the verify slot: the slot of the"
+		+ "review round exists in the plan, and the built-in reviewer contradicts the work the plan"
+		+ "gives its slot; a tenth slot, as the follow-up file proposed, would amend DESC 1 of"
+		+ "@DECISION.RolesAreSlotsBoundToRoleFiles for a work a slot already carries; @TASK.B09"
+		+ "plans planner, reporter and triager, not this"
+		REF @TASK.B18
+		REF @TASK.B16
+		REF @DECISION.RolesAreSlotsBoundToRoleFiles
+		REF @TASK.B09
+	RATIONALE "on the author's machine the [slots] table of config.toml binds build alone, so"
+		+ "review resolved to the built-in role; binding review to the AGENT entity whose WORK"
+		+ "names the review round is that machine's configuration, never brigade's, by"
+		+ "@DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares"
+		REF @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
+	SOURCE "item 12 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B91
+	TITLE "A message handed to a running run, read by its next segment or by its relaunch"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "a command of brigade appends a text, with its timestamp, to a notes file of runs/<id>/,"
+		+ "and exits 1 naming the run when none exists or when its result is written"
+	SPEC "the brief of the next segment of the run, and the brief of a relaunch, carry the notes"
+		+ "appended since the segment before, after the progress file"
+	SPEC "a note never reaches a segment already launched: the client takes no input once launched,"
+		+ "and the command says so in its output"
+	RATIONALE "on 2026-10-07 a message for the running run of @TASK.B82, run"
+		+ "20261007T105605Z-396068, on the two L016 errors of the corpus on main, could not reach"
+		+ "it: claude -p takes no input once launched; the only live channel is the brief of the"
+		+ "next segment, which"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast opens on the"
+		+ "progress file; the follow-up file proposed brigade run note <run> <text>, and brigade"
+		+ "run takes the procedure as its first word, so the command's path is the refinement's;"
+		+ "distinct from brigade note of @TASK.B22, which records a signal for the inbox"
+		REF @TASK.B82
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+		REF @TASK.B22
+	SOURCE "item 5 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B92
+	TITLE "brigade runs list says what each run worked on and how it went: the arguments of its"
+		+ "procedure, its segments with their outcomes, its duration and its cost"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "commands"
+	ROLE ada
+	SPEC "brigade runs list prints, for each run, the arguments of its procedure as run.json"
+		+ "records them, the number of its segments and the outcome of each in order, its duration"
+		+ "summed over its segments and its cost in USD where the ledger holds its usage, text and"
+		+ "--json"
+	SPEC "two runs of one procedure on two tasks are told apart on the text rendering by their"
+		+ "arguments"
+	SPEC "a run cut and resumed reads as two segments, wall_limit then done, never as done alone"
+	AFTER @TASK.B82
+	RATIONALE "on 2026-10-07 brigade runs list showed run 20261007T105605Z-396068 as done without"
+		+ "saying it was cut at the wall-time limit and resumed, a fact held by brigade.log and the"
+		+ "ledger alone, and its two awawa-task rows, 2ee96f on @TASK.B71 and 396068 on @TASK.B82,"
+		+ "read alike: the arguments of the procedure, task=@TASK.B82 or pr=56, are in run.json"
+		+ "only, and the ledger's task field is null outside a wave; items 6 and 13 of the"
+		+ "follow-up file, one task since both change the columns of one renderer"
+		REF @TASK.B71
+		REF @TASK.B82
+	RATIONALE "the header row and the aligned columns the list commands share, item 14 of the"
+		+ "follow-up file, were moved into pull request #56 by the user's ruling of 2026-10-07,"
+		+ "\"s'il peut passer dans B82 sans trop alourdir, ok\"; this task follows @TASK.B82 for"
+		+ "that renderer"
+		REF @TASK.B82
+	SOURCE "items 6 and 13 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B93
+	TITLE "The installed brigade keeps up to date: brigade updates itself, or the install is"
+		+ "dist/brigade.pyz rather than a clone"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "install"
+	ROLE ada
+	SPEC "one command of brigade, or the install procedure of the README, brings the installed"
+		+ "brigade to the head of its upstream without an edit by hand; brigade doctor, run after"
+		+ "it, prints no warning of a stale checkout"
+	SPEC "the README names the install it recommends, the zipapp or the clone, both of which"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites allows, and the way it updates"
+	AFTER @TASK.B87
+	RATIONALE "follows item 4, @TASK.B87: ~/.local/bin/brigade linked to a clone updates by a git"
+		+ "pull in that clone, done by hand and forgotten on 2026-10-07;"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites allows the zipapp or the clone"
+		+ "and says nothing of updates; the choice between a self-update and an install from"
+		+ "dist/brigade.pyz is the refinement's"
+		REF @TASK.B87
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "item 7 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B94
+	TITLE "A run is followed while it runs, inside or outside a wave: /api/runs and a Runs view of"
+		+ "the dashboard, and brigade runs show <id> printing the progress file"
+	STATUS draft
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE ada
+	SPEC "/api/runs lists every run of runs/, inside or outside a wave, with its state, running,"
+		+ "finished or dead, its segments and their outcomes, the arguments of its procedure and"
+		+ "its progress file read at each request; /api/runs/<id> serves one run"
+	SPEC "a Runs view of the dashboard lists the runs and shows one run with its progress file,"
+		+ "refreshed by the polling of the page shell; every string of a progress file is escaped"
+		+ "on render, as @TASK.B27 requires of every rendered string"
+	SPEC "brigade runs show <id> prints the summary of run.json, the segments with their outcomes"
+		+ "and the progress file of the run, text and --json, and exits 1 naming the id when the"
+		+ "run does not exist"
+	AFTER @TASK.B27
+	AFTER @TASK.B82
+	RATIONALE "asked on 2026-10-07 while following the run of @TASK.B82: brigade runs list gives"
+		+ "the state and brigade runs logs the client's output, which Claude Code writes only at"
+		+ "the end; the progress file runs/<id>/progress.md is the only live trace, and no command"
+		+ "prints it; @TASK.B27 serves /api/status, /api/waves/<id>, /api/inbox, /api/corpus,"
+		+ "/api/ledger and /api/reports, and @TASK.B28 a Wave view of tasks with their steps: a run"
+		+ "launched by brigade run outside a wave appears in none, and none shows a run in"
+		+ "progress; neither task is amended, the view completes them"
+		REF @TASK.B82
+		REF @TASK.B27
+		REF @TASK.B28
+	SOURCE "item 15 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
+		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+
+TASK B95
+	TITLE "awawa in the CI from the asset of a private release, pinned to one version, and a corpus"
+		+ "job running awawa fmt --check and awawa lint --strict"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "ci"
+	ROLE ada
+	SPEC "one step of .github/workflows/ci.yml, run by every job that needs awawa, downloads the"
+		+ "awawa binary from the asset of a release of a private repository with the token the"
+		+ "workflow already holds, checks it against the version and the checksum pinned in the"
+		+ "workflow, puts it on PATH and prints awawa --version; the step fails on a version or a"
+		+ "checksum that differs"
+	SPEC "a corpus job runs awawa fmt --check . and awawa lint --strict . on every pull request and"
+		+ "every push to main, and fails on a would-change or a lint error"
+	SPEC "the test jobs of the matrix and the coverage job skip no test for want of awawa: the log"
+		+ "of each reads OK without skipped=, and a test that needs awawa still skips on a machine"
+		+ "without it"
+	SPEC "the README names the private release the CI reads and the way its asset is renewed when"
+		+ "the pinned awawa is bumped"
+	SPEC "nothing under brigade/ changes: awawa stays a prerequisite checked by brigade doctor,"
+		+ "never shipped in dist/brigade.pyz"
+	RATIONALE "found in the review of pull request #56: every CI job skipped 70 tests, OK"
+		+ "(skipped=70) on main 3deeea2 and on #56, and no job ran awawa fmt --check or awawa lint"
+		+ "--strict, so #52 merged with two L016 that broke lint --strict on main; the ruling of"
+		+ "2026-10-06 that kept awawa out of the CI is replaced in place by"
+		+ "@DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere, which this task"
+		+ "binds; the repository that holds the private release is the refinement's"
+		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
+	RATIONALE "the asset is downloaded, never built: @DECISION.AwawaIsWrappedAsItIs; the pin and"
+		+ "the checksum follow the pinned tools of"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade, though awawa, a"
+		+ "prerequisite of brigade, is not one of them"
+		REF @DECISION.AwawaIsWrappedAsItIs
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+	SOURCE "item 8 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
+		+ "the user's words of 2026-10-07, \"A moins que ça ne coute rien d'avoir une copie d'awawa"
+		+ "embarquée ... Si on peut l'avoir en privé\", and the answer chosen, \"Copie privée"
+		+ "(licence OK)\""
+
+TASK B96
+	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, with awawa on its PATH,"
+		+ "fails below the figure of B70"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "ci"
+	ROLE ada
+	SPEC ".coveragerc sets fail_under = 100 and the coverage job of the CI passes at that threshold"
+		+ "with awawa on PATH; the pull request body quotes the TOTAL line of the job next to the"
+		+ "local one of @TASK.B70's commands"
+	SPEC "the README sentence on coverage, as @TASK.B80 leaves it, reads the threshold of 100"
+	AFTER @TASK.B95
+	AFTER @TASK.B80
+	RATIONALE "found in the review of pull request #56: .coveragerc sets fail_under = 93, the"
+		+ "figure @TASK.B70 read in a CI without awawa, and the coverage job printed 94 % on #56,"
+		+ "job 112779485130; the 100 % of @TASK.B70 and of SPEC 7 of @TASK.B82 held only on a"
+		+ "machine with awawa on PATH; DESC 6 of"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade now names this"
+		+ "task as the one that raises the threshold once @TASK.B95 puts awawa on the CI's PATH;"
+		+ "SPEC 6 and 7 of @TASK.B70, implemented, stay the record of its delivery"
+		REF @TASK.B70
+		REF @TASK.B82
+		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
+		REF @TASK.B95
+	SOURCE "item 9 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
+		+ "the user's answer of 2026-10-07, \"Copie privée (licence OK)\""
