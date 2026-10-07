@@ -14,13 +14,13 @@ BROKEN_CLIENT = str(FIXTURES / "executables" / "client-broken")
 
 LAUNCH_REQUEST = (
     '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.",'
-    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "bastien", "package": "AGENT bastien",'
+    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder", "package": "AGENT builder",'
     ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
     ' "budget": 75}}'
 )
 RESUME_REQUEST = (
     '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1",'
-    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "bastien", "package": "AGENT bastien",'
+    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder", "package": "AGENT builder",'
     ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
     ' "budget": 75}}'
 )
@@ -153,7 +153,7 @@ class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
             json.loads(completed.stdout),
             {
                 "schema_version": 1,
-                "argv": ["cat", "--", f"{RECORDINGS}/bastien.json"],
+                "argv": ["cat", "--", f"{RECORDINGS}/builder.json"],
                 "environment": {},
                 "stdin": None,
             },
@@ -197,7 +197,7 @@ class BrigadeAdapterParseResultTest(AdapterTestCase):
         # Arrange
         self.machine.write_configuration('client = "fake"\n')
         request = json.dumps(
-            {"schema_version": 1, "exit_code": 0, "stdout": (RECORDINGS / "bastien.json").read_text(), "stderr": ""}
+            {"schema_version": 1, "exit_code": 0, "stdout": (RECORDINGS / "builder.json").read_text(), "stderr": ""}
         )
 
         # Act
@@ -217,7 +217,7 @@ class BrigadeAdapterParseResultTest(AdapterTestCase):
                     "cache_creation_input_tokens": 16778,
                     "cache_read_input_tokens": 98000,
                 },
-                "session_id": "fake-session-bastien",
+                "session_id": "fake-session-builder",
                 "duration_ms": 61000,
                 "error_class": None,
                 "reset": None,
@@ -411,7 +411,7 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
             (
                 (
                     '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "role": {"name":'
-                    ' "bastien", "package": "AGENT bastien", "package_file": "/state/brigade/runs/r1/role.md",'
+                    ' "builder", "package": "AGENT builder", "package_file": "/state/brigade/runs/r1/role.md",'
                     ' "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
                 ),
                 "brigade adapter launch-argv: the request on stdin: lacks the key progress_file\n",
@@ -419,8 +419,8 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
             (
                 (
                     '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.",'
-                    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "bastien",'
-                    ' "package": "AGENT bastien", "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+                    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder",'
+                    ' "package": "AGENT builder", "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
                 ),
                 "brigade adapter launch-argv: the request on stdin: lacks the key role.package_file\n",
             ),
@@ -453,7 +453,7 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
         self.machine.write_configuration('client = "claude-code"\n')
 
         # Act
-        completed = self.run_adapter("launch-argv", "--json", request="role: bastien")
+        completed = self.run_adapter("launch-argv", "--json", request="role: builder")
 
         # Assert
         self.assertEqual(completed.returncode, 1)

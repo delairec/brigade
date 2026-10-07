@@ -1,1 +1,0 @@
-{"schema_version": 1, "outcome": "done", "steps": 12, "usage": {"input_tokens": 120, "output_tokens": 3400, "cache_creation_input_tokens": 16778, "cache_read_input_tokens": 98000}, "session_id": "fake-session-bastien", "duration_ms": 61000, "error_class": null, "reset": null, "message": null}
