@@ -102,7 +102,7 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
             {"schema_version": 1, "roles": describe_built_in_roles("fable", "opus", "haiku")},
         )
 
-    def test_should_print_one_line_per_slot_as_text(self):
+    def test_should_print_the_slots_as_a_table_under_its_header(self):
         # Arrange
         self.machine.write_configuration('client = "claude-code"\n')
 
@@ -114,16 +114,16 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "slot     role        source        model",
-                "plan     planner     built-in      fable",
-                "build    builder     built-in      opus",
-                "verify   verifier    built-in      fable",
-                "review   reviewer    built-in      fable",
-                "rebase   rebaser     built-in      sonnet",
-                "report   reporter    built-in      opus",
-                "triage   triager     built-in      opus",
-                "rules    rulewriter  built-in      fable",
-                "explore  explorer    built-in      sonnet",
+                "slot     role        source    model",
+                "plan     planner     built-in  fable",
+                "build    builder     built-in  opus",
+                "verify   verifier    built-in  fable",
+                "review   reviewer    built-in  fable",
+                "rebase   rebaser     built-in  sonnet",
+                "report   reporter    built-in  opus",
+                "triage   triager     built-in  opus",
+                "rules    rulewriter  built-in  fable",
+                "explore  explorer    built-in  sonnet",
             ],
         )
 

@@ -2,10 +2,12 @@ from brigade.command import Command
 from brigade.corpus.read_entities import Entity
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
+from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
 NO_VALUE = ""
 NO_PROJECT = "no project registered"
+COLUMNS = ("name", "status", "path")
 
 
 def _read_field(project: Entity, name: str) -> str:
@@ -16,8 +18,7 @@ def _render_text(document: dict) -> str:
     projects = document["projects"]
     if not projects:
         return NO_PROJECT
-    name_width = max(len(project["name"]) for project in projects)
-    return "\n".join(f"{project['name']:<{name_width}}  {project['status']}  {project['path']}" for project in projects)
+    return render_table(COLUMNS, [tuple(project[column] for column in COLUMNS) for project in projects])
 
 
 def _read_request(options):

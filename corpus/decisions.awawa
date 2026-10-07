@@ -683,6 +683,13 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "validated by the user's rulings of 2026-10-07 in its review: \"Garder\" for the common"
 		+ "options of a group, \"Valider\" for the order of the help and the name action"
 		REF @TASK.B82
+	DESC "the text of a list command is a table: a header row naming its columns, each column but"
+		+ "the last padded to its widest cell, rendered by brigade/system/render_table.py; an empty"
+		+ "list keeps its one-line message, from @TASK.B82"
+		REF @TASK.B82
+	SOURCE "DESC 15 on the user's words of 2026-10-07 in the review of pull request #56: \"il"
+		+ "faudrait aussi que ça s'affiche dans un tableau à entête non?\""
+		REF @TASK.B82
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"

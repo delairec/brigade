@@ -428,7 +428,7 @@ class BrigadeProjectListTest(ProjectTestCase):
             },
         )
 
-    def test_should_print_every_project_as_text(self):
+    def test_should_print_the_projects_as_a_table_under_its_header(self):
         # Arrange
         self.run_project("add", str(self.beta.path), "--name", "the_beta")
         self.run_project("add", str(self.alpha.path))
@@ -441,6 +441,7 @@ class BrigadeProjectListTest(ProjectTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
+                "name      status  path",
                 f"alpha     active  {self.alpha.path}",
                 f"the_beta  active  {self.beta.path}",
             ],

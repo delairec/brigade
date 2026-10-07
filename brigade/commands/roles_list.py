@@ -3,14 +3,12 @@ from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
 from brigade.system.ask_configured_client import ask_configured_client
 from brigade.system.read_configuration import SLOTS
 from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
 CONFIGURATION_FILE = "config.toml"
 NO_MODEL_BOUND = {}
-SLOT_WIDTH = 9
-ROLE_WIDTH = 12
-SOURCE_WIDTH = 14
-HEADER = {"slot": "slot", "role": "role", "source": "source", "model": "model"}
+COLUMNS = ("slot", "role", "source", "model")
 NO_MODEL = "-"
 
 
@@ -21,13 +19,13 @@ def _read_bound_models(runtime) -> dict:
     return ask_configured_client(runtime, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION}).document["models"]
 
 
-def _render_row(row: dict) -> str:
+def _render_row(row: dict) -> tuple[str, ...]:
     model = NO_MODEL if row["model"] is None else row["model"]
-    return f"{row['slot']:<{SLOT_WIDTH}}{row['role']:<{ROLE_WIDTH}}{row['source']:<{SOURCE_WIDTH}}{model}"
+    return (row["slot"], row["role"], row["source"], model)
 
 
 def _render_text(document: dict) -> str:
-    return "\n".join(_render_row(row) for row in [HEADER, *document["roles"]])
+    return render_table(COLUMNS, [_render_row(row) for row in document["roles"]])
 
 
 def _read_request(options):

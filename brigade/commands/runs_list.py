@@ -1,8 +1,8 @@
 from brigade.command import Command
 from brigade.runs.list_runs import list_runs
+from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
-COLUMN_SEPARATOR = "  "
 ABSENT = "-"
 NO_RUNS = "no runs"
 COLUMNS = ("run", "procedure", "slot", "role", "project", "state", "outcome")
@@ -17,8 +17,8 @@ def _render_value(value) -> str:
 def _render_text(document: dict) -> str:
     if not document["runs"]:
         return NO_RUNS
-    return "\n".join(
-        COLUMN_SEPARATOR.join(_render_value(listed[column]) for column in COLUMNS) for listed in document["runs"]
+    return render_table(
+        COLUMNS, [tuple(_render_value(listed[column]) for column in COLUMNS) for listed in document["runs"]]
     )
 
 
