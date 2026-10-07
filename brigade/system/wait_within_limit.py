@@ -1,8 +1,13 @@
 import os
 import signal
 import subprocess
+from dataclasses import dataclass
 
-GRACE_BEFORE_KILL_S = 30.0
+
+@dataclass(frozen=True)
+class WallLimit:
+    limit_s: float
+    grace_before_kill_s: float
 
 
 def _signal_group(process: subprocess.Popen, signal_number: int) -> None:
@@ -12,14 +17,14 @@ def _signal_group(process: subprocess.Popen, signal_number: int) -> None:
         pass
 
 
-def wait_within_limit(process: subprocess.Popen, limit_s: float) -> int | None:
+def wait_within_limit(process: subprocess.Popen, limit: WallLimit) -> int | None:
     try:
-        return process.wait(timeout=limit_s)
+        return process.wait(timeout=limit.limit_s)
     except subprocess.TimeoutExpired:
         pass
     _signal_group(process, signal.SIGTERM)
     try:
-        process.wait(timeout=GRACE_BEFORE_KILL_S)
+        process.wait(timeout=limit.grace_before_kill_s)
     except subprocess.TimeoutExpired:
         _signal_group(process, signal.SIGKILL)
         process.wait()

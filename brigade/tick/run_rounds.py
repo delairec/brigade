@@ -15,7 +15,6 @@ class Rounds:
 @dataclass(frozen=True)
 class RoundsOutcome:
     actions_applied: int
-    capped: bool
 
 
 def run_rounds(rounds: Rounds) -> RoundsOutcome:
@@ -23,6 +22,6 @@ def run_rounds(rounds: Rounds) -> RoundsOutcome:
     for _ in range(rounds.cap):
         actions = rounds.plan(rounds.build_snapshot())
         if not actions:
-            return RoundsOutcome(actions_applied=actions_applied, capped=False)
+            return RoundsOutcome(actions_applied=actions_applied)
         actions_applied += rounds.apply(actions)
-    return RoundsOutcome(actions_applied=actions_applied, capped=True)
+    return RoundsOutcome(actions_applied=actions_applied)

@@ -1,13 +1,10 @@
 import sys
 
-from brigade.python_floor import describe_python_floor_breach
+from brigade.python_floor import refuse_python_below_floor
 
 
 def launch() -> None:
-    breach = describe_python_floor_breach(tuple(sys.version_info[:3]))
-    if breach is not None:
-        sys.stderr.write(breach + "\n")
-        sys.exit(1)
+    refuse_python_below_floor(tuple(sys.version_info[:3]))
     from brigade.cli import main
 
     sys.exit(main(sys.argv[1:]))

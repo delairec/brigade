@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from brigade.errors import BrigadeError
-from brigade.system.resolve_plugin import resolve_plugin
 from brigade.system.scheduler_shapes import SCHEDULER_ANSWER_SHAPES
 from brigade.system.validate_document import DocumentInvalid, validate_document
 
@@ -13,8 +12,7 @@ class SchedulerQuestion:
     request: dict
 
 
-def ask_scheduler(question: SchedulerQuestion, runtime) -> dict:
-    scheduler = resolve_plugin("scheduler", question.scheduler_name, runtime)
+def ask_scheduler(scheduler, question: SchedulerQuestion, runtime) -> dict:
     answer = getattr(scheduler, question.operation)(question.request, runtime)
     try:
         validate_document(answer, SCHEDULER_ANSWER_SHAPES[question.operation])

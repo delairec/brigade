@@ -1,14 +1,13 @@
 import tempfile
-import threading
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from brigade.errors import ToolNotFound
 from brigade.system.spawn_process import SpawnRequest, spawn_process
 
 PROCESS_WAIT_S = 10.0
 LARGER_THAN_A_PIPE = "x" * 1_048_576
+STILL_RUNNING = None
 
 
 class SpawnProcessTestCase(unittest.TestCase):
@@ -40,19 +39,22 @@ class SpawnProcessWithABriefTest(SpawnProcessTestCase):
         # Assert
         self.assertEqual(self.stdout.read_text(), "Deliver the task B70.\n")
 
-    def test_should_report_nothing_when_the_process_ends_without_reading_its_brief(self):
-        # Arrange
-        threads_before = set(threading.enumerate())
-        with mock.patch.object(threading, "excepthook") as report_thread_error:
-            process = self.spawn(("sleep", "30"), LARGER_THAN_A_PIPE)
-            (feeder,) = set(threading.enumerate()) - threads_before
-
-            # Act
-            process.kill()
-            feeder.join(timeout=PROCESS_WAIT_S)
+    def test_should_hand_the_process_over_before_it_reads_its_brief(self):
+        # Act
+        process = self.spawn(("sleep", "30"), LARGER_THAN_A_PIPE)
 
         # Assert
-        report_thread_error.assert_not_called()
+        self.assertEqual(process.poll(), STILL_RUNNING)
+
+    def test_should_hand_a_brief_larger_than_a_pipe_whole(self):
+        # Arrange
+        process = self.spawn(("cat",), LARGER_THAN_A_PIPE)
+
+        # Act
+        process.wait(timeout=PROCESS_WAIT_S)
+
+        # Assert
+        self.assertEqual(self.stdout.read_text(), LARGER_THAN_A_PIPE)
 
 
 class SpawnProcessOfAMissingToolTest(SpawnProcessTestCase):

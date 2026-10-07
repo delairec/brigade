@@ -1,12 +1,11 @@
 import signal
 import subprocess
 import unittest
-from unittest import mock
 
-from brigade.system import wait_within_limit as wait_module
-from brigade.system.wait_within_limit import wait_within_limit
+from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 
 NO_TIME = 0.0
+ANY_GRACE_S = 30.0
 SHORT_GRACE_S = 0.2
 CUT = None
 
@@ -28,7 +27,7 @@ class WaitWithinLimitOfAProcessWithNoGroupTest(WaitWithinLimitTestCase):
         process = self.start(["sleep", "0.5"], start_new_session=False)
 
         # Act
-        exit_code = wait_within_limit(process, NO_TIME)
+        exit_code = wait_within_limit(process, WallLimit(limit_s=NO_TIME, grace_before_kill_s=ANY_GRACE_S))
 
         # Assert
         self.assertEqual(exit_code, CUT)
@@ -37,12 +36,11 @@ class WaitWithinLimitOfAProcessWithNoGroupTest(WaitWithinLimitTestCase):
 class WaitWithinLimitOfAProcessIgnoringTheStopSignalTest(WaitWithinLimitTestCase):
     def test_should_kill_the_group_once_the_grace_is_over(self):
         # Arrange
-        process = self.start(["sh", "-c", 'trap "" TERM; echo ready; exec sleep 30'], start_new_session=True)
+        process = self.start(["sh", "-c", 'trap "" TERM; echo ready; exec sleep 5'], start_new_session=True)
         process.stdout.readline()
 
         # Act
-        with mock.patch.object(wait_module, "GRACE_BEFORE_KILL_S", SHORT_GRACE_S):
-            exit_code = wait_within_limit(process, NO_TIME)
+        exit_code = wait_within_limit(process, WallLimit(limit_s=NO_TIME, grace_before_kill_s=SHORT_GRACE_S))
 
         # Assert
         self.assertEqual((exit_code, process.returncode), (CUT, -signal.SIGKILL))

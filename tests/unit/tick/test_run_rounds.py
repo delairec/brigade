@@ -51,7 +51,7 @@ class RunRoundsTest(unittest.TestCase):
         outcome = run_rounds(create_rounds([FIRST_SNAPSHOT], planner, executor))
 
         # Assert
-        self.assertEqual((outcome, executor.plans_applied), (RoundsOutcome(actions_applied=0, capped=False), []))
+        self.assertEqual((outcome, executor.plans_applied), (RoundsOutcome(actions_applied=0), []))
 
     def test_should_apply_each_plan_until_the_plan_is_empty(self):
         # Arrange
@@ -64,7 +64,7 @@ class RunRoundsTest(unittest.TestCase):
         outcome = run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT], planner, executor))
 
         # Assert
-        self.assertEqual(outcome, RoundsOutcome(actions_applied=3, capped=False))
+        self.assertEqual(outcome, RoundsOutcome(actions_applied=3))
         self.assertEqual(executor.plans_applied, [("merge", "launch"), ("launch",)])
 
     def test_should_plan_every_round_on_a_snapshot_built_afresh(self):
@@ -90,4 +90,4 @@ class RunRoundsTest(unittest.TestCase):
         outcome = run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT], planner, executor, cap=3))
 
         # Assert
-        self.assertEqual(outcome, RoundsOutcome(actions_applied=3, capped=True))
+        self.assertEqual(outcome, RoundsOutcome(actions_applied=3))
