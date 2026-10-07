@@ -3005,21 +3005,41 @@ TASK B71
 	DELIVERED_BY 52
 
 TASK B72
-	TITLE "ProcessRecord carries the duration, and --verbose on the common options prints every"
-		+ "subprocess argv, exit code and duration on stderr"
-	STATUS draft
+	TITLE "every subprocess leaves a structured record in the trail of its run, its tick or its"
+		+ "command, and --verbose renders the records on stderr"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "system"
 	ROLE ada
 	SPEC "ProcessRecord of brigade/system/run_process.py carries duration_ms, the integer"
-		+ "milliseconds between the start and the end of the subprocess measured with"
-		+ "time.monotonic"
+		+ "milliseconds the subprocess took"
+	SPEC "every subprocess brigade starts, through run_process or spawn_process, appends one line"
+		+ "to the trail of the invocation that started it, whatever its exit code: a JSON document"
+		+ "carrying schema_version 1, argv, cwd, exit, the exit code or null when there is none,"
+		+ "duration_ms, null for a spawned run, outcome, one of exited, timed_out, not_found, cut"
+		+ "for a client segment stopped by its wall limit and spawned for a run detached, and pid"
+		+ "for a spawned run alone"
+	SPEC "the trail of brigade run is runs/<id>/processes.jsonl, the client segment recorded after"
+		+ "its wait and the records of a detached run written by the process it re-executes; the"
+		+ "trail of a tick is $XDG_STATE_HOME/brigade/ticks/<instant>.jsonl, one file per tick,"
+		+ "each round of tick --loop included; the trail of any other command is"
+		+ "$XDG_STATE_HOME/brigade/commands/<instant>-<command>.jsonl; <instant> is the UTC compact"
+		+ "form of the instant the command or the tick read"
+	SPEC "at each tick and each command, the trails of ticks/ and commands/ older than trail_days"
+		+ "of config.toml, 7 by default, are removed; a trail_days below 1 is an error naming the"
+		+ "key and the file; the trail of a run is removed with its run"
 	SPEC "--verbose is declared once on the common options next to --json and accepted by every"
-		+ "subcommand; brigade <command> --verbose prints on stderr one line per subprocess the"
-		+ "command ran, its argv, its exit code and its duration in milliseconds, and stdout"
-		+ "carries the document alone"
-	SPEC "without --verbose stderr carries no such line; under --json --verbose the lines still go"
-		+ "to stderr and stdout stays the JSON document"
+		+ "subcommand; brigade <command> --verbose prints on stderr one line per record the command"
+		+ "writes, \"brigade <command>: ran <argv joined by shlex.join>\" followed by \"exit <code>"
+		+ "in <ms> ms\", \"timed out after <ms> ms\", \"not on PATH\", \"cut after <ms> ms\" or"
+		+ "\"spawned pid <pid>\"; stdout carries the document alone, under --json too; without"
+		+ "--verbose stderr carries no such line"
+	SPEC "brigade run --detach --verbose prints the spawned line of the run, and the process it"
+		+ "re-executes receives no --verbose"
+	SPEC "tests/cli prove, through the fake adapter in a temporary state directory, the record of a"
+		+ "subprocess whose exit code is refused in the trail of a run, the trail of a tick written"
+		+ "and the trails older than trail_days removed, the trail of another command, and the"
+		+ "--verbose lines on stderr with stdout unchanged"
 	AFTER @TASK.B82
 	RATIONALE "F2 of the foundations review: run_process.py:19-25 declares ProcessRecord with argv,"
 		+ "cwd, exit code, stdout and stderr and no duration; cli.py:78-83 declares --json alone on"
@@ -3028,19 +3048,42 @@ TASK B72
 		+ "stdout, stderr and duration\" and DESC 5 \"--verbose prints every subprocess argv, exit"
 		+ "code and duration on stderr\"; plan section 4 line 253 and section 16 line 752"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
-	RATIONALE "the risk R4 of the review: without the trail a failing unattended tick leaves no"
+	RATIONALE "the risk R4 of the review: without a trail a failing unattended tick leaves no"
 		+ "subprocess record, the ledger run.finished carrying the client's duration_ms alone,"
-		+ "run_segments.py:64"
-	RATIONALE "the alternative the report offers for the refinement round: DESC 1 and 5 of the"
-		+ "decision amended to drop the duration and --verbose until the tick needs a trail"
+		+ "run_segments.py:64; the trail of each tick answers it while the scheduler unit keeps"
+		+ "running brigade tick --once without --verbose, brigade.service.tpl:7"
+	RATIONALE "the user ruled to implement the decision rather than amend it, and that a trail is a"
+		+ "structured record a brigade command reads, by"
+		+ "@DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads: the records are always"
+		+ "written to files, --verbose renders them for a person and nothing reads that rendering"
+		+ "back; @TASK.B97 reads the trails"
+		REF @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads
+		REF @TASK.B97
+	RATIONALE "the trails stay out of the ledger: R5 of the review estimates about 60 awawa spawns"
+		+ "per read of a project of 60 tasks, so a tick every five minutes writes about 17 000"
+		+ "records a day, 4.5 MB at about 263 bytes a record, which every view of brigade ledger"
+		+ "would read again; a file per tick or per command keeps the ledger to the events of the"
+		+ "work and the purge of the trails to one age"
+	RATIONALE "a record carries no instant: by @DECISION.TheClockIsReadOnceAndCarriedAsAFact the"
+		+ "clock is read once per command and per tick, so the instant in the name of the trail and"
+		+ "the order of its lines date the records; durations are measured with time.monotonic, as"
+		+ "commands/tick.py and run_segment.py measure theirs"
+		REF @DECISION.TheClockIsReadOnceAndCarriedAsAFact
+	RATIONALE "the runner reaches the code through Runtime.run_process, runtime.py:11-16, built by"
+		+ "build_runtime in cli.py and commands/tick.py alone; the spawns are the client segment,"
+		+ "run_segment.py:98-112, whose exit code and duration are known at its wait, and the"
+		+ "detached run, detach_run.py:22, whose exit its parent never knows, which is why the"
+		+ "re-executed process records its own subprocesses and needs no --verbose"
 	RATIONALE "it follows @TASK.B82, which moves the parsers into the command modules and keeps the"
-		+ "common options parent parser in cli.py, where --verbose is added once; what the line of"
-		+ "a run spawned detached by spawn_process carries, its exit code and duration being known"
-		+ "at wait only, is left to the refinement"
+		+ "common options parent parser in cli.py, where --verbose is added once"
 		REF @TASK.B82
 	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
 		+ "fix the issues reported by max in this milestone\"; F2 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's rulings of 2026-10-07 at the refinement of B72: implement, the runner and"
+		+ "the spawns traced, the scheduler unit unchanged, a trail per run, per tick and per"
+		+ "command purged by age, the reader a draft of its own, the stderr line in the form of the"
+		+ "existing diagnostics, no --verbose handed to a detached run"
 
 TASK B73
 	TITLE "Runtime carries the resolver and the renderer, the commands resolve the plugins and the"
@@ -3959,3 +4002,26 @@ TASK B96
 		REF @TASK.B95
 	SOURCE "item 9 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
 		+ "the user's answer of 2026-10-07, \"Copie privée (licence OK)\""
+
+TASK B97
+	TITLE "brigade reads the subprocess trails: the records of a run, a tick or a command returned"
+		+ "as a document, the failed ones alone on request"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE ada
+	DESC "to be refined with the user: the command lines, how a run, a tick or a command is named"
+		+ "on them, the filters, and whether one query answers why a run, a tick or a command"
+		+ "failed by crossing the ledger, its trail and the logs of the run; the SPEC lines are"
+		+ "proposals"
+	SPEC "a brigade command returns the records of the trail of a run, a tick or a command as one"
+		+ "document, and with a filter the records whose outcome is not exited with code 0 alone,"
+		+ "so that no reader searches a trail file itself"
+	AFTER @TASK.B72
+	RATIONALE "by @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads a trail is read"
+		+ "through a brigade command, never searched with grep, sed or awk; @TASK.B72 writes the"
+		+ "trails, this task reads them"
+		REF @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads
+		REF @TASK.B72
+	SOURCE "the user's ruling of 2026-10-07 at the refinement of B72: the reader of the trails is a"
+		+ "draft of its own in F0, after B72"

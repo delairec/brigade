@@ -1355,3 +1355,35 @@ DECISION TheClaudeCodeAdapterRunsInDontAskModeAndGrantsOnlyItsAllowedTools
 	SOURCE "the user's answers of 2026-10-07 at the refinement of @TASK.B71, on the probes the"
 		+ "session ran with claude 2.1.292"
 		REF @TASK.B71
+
+DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
+	TITLE "every trace brigade writes is a structured, versioned record that a brigade command"
+		+ "reads and queries; a text on stderr or in a log is a rendering for a person, never a"
+		+ "source"
+	STATUS active
+	DESC "a trace brigade writes, a subprocess record, an event, a state or a result, is a JSON"
+		+ "document carrying schema_version, written to a file brigade owns"
+	DESC "an agent or a person learns what happened through a brigade command that reads those"
+		+ "records and returns the answer as a document; no reader is expected to search a file"
+		+ "with grep, sed or awk"
+	DESC "a line brigade prints on stderr or writes to a log renders a record; no brigade command"
+		+ "parses it back"
+	DESC "the stdout and stderr of a client segment, kept as raw text, are reached through a"
+		+ "brigade command that bounds and summarises them, as @TASK.B79 and @TASK.B97 settle"
+		REF @TASK.B79
+		REF @TASK.B97
+	DESC "binds @TASK.B72 and @TASK.B97"
+		REF @TASK.B72
+		REF @TASK.B97
+	REJECTED "traces written as free text and searched with grep, sed or awk: every reader"
+		+ "rediscovers the format, and an agent spends its steps searching instead of being handed"
+		+ "the facts it needs"
+	REJECTED "the subprocess records in the ledger: about 17 000 a day for one project in M1 by the"
+		+ "risk R5 of the foundations review, read again by every view of brigade ledger"
+	RATIONALE "brigade mechanises the reading of its own journals, so that an agent asks a tool for"
+		+ "the facts it needs and searches nothing itself"
+	SOURCE "the user's words of 2026-10-07 at the refinement of @TASK.B72, \"les logs doivent être"
+		+ "écrits non pas pour être exploitable en recherche par un agents ia, mais pour que"
+		+ "l'agents ia puisse utiliser un outil qui remonte les infos dont il a besoin sans avoir à"
+		+ "chercher par lui-même\""
+		REF @TASK.B72
