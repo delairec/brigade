@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entity_package import read_entity_package
-from brigade.system.run_process import run_process
+from tests.integration.run_process_without_trail import run_process_without_trail
 
 SCHEMA = (
     'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\tFIELD LOADS @RULE\n'
@@ -30,7 +30,7 @@ class ReadEntityPackageTest(unittest.TestCase):
 
     def test_should_read_the_package_of_the_entity_and_what_it_rests_on_without_its_reasoning(self):
         # Act
-        package = read_entity_package(run_process, self.corpus, "@AGENT.planner")
+        package = read_entity_package(run_process_without_trail, self.corpus, "@AGENT.planner")
 
         # Assert
         self.assertEqual(

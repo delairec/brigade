@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.git.read_main_branch import read_main_branch
-from brigade.system.run_process import run_process
+from tests.integration.run_process_without_trail import run_process_without_trail
 
 
 def run_git(repository: Path, *arguments: str) -> None:
@@ -29,14 +29,14 @@ class ReadMainBranchTest(unittest.TestCase):
         run_git(self.repository, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
 
         # Act
-        branch = read_main_branch(run_process, self.repository)
+        branch = read_main_branch(run_process_without_trail, self.repository)
 
         # Assert
         self.assertEqual(branch, "trunk")
 
     def test_should_read_the_branch_checked_out_without_origin_head(self):
         # Act
-        branch = read_main_branch(run_process, self.repository)
+        branch = read_main_branch(run_process_without_trail, self.repository)
 
         # Assert
         self.assertEqual(branch, "develop")

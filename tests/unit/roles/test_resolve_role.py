@@ -8,6 +8,7 @@ from brigade.roles.resolve_role import ResolvedRole, RoleBindings, resolve_role
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.run_process import ProcessRequest
+from brigade.system.trail_writer import TrailWriter
 
 NO_RUNTIME_NEEDED = None
 SHOP_BUILDER = (
@@ -22,6 +23,10 @@ SHOP_BUILDER = (
     "---\n"
     "You build the shop.\n"
 )
+
+
+def _keep_no_trace(trace) -> None:
+    pass
 
 
 def create_bindings(roleset: str | None, project_path: Path | None = None, roles: dict | None = None) -> RoleBindings:
@@ -122,6 +127,7 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
             paths=self.paths,
             now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
             entry_point=Path("/srv/brigade/bin/brigade"),
+            trail=TrailWriter(_keep_no_trace),
         )
 
     def test_should_let_a_missing_awawa_through_rather_than_look_elsewhere(self):

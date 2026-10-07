@@ -190,3 +190,15 @@ class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), f"{expected_problem} in {self.path}")
+
+
+class ReadConfigurationOfTheTrailDaysTest(ReadConfigurationTestCase):
+    def test_should_answer_the_days_the_key_sets(self):
+        # Arrange
+        self.path.write_text("trail_days = 30\n")
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.trail_days, 30)

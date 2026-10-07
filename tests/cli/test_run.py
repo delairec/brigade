@@ -139,6 +139,7 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
             sorted(path.relative_to(run_directory).as_posix() for path in run_directory.rglob("*") if path.is_file()),
             [
                 "pid",
+                "processes.jsonl",
                 "progress.md",
                 "result.json",
                 "role.md",

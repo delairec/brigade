@@ -9,7 +9,9 @@ from brigade.system.run_process import ProcessRecord
 
 def create_runtime(exit_code: int, stdout: str) -> SimpleNamespace:
     def run_systemctl(request):
-        return ProcessRecord(argv=request.argv, cwd=request.cwd, exit_code=exit_code, stdout=stdout, stderr="")
+        return ProcessRecord(
+            argv=request.argv, cwd=request.cwd, exit_code=exit_code, stdout=stdout, stderr="", duration_ms=0
+        )
 
     return SimpleNamespace(run_process=run_systemctl)
 

@@ -1,9 +1,10 @@
-import datetime
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.system.name_toml_type import name_toml_type
+from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
 STRING_KEYS = ("client", "scheduler", "instructions")
 UNREAD_STRING_KEYS = ("forge_account", "ide_link")
@@ -13,16 +14,6 @@ REASONING_ROW_KEYS = ("model", "effort")
 SECONDS_PER_STEP_KEY = "seconds_per_step"
 SECONDS_PER_STEP_BY_DEFAULT = 30
 SLOTS = ("plan", "build", "verify", "review", "rebase", "report", "triage", "rules", "explore")
-TOML_TYPE_NAMES = (
-    (bool, "a boolean"),
-    (int, "an integer"),
-    (float, "a number"),
-    (str, "a string"),
-    (dict, "a table"),
-    (list, "an array"),
-    (datetime.date, "a date"),
-    (datetime.time, "a date"),
-)
 
 
 @dataclass(frozen=True)
@@ -41,15 +32,12 @@ class Configuration:
     clients: dict = field(default_factory=dict)
     slots: dict = field(default_factory=dict)
     seconds_per_step: int | float = SECONDS_PER_STEP_BY_DEFAULT
-
-
-def _name_toml_type(value) -> str:
-    return next(name for kind, name in TOML_TYPE_NAMES if isinstance(value, kind))
+    trail_days: int = TRAIL_DAYS_BY_DEFAULT
 
 
 def _require(value, kind: type, expected: str, location: str, path: Path):
     if not isinstance(value, kind):
-        raise BrigadeError(f"{location} is {_name_toml_type(value)}, not {expected}, in {path}")
+        raise BrigadeError(f"{location} is {name_toml_type(value)}, not {expected}, in {path}")
     return value
 
 
@@ -98,7 +86,7 @@ def _read_slots(table, path: Path) -> dict:
 def _read_refs_cache_mb(document: dict, path: Path) -> int:
     value = document.get(REFS_CACHE_MB_KEY, Configuration.refs_cache_mb)
     if isinstance(value, bool) or not isinstance(value, int):
-        raise BrigadeError(f"{REFS_CACHE_MB_KEY} is {_name_toml_type(value)}, not an integer, in {path}")
+        raise BrigadeError(f"{REFS_CACHE_MB_KEY} is {name_toml_type(value)}, not an integer, in {path}")
     if value < 0:
         raise BrigadeError(f"{REFS_CACHE_MB_KEY} is {value}, not 0 or more, in {path}")
     return value
@@ -106,7 +94,7 @@ def _read_refs_cache_mb(document: dict, path: Path) -> int:
 
 def _read_seconds_per_step(value, path: Path) -> int | float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise BrigadeError(f"{SECONDS_PER_STEP_KEY} is {_name_toml_type(value)}, not a number, in {path}")
+        raise BrigadeError(f"{SECONDS_PER_STEP_KEY} is {name_toml_type(value)}, not a number, in {path}")
     if value <= 0:
         raise BrigadeError(f"{SECONDS_PER_STEP_KEY} is {value}, not a positive number, in {path}")
     return value
@@ -127,7 +115,16 @@ def read_configuration(path: Path) -> Configuration:
     document = _parse(path)
     _refuse_unknown_keys(
         document,
-        (*STRING_KEYS, *UNREAD_STRING_KEYS, REFS_CACHE_MB_KEY, "reasoning", "clients", "slots", SECONDS_PER_STEP_KEY),
+        (
+            *STRING_KEYS,
+            *UNREAD_STRING_KEYS,
+            REFS_CACHE_MB_KEY,
+            "reasoning",
+            "clients",
+            "slots",
+            SECONDS_PER_STEP_KEY,
+            TRAIL_DAYS_KEY,
+        ),
         "",
         path,
     )
@@ -142,4 +139,5 @@ def read_configuration(path: Path) -> Configuration:
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),
         seconds_per_step=_read_seconds_per_step(document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path),
+        trail_days=read_trail_days(document, path),
     )

@@ -459,6 +459,32 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
             },
         )
 
+    def test_should_report_a_finding_naming_a_trail_days_that_is_no_integer_of_1_or_more(self):
+        rows = [
+            ("zero", "trail_days = 0\n", f"trail_days is 0, not 1 or more, in {self.configuration}"),
+            ("a string", 'trail_days = "7"\n', f"trail_days is a string, not an integer, in {self.configuration}"),
+        ]
+        for case, trail_days, expected_detail in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.write_configuration(CLAUDE_CODE_CONFIGURATION + trail_days)
+
+                # Act
+                completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 1, completed.stderr)
+                self.assertEqual(
+                    json.loads(completed.stdout)["items"][CLIENT_ENTRY],
+                    {
+                        "name": "client",
+                        "kind": "prerequisite",
+                        "state": "finding",
+                        "detail": expected_detail,
+                        "fallback": None,
+                    },
+                )
+
     def test_should_report_an_adapter_with_no_client_executable_as_ok(self):
         # Arrange
         self.write_configuration('client = "fake"\n')

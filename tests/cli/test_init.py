@@ -99,14 +99,14 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(configuration, {})
 
-    def test_should_create_neither_the_state_root_nor_the_cache_root(self):
+    def test_should_write_its_command_trail_alone_in_the_state_root_and_create_no_cache_root(self):
         # Act
         self.machine.run_init()
 
         # Assert
         self.assertEqual(
-            [(self.machine.state_home / "brigade").exists(), (self.machine.cache_home / "brigade").exists()],
-            [False, False],
+            [sorted(os.listdir(self.machine.state_home / "brigade")), (self.machine.cache_home / "brigade").exists()],
+            [["commands"], False],
         )
 
     @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
@@ -218,6 +218,21 @@ class BrigadeInitWhenAFileDiffersFromTheShippedOneTest(unittest.TestCase):
                     {"name": name, "path": str(edited_file), "state": "differs"},
                 )
                 self.assertEqual(edited_file.read_text(), "# edited by the user\n")
+
+    def test_should_report_a_configuration_whose_trail_days_is_below_1_as_differing(self):
+        # Arrange
+        configuration = self.machine.corpus / "config.toml"
+        configuration.write_text("trail_days = 0\n")
+
+        # Act
+        completed = self.machine.run_init("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][CONFIGURATION_ENTRY],
+            {"name": "config.toml", "path": str(configuration), "state": "differs"},
+        )
 
     def test_should_print_a_warning_for_the_differing_file(self):
         # Arrange

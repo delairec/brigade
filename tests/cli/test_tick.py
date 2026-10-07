@@ -61,13 +61,13 @@ class BrigadeTickOnceTest(TickTestCase):
         self.assertIsInstance(heartbeat["duration_ms"], int)
         self.assertEqual(heartbeat, {"schema_version": 1, "ts": ANY, "duration_ms": ANY, "actions_applied": 0})
 
-    def test_should_leave_the_lock_and_the_heartbeat_alone_in_the_state_directory(self):
+    def test_should_leave_the_lock_the_heartbeat_and_the_trails_alone_in_the_state_directory(self):
         # Act
         completed = self.run_tick("--once")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(sorted(path.name for path in self.state.iterdir()), ["locks", "tick.json"])
+        self.assertEqual(sorted(path.name for path in self.state.iterdir()), ["locks", "tick.json", "ticks"])
 
     def test_should_report_the_tick_it_recorded_in_the_versioned_document(self):
         # Act
@@ -112,7 +112,7 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
             (completed.returncode, completed.stdout, completed.stderr),
             (0, "", f"brigade tick: another tick holds {self.lock}\n"),
         )
-        self.assertFalse(self.heartbeat.exists())
+        self.assertEqual(sorted(os.listdir(self.state)), ["locks"])
 
 
 class BrigadeTickDryRunTest(TickTestCase):
@@ -208,6 +208,19 @@ class BrigadeTickLoopTest(TickTestCase):
         stdout, stderr = loop.communicate(timeout=STOP_WAIT_S)
         self.assertEqual((loop.returncode, stdout), (0, "tick --loop: 1 ticks attempted\n"), stderr)
 
+    def test_should_write_the_trail_of_its_first_round(self):
+        # Arrange
+        loop = self.start_loop()
+        self.wait_for_first_tick(loop)
+
+        # Act
+        loop.send_signal(signal.SIGTERM)
+
+        # Assert
+        loop.communicate(timeout=STOP_WAIT_S)
+        [trail] = (self.state / "ticks").iterdir()
+        self.assertRegex(trail.name, r"^\d{8}T\d{6}Z\.jsonl$")
+
 
 class BrigadeTickLoopWhileAnotherTickHoldsTheLockTest(TickTestCase):
     def test_should_stand_down_on_stderr_and_exit_0_on_a_signal(self):
@@ -289,7 +302,7 @@ class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTes
             (1, "", f"brigade tick: cannot write {self.lock}: Permission denied\n"),
         )
 
-    def test_should_exit_1_naming_the_heartbeat_it_cannot_write_and_write_none(self):
+    def test_should_exit_1_naming_the_trail_directory_it_cannot_create_and_write_no_heartbeat(self):
         # Arrange
         self.state.chmod(0o500)
 
@@ -304,7 +317,21 @@ class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTes
                 completed.stderr,
                 sorted(path.name for path in self.state.iterdir()),
             ),
-            (1, "", f"brigade tick: cannot write {self.heartbeat}: Permission denied\n", ["locks"]),
+            (1, "", f"brigade tick: cannot write {self.state / 'ticks'}: Permission denied\n", ["locks"]),
+        )
+
+    def test_should_exit_1_naming_the_heartbeat_it_cannot_write_and_write_none(self):
+        # Arrange
+        (self.state / "ticks").mkdir()
+        self.state.chmod(0o500)
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr, self.heartbeat.exists()),
+            (1, "", f"brigade tick: cannot write {self.heartbeat}: Permission denied\n", False),
         )
 
 

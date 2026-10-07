@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.corpus.read_entity import read_entity
-from brigade.system.run_process import run_process
+from tests.integration.run_process_without_trail import run_process_without_trail
 
 SCHEMA = 'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\t\tREPEATABLE\n\tFIELD BUDGET uint\n'
 AGENTS = 'AGENT planner\n\tWORK "the plan of a wave"\n\tWORK "the order of its tasks"\n\tBUDGET 40\n'
@@ -24,7 +24,7 @@ class ReadEntityTest(unittest.TestCase):
 
     def test_should_read_the_fields_of_one_entity_unquoted_in_their_order(self):
         # Act
-        entity = read_entity(run_process, self.corpus, "AGENT", "planner")
+        entity = read_entity(run_process_without_trail, self.corpus, "AGENT", "planner")
 
         # Assert
         self.assertEqual(
