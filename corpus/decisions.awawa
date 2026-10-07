@@ -427,11 +427,14 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC "a subpackage of brigade/ per COMPONENT of the tasks (ledger, registry, corpus, runs,"
 		+ "tick, waves, verify for the pass, studies, intake, recipes, dashboard, roles), created"
 		+ "by the first task of that component, never ahead of it"
-	DESC "brigade/commands/ one module per command, brigade/cli.py the parser and the exit mapping,"
-		+ "brigade/launcher.py the floor check; brigade/adapters/clients, forges and schedulers,"
-		+ "brigade/collectors/, brigade/checks/ and brigade/outputs/ the plugins; brigade/system/"
-		+ "the primitives: paths, clock, processes, locks, atomic files, ids, documents;"
-		+ "brigade/git/ the git gateway, as brigade/corpus/ is the awawa one"
+	DESC "brigade/commands/ one module per command line and nothing else, its renderers, request"
+		+ "reader and exit decision underscored in it; brigade/command.py the record type every"
+		+ "command module declares; brigade/cli.py discovers the command modules, builds the parser"
+		+ "from their records and keeps the exit mapping; brigade/launcher.py the floor check;"
+		+ "brigade/adapters/clients, forges and schedulers, brigade/collectors/, brigade/checks/"
+		+ "and brigade/outputs/ the plugins; brigade/system/ the primitives: paths, clock,"
+		+ "processes, locks, atomic files, ids, documents; brigade/git/ the git gateway, as"
+		+ "brigade/corpus/ is the awawa one"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	DESC "a module exposes one public function named after a verb, no leading underscore, its"
 		+ "helpers underscored, with the constants and frozen dataclasses it declares; its unit"
@@ -459,10 +462,19 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		+ "and the IMPL anchors need module names that say what they hold"
 	REJECTED "mypy or pyright in CI now: a third-party tool nobody asked for; the IDE on the"
 		+ "reference machine checks the annotations live"
+	REJECTED "a render_*.py or helper module beside the command modules: commands/ then holds two"
+		+ "kinds of modules and cannot be discovered as the list of commands"
+	REJECTED "one command module declaring several command lines: the lines it serves are found by"
+		+ "reading it, not by listing commands/"
+	REJECTED "a hand-written list of the command modules in cli.py: one more place to touch per"
+		+ "command, which discovery makes useless once commands/ holds commands alone"
 	RATIONALE "the user asked on 2026-10-05 for strict foundations before the code of M0 grows; the"
 		+ "layout applies the rules one_exported_function_per_file, yagni, kiss, test_scope_levels"
 		+ "and tool_introduction_is_the_users_call of the instructions corpus"
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "DESC 3 amended on the user's rulings of 2026-10-07 in the refinement of @TASK.B82, F26"
+		+ "and F27 of the foundations review"
+		REF @TASK.B82
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	TITLE "client, forge, scheduler, collector, check and output are plugin kinds resolved by name"
@@ -637,6 +649,16 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "run_reporting_failure, a BrigadeError one stderr line, any other exception its"
 		+ "traceback, and the loop ticks again; the table applies to the exit of the loop"
 		REF @TASK.B56
+	DESC "a command module declares, as a module-level constant of the frozen record type of"
+		+ "brigade/command.py, the path, the help and the arguments of its one command line, its"
+		+ "request reader, its text renderer, its exit decision and, where it has them, its"
+		+ "Markdown renderer and its diagnostics; the help of a group with no command of its own is"
+		+ "declared by the records of its lines; cli.py renders and exits through the record alone,"
+		+ "from @TASK.B82"
+		REF @TASK.B82
+	SOURCE "the declared record of DESC 11 on the user's rulings of 2026-10-07 in the refinement of"
+		+ "@TASK.B82"
+		REF @TASK.B82
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"

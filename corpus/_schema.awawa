@@ -54,7 +54,7 @@ SCHEMA TASK
 		CONVERSE COMPRISES
 	FIELD COMPONENT string
 		DESC "the part of brigade the task touches"
-	FIELD ROLE ada|bastien|lex|prudence|remi|manu|bilal|mina|dora|none
+	FIELD ROLE ada|lex|prudence|remi|manu|bilal|mina|dora|none
 		REPEATABLE
 		DESC "the role suggested to deliver it"
 	FIELD AFTER @TASK
