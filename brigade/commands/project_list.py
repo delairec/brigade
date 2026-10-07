@@ -1,13 +1,31 @@
+from brigade.command import Command
 from brigade.corpus.read_entities import Entity
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 
 DOCUMENT_SCHEMA_VERSION = 1
 NO_VALUE = ""
+NO_PROJECT = "no project registered"
 
 
 def _read_field(project: Entity, name: str) -> str:
     return next((field.value for field in project.fields if field.name == name), NO_VALUE)
+
+
+def _render_text(document: dict) -> str:
+    projects = document["projects"]
+    if not projects:
+        return NO_PROJECT
+    name_width = max(len(project["name"]) for project in projects)
+    return "\n".join(f"{project['name']:<{name_width}}  {project['status']}  {project['path']}" for project in projects)
+
+
+def _read_request(options):
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    return 0
 
 
 def project_list(request, runtime) -> dict:
@@ -19,3 +37,14 @@ def project_list(request, runtime) -> dict:
             for project in read_projects(runtime)
         ],
     }
+
+
+COMMAND = Command(
+    path=("project", "list"),
+    help="list every registered project",
+    group_help="register the projects brigade works on, list and show them",
+    run=project_list,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

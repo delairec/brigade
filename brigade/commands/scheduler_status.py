@@ -1,3 +1,4 @@
+from brigade.command import Command
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
 from brigade.system.resolve_plugin import resolve_plugin
@@ -29,6 +30,30 @@ def _describe_last_tick(runtime):
     return {key: value for key, value in heartbeat.items() if key != "schema_version"}
 
 
+def _render_last_tick(last_tick) -> str:
+    if last_tick is None:
+        return "never"
+    return f"{last_tick['ts']}, {last_tick['actions_applied']} actions applied in {last_tick['duration_ms']} ms"
+
+
+def _render_text(document: dict) -> str:
+    lines = [f"scheduler  {document['scheduler']}", *(f"unit       {unit}" for unit in document["unit_files"])]
+    if document["cron_line"] is not None:
+        lines.append(f"cron line  {document['cron_line']}")
+    if document["next_activation"] is not None:
+        lines.append(f"next       {document['next_activation']}")
+    lines.append(f"last tick  {_render_last_tick(document['last_tick'])}")
+    return "\n".join(lines)
+
+
+def _read_request(options):
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    return 0
+
+
 def scheduler_status(request, runtime) -> dict:
     name, status = _find_installed(runtime)
     return {
@@ -39,3 +64,14 @@ def scheduler_status(request, runtime) -> dict:
         "next_activation": status["next_activation"],
         "last_tick": _describe_last_tick(runtime),
     }
+
+
+COMMAND = Command(
+    path=("scheduler", "status"),
+    help="report the scheduler installed",
+    group_help="install what fires the tick, and report it",
+    run=scheduler_status,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

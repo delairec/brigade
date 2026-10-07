@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
@@ -23,6 +24,9 @@ INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 CONFIGURATION_FILE = "config.toml"
 STEPS_FALLBACK = "the wall-time limit of each run"
 STEP_COUNT_FEATURE = "step_count"
+STATE_WIDTH = 9
+NAME_WIDTH = 13
+DETAIL_WIDTH = 36
 
 
 def _format_version(version: tuple[int, ...]) -> str:
@@ -148,6 +152,47 @@ def _check_steps(runtime) -> list[dict]:
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
 
 
+def _render_prerequisite(item: dict) -> str:
+    return f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['detail']}"
+
+
+def _render_optional(item: dict) -> str:
+    label = "else" if item["state"] == "ok" else "fallback"
+    columns = f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['detail']:<{DETAIL_WIDTH - 1}}"
+    return f"{columns} {label}: {item['fallback']}"
+
+
+def _summarise(prerequisites: list[dict], optional_items: list[dict]) -> str:
+    prerequisites_ok = sum(1 for item in prerequisites if item["state"] == "ok")
+    on_fallback = sum(1 for item in optional_items if item["state"] != "ok")
+    optional_phrase = "optional item on its fallback" if on_fallback == 1 else "optional items on their fallback"
+    return f"doctor: {prerequisites_ok} of {len(prerequisites)} prerequisites ok · {on_fallback} {optional_phrase}"
+
+
+def _render_text(document: dict) -> str:
+    prerequisites = [item for item in document["items"] if item["kind"] == "prerequisite"]
+    optional_items = [item for item in document["items"] if item["kind"] == "optional"]
+    lines = [
+        "prerequisites",
+        *(_render_prerequisite(item) for item in prerequisites),
+        "optional",
+        *(_render_optional(item) for item in optional_items),
+        "",
+        _summarise(prerequisites, optional_items),
+    ]
+    return "\n".join(lines)
+
+
+def _read_request(options):
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    if any(item["state"] == "finding" for item in document["items"]):
+        return 1
+    return 0
+
+
 def doctor(request, runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -163,3 +208,13 @@ def doctor(request, runtime) -> dict:
             *_check_steps(runtime),
         ],
     }
+
+
+COMMAND = Command(
+    path=("doctor",),
+    help="check the prerequisites and report the optional items with their fallback",
+    run=doctor,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

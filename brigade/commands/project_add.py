@@ -2,6 +2,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.command import Argument, Command
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError, UsageError
 from brigade.git.detect_repository import detect_repository
@@ -18,6 +19,9 @@ DOCUMENT_SCHEMA_VERSION = 1
 IDENTIFIER = re.compile(r"[A-Za-z0-9_]+")
 INITIAL_STATUS = "active"
 NEVER_GUESSED = ()
+FIELD_NAME_WIDTH = 12
+GUESSED_MARK = "  (guessed)"
+NO_CONFIGURATION = "no supported configuration was found"
 
 
 @dataclass(frozen=True)
@@ -86,6 +90,30 @@ def _choose_name(request, path: Path) -> str:
     return request.name
 
 
+def _render_field(field: dict) -> str:
+    mark = GUESSED_MARK if field["guessed"] else ""
+    return f"{field['name']:<{FIELD_NAME_WIDTH}}{field['value']}{mark}"
+
+
+def _render_text(document: dict) -> str:
+    project = document["project"]
+    lines = [
+        f"{document['action']} @PROJECT.{project['name']}",
+        *(_render_field(field) for field in project["fields"]),
+    ]
+    if not document["configurations"]:
+        lines.append(NO_CONFIGURATION)
+    return "\n".join(lines)
+
+
+def _read_request(options):
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    return 0
+
+
 def project_add(request, runtime) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     path = Path(request.path).resolve()
@@ -109,3 +137,22 @@ def project_add(request, runtime) -> dict:
         },
         "configurations": list(guess.configurations),
     }
+
+
+COMMAND = Command(
+    path=("project", "add"),
+    help="register a git repository in the operational corpus",
+    group_help="register the projects brigade works on, list and show them",
+    arguments=(
+        Argument(("path",)),
+        Argument(("--name",), {"help": "the name of the PROJECT entity; the basename of the path by default"}),
+        Argument(("--acceptance",), {"action": "append", "default": [], "help": "a light command run by task check"}),
+        Argument(("--heavy",), {"action": "append", "default": [], "help": "a suite left to continuous integration"}),
+        Argument(("--setup",), {"action": "append", "default": [], "help": "a per-worktree command"}),
+        Argument(("--force",), {"action": "store_true", "help": "replace the project already registered"}),
+    ),
+    run=project_add,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

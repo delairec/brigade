@@ -1,6 +1,7 @@
 from importlib.resources import files
 from string import Template
 
+from brigade.command import Command
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
@@ -14,6 +15,9 @@ CONFIGURATION_FILE = "config.toml"
 GITIGNORE_CONTENT = "config.toml\n"
 COMMITTED_FILES = (SCHEMA_FILE, GITIGNORE_FILE)
 COMMIT_MESSAGE = "brigade init: the operational corpus"
+STATE_WIDTH = 9
+NAME_WIDTH = 13
+STATES = ("created", "present", "differs")
 
 
 def _require_identity(runtime) -> None:
@@ -55,6 +59,38 @@ def _ensure_file(runtime, name: str, file_name: str, content: bytes) -> dict:
     return {**item, "state": "differs"}
 
 
+def _render_item(item: dict) -> str:
+    return f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['path']}"
+
+
+def _summarise(items: list[dict]) -> str:
+    counts = " · ".join(f"{state} {sum(1 for item in items if item['state'] == state)}" for state in STATES)
+    return f"init: {counts}"
+
+
+def _warn(item: dict) -> str:
+    return f"warning: {item['name']} differs from the shipped file and is left as it is"
+
+
+def _render_text(document: dict) -> str:
+    items = document["items"]
+    lines = [
+        *(_render_item(item) for item in items),
+        "",
+        _summarise(items),
+        *(_warn(item) for item in items if item["state"] == "differs"),
+    ]
+    return "\n".join(lines)
+
+
+def _read_request(options):
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    return 0
+
+
 def init(request, runtime) -> dict:
     _require_identity(runtime)
     repository = _ensure_repository(runtime)
@@ -75,3 +111,13 @@ def init(request, runtime) -> dict:
             CommitRequest(repository=runtime.paths.config_root, files=created_to_commit, message=COMMIT_MESSAGE),
         )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "items": [repository, *file_items]}
+
+
+COMMAND = Command(
+    path=("init",),
+    help="create the operational corpus repository, its schema and config.toml",
+    run=init,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

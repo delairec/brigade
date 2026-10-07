@@ -1,9 +1,9 @@
 import unittest
 
-from brigade.commands.render_run_text import render_run_text
+from brigade.commands.run import COMMAND
 
 
-class RenderRunTextTest(unittest.TestCase):
+class RunTextTest(unittest.TestCase):
     def test_should_count_the_segments_of_a_run_handed_over(self):
         # Arrange
         document = {
@@ -16,7 +16,7 @@ class RenderRunTextTest(unittest.TestCase):
         }
 
         # Act
-        text = render_run_text(document)
+        text = COMMAND.render_text(document)
 
         # Assert
         self.assertEqual(text, "run 20261007T090000Z-b70a01: deliver as builder (build) done after 2 segments")
