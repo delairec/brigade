@@ -13,12 +13,16 @@ SCRIPTED_CLIENT = str(FIXTURES / "executables" / "client-scripted")
 BROKEN_CLIENT = str(FIXTURES / "executables" / "client-broken")
 
 LAUNCH_REQUEST = (
-    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "role": {"name": "bastien",'
-    ' "package": "AGENT bastien", "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.",'
+    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "bastien", "package": "AGENT bastien",'
+    ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
+    ' "budget": 75}}'
 )
 RESUME_REQUEST = (
-    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1", "role": {"name": "bastien",'
-    ' "package": "AGENT bastien", "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1",'
+    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "bastien", "package": "AGENT bastien",'
+    ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
+    ' "budget": 75}}'
 )
 FAKE_PROBE = {
     "schema_version": 1,
@@ -118,16 +122,18 @@ class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
                     "--print",
                     "--output-format",
                     "json",
+                    "--permission-mode",
+                    "dontAsk",
                     "--model",
                     "sonnet",
                     "--effort",
                     "low",
                     "--max-turns",
                     "94",
-                    "--append-system-prompt",
-                    "AGENT bastien",
+                    "--append-system-prompt-file",
+                    "/state/brigade/runs/r1/role.md",
                     "--allowedTools",
-                    "Read,Glob,Grep",
+                    "Read,Glob,Grep,Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)",
                 ],
                 "environment": {},
                 "stdin": "Deliver the task B42.",
@@ -230,7 +236,29 @@ class BrigadeAdapterResumeArgvTest(AdapterTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["argv"][4:6], ["--resume", "s1"])
+        self.assertEqual(
+            json.loads(completed.stdout)["argv"],
+            [
+                "claude",
+                "--print",
+                "--output-format",
+                "json",
+                "--permission-mode",
+                "dontAsk",
+                "--resume",
+                "s1",
+                "--model",
+                "opus",
+                "--effort",
+                "high",
+                "--max-turns",
+                "94",
+                "--append-system-prompt-file",
+                "/state/brigade/runs/r1/role.md",
+                "--allowedTools",
+                "Read,Glob,Grep,Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)",
+            ],
+        )
 
 
 class BrigadeAdapterTranscriptsTest(AdapterTestCase):
@@ -377,6 +405,36 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stderr, "brigade adapter launch-argv: the request on stdin: lacks the key role\n")
+
+    def test_should_name_the_file_a_launch_request_lacks(self):
+        rows = [
+            (
+                (
+                    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "role": {"name":'
+                    ' "bastien", "package": "AGENT bastien", "package_file": "/state/brigade/runs/r1/role.md",'
+                    ' "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+                ),
+                "brigade adapter launch-argv: the request on stdin: lacks the key progress_file\n",
+            ),
+            (
+                (
+                    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.",'
+                    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "bastien",'
+                    ' "package": "AGENT bastien", "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+                ),
+                "brigade adapter launch-argv: the request on stdin: lacks the key role.package_file\n",
+            ),
+        ]
+        for request, expected_refusal in rows:
+            with self.subTest(expected_refusal=expected_refusal):
+                # Arrange
+                self.machine.write_configuration('client = "claude-code"\n')
+
+                # Act
+                completed = self.run_adapter("launch-argv", "--json", request=request)
+
+                # Assert
+                self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
 
     def test_should_refuse_an_invalid_request_before_reading_the_configuration(self):
         # Arrange

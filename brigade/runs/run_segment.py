@@ -3,7 +3,14 @@ from dataclasses import dataclass
 
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.plan_run import RunPlan
-from brigade.runs.run_locations import BRIEF_FILE, PROGRESS_FILE, SEGMENTS_DIRECTORY, STDERR_FILE, STDOUT_FILE
+from brigade.runs.run_locations import (
+    BRIEF_FILE,
+    PROGRESS_FILE,
+    ROLE_FILE,
+    SEGMENTS_DIRECTORY,
+    STDERR_FILE,
+    STDOUT_FILE,
+)
 from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.create_directory import create_directory
@@ -45,6 +52,7 @@ def _describe_role(plan: RunPlan) -> dict:
     return {
         "name": plan.role.role,
         "package": plan.role.body,
+        "package_file": str(plan.run_directory / ROLE_FILE),
         "capabilities": list(plan.capabilities),
         "reasoning": plan.role.front_matter["reasoning"],
         "budget": plan.procedure.budget,
@@ -74,6 +82,7 @@ def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
     create_directory(segment_directory)
     brief = _compose_segment_brief(plan, number)
     write_text_file(segment_directory / BRIEF_FILE, brief)
+    progress_file = str(plan.run_directory / PROGRESS_FILE)
     launch = _ask_client(
         plan,
         runtime,
@@ -82,6 +91,7 @@ def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
             "schema_version": REQUEST_SCHEMA_VERSION,
             "worktree": str(plan.worktree),
             "brief": brief,
+            "progress_file": progress_file,
             "role": _describe_role(plan),
         },
     )
@@ -90,7 +100,7 @@ def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
         SpawnRequest(
             argv=tuple(launch["argv"]),
             cwd=str(plan.worktree),
-            environment={**launch["environment"], PROGRESS_FILE_VARIABLE: str(plan.run_directory / PROGRESS_FILE)},
+            environment={**launch["environment"], PROGRESS_FILE_VARIABLE: progress_file},
             stdin=launch["stdin"],
             stdout=segment_directory / STDOUT_FILE,
             stderr=segment_directory / STDERR_FILE,

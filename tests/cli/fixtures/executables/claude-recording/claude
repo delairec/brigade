@@ -1,0 +1,4 @@
+#!/bin/sh
+cat > /dev/null
+printf '%s\n' "$@" > "$BRIGADE_PROGRESS_FILE"
+cat -- "$(dirname -- "$0")/../../claude-code/result-success.json"

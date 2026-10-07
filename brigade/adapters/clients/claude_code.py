@@ -9,7 +9,7 @@ from brigade.errors import BrigadeError
 SCHEMA_VERSION = 1
 CLIENT_NAME = "claude-code"
 EXECUTABLE = "claude"
-UNATTENDED_OPTIONS = ("--print", "--output-format", "json")
+UNATTENDED_OPTIONS = ("--print", "--output-format", "json", "--permission-mode", "dontAsk")
 REASONING_DEFAULTS = {
     "deepest": {"model": "fable", "effort": "max"},
     "deep": {"model": "fable", "effort": "high"},
@@ -22,6 +22,7 @@ CAPABILITY_TOOLS = {
     "shell": ("Bash",),
     "net": ("WebFetch", "WebSearch"),
 }
+PROGRESS_FILE_TOOLS = ("Write", "Edit")
 TURN_MARGIN_DIVISOR = 4
 USAGE_COUNTERS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 RATE_LIMIT_PHRASES = ("limit reached", "hit your limit", "usage limit", "rate limit")
@@ -53,6 +54,7 @@ def _build_role_options(request: dict) -> list[str]:
     reasoning = request["reasoning_table"].get(role["reasoning"], REASONING_DEFAULTS[role["reasoning"]])
     max_turns = role["budget"] + math.ceil(role["budget"] / TURN_MARGIN_DIVISOR)
     tools = [tool for capability in role["capabilities"] for tool in CAPABILITY_TOOLS[capability]]
+    progress_rules = [f"{tool}(/{request['progress_file']})" for tool in PROGRESS_FILE_TOOLS]
     return [
         "--model",
         reasoning["model"],
@@ -60,10 +62,10 @@ def _build_role_options(request: dict) -> list[str]:
         reasoning["effort"],
         "--max-turns",
         str(max_turns),
-        "--append-system-prompt",
-        role["package"],
+        "--append-system-prompt-file",
+        role["package_file"],
         "--allowedTools",
-        ",".join(tools),
+        ",".join([*tools, *progress_rules]),
     ]
 
 

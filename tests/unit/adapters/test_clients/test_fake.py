@@ -7,9 +7,11 @@ LAUNCH_REQUEST = {
     "schema_version": 1,
     "worktree": "/srv/worktrees/b42",
     "brief": "Deliver the task B42.",
+    "progress_file": "/state/brigade/runs/r1/progress.md",
     "role": {
         "name": "bastien",
         "package": "AGENT bastien",
+        "package_file": "/state/brigade/runs/r1/role.md",
         "capabilities": ["read", "shell"],
         "reasoning": "standard",
         "budget": 75,
