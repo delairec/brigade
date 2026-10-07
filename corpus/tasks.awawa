@@ -1112,6 +1112,7 @@ TASK B19
 	SPEC "ledger events wave.paused and wave.resumed"
 	AFTER @TASK.B14
 	AFTER @TASK.B71
+	AFTER @TASK.B106
 	RATIONALE "it follows @TASK.B71: the resume from a progress file rests on the client being able"
 		+ "to write it, F1 of the foundations review"
 		REF @TASK.B71
@@ -4040,6 +4041,7 @@ TASK B91
 		+ "appended since the segment before, after the progress file"
 	SPEC "a note never reaches a segment already launched: the client takes no input once launched,"
 		+ "and the command says so in its output"
+	AFTER @TASK.B106
 	RATIONALE "on 2026-10-07 a message for the running run of @TASK.B82, run"
 		+ "20261007T105605Z-396068, on the two L016 errors of the corpus on main, could not reach"
 		+ "it: claude -p takes no input once launched; the only live channel is the brief of the"
@@ -4126,6 +4128,7 @@ TASK B94
 		+ "run does not exist"
 	AFTER @TASK.B27
 	AFTER @TASK.B82
+	AFTER @TASK.B106
 	RATIONALE "asked on 2026-10-07 while following the run of @TASK.B82: brigade runs list gives"
 		+ "the state and brigade runs logs the client's output, which Claude Code writes only at"
 		+ "the end; the progress file runs/<id>/progress.md is the only live trace, and no command"
@@ -4626,3 +4629,128 @@ TASK B105
 		+ "à moins de relancer la commande toutes les X secondes peut être?\"; on the proposal of a"
 		+ "draft task in ADD0: \"ok mais ça n'est pas prévu dans le plan déjà? sinon ça pourrait"
 		+ "rentrer dans ADD0 je suppose, c'est du confort\", then \"oui ok\""
+
+TASK B106
+	TITLE "The progress of a run is written and read through a document plugin, Markdown without"
+		+ "awawa, a small awawa corpus with a fixed schema where awawa is declared, and the brief"
+		+ "frames what the agent writes in it"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "runs"
+	ROLE ada
+	DESC "to settle in the refinement: whether the awawa form is one file, runs/<id>/progress.awawa"
+		+ "holding its schema, the one path the write grant of @TASK.B71 names, or a directory; how"
+		+ "a role whose capabilities carry no shell formats and lints what it appends, or whether"
+		+ "brigade formats the corpus at each read as"
+		+ "@DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote does for a project"
+		+ "corpus; what a corpus awawa cannot read does to the relaunch; the name of the key of"
+		+ "config.toml; what the progress setting of the fake client appends in the awawa form;"
+		+ "what @TASK.B94 prints in the awawa form"
+		REF @TASK.B71
+		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
+		REF @TASK.B94
+	SPEC "document is a plugin kind resolved by name through the resolver of"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported, with two built-in"
+		+ "plugins, markdown and awawa; every operation takes the document it serves, its path, its"
+		+ "schema resource and the frame of its content, and nothing of the kind names the progress"
+		+ "of a run: create the document, the text the brief carries about it, the latest entries"
+		+ "it holds, and whether it holds any"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	SPEC "the progress of a run is the first document served by that kind: the markdown plugin"
+		+ "writes and reads runs/<id>/progress.md, the awawa plugin a corpus of the schema brigade"
+		+ "ships for it"
+	SPEC "the form is the document key of config.toml, awawa or markdown; without the key, awawa"
+		+ "when brigade finds the awawa executable, else markdown; brigade doctor reports the form"
+		+ "in use as an optional item, markdown its fallback when awawa is missing"
+	SPEC "the command run resolves the document plugin through the runtime's resolver, as it"
+		+ "resolves the client, and RunPlan carries it; no module outside the plugin package reads"
+		+ "or writes the progress of a run"
+	SPEC "brigade run creates the progress of the run before the first segment through the plugin:"
+		+ "an empty progress.md in the markdown form; in the awawa form, a corpus holding the"
+		+ "schema brigade ships as a resource, the one the rule"
+		+ "procedure_progress_outside_repository of the instructions corpus fixes, and no entry"
+	SPEC "the brief of every segment names the form of the run and its path, exported as"
+		+ "BRIGADE_PROGRESS_FILE, and the frame of what the agent writes: after each major step,"
+		+ "the step completed, the facts it established and the next step, one line per fact, one"
+		+ "entity per step in the awawa form; no command output, no diff, no narration"
+	SPEC "the brief of a relaunched segment opens on what the plugin reads: the file as it is in"
+		+ "the markdown form; the last step recorded and its next step in the awawa form, read"
+		+ "through the gateway brigade/corpus/, never the whole history"
+	SPEC "the awawa plugin calls awawa through the gateway brigade/corpus/ alone, as"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa requires"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	SPEC "each built-in plugin has its unit test under tests/unit, the awawa one proven against a"
+		+ "real corpus in a temporary directory; the resolver test proves that an unknown document"
+		+ "name raises the error naming the kind and the name"
+	SPEC "tests/cli run brigade run as a subprocess with the fake client in each form: a segment"
+		+ "that hands over is relaunched with a brief opening on the file in the markdown form and"
+		+ "on the last step and its next step in the awawa form; with no awawa executable on PATH"
+		+ "and no key, the run uses the markdown form and brigade doctor reports the fallback"
+	SPEC "the README's Runs section states the two forms, the key, the fallback and the frame"
+	AFTER @TASK.B73
+	AFTER @TASK.B102
+	RATIONALE "brigade/runs/run_segment.py:38-39 reads runs/<id>/progress.md whole into the"
+		+ "Progress so far section of every relaunched brief, brigade/runs/compose_brief.py:23-24,"
+		+ "and brigade/runs/run_segments.py:27-28 tests it non-empty: the file joins the context of"
+		+ "each segment after the first, so what the agent writes in it is paid at every relaunch;"
+		+ "the user asked for a form that awawa reads entity by entity as the file grows, and for a"
+		+ "frame so that the agents write no useless detail"
+	RATIONALE "the user ruled for a plugin: Markdown where awawa is absent, a corpus where awawa is"
+		+ "declared; a kind with two built-in modules follows DESC 1 of"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported, whose list of kinds"
+		+ "gains document at the ratification of this task; the choice is read from config.toml so"
+		+ "that a machine with awawa may keep Markdown"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	RATIONALE "the kind serves documents, not the progress of a run alone, because the user ruled"
+		+ "that every .md brigade handles must be manageable through awawa instead: the operations"
+		+ "take the document they serve, which costs the progress nothing more than passing its"
+		+ "path, schema and frame, and a later document joins by naming its own; the inventory of"
+		+ "the .md files brigade reads and writes, the decision and the tasks of that"
+		+ "generalisation are planned apart, and this task changes the progress of a run alone"
+	RATIONALE "the two forms and the frame are those of the rule"
+		+ "procedure_progress_outside_repository of the instructions corpus, amended in parallel"
+		+ "with this draft; brigade ships the schema and carries the frame in its own brief because"
+		+ "the instructions corpus is optional, DESC 2 of"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, and a run must record its"
+		+ "progress the same way without it"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "DESC 1 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites makes awawa a"
+		+ "prerequisite that brigade doctor reports as a finding, SPEC 1 of @TASK.B02: the markdown"
+		+ "fallback without awawa is reached only on a machine doctor already refuses, and an"
+		+ "optional item for the form would make awawa optional for the runs; the refinement"
+		+ "settles which of the decision and the fallback yields, and the conflict is reported with"
+		+ "this draft rather than resolved in it"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+		REF @TASK.B02
+	RATIONALE "M1 rather than ADD0, as the user ruled: the progress of a run is a contract several"
+		+ "tasks read, @TASK.B19 relaunches from it in M1, @TASK.B102 relaunches a run that hands"
+		+ "over by itself, @TASK.B94 prints it, @TASK.B91 appends notes after it; the form is fixed"
+		+ "before its readers are built, each of them going through the plugin, and the quota saved"
+		+ "applies from the first waves of M2"
+		REF @TASK.B19
+		REF @TASK.B102
+		REF @TASK.B94
+		REF @TASK.B91
+	RATIONALE "after @TASK.B73, which puts the resolver on Runtime and has the command run resolve"
+		+ "the plugins the core receives, and after @TASK.B102, which relaunches on the declaration"
+		+ "of the last line and composes the brief this task changes; the Claude Code adapter"
+		+ "grants the path the launch request names, brigade/adapters/clients/claude_code.py:57, so"
+		+ "the awawa form costs it nothing; DESC 1 of"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast names"
+		+ "progress.md and is amended at the ratification to name the file of each form"
+		REF @TASK.B73
+		REF @TASK.B102
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+	SOURCE "the user's words of 2026-10-07: \"ce fichier progress.md, à terme j'aimerais bien qu'il"
+		+ "soit normalisé, probabelement en passant par awawa, comme ça quand le fichier de"
+		+ "progression grossit, on peut continuer de le lire via awawa sans consommer beaucoup de"
+		+ "tokens.\""
+	SOURCE "the user's rulings of 2026-10-07: \"Oui bah on peut l'avoir en plugin à la limite: pas"
+		+ "d'awawa on remplit un .md, awawa déclaré on utilise des corpus. L'idée c'est de cadrer"
+		+ "les agents aussi pour éviter qu'ils n'écrivent trop de détails inutiles dans le fichier"
+		+ "de progression. Ok pour mettre à jour .ai par une PR. Je pense que ça peut quand même"
+		+ "pas mal aider à réduire la conso de quota ai vu que ça s'ajoute dans le contexte lors"
+		+ "des run. Ok pour la mettre en m1\""
+	SOURCE "the user's ruling of 2026-10-07 on the shape of the plugin: \"d'ailleurs: tout ce qui"
+		+ "est un .md doit pouvoir être géré en utilisant awawa à la place, c'est à prévoir dans"
+		+ "notre plan\""
