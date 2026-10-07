@@ -2692,7 +2692,7 @@ TASK B70
 	TITLE "100% line and branch coverage of brigade/ measured locally on the full suite: every"
 		+ "uncovered line or branch covered by a test written first, failing on the missing"
 		+ "behaviour, or deleted when nothing demands it"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tests"
 	ROLE bastien
@@ -2701,18 +2701,37 @@ TASK B70
 		+ "version requirements-ci.txt pins, print TOTAL at 100% for the lines and the branches of"
 		+ "brigade/; the pull request body quotes the three commands, the coverage version, the"
 		+ "head commit and the TOTAL line"
+		IMPL ".coveragerc::branch = True"
+		IMPL "tests/unit/system/test_spawn_process.py::class"
+			+ "SpawnProcessWithABriefTest(SpawnProcessTestCase):"
+		IMPL "tests/unit/runs/test_list_runs.py::class"
+			+ "ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):"
+		IMPL "tests/cli/test_run.py::class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):"
 	SPEC "every test added fails when the line or the branch it covers is removed: a test that"
 		+ "still passes without the code it covers is not the test of that code"
+		IMPL "tests/unit/system/test_wait_within_limit.py::def"
+			+ "test_should_kill_the_group_once_the_grace_is_over(self):"
+		IMPL "tests/unit/roles/test_resolve_role.py::def"
+			+ "test_should_let_a_missing_awawa_through_rather_than_look_elsewhere(self):"
 	SPEC "every line or branch deleted is justified in the pull request body, one line each: the"
 		+ "file and the lines, and why nothing demands them, no caller reaching them, a condition"
 		+ "that cannot hold, or a behaviour no entity of the corpus asks for"
+		IMPL "brigade/system/spawn_process.py::with contextlib.suppress(BrokenPipeError), pipe:"
+		IMPL "brigade/system/resolve_plugin.py::if importlib.util.find_spec(module_name) is None:"
+		IMPL "brigade/system/repeat_until_signalled.py::with contextlib.suppress(BlockingIOError):"
+		IMPL "brigade/registry/locate_project_block.py::start = next("
 	SPEC "brigade/ holds no # pragma: no cover, and .coveragerc sets no exclude_lines, no"
 		+ "partial_branches and no omit: every line and every branch of brigade/ counts"
+		IMPL ".coveragerc::[report]"
 	SPEC "the tests that need awawa still skip without it: the coverage job of the CI passes"
 		+ "without awawa, and the pull request body quotes its TOTAL next to the local one"
+		IMPL "tests/cli/test_run.py::@unittest.skipUnless(shutil.which(\"awawa\"), \"awawa is not"
+			+ "on PATH\")"
+		IMPL ".github/workflows/ci.yml::run: coverage report"
 	SPEC ".coveragerc sets fail_under to the TOTAL percentage of the coverage job of the CI at the"
 		+ "head of the pull request, rounded down to an integer: the job fails when a later pull"
 		+ "request brings the figure below it"
+		IMPL ".coveragerc::fail_under = 93"
 	AFTER @TASK.B66
 	AFTER @TASK.B69
 	RATIONALE "the user ruled on 2026-10-07: « la définition du TDD est: pas de ligne de code sans"
@@ -2763,3 +2782,4 @@ TASK B70
 	SOURCE "the user's words of 2026-10-07, « la définition du TDD est: pas de ligne de code sans"
 		+ "qu'un test échoue d'abord, donc une ligne de code doit avoir son test, je suis pas"
 		+ "d'accord là », then « oui » and « général » on the session's proposal"
+	DELIVERED_BY 49
