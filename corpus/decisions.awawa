@@ -1247,30 +1247,3 @@ DECISION ThePidOfARunIsReplacedAtomically
 		+ "slower suite would only hide it"
 	SOURCE "pull request #45 of the brigade repository, delivering @TASK.B69"
 		REF @TASK.B69
-
-DECISION ABranchOnlyAModulePatchReachesIsCoveredByAPatchingTest
-	TITLE "a line or a branch of brigade/ that only a patch of a module attribute reaches is"
-		+ "covered by a test patching it with unittest.mock for its own duration, never left"
-		+ "untested"
-	STATUS active
-	DESC "the patch replaces a module attribute for one test and is restored on exit,"
-		+ "mock.patch.object or mock.patch.dict, as test_paths patches os.environ; it serves only"
-		+ "where no input of the public function reaches the line"
-	DESC "its cases at its adoption: sys.version_info for the floor check of launch,"
-		+ "GRACE_BEFORE_KILL_S for the kill of wait_within_limit, threading.excepthook to observe"
-		+ "the feeding thread of spawn_process, plan and EXECUTORS of the tick while no action"
-		+ "exists, a scheduler answer off its shape"
-		REF @TASK.B70
-	REJECTED "leaving the branch untested and recording why, as the rule"
-		+ "production_signature_not_deformed_for_test of the instructions corpus asks: task B70"
-		+ "asks every line of brigade/ covered by a test or deleted"
-	REJECTED "a parameter or a default added for the test, the grace given as an argument: the same"
-		+ "rule forbids deforming a production signature for a spec"
-	REJECTED "deleting the branch: the floor check, the kill after the grace and the warning at the"
-		+ "round cap are behaviours, not dead code"
-	RATIONALE "departs from production_signature_not_deformed_for_test of the instructions corpus"
-		+ "for brigade: the user ruled on 2026-10-07 that no line of code stands without a test"
-		+ "failing first"
-		REF @TASK.B70
-	SOURCE "pull request #49, delivering B70"
-		REF @TASK.B70
