@@ -936,8 +936,9 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	DESC "a reader keeps an upgrade function per kind from every version ever written to the"
 		+ "current one; a ledger line is upgraded on read and never rewritten; a state file is"
 		+ "upgraded on read and written back current"
-	DESC "inside the core a document becomes a frozen dataclass through one from_document and"
-		+ "to_document pair per kind; dicts stay at the edges"
+	DESC "inside the core a document becomes a frozen dataclass; the module of its kind declares"
+		+ "from_document when brigade reads the kind and to_document when brigade writes it, no"
+		+ "function for a direction no code crosses; dicts stay at the edges"
 	DESC "timestamps are ISO 8601 UTC with Z; durations are integer milliseconds in *_ms fields;"
 		+ "run ids are time-sortable, <UTC compact>-<6 hex>, from one function"
 	DESC "binds @TASK.B02, @TASK.B05, @TASK.B06, @TASK.B42, @TASK.B47, @TASK.B48 and @TASK.B50"
@@ -952,6 +953,8 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		+ "collector name, the command or the file name, and two ratified tasks name schema_version"
 	REJECTED "JSON Schema validated by a library: a third-party dependency for keys, types and"
 		+ "enumerations"
+	REJECTED "both functions for every kind: the snapshot of the tick is never read, and its"
+		+ "from_document would be called by its test alone"
 	RATIONALE "DESC 3 of @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles gives every"
 		+ "result, event, collector, recipe and config document a schema version and DESC 2 refuses"
 		+ "pickle; SPEC 1 of @TASK.B01 and SPEC 3 of @TASK.B02 already name schema_version"
@@ -959,6 +962,9 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		REF @TASK.B01
 		REF @TASK.B02
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's ruling of 2026-10-07 at the refinement of @TASK.B74: a kind carries only the"
+		+ "directions it crosses, DESC 4 amended"
+		REF @TASK.B74
 
 DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 	TITLE "the pull request of a task carries the GitHub milestone named after the TITLE of the"
