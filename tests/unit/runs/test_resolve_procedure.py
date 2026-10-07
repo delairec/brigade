@@ -55,3 +55,94 @@ class ResolveProcedureFoundNowhereTest(ResolveProcedureByNameTestCase):
             str(raised.exception),
             f"no procedure deploy: not shipped with brigade and not in {self.instructions}/procedures",
         )
+
+
+class ResolveProcedureFoundNowhereWithoutAnInstructionsCorpusTest(unittest.TestCase):
+    def test_should_refuse_naming_the_procedure_and_that_no_corpus_is_set(self):
+        # Arrange
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        shipped = Path(root.name) / "shipped"
+        shipped.mkdir()
+        directories = ProcedureDirectories(shipped=shipped, instructions=None)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure("deploy", directories)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "no procedure deploy: not shipped with brigade and no instructions corpus set in config.toml",
+        )
+
+
+class ResolveProcedureByPathTest(unittest.TestCase):
+    def test_should_resolve_a_procedure_given_by_its_path(self):
+        # Arrange
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        path = Path(root.name) / "custom.md"
+        path.write_text("---\ncapabilities: read\nbudget: 10\n---\nCustom procedure.\n")
+        directories = ProcedureDirectories(shipped=Path(root.name), instructions=None)
+
+        # Act
+        procedure = resolve_procedure(str(path), directories)
+
+        # Assert
+        self.assertEqual(procedure.name, "custom")
+        self.assertEqual(procedure.location, str(path))
+
+    def test_should_refuse_a_path_that_is_not_a_file(self):
+        # Arrange
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        path = Path(root.name) / "missing.md"
+        directories = ProcedureDirectories(shipped=Path(root.name), instructions=None)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure(str(path), directories)
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"no procedure file {path}")
+
+
+class ResolveProcedureWithAnUnknownCapabilityTest(unittest.TestCase):
+    def test_should_refuse_a_procedure_declaring_a_capability_outside_the_set(self):
+        # Arrange
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        path = Path(root.name) / "bad.md"
+        path.write_text("---\ncapabilities: read, fly\nbudget: 10\n---\nBad procedure.\n")
+        directories = ProcedureDirectories(shipped=Path(root.name), instructions=None)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure(str(path), directories)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            f"the procedure {path} declares fly, not one of read, write, shell, net",
+        )
+
+
+class ResolveProcedureWithAnInvalidBudgetTest(unittest.TestCase):
+    def test_should_refuse_a_procedure_whose_budget_is_not_a_positive_integer(self):
+        # Arrange
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        path = Path(root.name) / "bad.md"
+        path.write_text("---\ncapabilities: read\nbudget: zero\n---\nBad procedure.\n")
+        directories = ProcedureDirectories(shipped=Path(root.name), instructions=None)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure(str(path), directories)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            f"the procedure {path} has the budget zero, not a positive integer",
+        )

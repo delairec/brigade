@@ -441,3 +441,37 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
             str(raised.exception),
             f"no transcript of session ada28962 at {self.home.name}/.claude/projects/-srv-b42/ada28962.jsonl",
         )
+
+
+class ClaudeCodeResultWithoutAUsageObjectTest(unittest.TestCase):
+    def test_should_report_no_usage_when_the_usage_is_not_an_object(self):
+        # Arrange
+        stdout = '{"type": "result", "subtype": "success", "result": "done", "usage": "not an object", "num_turns": 5}'
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertIsNone(result["usage"])
+
+
+class ClaudeCodeResultOfAnotherTypeTest(unittest.TestCase):
+    def test_should_report_an_unreadable_output_when_the_document_is_not_a_result(self):
+        # Arrange
+        stdout = '{"type": "assistant", "message": {}}'
+
+        # Act
+        result = parse_claude_output(stdout, stderr="some stderr")
+
+        # Assert
+        self.assertEqual(result["error_class"], "unreadable_output")
+
+
+class ClaudeCodeUnsupportedOperationTest(unittest.TestCase):
+    def test_should_refuse_an_operation_it_does_not_answer(self):
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            answer("frobnicate", {})
+
+        # Assert
+        self.assertEqual(str(raised.exception), "the claude-code client adapter does not answer frobnicate")

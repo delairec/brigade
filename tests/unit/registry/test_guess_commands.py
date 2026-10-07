@@ -182,3 +182,33 @@ class GuessCommandsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(guess, CommandGuess(configurations=(), acceptance=(), setup=()))
+
+    def test_should_guess_no_scripts_when_the_package_json_is_not_json(self):
+        # Arrange
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        create_files(Path(root.name), {"package.json": "not json"})
+
+        # Act
+        guess = guess_commands(Path(root.name))
+
+        # Assert
+        self.assertEqual(
+            guess,
+            CommandGuess(configurations=("package.json",), acceptance=(), setup=("npm install",)),
+        )
+
+    def test_should_guess_no_scripts_when_the_scripts_are_not_an_object(self):
+        # Arrange
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        create_files(Path(root.name), {"package.json": '{"scripts": "not an object"}'})
+
+        # Act
+        guess = guess_commands(Path(root.name))
+
+        # Assert
+        self.assertEqual(
+            guess,
+            CommandGuess(configurations=("package.json",), acceptance=(), setup=("npm install",)),
+        )

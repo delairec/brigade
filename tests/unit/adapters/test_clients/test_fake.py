@@ -151,6 +151,27 @@ class FakeResultTest(unittest.TestCase):
         )
 
 
+class FakeResultOfUnreadableOutputTest(unittest.TestCase):
+    def test_should_describe_the_unreadable_output_when_the_stdout_is_not_json(self):
+        # Act
+        result = answer(
+            "parse-result",
+            {
+                "schema_version": 1,
+                "exit_code": 1,
+                "stdout": "not json",
+                "stderr": "something went wrong",
+                "reasoning_table": {},
+                "settings": {},
+                "home": "/home/ada",
+            },
+        )
+
+        # Assert
+        self.assertEqual(result["error_class"], "unreadable_output")
+        self.assertEqual(result["message"], "something went wrong")
+
+
 class FakeUnsupportedOperationsTest(unittest.TestCase):
     def test_should_refuse_the_operations_it_does_not_replay(self):
         rows = ["resume-argv", "transcripts"]

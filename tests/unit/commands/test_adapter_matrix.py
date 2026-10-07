@@ -4,7 +4,7 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.commands.adapter_matrix import adapter_matrix
+from brigade.commands.adapter_matrix import ABSENT, FULL, _grade, adapter_matrix
 from brigade.errors import ToolFailure
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
@@ -57,3 +57,19 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
                 "error": f"{self.executable} probe timed out after 30 s",
             },
         )
+
+
+class GradeTest(unittest.TestCase):
+    def test_should_grade_full_a_declared_capability(self):
+        # Act
+        grade = _grade("launch", ["launch", "result"])
+
+        # Assert
+        self.assertEqual(grade, FULL)
+
+    def test_should_grade_absent_a_capability_with_no_fallback(self):
+        # Act
+        grade = _grade("launch", ["result"])
+
+        # Assert
+        self.assertEqual(grade, ABSENT)

@@ -128,3 +128,38 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                     (len(reading.entries), reading.skipped),
                     (1, (SkippedLine(file=str(october), line=2, reason=expected_reason),)),
                 )
+
+
+class ReadLedgerWhenATimestampIsNotIso8601Test(ReadLedgerTestCase):
+    def test_should_skip_the_line_when_the_timestamp_is_not_parseable(self):
+        # Arrange
+        content = b'{"schema_version": 1, "ts": "2026-13-45T99:99:99Z", "event": "wave.paused", "wave": "tp/16"}\n'
+        october = self.write_ledger("2026-10.jsonl", content)
+
+        # Act
+        reading = read_ledger(self.state_root)
+
+        # Assert
+        self.assertEqual(
+            reading.skipped,
+            (
+                SkippedLine(
+                    file=str(october),
+                    line=1,
+                    reason="ts '2026-13-45T99:99:99Z' is not an ISO 8601 UTC instant",
+                ),
+            ),
+        )
+
+
+class ReadLedgerWhenTheFileHasNoTrailingNewlineTest(ReadLedgerTestCase):
+    def test_should_read_the_last_line_without_a_trailing_newline(self):
+        # Arrange
+        self.write_ledger("2026-10.jsonl", WAVE_PAUSED.rstrip("\n").encode())
+
+        # Act
+        reading = read_ledger(self.state_root)
+
+        # Assert
+        self.assertEqual(len(reading.entries), 1)
+        self.assertEqual(reading.skipped, ())

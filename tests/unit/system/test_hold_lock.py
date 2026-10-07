@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from brigade.errors import BrigadeError
 from brigade.system.hold_lock import hold_lock
@@ -97,3 +98,24 @@ class HoldLockWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")
+
+
+class HoldLockWhenTheWriteFailsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.lock_path = Path(self.root.name) / "locks" / "corpus.lock"
+
+    def tearDown(self):
+        self.root.cleanup()
+
+    def test_should_raise_cannot_write_when_the_lock_write_fails(self):
+        # Act
+        with (
+            mock.patch("fcntl.flock", side_effect=OSError(28, "No space left on device")),
+            self.assertRaises(BrigadeError) as raised,
+            hold_lock(self.lock_path),
+        ):
+            pass
+
+        # Assert
+        self.assertIn("cannot write", str(raised.exception))

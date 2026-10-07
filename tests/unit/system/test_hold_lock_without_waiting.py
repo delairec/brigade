@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from brigade.errors import BrigadeError
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
@@ -91,3 +92,38 @@ class HoldLockWithoutWaitingWhereTheMachineRefusesTheWriteTest(unittest.TestCase
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")
+
+
+class HoldLockWithoutWaitingWhenTheFlockFailsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.lock_path = Path(self.root.name) / "locks" / "tick.lock"
+
+    def tearDown(self):
+        self.root.cleanup()
+
+    def test_should_raise_cannot_write_when_the_flock_fails_with_an_os_error(self):
+        # Act
+        with (
+            mock.patch("fcntl.flock", side_effect=OSError(28, "No space left on device")),
+            self.assertRaises(BrigadeError) as raised,
+            hold_lock_without_waiting(self.lock_path),
+        ):
+            pass
+
+        # Assert
+        self.assertIn("cannot write", str(raised.exception))
+
+    def test_should_raise_cannot_write_when_the_write_fails(self):
+        # Arrange
+        self.lock_path.parent.mkdir(parents=True)
+
+        # Act
+        with mock.patch("fcntl.flock"), mock.patch("builtins.open", mock.mock_open()) as open_mock:
+            file_mock = open_mock.return_value.__enter__.return_value
+            file_mock.write.side_effect = OSError(28, "No space left on device")
+            with self.assertRaises(BrigadeError) as raised, hold_lock_without_waiting(self.lock_path):
+                pass
+
+        # Assert
+        self.assertIn("cannot write", str(raised.exception))

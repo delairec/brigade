@@ -1,8 +1,9 @@
 import os
 import signal
 import unittest
+from unittest import mock
 
-from brigade.system.repeat_until_signalled import repeat_until_signalled
+from brigade.system.repeat_until_signalled import _drain, repeat_until_signalled
 
 SHORT_INTERVAL_S = 0.01
 
@@ -49,3 +50,32 @@ class RepeatUntilSignalledTest(unittest.TestCase):
 
         # Assert
         self.assertEqual((signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT)), self.handlers_before)
+
+
+class DrainTest(unittest.TestCase):
+    def test_should_drain_until_the_read_returns_empty(self):
+        # Arrange
+        read_descriptor, write_descriptor = os.pipe()
+        os.set_blocking(read_descriptor, False)
+        os.write(write_descriptor, b"data")
+        os.close(write_descriptor)
+
+        # Act
+        _drain(read_descriptor)
+
+        # Assert
+        self.assertEqual(os.read(read_descriptor, 512), b"")
+        os.close(read_descriptor)
+
+    def test_should_ignore_a_blocking_io_error(self):
+        # Arrange
+        read_descriptor, write_descriptor = os.pipe()
+        os.set_blocking(read_descriptor, False)
+        os.close(write_descriptor)
+
+        # Act
+        with mock.patch("os.read", side_effect=BlockingIOError):
+            _drain(read_descriptor)
+
+        # Assert
+        os.close(read_descriptor)
