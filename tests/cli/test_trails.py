@@ -273,6 +273,18 @@ class BrigadeCommandTrailTest(TrailTestCase):
             (0, quiet.stdout, "brigade scheduler status: ran crontab -l, not on PATH\n"),
         )
 
+    def test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):
+        # Act
+        completed = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "--verbose", "scheduler", "status", environment=self.environment
+        )
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (0, "brigade scheduler status: ran crontab -l, not on PATH\n"),
+        )
+
     def test_should_print_no_record_on_stderr_without_verbose(self):
         # Act
         completed = self.run_status("--json")

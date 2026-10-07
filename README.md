@@ -250,8 +250,8 @@ each command, the trails of `ticks/` and `commands/` older than `trail_days` of 
 removed; a `trail_days` that is no integer of 1 or more keeps every trail, and `brigade doctor` names it. The trail of
 a run goes with its run. A detached run's records are written by the process it re-executes.
 
-`--verbose`, accepted by every command, prints on stderr one line per record the command writes, stdout keeping the
-document alone:
+`--verbose`, accepted by every command, before its name as after it, prints on stderr one line per record the command
+writes, stdout keeping the document alone:
 
 ```
 brigade run: ran claude -p --output-format json, exit 0 in 41250 ms

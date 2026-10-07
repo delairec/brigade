@@ -20,6 +20,8 @@ PRIVATE_MODULE_PREFIX = "_"
 PASSTHROUGH_SEPARATOR = "--"
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
+JSON_HELP = "print the output as a JSON document"
+VERBOSE_HELP = "print every subprocess the command runs on stderr"
 
 
 def _discover_commands() -> list:
@@ -32,22 +34,16 @@ def _discover_commands() -> list:
 
 def _create_common_options():
     common_options = argparse.ArgumentParser(add_help=False)
-    common_options.add_argument(
-        "--json", action="store_true", default=argparse.SUPPRESS, help="print the output as a JSON document"
-    )
-    common_options.add_argument(
-        "--verbose",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="print every subprocess the command runs on stderr",
-    )
+    common_options.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help=JSON_HELP)
+    common_options.add_argument("--verbose", action="store_true", default=argparse.SUPPRESS, help=VERBOSE_HELP)
     return common_options
 
 
 def _create_parser(commands):
     parser = argparse.ArgumentParser(prog="brigade")
     parser.add_argument("--version", action="store_true", help="print the version of brigade")
-    parser.add_argument("--json", action="store_true", help="print the output as a JSON document")
+    parser.add_argument("--json", action="store_true", help=JSON_HELP)
+    parser.add_argument("--verbose", action="store_true", help=VERBOSE_HELP)
     add_command_parsers(parser, commands, _create_common_options())
     return parser
 
