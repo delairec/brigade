@@ -3776,6 +3776,10 @@ TASK B83
 		+ "brigade/adapters/clients/claude_code.py reads num_turns, usage and duration_ms from that"
 		+ "object, and run_segments.py:64 takes the client's duration over the one it measured"
 		REF @TASK.B71
+	RATIONALE "seen again on run 20261007T184817Z-13636c, procedure awawa-pr-review-round: its"
+		+ "result.json reports steps 3 and duration_ms 21805, its result object origin.kind"
+		+ "task-notification and num_turns 3, while the transcript of session"
+		+ "206a130d-9888-4e84-9d23-8f91150d81e7 holds 62 tool calls from 18:48 to 18:57"
 	RATIONALE "the budgets of @TASK.B37 are computed from the steps and the usage of the ledger; a"
 		+ "run that delegates to a sub-agent would read as two steps and nineteen seconds"
 		REF @TASK.B37
@@ -4399,3 +4403,42 @@ TASK B102
 		+ "d'essayer de détecter si on est toujours en progression\", \"toute sortie doit donner"
 		+ "lieu à un code\", the relaunch of an undeclared segment on the count of HANDOVERS, the"
 		+ "declaration on the last line of the final message"
+
+TASK B103
+	TITLE "A segment whose steps exceed its budget records a signal of its own, whatever its"
+		+ "outcome, and the step cap the Claude Code adapter passes holds"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "a segment whose steps exceed the budget of its procedure appends a signal.recorded event"
+		+ "whose signal is budget_exceeded, carrying the steps and the budget, whatever the"
+		+ "client's error class; the outcome and the exit code of the run are unchanged"
+	SPEC "tests/cli runs brigade run as a subprocess with the fake client reporting more steps than"
+		+ "the budget and no error: the run ends done, exit 0, and the ledger holds the"
+		+ "budget_exceeded signal; at or under the budget, no such signal"
+	SPEC "the cause of 57 turns under --max-turns 50 is established, num_turns counted otherwise"
+		+ "than --max-turns or the cap not applied, and the computation of max_turns in"
+		+ "brigade/adapters/clients/claude_code.py is corrected so that the step cap holds, or the"
+		+ "cause is reported with its evidence when it lies in the client"
+	AFTER @TASK.B85
+	RATIONALE "run 20261007T175404Z-6108de, procedure review-pull-request, role reviewer, budget"
+		+ "40, wall_limit_s 1500: its result object reports subtype success and num_turns 57, and"
+		+ "the ledger holds run.finished steps 57 outcome done and no signal.recorded;"
+		+ "brigade/adapters/clients/claude_code.py:55 passes --max-turns 50, 40 plus a quarter"
+		+ "rounded up"
+	RATIONALE "brigade/runs/run_segments.py appends a signal only when the error class is"
+		+ "turn_limit or the outcome wall_limit, so a run that overruns its budget without reaching"
+		+ "the cap goes unseen, though @TASK.B06 records the budget reached so that the user"
+		+ "decides between a budget too tight and a task to split"
+		REF @TASK.B06
+	RATIONALE "the user ruled for a signal alone: a run that delivered keeps done and exit 0, as"
+		+ "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity gives it"
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+	RATIONALE "after @TASK.B85, which gives each cause its own signal in the same function of"
+		+ "run_segments.py"
+		REF @TASK.B85
+	SOURCE "a defect reported by another session on 2026-10-07, \"Le run de review a pris 57 étapes"
+		+ "pour un budget de 40 et a quand même été enregistré done, sans aucun signal de"
+		+ "dépassement\"; the user's rulings that day, a signal alone with the outcome unchanged,"
+		+ "and the cause of the overrun of the cap sought in the same task"
