@@ -1012,11 +1012,16 @@ TASK B14
 		+ "through the forge adapter, records ledger events and moves the task state"
 	SPEC "the worktree the scheduler cut for the task is removed once its pull request is merged or"
 		+ "closed, never while a run holds it"
+	SPEC "a ledger event forge_account_unavailable pauses the wave of its project, which the user"
+		+ "resumes"
 	AFTER @TASK.B12
 	AFTER @TASK.B75
 	RATIONALE "it follows @TASK.B75: the forge facts it reads and the ledger events it records run"
-		+ "as the configured forge account, F5 of the foundations review"
+		+ "as the login of the key cli, F5 of the foundations review; a login whose token gh no"
+		+ "longer prints stops the command and pauses the wave, as"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets"
 		REF @TASK.B75
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 	RATIONALE "the removal of the worktree sits here and not on @TASK.B12 because merged or closed"
 		+ "is a forge fact this task reads; the scheduler sees git alone, which shows no closed"
 		+ "pull request"
@@ -1040,14 +1045,23 @@ TASK B16
 	COMPONENT "the pass"
 	ROLE ada
 	ROLE lex
-	SPEC "the verify slot receives the verification package and posts approve or request changes"
-		+ "through verdict, recorded in the ledger event"
+	SPEC "the verify slot receives the verification package and gives its verdict, pass or changes"
+		+ "requested, through verdict, recorded in the ledger event"
+	SPEC "under POLICY.REVIEW approval the verdict is a GitHub review approving or requesting"
+		+ "changes under the login of the verify slot; under verdict it is the ledger event alone"
+	SPEC "the ledger event of a review posted carries the login the review ran as"
 	AFTER @TASK.B15
 	AFTER @TASK.B75
+	AFTER @TASK.B99
 	RATIONALE "the clause \"as the configured forge account\" moved to @TASK.B75, which hands the"
 		+ "account's token to every gh subprocess and records the account on every write, F5 of the"
 		+ "foundations review; this task follows it"
 		REF @TASK.B75
+	RATIONALE "the verdict follows the review mode of the project,"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode, declared by"
+		+ "@TASK.B99"
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+		REF @TASK.B99
 	SOURCE "F5 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 
 TASK B17
@@ -1056,14 +1070,21 @@ TASK B17
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
-	SPEC "approve plus green checks merge the pull request with PROJECT.MERGE"
+	SPEC "green checks and the verdict merge the pull request with PROJECT.MERGE: the approving"
+		+ "review under POLICY.REVIEW approval, the pass verdict of the ledger under verdict"
+	SPEC "the ledger event of a merge carries the login the merge ran as"
 	SPEC "the task becomes merged"
 	SPEC "its dependents become startable in the same tick"
 	AFTER @TASK.B16
 	AFTER @TASK.B75
-	RATIONALE "it follows @TASK.B75: the merge runs as the configured forge account, F5 of the"
-		+ "foundations review"
+	AFTER @TASK.B99
+	RATIONALE "it follows @TASK.B75: the merge runs as the login of the key cli, F5 of the"
+		+ "foundations review; the verdict it waits for follows the review mode of"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode, declared by"
+		+ "@TASK.B99"
 		REF @TASK.B75
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+		REF @TASK.B99
 
 TASK B18
 	TITLE "Repair paths"
@@ -1688,8 +1709,6 @@ TASK B46
 	COMPONENT "adapters"
 	ROLE ada
 	SPEC "the GitHub adapter wraps gh as today"
-	SPEC "brigade doctor reports whether gh is active as the account config.toml names; a mismatch"
-		+ "is a warning with its fallback, the user's account recorded in the ledger"
 	SPEC "FORGE none runs a wave on local branches: the pass reads the acceptance results of task"
 		+ "check instead of check runs, the verdict is kept in the ledger and the merge into"
 		+ "integration is a git merge"
@@ -1700,8 +1719,9 @@ TASK B46
 	AFTER @TASK.B42
 	RATIONALE "the account it acts as and the field forge_account moved to @TASK.B75, F5 of the"
 		+ "foundations review, which brings the account back before M1; this task keeps the local"
-		+ "mode and the doctor report, whose mismatch warning the refinement reconsiders once the"
-		+ "token of the configured account reaches every gh subprocess"
+		+ "local mode; its doctor report of the active account was removed at the refinement of"
+		+ "B75, whose doctor reports each login of [forge_accounts] once its token reaches the gh"
+		+ "subprocesses"
 		REF @TASK.B75
 	SOURCE "the user's ruling of 2026-10-06, \"ok\", on forge_account accepted and type-checked but"
 		+ "no longer stored until a command reads it, pull request #42"
@@ -3281,66 +3301,106 @@ TASK B74
 		+ "only the directions a kind crosses"
 
 TASK B75
-	TITLE "The forge account of config.toml stored and its token handed to every gh subprocess, so"
-		+ "that reviews and merges run as the configured account, recorded in the ledger on every"
-		+ "write"
-	STATUS draft
+	TITLE "The forge accounts of config.toml bound per slot, and the token of each login handed to"
+		+ "the gh subprocesses and the runs that act as it"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
-	SPEC "Configuration of brigade/system/read_configuration.py stores forge_account, the key"
-		+ "config.toml already accepts and type-checks; forge_account leaves UNREAD_STRING_KEYS"
+	SPEC "config.toml accepts the table [forge_accounts], mapping a slot among the nine, or the key"
+		+ "cli for the gh subprocesses brigade starts itself, to a gh login; an unknown key or a"
+		+ "value that is no string is an error naming the key and the file; Configuration stores"
+		+ "the table; forge_account is no longer accepted, a config.toml holding it an error naming"
+		+ "the key and the file, and config.toml.tpl documents the table in its place"
+	SPEC "ProcessRequest of brigade/system/run_process.py carries the variables a caller adds over"
+		+ "the whitelisted environment, as SpawnRequest does; build_process_environment still"
+		+ "passes no GH_TOKEN of brigade's own environment"
 	SPEC "every gh subprocess of the GitHub forge adapter runs with GH_TOKEN set to the token gh"
-		+ "auth token --user <forge_account> prints, read once per command through the runner;"
-		+ "without forge_account the environment carries no GH_TOKEN and gh acts as its active"
-		+ "account"
-	SPEC "every write of the forge adapter, a review posted, a pull request opened, a merge,"
-		+ "records in its ledger event the login the write ran as, forge_account when set, else the"
-		+ "active account gh api user prints"
-	SPEC "tests/cli proves the environment of the gh subprocess with a fake gh on PATH that prints"
-		+ "its GH_TOKEN: with forge_account set, the token the fake gh auth token call printed;"
-		+ "without it, no GH_TOKEN"
+		+ "auth token --user <login> prints for the login of the key cli, and every client segment"
+		+ "of a run whose slot is bound runs with GH_TOKEN set to the token of that slot's login;"
+		+ "without a binding the environment carries no GH_TOKEN and gh acts as its active account"
+	SPEC "a token gh auth token does not print is read again, up to forge_attempts attempts in all,"
+		+ "an integer of config.toml, 3 by default, a value below 1 an error naming the key and the"
+		+ "file, the delay doubling from one second; the attempts exhausted, the command stops on"
+		+ "an error naming the login and the attempts, records the ledger event"
+		+ "forge_account_unavailable with the login and its slot or cli, and starts no run and no"
+		+ "gh subprocess for that login; no other account is used in its place"
+	SPEC "brigade doctor reports each login of [forge_accounts], ok when gh prints its token, else"
+		+ "a warning naming the login and the keys bound to it; the forge line names the login of"
+		+ "the key cli when it is bound"
+	SPEC "no token appears in a trail, a ledger event, a run directory, the output of a command or"
+		+ "an error: tests/cli search the token of the fake gh in the state directory, stdout and"
+		+ "stderr and find it nowhere"
+	SPEC "tests/cli prove, with a fake gh on PATH answering auth token --user <login> with a token"
+		+ "derived from the login and auth status with the login its GH_TOKEN carries, and a fake"
+		+ "client recording its environment: brigade doctor reporting the login of cli when bound"
+		+ "and gh receiving no GH_TOKEN otherwise; the client segment of a bound slot receiving the"
+		+ "token of its login; a login whose token the fake gh refuses exhausting forge_attempts,"
+		+ "with the error and the ledger event"
+	AFTER @TASK.B72
+	AFTER @TASK.B73
 	AFTER @TASK.B77
 	RATIONALE "F5 of the foundations review, medium: the verify verdict and the merges of M1,"
 		+ "@TASK.B16 and @TASK.B17, would run gh as whatever account gh holds active, the runner"
 		+ "passing a whitelisted environment without GH_TOKEN, build_process_environment.py:3-4,"
-		+ "and the user's wrapper that injects the machine account living in ~/.zshrc under"
-		+ "$CLAUDECODE, which brigade's subprocesses never see; the live brigade doctor of"
-		+ "2026-10-07 printed forge ok gh as the user's account; SPEC 7 of @TASK.B65 accepts"
-		+ "forge_account and stores it no longer, read_configuration.py:9, until \"the task whose"
-		+ "command reads one adds its field back\", and the field came back in SPEC 5 of @TASK.B46,"
-		+ "M7; DESC 2 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites reads \"gh with"
-		+ "the machine account, else the user's gh account recorded in the ledger on every write\";"
-		+ "plan section 18 lets the forge account merge into integration/* only"
+		+ "ProcessRequest carrying no variable a caller adds, run_process.py:11-16, where"
+		+ "SpawnRequest does, spawn_process.py:17 and 54, and the user's wrapper that injects the"
+		+ "machine account living in ~/.zshrc under $CLAUDECODE, which brigade's subprocesses never"
+		+ "see; SPEC 7 of @TASK.B65 accepts forge_account and stores it no longer,"
+		+ "read_configuration.py:9; DESC 2 of"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites reads \"gh with the machine"
+		+ "account, else the user's gh account recorded in the ledger on every write\""
 		REF @TASK.B16
 		REF @TASK.B17
 		REF @TASK.B65
-		REF @TASK.B46
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
-	RATIONALE "the option taken: the field comes back here, before M1, and @TASK.B14, @TASK.B16 and"
-		+ "@TASK.B17 follow this task; SPEC 5 of @TASK.B46 and the account clause of its SPEC 1 are"
-		+ "removed in the same change, B46 keeping the local mode and the doctor report; the"
-		+ "alternative the report offers for the refinement round: forge_account stored by B14 or"
-		+ "B16, or B46 moved to M1 before B16"
+	RATIONALE "the user ruled one login per slot rather than one forge account, as"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode records: GitHub"
+		+ "refuses an approval by the author of a pull request, so a verify slot approving under"
+		+ "the account of the build slot that opened it fails; the table alone names every account,"
+		+ "the key cli carrying the reads and merges brigade runs itself; the review modes using"
+		+ "the logins are delivered by @TASK.B99 and @TASK.B100"
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+		REF @TASK.B99
+		REF @TASK.B100
+	RATIONALE "the user ruled that a login gh holds no token for stops the command: falling back to"
+		+ "the active account would post reviews and merges under the user's account, which the"
+		+ "branch protection of plan section 18 cannot tell from the bot; the check before a wave"
+		+ "belongs to the preflight once it exists, @TASK.B98, and the pause of the wave on"
+		+ "forge_account_unavailable to the tick, @TASK.B14"
+		REF @TASK.B98
 		REF @TASK.B14
+	RATIONALE "the login each write ran as is recorded by the tasks that deliver the writes,"
+		+ "@TASK.B16 and @TASK.B17: brigade/adapters/forges/github.py holds one operation,"
+		+ "describe_account, a read, and the builder opens its pull request through the client,"
+		+ "brigade/roles/data/builder.md:14"
+		REF @TASK.B16
+		REF @TASK.B17
+	RATIONALE "SPEC 5 of @TASK.B46 and the account clause of its SPEC 1 were removed when F0 was"
+		+ "drafted; its doctor report of the active account is removed by the refinement of this"
+		+ "task, SPEC 5 here reporting each bound login"
 		REF @TASK.B46
-	RATIONALE "gh auth token --user names no account of its own: the account reaches brigade as"
+	RATIONALE "gh auth token --user names no account of its own: the logins reach brigade as"
 		+ "configuration the user supplies, which keeps brigade free of its author's machine, and"
-		+ "the token never crosses the whitelist of the runner, the adapter adding it to the"
-		+ "environment of its own subprocesses as DESC 1 of"
+		+ "the token never crosses the whitelist of the runner, the adapter and the run adding it"
+		+ "to the environment of their own subprocesses as DESC 1 of"
 		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa allows, \"what the"
 		+ "adapter adds\""
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
-	RATIONALE "it follows @TASK.B77, which passes the frozen Configuration record down to the"
-		+ "functions that need it, the forge adapter among them"
+	RATIONALE "it follows @TASK.B72, being implemented, which changes run_process.py and writes the"
+		+ "trails the token stays out of; @TASK.B73, which moves the resolution of the forge plugin"
+		+ "out of commands/doctor.py:107 and annotates its operation; and @TASK.B77, which changes"
+		+ "how doctor and the commands read config.toml, commands/doctor.py:133"
+		REF @TASK.B72
+		REF @TASK.B73
 		REF @TASK.B77
 	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
 		+ "fix the issues reported by max in this milestone\"; F5 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
-	SOURCE "the user's ruling of 2026-10-06, \"ok\", on forge_account accepted and type-checked but"
-		+ "no longer stored until a command reads it, pull request #42, which SPEC 7 of @TASK.B65"
-		+ "records"
-		REF @TASK.B65
+	SOURCE "the user's rulings of 2026-10-07 at the refinement of B75: the login of each write"
+		+ "recorded by B16 and B17; the table [forge_accounts] per slot alone, forge_account"
+		+ "removed; refusal when a login has no token, forge_attempts configurable; after B72, B73"
+		+ "and B77; the review modes split into their own decision and tasks"
 
 TASK B76
 	TITLE "The forge and the scheduler kinds resolve an executable brigade-<kind>-<name> on PATH as"
@@ -4173,6 +4233,10 @@ TASK B98
 		+ "records the entity through fmt, lint and a commit as study new of @TASK.B48 does"
 		REF @TASK.B33
 		REF @TASK.B48
+	DESC "an action to plan: the logins of [forge_accounts] checked before a wave, each printing"
+		+ "its token, as @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode"
+		+ "sets"
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 	SPEC "a MILESTONE entity of corpus/milestones.awawa names the preflight feature, its DESC"
 		+ "stating what a preflight is, how it is named, run and extended, and how it stands to the"
 		+ "pull request preflight, the collectors, the checks, the studies and the recipes"
@@ -4189,3 +4253,74 @@ TASK B98
 		+ "l'ajout de la fonctionnalité preflight, car je suppose que ce preflight pourrait être"
 		+ "utile pas seulement au refinement ... La tâche sera donc pas l'ajout de la"
 		+ "fonctionnalité, mais la création de la milestone et du plan (tâches)\""
+
+TASK B99
+	TITLE "POLICY.REVIEW chooses approval or verdict, and doctor warns when a project under"
+		+ "approval has no distinct logins for its build and verify slots"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "the pass"
+	ROLE ada
+	SPEC "the POLICY schema brigade init installs, brigade/corpus/data/schema.awawa.tpl, declares"
+		+ "REVIEW approval|verdict, verdict by default"
+	SPEC "brigade doctor reports a warning naming the project for each project whose POLICY sets"
+		+ "REVIEW approval while the build and verify slots of [forge_accounts] are unbound or"
+		+ "bound to one login"
+	SPEC "tests/cli prove the default, the field read from a policy, and the warning with one login"
+		+ "and with two"
+	AFTER @TASK.B75
+	RATIONALE "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets three"
+		+ "review modes; approval and verdict are needed by the verdict and the merge of M1,"
+		+ "@TASK.B16 and @TASK.B17, which follow this task; local is delivered by @TASK.B100"
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+		REF @TASK.B16
+		REF @TASK.B17
+		REF @TASK.B100
+	RATIONALE "GitHub refuses an approval by the author of a pull request: under approval the build"
+		+ "slot that opens it and the verify slot that approves it need two logins"
+	SOURCE "the user's rulings of 2026-10-07 at the refinement of B75: a task of M1 for approval"
+		+ "and verdict, before B16 and B17; POLICY.REVIEW, verdict by default"
+
+TASK B100
+	TITLE "POLICY.REVIEW local: the tasks of a wave merged into integration on the machine, and one"
+		+ "pull request from integration to main opened once the wave is delivered"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "tick"
+	ROLE ada
+	DESC "to be refined with the user: how the wave counts as delivered, the X tasks of the user's"
+		+ "words; how the verify slot verifies a task branch before its local merge; how this mode"
+		+ "stands to FORGE none of @TASK.B46, which merges into integration with git and opens no"
+		+ "pull request"
+		REF @TASK.B46
+	SPEC "the POLICY schema declares REVIEW local; under it no pull request is opened per task,"
+		+ "each task verified by the verify slot is merged into integration on the machine, and one"
+		+ "pull request from integration to main is opened once the wave is delivered"
+	AFTER @TASK.B99
+	AFTER @TASK.B17
+	RATIONALE "the third workflow of"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode"
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+	SOURCE "the user's words of 2026-10-07 at the refinement of B75, \"Il y aura sûrement d'autres"
+		+ "cas où on pourra décider que tout est fait en local et une PR ne s'ouvre que quand les X"
+		+ "tâches sont livrées, sans avoir besoin de gérer la partie merge+review via github du"
+		+ "coup\""
+
+TASK B101
+	TITLE "The sensitive data brigade handles audited: what each is, where it is read, held, passed"
+		+ "and written, and the precautions it needs"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "review"
+	ROLE none
+	DESC "to be refined with the user"
+	SPEC "a report under docs/ lists each sensitive datum brigade handles, the forge tokens of"
+		+ "@TASK.B75 among them, where it is read, held, passed to a subprocess and written, and"
+		+ "the precaution each needs"
+		REF @TASK.B75
+	SPEC "each precaution the report finds missing is drafted as a task"
+	AFTER @TASK.B75
+	SOURCE "the user's words of 2026-10-07 at the refinement of B75, \"il faut faire attention ici"
+		+ "car on manipule des données sensibles. Ajoute une tâche en ADD0 pour vérifier quelles"
+		+ "données sensibles on manipule, à quel endroit, et s'il faut prendre des précautions"
+		+ "additionnelles\""
