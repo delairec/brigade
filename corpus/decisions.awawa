@@ -504,8 +504,15 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "brigade.collectors, brigade.checks or brigade.outputs from outside their own package,"
 		+ "the guard @TASK.B42 asks for, widened"
 		REF @TASK.B42
-	DESC "the commands build the runtime: paths, clock, process runner, renderer, resolver; a core"
-		+ "function receives resolved plugin objects as arguments and resolves nothing itself"
+	DESC "cli.py builds the runtime, once per command and once per round of tick --loop through a"
+		+ "factory it hands that command: paths, clock, process runner, resolver; the renderers of"
+		+ "a command are declared by its module, as"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable sets; the"
+		+ "commands resolve the plugins through the runtime's resolver, and a core function"
+		+ "receives resolved plugin objects as arguments and resolves nothing itself, as @TASK.B73"
+		+ "delivers"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+		REF @TASK.B73
 	DESC "binds @TASK.B06, @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B23, @TASK.B24, @TASK.B42,"
 		+ "@TASK.B43, @TASK.B46, @TASK.B47 and @TASK.B48"
 		REF @TASK.B06
@@ -529,6 +536,11 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "adapters already process-shaped, and a port at M3 that carries the contract, not the"
 		+ "Python; the rules of the areas architecture and architecture_layers of the instructions"
 		+ "corpus govern a core- package, which brigade is not"
+	REJECTED "a core function handed a name and the runtime's resolver, the alternative F3 of the"
+		+ "foundations review offers: the core would still resolve, and a resolved object passed as"
+		+ "an argument is what a unit test replaces with a double"
+	REJECTED "a renderer carried by the runtime: no core function renders, the renderers being"
+		+ "declared by each command module in its record since pull request #56"
 	RATIONALE "it refines DESC 5 and 6 of"
 		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles, DESC 3 of"
 		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters and plan section 17 to every plugin"
@@ -541,6 +553,8 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "DEROGATES field: those rules govern a core- package, and brigade is a command-line tool"
 		+ "with one delivery, one persistence and process-shaped adapters"
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's rulings of 2026-10-07 at the refinement of @TASK.B73, amending DESC 5"
+		REF @TASK.B73
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
@@ -922,8 +936,9 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	DESC "a reader keeps an upgrade function per kind from every version ever written to the"
 		+ "current one; a ledger line is upgraded on read and never rewritten; a state file is"
 		+ "upgraded on read and written back current"
-	DESC "inside the core a document becomes a frozen dataclass through one from_document and"
-		+ "to_document pair per kind; dicts stay at the edges"
+	DESC "inside the core a document becomes a frozen dataclass; the module of its kind declares"
+		+ "from_document when brigade reads the kind and to_document when brigade writes it, no"
+		+ "function for a direction no code crosses; dicts stay at the edges"
 	DESC "timestamps are ISO 8601 UTC with Z; durations are integer milliseconds in *_ms fields;"
 		+ "run ids are time-sortable, <UTC compact>-<6 hex>, from one function"
 	DESC "binds @TASK.B02, @TASK.B05, @TASK.B06, @TASK.B42, @TASK.B47, @TASK.B48 and @TASK.B50"
@@ -938,6 +953,8 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		+ "collector name, the command or the file name, and two ratified tasks name schema_version"
 	REJECTED "JSON Schema validated by a library: a third-party dependency for keys, types and"
 		+ "enumerations"
+	REJECTED "both functions for every kind: the snapshot of the tick is never read, and its"
+		+ "from_document would be called by its test alone"
 	RATIONALE "DESC 3 of @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles gives every"
 		+ "result, event, collector, recipe and config document a schema version and DESC 2 refuses"
 		+ "pickle; SPEC 1 of @TASK.B01 and SPEC 3 of @TASK.B02 already name schema_version"
@@ -945,6 +962,9 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		REF @TASK.B01
 		REF @TASK.B02
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's ruling of 2026-10-07 at the refinement of @TASK.B74: a kind carries only the"
+		+ "directions it crosses, DESC 4 amended"
+		REF @TASK.B74
 
 DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 	TITLE "the pull request of a task carries the GitHub milestone named after the TITLE of the"
@@ -1357,6 +1377,75 @@ DECISION TheClaudeCodeAdapterRunsInDontAskModeAndGrantsOnlyItsAllowedTools
 	SOURCE "the user's answers of 2026-10-07 at the refinement of @TASK.B71, on the probes the"
 		+ "session ran with claude 2.1.292"
 		REF @TASK.B71
+
+DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
+	TITLE "every trace brigade writes is a structured, versioned record that a brigade command"
+		+ "reads and queries; a text on stderr or in a log is a rendering for a person, never a"
+		+ "source"
+	STATUS active
+	DESC "a trace brigade writes, a subprocess record, an event, a state or a result, is a JSON"
+		+ "document carrying schema_version, written to a file brigade owns"
+	DESC "an agent or a person learns what happened through a brigade command that reads those"
+		+ "records and returns the answer as a document; no reader is expected to search a file"
+		+ "with grep, sed or awk"
+	DESC "a line brigade prints on stderr or writes to a log renders a record; no brigade command"
+		+ "parses it back"
+	DESC "the stdout and stderr of a client segment, kept as raw text, are reached through a"
+		+ "brigade command that bounds and summarises them, as @TASK.B79 and @TASK.B97 settle"
+		REF @TASK.B79
+		REF @TASK.B97
+	DESC "binds @TASK.B72 and @TASK.B97"
+		REF @TASK.B72
+		REF @TASK.B97
+	REJECTED "traces written as free text and searched with grep, sed or awk: every reader"
+		+ "rediscovers the format, and an agent spends its steps searching instead of being handed"
+		+ "the facts it needs"
+	REJECTED "the subprocess records in the ledger: about 17 000 a day for one project in M1 by the"
+		+ "risk R5 of the foundations review, read again by every view of brigade ledger"
+	RATIONALE "brigade mechanises the reading of its own journals, so that an agent asks a tool for"
+		+ "the facts it needs and searches nothing itself"
+	SOURCE "the user's words of 2026-10-07 at the refinement of @TASK.B72, \"les logs doivent être"
+		+ "écrits non pas pour être exploitable en recherche par un agents ia, mais pour que"
+		+ "l'agents ia puisse utiliser un outil qui remonte les infos dont il a besoin sans avoir à"
+		+ "chercher par lui-même\""
+		REF @TASK.B72
+
+DECISION APreflightIsANamedSetOfCollectorsAndChecks
+	TITLE "a preflight is a named set of mechanical actions, collectors and checks, run on demand"
+		+ "by brigade preflight <name>; brigade ships built-in preflights and a user adds custom"
+		+ "ones"
+	STATUS active
+	DESC "a preflight composes collectors and checks resolved as plugins and declares no action of"
+		+ "its own; an action needed by a preflight is delivered as a collector or a check,"
+		+ "reusable elsewhere"
+	DESC "brigade preflight <name> runs the preflight named and returns its findings as one"
+		+ "document; built-in preflights ship with brigade, refinement the first, and a user adds"
+		+ "custom ones"
+	DESC "the eight deterministic checks of a pull request of @TASK.B15 become the built-in"
+		+ "preflight verify-pull-request once brigade preflight exists; B15 is delivered as written"
+		+ "until then"
+		REF @TASK.B15
+	DESC "a scan of @TASK.B33 and the mechanical steps of a recipe of"
+		+ "@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder call a named built-in preflight or are"
+		+ "replaced by one, so that a set of collectors and checks is declared in one place; which"
+		+ "of the two, for each, is settled by @TASK.B98"
+		REF @TASK.B33
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+		REF @TASK.B98
+	DESC "binds @TASK.B98 and the tasks of the milestone it creates"
+		REF @TASK.B98
+	REJECTED "a preflight declaring its own actions: a third way, beside the scans and the recipes,"
+		+ "to declare a set of collectors, and actions no study or recipe could reuse"
+	REJECTED "a distinct word for the named sets, preflight kept for the pull request checks alone:"
+		+ "the pull request checks are one named set among others"
+	RATIONALE "the refinement of @TASK.B73 did by hand mechanical checks a command could run, and"
+		+ "the user wants them useful beyond the refinement"
+		REF @TASK.B73
+	SOURCE "the user's words of 2026-10-07: \"un preflight = un set d'actions mécanisables, donc on"
+		+ "pourrait avoir un preflight nommé refinement qui lance les collecteurs, checks, etc ..."
+		+ "des preflight built-in ... et la possibilité d'en ajouter des customs\"; \"ces"
+		+ "mécanismes (scans, recette) feront appel à ou seront remplacé par des preflight built-in"
+		+ "nommés\""
 
 DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 	TITLE "a pull request touching only corpus/, docs/, artifact/ or Markdown at the root starts no"
