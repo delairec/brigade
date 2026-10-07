@@ -1647,6 +1647,16 @@ TASK B44
 	AFTER @TASK.B21
 	AFTER @TASK.B42
 	AFTER @TASK.B49
+	SPEC "a slot names the client its runs launch, so that two clients serve one project, the build"
+		+ "slot on one and the review slot on the other: the client of the slot, else the CLIENT of"
+		+ "the PROJECT entity, else the client of config.toml; the shape of the binding, a client"
+		+ "key per slot in [slots] or a field of the role, is ruled at the refinement"
+	RATIONALE "the user asked on 2026-10-07 whether two AI providers can coexist; the session found"
+		+ "one client per machine, the client key of config.toml, replaced per project by the"
+		+ "CLIENT of the PROJECT entity (brigade/runs/plan_run.py:156), and no decision or task"
+		+ "binding a client to a slot or a role; the user asked for the mention in this draft"
+	SOURCE "the user's words of 2026-10-07, « oui ajoute la mention au draft », on the session's"
+		+ "proposal of a client per slot or per role, to settle at the ratification of this task"
 
 TASK B45
 	TITLE "Fresh-account install rehearsal"
