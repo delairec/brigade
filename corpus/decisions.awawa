@@ -1133,7 +1133,7 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture and coverage.py, each installed by pip from"
 		+ "requirements-ci.txt under dependabot; none is a dependency of brigade, and coverage"
-		+ "reports without a threshold"
+		+ "fails below a threshold set once the real figure is known"
 	STATUS active
 	DESC "the CI runs five development tools on every pull request and every push to main: zizmor"
 		+ "on .github/workflows/, ruff check and ruff format --check, semgrep scan with the Python"
@@ -1158,11 +1158,15 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC ".github/workflows/ci.yml declares permissions: contents: read at its top level and"
 		+ "persist-credentials: false on every actions/checkout step"
-	DESC "coverage reports and does not fail the run: no fail_under until the real figure is known;"
-		+ "a threshold, once set, is never lowered"
+	DESC "coverage fails the run below the fail_under of .coveragerc, which @TASK.B70 sets at the"
+		+ "figure of the CI once the real figure is known; a threshold, once set, is never lowered"
+		REF @TASK.B70
 	DESC "ruff check and ruff format --check run locally before a push wherever a ruff binary is"
 		+ "present, on the same ruff.toml, the version pinned in requirements-ci.txt giving the"
-		+ "verdict that counts; zizmor, semgrep, vulture and coverage run in the CI only"
+		+ "verdict that counts; zizmor, semgrep and vulture run in the CI only; coverage runs in"
+		+ "the CI and, for a task that measures coverage with awawa on PATH, locally in a virtual"
+		+ "environment outside the repository holding coverage at the version requirements-ci.txt"
+		+ "pins, which no file of the repository sets up"
 	REJECTED "CodeQL and GitHub secret scanning: the repository is private and both need GitHub"
 		+ "Advanced Security, paid; semgrep CE scans a private repository for free"
 	REJECTED "pip-audit or another CVE scan of dependencies: brigade has no dependency to scan, and"
@@ -1195,6 +1199,13 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		+ "@DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents: with one public"
 		+ "function per module, an uncalled function is a dead module"
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
+	RATIONALE "the user ruled on 2026-10-07, refining @TASK.B70, which measures coverage with the"
+		+ "tests that need awawa, skipped in the CI by"
+		+ "@DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa: coverage runs locally in"
+		+ "a virtual environment outside the repository, and the threshold is set at the figure of"
+		+ "the CI"
+		REF @TASK.B70
+		REF @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
 	SOURCE "the user's rulings of 2026-10-06 on the CI tooling proposals: \"tout ce que tu as mis"
 		+ "en oui\", then \"tout ce qui est utile est bon à prendre\""
 

@@ -2242,6 +2242,7 @@ TASK B61
 	AFTER @TASK.B65
 	AFTER @TASK.B66
 	AFTER @TASK.B67
+	AFTER @TASK.B70
 	RATIONALE "the user ruled on 2026-10-06 that a review by max closes M0, after every other task"
 		+ "of the milestone: its goal is to check that the foundations are solid, that they match"
 		+ "the initial plan and the architectural decisions max ruled, and to name the risks they"
@@ -2691,14 +2692,15 @@ TASK B70
 	TITLE "100% line and branch coverage of brigade/ measured locally on the full suite: every"
 		+ "uncovered line or branch covered by a test written first, failing on the missing"
 		+ "behaviour, or deleted when nothing demands it"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M0
 	COMPONENT "tests"
 	ROLE bastien
 	SPEC "coverage run -m unittest, coverage combine, then coverage report -m, run locally with"
-		+ "awawa on PATH so that the tests that need it do not skip, print TOTAL at 100% for the"
-		+ "lines and the branches of brigade/; the pull request body quotes the three commands, the"
-		+ "coverage version, the head commit and the TOTAL line"
+		+ "awawa on PATH so that the tests that need it do not skip, and with coverage at the"
+		+ "version requirements-ci.txt pins, print TOTAL at 100% for the lines and the branches of"
+		+ "brigade/; the pull request body quotes the three commands, the coverage version, the"
+		+ "head commit and the TOTAL line"
 	SPEC "every test added fails when the line or the branch it covers is removed: a test that"
 		+ "still passes without the code it covers is not the test of that code"
 	SPEC "every line or branch deleted is justified in the pull request body, one line each: the"
@@ -2708,6 +2710,9 @@ TASK B70
 		+ "partial_branches and no omit: every line and every branch of brigade/ counts"
 	SPEC "the tests that need awawa still skip without it: the coverage job of the CI passes"
 		+ "without awawa, and the pull request body quotes its TOTAL next to the local one"
+	SPEC ".coveragerc sets fail_under to the TOTAL percentage of the coverage job of the CI at the"
+		+ "head of the pull request, rounded down to an integer: the job fails when a later pull"
+		+ "request brings the figure below it"
 	AFTER @TASK.B66
 	AFTER @TASK.B69
 	RATIONALE "the user ruled on 2026-10-07: « la définition du TDD est: pas de ligne de code sans"
@@ -2724,13 +2729,16 @@ TASK B70
 		+ "awawa on PATH, give TOTAL 3679 statements, 94 missed, 594 branches, 53 partial, 97%; the"
 		+ "coverage job of the CI reports 89% at the same commit because 64 tests skip without"
 		+ "awawa, as @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa binds; the local"
-		+ "figure is the one this task brings to 100%"
+		+ "figure is the one this task brings to 100%; measured again at c7cdec5, the head of main"
+		+ "after @TASK.B69, the local run gives 3688 statements, 102 missed, 594 branches, 55"
+		+ "partial, 96%, and the CI run 37542826149 gives 89%, 318 missed"
 		REF @TASK.B66
 		REF @DECISION.TestsThatNeedAwawaRunLocallyAndTheCiInstallsNoAwawa
-	RATIONALE "the largest gaps of that report: brigade/system/spawn_process.py at 70% (lines 22-30"
-		+ "_feed, 36, 61-62 ToolNotFound, 64 the stdin thread: no tested caller passes stdin,"
-		+ "although run_segment.py forwards launch[\"stdin\"]); brigade/runs/list_runs.py at 78%"
-		+ "(13-14, 16, 22, 27-28, 55: pid missing, not digits, None, PermissionError);"
+		REF @TASK.B69
+	RATIONALE "the largest gaps of the report at 2dcbc20: brigade/system/spawn_process.py at 70%"
+		+ "(lines 22-30 _feed, 36, 61-62 ToolNotFound, 64 the stdin thread: no tested caller passes"
+		+ "stdin, although run_segment.py forwards launch[\"stdin\"]); brigade/runs/list_runs.py at"
+		+ "78% (13-14, 16, 22, 27-28, 55: pid missing, not digits, None, PermissionError);"
 		+ "brigade/system/wait_within_limit.py at 76% (11-12, 23-25);"
 		+ "brigade/system/hold_lock_without_waiting.py at 88% (27-28, 33-34);"
 		+ "brigade/roles/resolve_role.py at 90% (66-67, 93, 124, 145-150, 176, 219);"
@@ -2745,13 +2753,12 @@ TASK B70
 		+ "with"
 		REF @TASK.B69
 		REF @TASK.B66
-	RATIONALE "two points are left to the refinement of this draft: a threshold, which"
-		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade foresees once the"
-		+ "real figure is known and never lowered, the session proposing fail_under at the figure"
-		+ "of the CI once this task lands, the user not having ruled whether this task sets it nor"
-		+ "at which figure; and exclusions, on which the user has not ruled: the SPEC refuses #"
-		+ "pragma: no cover and exclude_lines because an excluded line is neither covered nor"
-		+ "deleted, and a ruling otherwise reopens that SPEC"
+	RATIONALE "the user ruled on 2026-10-07, refining this draft: coverage runs locally in a"
+		+ "virtual environment outside the repository, which"
+		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade now allows; this"
+		+ "task sets the threshold that decision foresees once the real figure is known, at the"
+		+ "figure of the CI, which skips the tests that need awawa, the local figure staying above"
+		+ "it; and no exclusion, an excluded line being neither covered nor deleted"
 		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	SOURCE "the user's words of 2026-10-07, « la définition du TDD est: pas de ligne de code sans"
 		+ "qu'un test échoue d'abord, donc une ligne de code doit avoir son test, je suis pas"
