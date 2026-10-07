@@ -231,9 +231,21 @@ DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
 	REJECTED "systemd as a prerequisite: the tick is one command any scheduler runs"
 	REJECTED "machine bindings as corpus entities: a probed capability is not a ratified fact, and"
 		+ "the corpus is a git history"
+	REJECTED "awawa optional, the progress of a run falling back to Markdown without it: a refactor"
+		+ "of the registry, the policies and every corpus read for nothing, brigade reading no"
+		+ "project of projects.awawa without awawa"
+	REJECTED "awawa embedded in the brigade binary: awawa is a native ELF x86-64 binary and brigade"
+		+ "a stdlib-only zipapp that runs with python3 alone, so one binary per architecture would"
+		+ "be extracted to disk at run time, against DESC 5"
 	RATIONALE "the user ruled on 2026-10-05 that brigade installs and runs on another Linux machine"
 		+ "with another AI client"
 	SOURCE "pull request #3 of the brigade repository"
+	SOURCE "the user's word of 2026-10-07, \"ok\", at the drafting of @TASK.B106, pull request #64"
+		+ "of the brigade repository, on the proposal \"Je recommande A. … Concrètement : la clé"
+		+ "`document` de `config.toml` vaut `awawa` par défaut ; `markdown` reste disponible par"
+		+ "configuration ; `brigade doctor` continue de signaler l'absence d'awawa comme un"
+		+ "problème.\""
+		REF @TASK.B106
 
 DECISION ThePortableContractIsTheCommandLineAndNeutralFiles
 	TITLE "the command line with --json is the contract, state lives in language-neutral files and"

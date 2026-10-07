@@ -4642,9 +4642,8 @@ TASK B106
 		+ "lints the file after each append, as the rule progress_corpus_where_awawa_declared asks,"
 		+ "or whether brigade formats the file at each read as"
 		+ "@DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote does for a project"
-		+ "corpus; what a corpus awawa cannot read does to the relaunch; the name of the key of"
-		+ "config.toml; what the progress setting of the fake client appends in the awawa form;"
-		+ "what @TASK.B94 prints in the awawa form"
+		+ "corpus; what a corpus awawa cannot read does to the relaunch; what the progress setting"
+		+ "of the fake client appends in the awawa form; what @TASK.B94 prints in the awawa form"
 		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
 		REF @TASK.B94
 	SPEC "document is a plugin kind resolved by name through the resolver of"
@@ -4662,9 +4661,11 @@ TASK B106
 		+ "as the rule progress_corpus_where_awawa_declared of the instructions corpus sets; no run"
 		+ "keeps both"
 		REF @TASK.B71
-	SPEC "the form is the document key of config.toml, awawa or markdown; without the key, awawa"
-		+ "when brigade finds the awawa executable, else markdown; brigade doctor reports the form"
-		+ "in use as an optional item, markdown its fallback when awawa is missing"
+	SPEC "the form is the document key of config.toml, awawa by default, markdown by configuration;"
+		+ "the presence of awawa chooses nothing, awawa staying a prerequisite as"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites sets, and brigade doctor is"
+		+ "unchanged"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	SPEC "the command run resolves the document plugin through the runtime's resolver, as it"
 		+ "resolves the client, and RunPlan carries it; no module outside the plugin package reads"
 		+ "or writes the progress of a run"
@@ -4695,10 +4696,9 @@ TASK B106
 		+ "name raises the error naming the kind and the name"
 	SPEC "tests/cli run brigade run as a subprocess with the fake client in each form: a segment"
 		+ "that hands over is relaunched with a brief opening on the file in the markdown form and"
-		+ "on the inventory and the last entity in the awawa form; with no awawa executable on PATH"
-		+ "and no key, the run uses the markdown form and brigade doctor reports the fallback"
-	SPEC "the README's Runs section states the two forms, the extension, the key, the fallback and"
-		+ "the frame"
+		+ "on the inventory and the last entity in the awawa form; without the key the run uses the"
+		+ "awawa form, with document = markdown the markdown form"
+	SPEC "the README's Runs section states the two forms, the extension, the key and the frame"
 	AFTER @TASK.B73
 	AFTER @TASK.B102
 	RATIONALE "brigade/runs/run_segment.py:38-39 reads runs/<id>/progress.md whole into the"
@@ -4740,12 +4740,13 @@ TASK B106
 		+ "is the plugin's answer to whether the document holds one, which replaces the non-empty"
 		+ "test of run_segments.py"
 		REF @TASK.B102
-	RATIONALE "DESC 1 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites makes awawa a"
-		+ "prerequisite that brigade doctor reports as a finding, SPEC 1 of @TASK.B02: the markdown"
-		+ "fallback without awawa is reached only on a machine doctor already refuses, and an"
-		+ "optional item for the form would make awawa optional for the runs; the refinement"
-		+ "settles which of the decision and the fallback yields, and the conflict is reported with"
-		+ "this draft rather than resolved in it"
+	RATIONALE "awawa stays a prerequisite, DESC 1 of"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, as the user ruled on"
+		+ "2026-10-07 between the three options put to them, awawa optional and awawa embedded in"
+		+ "the zipapp being the alternatives that decision now records as refused: the markdown"
+		+ "form is a configuration a machine with awawa may choose, not a fallback for a machine"
+		+ "without it, and brigade doctor keeps reporting a missing awawa as a finding, SPEC 1 of"
+		+ "@TASK.B02"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 		REF @TASK.B02
 	RATIONALE "M1 rather than ADD0, as the user ruled: the progress of a run is a contract several"
@@ -4780,6 +4781,10 @@ TASK B106
 	SOURCE "the user's ruling of 2026-10-07 on the shape of the plugin: \"d'ailleurs: tout ce qui"
 		+ "est un .md doit pouvoir être géré en utilisant awawa à la place, c'est à prévoir dans"
 		+ "notre plan\""
+	SOURCE "the user's word of 2026-10-07, \"ok\", on the proposal \"Je recommande A. …"
+		+ "Concrètement : la clé `document` de `config.toml` vaut `awawa` par défaut ; `markdown`"
+		+ "reste disponible par configuration ; `brigade doctor` continue de signaler l'absence"
+		+ "d'awawa comme un problème.\""
 	SOURCE "pull request #88 of the instructions corpus, the rules"
 		+ "procedure_progress_outside_repository, progress_corpus_where_awawa_declared and"
 		+ "progress_entry_holds_what_resume_needs at its head 021ae05"
