@@ -11,8 +11,8 @@ LAUNCH_REQUEST = {
     "brief": "Deliver the task B42.",
     "progress_file": "/state/brigade/runs/r1/progress.md",
     "role": {
-        "name": "bastien",
-        "package": "AGENT bastien",
+        "name": "builder",
+        "package": "AGENT builder",
         "package_file": "/state/brigade/runs/r1/role.md",
         "capabilities": ["read", "shell"],
         "reasoning": "standard",

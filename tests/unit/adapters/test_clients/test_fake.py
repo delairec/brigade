@@ -9,8 +9,8 @@ LAUNCH_REQUEST = {
     "brief": "Deliver the task B42.",
     "progress_file": "/state/brigade/runs/r1/progress.md",
     "role": {
-        "name": "bastien",
-        "package": "AGENT bastien",
+        "name": "builder",
+        "package": "AGENT builder",
         "package_file": "/state/brigade/runs/r1/role.md",
         "capabilities": ["read", "shell"],
         "reasoning": "standard",
@@ -51,7 +51,7 @@ class FakeLaunchTest(unittest.TestCase):
             launch,
             {
                 "schema_version": 1,
-                "argv": ["cat", "--", "/srv/recordings/bastien.json"],
+                "argv": ["cat", "--", "/srv/recordings/builder.json"],
                 "environment": {},
                 "stdin": None,
             },
@@ -106,7 +106,7 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                     "fake",
                     "5",
                     "step 1 done",
-                    "/srv/recordings/bastien.json",
+                    "/srv/recordings/builder.json",
                 ],
                 "environment": {},
                 "stdin": None,
