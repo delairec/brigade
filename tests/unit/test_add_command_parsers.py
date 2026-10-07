@@ -1,4 +1,6 @@
 import argparse
+import contextlib
+import io
 import unittest
 
 from brigade.add_command_parsers import add_command_parsers
@@ -128,6 +130,21 @@ class AddCommandParsersOfAGroupWithNoCommandOfItsOwnTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(vars(options), {"command": show, "json": True, "name": "brigade"})
+
+    def test_should_refuse_the_group_named_without_its_action(self):
+        # Arrange
+        show = _create_command(("project", "show"), "print a project", group_help="the projects")
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (show,), _create_common_options())
+        errors = io.StringIO()
+
+        # Act
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(errors):
+            parser.parse_args(["project"])
+
+        # Assert
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("the following arguments are required: action", errors.getvalue())
 
     def test_should_parse_no_command_when_none_is_given(self):
         # Arrange
