@@ -1238,10 +1238,12 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		+ "requirements-ci.txt under dependabot; none is a dependency of brigade, and coverage"
 		+ "fails below a threshold set once the real figure is known"
 	STATUS active
-	DESC "the CI runs five development tools on every pull request and every push to main: zizmor"
-		+ "on .github/workflows/, ruff check and ruff format --check, semgrep scan with the Python"
-		+ "and security rule packs, vulture, and coverage.py in report mode; @TASK.B62 to @TASK.B66"
-		+ "deliver them, one tool per pull request"
+	DESC "the CI runs five development tools on every pull request touching a file outside the"
+		+ "paths @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob names, and"
+		+ "on every push to main: zizmor on .github/workflows/, ruff check and ruff format --check,"
+		+ "semgrep scan with the Python and security rule packs, vulture, and coverage.py in report"
+		+ "mode; @TASK.B62 to @TASK.B66 deliver them, one tool per pull request"
+		REF @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 		REF @TASK.B62
 		REF @TASK.B63
 		REF @TASK.B64
@@ -1444,3 +1446,30 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "des preflight built-in ... et la possibilité d'en ajouter des customs\"; \"ces"
 		+ "mécanismes (scans, recette) feront appel à ou seront remplacé par des preflight built-in"
 		+ "nommés\""
+
+DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
+	TITLE "a pull request touching only corpus/, docs/, artifact/ or Markdown at the root starts no"
+		+ "job of ci.yml; a push to main runs them all"
+	STATUS active
+	DESC "the pull_request trigger of .github/workflows/ci.yml carries paths-ignore corpus/**,"
+		+ "docs/**, artifact/** and *.md, the Markdown at the root alone: a pull request changing"
+		+ "only those files starts none of its jobs, a pull request changing one other file starts"
+		+ "them all"
+	DESC "the push trigger on main carries no filter: every merge runs the whole suite"
+	DESC "no job of ci.yml reads those paths: the tests write their own corpora in temporary"
+		+ "directories, and no .awawa file lies outside corpus/"
+	DESC "the corpus job of @TASK.B95 lives in a workflow of its own, which runs on every pull"
+		+ "request as DESC 3 of @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere"
+		+ "sets, so that a pull request touching only corpus/ is still checked"
+		REF @TASK.B95
+		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
+	REJECTED "a first job detecting the changed paths and an if: on every job: about fifteen lines"
+		+ "of YAML for checks reported skipped, which matter only under required status checks, and"
+		+ "main has no branch protection"
+	REJECTED "a paths list of the files that start the CI: a file forgotten in the list skips the"
+		+ "CI without a warning, where a paths-ignore list starts it for every new kind of file"
+	RATIONALE "a pull request of refinement, such as pull request #58 changing corpus/ alone, ran"
+		+ "the eight jobs of ci.yml, tests on two Pythons, the floor, zizmor, ruff, semgrep,"
+		+ "vulture and coverage, none of which reads a file it changed"
+	SOURCE "the user's rulings of 2026-10-07: paths-ignore of the workflow rather than a detecting"
+		+ "job or a paths list, delivered by a pull request of its own without a task"
