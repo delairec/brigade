@@ -4064,3 +4064,59 @@ TASK B97
 		REF @TASK.B72
 	SOURCE "the user's ruling of 2026-10-07 at the refinement of B72: the reader of the trails is a"
 		+ "draft of its own in F0, after B72"
+
+TASK B98
+	TITLE "A milestone and its draft tasks plan the preflight: named lists of mechanical checks run"
+		+ "by brigade preflight <name>, refinement the first"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "corpus"
+	ROLE lex
+	DESC "to be refined with the user; the design the user proposed: a preflight is an entity"
+		+ "holding a list of mechanical actions, brigade preflight <name> runs the actions of the"
+		+ "preflight named, refinement or any name the user gives, and returns their findings, and"
+		+ "brigade preflight add adds an action, a capability, to a preflight"
+	DESC "the example of the refinement, from the refinement of @TASK.B73 where each action was"
+		+ "done by hand: the file:line citations of a draft read again and the ones whose lines"
+		+ "moved since the commit of its source reported, as run_segment.py:54-55 had moved after"
+		+ "@TASK.B82; the tasks, ratified or not, touching the same files as the draft and not"
+		+ "named in its AFTER, as @TASK.B72 and B73 both change runtime.py; the drafts and tasks"
+		+ "whose deliverables overlap, as @TASK.B94 and @TASK.B97; the judgement and the rulings"
+		+ "stay the conversation's"
+		REF @TASK.B73
+		REF @TASK.B82
+		REF @TASK.B72
+		REF @TASK.B94
+		REF @TASK.B97
+	DESC "to settle in the refinement: the word preflight already names the eight deterministic"
+		+ "checks of a pull request, @TASK.B15 and"
+		+ "@DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate, which becomes one named"
+		+ "preflight or keeps the word to itself; how a preflight stands to the collectors and"
+		+ "checks of @TASK.B47 and @TASK.B50, to a study with SLOT none of @TASK.B33 and to the"
+		+ "recipes of @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder, whose collect and gate steps"
+		+ "already run mechanical actions; where the entities live, the operational corpus as a"
+		+ "STUDY or an ORDER, or the project; whether preflight add records the entity through fmt,"
+		+ "lint and a commit as study new of @TASK.B48 does"
+		REF @TASK.B15
+		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+		REF @TASK.B47
+		REF @TASK.B50
+		REF @TASK.B33
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+		REF @TASK.B48
+	SPEC "a MILESTONE entity of corpus/milestones.awawa names the preflight feature, its DESC"
+		+ "stating what a preflight is, how it is named, run and extended, and how it stands to the"
+		+ "pull request preflight, the collectors, the checks, the studies and the recipes"
+	SPEC "draft tasks of that milestone, one per deliverable, cover the entity, brigade preflight"
+		+ "<name>, brigade preflight add and the built-in refinement preflight, each action of the"
+		+ "example covered by a task or set aside in the milestone's DESC with its reason"
+	SPEC "each ruling binding beyond one task is a DECISION with its REJECTED lines; the pull"
+		+ "request changes the corpus alone"
+	RATIONALE "the user wants the preflight useful beyond the refinement, so the feature is planned"
+		+ "as a milestone of its own rather than one task; the findings of this session on awawa, a"
+		+ "task id taken twice after a rebase and no search across the fields of a corpus, go to"
+		+ "the usage report addressed to awawa's authors, not to this milestone"
+	SOURCE "the user's words of 2026-10-07, after the refinement of B73: \"créer une milestone pour"
+		+ "l'ajout de la fonctionnalité preflight, car je suppose que ce preflight pourrait être"
+		+ "utile pas seulement au refinement ... La tâche sera donc pas l'ajout de la"
+		+ "fonctionnalité, mais la création de la milestone et du plan (tâches)\""
