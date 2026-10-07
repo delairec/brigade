@@ -4342,6 +4342,7 @@ TASK B102
 		+ "done, brigade-end: handed_over or brigade-end: blocked; the adapter reads the last line"
 		+ "of the final message in segments/<n>/stdout.log and carries the declaration in the"
 		+ "normalised result"
+		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
 	SPEC "a segment the client ends without error has the outcome its last line declares, done,"
 		+ "handed_over or blocked, and undeclared when that line is missing, unreadable or names"
 		+ "another value"
