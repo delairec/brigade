@@ -1401,3 +1401,40 @@ DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 		+ "l'agents ia puisse utiliser un outil qui remonte les infos dont il a besoin sans avoir à"
 		+ "chercher par lui-même\""
 		REF @TASK.B72
+
+DECISION APreflightIsANamedSetOfCollectorsAndChecks
+	TITLE "a preflight is a named set of mechanical actions, collectors and checks, run on demand"
+		+ "by brigade preflight <name>; brigade ships built-in preflights and a user adds custom"
+		+ "ones"
+	STATUS active
+	DESC "a preflight composes collectors and checks resolved as plugins and declares no action of"
+		+ "its own; an action needed by a preflight is delivered as a collector or a check,"
+		+ "reusable elsewhere"
+	DESC "brigade preflight <name> runs the preflight named and returns its findings as one"
+		+ "document; built-in preflights ship with brigade, refinement the first, and a user adds"
+		+ "custom ones"
+	DESC "the eight deterministic checks of a pull request of @TASK.B15 become the built-in"
+		+ "preflight verify-pull-request once brigade preflight exists; B15 is delivered as written"
+		+ "until then"
+		REF @TASK.B15
+	DESC "a scan of @TASK.B33 and the mechanical steps of a recipe of"
+		+ "@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder call a named built-in preflight or are"
+		+ "replaced by one, so that a set of collectors and checks is declared in one place; which"
+		+ "of the two, for each, is settled by @TASK.B98"
+		REF @TASK.B33
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+		REF @TASK.B98
+	DESC "binds @TASK.B98 and the tasks of the milestone it creates"
+		REF @TASK.B98
+	REJECTED "a preflight declaring its own actions: a third way, beside the scans and the recipes,"
+		+ "to declare a set of collectors, and actions no study or recipe could reuse"
+	REJECTED "a distinct word for the named sets, preflight kept for the pull request checks alone:"
+		+ "the pull request checks are one named set among others"
+	RATIONALE "the refinement of @TASK.B73 did by hand mechanical checks a command could run, and"
+		+ "the user wants them useful beyond the refinement"
+		REF @TASK.B73
+	SOURCE "the user's words of 2026-10-07: \"un preflight = un set d'actions mécanisables, donc on"
+		+ "pourrait avoir un preflight nommé refinement qui lance les collecteurs, checks, etc ..."
+		+ "des preflight built-in ... et la possibilité d'en ajouter des customs\"; \"ces"
+		+ "mécanismes (scans, recette) feront appel à ou seront remplacé par des preflight built-in"
+		+ "nommés\""

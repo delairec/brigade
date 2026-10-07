@@ -4088,21 +4088,18 @@ TASK B98
 		REF @TASK.B72
 		REF @TASK.B94
 		REF @TASK.B97
-	DESC "to settle in the refinement: the word preflight already names the eight deterministic"
-		+ "checks of a pull request, @TASK.B15 and"
-		+ "@DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate, which becomes one named"
-		+ "preflight or keeps the word to itself; how a preflight stands to the collectors and"
-		+ "checks of @TASK.B47 and @TASK.B50, to a study with SLOT none of @TASK.B33 and to the"
-		+ "recipes of @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder, whose collect and gate steps"
-		+ "already run mechanical actions; where the entities live, the operational corpus as a"
-		+ "STUDY or an ORDER, or the project; whether preflight add records the entity through fmt,"
-		+ "lint and a commit as study new of @TASK.B48 does"
-		REF @TASK.B15
-		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+	DESC "settled by @DECISION.APreflightIsANamedSetOfCollectorsAndChecks: a preflight composes the"
+		+ "collectors and checks of @TASK.B47 and @TASK.B50 and declares no action, built-ins and"
+		+ "custom ones, the checks of @TASK.B15 becoming the built-in verify-pull-request"
+		REF @DECISION.APreflightIsANamedSetOfCollectorsAndChecks
 		REF @TASK.B47
 		REF @TASK.B50
+		REF @TASK.B15
+	DESC "to settle in the refinement: for a scan of @TASK.B33 and for the mechanical steps of a"
+		+ "recipe, whether each calls a named built-in preflight or is replaced by one; where the"
+		+ "custom preflights live, the operational corpus or the project; whether preflight add"
+		+ "records the entity through fmt, lint and a commit as study new of @TASK.B48 does"
 		REF @TASK.B33
-		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
 		REF @TASK.B48
 	SPEC "a MILESTONE entity of corpus/milestones.awawa names the preflight feature, its DESC"
 		+ "stating what a preflight is, how it is named, run and extended, and how it stands to the"
