@@ -3,7 +3,6 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.errors import BrigadeError
 from brigade.system.paths import Paths
 from brigade.system.remove_expired_trails import remove_expired_trails
 
@@ -32,7 +31,7 @@ class RemoveExpiredTrailsTestCase(unittest.TestCase):
             path.write_text("")
 
     def configure(self, content: str) -> None:
-        self.configuration.parent.mkdir(parents=True)
+        self.configuration.parent.mkdir(parents=True, exist_ok=True)
         self.configuration.write_text(content)
 
 
@@ -112,13 +111,20 @@ class RemoveExpiredTrailsOfConfiguredDaysTest(RemoveExpiredTrailsTestCase):
         # Assert
         self.assertTrue(expired.exists())
 
-    def test_should_refuse_a_trail_days_below_1_naming_the_key_and_the_file(self):
-        # Arrange
-        self.configure("trail_days = 0\n")
+    def test_should_keep_every_trail_when_trail_days_is_no_integer_of_1_or_more(self):
+        rows = [
+            ("zero", "trail_days = 0\n"),
+            ("a string", 'trail_days = "7"\n'),
+        ]
+        for case, content in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.configure(content)
+                expired = self.ticks / "20260901T000000Z.jsonl"
+                self.write_trails(expired)
 
-        # Act
-        with self.assertRaises(BrigadeError) as raised:
-            remove_expired_trails(self.paths, NOW)
+                # Act
+                remove_expired_trails(self.paths, NOW)
 
-        # Assert
-        self.assertEqual(str(raised.exception), f"trail_days is 0, not 1 or more, in {self.configuration}")
+                # Assert
+                self.assertTrue(expired.exists())

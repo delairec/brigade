@@ -2,6 +2,7 @@ import tomllib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.system.paths import Paths
 from brigade.system.read_trail_days import read_trail_days
 from brigade.system.trail_locations import (
@@ -45,7 +46,11 @@ def remove_expired_trails(paths: Paths, now: datetime) -> None:
     document = _read_configuration_document(configuration)
     if document is None:
         return
-    oldest_kept = now - timedelta(days=read_trail_days(document, configuration))
+    try:
+        trail_days = read_trail_days(document, configuration)
+    except BrigadeError:
+        return
+    oldest_kept = now - timedelta(days=trail_days)
     for trail in _list_trails(paths.state_root):
         instant = _read_instant(trail)
         if instant is not None and instant < oldest_kept:

@@ -228,19 +228,6 @@ class BrigadeTickTrailTest(TrailTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertTrue(old_tick.exists())
 
-    def test_should_exit_1_naming_a_trail_days_below_1_and_its_file(self):
-        # Arrange
-        configuration = self.machine.write_configuration("trail_days = 0\n")
-
-        # Act
-        completed = self.run_brigade("tick", "--once")
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade tick: trail_days is 0, not 1 or more, in {configuration}\n"),
-        )
-
 
 class BrigadeCommandTrailTest(TrailTestCase):
     def setUp(self):

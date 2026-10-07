@@ -247,7 +247,8 @@ its lines date it.
 
 `<instant>` is the UTC compact form, `20261007T120000Z`, of the instant the command or the tick read. At each tick and
 each command, the trails of `ticks/` and `commands/` older than `trail_days` of `config.toml`, 7 by default, are
-removed; the trail of a run goes with its run. A detached run's records are written by the process it re-executes.
+removed; a `trail_days` that is no integer of 1 or more keeps every trail, and `brigade doctor` names it. The trail of
+a run goes with its run. A detached run's records are written by the process it re-executes.
 
 `--verbose`, accepted by every command, prints on stderr one line per record the command writes, stdout keeping the
 document alone:

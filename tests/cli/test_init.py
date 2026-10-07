@@ -219,6 +219,21 @@ class BrigadeInitWhenAFileDiffersFromTheShippedOneTest(unittest.TestCase):
                 )
                 self.assertEqual(edited_file.read_text(), "# edited by the user\n")
 
+    def test_should_report_a_configuration_whose_trail_days_is_below_1_as_differing(self):
+        # Arrange
+        configuration = self.machine.corpus / "config.toml"
+        configuration.write_text("trail_days = 0\n")
+
+        # Act
+        completed = self.machine.run_init("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][CONFIGURATION_ENTRY],
+            {"name": "config.toml", "path": str(configuration), "state": "differs"},
+        )
+
     def test_should_print_a_warning_for_the_differing_file(self):
         # Arrange
         (self.machine.corpus / "config.toml").write_text('client = "fake"\n')
