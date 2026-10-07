@@ -9,8 +9,7 @@ STOP_SIGNALS = (signal.SIGTERM, signal.SIGINT)
 
 def _drain(read_descriptor: int) -> None:
     with contextlib.suppress(BlockingIOError):
-        while True:
-            os.read(read_descriptor, 512)
+        os.read(read_descriptor, 512)
 
 
 def repeat_until_signalled(action: Callable[[], None], interval_s: float) -> int:
