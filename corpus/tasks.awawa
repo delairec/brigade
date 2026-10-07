@@ -4465,3 +4465,66 @@ TASK B103
 		+ "pour un budget de 40 et a quand même été enregistré done, sans aucun signal de"
 		+ "dépassement\"; the user's rulings that day, a signal alone with the outcome unchanged,"
 		+ "and the cause of the overrun of the cap sought in the same task"
+
+TASK B104
+	TITLE "A milestone and its draft tasks plan brigade clean: what brigade leaves behind removed"
+		+ "by kind, each kind enabled in config.toml and purged on the schedule it sets"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "corpus"
+	ROLE lex
+	DESC "to be refined with the user; the design the user asked for: a clean command whose"
+		+ "configuration chooses by booleans what it cleans and sets when the purge runs"
+	DESC "what is removed today or planned, each kind with its own key and its own moment: the refs"
+		+ "cache bounded in bytes by @TASK.B08, the trails older than trail_days by @TASK.B72, the"
+		+ "disposable worktree of a reading slot after its run by @TASK.B06; in draft, the runs"
+		+ "beyond runs_kept by @TASK.B60, the worktree of a task once its pull request is merged or"
+		+ "closed by @TASK.B14, the scans stale-branches and worktrees of @TASK.B33, which report"
+		+ "and remove nothing"
+		REF @TASK.B08
+		REF @TASK.B72
+		REF @TASK.B06
+		REF @TASK.B60
+		REF @TASK.B14
+		REF @TASK.B33
+	DESC "what no task removes: the local branch of a task whose pull request is merged, which git"
+		+ "branch --merged does not recognise after a squash merge; a worktree brigade did not cut,"
+		+ "or whose run died; the branches left without a worktree; the ledger of @TASK.B05,"
+		+ "append-only, whose size no task bounds"
+		REF @TASK.B05
+	DESC "the example of the cleanup of this repository by hand on 2026-10-07, through the"
+		+ "worktree-clean procedure: 39 worktrees and 37 branches removed, the merge read from the"
+		+ "forge since every pull request was squash-merged, 13 local heads older than the rebased"
+		+ "head of their merged pull request, one worktree with an uncommitted change already on"
+		+ "main, 26 worktree-agent-* branches left without a worktree"
+	DESC "to settle in the refinement: whether the purges of @TASK.B08, B60 and B72 become kinds of"
+		+ "brigade clean or keep their own moment with clean as a second entry; whether the tick"
+		+ "runs the clean at its own period or a timer of its own does; a dry run listing what"
+		+ "would go before anything is removed; what each kind spares, a running run, a worktree"
+		+ "with uncommitted changes, a branch with commits on no merged pull request; the ledger"
+		+ "event of each removal; how clean stands to the scans of @TASK.B33 and the preflight of"
+		+ "@TASK.B98"
+		REF @TASK.B08
+		REF @TASK.B60
+		REF @TASK.B72
+		REF @TASK.B33
+		REF @TASK.B98
+	SPEC "a MILESTONE entity of corpus/milestones.awawa names the clean feature, its DESC stating"
+		+ "the kinds brigade clean removes, what each kind spares, the keys of config.toml that"
+		+ "enable each kind and set its age or count, the schedule of the purge, and how the"
+		+ "feature stands to the purges and removals already specified"
+	SPEC "draft tasks of that milestone, one per deliverable, cover the command, each kind, the"
+		+ "configuration and the schedule, each purge already specified absorbed or kept apart with"
+		+ "its reason in the milestone's DESC"
+	SPEC "each ruling binding beyond one task is a DECISION with its REJECTED lines; the pull"
+		+ "request changes the corpus alone"
+	RATIONALE "the purges are specified task by task, each with its key and its moment, and several"
+		+ "kinds have none; the user wants one configurable feature, so it is planned as a"
+		+ "milestone of its own, as the preflight was by @TASK.B98, rather than as one task"
+		REF @TASK.B98
+	SOURCE "the user's words of 2026-10-07, after the cleanup of this repository's worktrees:"
+		+ "\"brigade propose-t-elle ou va-t-elle proposer (selon le plan des tâches) un clean ?"
+		+ "avec possibilités de configuration (booleans sur quoi cleaner, timing de la purge, etc)."
+		+ "Si la réponse est nom, il faut créer une tâche en draft pour dire d'établir un plan pour"
+		+ "ajouter la fonctionnalité (un peu comme on a fait avec la tâche qui doit"
+		+ "programmer/planifier la feature \\\"preflight\\\")\""
