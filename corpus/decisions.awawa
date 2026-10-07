@@ -658,25 +658,30 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	DESC "a command module declares, as a module-level constant of the frozen record type of"
 		+ "brigade/command.py, the path, the help and the arguments of its one command line, its"
 		+ "request reader, its text renderer, its exit decision and, where it has them, its"
-		+ "Markdown renderer and its diagnostics; the help of a group with no command of its own is"
+		+ "Markdown renderer, its diagnostics, the renderer of the stderr a passthrough passes and"
+		+ "the acceptance of extra arguments; the help of a group with no command of its own is"
 		+ "declared by the records of its lines; cli.py renders and exits through the record alone,"
 		+ "from @TASK.B82"
 		REF @TASK.B82
 	SOURCE "the declared record of DESC 11 on the user's rulings of 2026-10-07 in the refinement of"
 		+ "@TASK.B82"
 		REF @TASK.B82
-	DESC "a group parser takes the common options as every command parser does; brigade --help and"
-		+ "the help of a group list their command lines in the order of their module names, and a"
-		+ "group names its lines action; the passthrough of corpus is the record that renders the"
-		+ "stderr it passes, and the key=value arguments brigade run takes after its options are"
-		+ "the extra arguments its record accepts, from @TASK.B82"
+	DESC "a group parser takes the common options as every command parser does: brigade project"
+		+ "--json list runs, from @TASK.B82"
+		REF @TASK.B82
+	DESC "brigade --help and the help of a group list their command lines in the order of their"
+		+ "module names, from @TASK.B82"
+		REF @TASK.B82
+	DESC "a group names its command lines action in its usage and its errors, from @TASK.B82"
 		REF @TASK.B82
 	REJECTED "an order field in the record to keep the hand-written order of the help: a table of"
 		+ "commands spread over the records, which discovery replaces"
 	REJECTED "the common options on the adapter group alone, as the hand-written parsers of cli.py"
 		+ "declared them: nothing kept them off the other groups, and DESC 6 attaches them to every"
 		+ "subcommand"
-	SOURCE "DESC 12 in pull request #56 of the brigade repository, delivering @TASK.B82"
+	SOURCE "DESC 12 to 14 in pull request #56 of the brigade repository, delivering @TASK.B82,"
+		+ "validated by the user's rulings of 2026-10-07 in its review: \"Garder\" for the common"
+		+ "options of a group, \"Valider\" for the order of the help and the name action"
 		REF @TASK.B82
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
