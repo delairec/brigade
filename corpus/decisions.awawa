@@ -488,9 +488,11 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "Architecture's layering is not adopted"
 	STATUS active
 	DESC "a built-in plugin is a module under its kind's package, an external one an executable"
-		+ "brigade-<kind>-<name> on PATH; one resolver turns a name into one object answering the"
-		+ "kind's operations, searched in the kind's declared order: project, machine, PATH,"
-		+ "built-ins"
+		+ "brigade-<kind>-<name> on PATH for the client kind; the forge and the scheduler kinds"
+		+ "resolve their built-in modules alone until @TASK.B76, post-MVP, delivers their"
+		+ "executables; one resolver turns a name into one object answering the kind's operations,"
+		+ "searched in the kind's declared order: project, machine, PATH, built-ins"
+		REF @TASK.B76
 	DESC "an operation takes a JSON-compatible dict and returns one, validated by the core on entry"
 		+ "as @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets; a module"
 		+ "plugin and an executable plugin are indistinguishable to the core; no plugin Python type"
@@ -555,6 +557,9 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "the user's rulings of 2026-10-07 at the refinement of @TASK.B73, amending DESC 5"
 		REF @TASK.B73
+	SOURCE "the user's ruling of 2026-10-07 at the refinement of @TASK.B76, amending DESC 1: an"
+		+ "executable forge or scheduler is post-MVP comfort, F7 of the foundations review"
+		REF @TASK.B76
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"

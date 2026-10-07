@@ -3412,7 +3412,7 @@ TASK B76
 	TITLE "The forge and the scheduler kinds resolve an executable brigade-<kind>-<name> on PATH as"
 		+ "the client kind does"
 	STATUS draft
-	MILESTONE @MILESTONE.F0
+	MILESTONE @MILESTONE.ADD0
 	COMPONENT "system"
 	ROLE ada
 	SPEC "resolve_plugin(\"forge\", name, runtime) and resolve_plugin(\"scheduler\", name, runtime)"
@@ -3423,17 +3423,40 @@ TASK B76
 		+ "and stdout through the same caller as a client executable, validated on entry"
 	SPEC "a unit test per kind proves the resolution with a fake executable on a temporary PATH,"
 		+ "and a name matching no executable and no module raises the error naming both"
+	AFTER @TASK.B73
+	AFTER @TASK.B74
+	AFTER @TASK.B75
 	RATIONALE "F7 of the foundations review: resolve_plugin.py:50-54 resolves forge and scheduler"
-		+ "from the built-in modules alone, and lines 73-77 give the PATH search to the client kind"
-		+ "only; DESC 1 of @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported"
-		+ "reads \"a built-in plugin is a module under its kind's package, an external one an"
-		+ "executable brigade-<kind>-<name> on PATH\"; plan section 11 line 524; @TASK.B46, M7, is"
-		+ "the first to need it"
+		+ "from the built-in modules alone, and _resolve_client, lines 57-70, gives the PATH search"
+		+ "to the client kind only; DESC 1 of"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported reads \"a built-in"
+		+ "plugin is a module under its kind's package, an external one an executable"
+		+ "brigade-<kind>-<name> on PATH\"; plan section 11 line 524; @TASK.B46, M7, is the first"
+		+ "to need it"
 		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		REF @TASK.B46
-	RATIONALE "the alternative the report offers for the refinement round: DESC 1 of the decision"
-		+ "amended to \"executables on PATH for the client kind until a second forge or scheduler"
-		+ "exists\", or the resolution given to B46"
+	RATIONALE "moved from F0 to ADD0 at its refinement: without it brigade uses its built-in forge,"
+		+ "github, and its built-in schedulers, systemd, cron and loop, and no task of the MVP"
+		+ "needs another; DESC 1 of the decision now states that forge and scheduler resolve their"
+		+ "built-in modules alone until this task, which closes F7 within F0"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	RATIONALE "the contract of an executable forge or scheduler is left to the refinement of this"
+		+ "task: a client module answers every operation through answer(operation, request) and"
+		+ "spawns nothing, which ClientExecutableCaller mirrors, whereas a forge or scheduler"
+		+ "module exposes one function per operation (describe_account, install, read_status)"
+		+ "taking request and runtime and spawns gh, crontab or systemctl through"
+		+ "runtime.run_process, called as forge.describe_account at doctor.py:107 and through"
+		+ "getattr at ask_scheduler.py:16; an executable receives no runtime"
+	RATIONALE "after @TASK.B73, which moves the resolver into Runtime and changes its call sites,"
+		+ "@TASK.B74, which validates the answer of the forge operation describe_account, and"
+		+ "@TASK.B75, whose GH_TOKEN of the forge's gh subprocesses an executable forge would need"
+		+ "in its environment"
+		REF @TASK.B73
+		REF @TASK.B74
+		REF @TASK.B75
+	SOURCE "the user's ruling of 2026-10-07 at the refinement of B76, \"oui, les quatre"
+		+ "changements\", on \"on peut passer cet ajout dans une tâche en ADD0 (post mvp) en"
+		+ "considérant que c'est du confort\""
 	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
 		+ "fix the issues reported by max in this milestone\"; F7 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
