@@ -3041,6 +3041,7 @@ TASK B72
 		IMPL "brigade/commands/tick.py::def _locate_trail(runtime):"
 		IMPL "brigade/cli.py::def _locate_command_trail(command, runtime: Runtime) -> Path:"
 		IMPL "tests/cli/test_trails.py::class BrigadeTickTrailTest(TrailTestCase):"
+		IMPL "tests/cli/test_tick.py::def test_should_write_the_trail_of_its_first_round(self):"
 	SPEC "at each tick and each command, the trails of ticks/ and commands/ older than trail_days"
 		+ "of config.toml, 7 by default, are removed; a trail_days that is no integer of 1 or more"
 		+ "keeps every trail and is a finding of brigade doctor naming the key and the file; the"
