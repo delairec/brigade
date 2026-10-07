@@ -3234,9 +3234,10 @@ TASK B74
 	ROLE ada
 	SPEC "every document kind brigade reads or writes, command outputs aside, has one module"
 		+ "declaring its frozen dataclass: the request and the answer of each client operation,"
-		+ "probe, launch-argv, resume-argv, parse-result and transcripts, the scheduler answers"
-		+ "install and read_status, each event of declared_events.py, run.json, result.json, the"
-		+ "heartbeat tick.json, the snapshot of the tick and the line of a trail"
+		+ "probe, launch-argv, resume-argv, parse-result and transcripts, the request and the"
+		+ "answer of the forge operation describe_account, the scheduler answers install and"
+		+ "read_status, each event of declared_events.py, run.json, result.json, the heartbeat"
+		+ "tick.json, the snapshot of the tick and the line of a trail"
 	SPEC "the module of a kind declares from_document when brigade reads the kind and to_document"
 		+ "when brigade writes it, and no function for a direction no code crosses; from_document"
 		+ "is called once where the document enters, after the validator, and to_document once"
@@ -3267,6 +3268,11 @@ TASK B74
 		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets a frozen"
 		+ "dataclass per kind inside the core and dicts at the edges"
 		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "the forge operation describe_account, brigade/adapters/forges/github.py:19-29, is"
+		+ "called by commands/doctor.py:109 with a dict request and its answer read by key at lines"
+		+ "112-114 with no validator; SPEC 2 puts the validator before its from_document, added at"
+		+ "the refinement of @TASK.B75 at the user's request"
+		REF @TASK.B75
 	RATIONALE "the user ruled every kind without exception rather than the alternative the report"
 		+ "offered, DESC 4 narrowed to the kinds the core computes with: the scheduler answers and"
 		+ "the client requests are covered although a command module alone reads them"
