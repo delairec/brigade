@@ -1,3 +1,4 @@
+import contextlib
 import subprocess
 import threading
 from dataclasses import dataclass
@@ -19,15 +20,8 @@ class SpawnRequest:
 
 
 def _feed(pipe: BinaryIO, data: bytes) -> None:
-    try:
+    with contextlib.suppress(BrokenPipeError), pipe:
         pipe.write(data)
-    except BrokenPipeError:
-        pass
-    finally:
-        try:
-            pipe.close()
-        except BrokenPipeError:
-            pass
 
 
 def _choose_input(stdin: str | None) -> int:

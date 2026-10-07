@@ -1,4 +1,5 @@
 import importlib
+import importlib.util
 import json
 import re
 import shutil
@@ -41,12 +42,9 @@ class ClientExecutableCaller:
 
 def _import_module(package: str, module_basename: str):
     module_name = f"{package}.{module_basename}"
-    try:
-        return importlib.import_module(module_name)
-    except ModuleNotFoundError as error:
-        if error.name != module_name:
-            raise
+    if importlib.util.find_spec(module_name) is None:
         return None
+    return importlib.import_module(module_name)
 
 
 def _resolve_built_in(kind: str, name: str):
