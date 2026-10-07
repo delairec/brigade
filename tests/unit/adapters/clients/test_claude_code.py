@@ -9,9 +9,11 @@ LAUNCH_REQUEST = {
     "schema_version": 1,
     "worktree": "/srv/worktrees/b42",
     "brief": "Deliver the task B42.",
+    "progress_file": "/state/brigade/runs/r1/progress.md",
     "role": {
         "name": "bastien",
         "package": "AGENT bastien",
+        "package_file": "/state/brigade/runs/r1/role.md",
         "capabilities": ["read", "shell"],
         "reasoning": "standard",
         "budget": 75,
@@ -85,16 +87,18 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                     "--print",
                     "--output-format",
                     "json",
+                    "--permission-mode",
+                    "dontAsk",
                     "--model",
                     "opus",
                     "--effort",
                     "high",
                     "--max-turns",
                     "94",
-                    "--append-system-prompt",
-                    "AGENT bastien",
+                    "--append-system-prompt-file",
+                    "/state/brigade/runs/r1/role.md",
                     "--allowedTools",
-                    "Read,Glob,Grep,Bash",
+                    "Read,Glob,Grep,Bash,Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)",
                 ],
                 "environment": {},
                 "stdin": "Deliver the task B42.",
@@ -117,7 +121,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 launch = answer("launch-argv", request)
 
                 # Assert
-                self.assertEqual(launch["argv"][4:8], expected_model_and_effort)
+                self.assertEqual(launch["argv"][6:10], expected_model_and_effort)
 
     def test_should_take_the_row_the_configuration_sets_for_a_level(self):
         # Arrange
@@ -127,15 +131,39 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
         launch = answer("launch-argv", request)
 
         # Assert
-        self.assertEqual(launch["argv"][4:8], ["--model", "sonnet", "--effort", "low"])
+        self.assertEqual(launch["argv"][6:10], ["--model", "sonnet", "--effort", "low"])
 
     def test_should_grant_the_tools_of_each_capability(self):
         rows = [
-            (["read"], "Read,Glob,Grep"),
-            (["write"], "Edit,Write,NotebookEdit"),
-            (["shell"], "Bash"),
-            (["net"], "WebFetch,WebSearch"),
-            (["read", "write", "shell", "net"], "Read,Glob,Grep,Edit,Write,NotebookEdit,Bash,WebFetch,WebSearch"),
+            (
+                ["read"],
+                ("Read,Glob,Grep,Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)"),
+            ),
+            (
+                ["write"],
+                (
+                    "Edit,Write,NotebookEdit,"
+                    "Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)"
+                ),
+            ),
+            (
+                ["shell"],
+                ("Bash,Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)"),
+            ),
+            (
+                ["net"],
+                (
+                    "WebFetch,WebSearch,"
+                    "Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)"
+                ),
+            ),
+            (
+                ["read", "write", "shell", "net"],
+                (
+                    "Read,Glob,Grep,Edit,Write,NotebookEdit,Bash,WebFetch,WebSearch,"
+                    "Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)"
+                ),
+            ),
         ]
         for capabilities, expected_tools in rows:
             with self.subTest(capabilities=capabilities):
@@ -159,7 +187,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 launch = answer("launch-argv", request)
 
                 # Assert
-                self.assertEqual(launch["argv"][8:10], ["--max-turns", expected_max_turns])
+                self.assertEqual(launch["argv"][10:12], ["--max-turns", expected_max_turns])
 
 
 class ClaudeCodeResumeTest(unittest.TestCase):
@@ -180,6 +208,8 @@ class ClaudeCodeResumeTest(unittest.TestCase):
                     "--print",
                     "--output-format",
                     "json",
+                    "--permission-mode",
+                    "dontAsk",
                     "--resume",
                     "ada28962",
                     "--model",
@@ -188,10 +218,10 @@ class ClaudeCodeResumeTest(unittest.TestCase):
                     "high",
                     "--max-turns",
                     "94",
-                    "--append-system-prompt",
-                    "AGENT bastien",
+                    "--append-system-prompt-file",
+                    "/state/brigade/runs/r1/role.md",
                     "--allowedTools",
-                    "Read,Glob,Grep,Bash",
+                    "Read,Glob,Grep,Bash,Write(//state/brigade/runs/r1/progress.md),Edit(//state/brigade/runs/r1/progress.md)",
                 ],
                 "environment": {},
                 "stdin": "Carry on from the progress file.",

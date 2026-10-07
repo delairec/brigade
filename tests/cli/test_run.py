@@ -6,12 +6,13 @@ from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
 from tests.cli.temporary_instructions import TemporaryInstructions
-from tests.cli.temporary_machine import REPOSITORY_ROOT
+from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT
 from tests.cli.temporary_project import TemporaryProject
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
 BUILT_IN_BUILDER = REPOSITORY_ROOT / "brigade" / "roles" / "data" / "builder.md"
+RECORDING_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-recording"
 NOT_IN_A_WAVE = "not launched by a wave"
 CUT = "cut at the wall-time limit"
 QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 1\n---\nAnswer at once.\n"
@@ -184,6 +185,63 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         self.assertEqual(json.loads((run_directory / "result.json").read_text()), DONE_RESULT)
+
+
+class BrigadeRunOnClaudeCodeTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.write_configuration('client = "claude-code"\n')
+        self.brief = self.workspace / "brief.md"
+        self.brief.write_text("Deliver B71.\n")
+
+    def test_should_hand_the_client_the_role_file_and_grant_it_the_progress_file(self):
+        # Arrange
+        environment = {
+            **self.machine.describe_environment(),
+            "PATH": os.pathsep.join([str(RECORDING_CLAUDE), os.environ["PATH"]]),
+        }
+
+        # Act
+        completed = self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "run",
+            str(self.procedure),
+            "--slot",
+            "build",
+            "--cwd",
+            str(self.workspace),
+            "--brief",
+            str(self.brief),
+            "--json",
+            environment=environment,
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        run_directory = self.runs / json.loads(completed.stdout)["run"]
+        self.assertEqual(
+            (run_directory / "progress.md").read_text().splitlines(),
+            [
+                "--print",
+                "--output-format",
+                "json",
+                "--permission-mode",
+                "dontAsk",
+                "--model",
+                "opus",
+                "--effort",
+                "high",
+                "--max-turns",
+                "94",
+                "--append-system-prompt-file",
+                f"{run_directory / 'role.md'}",
+                "--allowedTools",
+                (
+                    f"Read,Glob,Grep,Edit,Write,NotebookEdit,Bash,Write(/{run_directory / 'progress.md'}),"
+                    f"Edit(/{run_directory / 'progress.md'})"
+                ),
+            ],
+        )
 
 
 class BrigadeRunOfAProcedureGivenByNameTest(RunTestCase):

@@ -12,12 +12,19 @@ ROLE = Field(
     fields={
         "name": TEXT,
         "package": TEXT,
+        "package_file": TEXT,
         "capabilities": Field(kinds=(list,), items=Field(kinds=(str,), values=("read", "write", "shell", "net"))),
         "reasoning": Field(kinds=(str,), values=("deepest", "deep", "standard", "light")),
         "budget": COUNT,
     },
 )
-LAUNCH_REQUEST = {"schema_version": SCHEMA_VERSION, "worktree": TEXT, "brief": TEXT, "role": ROLE}
+LAUNCH_REQUEST = {
+    "schema_version": SCHEMA_VERSION,
+    "worktree": TEXT,
+    "brief": TEXT,
+    "role": ROLE,
+    "progress_file": TEXT,
+}
 
 CLIENT_REQUEST_SHAPES = {
     "probe": {"schema_version": SCHEMA_VERSION},
