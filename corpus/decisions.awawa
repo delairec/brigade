@@ -504,8 +504,15 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "brigade.collectors, brigade.checks or brigade.outputs from outside their own package,"
 		+ "the guard @TASK.B42 asks for, widened"
 		REF @TASK.B42
-	DESC "the commands build the runtime: paths, clock, process runner, renderer, resolver; a core"
-		+ "function receives resolved plugin objects as arguments and resolves nothing itself"
+	DESC "cli.py builds the runtime, once per command and once per round of tick --loop through a"
+		+ "factory it hands that command: paths, clock, process runner, resolver; the renderers of"
+		+ "a command are declared by its module, as"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable sets; the"
+		+ "commands resolve the plugins through the runtime's resolver, and a core function"
+		+ "receives resolved plugin objects as arguments and resolves nothing itself, as @TASK.B73"
+		+ "delivers"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+		REF @TASK.B73
 	DESC "binds @TASK.B06, @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B23, @TASK.B24, @TASK.B42,"
 		+ "@TASK.B43, @TASK.B46, @TASK.B47 and @TASK.B48"
 		REF @TASK.B06
@@ -529,6 +536,11 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "adapters already process-shaped, and a port at M3 that carries the contract, not the"
 		+ "Python; the rules of the areas architecture and architecture_layers of the instructions"
 		+ "corpus govern a core- package, which brigade is not"
+	REJECTED "a core function handed a name and the runtime's resolver, the alternative F3 of the"
+		+ "foundations review offers: the core would still resolve, and a resolved object passed as"
+		+ "an argument is what a unit test replaces with a double"
+	REJECTED "a renderer carried by the runtime: no core function renders, the renderers being"
+		+ "declared by each command module in its record since pull request #56"
 	RATIONALE "it refines DESC 5 and 6 of"
 		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles, DESC 3 of"
 		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters and plan section 17 to every plugin"
@@ -541,6 +553,8 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "DEROGATES field: those rules govern a core- package, and brigade is a command-line tool"
 		+ "with one delivery, one persistence and process-shaped adapters"
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's rulings of 2026-10-07 at the refinement of @TASK.B73, amending DESC 5"
+		REF @TASK.B73
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
