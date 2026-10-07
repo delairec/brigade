@@ -1627,3 +1627,68 @@ DECISION ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
 	SOURCE "the user's rulings of 2026-10-07 at the drafting of B102, \"il faut qu'on trouve plutôt"
 		+ "un moyen d'enregistrer un marqueur de finition plutôt que d'essayer de détecter si on"
 		+ "est toujours en progression\""
+
+DECISION EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+	TITLE "every document brigade reads back or parses accepts an awawa form through the plugin"
+		+ "kind document; text stays the form of a rendering handed whole to a client, to GitHub or"
+		+ "to a person, produced from the entities"
+	STATUS active
+	DESC "every document brigade reads back or parses, the progress of a run, a role file, a"
+		+ "procedure file, a wave report, a study answer and an order output, accepts an awawa form"
+		+ "beside its Markdown form, served by the plugin kind document that @TASK.B106 introduces:"
+		+ "every operation of the kind takes the document it serves, its path, its schema resource"
+		+ "and its frame; a document brigade reads later names its two forms, its schema and its"
+		+ "frame when it is specified"
+		REF @TASK.B106
+	DESC "the awawa form is read entity by entity, status, show and context on the file, never the"
+		+ "file whole; the sections a command fills are fields, the narrative a prose field; the"
+		+ "schema is shipped by brigade as a resource of its package under a name not ending in"
+		+ ".awawa, as @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets, and"
+		+ "read from no instructions corpus"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+	DESC "a document in its awawa form is validated by awawa lint against that schema, never by a"
+		+ "comparison of its headings; a field a command filled is one the answer may not change"
+	DESC "a document whose code does not exist yet is designed as entities from the start, its"
+		+ "Markdown a rendering for the person and for the dashboard: @TASK.B20, @TASK.B31,"
+		+ "@TASK.B48, @TASK.B50 and @TASK.B51 are amended so; the role and the procedure files,"
+		+ "whose Markdown form works, gain the awawa form by @TASK.B107"
+		REF @TASK.B20
+		REF @TASK.B31
+		REF @TASK.B48
+		REF @TASK.B50
+		REF @TASK.B51
+		REF @TASK.B107
+	DESC "text stays the form of the brief of a segment, segments/<n>/brief.md, of the role file"
+		+ "passed to the client, runs/<id>/role.md, and of the file of --brief: a client takes only"
+		+ "text, and brigade reads none of the three back"
+	DESC "text stays the form of the body of a pull request, of a review reply and of the adapter"
+		+ "matrix of the README: GitHub and a person read them, brigade parses none"
+	DESC "text stays the form of the dated documents of docs/: a dated document is never rewritten,"
+		+ "as the rule dated_document_never_rewritten of the instructions corpus sets, and brigade"
+		+ "reads none"
+	DESC "a text rendering is produced from the entities, as awawa context renders an AGENT entity"
+		+ "into the body of a role, and shows no fact its entities lack"
+	REJECTED "Markdown kept as the one form of every document, its sections found by headings: a"
+		+ "file read whole costs its length at every read, and a comparison of headings validates"
+		+ "nothing of the content"
+	RATIONALE "the user ruled on 2026-10-07 that everything that is a .md must be manageable"
+		+ "through awawa instead, and approved the plan of this decision, of @TASK.B107 and of the"
+		+ "amendments; the inventory of that day found the brief of a segment, the role file and"
+		+ "the file of --brief never read back, brigade/runs/run_segment.py:65-66,"
+		+ "brigade/adapters/clients/claude_code.py:65-73 and brigade/runs/plan_run.py:117-123, the"
+		+ "progress of a run already served by @TASK.B106, no code of the reports yet, and the"
+		+ "triage, the intake and the wave plans already JSONL or entities"
+		REF @TASK.B106
+		REF @TASK.B107
+	RATIONALE "the user wants brigade operational quickly: a form that already works is not"
+		+ "rewritten before the MVP, and the comfort of a second form is a task of @MILESTONE.ADD0"
+		+ "that brigade may deliver itself; a document whose code does not exist yet costs nothing"
+		+ "more as entities"
+		REF @MILESTONE.ADD0
+	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
+		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
+		+ "of this decision, of @TASK.B107 and of the amendments: \"ok pour le plan ci-dessus\"; on"
+		+ "the priorities: \"J'aimerais avoir une brigade opérationnelle rapidement, et"
+		+ "potentiellement les améliorations non indispensables pourront être implémentée en"
+		+ "utilisant brigade justement.\""
+		REF @TASK.B107

@@ -1123,16 +1123,36 @@ TASK B20
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
-	SPEC "the collectors ledger, pr-list, corpus and git-diff-stat fill the template skeleton: the"
-		+ "task table, the statistics, the dependency graph, the manual-test table from SPEC lines,"
-		+ "the instructions-corpus change list and the parked questions"
-	SPEC "the report slot completes the narrative, the reasons, the manual tests in a tester's"
-		+ "words and the sampling suggestions; study answer refuses an answer that changed a"
-		+ "CLI-filled section, commits waves/<n>-report.md under the project's corpus folder on the"
-		+ "integration branch and updates the integration pull request"
+	DESC "to settle in the refinement: the fields of the REPORT schema; where the entity of a"
+		+ "report lives, in the project's corpus under a schema the starter corpus of @TASK.B81"
+		+ "carries, or as a one-file corpus holding its schema beside its rendering"
+		REF @TASK.B81
+	SPEC "the report is one entity of the schema brigade ships for it, written and read through the"
+		+ "document kind of @TASK.B106; the collectors ledger, pr-list, corpus and git-diff-stat"
+		+ "fill its fields, the task table, the statistics, the dependency graph, the manual-test"
+		+ "table from SPEC lines, the instructions-corpus change list and the parked questions, one"
+		+ "field each"
+		REF @TASK.B106
+	SPEC "the report slot completes the prose fields, the narrative, the reasons, the manual tests"
+		+ "in a tester's words and the sampling suggestions; study answer validates the answer by"
+		+ "awawa lint against the schema, refuses an answer that changed a field the CLI filled,"
+		+ "commits the report and its Markdown rendering waves/<n>-report.md under the project's"
+		+ "corpus folder on the integration branch and updates the integration pull request; the"
+		+ "Markdown is rendered from the entity for the person and for the dashboard, and brigade"
+		+ "reads it back nowhere"
 	SPEC "the tick runs it when every task of the wave is merged or parked"
 	AFTER @TASK.B17
 	AFTER @TASK.B48
+	AFTER @TASK.B106
+	RATIONALE "designed as entities from the start, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets: no code of the report exists yet, and a comparison of headings validates nothing"
+		+ "of the content; after @TASK.B106, which introduces the document kind"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+		REF @TASK.B106
+	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
+		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
+		+ "amending this task: \"ok pour le plan ci-dessus\""
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
@@ -1296,9 +1316,22 @@ TASK B31
 	ROLE ada
 	SPEC "steps p50 and p90 by role and procedure, waves per month, pauses and the baseline"
 		+ "comparison"
-	SPEC "wave reports, study answers and order outputs rendered with their manual-test tables"
+	SPEC "wave reports, study answers and order outputs, read through the document kind of"
+		+ "@TASK.B106, rendered from their entities with their manual-test tables; the Markdown of"
+		+ "each is a rendering for the person, never the home of a fact"
+		REF @TASK.B106
 	AFTER @TASK.B27
 	AFTER @TASK.B20
+	AFTER @TASK.B106
+	RATIONALE "the views render the entities, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets, so that the dashboard shows no fact the entities lack; after @TASK.B106, which"
+		+ "introduces the document kind"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+		REF @TASK.B106
+	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
+		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
+		+ "amending this task: \"ok pour le plan ci-dessus\""
 
 TASK B32
 	TITLE "Follow-up: the IntelliJ plugin reads /api/corpus"
@@ -1764,7 +1797,8 @@ TASK B48
 	ROLE ada
 	SPEC "study new records a STUDY entity through fmt, lint and a commit, with the question"
 		+ "verbatim, the project when there is one, the collectors, the slot or none, the schedule"
-		+ "or none, the output and the template, and runs it once unless --every is given"
+		+ "or none, the output and the schema of the answer, and runs it once unless --every is"
+		+ "given"
 	SPEC "study run runs the ordered steps collect, judge and output: the collectors, then the"
 		+ "slot's role through brigade run with the procedure study.md, then the output; a study"
 		+ "with SLOT none writes the collected output to its destination and launches nothing"
@@ -1772,13 +1806,17 @@ TASK B48
 		+ "first undone step; this layout and the event names below are the recipe engine's"
 		+ "contract, which replaces this orchestration in M8 without a command changing"
 	SPEC "study context prints the question, each collector's summary with the path of its full"
-		+ "document, the template's skeleton filled with the collected values and the expected"
-		+ "shape of the answer; the full package is written to the run directory"
-	SPEC "study answer --file validates the answer against the template's sections or the output's"
-		+ "schema, refuses an answer that changed a CLI-filled section, writes it to the output,"
-		+ "file on a branch of the project with a pull request where the project has a forge,"
-		+ "corpus entity through fmt, lint and a commit, inbox signal, forge issue or"
-		+ "brigade-output-<name> on PATH"
+		+ "document, the answer entity with the fields the collectors filled and the prose fields"
+		+ "left to the slot, and the schema of the answer; the full package is written to the run"
+		+ "directory"
+	SPEC "study answer --file validates the answer by awawa lint against the schema of the answer,"
+		+ "never by a comparison of headings, refuses an answer that changed a field the CLI"
+		+ "filled, writes it to the output, file on a branch of the project with a pull request"
+		+ "where the project has a forge, corpus entity through fmt, lint and a commit, inbox"
+		+ "signal, forge issue or brigade-output-<name> on PATH; the answer is written and read"
+		+ "through the document kind of @TASK.B106, and the Markdown an output hands to a person is"
+		+ "rendered from the entity"
+		REF @TASK.B106
 	SPEC "the tick runs each due study under the slot cap and records order.started, step.done,"
 		+ "step.failed, order.parked and order.done with kind study"
 	SPEC "study list, show, pause and resume; list prints every study with its schedule, last run"
@@ -1787,6 +1825,19 @@ TASK B48
 	AFTER @TASK.B07
 	AFTER @TASK.B43
 	AFTER @TASK.B47
+	AFTER @TASK.B106
+	RATIONALE "the answer is designed as an entity from the start, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets: no code of the studies exists yet; the template of"
+		+ "@DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun, DESC 1, 4 and 5, becomes the"
+		+ "schema of the answer at the ratification; after @TASK.B106, which introduces the"
+		+ "document kind"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+		REF @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun
+		REF @TASK.B106
+	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
+		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
+		+ "amending this task: \"ok pour le plan ci-dessus\""
 
 TASK B49
 	TITLE "brigade adapter matrix and the supported-clients table of the README, generated from the"
@@ -1896,10 +1947,12 @@ TASK B50
 		+ "tables of the kinds collect, command, gate, judge, output, order, corpus and op, op"
 		+ "being one of worktree, commit, pull-request and merge; a value substitutes {param} from"
 		+ "the order and the project, nothing else"
-	SPEC "a judge step names a slot, a procedure and a template or an answer schema; a gate step"
-		+ "names a check, an executable printing ok and reason, resolved like a collector, with the"
-		+ "built-ins pr-is-reviewed, checks-green, branch-descends-from and corpus-lint-green;"
-		+ "on_fail is park by default, else skip, stop or retry:N"
+	SPEC "a judge step names a slot, a procedure and the schema of its answer, the entity the judge"
+		+ "fills through the document kind of @TASK.B106; a gate step names a check, an executable"
+		+ "printing ok and reason, resolved like a collector, with the built-ins pr-is-reviewed,"
+		+ "checks-green, branch-descends-from and corpus-lint-green; on_fail is park by default,"
+		+ "else skip, stop or retry:N"
+		REF @TASK.B106
 	SPEC "recipes resolve in order: the project's .brigade/recipes/, the machine's recipes"
 		+ "directory, brigade's recipes/; brigade recipes list prints them with their source, wave"
 		+ "listed as native, and brigade recipes show <name> prints the file"
@@ -1910,6 +1963,15 @@ TASK B50
 		+ "order's COLLECTOR lines"
 	AFTER @TASK.B47
 	AFTER @TASK.B48
+	AFTER @TASK.B106
+	RATIONALE "the answer of a judge step is an entity, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets; after @TASK.B106, which introduces the document kind"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+		REF @TASK.B106
+	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
+		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
+		+ "amending this task: \"ok pour le plan ci-dessus\""
 
 TASK B51
 	TITLE "ORDER entity and the recipe engine in the tick"
@@ -1923,9 +1985,12 @@ TASK B51
 	SPEC "the engine runs the steps in order, each result a file under runs/<id>/steps/; a resumed"
 		+ "order restarts at its first undone step; the tick runs due orders under the slot cap and"
 		+ "within max_wall"
-	SPEC "brigade order context <run> prints the run directory's documents and the expected shape"
-		+ "of the answer; brigade order answer <run> --file validates and stores a judge step's"
-		+ "answer; a judge step is a run with its procedure's budget"
+	SPEC "brigade order context <run> prints the run directory's documents and the schema of the"
+		+ "answer; brigade order answer <run> --file validates a judge step's answer by awawa lint"
+		+ "against the schema its step names, never by a comparison of headings, refuses an answer"
+		+ "that changed a field the CLI filled, and stores it through the document kind of"
+		+ "@TASK.B106; a judge step is a run with its procedure's budget"
+		REF @TASK.B106
 	SPEC "a failed gate or command parks the order with the step's reason unless the recipe says"
 		+ "skip, stop or retry:N; a parked order shows on Home and in the inbox and resumes through"
 		+ "brigade order resume once the user acted; nothing is assumed"
@@ -1933,6 +1998,15 @@ TASK B51
 		+ "study run and brigade study answer become the study recipe's commands and the native"
 		+ "orchestration of B48 is deleted, the study tests passing unchanged"
 	AFTER @TASK.B50
+	AFTER @TASK.B106
+	RATIONALE "the answer of a judge step is an entity, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets; after @TASK.B106, which introduces the document kind"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+		REF @TASK.B106
+	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
+		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
+		+ "amending this task: \"ok pour le plan ci-dessus\""
 
 TASK B52
 	TITLE "Example recipe pr-usage-report, end to end on the sandbox"
@@ -4788,3 +4862,80 @@ TASK B106
 	SOURCE "pull request #88 of the instructions corpus, the rules"
 		+ "procedure_progress_outside_repository, progress_corpus_where_awawa_declared and"
 		+ "progress_entry_holds_what_resume_needs at its head 021ae05"
+
+TASK B107
+	TITLE "A role file and a procedure file are accepted in an awawa form through the document"
+		+ "kind, the hand-written front-matter parser kept for the Markdown form alone"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "roles"
+	ROLE ada
+	DESC "to settle in the refinement: whether the built-in roles of brigade/roles/data/ convert to"
+		+ "the awawa form under a name not ending in .awawa, as DESC 2 of"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources requires of a shipped"
+		+ "awawa file, or stay Markdown; the names of the entity types, ROLE and PROCEDURE; whether"
+		+ "a file holds one entity or a directory of roles holds one corpus; how brigade roles lint"
+		+ "reports a finding of awawa lint"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+	SPEC "a role file of the machine's roles/, of a ROLESET directory and among the built-in roles"
+		+ "is accepted in an awawa form beside its Markdown form: one entity whose fields are name,"
+		+ "slot, work, reasoning, capabilities, budget and returns, as the AGENT schema of the"
+		+ "instructions corpus declares WORK, REASONING, CAPABILITY, BUDGET and RETURNS, and whose"
+		+ "body is the rendering of the entity, as brigade/roles/resolve_role.py:108-124 fills the"
+		+ "front matter of an AGENT entity through awawa --json and its body through awawa context"
+	SPEC "a procedure file, shipped by brigade or in procedures/ of the instructions corpus, is"
+		+ "accepted in the same way: one entity declaring capabilities and budget, the body the"
+		+ "agent runs rendered from it"
+	SPEC "both forms are read through the document kind of @TASK.B106, the plugin named by the"
+		+ "extension, .md for the markdown plugin and .awawa for the awawa plugin;"
+		+ "brigade/roles/parse_role_file.py, brigade/roles/check_front_matter.py and the key"
+		+ "reading of brigade/runs/resolve_procedure.py:89-106 serve the Markdown form alone, and"
+		+ "the awawa form is checked by awawa lint against the schema brigade ships, never by those"
+		+ "parsers"
+		REF @TASK.B106
+	SPEC "brigade ships its own ROLE and PROCEDURE schema as a resource of its package under a name"
+		+ "not ending in .awawa, as @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources"
+		+ "sets, and opens no file of the author's instructions corpus: the PROCEDURE type of that"
+		+ "corpus, spec/procedures.awawa with PATH, CITES and LAUNCHES, is a model the implementer"
+		+ "reads once, as the rule distributed_tool_free_of_authors_machine of the instructions"
+		+ "corpus requires"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+	SPEC "runs/<id>/role.md and the brief stay text, rendered from the entity, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets: the client receives the same role and the same brief whichever form the file was"
+		+ "in"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+	SPEC "brigade roles list, show and lint and brigade run accept a role and a procedure in either"
+		+ "form; roles lint names the file and the finding of awawa lint on an awawa role file;"
+		+ "tests/cli prove a machine role, a ROLESET role and a procedure in the awawa form"
+		+ "resolved and launched through the fake client, and a role file off its schema refused"
+		+ "naming the file"
+	SPEC "the README's Roles and Runs sections state the two forms, the extension and the schema of"
+		+ "each"
+	AFTER @TASK.B106
+	RATIONALE "comfort, no quota gain: the body of a role and of a procedure is passed whole to the"
+		+ "client in either form, brigade/runs/run_segment.py:65-66 for the role, so the awawa form"
+		+ "saves no token; in @MILESTONE.ADD0 because the Markdown forms already work, @TASK.B43"
+		+ "having delivered the role files and brigade run the procedures, and because the user"
+		+ "wants brigade operational quickly, the improvements that are not indispensable"
+		+ "deliverable by brigade itself"
+		REF @MILESTONE.ADD0
+		REF @TASK.B43
+	RATIONALE "the path of an AGENT entity, brigade/roles/resolve_role.py:108-124, is the model:"
+		+ "awawa --json fills the front matter from the fields and awawa context renders the body;"
+		+ "the awawa form of a role file is that path on a file brigade reads itself, through the"
+		+ "document kind rather than the corpus gateway alone"
+	RATIONALE "after @TASK.B106, which introduces the document kind and its two built-in plugins;"
+		+ "at the ratification, @DECISION.RolesAreSlotsBoundToRoleFiles, a role is a Markdown file,"
+		+ "DESC 2 of @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares, a machine"
+		+ "role file is any name ending in .md, and its REJECTED of a key repeated once per value,"
+		+ "which the repeatable CAPABILITY of the awawa form reopens, are amended to the two forms"
+		REF @TASK.B106
+		REF @DECISION.RolesAreSlotsBoundToRoleFiles
+		REF @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
+	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
+		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
+		+ "of the decision, of this task and of the amendments: \"ok pour le plan ci-dessus\"; on"
+		+ "the priorities: \"J'aimerais avoir une brigade opérationnelle rapidement, et"
+		+ "potentiellement les améliorations non indispensables pourront être implémentée en"
+		+ "utilisant brigade justement.\""
