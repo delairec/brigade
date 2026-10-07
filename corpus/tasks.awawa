@@ -3465,3 +3465,42 @@ TASK B82
 	SOURCE "the user's rulings of 2026-10-07 in the refinement of B82: the record type in"
 		+ "brigade/command.py, one module per command line, discovery, the group help in the"
 		+ "records, two decisions amended"
+
+TASK B83
+	TITLE "A Claude Code session that ran a sub-agent is recorded whole: its usage, its duration"
+		+ "and its steps, not those of the turns after its last task notification"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "adapters"
+	ROLE ada
+	SPEC "parse-result of the Claude Code adapter reads the usage from modelUsage, summed over its"
+		+ "models (inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens), when"
+		+ "the result object carries it; a unit row on a fixture taken from the stdout of run"
+		+ "20261007T101817Z-2ee96f, the home directory scrubbed, pins the sums 108, 42255, 5861342"
+		+ "and 230745"
+	SPEC "run.finished carries as duration_ms the wall time brigade measured for the segment;"
+		+ "brigade/runs/run_segments.py prefers it to the duration_ms the client reports"
+	SPEC "when the result object follows a task notification, its origin.kind task-notification,"
+		+ "steps is null with the reason that the client reported the turns after its last"
+		+ "notification only, never the num_turns of those turns"
+	SPEC "the fixture run through brigade adapter parse-result prints the usage of the whole"
+		+ "session and steps null, and the existing rows of"
+		+ "tests/unit/adapters/clients/test_claude_code.py still pass"
+	AFTER @TASK.B71
+	RATIONALE "found by the session on 2026-10-07 on the first run of brigade on itself, run"
+		+ "20261007T101817Z-2ee96f, ada delivering @TASK.B71 as pull request #52: the run lasted"
+		+ "from 10:18 to 10:33 and its result object reports total_cost_usd 3.63 and modelUsage"
+		+ "outputTokens 42255, while the ledger recorded steps 2, duration_ms 19091 and"
+		+ "output_tokens 1986; the result object, origin.kind task-notification and result_index 1,"
+		+ "covers the two turns that followed the notification of the sub-agent ada launched;"
+		+ "brigade/adapters/clients/claude_code.py reads num_turns, usage and duration_ms from that"
+		+ "object, and run_segments.py:64 takes the client's duration over the one it measured"
+		REF @TASK.B71
+	RATIONALE "the budgets of @TASK.B37 are computed from the steps and the usage of the ledger; a"
+		+ "run that delegates to a sub-agent would read as two steps and nineteen seconds"
+		REF @TASK.B37
+	RATIONALE "left to the refinement: whether steps can be counted whole from the transcript of"
+		+ "the session, which the transcripts operation already reads, rather than reported null;"
+		+ "and whether total_cost_usd joins the ledger"
+	SOURCE "the user's answer of 2026-10-07, a draft in F0, on the session's report of the ledger"
+		+ "lines of run 20261007T101817Z-2ee96f"
