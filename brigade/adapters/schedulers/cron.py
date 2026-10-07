@@ -4,6 +4,7 @@ from pathlib import Path
 from string import Template
 
 from brigade.errors import ToolFailure, ToolNotFound
+from brigade.runtime import Runtime
 from brigade.system.run_process import ProcessRequest
 
 SHIPPED_DATA = files("brigade.adapters.schedulers") / "data"
@@ -31,7 +32,7 @@ def _describe_cron_line(request: dict) -> str:
     )
 
 
-def _list_crontab(runtime) -> list[str]:
+def _list_crontab(runtime: Runtime) -> list[str]:
     record = runtime.run_process(
         ProcessRequest(
             argv=("crontab", "-l"),
@@ -47,7 +48,7 @@ def _list_crontab(runtime) -> list[str]:
     raise ToolFailure(f"crontab -l exited {record.exit_code}: {record.stderr.strip()}")
 
 
-def install(request: dict, runtime) -> dict:
+def install(request: dict, runtime: Runtime) -> dict:
     cron_line = _describe_cron_line(request)
     lines = [line for line in _list_crontab(runtime) if not line.endswith(MARKER)]
     runtime.run_process(
@@ -67,7 +68,7 @@ def install(request: dict, runtime) -> dict:
     }
 
 
-def _find_cron_line(runtime) -> str | None:
+def _find_cron_line(runtime: Runtime) -> str | None:
     try:
         lines = _list_crontab(runtime)
     except ToolNotFound:
@@ -75,7 +76,7 @@ def _find_cron_line(runtime) -> str | None:
     return next((line for line in lines if line.endswith(MARKER)), None)
 
 
-def read_status(request: dict, runtime) -> dict:
+def read_status(request: dict, runtime: Runtime) -> dict:
     cron_line = _find_cron_line(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

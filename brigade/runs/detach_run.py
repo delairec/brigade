@@ -3,8 +3,9 @@ import sys
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import DETACHED_LOG_FILE
+from brigade.runtime import Runtime
 from brigade.system.process_trace import SPAWNED, ProcessTrace
-from brigade.system.spawn_process import SpawnRequest, spawn_process
+from brigade.system.spawn_process import SpawnRequest
 
 ARGUMENT_SEPARATOR = "="
 NO_EXTRA_VARIABLES = {}
@@ -16,7 +17,7 @@ def _repeat_options(plan: RunPlan) -> tuple[str, ...]:
     return ("--slot", plan.slot, "--cwd", str(plan.cwd), *project, *brief, "--run-id", plan.run_id)
 
 
-def detach_run(plan: RunPlan, runtime) -> int:
+def detach_run(plan: RunPlan, runtime: Runtime) -> int:
     arguments = tuple(f"{key}{ARGUMENT_SEPARATOR}{value}" for key, value in plan.arguments.items())
     command = ("run", plan.procedure.argument, *arguments, *_repeat_options(plan))
     log = plan.run_directory / DETACHED_LOG_FILE
@@ -28,7 +29,7 @@ def detach_run(plan: RunPlan, runtime) -> int:
         stdout=log,
         stderr=log,
     )
-    process = spawn_process(request, runtime.trail.append)
+    process = runtime.spawn_process(request)
     runtime.trail.append(
         ProcessTrace(request.argv, request.cwd, SPAWNED, exit_code=None, duration_ms=None, pid=process.pid)
     )

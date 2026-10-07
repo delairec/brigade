@@ -6,19 +6,17 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError, UsageError
-from brigade.registry.find_project import find_project
-from brigade.registry.read_projects import read_projects
-from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, ResolvedRole, RoleBindings, resolve_role
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_handovers import read_handovers
+from brigade.runs.read_run_setting import RunSetting
 from brigade.runs.resolve_procedure import Procedure, ProcedureDirectories, resolve_procedure
 from brigade.runs.run_locations import DISPOSABLE_WORKTREE_DIRECTORY, RUNS_DIRECTORY
+from brigade.runtime import Runtime
 from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
-from brigade.system.read_configuration import Configuration, read_configuration
+from brigade.system.read_configuration import Configuration
 
-CONFIGURATION_FILE = "config.toml"
 PROBE_REQUEST = {"schema_version": 1}
 SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
 STEP_COUNT_FEATURE = "step_count"
@@ -50,6 +48,7 @@ class RunPlan:
     slot: str
     role: ResolvedRole
     client: str
+    client_adapter: object
     configuration: Configuration
     project: str | None
     cwd: Path
@@ -73,13 +72,6 @@ def _read_values(project: Entity | None, field_name: str) -> list[str]:
 
 def _read_value(project: Entity | None, field_name: str) -> str | None:
     return next(iter(_read_values(project, field_name)), None)
-
-
-def _read_project(name: str | None, runtime) -> Entity | None:
-    if name is None:
-        return None
-    require_operational_corpus(runtime.paths.config_root)
-    return find_project(read_projects(runtime), name)
 
 
 def _read_role_binding(project: Entity, value: str) -> tuple[str, str]:
@@ -130,7 +122,7 @@ def _read_argument(argument: str) -> tuple[str, str]:
     return key, value
 
 
-def _choose_run_id(run_id: str | None, runtime) -> str:
+def _choose_run_id(run_id: str | None, runtime: Runtime) -> str:
     if run_id is None:
         return create_run_id(runtime.now)
     if not RUN_ID_PATTERN.fullmatch(run_id):
@@ -149,19 +141,17 @@ def _describe_clock_warning(client: str, budget: int, wall_limit_s: float) -> st
     )
 
 
-def plan_run(request: RunRequest, runtime) -> RunPlan:
-    configuration_path = runtime.paths.config_root / CONFIGURATION_FILE
-    configuration = read_configuration(configuration_path)
-    project = _read_project(request.project, runtime)
-    client = _read_value(project, "CLIENT") or configuration.client
-    if client is None:
-        raise BrigadeError(f"config.toml names no client: set the client key in {configuration_path}")
+def plan_run(request: RunRequest, setting: RunSetting, client_adapter, runtime: Runtime) -> RunPlan:
+    configuration = setting.configuration
+    project = setting.project
+    client = setting.client
     directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=configuration.instructions)
     procedure = resolve_procedure(request.procedure, directories)
     role = resolve_role(request.slot, runtime, _read_bindings(project))
     role_capabilities = _read_role_capabilities(role)
     capabilities = tuple(capability for capability in procedure.capabilities if capability in role_capabilities)
-    features = ask_named_client(runtime, configuration, ClientQuestion(client, "probe", PROBE_REQUEST))["features"]
+    probe = ask_named_client(client_adapter, ClientQuestion(client, "probe", PROBE_REQUEST), configuration, runtime)
+    features = probe["features"]
     counts_steps = STEP_COUNT_FEATURE in features
     cwd = _locate_cwd(request.cwd, project)
     brief_path, brief = _read_brief(request.brief)
@@ -178,6 +168,7 @@ def plan_run(request: RunRequest, runtime) -> RunPlan:
         slot=request.slot,
         role=role,
         client=client,
+        client_adapter=client_adapter,
         configuration=configuration,
         project=request.project,
         cwd=cwd,

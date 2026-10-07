@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import functools
 import importlib
 import json
 import sys
@@ -76,7 +77,7 @@ def _locate_command_trail(command, runtime: Runtime) -> Path:
 
 
 def _run_and_settle_trail(command, options: argparse.Namespace):
-    runtime = build_runtime(Invocation(command=_name(command), verbose=getattr(options, "verbose", False)))
+    runtime = options.create_runtime()
     trail = _locate_command_trail(command, runtime)
     try:
         remove_expired_trails(runtime.paths, runtime.now)
@@ -130,6 +131,9 @@ def main(arguments: list[str]) -> int:
     command = options.command if passthrough is None else passthrough
     options.extra_arguments = extras
     options.passed_arguments = tuple(arguments[separator + 1 :])
+    options.create_runtime = functools.partial(
+        build_runtime, Invocation(command=_name(command), verbose=getattr(options, "verbose", False))
+    )
     try:
         return _run_command(command, options)
     except StandingDown as reason:

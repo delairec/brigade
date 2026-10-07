@@ -14,6 +14,7 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.remove_project_entity import remove_project_entity
 from brigade.registry.render_project_entity import render_project_entity
 from brigade.registry.require_operational_corpus import require_operational_corpus
+from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
 IDENTIFIER = re.compile(r"[A-Za-z0-9_]+")
@@ -32,7 +33,7 @@ class _DocumentField:
 
 
 class _Registration:
-    def __init__(self, runtime, entity: Entity, force: bool):
+    def __init__(self, runtime: Runtime, entity: Entity, force: bool):
         self.runtime = runtime
         self.entity = entity
         self.force = force
@@ -114,7 +115,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def project_add(request, runtime) -> dict:
+def project_add(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     path = Path(request.path).resolve()
     name = _choose_name(request, path)

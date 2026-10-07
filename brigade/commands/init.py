@@ -6,6 +6,7 @@ from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
 from brigade.git.read_git_identity import read_git_identity
+from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
 SHIPPED_DATA = files("brigade.corpus") / "data"
@@ -20,14 +21,14 @@ NAME_WIDTH = 13
 STATES = ("created", "present", "differs")
 
 
-def _require_identity(runtime) -> None:
+def _require_identity(runtime: Runtime) -> None:
     identity = read_git_identity(runtime.run_process)
     missing = [key for key, value in (("user.name", identity.name), ("user.email", identity.email)) if value is None]
     if missing:
         raise BrigadeError(f"the git identity lacks {' and '.join(missing)}; set it with git config --global")
 
 
-def _ensure_repository(runtime) -> dict:
+def _ensure_repository(runtime: Runtime) -> dict:
     config_root = runtime.paths.config_root
     item = {"name": "repository", "path": str(config_root)}
     if (config_root / ".git").exists():
@@ -40,12 +41,12 @@ def _ensure_repository(runtime) -> dict:
     return {**item, "state": "created"}
 
 
-def _render_configuration(runtime) -> str:
+def _render_configuration(runtime: Runtime) -> str:
     template = Template((SHIPPED_DATA / "config.toml.tpl").read_text(encoding="utf-8"))
     return template.substitute(state_root=runtime.paths.state_root, cache_root=runtime.paths.cache_root)
 
 
-def _ensure_file(runtime, name: str, file_name: str, content: bytes) -> dict:
+def _ensure_file(runtime: Runtime, name: str, file_name: str, content: bytes) -> dict:
     path = runtime.paths.config_root / file_name
     item = {"name": name, "path": str(path)}
     if not path.exists():
@@ -91,7 +92,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def init(request, runtime) -> dict:
+def init(request, runtime: Runtime) -> dict:
     _require_identity(runtime)
     repository = _ensure_repository(runtime)
     shipped_files = [

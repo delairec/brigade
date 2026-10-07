@@ -1,5 +1,7 @@
 from brigade.command import Command
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
+from brigade.runtime import Runtime
+from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_configured_client import ask_configured_client
 from brigade.system.read_configuration import SLOTS
 from brigade.system.read_optional_configuration import read_optional_configuration
@@ -12,11 +14,13 @@ COLUMNS = ("slot", "role", "source", "model")
 NO_MODEL = "-"
 
 
-def _read_bound_models(runtime) -> dict:
+def _read_bound_models(runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
     if configuration.client is None:
         return NO_MODEL_BOUND
-    return ask_configured_client(runtime, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION}).document["models"]
+    client = runtime.resolve_plugin("client", configuration.client)
+    question = ClientQuestion(configuration.client, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+    return ask_configured_client(client, question, runtime)["models"]
 
 
 def _render_row(row: dict) -> tuple[str, ...]:
@@ -36,7 +40,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def roles_list(request, runtime) -> dict:
+def roles_list(request, runtime: Runtime) -> dict:
     resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS) for slot in SLOTS]
     models = _read_bound_models(runtime)
     return {

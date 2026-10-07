@@ -7,6 +7,7 @@ from brigade.ledger.declared_events import RUN_FINISHED
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import PROGRESS_FILE, RESULT_FILE
 from brigade.runs.run_segment import WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
+from brigade.runtime import Runtime
 from brigade.system.write_json_atomically import write_json_atomically
 
 SIGNAL_RECORDED = "signal.recorded"
@@ -83,7 +84,7 @@ def _describe_signal(plan: RunPlan, record: SegmentRecord) -> dict:
     }
 
 
-def _run_with_handovers(plan: RunPlan, runtime) -> list[SegmentRecord]:
+def _run_with_handovers(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
     records = []
     instant = runtime.now
     while True:
@@ -98,7 +99,7 @@ def _run_with_handovers(plan: RunPlan, runtime) -> list[SegmentRecord]:
             return records
 
 
-def run_segments(plan: RunPlan, runtime) -> list[SegmentRecord]:
+def run_segments(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
     if plan.disposable_worktree:
         add_detached_worktree(runtime.run_process, plan.cwd, plan.worktree)
     try:

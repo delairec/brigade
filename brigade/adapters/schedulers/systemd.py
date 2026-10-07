@@ -3,6 +3,7 @@ from pathlib import Path
 from string import Template
 
 from brigade.errors import ToolNotFound
+from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 from brigade.system.write_text_file import write_text_file
@@ -28,7 +29,7 @@ def _render(template_name: str, **values: str) -> str:
     return Template((SHIPPED_DATA / template_name).read_text(encoding="utf-8")).substitute(values)
 
 
-def _run_systemctl(runtime, *arguments: str, acceptable_exit_codes: tuple = (0,)):
+def _run_systemctl(runtime: Runtime, *arguments: str, acceptable_exit_codes: tuple = (0,)):
     return runtime.run_process(
         ProcessRequest(
             argv=("systemctl", "--user", *arguments),
@@ -44,7 +45,7 @@ def _locate_units(request: dict) -> tuple[Path, Path]:
     return unit_directory / SERVICE_NAME, unit_directory / TIMER_NAME
 
 
-def install(request: dict, runtime) -> dict:
+def install(request: dict, runtime: Runtime) -> dict:
     service, timer = _locate_units(request)
     environment = "\n".join(
         f'Environment="{_escape(f"{name}={value}", UNIT_ESCAPES)}"' for name, value in request["environment"].items()
@@ -66,7 +67,7 @@ def install(request: dict, runtime) -> dict:
     }
 
 
-def _read_next_activation(runtime):
+def _read_next_activation(runtime: Runtime):
     try:
         record = _run_systemctl(
             runtime,
@@ -84,7 +85,7 @@ def _read_next_activation(runtime):
     return value
 
 
-def read_status(request: dict, runtime) -> dict:
+def read_status(request: dict, runtime: Runtime) -> dict:
     unit_files = [str(unit) for unit in _locate_units(request) if unit.exists()]
     installed = bool(unit_files)
     return {

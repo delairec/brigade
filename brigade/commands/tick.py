@@ -1,11 +1,12 @@
 import dataclasses
 import sys
 import time
+from collections.abc import Callable
 
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.errors import StandingDown
 from brigade.ledger.format_instant import format_instant
-from brigade.runtime import Invocation, build_runtime
+from brigade.runtime import Runtime
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.repeat_until_signalled import repeat_until_signalled
@@ -26,19 +27,19 @@ LOCK_NAME = "tick.lock"
 COMMAND_NAME = "tick"
 
 
-def _locate_heartbeat(runtime):
+def _locate_heartbeat(runtime: Runtime):
     return runtime.paths.state_root / HEARTBEAT_NAME
 
 
-def _locate_lock(runtime):
+def _locate_lock(runtime: Runtime):
     return runtime.paths.state_root / LOCK_DIRECTORY / LOCK_NAME
 
 
-def _locate_trail(runtime):
+def _locate_trail(runtime: Runtime):
     return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(TRAIL_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
 
 
-def _tick(runtime) -> dict | None:
+def _tick(runtime: Runtime) -> dict | None:
     started = time.monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
@@ -62,7 +63,7 @@ def _tick(runtime) -> dict | None:
     return heartbeat
 
 
-def _tick_once(runtime) -> dict:
+def _tick_once(runtime: Runtime) -> dict:
     heartbeat = _tick(runtime)
     if heartbeat is None:
         raise StandingDown(f"another tick holds {_locate_lock(runtime)}")
@@ -76,7 +77,7 @@ def _tick_once(runtime) -> dict:
     }
 
 
-def _plan_dry(runtime) -> dict:
+def _plan_dry(runtime: Runtime) -> dict:
     snapshot = build_snapshot(runtime.now)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -86,8 +87,8 @@ def _plan_dry(runtime) -> dict:
     }
 
 
-def _tick_and_report(verbose: bool) -> None:
-    runtime = build_runtime(Invocation(command=COMMAND_NAME, verbose=verbose))
+def _tick_and_report(create_runtime: Callable[[], Runtime]) -> None:
+    runtime = create_runtime()
     remove_expired_trails(runtime.paths, runtime.now)
     heartbeat = _tick(runtime)
     if heartbeat is None:
@@ -100,9 +101,9 @@ def _tick_and_report(verbose: bool) -> None:
     sys.stderr.flush()
 
 
-def _tick_in_loop(verbose: bool) -> dict:
+def _tick_in_loop(create_runtime: Callable[[], Runtime]) -> dict:
     ticks_attempted = repeat_until_signalled(
-        lambda: run_reporting_failure(lambda: _tick_and_report(verbose), COMMAND_NAME), TICK_INTERVAL_S
+        lambda: run_reporting_failure(lambda: _tick_and_report(create_runtime), COMMAND_NAME), TICK_INTERVAL_S
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "mode": "loop", "ticks_attempted": ticks_attempted}
 
@@ -136,12 +137,12 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def tick(request, runtime) -> dict:
+def tick(request, runtime: Runtime) -> dict:
     if request.mode == "once":
         return _tick_once(runtime)
     if request.mode == "dry-run":
         return _plan_dry(runtime)
-    return _tick_in_loop(getattr(request, "verbose", False))
+    return _tick_in_loop(request.create_runtime)
 
 
 COMMAND = Command(

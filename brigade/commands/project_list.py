@@ -2,6 +2,7 @@ from brigade.command import Command
 from brigade.corpus.read_entities import Entity
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
+from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -29,7 +30,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def project_list(request, runtime) -> dict:
+def project_list(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

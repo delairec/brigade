@@ -1,6 +1,7 @@
 from brigade.command import Argument, Command
 from brigade.roles.render_role_file import render_role_file
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
+from brigade.runtime import Runtime
 from brigade.system.read_configuration import SLOTS
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -19,7 +20,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def roles_show(request, runtime) -> dict:
+def roles_show(request, runtime: Runtime) -> dict:
     resolved = resolve_role(request.slot, runtime, NO_PROJECT_BINDINGS)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

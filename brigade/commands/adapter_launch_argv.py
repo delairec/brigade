@@ -2,8 +2,11 @@ import json
 import sys
 
 from brigade.command import Command
+from brigade.runtime import Runtime
+from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_configured_client import ask_configured_client
 from brigade.system.read_client_request import read_client_request
+from brigade.system.read_configured_client_name import read_configured_client_name
 
 OPERATION = "launch-argv"
 TEXT_INDENT = 2
@@ -21,8 +24,11 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def adapter_launch_argv(request, runtime) -> dict:
-    return ask_configured_client(runtime, OPERATION, read_client_request(OPERATION, request)).document
+def adapter_launch_argv(request, runtime: Runtime) -> dict:
+    client_request = read_client_request(OPERATION, request)
+    client_name = read_configured_client_name(runtime)
+    client = runtime.resolve_plugin("client", client_name)
+    return ask_configured_client(client, ClientQuestion(client_name, OPERATION, client_request), runtime)
 
 
 COMMAND = Command(
