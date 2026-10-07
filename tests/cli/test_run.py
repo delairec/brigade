@@ -243,6 +243,67 @@ class BrigadeRunOfAProcedureOffItsDeclarationTest(RunTestCase):
                 self.assertEqual(completed.stderr, f"brigade run: the procedure {self.procedure} {problem}\n")
 
 
+class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
+    def test_should_exit_1_naming_what_it_cannot_plan_from(self):
+        missing = self.workspace / "missing"
+        rows = [
+            ("a directory that does not exist", ["--cwd", str(missing)], f"no directory {missing}"),
+            (
+                "a brief that does not exist",
+                ["--cwd", str(self.workspace), "--brief", str(missing)],
+                f"no brief file {missing}",
+            ),
+            ("an argument with no key", ["--cwd", str(self.workspace), "=B06"], "the argument =B06 is not key=value"),
+        ]
+        self.configure_fake(COUNTING_CLIENT)
+        for case, options, refusal in rows:
+            with self.subTest(case=case):
+                # Act
+                completed = self.run_brigade("run", str(self.procedure), "--slot", "build", *options)
+
+                # Assert
+                self.assertEqual((completed.returncode, completed.stderr), (1, f"brigade run: {refusal}\n"))
+
+    def test_should_exit_2_for_a_run_id_off_its_pattern(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+
+        # Act
+        completed = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--run-id", "latest"
+        )
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stderr), (2, "brigade run: latest is not a run id\n"))
+
+    def test_should_exit_1_when_config_toml_names_no_client(self):
+        # Arrange
+        configuration = self.machine.write_configuration("")
+
+        # Act
+        completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace))
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, f"brigade run: config.toml names no client: set the client key in {configuration}\n"),
+        )
+
+
+class BrigadeRunWithNoDirectoryGivenTest(RunTestCase):
+    def test_should_run_in_the_current_directory(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+
+        # Act
+        completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["worktree"], os.getcwd())
+
+
 class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):
     def test_should_record_the_capabilities_the_procedure_declares_that_the_role_allows(self):
         # Arrange
@@ -600,6 +661,60 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["role"], "verifier")
 
+    def test_should_exit_1_naming_a_project_role_binding_with_no_name(self):
+        # Arrange
+        self.register('ROLE "build"')
+
+        # Act
+        completed = self.run_slot()
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr), (1, "brigade run: @PROJECT.shop has ROLE build, not slot=name\n")
+        )
+
+    def test_should_resolve_the_role_a_project_binds_to_an_agent_entity_of_the_instructions_corpus(self):
+        # Arrange
+        instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
+        self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
+        self.record("planner", DONE_RESULT)
+        self.register('ROLE "build=planner"')
+
+        # Act
+        completed = self.run_slot()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        front_matter = (self.runs / json.loads(completed.stdout)["run"] / "role.md").read_text().splitlines()[:9]
+        self.assertEqual(
+            front_matter,
+            [
+                "---",
+                "name: planner",
+                "slot: build",
+                "work: the plan of a wave; the order of its tasks",
+                "reasoning: deep",
+                "capabilities: read, shell",
+                "budget: 40",
+                "returns: the wave plan; the blockers",
+                "---",
+            ],
+        )
+
+    def test_should_resolve_a_project_role_the_instructions_corpus_lacks_among_the_built_in_roles(self):
+        # Arrange
+        instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
+        self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
+        self.record("verifier", DONE_RESULT)
+        self.register('ROLE "build=verifier"')
+
+        # Act
+        completed = self.run_slot()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["role"], "verifier")
+
     def test_should_exit_1_naming_a_project_role_found_nowhere(self):
         # Arrange
         self.register('ROLE "build=nobody"')
@@ -660,6 +775,24 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         self.record("builder", TURN_LIMIT_RESULT)
         self.register()
         (self.machine.corpus / "policies.awawa").write_text(
+            "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tHANDOVERS 1\n"
+        )
+
+        # Act
+        completed = self.run_slot()
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["segments"], 2)
+
+    def test_should_take_the_handovers_of_the_policy_of_its_own_project_only(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", TURN_LIMIT_RESULT)
+        self.register()
+        (self.machine.corpus / "policies.awawa").write_text(
+            'PROJECT depot\n\tPATH "/srv/depot"\n\tMAIN "main"\n\tSTATUS active\n\n'
+            "POLICY a_depot_policy\n\tPROJECT @PROJECT.depot\n\tHANDOVERS 0\n\n"
             "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tHANDOVERS 1\n"
         )
 

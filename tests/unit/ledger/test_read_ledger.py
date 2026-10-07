@@ -88,6 +88,19 @@ class ReadLedgerWhenEveryLineIsWholeTest(ReadLedgerTestCase):
         )
 
 
+class ReadLedgerWhenTheLastLineWasNotEndedTest(ReadLedgerTestCase):
+    def test_should_read_the_last_line_as_an_entry(self):
+        # Arrange
+        unended_last_line = WAVE_PAUSED.removesuffix("\n").encode()
+        self.write_ledger("2026-10.jsonl", WAVE_STARTED.encode() + unended_last_line)
+
+        # Act
+        reading = read_ledger(self.state_root)
+
+        # Assert
+        self.assertEqual((len(reading.entries), reading.skipped), (2, ()))
+
+
 class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
     def test_should_skip_the_line_naming_its_file_its_number_and_the_reason(self):
         rows = [
@@ -112,6 +125,10 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
             (
                 b'{"schema_version": 1, "ts": "2026-10-01T02:41:00+02:00", "event": "wave.paused", "wave": "tp/16"}\n',
                 "ts '2026-10-01T02:41:00+02:00' is not an ISO 8601 UTC instant",
+            ),
+            (
+                b'{"schema_version": 1, "ts": "2026-13-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n',
+                "ts '2026-13-01T00:41:00Z' is not an ISO 8601 UTC instant",
             ),
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused"}\n', "lacks the key wave"),
         ]

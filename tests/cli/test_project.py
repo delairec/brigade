@@ -580,6 +580,21 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
                     (1, "", f"brigade project {action}: @PROJECT.ghost is not registered\n"),
                 )
 
+    def test_should_exit_1_for_a_project_written_outside_the_registry_file(self):
+        # Arrange
+        (self.machine.corpus / "elsewhere.awawa").write_text(
+            'PROJECT ghost\n\tPATH "/srv/ghost"\n\tMAIN "main"\n\tSTATUS active\n'
+        )
+
+        # Act
+        completed = self.run_project("pause", "ghost")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade project pause: @PROJECT.ghost is not written in projects.awawa\n"),
+        )
+
 
 class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
     def test_should_wait_for_the_lock_of_the_corpus_repository(self):

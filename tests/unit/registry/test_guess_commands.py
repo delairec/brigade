@@ -171,6 +171,23 @@ class GuessCommandsTest(unittest.TestCase):
             ),
         )
 
+    def test_should_read_no_script_from_a_package_json_that_is_no_object(self):
+        rows = [("not JSON", "{scripts"), ("a list", "[]")]
+        for case, package_json in rows:
+            with self.subTest(case=case):
+                # Arrange
+                root = tempfile.TemporaryDirectory()
+                self.addCleanup(root.cleanup)
+                create_files(Path(root.name), {"package.json": package_json})
+
+                # Act
+                guess = guess_commands(Path(root.name))
+
+                # Assert
+                self.assertEqual(
+                    guess, CommandGuess(configurations=("package.json",), acceptance=(), setup=("npm install",))
+                )
+
     def test_should_guess_nothing_without_a_supported_configuration(self):
         # Arrange
         root = tempfile.TemporaryDirectory()

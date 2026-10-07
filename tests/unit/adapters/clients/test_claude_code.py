@@ -374,6 +374,65 @@ class ClaudeCodeResultTest(unittest.TestCase):
             },
         )
 
+    def test_should_report_a_json_document_that_is_not_the_result_object(self):
+        # Arrange
+        system_message = '{"type": "system", "subtype": "init", "session_id": "s-42"}'
+
+        # Act
+        result = parse_claude_output(system_message, stderr="Error: interrupted\n", exit_code=1)
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "failed",
+                "steps": None,
+                "usage": None,
+                "session_id": None,
+                "duration_ms": None,
+                "error_class": "unreadable_output",
+                "reset": None,
+                "message": "Error: interrupted",
+            },
+        )
+
+    def test_should_report_no_usage_when_the_result_object_carries_none(self):
+        # Arrange
+        result_without_usage = (
+            '{"type": "result", "subtype": "success", "is_error": false, "num_turns": 3, "session_id": "s-42",'
+            ' "duration_ms": 9000, "result": "Done.", "usage": null}'
+        )
+
+        # Act
+        result = parse_claude_output(result_without_usage)
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "done",
+                "steps": 3,
+                "usage": None,
+                "session_id": "s-42",
+                "duration_ms": 9000,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+
+
+class ClaudeCodeUnsupportedOperationTest(unittest.TestCase):
+    def test_should_refuse_an_operation_it_does_not_answer(self):
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            answer("compact", {"schema_version": 1})
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the claude-code client adapter does not answer compact")
+
 
 class ClaudeCodeTranscriptsTest(unittest.TestCase):
     def setUp(self):

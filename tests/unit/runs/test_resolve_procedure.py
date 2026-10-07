@@ -55,3 +55,56 @@ class ResolveProcedureFoundNowhereTest(ResolveProcedureByNameTestCase):
             str(raised.exception),
             f"no procedure deploy: not shipped with brigade and not in {self.instructions}/procedures",
         )
+
+
+class ResolveProcedureWithNoInstructionsCorpusTest(ResolveProcedureByNameTestCase):
+    def test_should_refuse_naming_the_missing_instructions_corpus(self):
+        # Arrange
+        directories = ProcedureDirectories(shipped=self.shipped, instructions=None)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure("triage", directories)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "no procedure triage: not shipped with brigade and no instructions corpus set in config.toml",
+        )
+
+
+class ResolveProcedureGivenByPathTest(ResolveProcedureByNameTestCase):
+    def test_should_refuse_a_path_to_no_file(self):
+        # Arrange
+        missing = Path(self.root.name) / "procedures" / "deliver.md"
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure(str(missing), self.directories)
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"no procedure file {missing}")
+
+    def test_should_refuse_a_front_matter_off_its_declaration(self):
+        procedure = Path(self.root.name) / "deliver.md"
+        rows = [
+            (
+                "---\ncapabilities: read, fly\nbudget: 10\n---\nBody.\n",
+                f"the procedure {procedure} declares fly, not one of read, write, shell, net",
+            ),
+            (
+                "---\ncapabilities: read\nbudget: many\n---\nBody.\n",
+                f"the procedure {procedure} has the budget many, not a positive integer",
+            ),
+        ]
+        for content, expected_refusal in rows:
+            with self.subTest(content=content):
+                # Arrange
+                procedure.write_text(content)
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    resolve_procedure(str(procedure), self.directories)
+
+                # Assert
+                self.assertEqual(str(raised.exception), expected_refusal)

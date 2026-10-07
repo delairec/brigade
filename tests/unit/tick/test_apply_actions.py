@@ -1,7 +1,8 @@
 import unittest
+from unittest import mock
 
 from brigade.errors import BrigadeError
-from brigade.tick.apply_actions import apply_actions
+from brigade.tick.apply_actions import EXECUTORS, apply_actions
 
 NO_RUNTIME_NEEDED = None
 
@@ -31,3 +32,18 @@ class ApplyActionsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the tick has no executor for the action LaunchRun")
+
+
+class ApplyActionsWithAnExecutorTest(unittest.TestCase):
+    def test_should_hand_each_action_to_the_executor_of_its_type(self):
+        # Arrange
+        applied = []
+        action = LaunchRun()
+        runtime = object()
+
+        # Act
+        with mock.patch.dict(EXECUTORS, {LaunchRun: lambda executed, given: applied.append((executed, given))}):
+            actions_applied = apply_actions((action,), runtime)
+
+        # Assert
+        self.assertEqual((actions_applied, applied), (1, [(action, runtime)]))
