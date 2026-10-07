@@ -3107,8 +3107,8 @@ TASK B72
 		+ "work and the purge of the trails to one age"
 	RATIONALE "a record carries no instant: by @DECISION.TheClockIsReadOnceAndCarriedAsAFact the"
 		+ "clock is read once per command and per tick, so the instant in the name of the trail and"
-		+ "the order of its lines date the records; durations are measured with time.monotonic, as"
-		+ "commands/tick.py and run_segment.py measure theirs"
+		+ "the order of the lines one process wrote date the records; durations are measured with"
+		+ "time.monotonic, as commands/tick.py and run_segment.py measure theirs"
 		REF @DECISION.TheClockIsReadOnceAndCarriedAsAFact
 	RATIONALE "the runner reaches the code through Runtime.run_process, runtime.py:11-16, built by"
 		+ "build_runtime in cli.py and commands/tick.py alone; the spawns are the client segment,"

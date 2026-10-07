@@ -237,7 +237,8 @@ Every subprocess brigade starts appends one JSON line to the trail of the invoca
 exit code: `schema_version`, `argv`, `cwd`, `exit` (null when there is none), `duration_ms` (null for a spawned run),
 `outcome` (`exited`, `timed_out`, `not_found`, `cut` for a client segment stopped by its wall limit, `spawned` for a
 detached run) and, for a spawned run alone, `pid`. A record carries no instant: the name of its trail and the order of
-its lines date it.
+the lines one process wrote date it. The `spawned` line of a detached run and the lines of the process it re-executes
+carry no order between them.
 
 | Invocation          | Trail                                                       |
 |---------------------|-------------------------------------------------------------|

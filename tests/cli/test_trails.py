@@ -144,20 +144,28 @@ class BrigadeRunDetachedTrailTest(RunTestCase):
         pid = int((run_directory / "pid").read_text())
         self.wait_for_file(run_directory / "result.json")
         self.wait_for_exit(pid)
-        spawned, segment = read_trail(run_directory / "processes.jsonl")
-        self.assertEqual(
-            spawned,
-            {
-                "schema_version": 1,
-                "argv": ANY,
-                "cwd": str(self.workspace),
-                "exit": None,
-                "duration_ms": None,
-                "outcome": "spawned",
-                "pid": pid,
-            },
+        self.assertCountEqual(
+            read_trail(run_directory / "processes.jsonl"),
+            [
+                {
+                    "schema_version": 1,
+                    "argv": ANY,
+                    "cwd": str(self.workspace),
+                    "exit": None,
+                    "duration_ms": None,
+                    "outcome": "spawned",
+                    "pid": pid,
+                },
+                {
+                    "schema_version": 1,
+                    "argv": ["cat", "--", str(self.recordings / "builder.json")],
+                    "cwd": str(self.workspace),
+                    "exit": 0,
+                    "duration_ms": ANY,
+                    "outcome": "exited",
+                },
+            ],
         )
-        self.assertEqual(segment["argv"], ["cat", "--", str(self.recordings / "builder.json")])
 
 
 class TrailTestCase(unittest.TestCase):
@@ -261,16 +269,20 @@ class BrigadeCommandTrailTest(TrailTestCase):
         )
 
     def test_should_render_each_record_on_stderr_and_leave_stdout_unchanged_under_verbose(self):
-        # Arrange
-        quiet = self.run_status("--json")
-
         # Act
-        verbose = self.run_status("--json", "--verbose")
+        completed = self.run_status("--json", "--verbose")
 
         # Assert
         self.assertEqual(
-            (verbose.returncode, verbose.stdout, verbose.stderr),
-            (0, quiet.stdout, "brigade scheduler status: ran crontab -l, not on PATH\n"),
+            (completed.returncode, completed.stdout, completed.stderr),
+            (
+                0,
+                (
+                    '{"schema_version": 1, "scheduler": "none", "unit_files": [], "cron_line": null,'
+                    ' "next_activation": null, "last_tick": null}\n'
+                ),
+                "brigade scheduler status: ran crontab -l, not on PATH\n",
+            ),
         )
 
     def test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):
