@@ -4528,3 +4528,101 @@ TASK B104
 		+ "Si la réponse est nom, il faut créer une tâche en draft pour dire d'établir un plan pour"
 		+ "ajouter la fonctionnalité (un peu comme on a fait avec la tâche qui doit"
 		+ "programmer/planifier la feature \\\"preflight\\\")\""
+
+TASK B105
+	TITLE "The claude-code client streams its events into stdout.log as they happen, and brigade"
+		+ "runs logs <id> --follow prints one line per action of the run as it comes"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "runs"
+	ROLE ada
+	DESC "to be refined with the user: the name and the request of the adapter operation that turns"
+		+ "the output of a segment into actions, the whole file with an offset or the lines since"
+		+ "the last read; the poll period of stdout.log; the fields of an action document; --follow"
+		+ "combined with --tail; the amendments to the decisions SPEC 7 names"
+	DESC "distinct from @TASK.B94, which reads the progress file of a run at each request and"
+		+ "prints it by brigade runs show <id>; this task streams the client's own output and"
+		+ "follows it on the CLI"
+		REF @TASK.B94
+	SPEC "the launch and resume argv of the claude-code adapter carry --output-format stream-json"
+		+ "and --verbose, which Claude Code requires of stream-json under --print, in place of"
+		+ "--output-format json; segments/<n>/stdout.log receives one JSON event per line as the"
+		+ "client emits it, so that the file grows during the segment"
+	SPEC "the normalised result of a segment, and with it result.json, run.finished, steps, usage,"
+		+ "session, outcome and error class, is read from the result event, the last line of"
+		+ "stdout.log whose type is result; the declaration of @TASK.B102 is read from the final"
+		+ "message that event carries; an output holding no result event is reported as an"
+		+ "unreadable output, as today; the unit tests of"
+		+ "tests/unit/adapters/clients/test_claude_code.py are adapted to the stream"
+		REF @TASK.B102
+	SPEC "brigade runs logs <id> --follow prints one line per action of the client as stdout.log of"
+		+ "the current segment receives it, the actions already written when the command starts"
+		+ "first: a tool call names the tool and the argument that identifies it, a path, a command"
+		+ "or a pattern; a text prints its first line; a result prints the outcome of the segment"
+	SPEC "--follow moves to the next segment when a relaunch opens one, and ends when result.json"
+		+ "is written, exit 0, or when the pid of the run is gone without a result, exit 1 naming"
+		+ "the run; an unknown id exits 1 naming it, as today"
+	SPEC "--follow --json prints one JSON document per action on its own line, carrying"
+		+ "schema_version, the segment number, the kind of the action, tool_call, text or result,"
+		+ "and the fields of that kind, and no closing document; without --follow, runs logs keeps"
+		+ "the document of @TASK.B79"
+		REF @TASK.B79
+	SPEC "the actions are read through an operation of the client adapter that turns the output of"
+		+ "a segment into the actions it holds, declared in the probe as the other operations are;"
+		+ "the core names no event of Claude Code, and the import guard of tests/guards holds"
+	SPEC "a client whose probe does not declare that operation keeps today's behaviour, its stdout"
+		+ "read once at the end of the segment, and --follow prints the raw lines of stdout.log as"
+		+ "they come; the matrix of brigade adapter matrix and the README table gain the capability"
+		+ "with that fallback; the decisions ClientAdaptersAnswerEveryOperationThroughOneFunction,"
+		+ "BrigadeNamesNoAiClientOutsideItsAdapters and"
+		+ "TheSupportedClientsTableIsGeneratedFromTheProbes are amended to the sixth operation, and"
+		+ "EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable to a command that streams"
+		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+		REF @DECISION.TheSupportedClientsTableIsGeneratedFromTheProbes
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	SPEC "tests/cli proves --follow through the fake adapter: a detached run whose client writes"
+		+ "its lines at intervals is followed to its result and the command exits 0 with every"
+		+ "action printed in order, a run whose process is gone without a result exits 1, and a"
+		+ "fake declaring no actions operation is followed as raw lines"
+	AFTER @TASK.B79
+	AFTER @TASK.B102
+	RATIONALE "observed on 2026-10-07 on run 20261007T201725Z-ed661e of @TASK.B73, client"
+		+ "claude-code: brigade runs logs printed nothing while the run was running,"
+		+ "segments/1/stdout.log at 0 bytes beside a brief.md of 8.6 kB;"
+		+ "brigade/adapters/clients/claude_code.py:12 launches the client with --print"
+		+ "--output-format json, and Claude Code writes its single JSON document at the end of the"
+		+ "session; brigade runs logs takes --tail alone and follows nothing; the only live trace"
+		+ "is the transcript under ~/.claude/projects/<cwd slug>/<session>.jsonl, which brigade"
+		+ "reads only after the segment through the transcripts operation"
+		REF @TASK.B73
+	RATIONALE "claude --help of Claude Code 2.1.293, read on 2026-10-07: --output-format"
+		+ "stream-json is realtime streaming, and a launch of --print --output-format stream-json"
+		+ "without --verbose exits on \"Error: When using --print, --output-format=stream-json"
+		+ "requires --verbose\"; a stream carries system, assistant, user, rate_limit_event and"
+		+ "result events, one per line, the result event holding the fields the json output holds,"
+		+ "subtype, is_error, num_turns, session_id, duration_ms, usage and result, so that the"
+		+ "parsing of a segment changes its source and not its reading"
+	RATIONALE "the mapping of the events to actions is the client's and lives in its adapter, as"
+		+ "every launch, result, resume and transcript read does by"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters; a client with no streaming output,"
+		+ "or whose adapter declares no such operation, is followed as raw lines, the fallback of"
+		+ "DESC 2 of that decision for an operation the client lacks"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	RATIONALE "a command that prints as the run goes is neither one document rendered once nor"
+		+ "bounded, DESC 1 and 2 of"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable; the refinement"
+		+ "settles the amendment, as DESC 7 of that decision already admits a long-lived command"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "after @TASK.B79, which reshapes the document of runs logs without --tail, to which"
+		+ "--follow is added, and after @TASK.B102, which reads the last line of the final message"
+		+ "in stdout.log, whose shape this task changes"
+		REF @TASK.B79
+		REF @TASK.B102
+	RATIONALE "in ADD0 on the user's words: a comfort, planned after the MVP, as @TASK.B76 was"
+		REF @TASK.B76
+	SOURCE "the user's words of 2026-10-07, after observing that brigade runs logs prints nothing"
+		+ "while a run is running: \"ça n'écrit rien dans la console, et ça ne suit pas en direct,"
+		+ "à moins de relancer la commande toutes les X secondes peut être?\"; on the proposal of a"
+		+ "draft task in ADD0: \"ok mais ça n'est pas prévu dans le plan déjà? sinon ça pourrait"
+		+ "rentrer dans ADD0 je suppose, c'est du confort\", then \"oui ok\""
