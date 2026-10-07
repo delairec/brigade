@@ -3342,6 +3342,13 @@ TASK B79
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
 	ROLE ada
+	DESC "for the refinement: by @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads a"
+		+ "reader learns what happened through a brigade command and searches no file itself, while"
+		+ "SPEC 1 returns the paths and line counts of the logs of a segment, leaving the reader to"
+		+ "open and search them; whether runs logs returns what the logs hold, summarised and"
+		+ "bounded, rather than where they are, settled with @TASK.B97"
+		REF @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads
+		REF @TASK.B97
 	SPEC "brigade runs logs <id> without --tail returns a document carrying, per segment, the path"
 		+ "of its stdout and stderr files under runs/<id>/ and their line counts, and no line; with"
 		+ "--tail N it returns the last N lines as today"
