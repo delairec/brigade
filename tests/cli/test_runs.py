@@ -49,7 +49,7 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
             },
         )
 
-    def test_should_print_one_line_per_run_as_text(self):
+    def test_should_print_the_runs_as_a_table_under_its_header(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
 
@@ -58,7 +58,13 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, f"{run_id}  deliver  build  builder  -  finished  done\n")
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                "run                      procedure  slot   role     project  state     outcome",
+                f"{run_id}  deliver    build  builder  -        finished  done",
+            ],
+        )
 
     def test_should_list_a_run_whose_process_is_gone_without_a_result_as_dead(self):
         # Arrange

@@ -22,16 +22,9 @@ def _build_rewrite(runtime, name: str, status: str):
     return rewrite
 
 
-def project_status(request, runtime) -> dict:
+def change_project_status(runtime, name: str, status: str) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     changed = change_registry(
-        runtime,
-        f"brigade project {ACTIONS[request.status]}: {request.name}",
-        _build_rewrite(runtime, request.name, request.status),
+        runtime, f"brigade project {ACTIONS[status]}: {name}", _build_rewrite(runtime, name, status)
     )
-    return {
-        "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "project": request.name,
-        "status": request.status,
-        "changed": changed,
-    }
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "project": name, "status": status, "changed": changed}

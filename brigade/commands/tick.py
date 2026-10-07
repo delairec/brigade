@@ -2,6 +2,7 @@ import dataclasses
 import sys
 import time
 
+from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.errors import StandingDown
 from brigade.ledger.format_instant import format_instant
 from brigade.runtime import build_runtime
@@ -95,9 +96,76 @@ def _tick_in_loop() -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "mode": "loop", "ticks_attempted": ticks_attempted}
 
 
+def _render_once(document: dict) -> list[str]:
+    return [f"tick {document['ts']}: {document['actions_applied']} actions applied in {document['duration_ms']} ms"]
+
+
+def _render_dry_run(document: dict) -> list[str]:
+    snapshot_lines = [f"  {key}  {value}" for key, value in document["snapshot"].items() if key != "schema_version"]
+    plan_lines = [f"  {action}" for action in document["plan"]] or ["  no action"]
+    return ["snapshot", *snapshot_lines, "plan", *plan_lines]
+
+
+def _render_loop(document: dict) -> list[str]:
+    return [f"tick --loop: {document['ticks_attempted']} ticks attempted"]
+
+
+RENDERERS = {"once": _render_once, "dry-run": _render_dry_run, "loop": _render_loop}
+
+
+def _render_text(document: dict) -> str:
+    return "\n".join(RENDERERS[document["mode"]](document))
+
+
+def _read_request(options):
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    return 0
+
+
 def tick(request, runtime) -> dict:
     if request.mode == "once":
         return _tick_once(runtime)
     if request.mode == "dry-run":
         return _plan_dry(runtime)
     return _tick_in_loop()
+
+
+COMMAND = Command(
+    path=("tick",),
+    help="plan and apply what the facts call for, once or in a loop",
+    arguments=(
+        ExclusiveArguments(
+            (
+                Argument(
+                    ("--once",), {"dest": "mode", "action": "store_const", "const": "once", "help": "run one tick"}
+                ),
+                Argument(
+                    ("--dry-run",),
+                    {
+                        "dest": "mode",
+                        "action": "store_const",
+                        "const": "dry-run",
+                        "help": "print the snapshot and the plan",
+                    },
+                ),
+                Argument(
+                    ("--loop",),
+                    {
+                        "dest": "mode",
+                        "action": "store_const",
+                        "const": "loop",
+                        "help": "run a tick every five minutes until a signal",
+                    },
+                ),
+            ),
+            required=True,
+        ),
+    ),
+    run=tick,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

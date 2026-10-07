@@ -1,6 +1,27 @@
-from brigade.commands.prepare_project_tree import prepare_project_tree
+from pathlib import Path
+
+from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.corpus.prepare_project_tree import prepare_project_tree
 
 DOCUMENT_SCHEMA_VERSION = 1
+FIELD_NAME_WIDTH = 6
+TREE_FIELDS = ("ref", "sha", "kind", "root")
+
+
+def _render_text(document: dict) -> str:
+    lines = [
+        f"@PROJECT.{document['project']}",
+        *(f"{name:<{FIELD_NAME_WIDTH}}{document[name]}" for name in TREE_FIELDS if document[name] is not None),
+    ]
+    return "\n".join(lines)
+
+
+def _read_request(options):
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    return 0
 
 
 def corpus(request, runtime) -> dict:
@@ -13,3 +34,31 @@ def corpus(request, runtime) -> dict:
         "kind": tree.kind,
         "root": str(tree.root),
     }
+
+
+COMMAND = Command(
+    path=("corpus",),
+    help="read a registered project's tree at a branch, a SHA or a worktree; -- <awawa args> runs awawa there",
+    arguments=(
+        Argument(("project",)),
+        ExclusiveArguments(
+            (
+                Argument(
+                    ("--ref",),
+                    {
+                        "help": "a branch or a SHA, extracted to the cache;"
+                        " worktree:<branch> reads the worktree of that branch"
+                    },
+                ),
+                Argument(
+                    ("--worktree",), {"type": Path, "help": "the path of a worktree of the project, read in place"}
+                ),
+            ),
+            required=True,
+        ),
+    ),
+    run=corpus,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

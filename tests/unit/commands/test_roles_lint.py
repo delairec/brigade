@@ -1,9 +1,9 @@
 import unittest
 
-from brigade.commands.render_roles_lint_text import render_roles_lint_text
+from brigade.commands.roles_lint import COMMAND
 
 
-class RenderRolesLintTextTest(unittest.TestCase):
+class RolesLintTextTest(unittest.TestCase):
     def test_should_name_the_file_alone_for_a_finding_on_no_key(self):
         # Arrange
         document = {
@@ -14,7 +14,7 @@ class RenderRolesLintTextTest(unittest.TestCase):
         }
 
         # Act
-        text = render_roles_lint_text(document)
+        text = COMMAND.render_text(document)
 
         # Assert
         self.assertEqual(
@@ -27,7 +27,7 @@ class RenderRolesLintTextTest(unittest.TestCase):
         document = {"files": ["/srv/roles/planner.md", "/srv/roles/builder.md"], "findings": []}
 
         # Act
-        text = render_roles_lint_text(document)
+        text = COMMAND.render_text(document)
 
         # Assert
         self.assertEqual(text, "roles lint: 2 files, 0 findings")

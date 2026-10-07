@@ -430,11 +430,11 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC "brigade/commands/ one module per command line and nothing else, its renderers, request"
 		+ "reader and exit decision underscored in it; brigade/command.py the record type every"
 		+ "command module declares; brigade/cli.py discovers the command modules, builds the parser"
-		+ "from their records and keeps the exit mapping; brigade/launcher.py the floor check;"
-		+ "brigade/adapters/clients, forges and schedulers, brigade/collectors/, brigade/checks/"
-		+ "and brigade/outputs/ the plugins; brigade/system/ the primitives: paths, clock,"
-		+ "processes, locks, atomic files, ids, documents; brigade/git/ the git gateway, as"
-		+ "brigade/corpus/ is the awawa one"
+		+ "from their records through brigade/add_command_parsers.py and keeps the exit mapping;"
+		+ "brigade/launcher.py the floor check; brigade/adapters/clients, forges and schedulers,"
+		+ "brigade/collectors/, brigade/checks/ and brigade/outputs/ the plugins; brigade/system/"
+		+ "the primitives: paths, clock, processes, locks, atomic files, ids, documents;"
+		+ "brigade/git/ the git gateway, as brigade/corpus/ is the awawa one"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	DESC "a module exposes one public function named after a verb, no leading underscore, its"
 		+ "helpers underscored, with the constants and frozen dataclasses it declares; its unit"
@@ -474,6 +474,12 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "DESC 3 amended on the user's rulings of 2026-10-07 in the refinement of @TASK.B82, F26"
 		+ "and F27 of the foundations review"
+		REF @TASK.B82
+	REJECTED "the parser builder private to brigade/cli.py: its refusals of a path declared twice"
+		+ "and of two helps for one group could then be unit-tested only through an underscored"
+		+ "name"
+	SOURCE "brigade/add_command_parsers.py named in DESC 3 in pull request #56 of the brigade"
+		+ "repository, delivering @TASK.B82"
 		REF @TASK.B82
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
@@ -652,12 +658,37 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	DESC "a command module declares, as a module-level constant of the frozen record type of"
 		+ "brigade/command.py, the path, the help and the arguments of its one command line, its"
 		+ "request reader, its text renderer, its exit decision and, where it has them, its"
-		+ "Markdown renderer and its diagnostics; the help of a group with no command of its own is"
+		+ "Markdown renderer, its diagnostics, the renderer of the stderr a passthrough passes and"
+		+ "the acceptance of extra arguments; the help of a group with no command of its own is"
 		+ "declared by the records of its lines; cli.py renders and exits through the record alone,"
 		+ "from @TASK.B82"
 		REF @TASK.B82
 	SOURCE "the declared record of DESC 11 on the user's rulings of 2026-10-07 in the refinement of"
 		+ "@TASK.B82"
+		REF @TASK.B82
+	DESC "a group parser takes the common options as every command parser does: brigade project"
+		+ "--json list runs, from @TASK.B82"
+		REF @TASK.B82
+	DESC "brigade --help and the help of a group list their command lines in the order of their"
+		+ "module names, from @TASK.B82"
+		REF @TASK.B82
+	DESC "a group names its command lines action in its usage and its errors, from @TASK.B82"
+		REF @TASK.B82
+	REJECTED "an order field in the record to keep the hand-written order of the help: a table of"
+		+ "commands spread over the records, which discovery replaces"
+	REJECTED "the common options on the adapter group alone, as the hand-written parsers of cli.py"
+		+ "declared them: nothing kept them off the other groups, and DESC 6 attaches them to every"
+		+ "subcommand"
+	SOURCE "DESC 12 to 14 in pull request #56 of the brigade repository, delivering @TASK.B82,"
+		+ "validated by the user's rulings of 2026-10-07 in its review: \"Garder\" for the common"
+		+ "options of a group, \"Valider\" for the order of the help and the name action"
+		REF @TASK.B82
+	DESC "the text of a list command is a table: a header row naming its columns, each column but"
+		+ "the last padded to its widest cell, rendered by brigade/system/render_table.py; an empty"
+		+ "list keeps its one-line message, from @TASK.B82"
+		REF @TASK.B82
+	SOURCE "DESC 15 on the user's words of 2026-10-07 in the review of pull request #56: \"il"
+		+ "faudrait aussi que ça s'affiche dans un tableau à entête non?\""
 		REF @TASK.B82
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
