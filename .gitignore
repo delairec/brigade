@@ -1,7 +1,9 @@
 .idea
 .claude
+.vibe
 node_modules
 dist
 __pycache__
 .coverage
 .coverage.*
+
