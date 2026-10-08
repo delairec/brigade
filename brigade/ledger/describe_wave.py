@@ -1,10 +1,15 @@
 from datetime import datetime
 
 from brigade.errors import BrigadeError
-from brigade.ledger.declared_events import RUN_FINISHED
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.read_ledger import LedgerEntry, LedgerReading
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.pr_merged import PrMerged
+from brigade.ledger.read_ledger import LedgerReading
+from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.summarize_steps import summarize_steps
+from brigade.ledger.task_parked import TaskParked
+from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_resumed import WaveResumed
 
 FIRST_HAND_OVER_SEGMENT = 2
 MILLISECONDS_PER_SECOND = 1000
@@ -14,23 +19,22 @@ def _measure_ms(start: datetime, end: datetime) -> int:
     return int((end - start).total_seconds() * MILLISECONDS_PER_SECOND)
 
 
-def _list_tasks(records: list[dict]) -> list[str]:
-    return list(dict.fromkeys(record["task"] for record in records if record.get("task") is not None))
+def _list_tasks(events: list) -> list[str]:
+    return list(dict.fromkeys(event.task for event in events if getattr(event, "task", None) is not None))
 
 
-def _summarize_by(runs: list[dict], key: str) -> dict:
-    names = sorted({run[key] for run in runs}, key=str)
-    return {name: summarize_steps(run["steps"] for run in runs if run[key] == name) for name in names}
+def _summarize_by(runs: list[RunFinished], attribute: str) -> dict:
+    names = sorted({getattr(run, attribute) for run in runs}, key=str)
+    return {name: summarize_steps(run.steps for run in runs if getattr(run, attribute) == name) for name in names}
 
 
 def _pair_pauses(entries: list[LedgerEntry]) -> list[dict]:
     pauses = []
     paused_at = None
     for entry in entries:
-        event = entry.record["event"]
-        if event == "wave.paused" and paused_at is None:
+        if isinstance(entry.event, WavePaused) and paused_at is None:
             paused_at = entry.instant
-        elif event == "wave.resumed" and paused_at is not None:
+        elif isinstance(entry.event, WaveResumed) and paused_at is not None:
             pauses.append(
                 {
                     "paused_at": format_instant(paused_at),
@@ -45,13 +49,13 @@ def _pair_pauses(entries: list[LedgerEntry]) -> list[dict]:
 
 
 def describe_wave(reading: LedgerReading, wave: str) -> dict:
-    entries = [entry for entry in reading.entries if entry.record.get("wave") == wave]
+    entries = [entry for entry in reading.entries if getattr(entry.event, "wave", None) == wave]
     if not entries:
         raise BrigadeError(f"no event names the wave {wave}")
-    records = [entry.record for entry in entries]
+    events = [entry.event for entry in entries]
     first = min(entry.instant for entry in entries)
     last = max(entry.instant for entry in entries)
-    runs = [record for record in records if record["event"] == RUN_FINISHED]
+    runs = [event for event in events if isinstance(event, RunFinished)]
     pauses = _pair_pauses(entries)
     return {
         "view": "wave",
@@ -59,19 +63,19 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "first": format_instant(first),
         "last": format_instant(last),
         "wall_time_ms": _measure_ms(first, last),
-        "tasks": _list_tasks(records),
+        "tasks": _list_tasks(events),
         "pull_requests": [
-            {"task": record["task"], "pr": record["pr"], "rounds": record["rounds"]}
-            for record in records
-            if record["event"] == "pr.merged"
+            {"task": event.task, "pr": event.pr, "rounds": event.rounds}
+            for event in events
+            if isinstance(event, PrMerged)
         ],
         "steps": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
         "pauses": pauses,
         "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
         "hand_overs": [
-            {"task": run["task"], "role": run["role"], "slot": run["slot"], "segment": run["segment"]}
+            {"task": run.task, "role": run.role, "slot": run.slot, "segment": run.segment}
             for run in runs
-            if run["segment"] >= FIRST_HAND_OVER_SEGMENT
+            if run.segment >= FIRST_HAND_OVER_SEGMENT
         ],
-        "parked": [record["task"] for record in records if record["event"] == "task.parked"],
+        "parked": [event.task for event in events if isinstance(event, TaskParked)],
     }

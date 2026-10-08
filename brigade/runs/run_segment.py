@@ -11,16 +11,20 @@ from brigade.runs.run_locations import (
     STDERR_FILE,
     STDOUT_FILE,
 )
+from brigade.runs.run_result import RunResult
 from brigade.runtime import Runtime
-from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.client_question import ClientQuestion
+from brigade.system.client_role import ClientRole
 from brigade.system.create_directory import create_directory
+from brigade.system.launch_argv_request import LaunchArgvRequest
+from brigade.system.parse_result_answer import ParseResultAnswer
+from brigade.system.parse_result_request import ParseResultRequest
 from brigade.system.process_trace import CUT, EXITED, ProcessTrace
 from brigade.system.spawn_process import SpawnRequest
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 from brigade.system.write_text_file import write_text_file
 
-REQUEST_SCHEMA_VERSION = 1
 FIRST_SEGMENT = 1
 PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
 WALL_LIMIT_OUTCOME = "wall_limit"
@@ -30,7 +34,7 @@ GRACE_BEFORE_KILL_S = 30.0
 @dataclass(frozen=True)
 class SegmentRecord:
     number: int
-    result: dict
+    result: RunResult
     exit_code: int | None
     measured_ms: int
 
@@ -50,34 +54,45 @@ def _compose_segment_brief(plan: RunPlan, number: int) -> str:
     )
 
 
-def _describe_role(plan: RunPlan) -> dict:
-    return {
-        "name": plan.role.role,
-        "package": plan.role.body,
-        "package_file": str(plan.run_directory / ROLE_FILE),
-        "capabilities": list(plan.capabilities),
-        "reasoning": plan.role.front_matter["reasoning"],
-        "budget": plan.procedure.budget,
-    }
+def _describe_role(plan: RunPlan) -> ClientRole:
+    return ClientRole(
+        name=plan.role.role,
+        package=plan.role.body,
+        package_file=str(plan.run_directory / ROLE_FILE),
+        capabilities=plan.capabilities,
+        reasoning=plan.role.front_matter["reasoning"],
+        budget=plan.procedure.budget,
+    )
 
 
-def _ask_client(plan: RunPlan, runtime: Runtime, operation: str, request: dict) -> dict:
-    question = ClientQuestion(plan.client, operation, request)
-    return ask_named_client(plan.client_adapter, question, plan.configuration, runtime)
+def _ask_client(plan: RunPlan, runtime: Runtime, request: LaunchArgvRequest | ParseResultRequest):
+    return ask_named_client(plan.client_adapter, ClientQuestion(plan.client, request), plan.configuration, runtime)
 
 
-def _describe_cut(plan: RunPlan, measured_ms: int) -> dict:
-    return {
-        "schema_version": REQUEST_SCHEMA_VERSION,
-        "outcome": WALL_LIMIT_OUTCOME,
-        "steps": None,
-        "usage": None,
-        "session_id": None,
-        "duration_ms": measured_ms,
-        "error_class": None,
-        "reset": None,
-        "message": f"cut at the wall-time limit of {plan.wall_limit_s:g} s",
-    }
+def _adopt_answer(answer: ParseResultAnswer) -> RunResult:
+    return RunResult(
+        outcome=answer.outcome,
+        steps=answer.steps,
+        usage=answer.usage,
+        session_id=answer.session_id,
+        duration_ms=answer.duration_ms,
+        error_class=answer.error_class,
+        reset=answer.reset,
+        message=answer.message,
+    )
+
+
+def _describe_cut(plan: RunPlan, measured_ms: int) -> RunResult:
+    return RunResult(
+        outcome=WALL_LIMIT_OUTCOME,
+        steps=None,
+        usage=None,
+        session_id=None,
+        duration_ms=measured_ms,
+        error_class=None,
+        reset=None,
+        message=f"cut at the wall-time limit of {plan.wall_limit_s:g} s",
+    )
 
 
 def run_segment(plan: RunPlan, number: int, runtime: Runtime) -> SegmentRecord:
@@ -89,20 +104,15 @@ def run_segment(plan: RunPlan, number: int, runtime: Runtime) -> SegmentRecord:
     launch = _ask_client(
         plan,
         runtime,
-        "launch-argv",
-        {
-            "schema_version": REQUEST_SCHEMA_VERSION,
-            "worktree": str(plan.worktree),
-            "brief": brief,
-            "progress_file": progress_file,
-            "role": _describe_role(plan),
-        },
+        LaunchArgvRequest(
+            worktree=str(plan.worktree), brief=brief, role=_describe_role(plan), progress_file=progress_file
+        ),
     )
     request = SpawnRequest(
-        argv=tuple(launch["argv"]),
+        argv=launch.argv,
         cwd=str(plan.worktree),
-        environment={**launch["environment"], PROGRESS_FILE_VARIABLE: progress_file},
-        stdin=launch["stdin"],
+        environment={**launch.environment, PROGRESS_FILE_VARIABLE: progress_file},
+        stdin=launch.stdin,
         stdout=segment_directory / STDOUT_FILE,
         stderr=segment_directory / STDERR_FILE,
     )
@@ -117,15 +127,13 @@ def run_segment(plan: RunPlan, number: int, runtime: Runtime) -> SegmentRecord:
     if exit_code is None:
         cut = _describe_cut(plan, measured_ms)
         return SegmentRecord(number=number, result=cut, exit_code=None, measured_ms=measured_ms)
-    result = _ask_client(
+    answer = _ask_client(
         plan,
         runtime,
-        "parse-result",
-        {
-            "schema_version": REQUEST_SCHEMA_VERSION,
-            "exit_code": exit_code,
-            "stdout": (segment_directory / STDOUT_FILE).read_text(encoding="utf-8", errors="replace"),
-            "stderr": (segment_directory / STDERR_FILE).read_text(encoding="utf-8", errors="replace"),
-        },
+        ParseResultRequest(
+            exit_code=exit_code,
+            stdout=(segment_directory / STDOUT_FILE).read_text(encoding="utf-8", errors="replace"),
+            stderr=(segment_directory / STDERR_FILE).read_text(encoding="utf-8", errors="replace"),
+        ),
     )
-    return SegmentRecord(number=number, result=result, exit_code=exit_code, measured_ms=measured_ms)
+    return SegmentRecord(number=number, result=_adopt_answer(answer), exit_code=exit_code, measured_ms=measured_ms)

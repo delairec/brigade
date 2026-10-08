@@ -4,10 +4,38 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.runs.list_runs import list_runs
 
 RUN_ID = "20261007T090000Z-b70a01"
-RUN_RECORD = {"run": RUN_ID, "procedure": "deliver", "slot": "build", "role": "builder", "project": None}
+RUN_RECORD = {
+    "schema_version": 1,
+    "run": RUN_ID,
+    "procedure": "deliver",
+    "procedure_path": "built-in",
+    "slot": "build",
+    "role": "builder",
+    "role_source": "built-in",
+    "client": "fake",
+    "project": None,
+    "cwd": "/home/user/tidepool",
+    "worktree": "/home/user/tidepool",
+    "capabilities": ["read"],
+    "budget": 40,
+    "wall_limit_s": 1500.0,
+    "arguments": {},
+}
+RUN_RESULT = {
+    "schema_version": 1,
+    "outcome": "done",
+    "steps": 12,
+    "usage": None,
+    "session_id": "session-b74",
+    "duration_ms": 4200,
+    "error_class": None,
+    "reset": None,
+    "message": "the client finished the task",
+}
 PROCESS_OF_ANOTHER_USER = "1"
 
 
@@ -43,7 +71,20 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
         runs = list_runs(self.state_root)
 
         # Assert
-        self.assertEqual(runs, [{**RUN_RECORD, "state": "dead", "outcome": None}])
+        self.assertEqual(
+            runs,
+            [
+                {
+                    "run": "20261007T090000Z-b70a01",
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "state": "dead",
+                    "outcome": None,
+                }
+            ],
+        )
 
     def test_should_list_a_run_whose_pid_is_no_number_as_dead(self):
         # Arrange
@@ -51,10 +92,10 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
         (self.run_directory / "pid").write_text("\n")
 
         # Act
-        runs = list_runs(self.state_root)
+        [listed] = list_runs(self.state_root)
 
         # Assert
-        self.assertEqual(runs, [{**RUN_RECORD, "state": "dead", "outcome": None}])
+        self.assertEqual(listed["state"], "dead")
 
     @unittest.skipIf(os.geteuid() == 0, "root may signal every process")
     def test_should_list_a_run_whose_process_belongs_to_another_user_as_running(self):
@@ -63,7 +104,60 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
         (self.run_directory / "pid").write_text(PROCESS_OF_ANOTHER_USER)
 
         # Act
-        runs = list_runs(self.state_root)
+        [listed] = list_runs(self.state_root)
 
         # Assert
-        self.assertEqual(runs, [{**RUN_RECORD, "state": "running", "outcome": None}])
+        self.assertEqual(listed["state"], "running")
+
+
+class ListRunsOfAFinishedRunTest(ListRunsTestCase):
+    def test_should_list_the_run_finished_with_the_outcome_of_its_result(self):
+        # Arrange
+        self.start_run()
+        (self.run_directory / "result.json").write_text(json.dumps(RUN_RESULT))
+
+        # Act
+        [listed] = list_runs(self.state_root)
+
+        # Assert
+        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "done"))
+
+
+class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
+    def test_should_refuse_a_run_record_naming_the_file_and_the_problem(self):
+        rows = [
+            ("a record that is not JSON", "{", "is not a run record: not a JSON document"),
+            (
+                "a record lacking its client",
+                json.dumps({key: value for key, value in RUN_RECORD.items() if key != "client"}),
+                "is not a run record: lacks the key client",
+            ),
+        ]
+        for case, content, expected_problem in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.run_directory.mkdir(parents=True, exist_ok=True)
+                (self.run_directory / "run.json").write_text(content)
+
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    list_runs(self.state_root)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), f"{self.run_directory / 'run.json'} {expected_problem}")
+
+    def test_should_refuse_a_run_result_naming_the_file_and_the_problem(self):
+        # Arrange
+        self.start_run()
+        (self.run_directory / "result.json").write_text(json.dumps({**RUN_RESULT, "outcome": "lost"}))
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            list_runs(self.state_root)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            f"{self.run_directory / 'result.json'} is not a run result: outcome is 'lost', not one of done, failed,"
+            " wall_limit",
+        )

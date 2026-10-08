@@ -1,16 +1,16 @@
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError, UsageError
 from brigade.runtime import Runtime
-from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.client_question import ClientQuestion
 from brigade.system.list_client_adapters import SUPPORTED_CLIENT, ClientAdapter, list_client_adapters
+from brigade.system.probe_answer import ProbeAnswer
+from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 
 SCHEMA_VERSION = 1
 CONFIGURATION_FILE = "config.toml"
-PROBE_OPERATION = "probe"
-PROBE_REQUEST = {"schema_version": 1}
 OPERATION_CAPABILITIES = ("launch", "result", "resume", "transcripts")
 FEATURE_CAPABILITIES = ("step_count", "tool_grants", "reset_hour")
 CAPABILITIES = OPERATION_CAPABILITIES + FEATURE_CAPABILITIES
@@ -41,7 +41,7 @@ HEADER_RULE = "---"
 EMPTY_CELL = ""
 
 
-def _grade(capability: str, declared: list[str]) -> str:
+def _grade(capability: str, declared: tuple[str, ...]) -> str:
     if capability in declared:
         return FULL
     if capability in FALLBACKS:
@@ -49,10 +49,10 @@ def _grade(capability: str, declared: list[str]) -> str:
     return ABSENT
 
 
-def _grade_capabilities(probe: dict) -> dict:
+def _grade_capabilities(probe: ProbeAnswer) -> dict:
     return {
-        **{capability: _grade(capability, probe["operations"]) for capability in OPERATION_CAPABILITIES},
-        **{capability: _grade(capability, probe["features"]) for capability in FEATURE_CAPABILITIES},
+        **{capability: _grade(capability, probe.operations) for capability in OPERATION_CAPABILITIES},
+        **{capability: _grade(capability, probe.features) for capability in FEATURE_CAPABILITIES},
     }
 
 
@@ -60,9 +60,7 @@ def _describe_adapter(runtime: Runtime, configuration: Configuration, adapter: C
     row = {"name": adapter.name, "audience": adapter.audience}
     try:
         client = runtime.resolve_plugin("client", adapter.name)
-        probe = ask_named_client(
-            client, ClientQuestion(adapter.name, PROBE_OPERATION, PROBE_REQUEST), configuration, runtime
-        )
+        probe = ask_named_client(client, ClientQuestion(adapter.name, ProbeRequest()), configuration, runtime)
     except BrigadeError as error:
         return {**row, "capabilities": NO_CAPABILITIES, "error": str(error)}
     return {**row, "capabilities": _grade_capabilities(probe), "error": NO_ERROR}

@@ -3,8 +3,8 @@ import sys
 
 from brigade.command import Command
 from brigade.runtime import Runtime
-from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.client_question import ClientQuestion
 from brigade.system.read_client_request import read_client_request
 from brigade.system.read_configured_client import read_configured_client
 
@@ -28,9 +28,8 @@ def adapter_transcripts(request, runtime: Runtime) -> dict:
     client_request = read_client_request(OPERATION, request)
     configured = read_configured_client(runtime)
     client = runtime.resolve_plugin("client", configured.name)
-    return ask_named_client(
-        client, ClientQuestion(configured.name, OPERATION, client_request), configured.configuration, runtime
-    )
+    question = ClientQuestion(configured.name, client_request)
+    return ask_named_client(client, question, configured.configuration, runtime).to_document()
 
 
 COMMAND = Command(

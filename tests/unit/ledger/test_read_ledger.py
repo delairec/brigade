@@ -3,7 +3,11 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.ledger.read_ledger import LedgerEntry, LedgerReading, SkippedLine, read_ledger
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.read_ledger import LedgerReading, SkippedLine, read_ledger
+from brigade.ledger.undeclared_event import UndeclaredEvent
+from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_started import WaveStarted
 
 WAVE_STARTED = (
     '{"schema_version": 1, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tp/16",'
@@ -55,31 +59,15 @@ class ReadLedgerWhenEveryLineIsWholeTest(ReadLedgerTestCase):
                 entries=(
                     LedgerEntry(
                         instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
-                        record={
-                            "schema_version": 1,
-                            "ts": "2026-09-30T22:00:00Z",
-                            "event": "wave.started",
-                            "wave": "tp/16",
-                            "project": "tidepool",
-                        },
+                        event=WaveStarted(wave="tp/16", project="tidepool"),
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                        record={
-                            "schema_version": 1,
-                            "ts": "2026-10-01T00:15:00Z",
-                            "event": "wave.paused",
-                            "wave": "tp/16",
-                        },
+                        event=WavePaused(wave="tp/16"),
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 20, tzinfo=UTC),
-                        record={
-                            "schema_version": 1,
-                            "ts": "2026-10-01T00:20:00Z",
-                            "event": "study.done",
-                            "study": "health",
-                        },
+                        event=UndeclaredEvent(name="study.done"),
                     ),
                 ),
                 files=(str(september), str(october)),

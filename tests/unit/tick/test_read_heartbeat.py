@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.read_heartbeat import read_heartbeat
 
 
@@ -31,9 +32,7 @@ class ReadHeartbeatTest(unittest.TestCase):
         last_tick = read_heartbeat(self.heartbeat)
 
         # Assert
-        self.assertEqual(
-            last_tick, {"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 2}
-        )
+        self.assertEqual(last_tick, Heartbeat(ts="2026-10-06T12:00:00Z", duration_ms=4, actions_applied=2))
 
     def test_should_refuse_a_file_that_is_not_a_heartbeat_naming_it(self):
         rows = [

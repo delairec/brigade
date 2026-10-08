@@ -9,7 +9,23 @@ from brigade.runs.list_runs import list_runs
 from brigade.runs.record_run_pid import record_run_pid
 
 RUN_ID = "20261006T120000Z-abcdef"
-RUN_RECORD = {"run": RUN_ID, "procedure": "deliver", "slot": "build", "role": "builder", "project": None}
+RUN_RECORD = {
+    "schema_version": 1,
+    "run": RUN_ID,
+    "procedure": "deliver",
+    "procedure_path": "built-in",
+    "slot": "build",
+    "role": "builder",
+    "role_source": "built-in",
+    "client": "fake",
+    "project": None,
+    "cwd": "/home/user/tidepool",
+    "worktree": "/home/user/tidepool",
+    "capabilities": ["read"],
+    "budget": 40,
+    "wall_limit_s": 1500.0,
+    "arguments": {},
+}
 WRITE_CALL = "write"
 
 
