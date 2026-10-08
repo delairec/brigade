@@ -6,6 +6,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError, UsageError
+from brigade.registry.read_project_field import read_project_field
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, ResolvedRole, RoleBindings, resolve_role
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_handovers import read_handovers
@@ -70,10 +71,6 @@ def _read_values(project: Entity | None, field_name: str) -> list[str]:
     return [field.value for field in project.fields if field.name == field_name]
 
 
-def _read_value(project: Entity | None, field_name: str) -> str | None:
-    return next(iter(_read_values(project, field_name)), None)
-
-
 def _read_role_binding(project: Entity, value: str) -> tuple[str, str]:
     slot, separator, name = value.partition(BINDING_SEPARATOR)
     if not separator or not slot.strip() or not name.strip():
@@ -84,17 +81,17 @@ def _read_role_binding(project: Entity, value: str) -> tuple[str, str]:
 def _read_bindings(project: Entity | None) -> RoleBindings:
     if project is None:
         return NO_PROJECT_BINDINGS
-    path = _read_value(project, "PATH")
+    path = read_project_field(project, "PATH")
     return RoleBindings(
         project=project.name,
         roles=dict(_read_role_binding(project, value) for value in _read_values(project, "ROLE")),
-        roleset=_read_value(project, "ROLESET"),
+        roleset=read_project_field(project, "ROLESET"),
         project_path=None if path is None else Path(path),
     )
 
 
 def _locate_cwd(cwd: str | None, project: Entity | None) -> Path:
-    project_path = _read_value(project, "PATH")
+    project_path = read_project_field(project, "PATH")
     if cwd is not None:
         directory = Path(cwd).absolute()
     elif project_path is not None:
