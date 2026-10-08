@@ -9,6 +9,7 @@ from brigade.roles.check_front_matter import check_front_matter
 from brigade.roles.list_built_in_role_files import list_built_in_role_files
 from brigade.roles.list_machine_role_files import list_machine_role_files
 from brigade.roles.parse_role_file import RoleFile, RoleFileUnreadable, parse_role_file
+from brigade.runtime import Runtime
 from brigade.system.read_optional_configuration import read_optional_configuration
 
 CONFIGURATION_FILE = "config.toml"
@@ -115,7 +116,7 @@ def _describe_agent(entity: Entity, slot: str) -> dict:
     return {"name": entity.name, "slot": slot, **declared}
 
 
-def _read_agent(name: str, slot: str, root: Path, runtime) -> RoleFile:
+def _read_agent(name: str, slot: str, root: Path, runtime: Runtime) -> RoleFile:
     front_matter = _describe_agent(read_entity(runtime.run_process, root, AGENT_TYPE, name), slot)
     problems = check_front_matter(front_matter)
     if problems:
@@ -174,7 +175,7 @@ def _locate_roleset(bindings: RoleBindings) -> Path:
     return bindings.project_path / directory
 
 
-def _list_sources(slot: str, bindings: RoleBindings, runtime) -> list[RoleSource]:
+def _list_sources(slot: str, bindings: RoleBindings, runtime: Runtime) -> list[RoleSource]:
     if bindings.roleset == BUILT_IN_ROLESET:
         return [_create_built_in_source()]
     if bindings.roleset is not None and bindings.roleset != CORPUS_ROLESET:
@@ -206,7 +207,7 @@ def _resolve_bound_name(slot: str, bindings: RoleBindings, sources: list[RoleSou
     raise BrigadeError(f"@PROJECT.{bindings.project} binds {slot} to {name}, a role found nowhere")
 
 
-def resolve_role(slot: str, runtime, bindings: RoleBindings) -> ResolvedRole:
+def resolve_role(slot: str, runtime: Runtime, bindings: RoleBindings) -> ResolvedRole:
     sources = _list_sources(slot, bindings, runtime)
     if slot in bindings.roles:
         return _resolve_bound_name(slot, bindings, sources)

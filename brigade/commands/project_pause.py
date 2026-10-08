@@ -1,5 +1,6 @@
 from brigade.command import Argument, Command
 from brigade.registry.change_project_status import change_project_status
+from brigade.runtime import Runtime
 
 STATUS = "paused"
 
@@ -19,7 +20,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def project_pause(request, runtime) -> dict:
+def project_pause(request, runtime: Runtime) -> dict:
     return change_project_status(runtime, request.name, STATUS)
 
 

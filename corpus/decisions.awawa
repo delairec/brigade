@@ -460,7 +460,9 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		+ "temporary directory; tests/unit the pure functions; tests/guards the import graph, the"
 		+ "environment reads and the README table"
 	DESC "public functions, dataclasses and plugin operations carry type annotations read by the"
-		+ "IDE; no checker runs in CI; adopting one is a tool introduction discussed with the user"
+		+ "IDE; every parameter named runtime, private functions included, is annotated runtime:"
+		+ "Runtime, which the guard tests/guards/find_unannotated_runtimes.py proves; no checker"
+		+ "runs in CI; adopting one is a tool introduction discussed with the user"
 	DESC "binds every code task from @TASK.B02; @TASK.B42 writes the guards, @TASK.B21 the"
 		+ "integration fixtures"
 		REF @TASK.B02
@@ -493,6 +495,10 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	SOURCE "brigade/add_command_parsers.py named in DESC 3 in pull request #56 of the brigade"
 		+ "repository, delivering @TASK.B82"
 		REF @TASK.B82
+	SOURCE "DESC 7 amended in pull request #65 of the brigade repository, delivering @TASK.B73, on"
+		+ "the user's ruling at its refinement: every function, private ones included, proven by a"
+		+ "guard"
+		REF @TASK.B73
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	TITLE "client, forge, scheduler, collector, check and output are plugin kinds resolved by name"
@@ -519,8 +525,8 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "the guard @TASK.B42 asks for, widened"
 		REF @TASK.B42
 	DESC "cli.py builds the runtime, once per command and once per round of tick --loop through a"
-		+ "factory it hands that command: paths, clock, process runner, resolver; the renderers of"
-		+ "a command are declared by its module, as"
+		+ "factory it hands that command: paths, clock, process runner, spawner, resolver; the"
+		+ "renderers of a command are declared by its module, as"
 		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable sets; the"
 		+ "commands resolve the plugins through the runtime's resolver, and a core function"
 		+ "receives resolved plugin objects as arguments and resolves nothing itself, as @TASK.B73"
@@ -572,6 +578,12 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	SOURCE "the user's ruling of 2026-10-07 at the refinement of @TASK.B76, amending DESC 1: an"
 		+ "executable forge or scheduler is post-MVP comfort, F7 of the foundations review"
 		REF @TASK.B76
+	REJECTED "a unit test of run_segment patching spawn_process in its module: a global module"
+		+ "mock, which the rule production_signature_not_deformed_for_test of the instructions"
+		+ "corpus refuses; the runtime carries the spawner as it carries the process runner"
+	SOURCE "the spawner added to DESC 5 in pull request #65 of the brigade repository, delivering"
+		+ "@TASK.B73"
+		REF @TASK.B73
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
@@ -1692,3 +1704,28 @@ DECISION EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHande
 		+ "potentiellement les améliorations non indispensables pourront être implémentée en"
 		+ "utilisant brigade justement.\""
 		REF @TASK.B107
+
+DECISION TheClientIsAskedThroughOneFunctionAndTheConfigurationIsReadOncePerCommand
+	TITLE "a client is asked through one function, ask_named_client, which receives the resolved"
+		+ "client and the configuration; a command reads config.toml once and passes the record"
+		+ "down"
+	STATUS active
+	DESC "the command modules that ask a client read config.toml once, through"
+		+ "read_configured_client or read_optional_configuration, resolve the client through the"
+		+ "runtime's resolver and pass the resolved client and the Configuration record to"
+		+ "ask_named_client, which completes the question and resolves nothing"
+		REF @TASK.B73
+	DESC "the ask of a client goes through one function of brigade/system; the configuration"
+		+ "travels from the command that read it and the system layer parses no file"
+		REF @TASK.B77
+	REJECTED "a second ask function, ask_configured_client, reading config.toml itself or kept as"
+		+ "an alias of ask_named_client: every command already reads the configuration for the"
+		+ "client's name, so it would parse the file twice, and its name no longer guaranteed that"
+		+ "the client passed was the configured one"
+	RATIONALE "the review of pull request #65 found the double read new in @TASK.B73 and the name"
+		+ "dishonest; the draft @TASK.B77 planned to keep the function as an alias, which would"
+		+ "have re-introduced it"
+		REF @TASK.B73
+		REF @TASK.B77
+	SOURCE "the review of pull request #65, 2026-10-08, run 20261008T005404Z-e7730d"
+		REF @TASK.B73

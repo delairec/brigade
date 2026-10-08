@@ -11,11 +11,12 @@ from brigade.runs.run_locations import (
     STDERR_FILE,
     STDOUT_FILE,
 )
+from brigade.runtime import Runtime
 from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.create_directory import create_directory
 from brigade.system.process_trace import CUT, EXITED, ProcessTrace
-from brigade.system.spawn_process import SpawnRequest, spawn_process
+from brigade.system.spawn_process import SpawnRequest
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 from brigade.system.write_text_file import write_text_file
 
@@ -60,8 +61,9 @@ def _describe_role(plan: RunPlan) -> dict:
     }
 
 
-def _ask_client(plan: RunPlan, runtime, operation: str, request: dict) -> dict:
-    return ask_named_client(runtime, plan.configuration, ClientQuestion(plan.client, operation, request))
+def _ask_client(plan: RunPlan, runtime: Runtime, operation: str, request: dict) -> dict:
+    question = ClientQuestion(plan.client, operation, request)
+    return ask_named_client(plan.client_adapter, question, plan.configuration, runtime)
 
 
 def _describe_cut(plan: RunPlan, measured_ms: int) -> dict:
@@ -78,7 +80,7 @@ def _describe_cut(plan: RunPlan, measured_ms: int) -> dict:
     }
 
 
-def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
+def run_segment(plan: RunPlan, number: int, runtime: Runtime) -> SegmentRecord:
     segment_directory = plan.run_directory / SEGMENTS_DIRECTORY / str(number)
     create_directory(segment_directory)
     brief = _compose_segment_brief(plan, number)
@@ -105,7 +107,7 @@ def run_segment(plan: RunPlan, number: int, runtime) -> SegmentRecord:
         stderr=segment_directory / STDERR_FILE,
     )
     started = time.monotonic()
-    process = spawn_process(request, runtime.trail.append)
+    process = runtime.spawn_process(request)
     exit_code = wait_within_limit(
         process, WallLimit(limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S)
     )

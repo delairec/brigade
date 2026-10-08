@@ -1,5 +1,6 @@
 from brigade.command import Command
 from brigade.runs.list_runs import list_runs
+from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -30,7 +31,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def runs_list(request, runtime) -> dict:
+def runs_list(request, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "runs": list_runs(runtime.paths.state_root)}
 
 

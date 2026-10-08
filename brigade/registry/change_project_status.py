@@ -4,12 +4,13 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.registry.set_project_status import set_project_status
+from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
 ACTIONS = {"paused": "pause", "active": "resume"}
 
 
-def _build_rewrite(runtime, name: str, status: str):
+def _build_rewrite(runtime: Runtime, name: str, status: str):
     def rewrite(text: str) -> str | None:
         project = find_project(read_projects(runtime), name)
         if any(field.name == "STATUS" and field.value == status for field in project.fields):
@@ -22,7 +23,7 @@ def _build_rewrite(runtime, name: str, status: str):
     return rewrite
 
 
-def change_project_status(runtime, name: str, status: str) -> dict:
+def change_project_status(runtime: Runtime, name: str, status: str) -> dict:
     require_operational_corpus(runtime.paths.config_root)
     changed = change_registry(
         runtime, f"brigade project {ACTIONS[status]}: {name}", _build_rewrite(runtime, name, status)

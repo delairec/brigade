@@ -25,6 +25,14 @@ SHOP_BUILDER = (
 )
 
 
+def _refuse_spawn(request):
+    raise AssertionError(f"resolve_role spawned {request.argv}")
+
+
+def _refuse_resolution(kind: str, name: str):
+    raise AssertionError(f"resolve_role resolved the {kind} plugin {name}")
+
+
 def _keep_no_trace(trace) -> None:
     pass
 
@@ -124,10 +132,12 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
     def create_runtime(self, run_process) -> Runtime:
         return Runtime(
             run_process=run_process,
+            spawn_process=_refuse_spawn,
             paths=self.paths,
             now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
             entry_point=Path("/srv/brigade/bin/brigade"),
             trail=TrailWriter(_keep_no_trace),
+            resolve_plugin=_refuse_resolution,
         )
 
     def test_should_let_a_missing_awawa_through_rather_than_look_elsewhere(self):

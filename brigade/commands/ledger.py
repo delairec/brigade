@@ -9,6 +9,7 @@ from brigade.ledger.describe_skipped_lines import describe_skipped_lines
 from brigade.ledger.describe_wave import describe_wave
 from brigade.ledger.format_steps_line import format_steps_line
 from brigade.ledger.read_ledger import read_ledger
+from brigade.runtime import Runtime
 from brigade.system.read_since import read_since
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -121,7 +122,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def ledger(request, runtime) -> dict:
+def ledger(request, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     if request.wave is not None:
         view = describe_wave(reading, request.wave)

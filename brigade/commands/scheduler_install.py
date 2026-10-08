@@ -3,11 +3,11 @@ from pathlib import Path
 
 from brigade.command import Command
 from brigade.errors import ToolNotFound
+from brigade.runtime import Runtime
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
-from brigade.system.resolve_plugin import resolve_plugin
 
 DOCUMENT_SCHEMA_VERSION = 1
 CONFIGURATION_FILE = "config.toml"
@@ -15,7 +15,7 @@ LOG_FILE = "tick.log"
 CHOOSERS = {"configuration": "config.toml", "probe": "the probe of the user systemd instance"}
 
 
-def _probe_scheduler(runtime) -> str:
+def _probe_scheduler(runtime: Runtime) -> str:
     try:
         systemd_state = read_user_systemd_state(runtime.run_process)
     except ToolNotFound:
@@ -23,7 +23,7 @@ def _probe_scheduler(runtime) -> str:
     return "systemd" if systemd_state in SYSTEMD_STATES_FIT_FOR_TIMERS else "cron"
 
 
-def _describe_install_request(runtime) -> dict:
+def _describe_install_request(runtime: Runtime) -> dict:
     paths = runtime.paths
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -59,14 +59,14 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def scheduler_install(request, runtime) -> dict:
+def scheduler_install(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
     if configuration.scheduler is not None:
         name, chosen_by = configuration.scheduler, "configuration"
     else:
         name, chosen_by = _probe_scheduler(runtime), "probe"
     answer = ask_scheduler(
-        resolve_plugin("scheduler", name, runtime),
+        runtime.resolve_plugin("scheduler", name),
         SchedulerQuestion(scheduler_name=name, operation="install", request=_describe_install_request(runtime)),
         runtime,
     )

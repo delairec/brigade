@@ -5,6 +5,7 @@ from brigade.ledger.describe_budgets import describe_budgets
 from brigade.ledger.describe_skipped_lines import describe_skipped_lines
 from brigade.ledger.format_steps_line import format_steps_line
 from brigade.ledger.read_ledger import read_ledger
+from brigade.runtime import Runtime
 from brigade.system.read_positive_count import read_positive_count
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -29,7 +30,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def ledger_budgets(request, runtime) -> dict:
+def ledger_budgets(request, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

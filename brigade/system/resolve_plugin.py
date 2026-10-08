@@ -20,6 +20,12 @@ CLIENT_ENTRY_POINT = "answer"
 
 
 @dataclass(frozen=True)
+class PluginSources:
+    executable_search_path: str
+    run_process: Callable[[ProcessRequest], ProcessRecord]
+
+
+@dataclass(frozen=True)
 class ClientExecutableCaller:
     name: str
     executable: str
@@ -54,15 +60,15 @@ def _resolve_built_in(kind: str, name: str):
     return plugin
 
 
-def _resolve_client(name: str, runtime):
+def _resolve_client(name: str, sources: PluginSources):
     missing = BrigadeError(
         f"no client adapter {name}: no built-in module and no {CLIENT_EXECUTABLE_PREFIX}{name} on PATH"
     )
     if not CLIENT_NAME_PATTERN.fullmatch(name):
         raise missing
-    executable = shutil.which(f"{CLIENT_EXECUTABLE_PREFIX}{name}", path=runtime.paths.executable_search_path)
+    executable = shutil.which(f"{CLIENT_EXECUTABLE_PREFIX}{name}", path=sources.executable_search_path)
     if executable is not None:
-        return ClientExecutableCaller(name=name, executable=executable, run_process=runtime.run_process)
+        return ClientExecutableCaller(name=name, executable=executable, run_process=sources.run_process)
     modules = (_import_module(package, name.replace("-", "_")) for package in CLIENT_PACKAGES)
     plugin = next((module for module in modules if hasattr(module, CLIENT_ENTRY_POINT)), None)
     if plugin is None:
@@ -70,9 +76,9 @@ def _resolve_client(name: str, runtime):
     return plugin
 
 
-def resolve_plugin(kind: str, name: str, runtime):
+def resolve_plugin(kind: str, name: str, sources: PluginSources):
     if kind in BUILT_IN_ENTRY_POINTS:
         return _resolve_built_in(kind, name)
     if kind == "client":
-        return _resolve_client(name, runtime)
+        return _resolve_client(name, sources)
     raise BrigadeError(f"no plugin kind {kind}")

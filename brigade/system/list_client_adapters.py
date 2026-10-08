@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
 
+from brigade.runtime import Runtime
 from brigade.system.resolve_plugin import (
     CLIENT_ENTRY_POINT,
     CLIENT_EXECUTABLE_PREFIX,
@@ -74,7 +75,7 @@ def _list_built_in_adapters(package: str) -> list[ClientAdapter]:
     ]
 
 
-def list_client_adapters(runtime) -> tuple[ClientAdapter, ...]:
+def list_client_adapters(runtime: Runtime) -> tuple[ClientAdapter, ...]:
     candidates = [
         *(
             ClientAdapter(name=name, audience=SUPPORTED_CLIENT)

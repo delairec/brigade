@@ -1,5 +1,6 @@
 from brigade.command import Argument, Command
 from brigade.runs.read_run_logs import read_run_logs
+from brigade.runtime import Runtime
 from brigade.system.read_positive_count import read_positive_count
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -17,7 +18,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def runs_logs(request, runtime) -> dict:
+def runs_logs(request, runtime: Runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "run": request.run,

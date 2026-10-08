@@ -1,5 +1,6 @@
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError, UsageError
+from brigade.runtime import Runtime
 from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.list_client_adapters import SUPPORTED_CLIENT, ClientAdapter, list_client_adapters
@@ -55,10 +56,13 @@ def _grade_capabilities(probe: dict) -> dict:
     }
 
 
-def _describe_adapter(runtime, configuration: Configuration, adapter: ClientAdapter) -> dict:
+def _describe_adapter(runtime: Runtime, configuration: Configuration, adapter: ClientAdapter) -> dict:
     row = {"name": adapter.name, "audience": adapter.audience}
     try:
-        probe = ask_named_client(runtime, configuration, ClientQuestion(adapter.name, PROBE_OPERATION, PROBE_REQUEST))
+        client = runtime.resolve_plugin("client", adapter.name)
+        probe = ask_named_client(
+            client, ClientQuestion(adapter.name, PROBE_OPERATION, PROBE_REQUEST), configuration, runtime
+        )
     except BrigadeError as error:
         return {**row, "capabilities": NO_CAPABILITIES, "error": str(error)}
     return {**row, "capabilities": _grade_capabilities(probe), "error": NO_ERROR}
@@ -148,7 +152,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def adapter_matrix(request, runtime) -> dict:
+def adapter_matrix(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
     rows = [_describe_adapter(runtime, configuration, adapter) for adapter in list_client_adapters(runtime)]
     return {"schema_version": SCHEMA_VERSION, "adapters": sorted(rows, key=_order_row), "fallbacks": FALLBACKS}

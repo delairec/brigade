@@ -1,4 +1,5 @@
 import argparse
+import functools
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -8,6 +9,7 @@ from brigade.commands.adapter_matrix import adapter_matrix
 from brigade.errors import ToolFailure
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
+from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.system.trail_writer import TrailWriter
 
@@ -19,6 +21,10 @@ BARE_PROBE = (
 
 def _keep_no_trace(trace) -> None:
     pass
+
+
+def _refuse_spawn(request):
+    raise AssertionError(f"the matrix spawned {request.argv}")
 
 
 def _time_out(request: ProcessRequest):
@@ -39,8 +45,10 @@ class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
         executable = search_directory / "brigade-client-bare"
         executable.write_text("#!/bin/sh\n")
         executable.chmod(0o755)
+        sources = PluginSources(executable_search_path=str(search_directory), run_process=_answer_the_bare_probe)
         self.runtime = Runtime(
             run_process=_answer_the_bare_probe,
+            spawn_process=_refuse_spawn,
             paths=Paths(
                 config_root=root / "config" / "brigade",
                 state_root=root / "state" / "brigade",
@@ -51,6 +59,7 @@ class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
             now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
             entry_point=Path("/srv/brigade/bin/brigade"),
             trail=TrailWriter(_keep_no_trace),
+            resolve_plugin=functools.partial(resolve_plugin, sources=sources),
         )
 
     def test_should_grade_absent_an_operation_with_no_fallback(self):
@@ -89,8 +98,10 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
         self.executable = search_directory / "brigade-client-slow"
         self.executable.write_text("#!/bin/sh\n")
         self.executable.chmod(0o755)
+        sources = PluginSources(executable_search_path=str(search_directory), run_process=_time_out)
         self.runtime = Runtime(
             run_process=_time_out,
+            spawn_process=_refuse_spawn,
             paths=Paths(
                 config_root=root / "config" / "brigade",
                 state_root=root / "state" / "brigade",
@@ -101,6 +112,7 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
             now=datetime(2026, 10, 6, 9, 0, tzinfo=UTC),
             entry_point=Path("/srv/brigade/bin/brigade"),
             trail=TrailWriter(_keep_no_trace),
+            resolve_plugin=functools.partial(resolve_plugin, sources=sources),
         )
 
     def tearDown(self):

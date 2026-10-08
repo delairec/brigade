@@ -1,7 +1,7 @@
 from brigade.command import Command
+from brigade.runtime import Runtime
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
-from brigade.system.resolve_plugin import resolve_plugin
 from brigade.tick.read_heartbeat import read_heartbeat
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -10,11 +10,11 @@ NO_SCHEDULER = "none"
 HEARTBEAT_NAME = "tick.json"
 
 
-def _find_installed(runtime):
+def _find_installed(runtime: Runtime):
     request = {"schema_version": DOCUMENT_SCHEMA_VERSION, "unit_directory": str(locate_unit_directory(runtime.paths))}
     for name in SCHEDULERS_ASKED:
         status = ask_scheduler(
-            resolve_plugin("scheduler", name, runtime),
+            runtime.resolve_plugin("scheduler", name),
             SchedulerQuestion(scheduler_name=name, operation="read_status", request=request),
             runtime,
         )
@@ -23,7 +23,7 @@ def _find_installed(runtime):
     return NO_SCHEDULER, {"unit_files": [], "cron_line": None, "next_activation": None}
 
 
-def _describe_last_tick(runtime):
+def _describe_last_tick(runtime: Runtime):
     heartbeat = read_heartbeat(runtime.paths.state_root / HEARTBEAT_NAME)
     if heartbeat is None:
         return None
@@ -54,7 +54,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def scheduler_status(request, runtime) -> dict:
+def scheduler_status(request, runtime: Runtime) -> dict:
     name, status = _find_installed(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

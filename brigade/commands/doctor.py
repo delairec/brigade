@@ -7,10 +7,12 @@ from brigade.corpus.read_awawa_version import read_awawa_version
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
-from brigade.system.ask_configured_client import ask_configured_client
+from brigade.runtime import Runtime
+from brigade.system.ask_client import ClientQuestion
+from brigade.system.ask_named_client import ask_named_client
+from brigade.system.read_configured_client import read_configured_client
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
-from brigade.system.resolve_plugin import resolve_plugin
 from brigade.system.run_process import ProcessRequest
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -46,7 +48,7 @@ def _check_python() -> dict:
     return _create_prerequisite("python", "ok", f"{running} (floor {_format_version(PYTHON_FLOOR)})")
 
 
-def _check_git(runtime) -> dict:
+def _check_git(runtime: Runtime) -> dict:
     try:
         version = read_git_version(runtime.run_process)
     except ToolNotFound:
@@ -61,7 +63,7 @@ def _read_release(version: str):
         return None
 
 
-def _check_awawa(runtime) -> dict:
+def _check_awawa(runtime: Runtime) -> dict:
     floor = _format_version(AWAWA_FLOOR)
     try:
         version = read_awawa_version(runtime.run_process)
@@ -72,13 +74,19 @@ def _check_awawa(runtime) -> dict:
     return _create_prerequisite("awawa", state, f"{version} (floor {floor})")
 
 
-def _check_client(runtime) -> dict:
+def _probe_configured_client(runtime: Runtime) -> tuple[str, dict]:
+    configured = read_configured_client(runtime)
+    client = runtime.resolve_plugin("client", configured.name)
+    question = ClientQuestion(configured.name, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+    return configured.name, ask_named_client(client, question, configured.configuration, runtime)
+
+
+def _check_client(runtime: Runtime) -> dict:
     try:
-        probe = ask_configured_client(runtime, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+        name, probe = _probe_configured_client(runtime)
     except BrigadeError as error:
         return _create_prerequisite("client", "finding", str(error))
-    name = probe.client_name
-    version_argv = probe.document["version_argv"]
+    version_argv = probe["version_argv"]
     if version_argv is None:
         return _create_prerequisite("client", "ok", f"{name}: no client executable")
     try:
@@ -91,7 +99,7 @@ def _check_client(runtime) -> dict:
     return _create_prerequisite("client", "ok", f"{name}: {first_line}")
 
 
-def _check_scheduler(runtime) -> dict:
+def _check_scheduler(runtime: Runtime) -> dict:
     try:
         systemd_state = read_user_systemd_state(runtime.run_process)
     except ToolNotFound:
@@ -103,8 +111,8 @@ def _check_scheduler(runtime) -> dict:
     return _create_optional("scheduler", "warning", f"no user systemd instance ({systemd_state})", SCHEDULER_FALLBACK)
 
 
-def _check_forge(runtime) -> dict:
-    forge = resolve_plugin("forge", "github", runtime)
+def _check_forge(runtime: Runtime) -> dict:
+    forge = runtime.resolve_plugin("forge", "github")
     try:
         account = forge.describe_account({"schema_version": 1}, runtime)
     except ToolNotFound:
@@ -114,7 +122,7 @@ def _check_forge(runtime) -> dict:
     return _create_optional("forge", "ok", f"gh as {account['login']}", FORGE_FALLBACK)
 
 
-def _check_awawa_web(runtime) -> dict:
+def _check_awawa_web(runtime: Runtime) -> dict:
     try:
         runtime.run_process(
             ProcessRequest(argv=("awawa-web", "--help"), cwd=PROBE_DIRECTORY, timeout_s=PROBE_TIMEOUT_S)
@@ -128,7 +136,7 @@ def _describe_instructions(state: str, detail: str) -> dict:
     return _create_optional("instructions", state, detail, INSTRUCTIONS_FALLBACK)
 
 
-def _check_instructions(runtime) -> dict:
+def _check_instructions(runtime: Runtime) -> dict:
     try:
         configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
         if configuration.instructions is None:
@@ -141,14 +149,14 @@ def _check_instructions(runtime) -> dict:
     return _describe_instructions("warning", f"lint --strict fails in {configuration.instructions}")
 
 
-def _check_steps(runtime) -> list[dict]:
+def _check_steps(runtime: Runtime) -> list[dict]:
     try:
-        probe = ask_configured_client(runtime, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+        name, probe = _probe_configured_client(runtime)
     except BrigadeError:
         return []
-    if STEP_COUNT_FEATURE in probe.document["features"]:
+    if STEP_COUNT_FEATURE in probe["features"]:
         return []
-    detail = f"{probe.client_name} counts no steps: the budget is held on the clock and the run cut at its limit"
+    detail = f"{name} counts no steps: the budget is held on the clock and the run cut at its limit"
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
 
 
@@ -193,7 +201,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def doctor(request, runtime) -> dict:
+def doctor(request, runtime: Runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "items": [
