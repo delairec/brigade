@@ -65,7 +65,7 @@ def _describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
         session=result.session_id,
         steps=result.steps if plan.counts_steps else None,
         duration_ms=record.measured_ms if result.duration_ms is None else result.duration_ms,
-        usage=None if result.usage is None else result.usage.to_document(),
+        usage=result.usage,
         outcome=result.outcome,
         error_class=result.error_class,
         exit=record.exit_code,

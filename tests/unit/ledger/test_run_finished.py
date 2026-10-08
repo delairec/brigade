@@ -1,6 +1,7 @@
 import unittest
 
 from brigade.ledger.run_finished import RunFinished
+from brigade.system.token_usage import TokenUsage
 
 RUN_OF_A_WAVE_WITH_ITS_MEASURES = {
     "run": "20261008T090000Z-b74a01",
@@ -111,4 +112,19 @@ class RunFinishedTest(unittest.TestCase):
                 "task": None,
                 "nulls": {"project": "no project given"},
             },
+        )
+
+    def test_should_read_the_usage_as_a_token_usage(self):
+        # Act
+        finished = RunFinished.from_document(RUN_OF_A_WAVE_WITH_ITS_MEASURES)
+
+        # Assert
+        self.assertEqual(
+            finished.usage,
+            TokenUsage(
+                input_tokens=1200,
+                output_tokens=340,
+                cache_creation_input_tokens=50,
+                cache_read_input_tokens=9000,
+            ),
         )

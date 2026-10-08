@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+from brigade.system.token_usage import TokenUsage
+
 
 @dataclass(frozen=True)
 class RunFinished:
@@ -15,7 +17,7 @@ class RunFinished:
     session: str | None
     steps: int | None
     duration_ms: int
-    usage: dict | None
+    usage: TokenUsage | None
     outcome: str
     error_class: str | None
     exit: int | None
@@ -27,6 +29,7 @@ class RunFinished:
 
     @classmethod
     def from_document(cls, document: dict) -> "RunFinished":
+        usage = document["usage"]
         return cls(
             run=document["run"],
             segment=document["segment"],
@@ -38,7 +41,7 @@ class RunFinished:
             session=document["session"],
             steps=document["steps"],
             duration_ms=document["duration_ms"],
-            usage=document["usage"],
+            usage=None if usage is None else TokenUsage.from_document(usage),
             outcome=document["outcome"],
             error_class=document["error_class"],
             exit=document["exit"],
@@ -65,7 +68,7 @@ class RunFinished:
             "session": self.session,
             "steps": self.steps,
             "duration_ms": self.duration_ms,
-            "usage": self.usage,
+            "usage": None if self.usage is None else self.usage.to_document(),
             "outcome": self.outcome,
             "error_class": self.error_class,
             "exit": self.exit,
