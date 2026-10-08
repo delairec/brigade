@@ -5,6 +5,7 @@ from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.task_parked import TaskParked
+from brigade.ledger.undeclared_event import UndeclaredEvent
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
@@ -25,3 +26,16 @@ DECLARED_EVENTS = {
         ConstraintDelivered,
     )
 }
+LedgerEvent = (
+    RunFinished
+    | WaveStarted
+    | WavePaused
+    | WaveResumed
+    | TaskParked
+    | PrMerged
+    | OrderDone
+    | SignalRecorded
+    | PatternRatified
+    | ConstraintDelivered
+    | UndeclaredEvent
+)
