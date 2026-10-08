@@ -1752,5 +1752,8 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 		+ "every name the ledger holds"
 	REJECTED "one dataclass per answer of launch-argv and resume-argv: two identical declarations"
 		+ "of one shape"
+	REJECTED "one kind for result.json and the parse-result answer: the outcome of result.json"
+		+ "admits wall_limit, the cut brigade decides when the wall limit expires, and the client"
+		+ "answer never carries it; the two shapes differ, and RunResult stays a kind of its own"
 	SOURCE "pull request #68 of the brigade repository, delivering @TASK.B74"
 		REF @TASK.B74
