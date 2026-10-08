@@ -5140,3 +5140,80 @@ TASK B108
 		+ "and carries AFTER @TASK.B84 and AFTER @TASK.B102"
 		REF @TASK.B84
 		REF @TASK.B102
+
+TASK B109
+	TITLE "A brigade run that receives SIGTERM or SIGINT stops the client's process group, with the"
+		+ "grace and the kill of the wall limit, and ends the run on the outcome stopped, so that"
+		+ "no client outlives its run"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE ada
+	DESC "to settle in the refinement: the exit code of stopped in the ranges of"
+		+ "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity; whether brigade runs stop"
+		+ "<run> is added beside list and logs, sending the signal to the pid of runs/<id>/pid, or"
+		+ "the signal stays the user's kill; what a signal received between two segments or before"
+		+ "the client is spawned ends on; the outcome of the client's record in processes.jsonl,"
+		+ "cut as at the wall limit or one of its own"
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+	SPEC "brigade run that receives SIGTERM or SIGINT while a segment runs sends SIGTERM to the"
+		+ "process group of the client, waits the grace the wall limit waits, 30 s, sends SIGKILL"
+		+ "to the group when the client still lives, and waits for the process: when brigade run"
+		+ "exits, no process of the client's group lives"
+	SPEC "the segment ends with the outcome stopped: run.finished is appended with outcome stopped,"
+		+ "its exit null and its nulls naming the stop, as those of a segment cut at the wall limit"
+		+ "name the cut; no further segment is launched, whatever the progress file holds;"
+		+ "result.json is written with outcome stopped, after the ledger events, and brigade run"
+		+ "exits with the code of stopped, never 0"
+	SPEC "a detached run is stopped the same way by a SIGTERM or SIGINT sent to the pid of"
+		+ "runs/<id>/pid, the process brigade run --detach re-executes; brigade runs list then"
+		+ "shows it finished with outcome stopped, never dead"
+	SPEC "tests/cli prove it through the fake client with a delay: a detached run sent SIGTERM"
+		+ "through the pid of runs/<id>/pid ends with the client's process gone, result.json"
+		+ "carrying outcome stopped, one run.finished event with outcome stopped and brigade runs"
+		+ "list showing the run finished; a foreground run sent SIGINT ends the same way; a client"
+		+ "that ignores SIGTERM is killed after the grace, in a unit row with a short grace as"
+		+ "tests/unit/system/test_wait_within_limit.py proves the wall limit"
+	AFTER @TASK.B102
+	RATIONALE "observed on 2026-10-08 on run 20261008T204748Z-bd168e, brigade run --slot build"
+		+ "--detach awawa-pr-review-round pr=68, client vibe, cwd"
+		+ "/home/chillie/Web/brigade/.claude/worktrees/b74: kill -TERM on the brigade process, pid"
+		+ "153444 read from the pid file of the run, ended brigade; its client child Vibe CLI, pid"
+		+ "153457, survived, reparented to pid 1249, still running in the worktree and able to keep"
+		+ "editing it, and was killed by hand; brigade runs list then showed the run dead, and the"
+		+ "run directory holds no result.json"
+	RATIONALE "read at ac93cd8: brigade/system/spawn_process.py:61 spawns the client with"
+		+ "start_new_session=True, in a session and a process group of its own, so that a SIGINT of"
+		+ "the terminal reaches brigade alone; os.killpg is called in"
+		+ "brigade/system/wait_within_limit.py:15-25 alone, on the wall limit;"
+		+ "brigade/system/repeat_until_signalled.py:7 handles SIGTERM and SIGINT for the tick loop"
+		+ "alone, and nothing in brigade run handles them; brigade runs offers list and logs,"
+		+ "brigade/commands/runs_list.py and brigade/commands/runs_logs.py, and no command stops a"
+		+ "run"
+	RATIONALE "the decisions the code departs from:"
+		+ "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity, every end of a run has its"
+		+ "outcome and its code, where a run stopped by a signal ends on none; DESC 4 of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa, liveness read from the"
+		+ "pid and the result file, which reads dead a run whose client still runs;"
+		+ "@DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap already sets the"
+		+ "signal, the grace and the kill of the client's group at the wall limit,"
+		+ "brigade/runs/run_segment.py:111-113, which a stop reuses"
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
+	RATIONALE "in @MILESTONE.F0: a finding of the first runs of brigade on itself, bringing the"
+		+ "code back to the decisions above, as the DESC of that milestone frames its tasks; after"
+		+ "@TASK.B102, which makes the outcome of a run that of its last segment in runs list,"
+		+ "run.finished and result.json and gives brigade run the exit code of each outcome, the"
+		+ "table stopped enters"
+		REF @MILESTONE.F0
+		REF @TASK.B102
+	RATIONALE "brigade runs stop <run> is left to the refinement: the user ruled on the task alone,"
+		+ "and a command beside the list and logs of @TASK.B06 is a ruling of its own; a stop by"
+		+ "signal, through the pid file every run keeps by"
+		+ "@DECISION.ThePidOfARunIsReplacedAtomically, needs no command"
+		REF @TASK.B06
+		REF @DECISION.ThePidOfARunIsReplacedAtomically
+	SOURCE "the user's words of 2026-10-08, « oui », to the question « Processus orphelin : quand"
+		+ "on tue brigade run, le client continue de tourner. Faut-il le consigner comme tâche"
+		+ "draft ? »"
