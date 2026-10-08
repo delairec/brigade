@@ -930,9 +930,24 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 	DESC "brigade init creates the operational corpus repository and config.toml only; every writer"
 		+ "creates its directory under $XDG_STATE_HOME/brigade/ or $XDG_CACHE_HOME/brigade/ when it"
 		+ "writes"
+	DESC "Paths exposes the paths shared by several components, configuration_file, lock_directory,"
+		+ "heartbeat_file and schema_file, built from its roots; a file or directory name used by"
+		+ "one component alone is declared in that component's module or its *_locations module"
+		REF @TASK.B77
+	DESC "only the command modules read config.toml, once per command, and pass the record down; a"
+		+ "guard of tests/guards checks the calls of its readers; the purge of the trails is the"
+		+ "one exception, as @DECISION.ATrailIsWrittenOnlyForWorkDoneAndThePurgeReadsTrailDaysAlone"
+		+ "rules"
+		REF @DECISION.ATrailIsWrittenOnlyForWorkDoneAndThePurgeReadsTrailDaysAlone
+		REF @TASK.B77
 	REJECTED "a BRIGADE_HOME variable: a second way to say what XDG already says"
 	REJECTED "init creating the state and cache directories, the Blueprint plan's step: a writer"
 		+ "relying on it breaks once the directory is deleted"
+	REJECTED "the shared names as constants of a module of their own, joined by every caller to a"
+		+ "root: each caller would still build the path, the join being what the decision places in"
+		+ "one place"
+	REJECTED "every file and directory name of brigade in one module: the names a single component"
+		+ "uses are its own and stay beside it"
 	REJECTED "a config set command rewriting the file: tomllib reads only; a writer without"
 		+ "round-trip loses the user's comments"
 	RATIONALE "DESC 3 and 4 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites already"
@@ -944,6 +959,9 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 	SOURCE "the user's ruling of 2026-10-05 in the refinement of B03"
 	SOURCE "the user's ruling of 2026-10-06 on pull request #24 of the brigade repository: one"
 		+ "export per module, the environment of the runner in a module of its own"
+	SOURCE "the user's rulings of 2026-10-09 at the refinement of B77: the shared names as derived"
+		+ "paths of Paths; config.toml read in the command modules alone, under a guard"
+		REF @TASK.B77
 
 DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	TITLE "every document brigade writes or reads carries an integer schema_version per kind, an"
