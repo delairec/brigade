@@ -25,6 +25,22 @@ RUN_RECORD = {
     "wall_limit_s": 1500.0,
     "arguments": {},
 }
+RUN_RECORD_WITHOUT_CLIENT = {
+    "schema_version": 1,
+    "run": RUN_ID,
+    "procedure": "deliver",
+    "procedure_path": "built-in",
+    "slot": "build",
+    "role": "builder",
+    "role_source": "built-in",
+    "project": None,
+    "cwd": "/home/user/tidepool",
+    "worktree": "/home/user/tidepool",
+    "capabilities": ["read"],
+    "budget": 40,
+    "wall_limit_s": 1500.0,
+    "arguments": {},
+}
 RUN_RESULT = {
     "schema_version": 1,
     "outcome": "done",
@@ -129,7 +145,7 @@ class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
             ("a record that is not JSON", "{", "is not a run record: not a JSON document"),
             (
                 "a record lacking its client",
-                json.dumps({key: value for key, value in RUN_RECORD.items() if key != "client"}),
+                json.dumps(RUN_RECORD_WITHOUT_CLIENT),
                 "is not a run record: lacks the key client",
             ),
         ]
