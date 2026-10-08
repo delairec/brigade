@@ -8,8 +8,11 @@ from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.runtime import Runtime
-from brigade.system.ask_client import ClientQuestion
+from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.client_question import ClientQuestion
+from brigade.system.probe_answer import ProbeAnswer
+from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configured_client import read_configured_client
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
@@ -21,6 +24,7 @@ PROBE_DIRECTORY = "/"
 PROBE_TIMEOUT_S = 10.0
 SCHEDULER_FALLBACK = "a cron line, or brigade tick --loop"
 FORGE_FALLBACK = "local mode without a forge"
+FORGE_NAME = "github"
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 CONFIGURATION_FILE = "config.toml"
@@ -74,10 +78,10 @@ def _check_awawa(runtime: Runtime) -> dict:
     return _create_prerequisite("awawa", state, f"{version} (floor {floor})")
 
 
-def _probe_configured_client(runtime: Runtime) -> tuple[str, dict]:
+def _probe_configured_client(runtime: Runtime) -> tuple[str, ProbeAnswer]:
     configured = read_configured_client(runtime)
     client = runtime.resolve_plugin("client", configured.name)
-    question = ClientQuestion(configured.name, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+    question = ClientQuestion(configured.name, ProbeRequest())
     return configured.name, ask_named_client(client, question, configured.configuration, runtime)
 
 
@@ -86,7 +90,7 @@ def _check_client(runtime: Runtime) -> dict:
         name, probe = _probe_configured_client(runtime)
     except BrigadeError as error:
         return _create_prerequisite("client", "finding", str(error))
-    version_argv = probe["version_argv"]
+    version_argv = probe.version_argv
     if version_argv is None:
         return _create_prerequisite("client", "ok", f"{name}: no client executable")
     try:
@@ -112,14 +116,14 @@ def _check_scheduler(runtime: Runtime) -> dict:
 
 
 def _check_forge(runtime: Runtime) -> dict:
-    forge = runtime.resolve_plugin("forge", "github")
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
     try:
-        account = forge.describe_account({"schema_version": 1}, runtime)
+        account = ask_forge_account(forge, FORGE_NAME, runtime)
     except ToolNotFound:
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
-    if account["login"] is None:
+    if account.login is None:
         return _create_optional("forge", "warning", "gh logged in to no account", FORGE_FALLBACK)
-    return _create_optional("forge", "ok", f"gh as {account['login']}", FORGE_FALLBACK)
+    return _create_optional("forge", "ok", f"gh as {account.login}", FORGE_FALLBACK)
 
 
 def _check_awawa_web(runtime: Runtime) -> dict:
@@ -154,7 +158,7 @@ def _check_steps(runtime: Runtime) -> list[dict]:
         name, probe = _probe_configured_client(runtime)
     except BrigadeError:
         return []
-    if STEP_COUNT_FEATURE in probe["features"]:
+    if STEP_COUNT_FEATURE in probe.features:
         return []
     detail = f"{name} counts no steps: the budget is held on the clock and the run cut at its limit"
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]

@@ -72,11 +72,11 @@ def scheduler_install(request, runtime: Runtime) -> dict:
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "scheduler": answer["scheduler"],
+        "scheduler": answer.scheduler,
         "chosen_by": chosen_by,
-        "unit_files": answer["unit_files"],
-        "cron_line": answer["cron_line"],
-        "keep_running": answer["keep_running"],
+        "unit_files": list(answer.unit_files),
+        "cron_line": answer.cron_line,
+        "keep_running": answer.keep_running,
     }
 
 

@@ -1,8 +1,9 @@
 from brigade.command import Command
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
 from brigade.runtime import Runtime
-from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.client_question import ClientQuestion
+from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import SLOTS
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.render_table import render_table
@@ -19,8 +20,8 @@ def _read_bound_models(runtime: Runtime) -> dict:
     if configuration.client is None:
         return NO_MODEL_BOUND
     client = runtime.resolve_plugin("client", configuration.client)
-    question = ClientQuestion(configuration.client, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
-    return ask_named_client(client, question, configuration, runtime)["models"]
+    question = ClientQuestion(configuration.client, ProbeRequest())
+    return ask_named_client(client, question, configuration, runtime).models
 
 
 def _render_row(row: dict) -> tuple[str, ...]:

@@ -14,11 +14,11 @@ from brigade.runs.read_run_setting import RunSetting
 from brigade.runs.resolve_procedure import Procedure, ProcedureDirectories, resolve_procedure
 from brigade.runs.run_locations import DISPOSABLE_WORKTREE_DIRECTORY, RUNS_DIRECTORY
 from brigade.runtime import Runtime
-from brigade.system.ask_client import ClientQuestion
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.client_question import ClientQuestion
+from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import Configuration
 
-PROBE_REQUEST = {"schema_version": 1}
 SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
 STEP_COUNT_FEATURE = "step_count"
 TOOL_GRANTS_FEATURE = "tool_grants"
@@ -65,9 +65,7 @@ class RunPlan:
     warnings: tuple[str, ...]
 
 
-def _read_values(project: Entity | None, field_name: str) -> list[str]:
-    if project is None:
-        return []
+def _read_values(project: Entity, field_name: str) -> list[str]:
     return [field.value for field in project.fields if field.name == field_name]
 
 
@@ -147,8 +145,8 @@ def plan_run(request: RunRequest, setting: RunSetting, client_adapter, runtime: 
     role = resolve_role(request.slot, runtime, _read_bindings(project))
     role_capabilities = _read_role_capabilities(role)
     capabilities = tuple(capability for capability in procedure.capabilities if capability in role_capabilities)
-    probe = ask_named_client(client_adapter, ClientQuestion(client, "probe", PROBE_REQUEST), configuration, runtime)
-    features = probe["features"]
+    probe = ask_named_client(client_adapter, ClientQuestion(client, ProbeRequest()), configuration, runtime)
+    features = probe.features
     counts_steps = STEP_COUNT_FEATURE in features
     cwd = _locate_cwd(request.cwd, project)
     brief_path, brief = _read_brief(request.brief)

@@ -1,11 +1,13 @@
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass, fields
 from datetime import datetime
 from pathlib import Path
 
-from brigade.ledger.declared_events import EVENT_FIELDS, LEDGER_SCHEMA_VERSION
+from brigade.ledger.declared_events import DECLARED_EVENTS, LEDGER_SCHEMA_VERSION
+from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.ledger_locations import LEDGER_DIRECTORY
+from brigade.ledger.undeclared_event import UndeclaredEvent
 from brigade.system.validate_document import KIND_NAMES, DocumentInvalid, Field, validate_document
 
 MONTH_FILE_NAME = re.compile(r"\d{4}-\d{2}\.jsonl")
@@ -17,13 +19,6 @@ ENVELOPE_SHAPE = {
     "event": Field((str,)),
 }
 DECLARED_FIELD = Field(tuple(KIND_NAMES), nullable=True)
-NO_DECLARED_FIELDS = ()
-
-
-@dataclass(frozen=True)
-class LedgerEntry:
-    instant: datetime
-    record: dict
 
 
 @dataclass(frozen=True)
@@ -54,6 +49,14 @@ def _read_instant(timestamp: str) -> datetime:
         raise refusal from None
 
 
+def _read_event(record: dict):
+    kind = DECLARED_EVENTS.get(record["event"])
+    if kind is None:
+        return UndeclaredEvent.from_document(record)
+    validate_document(record, {field.name: DECLARED_FIELD for field in fields(kind) if field.default is MISSING})
+    return kind.from_document(record)
+
+
 def _read_entry(text: str) -> LedgerEntry:
     try:
         record = json.loads(text)
@@ -62,11 +65,10 @@ def _read_entry(text: str) -> LedgerEntry:
     try:
         validate_document(record, ENVELOPE_SHAPE)
         instant = _read_instant(record["ts"])
-        declared_fields = EVENT_FIELDS.get(record["event"], NO_DECLARED_FIELDS)
-        validate_document(record, {field: DECLARED_FIELD for field in declared_fields})
+        event = _read_event(record)
     except DocumentInvalid as error:
         raise _LineRefused(str(error)) from None
-    return LedgerEntry(instant=instant, record=record)
+    return LedgerEntry(instant=instant, event=event)
 
 
 def _split_lines(content: str) -> list[str]:

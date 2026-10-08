@@ -6,6 +6,7 @@ from pathlib import Path
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
+from brigade.runs.run_result import RunResult
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
@@ -165,15 +166,14 @@ class RunSegmentTest(unittest.TestCase):
         self.assertEqual(record.exit_code, 0)
         self.assertEqual(
             record.result,
-            {
-                "schema_version": 1,
-                "outcome": "done",
-                "steps": 12,
-                "usage": None,
-                "session_id": "session-b73",
-                "duration_ms": 4200,
-                "error_class": None,
-                "reset": None,
-                "message": "the client finished the task",
-            },
+            RunResult(
+                outcome="done",
+                steps=12,
+                usage=None,
+                session_id="session-b73",
+                duration_ms=4200,
+                error_class=None,
+                reset=None,
+                message="the client finished the task",
+            ),
         )

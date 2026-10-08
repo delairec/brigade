@@ -1,0 +1,13 @@
+from dataclasses import dataclass
+
+from brigade.system.launch_argv_request import LaunchArgvRequest
+from brigade.system.parse_result_request import ParseResultRequest
+from brigade.system.probe_request import ProbeRequest
+from brigade.system.resume_argv_request import ResumeArgvRequest
+from brigade.system.transcripts_request import TranscriptsRequest
+
+
+@dataclass(frozen=True)
+class ClientQuestion:
+    client_name: str
+    request: ProbeRequest | LaunchArgvRequest | ResumeArgvRequest | ParseResultRequest | TranscriptsRequest

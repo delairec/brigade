@@ -1729,3 +1729,31 @@ DECISION TheClientIsAskedThroughOneFunctionAndTheConfigurationIsReadOncePerComma
 		REF @TASK.B77
 	SOURCE "the review of pull request #65, 2026-10-08, run 20261008T005404Z-e7730d"
 		REF @TASK.B73
+
+DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
+	TITLE "the dataclass of a ledger event declares every field brigade writes and a line must"
+		+ "carry them all; a measure no collector reported is absent, never null"
+	STATUS active
+	DESC "a run.finished line carries the 17 fields run_segments writes and a signal.recorded line"
+		+ "its 6; the reader refuses a line lacking one, as it refuses any line lacking a field of"
+		+ "its event"
+		REF @TASK.B74
+	DESC "steps_to_first_edit and oversized_output_steps are optional on RunFinished: absent from"
+		+ "the line until a collector reports them, and never written null"
+	DESC "an event the ledger does not declare is read as UndeclaredEvent, its name alone: the"
+		+ "overview counts it, and no wave or project view reads a key of its own"
+	DESC "the answers of launch-argv and resume-argv share one shape and one kind, ClientCommand"
+	REJECTED "keeping the nine fields of EVENT_FIELDS as the read contract of run.finished, the"
+		+ "others optional: the dataclass would declare fields a line may lack, and the reader"
+		+ "could not tell a damaged line from a complete one"
+	REJECTED "writing an unreported measure null: every null of run.finished carries its reason in"
+		+ "nulls, and a measure no collector exists for has none to give"
+	REJECTED "skipping an undeclared event as an unreadable line: the overview counts the events of"
+		+ "every name the ledger holds"
+	REJECTED "one dataclass per answer of launch-argv and resume-argv: two identical declarations"
+		+ "of one shape"
+	REJECTED "one kind for result.json and the parse-result answer: the outcome of result.json"
+		+ "admits wall_limit, the cut brigade decides when the wall limit expires, and the client"
+		+ "answer never carries it; the two shapes differ, and RunResult stays a kind of its own"
+	SOURCE "pull request #68 of the brigade repository, delivering @TASK.B74"
+		REF @TASK.B74

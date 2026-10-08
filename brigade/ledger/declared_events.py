@@ -1,15 +1,41 @@
+from brigade.ledger.constraint_delivered import ConstraintDelivered
+from brigade.ledger.order_done import OrderDone
+from brigade.ledger.pattern_ratified import PatternRatified
+from brigade.ledger.pr_merged import PrMerged
+from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.ledger.task_parked import TaskParked
+from brigade.ledger.undeclared_event import UndeclaredEvent
+from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_resumed import WaveResumed
+from brigade.ledger.wave_started import WaveStarted
+
 LEDGER_SCHEMA_VERSION = 1
-ENVELOPE_KEYS = ("schema_version", "ts", "event")
-RUN_FINISHED = "run.finished"
-EVENT_FIELDS = {
-    RUN_FINISHED: ("wave", "task", "procedure", "role", "slot", "segment", "outcome", "error_class", "steps"),
-    "wave.started": ("wave", "project"),
-    "wave.paused": ("wave",),
-    "wave.resumed": ("wave",),
-    "task.parked": ("wave", "task"),
-    "pr.merged": ("project", "wave", "task", "pr", "rounds"),
-    "order.done": ("project", "kind"),
-    "signal.recorded": ("project",),
-    "pattern.ratified": ("project",),
-    "constraint.delivered": ("project",),
+DECLARED_EVENTS = {
+    kind.name: kind
+    for kind in (
+        RunFinished,
+        WaveStarted,
+        WavePaused,
+        WaveResumed,
+        TaskParked,
+        PrMerged,
+        OrderDone,
+        SignalRecorded,
+        PatternRatified,
+        ConstraintDelivered,
+    )
 }
+LedgerEvent = (
+    RunFinished
+    | WaveStarted
+    | WavePaused
+    | WaveResumed
+    | TaskParked
+    | PrMerged
+    | OrderDone
+    | SignalRecorded
+    | PatternRatified
+    | ConstraintDelivered
+    | UndeclaredEvent
+)

@@ -15,6 +15,7 @@ from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
+from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
 from brigade.tick.run_rounds import Rounds, run_rounds
 
@@ -39,7 +40,7 @@ def _locate_trail(runtime: Runtime):
     return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(TRAIL_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
 
 
-def _tick(runtime: Runtime) -> dict | None:
+def _tick(runtime: Runtime) -> Heartbeat | None:
     started = time.monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
@@ -53,13 +54,12 @@ def _tick(runtime: Runtime) -> dict | None:
                 cap=ROUND_CAP,
             )
         )
-        heartbeat = {
-            "schema_version": DOCUMENT_SCHEMA_VERSION,
-            "ts": format_instant(runtime.now),
-            "duration_ms": int((time.monotonic() - started) * 1000),
-            "actions_applied": outcome.actions_applied,
-        }
-        write_json_atomically(_locate_heartbeat(runtime), heartbeat)
+        heartbeat = Heartbeat(
+            ts=format_instant(runtime.now),
+            duration_ms=int((time.monotonic() - started) * 1000),
+            actions_applied=outcome.actions_applied,
+        )
+        write_json_atomically(_locate_heartbeat(runtime), heartbeat.to_document())
     return heartbeat
 
 
@@ -70,9 +70,9 @@ def _tick_once(runtime: Runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "once",
-        "ts": heartbeat["ts"],
-        "duration_ms": heartbeat["duration_ms"],
-        "actions_applied": heartbeat["actions_applied"],
+        "ts": heartbeat.ts,
+        "duration_ms": heartbeat.duration_ms,
+        "actions_applied": heartbeat.actions_applied,
         "heartbeat": str(_locate_heartbeat(runtime)),
     }
 
@@ -95,8 +95,7 @@ def _tick_and_report(create_runtime: Callable[[], Runtime]) -> None:
         sys.stderr.write(f"brigade tick: another tick holds {_locate_lock(runtime)}\n")
         return
     sys.stderr.write(
-        f"brigade tick: {heartbeat['ts']}: {heartbeat['actions_applied']} actions applied"
-        f" in {heartbeat['duration_ms']} ms\n"
+        f"brigade tick: {heartbeat.ts}: {heartbeat.actions_applied} actions applied in {heartbeat.duration_ms} ms\n"
     )
     sys.stderr.flush()
 

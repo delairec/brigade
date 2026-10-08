@@ -2,17 +2,11 @@ import json
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.validate_document import DocumentInvalid, Field, validate_document
-
-HEARTBEAT_SHAPE = {
-    "schema_version": Field(kinds=(int,), values=(1,)),
-    "ts": Field(kinds=(str,)),
-    "duration_ms": Field(kinds=(int,)),
-    "actions_applied": Field(kinds=(int,)),
-}
+from brigade.system.validate_document import DocumentInvalid, validate_document
+from brigade.tick.heartbeat import HEARTBEAT_SHAPE, Heartbeat
 
 
-def read_heartbeat(path: Path) -> dict | None:
+def read_heartbeat(path: Path) -> Heartbeat | None:
     try:
         content = path.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -25,4 +19,4 @@ def read_heartbeat(path: Path) -> dict | None:
         validate_document(document, HEARTBEAT_SHAPE)
     except DocumentInvalid as problem:
         raise BrigadeError(f"{path} is not a heartbeat: {problem}") from None
-    return document
+    return Heartbeat.from_document(document)
