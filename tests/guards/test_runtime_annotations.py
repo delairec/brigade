@@ -44,6 +44,21 @@ class RuntimeAnnotationsGuardTest(unittest.TestCase):
                 "def read_projects(runtime: object) -> None:\n    pass\n",
                 "brigade/module.py:1 read_projects takes runtime without runtime: Runtime",
             ),
+            (
+                "a variadic parameter",
+                "def collect(*runtime) -> None:\n    pass\n",
+                "brigade/module.py:1 collect takes runtime without runtime: Runtime",
+            ),
+            (
+                "a keyword variadic parameter",
+                "def collect(**runtime) -> None:\n    pass\n",
+                "brigade/module.py:1 collect takes runtime without runtime: Runtime",
+            ),
+            (
+                "a lambda",
+                "handler = lambda runtime: None\n",
+                "brigade/module.py:1 a lambda takes runtime without runtime: Runtime",
+            ),
         ]
         for case, source, expected_violation in rows:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as root:
@@ -62,6 +77,9 @@ class RuntimeAnnotationsGuardTest(unittest.TestCase):
         rows = [
             ("an annotated runtime", "def read_projects(runtime: Runtime) -> None:\n    pass\n"),
             ("no runtime", "def plan(snapshot) -> None:\n    pass\n"),
+            ("an annotated variadic parameter", "def collect(*runtime: Runtime) -> None:\n    pass\n"),
+            ("an annotated keyword variadic parameter", "def collect(**runtime: Runtime) -> None:\n    pass\n"),
+            ("a lambda taking no runtime", "handler = lambda: None\n"),
         ]
         for case, source in rows:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as root:

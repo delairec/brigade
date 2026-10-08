@@ -3,12 +3,17 @@ from pathlib import Path
 
 RUNTIME_PARAMETER = "runtime"
 RUNTIME_TYPE = "Runtime"
-FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef)
+FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
 
 
-def _list_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.arg]:
+def _list_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda) -> list[ast.arg]:
     arguments = function.args
-    return [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
+    parameters = [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
+    if arguments.vararg is not None:
+        parameters.append(arguments.vararg)
+    if arguments.kwarg is not None:
+        parameters.append(arguments.kwarg)
+    return parameters
 
 
 def _is_annotated_runtime(parameter: ast.arg) -> bool:
@@ -24,6 +29,12 @@ def _takes_unannotated_runtime(node: ast.AST) -> bool:
     )
 
 
+def _describe(function: ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda) -> str:
+    if isinstance(function, ast.Lambda):
+        return "a lambda"
+    return function.name
+
+
 def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
     location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
     functions = [
@@ -32,8 +43,8 @@ def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
         if _takes_unannotated_runtime(node)
     ]
     return [
-        f"{location}:{function.lineno} {function.name} takes {RUNTIME_PARAMETER} without {RUNTIME_PARAMETER}:"
-        f" {RUNTIME_TYPE}"
+        f"{location}:{function.lineno} {_describe(function)} takes {RUNTIME_PARAMETER} without"
+        f" {RUNTIME_PARAMETER}: {RUNTIME_TYPE}"
         for function in sorted(functions, key=lambda function: function.lineno)
     ]
 
