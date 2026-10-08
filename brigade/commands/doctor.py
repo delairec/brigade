@@ -9,8 +9,8 @@ from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.runtime import Runtime
 from brigade.system.ask_client import ClientQuestion
-from brigade.system.ask_configured_client import ask_configured_client
-from brigade.system.read_configured_client_name import read_configured_client_name
+from brigade.system.ask_named_client import ask_named_client
+from brigade.system.read_configured_client import read_configured_client
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.run_process import ProcessRequest
@@ -75,10 +75,10 @@ def _check_awawa(runtime: Runtime) -> dict:
 
 
 def _probe_configured_client(runtime: Runtime) -> tuple[str, dict]:
-    name = read_configured_client_name(runtime)
-    client = runtime.resolve_plugin("client", name)
-    question = ClientQuestion(name, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
-    return name, ask_configured_client(client, question, runtime)
+    configured = read_configured_client(runtime)
+    client = runtime.resolve_plugin("client", configured.name)
+    question = ClientQuestion(configured.name, "probe", {"schema_version": DOCUMENT_SCHEMA_VERSION})
+    return configured.name, ask_named_client(client, question, configured.configuration, runtime)
 
 
 def _check_client(runtime: Runtime) -> dict:

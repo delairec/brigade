@@ -1704,3 +1704,28 @@ DECISION EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHande
 		+ "potentiellement les améliorations non indispensables pourront être implémentée en"
 		+ "utilisant brigade justement.\""
 		REF @TASK.B107
+
+DECISION TheClientIsAskedThroughOneFunctionAndTheConfigurationIsReadOncePerCommand
+	TITLE "a client is asked through one function, ask_named_client, which receives the resolved"
+		+ "client and the configuration; a command reads config.toml once and passes the record"
+		+ "down"
+	STATUS active
+	DESC "the command modules that ask a client read config.toml once, through"
+		+ "read_configured_client or read_optional_configuration, resolve the client through the"
+		+ "runtime's resolver and pass the resolved client and the Configuration record to"
+		+ "ask_named_client, which completes the question and resolves nothing"
+		REF @TASK.B73
+	DESC "the ask of a client goes through one function of brigade/system; the configuration"
+		+ "travels from the command that read it and the system layer parses no file"
+		REF @TASK.B77
+	REJECTED "a second ask function, ask_configured_client, reading config.toml itself or kept as"
+		+ "an alias of ask_named_client: every command already reads the configuration for the"
+		+ "client's name, so it would parse the file twice, and its name no longer guaranteed that"
+		+ "the client passed was the configured one"
+	RATIONALE "the review of pull request #65 found the double read new in @TASK.B73 and the name"
+		+ "dishonest; the draft @TASK.B77 planned to keep the function as an alias, which would"
+		+ "have re-introduced it"
+		REF @TASK.B73
+		REF @TASK.B77
+	SOURCE "the review of pull request #65, 2026-10-08, run 20261008T005404Z-e7730d"
+		REF @TASK.B73

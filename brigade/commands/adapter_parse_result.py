@@ -4,9 +4,9 @@ import sys
 from brigade.command import Command
 from brigade.runtime import Runtime
 from brigade.system.ask_client import ClientQuestion
-from brigade.system.ask_configured_client import ask_configured_client
+from brigade.system.ask_named_client import ask_named_client
 from brigade.system.read_client_request import read_client_request
-from brigade.system.read_configured_client_name import read_configured_client_name
+from brigade.system.read_configured_client import read_configured_client
 
 OPERATION = "parse-result"
 TEXT_INDENT = 2
@@ -26,9 +26,11 @@ def _decide_exit_code(document: dict) -> int:
 
 def adapter_parse_result(request, runtime: Runtime) -> dict:
     client_request = read_client_request(OPERATION, request)
-    client_name = read_configured_client_name(runtime)
-    client = runtime.resolve_plugin("client", client_name)
-    return ask_configured_client(client, ClientQuestion(client_name, OPERATION, client_request), runtime)
+    configured = read_configured_client(runtime)
+    client = runtime.resolve_plugin("client", configured.name)
+    return ask_named_client(
+        client, ClientQuestion(configured.name, OPERATION, client_request), configured.configuration, runtime
+    )
 
 
 COMMAND = Command(
