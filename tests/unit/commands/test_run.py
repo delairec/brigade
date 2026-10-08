@@ -1,6 +1,77 @@
+import functools
+import tempfile
 import unittest
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
 
-from brigade.commands.run import COMMAND
+from brigade.commands.run import COMMAND, run
+from brigade.errors import BrigadeError
+from brigade.runtime import Runtime
+from brigade.system.paths import Paths
+from brigade.system.resolve_plugin import PluginSources, resolve_plugin
+from brigade.system.trail_writer import TrailWriter
+
+NO_PATH_NEEDED = ""
+UNKNOWN_CLIENT = "no-such-client"
+UNKNOWN_PROCEDURE = "no-such-procedure"
+
+
+def _report_nothing(trace) -> None:
+    pass
+
+
+def _refuse_process(request):
+    raise AssertionError(f"the run of a command ran {request.argv}")
+
+
+def _create_runtime(root: Path) -> Runtime:
+    sources = PluginSources(executable_search_path=NO_PATH_NEEDED, run_process=_refuse_process)
+    return Runtime(
+        run_process=_refuse_process,
+        spawn_process=_refuse_process,
+        paths=Paths(
+            config_root=root / "config",
+            state_root=root / "state",
+            cache_root=root / "cache",
+            home=root / "home",
+            executable_search_path=NO_PATH_NEEDED,
+        ),
+        now=datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
+        entry_point=root / "bin" / "brigade",
+        trail=TrailWriter(_report_nothing),
+        resolve_plugin=functools.partial(resolve_plugin, sources=sources),
+    )
+
+
+class RunClientPrecedenceTest(unittest.TestCase):
+    def test_should_report_an_unknown_client_before_an_unknown_procedure(self):
+        # Arrange
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(f'client = "{UNKNOWN_CLIENT}"\n', encoding="utf-8")
+        request = SimpleNamespace(
+            procedure=UNKNOWN_PROCEDURE,
+            slot="build",
+            project=None,
+            cwd=None,
+            brief=None,
+            arguments=(),
+            run_id=None,
+            detach=False,
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            run(request, _create_runtime(root))
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            f"no client adapter {UNKNOWN_CLIENT}: no built-in module and no brigade-client-{UNKNOWN_CLIENT} on PATH",
+        )
 
 
 class RunTextTest(unittest.TestCase):
