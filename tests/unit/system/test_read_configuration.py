@@ -34,6 +34,8 @@ class ReadConfigurationWhenEveryKeyIsCommentedOutTest(ReadConfigurationTestCase)
                 reasoning={},
                 clients={},
                 slots={},
+                forge_accounts={},
+                forge_attempts=3,
             ),
         )
 
@@ -44,10 +46,10 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
         self.path.write_text(
             'client = "claude-code"\n'
             'scheduler = "cron"\n'
-            'forge_account = "octo-bot"\n'
             'instructions = "/home/ada/.ai"\n'
             'ide_link = "idea://open?file={path}&line={line}"\n'
             "refs_cache_mb = 2048\n"
+            "forge_attempts = 5\n"
             "[reasoning.deep]\n"
             'model = "opus"\n'
             'effort = "max"\n'
@@ -55,6 +57,9 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             'recordings = "/srv/recordings"\n'
             "[slots]\n"
             'plan = "charlie"\n'
+            "[forge_accounts]\n"
+            'cli = "octo-bot"\n'
+            'build = "octo-builder"\n'
         )
 
         # Act
@@ -71,6 +76,8 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
                 reasoning={"deep": ReasoningRow(model="opus", effort="max")},
                 clients={"fake": {"recordings": "/srv/recordings"}},
                 slots={"plan": "charlie"},
+                forge_accounts={"cli": "octo-bot", "build": "octo-builder"},
+                forge_attempts=5,
             ),
         )
 
@@ -100,7 +107,37 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
                 "unknown key reasoning.deep.temperature",
             ),
             ("a client of the wrong type", "client = 1\n", "client is an integer, not a string,"),
-            ("a forge account of the wrong type", "forge_account = 1\n", "forge_account is an integer, not a string,"),
+            (
+                "the forge account the table forge_accounts replaced",
+                'forge_account = "octo-bot"\n',
+                "unknown key forge_account",
+            ),
+            (
+                "a forge accounts table of the wrong type",
+                'forge_accounts = "octo-bot"\n',
+                "forge_accounts is a string, not a table,",
+            ),
+            (
+                "an unknown forge accounts key",
+                '[forge_accounts]\ncook = "octo-bot"\n',
+                "unknown key forge_accounts.cook",
+            ),
+            (
+                "a forge login of the wrong type",
+                "[forge_accounts]\ncli = 1\n",
+                "forge_accounts.cli is an integer, not a string,",
+            ),
+            (
+                "forge attempts of the wrong type",
+                'forge_attempts = "3"\n',
+                "forge_attempts is a string, not an integer,",
+            ),
+            (
+                "forge attempts that are a boolean",
+                "forge_attempts = true\n",
+                "forge_attempts is a boolean, not an integer,",
+            ),
+            ("forge attempts below one", "forge_attempts = 0\n", "forge_attempts is 0, not 1 or more,"),
             ("an IDE link of the wrong type", "ide_link = true\n", "ide_link is a boolean, not a string,"),
             ("a reasoning table of the wrong type", 'reasoning = "deep"\n', "reasoning is a string, not a table,"),
             (

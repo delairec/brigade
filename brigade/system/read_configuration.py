@@ -8,13 +8,19 @@ from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
 STRING_KEYS = ("client", "scheduler", "instructions")
-UNREAD_STRING_KEYS = ("forge_account", "ide_link")
+UNREAD_STRING_KEYS = ("ide_link",)
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
 SECONDS_PER_STEP_KEY = "seconds_per_step"
 SECONDS_PER_STEP_BY_DEFAULT = 30
 SLOTS = ("plan", "build", "verify", "review", "rebase", "report", "triage", "rules", "explore")
+CLI_KEY = "cli"
+FORGE_ACCOUNTS_KEY = "forge_accounts"
+FORGE_ACCOUNT_KEYS = (*SLOTS, CLI_KEY)
+FORGE_ATTEMPTS_KEY = "forge_attempts"
+FORGE_ATTEMPTS_BY_DEFAULT = 3
+FEWEST_FORGE_ATTEMPTS = 1
 
 
 class ConfigurationMissing(BrigadeError):
@@ -40,6 +46,8 @@ class Configuration:
     trail_days: int = TRAIL_DAYS_BY_DEFAULT
     journal_poll_s: int | float = JOURNAL_POLL_BY_DEFAULT_S
     findings: tuple[str, ...] = ()
+    forge_accounts: dict = field(default_factory=dict)
+    forge_attempts: int = FORGE_ATTEMPTS_BY_DEFAULT
 
 
 def _require(value, kind: type, expected: str, location: str, path: Path):
@@ -90,6 +98,21 @@ def _read_slots(table, path: Path) -> dict:
     return {slot: _require(name, str, "a string", f"slots.{slot}", path) for slot, name in table.items()}
 
 
+def _read_forge_accounts(table, path: Path) -> dict:
+    _require(table, dict, "a table", FORGE_ACCOUNTS_KEY, path)
+    _refuse_unknown_keys(table, FORGE_ACCOUNT_KEYS, f"{FORGE_ACCOUNTS_KEY}.", path)
+    return {key: _require(login, str, "a string", f"{FORGE_ACCOUNTS_KEY}.{key}", path) for key, login in table.items()}
+
+
+def _read_forge_attempts(document: dict, path: Path) -> int:
+    value = document.get(FORGE_ATTEMPTS_KEY, FORGE_ATTEMPTS_BY_DEFAULT)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise BrigadeError(f"{FORGE_ATTEMPTS_KEY} is {name_toml_type(value)}, not an integer, in {path}")
+    if value < FEWEST_FORGE_ATTEMPTS:
+        raise BrigadeError(f"{FORGE_ATTEMPTS_KEY} is {value}, not {FEWEST_FORGE_ATTEMPTS} or more, in {path}")
+    return value
+
+
 def _read_refs_cache_mb(document: dict, path: Path) -> int:
     value = document.get(REFS_CACHE_MB_KEY, Configuration.refs_cache_mb)
     if isinstance(value, bool) or not isinstance(value, int):
@@ -132,6 +155,8 @@ def read_configuration(path: Path) -> Configuration:
             SECONDS_PER_STEP_KEY,
             TRAIL_DAYS_KEY,
             JOURNAL_POLL_KEY,
+            FORGE_ACCOUNTS_KEY,
+            FORGE_ATTEMPTS_KEY,
         ),
         "",
         path,
@@ -151,4 +176,6 @@ def read_configuration(path: Path) -> Configuration:
         trail_days=read_trail_days(document, path),
         journal_poll_s=journal_poll_s,
         findings=findings,
+        forge_accounts=_read_forge_accounts(document.get(FORGE_ACCOUNTS_KEY, {}), path),
+        forge_attempts=_read_forge_attempts(document, path),
     )

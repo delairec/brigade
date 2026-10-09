@@ -1,4 +1,6 @@
 import argparse
+import dataclasses
+import time
 
 from brigade.command import Argument, Command
 from brigade.runs.create_run_directory import create_run_directory
@@ -8,11 +10,28 @@ from brigade.runs.read_run_setting import read_run_setting
 from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import SLOTS, read_configuration
+from brigade.system.read_configuration import SLOTS, Configuration, read_configuration
+from brigade.system.require_login_environment import LoginDemand, require_login_environment
 
 DOCUMENT_SCHEMA_VERSION = 1
 ARGUMENT_SEPARATOR = "="
 SINGLE_SEGMENT = 1
+FORGE_NAME = "github"
+UNBOUND_ENVIRONMENT = {}
+
+
+def _read_forge_environment(configuration: Configuration, slot: str, runtime: Runtime) -> dict:
+    login = configuration.forge_accounts.get(slot)
+    if login is None:
+        return UNBOUND_ENVIRONMENT
+    demand = LoginDemand(
+        forge=runtime.resolve_plugin("forge", FORGE_NAME),
+        forge_name=FORGE_NAME,
+        login=login,
+        key=slot,
+        attempts=configuration.forge_attempts,
+    )
+    return require_login_environment(demand, runtime, time.sleep)
 
 
 def _read_run_request(request) -> RunRequest:
@@ -69,9 +88,12 @@ def _describe_diagnostics(document: dict) -> list[str]:
 def run(request, runtime: Runtime) -> dict:
     run_request = _read_run_request(request)
     configuration = read_configuration(runtime.paths.configuration_file)
+    forge_environment = _read_forge_environment(configuration, run_request.slot, runtime)
     setting = read_run_setting(run_request.project, configuration, runtime)
     client_adapter = runtime.resolve_plugin("client", setting.client)
-    plan = plan_run(run_request, setting, client_adapter, runtime)
+    plan = dataclasses.replace(
+        plan_run(run_request, setting, client_adapter, runtime), forge_environment=forge_environment
+    )
     create_run_directory(plan)
     runtime.trail.locate(plan.run_directory / PROCESSES_FILE)
     if request.detach:

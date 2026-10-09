@@ -104,3 +104,7 @@ class RunTestCase(unittest.TestCase):
             if time.monotonic() > deadline:
                 self.fail(f"the process {pid} never exited")
             time.sleep(FILE_POLL_S)
+
+    def read_every_state_file(self) -> str:
+        files = sorted(path for path in self.machine.state_home.rglob("*") if path.is_file())
+        return "".join(path.read_text(encoding="utf-8", errors="replace") for path in files)

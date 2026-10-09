@@ -1606,7 +1606,7 @@ DECISION ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 		+ "the token gh auth token --user <login> prints, and an unbound one acts as gh's active"
 		+ "account"
 	DESC "a bound login whose token gh does not print after forge_attempts attempts stops the"
-		+ "command on an error, records the ledger event forge_account_unavailable and pauses the"
+		+ "command on an error, records the ledger event forge_account.unavailable and pauses the"
 		+ "wave; no other account is used in its place; once the preflight exists it checks the"
 		+ "logins before a wave"
 	DESC "every write to the forge records in its ledger event the login it ran as"
@@ -1917,3 +1917,26 @@ DECISION AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
 		+ "finding that brigade-client-vibe answers neither key: \"l'adaptateur doit fournir les"
 		+ "clés et respecter le contrat non?\""
 		REF @TASK.B84
+
+DECISION TheForgeAdapterAnswersTheEnvironmentOfALoginAndDoctorReadsItOnce
+	TITLE "the forge adapter answers the environment a process acting as a login carries; brigade"
+		+ "doctor reads each bound login once"
+	STATUS active
+	DESC "the GitHub forge adapter answers read_login_environment with the environment a process"
+		+ "acting as a login carries, GH_TOKEN set to the token gh auth token --user prints, or"
+		+ "null when gh prints none; brigade adds that environment to the gh subprocesses and"
+		+ "client segments of the login and names no variable of gh"
+	DESC "brigade doctor reads the environment of each bound login once, with no retry and no"
+		+ "ledger event, and reports a login without a token as a warning; forge_attempts and"
+		+ "forge_account.unavailable belong to the commands that act as the login"
+	DESC "a detached run reads the environment in the command that detaches it, so that a login"
+		+ "without a token starts no run, and again in the detached process; the token crosses no"
+		+ "argv and no file"
+	REJECTED "an answer carrying the bare token, the core naming GH_TOKEN: the variable gh reads"
+		+ "would be named outside the adapter of gh"
+	REJECTED "doctor reading each login through forge_attempts: the report would wait seconds per"
+		+ "login without a token and stop on the error its forge items report as a warning"
+	REJECTED "the token handed to the detached process in its environment: the runner adds nothing"
+		+ "to the environment of brigade itself, and a second read costs one gh call"
+	SOURCE "pull request #80 of the brigade repository, delivering @TASK.B75"
+		REF @TASK.B75

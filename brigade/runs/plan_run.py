@@ -1,6 +1,6 @@
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
 
@@ -65,6 +65,7 @@ class RunPlan:
     reads_actions: bool
     handovers: int
     warnings: tuple[str, ...]
+    forge_environment: dict = field(default_factory=dict, repr=False)
 
 
 def _read_values(project: Entity, field_name: str) -> list[str]:
