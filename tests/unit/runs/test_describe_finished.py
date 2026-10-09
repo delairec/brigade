@@ -131,20 +131,37 @@ class DescribeFinishedTest(unittest.TestCase):
         self.assertIsNone(finished.total_steps)
         self.assertEqual(finished.nulls["total_steps"], "the client reads no transcript")
 
-    def test_should_name_the_reason_of_main_steps_left_unknown(self):
-        # Arrange
-        record = SegmentRecord(
-            number=1,
-            result=_create_result(steps=None),
-            exit_code=0,
-            measured_ms=900000,
-            cost_usd=None,
-            counted_steps=None,
-            uncounted="the client reported no session",
-        )
+    def test_should_name_both_reasons_of_main_steps_left_unknown(self):
+        for counts_steps, uncounted, reason in [
+            (
+                True,
+                "the transcript could not be read: unreadable transcript at /home/ada/857d4221.jsonl: 'message'",
+                (
+                    "the client reported no step count and the transcript could not be read:"
+                    " unreadable transcript at /home/ada/857d4221.jsonl: 'message'"
+                ),
+            ),
+            (
+                True,
+                "the client reported no session",
+                "the client reported no step count and the client reported no session",
+            ),
+            (False, "the client reads no transcript", "the client counts no steps and the client reads no transcript"),
+        ]:
+            with self.subTest(counts_steps=counts_steps, uncounted=uncounted):
+                # Arrange
+                record = SegmentRecord(
+                    number=1,
+                    result=_create_result(steps=None),
+                    exit_code=0,
+                    measured_ms=900000,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted=uncounted,
+                )
 
-        # Act
-        finished = describe_finished(_create_plan(), record)
+                # Act
+                finished = describe_finished(_create_plan(counts_steps=counts_steps), record)
 
-        # Assert
-        self.assertEqual(finished.nulls["main_steps"], "the client reported no step count")
+                # Assert
+                self.assertEqual(finished.nulls["main_steps"], reason)

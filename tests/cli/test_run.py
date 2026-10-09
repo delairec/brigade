@@ -668,7 +668,9 @@ class BrigadeRunWithAClientThatCountsNoStepsTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [finished] = self.read_events("run.finished")
-        self.assertEqual(finished["nulls"]["main_steps"], "the client counts no steps")
+        self.assertEqual(
+            finished["nulls"]["main_steps"], "the client counts no steps and the client reads no transcript"
+        )
 
 
 class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):

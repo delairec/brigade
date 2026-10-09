@@ -12,10 +12,15 @@ CUT_FIELDS = ("session", "main_steps", "total_steps", "usage", "error_class", "e
 NO_NULLS_EXPLAINED = {}
 
 
+def _explain_missing_main_steps(plan: RunPlan, record: SegmentRecord) -> str:
+    client_reason = "the client reported no step count" if plan.counts_steps else "the client counts no steps"
+    return f"{client_reason} and {record.uncounted}"
+
+
 def _explain_client_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) -> dict:
     reasons = {
         "session": "the client reported no session",
-        "main_steps": "the client reported no step count" if plan.counts_steps else "the client counts no steps",
+        "main_steps": _explain_missing_main_steps(plan, record),
         "total_steps": record.uncounted,
         "usage": "the client reported no usage",
         "error_class": NO_FAILURE if finished.outcome == DONE_OUTCOME else NO_ERROR_CLASS,
