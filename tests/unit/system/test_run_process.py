@@ -47,6 +47,16 @@ class RunProcessWithTheVariablesOfItsCallerTest(unittest.TestCase):
         # Assert
         self.assertEqual(record.stdout, "token-of-octo-bot")
 
+    def test_should_keep_them_out_of_the_representation_of_the_request(self):
+        # Arrange
+        request = ProcessRequest(argv=("true",), cwd="/", timeout_s=10, environment={"GH_TOKEN": "token-of-octo-bot"})
+
+        # Act
+        representation = repr(request)
+
+        # Assert
+        self.assertNotIn("token-of-octo-bot", representation)
+
 
 class RunProcessOfAnAcceptedExitCodeTest(unittest.TestCase):
     def setUp(self):

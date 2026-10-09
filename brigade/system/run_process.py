@@ -18,7 +18,7 @@ class ProcessRequest:
     timeout_s: float
     acceptable_exit_codes: tuple[int, ...] = (0,)
     stdin: str | None = None
-    environment: dict = field(default_factory=dict)
+    environment: dict = field(default_factory=dict, repr=False)
 
 
 @dataclass(frozen=True)

@@ -65,7 +65,7 @@ class RunPlan:
     reads_actions: bool
     handovers: int
     warnings: tuple[str, ...]
-    forge_environment: dict = field(default_factory=dict)
+    forge_environment: dict = field(default_factory=dict, repr=False)
 
 
 def _read_values(project: Entity, field_name: str) -> list[str]:
