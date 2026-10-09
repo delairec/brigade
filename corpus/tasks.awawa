@@ -3735,43 +3735,97 @@ TASK B78
 	SOURCE "the user's rulings of 2026-10-09 in the refinement of B78"
 
 TASK B79
-	TITLE "runs logs without --tail and roles show bounded: the whole text stays in a file and the"
-		+ "document carries its path and a summary"
-	STATUS draft
+	TITLE "A run keeps a live journal of one short timestamped record per action of its client,"
+		+ "printed by brigade runs show <id> --log; brigade runs logs is removed"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
-	COMPONENT "commands"
+	COMPONENT "runs"
 	ROLE ada
-	DESC "for the refinement: by @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads a"
-		+ "reader learns what happened through a brigade command and searches no file itself, while"
-		+ "SPEC 1 returns the paths and line counts of the logs of a segment, leaving the reader to"
-		+ "open and search them; whether runs logs returns what the logs hold, summarised and"
-		+ "bounded, rather than where they are, settled with @TASK.B97"
-		REF @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads
-		REF @TASK.B97
-	SPEC "brigade runs logs <id> without --tail returns a document carrying, per segment, the path"
-		+ "of its stdout and stderr files under runs/<id>/ and their line counts, and no line; with"
-		+ "--tail N it returns the last N lines as today"
-	SPEC "brigade roles show <slot> writes the resolved role file atomically to a file under"
-		+ "$XDG_STATE_HOME/brigade/ and returns the front matter, the path of that file and the"
-		+ "line count of the body, not the body"
-	SPEC "the text rendering of each prints the summary and the path; --json prints the same"
-		+ "document"
+	SPEC "during each segment the run appends to runs/<id>/journal.jsonl one JSON record per action"
+		+ "of its client, carrying schema_version, the time brigade read it, the segment number,"
+		+ "the kind of the action and a summary of 200 characters at most with a flag naming a cut;"
+		+ "the new output of stdout.log is read every journal_poll_s seconds and once more when the"
+		+ "segment ends, so that tail -f of the file shows an action at most journal_poll_s seconds"
+		+ "after the client wrote it; the wall-time limit of the segment holds as today"
+	SPEC "journal_poll_s of config.toml is a positive number of seconds, 2 by default; any other"
+		+ "value keeps the default and is a finding of brigade doctor naming the key and the file"
+	SPEC "the actions are read through an operation actions of the client adapter, declared in its"
+		+ "probe, which turns the new output of a segment into the actions it holds: a tool call"
+		+ "names the tool and the argument that identifies it, a path, a command or a pattern; a"
+		+ "text gives its first line; a result gives the outcome of the segment; the core names no"
+		+ "event of a client, and the import guard of tests/guards holds"
+	SPEC "the launch and resume argv of the claude-code adapter carry --output-format stream-json"
+		+ "and --verbose, which Claude Code requires of stream-json under --print, in place of"
+		+ "--output-format json; its actions operation reads the stream, and its parse-result reads"
+		+ "the result event, the last line of stdout.log whose type is result, so that result.json,"
+		+ "run.finished, steps, usage, session, outcome and error class are unchanged; an output"
+		+ "holding no result event is reported as an unreadable output, as today"
+	SPEC "a client whose probe declares no actions operation has one record of kind raw per line of"
+		+ "its stdout, its summary cut to the same 200 characters"
+	SPEC "brigade runs show <id> prints the summary of run.json and the segments with their"
+		+ "outcomes, and with --log the journal, one line per record giving its time, segment, kind"
+		+ "and summary; --json prints the same document; an unknown id exits 1 naming it; brigade"
+		+ "runs logs and its --tail are removed, and the README lists runs show"
+	SPEC "the decisions ClientAdaptersAnswerEveryOperationThroughOneFunction,"
+		+ "BrigadeNamesNoAiClientOutsideItsAdapters and"
+		+ "TheSupportedClientsTableIsGeneratedFromTheProbes are amended to the operation actions,"
+		+ "and the matrix of brigade adapter matrix and the README table gain it with its fallback"
+	SPEC "tests/cli prove through the fake adapter a detached run whose client writes its lines at"
+		+ "intervals: journal.jsonl gains records while the run runs, brigade runs show <id> --log"
+		+ "prints them in order, and a fake declaring no actions operation yields raw records cut"
+		+ "to 200 characters; the unit tests of tests/unit/adapters/clients/test_claude_code.py"
+		+ "read a stream holding a result event and one holding none"
 	AFTER @TASK.B82
-	RATIONALE "F12 of the foundations review: commands/runs_logs.py:6-11 and"
-		+ "runs/read_run_logs.py:32-35 return the whole text when --tail is absent, and"
-		+ "commands/roles_show.py returns the body in the document; DESC 2 of"
-		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable reads \"a"
-		+ "document is bounded: a long result goes to a file under $XDG_STATE_HOME/brigade/ and the"
-		+ "document carries its path and a summary\""
+	RATIONALE "F12 of the foundations review: brigade runs logs without --tail returns the whole"
+		+ "text of the logs, commands/runs_logs.py and runs/read_run_logs.py, while DESC 2 of"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable bounds a document"
 		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
-	RATIONALE "the alternative the report offers for the refinement round: DESC 2 amended so that"
-		+ "runs logs and roles show are bounded by their reader, --tail and --json, the file rule"
-		+ "holding for the documents of M1"
-	RATIONALE "it follows @TASK.B82, which restructures the two command modules"
-		REF @TASK.B82
+	RATIONALE "the logs are no journal: segments/<n>/stdout.log is the raw stdout of the client,"
+		+ "brigade/system/spawn_process.py:59, read once at the end of the segment for"
+		+ "parse-result, brigade/runs/run_segment.py:135; the stdout of a vibe segment reached 2 MB"
+		+ "in 11 947 lines on run 20261008T114239Z-ca6fc7 and held a line of 200 655 characters on"
+		+ "run 20261008T223226Z-69c27b, the whole session with the content of every file a tool"
+		+ "read, while claude-code under --output-format json writes one result document of about 6"
+		+ "kB at the end of the session"
+	RATIONALE "the user ruled on 2026-10-09 that the input is at fault, not the output: the run"
+		+ "keeps a journal of short timestamped records, as"
+		+ "@DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails sets,"
+		+ "in JSONL so that a brigade reader reads fields and parses no rendering, by"
+		+ "@DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads; brigade takes no --tail"
+		+ "and no --follow, the reader pipes the output into tail or follows the file with tail -f"
+		REF @DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
+		REF @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads
+	RATIONALE "it takes the core of @TASK.B105, archived as covered: the stream-json launch of"
+		+ "claude-code and the operation that turns an output into actions, with its raw fallback;"
+		+ "the segment waits on its client in one process.wait,"
+		+ "brigade/system/wait_within_limit.py:22, which the live journal turns into waits of"
+		+ "journal_poll_s"
+		REF @TASK.B105
+	RATIONALE "brigade runs show <id> comes forward from @TASK.B94, which keeps the progress file"
+		+ "of the run; @TASK.B89 asserts the help of the command lines and follows; @TASK.B102"
+		+ "reads its declaration from the final message of the result event and follows"
+		REF @TASK.B94
+		REF @TASK.B89
+		REF @TASK.B102
+	RATIONALE "roles show, the other half of F12, goes to @TASK.B110"
+		REF @TASK.B110
+	RATIONALE "the operation actions is the sixth of the client adapter: the decisions it amends"
+		+ "are @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction,"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters and"
+		+ "@DECISION.TheSupportedClientsTableIsGeneratedFromTheProbes"
+		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+		REF @DECISION.TheSupportedClientsTableIsGeneratedFromTheProbes
 	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
 		+ "fix the issues reported by max in this milestone\"; F12 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's rulings of 2026-10-09 in the refinement of B79: \"On ne devrait pas avoir"
+		+ "des logs de 2mo. On devrait avoir un journal avec des entrées courtes (1 \"ligne\") et"
+		+ "horodatées non?\"; \"le tail n'est pas fait à l'intérieur, ça reste à moi (ou au bot) de"
+		+ "passer le log en tail [...] Si je le veux en direct je dois pouvoir utiliser tail\"; the"
+		+ "journal written live, in JSONL, read by brigade runs show <id> --log, raw records for a"
+		+ "client without the operation, summaries of 200 characters, the poll period in"
+		+ "config.toml, B102 after B79"
 
 TASK B80
 	TITLE "The README sentence on coverage names the fail_under threshold of .coveragerc"
@@ -4170,16 +4224,15 @@ TASK B88
 		+ "l'écriture dans le corpus\""
 
 TASK B89
-	TITLE "The help strings, the validation of runs logs --tail, the message of --since and the"
-		+ "modes of brigade tick are guarded by tests; an unknown tick mode is refused"
+	TITLE "The help strings, the message of --since and the modes of brigade tick are guarded by"
+		+ "tests; an unknown tick mode is refused"
 	STATUS draft
 	MILESTONE @MILESTONE.F0
 	COMPONENT "tests"
 	ROLE ada
 	SPEC "a test of tests/cli reads brigade --help and the help of each group and asserts the help"
 		+ "each command record declares"
-	SPEC "the refusal of runs logs --tail with a value that is no positive count, and the message"
-		+ "of --since with a value that is no day, are asserted by tests of tests/cli"
+	SPEC "the message of --since with a value that is no day is asserted by a test of tests/cli"
 	SPEC "brigade/commands/tick.py dispatches once, dry-run and loop by name and raises on any"
 		+ "other mode, exiting by the exception-to-exit-code table and never entering the loop; a"
 		+ "unit test proves the refusal, and a test of tests/cli proves that brigade tick without a"
@@ -4191,8 +4244,9 @@ TASK B89
 		+ "validation of runs logs --tail and the message of --since are unasserted, both from"
 		+ "before B82; brigade/commands/tick.py:128-133 at the head of #56 sends any mode other"
 		+ "than once and dry-run into the loop, so a lost required=True makes brigade tick loop"
-		+ "forever, as a mutant of the implementing run did; @TASK.B79 rewrites runs logs without"
-		+ "--tail, and this task follows it"
+		+ "forever, as a mutant of the implementing run did; @TASK.B79 replaces runs logs and its"
+		+ "--tail by brigade runs show <id> --log, whose help this task asserts, and this task"
+		+ "follows it"
 		REF @TASK.B82
 		REF @TASK.B79
 	SOURCE "item 11 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
@@ -4331,9 +4385,10 @@ TASK B94
 	SPEC "a Runs view of the dashboard lists the runs and shows one run with its progress file,"
 		+ "refreshed by the polling of the page shell; every string of a progress file is escaped"
 		+ "on render, as @TASK.B27 requires of every rendered string"
-	SPEC "brigade runs show <id> prints the summary of run.json, the segments with their outcomes"
-		+ "and the progress file of the run, text and --json, and exits 1 naming the id when the"
-		+ "run does not exist"
+	SPEC "brigade runs show <id>, which @TASK.B79 introduces with the summary of run.json, the"
+		+ "segments with their outcomes and --log, prints the progress file of the run too, text"
+		+ "and --json"
+		REF @TASK.B79
 	AFTER @TASK.B27
 	AFTER @TASK.B82
 	AFTER @TASK.B106
@@ -4603,6 +4658,7 @@ TASK B102
 		+ "progress file; the step cap reached at every segment exits 12, the wall-time limit 11, a"
 		+ "client error 1"
 	AFTER @TASK.B85
+	AFTER @TASK.B79
 	RATIONALE "run 20261007T165416Z-fbd1d3, procedure awawa-task, slot build, role ada, @TASK.B72,"
 		+ "budget 75, wall_limit_s 2820: around step 50 the run wrote a ## HANDOVER section in its"
 		+ "progress.md and ended its turn, stop_reason end_turn, subtype success, with nothing"
@@ -4743,7 +4799,12 @@ TASK B104
 TASK B105
 	TITLE "The claude-code client streams its events into stdout.log as they happen, and brigade"
 		+ "runs logs <id> --follow prints one line per action of the run as it comes"
-	STATUS draft
+	STATUS archived
+	DESC "archived on 2026-10-09: its core, the stream-json launch of claude-code and the operation"
+		+ "that turns an output into actions with its raw fallback, is delivered by @TASK.B79, and"
+		+ "--follow gives way to tail -f of the journal of the run, on the user's rulings in the"
+		+ "refinement of B79"
+		REF @TASK.B79
 	MILESTONE @MILESTONE.ADD0
 	COMPONENT "runs"
 	ROLE ada
@@ -5300,3 +5361,41 @@ TASK B109
 	SOURCE "the user's words of 2026-10-08, « oui », to the question « Processus orphelin : quand"
 		+ "on tue brigade run, le client continue de tourner. Faut-il le consigner comme tâche"
 		+ "draft ? »"
+
+TASK B110
+	TITLE "brigade roles show <slot> --short returns the resolved role without its body, for the"
+		+ "bots"
+	STATUS todo
+	MILESTONE @MILESTONE.F0
+	COMPONENT "commands"
+	ROLE ada
+	SPEC "brigade roles show <slot> --short --json prints a document carrying schema_version, the"
+		+ "slot, the role, the source, the front matter, body_lines, the line count of the body,"
+		+ "and body_bytes, its length in bytes encoded as UTF-8, and no body"
+	SPEC "the text of brigade roles show <slot> --short is the front-matter block of the resolved"
+		+ "role file between its --- lines, followed by one line body: <body_lines> lines,"
+		+ "<body_bytes> bytes, source <source>"
+	SPEC "without --short, brigade roles show <slot> prints the resolved role file whole and its"
+		+ "--json document carries the body, as before; python3 -m unittest passes"
+	AFTER @TASK.B77
+	RATIONALE "the second half of F12 of the foundations review: brigade roles show returns the"
+		+ "body of the role in its document, 964 lines and 54 kB for the slot build bound to ada"
+		+ "from the instructions corpus, 16 lines for a built-in role; ruled with the user in the"
+		+ "refinement of @TASK.B79: the whole file for a person, --short for a bot"
+		REF @TASK.B79
+	RATIONALE "after @TASK.B77, which reads config.toml once in brigade/commands/roles_show.py"
+		REF @TASK.B77
+	RATIONALE "DESC 2 of @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable is"
+		+ "amended in the refinement of this task: the role file whole is a text handed whole to a"
+		+ "client, as DESC 5 of"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "keeps it, and --short is its bounded form; the size of the body in lines and in bytes"
+		+ "tells a bot what reading it whole would cost"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+	SOURCE "the user's words of 2026-10-09 in the refinement of B79, \"Et roles show on le traite à"
+		+ "part, on lui ajoute un flag --short pour les bots\"; F12 of"
+		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's rulings of 2026-10-09 in the refinement of B110: DESC 2 amended in the"
+		+ "refinement, the text of --short the front-matter block followed by one line, the size of"
+		+ "the body in lines and in bytes"
