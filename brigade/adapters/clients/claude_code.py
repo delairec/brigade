@@ -256,9 +256,9 @@ def _read_messages(lines: list[str]) -> list[dict]:
     return [_describe_message(entry) for entry in entries if entry.get("type") in TRANSCRIPT_MESSAGE_TYPES]
 
 
-def _read_transcript(path: Path, split_lines) -> list[dict]:
+def _read_transcript(path: Path) -> list[dict]:
     try:
-        return _read_messages(split_lines(path.read_text(encoding="utf-8")))
+        return _read_messages(_split_written_lines(path.read_text(encoding="utf-8")))
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise BrigadeError(f"unreadable transcript at {path}: {error}") from None
 
@@ -272,10 +272,8 @@ def _read_transcripts(request: dict) -> dict:
     subagent_paths = (project_directory / session_id / SUBAGENTS_DIRECTORY).glob(SUBAGENT_TRANSCRIPTS)
     return {
         "schema_version": SCHEMA_VERSION,
-        "messages": _read_transcript(path, _split_written_lines),
-        "subagents": [
-            {"messages": _read_transcript(subagent_path, _split_written_lines)} for subagent_path in subagent_paths
-        ],
+        "messages": _read_transcript(path),
+        "subagents": [{"messages": _read_transcript(subagent_path)} for subagent_path in subagent_paths],
     }
 
 
