@@ -9,6 +9,7 @@ from brigade.system.transcripts_answer import TranscriptsAnswer
 
 FIXTURES = Path(__file__).parents[1] / "adapters" / "clients" / "fixtures" / "claude-code"
 SESSION_857D4221 = "857d4221-e962-4128-8096-759d8feb0ced"
+SESSION_DE26D2C6 = "de26d2c6-3b58-4d9e-9bb4-292f6b9e64de"
 
 
 class CountSessionStepsTest(unittest.TestCase):
@@ -52,7 +53,7 @@ class CountSessionStepsTest(unittest.TestCase):
         self.assertEqual(steps, SessionSteps(main_steps=2, total_steps=8))
 
 
-class CountSessionStepsOfSession857d4221Test(unittest.TestCase):
+class CountSessionStepsOfRecordedSessionsTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -64,15 +65,15 @@ class CountSessionStepsOfSession857d4221Test(unittest.TestCase):
         shutil.copyfile(
             FIXTURES / "session-857d4221-agent-a9ba9e367d37d17b5.jsonl", subagents / "agent-a9ba9e367d37d17b5.jsonl"
         )
+        shutil.copyfile(FIXTURES / "session-de26d2c6.jsonl", project / f"{SESSION_DE26D2C6}.jsonl")
 
-    def test_should_count_the_main_session_and_its_one_sub_agent(self):
-        # Arrange
-        transcripts = TranscriptsAnswer.from_document(
+    def read_transcripts(self, session_id: str) -> TranscriptsAnswer:
+        return TranscriptsAnswer.from_document(
             answer(
                 "transcripts",
                 {
                     "schema_version": 1,
-                    "session_id": SESSION_857D4221,
+                    "session_id": session_id,
                     "worktree": "/srv/worktrees/b71",
                     "reasoning_table": {},
                     "settings": {},
@@ -81,8 +82,24 @@ class CountSessionStepsOfSession857d4221Test(unittest.TestCase):
             )
         )
 
+    def test_should_count_the_main_session_and_its_one_sub_agent(self):
+        # Arrange
+        transcripts = self.read_transcripts(SESSION_857D4221)
+
         # Act
         steps = count_session_steps(transcripts)
 
         # Assert
         self.assertEqual(steps, SessionSteps(main_steps=42, total_steps=54))
+
+    def test_should_count_as_many_main_steps_as_the_turns_the_client_reported_for_a_session_ending_on_no_notification(
+        self,
+    ):
+        # Arrange
+        transcripts = self.read_transcripts(SESSION_DE26D2C6)
+
+        # Act
+        steps = count_session_steps(transcripts)
+
+        # Assert
+        self.assertEqual(steps, SessionSteps(main_steps=52, total_steps=52))
