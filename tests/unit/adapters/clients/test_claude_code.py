@@ -883,3 +883,91 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
             str(raised.exception),
             f"no transcript of session ada28962 at {self.home.name}/.claude/projects/-srv-b42/ada28962.jsonl",
         )
+
+    def test_should_refuse_a_session_file_it_cannot_parse(self):
+        for case, transcript in [
+            ("a line cut short", '{"type":"assistant","message":{"role":"assi\n'),
+            ("a message entry without its message", '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z"}\n'),
+            ("a line that is not an object", '["assistant"]\n'),
+            ("a message whose content is null", '{"type":"assistant","message":{"role":"assistant","content":null}}\n'),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+                projects.mkdir(parents=True, exist_ok=True)
+                (projects / "ada28962.jsonl").write_text(transcript)
+                request = {
+                    "schema_version": 1,
+                    "session_id": "ada28962",
+                    "worktree": "/srv/b42",
+                    "reasoning_table": {},
+                    "settings": {},
+                    "home": self.home.name,
+                }
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    answer("transcripts", request)
+
+                # Assert
+                self.assertIn(
+                    f"unreadable transcript at {self.home.name}/.claude/projects/-srv-b42/ada28962.jsonl: ",
+                    str(raised.exception),
+                )
+
+    def test_should_refuse_a_sub_agent_transcript_still_being_written(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        subagents = projects / "ada28962" / "subagents"
+        subagents.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+        )
+        (subagents / "agent-x.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:01:00.000Z","message":{"role":"assistant","content":[{"ty'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            answer("transcripts", request)
+
+        # Assert
+        self.assertIn(
+            f"unreadable transcript at {self.home.name}/.claude/projects/-srv-b42/ada28962/subagents/agent-x.jsonl: ",
+            str(raised.exception),
+        )
+
+    def test_should_refuse_a_sub_agent_transcript_it_cannot_open(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        subagents = projects / "ada28962" / "subagents"
+        (subagents / "agent-x.jsonl").mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            answer("transcripts", request)
+
+        # Assert
+        self.assertIn(
+            f"unreadable transcript at {self.home.name}/.claude/projects/-srv-b42/ada28962/subagents/agent-x.jsonl: ",
+            str(raised.exception),
+        )

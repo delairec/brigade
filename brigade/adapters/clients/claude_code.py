@@ -230,21 +230,24 @@ def _read_messages(content: str) -> list[dict]:
     return [_describe_message(entry) for entry in entries if entry.get("type") in TRANSCRIPT_MESSAGE_TYPES]
 
 
+def _read_transcript(path: Path) -> list[dict]:
+    try:
+        return _read_messages(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        raise BrigadeError(f"unreadable transcript at {path}: {error}") from None
+
+
 def _read_transcripts(request: dict) -> dict:
     session_id = request["session_id"]
     project_directory = Path(request["home"]) / ".claude" / "projects" / _name_project_directory(request["worktree"])
     path = project_directory / f"{session_id}.jsonl"
-    try:
-        content = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise BrigadeError(f"no transcript of session {session_id} at {path}") from None
+    if not path.exists():
+        raise BrigadeError(f"no transcript of session {session_id} at {path}")
     subagent_paths = sorted((project_directory / session_id / SUBAGENTS_DIRECTORY).glob(SUBAGENT_TRANSCRIPTS))
     return {
         "schema_version": SCHEMA_VERSION,
-        "messages": _read_messages(content),
-        "subagents": [
-            {"messages": _read_messages(subagent_path.read_text(encoding="utf-8"))} for subagent_path in subagent_paths
-        ],
+        "messages": _read_transcript(path),
+        "subagents": [{"messages": _read_transcript(subagent_path)} for subagent_path in subagent_paths],
     }
 
 
