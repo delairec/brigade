@@ -1301,10 +1301,13 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		REF @TASK.B19
 	REJECTED "a new run id per segment: the ledger's segment field and runs list would split one"
 		+ "run into several, and the progress file would move at each hand-over"
-	REJECTED "one stdout.log and stderr.log appended across segments: runs logs could no longer"
-		+ "tell which segment printed a line, and the brief each segment received would be lost"
+	REJECTED "one stdout.log and stderr.log appended across segments: no reader could tell which"
+		+ "segment printed a line, and the brief each segment received would be lost"
 	REJECTED "a state file rewritten as the run advances: the pid and the result already answer"
 		+ "running, finished and dead, without a write a crash could leave half done"
+	REJECTED "the outcome of each segment read from the run.finished events of the ledger: brigade"
+		+ "runs show would read the monthly ledger files of every run of the machine to find the"
+		+ "lines of one, where the directory of the run answers alone"
 	SOURCE "pull request #24 of the brigade repository, delivering @TASK.B06"
 		REF @TASK.B06
 	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
