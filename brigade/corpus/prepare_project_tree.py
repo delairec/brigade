@@ -5,21 +5,18 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import Configuration
 
 REPOSITORY_FIELD = "PATH"
-CONFIGURATION_FILE = "config.toml"
 REFS_CACHE_DIRECTORY = "refs"
 BYTES_PER_MB = 1024 * 1024
-LOCK_DIRECTORY = "locks"
 CACHE_LOCK_FILE = "refs-cache.lock"
 
 
-def prepare_project_tree(request, runtime: Runtime) -> Tree:
-    require_operational_corpus(runtime.paths.config_root)
+def prepare_project_tree(request, configuration: Configuration, runtime: Runtime) -> Tree:
+    require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.project)
     repository = next(field.value for field in project.fields if field.name == REPOSITORY_FIELD)
-    configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
     worktree = request.worktree.absolute() if request.worktree is not None else None
     return prepare_tree(
         runtime.run_process,
@@ -30,7 +27,7 @@ def prepare_project_tree(request, runtime: Runtime) -> Tree:
             worktree=worktree,
             cache=runtime.paths.cache_root / REFS_CACHE_DIRECTORY,
             cache_bound_bytes=configuration.refs_cache_mb * BYTES_PER_MB,
-            cache_lock=runtime.paths.state_root / LOCK_DIRECTORY / CACHE_LOCK_FILE,
+            cache_lock=runtime.paths.lock_directory / CACHE_LOCK_FILE,
             now=runtime.now,
         ),
     )

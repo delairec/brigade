@@ -13,8 +13,6 @@ from brigade.system.trail_locations import (
     TRAIL_SUFFIX,
 )
 
-CONFIGURATION_FILE = "config.toml"
-
 
 def _read_configuration_document(configuration: Path) -> dict | None:
     try:
@@ -42,7 +40,7 @@ def _list_trails(state_root: Path) -> list[Path]:
 
 
 def remove_expired_trails(paths: Paths, now: datetime) -> None:
-    configuration = paths.config_root / CONFIGURATION_FILE
+    configuration = paths.configuration_file
     document = _read_configuration_document(configuration)
     if document is None:
         return

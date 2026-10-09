@@ -9,7 +9,6 @@ from brigade.tick.read_heartbeat import read_heartbeat
 DOCUMENT_SCHEMA_VERSION = 1
 SCHEDULERS_ASKED = ("systemd", "cron")
 NO_SCHEDULER = "none"
-HEARTBEAT_NAME = "tick.json"
 NOT_INSTALLED = SchedulerState(installed=False, unit_files=(), cron_line=None, next_activation=None)
 
 
@@ -31,7 +30,7 @@ def _describe_heartbeat(heartbeat: Heartbeat) -> dict:
 
 
 def _describe_last_tick(runtime: Runtime):
-    heartbeat = read_heartbeat(runtime.paths.state_root / HEARTBEAT_NAME)
+    heartbeat = read_heartbeat(runtime.paths.heartbeat_file)
     if heartbeat is None:
         return None
     return _describe_heartbeat(heartbeat)

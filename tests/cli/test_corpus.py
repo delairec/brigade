@@ -231,6 +231,31 @@ class BrigadeCorpusOnWhatItCannotReadTest(CorpusTestCase):
                 self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_error))
 
 
+class BrigadeCorpusWithAConfigurationThatIsNotTomlTest(CorpusTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configuration = self.machine.write_configuration('client = "claude-code\n')
+
+    def test_should_report_the_configuration_before_a_missing_operational_corpus(self):
+        # Arrange
+        (self.machine.corpus / "_schema.awawa").unlink()
+
+        # Act
+        completed = self.run_corpus("app", "--ref", "main")
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stdout), (1, ""))
+        self.assertIn(f"brigade corpus: {self.configuration} is not valid TOML: ", completed.stderr)
+
+    def test_should_report_the_configuration_before_an_unknown_project(self):
+        # Act
+        completed = self.run_corpus("ghost", "--ref", "main")
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stdout), (1, ""))
+        self.assertIn(f"brigade corpus: {self.configuration} is not valid TOML: ", completed.stderr)
+
+
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
 class BrigadeCorpusWhereTheMachineRefusesTheCacheTest(CorpusTestCase):
     def setUp(self):

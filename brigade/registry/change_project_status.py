@@ -24,7 +24,7 @@ def _build_rewrite(runtime: Runtime, name: str, status: str):
 
 
 def change_project_status(runtime: Runtime, name: str, status: str) -> dict:
-    require_operational_corpus(runtime.paths.config_root)
+    require_operational_corpus(runtime.paths)
     changed = change_registry(
         runtime, f"brigade project {ACTIONS[status]}: {name}", _build_rewrite(runtime, name, status)
     )

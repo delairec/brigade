@@ -16,6 +16,10 @@ SECONDS_PER_STEP_BY_DEFAULT = 30
 SLOTS = ("plan", "build", "verify", "review", "rebase", "report", "triage", "rules", "explore")
 
 
+class ConfigurationMissing(BrigadeError):
+    pass
+
+
 @dataclass(frozen=True)
 class ReasoningRow:
     model: str
@@ -104,7 +108,7 @@ def _parse(path: Path) -> dict:
     try:
         content = path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        raise BrigadeError(f"no configuration at {path}; run brigade init") from None
+        raise ConfigurationMissing(f"no configuration at {path}; run brigade init") from None
     try:
         return tomllib.loads(content)
     except tomllib.TOMLDecodeError as error:

@@ -4,19 +4,17 @@ from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import SLOTS
+from brigade.system.read_configuration import SLOTS, Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
-CONFIGURATION_FILE = "config.toml"
 NO_MODEL_BOUND = {}
 COLUMNS = ("slot", "role", "source", "model")
 NO_MODEL = "-"
 
 
-def _read_bound_models(runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
+def _read_bound_models(configuration: Configuration, runtime: Runtime) -> dict:
     if configuration.client is None:
         return NO_MODEL_BOUND
     client = runtime.resolve_plugin("client", configuration.client)
@@ -42,8 +40,9 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def roles_list(request, runtime: Runtime) -> dict:
-    resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS) for slot in SLOTS]
-    models = _read_bound_models(runtime)
+    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS, configuration) for slot in SLOTS]
+    models = _read_bound_models(configuration, runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "roles": [

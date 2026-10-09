@@ -526,6 +526,47 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
         )
 
 
+class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
+    def test_should_report_the_error_of_the_one_read_in_each_check_that_needs_the_configuration(self):
+        rows = [("client", CLIENT_ENTRY, "finding"), ("instructions", INSTRUCTIONS_ENTRY, "warning")]
+        self.write_configuration('client = "claude-code\n')
+        for check, entry, expected_state in rows:
+            with self.subTest(check=check):
+                # Act
+                completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+                # Assert
+                item = json.loads(completed.stdout)["items"][entry]
+                self.assertEqual(item["state"], expected_state)
+                self.assertIn(f"{self.configuration} is not valid TOML: ", item["detail"])
+
+    def test_should_report_no_steps_item_since_no_client_could_be_probed(self):
+        # Arrange
+        self.write_configuration('client = "claude-code\n')
+
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(len(json.loads(completed.stdout)["items"]), STEPS_ENTRY)
+
+    def test_should_report_no_instructions_configured_when_no_configuration_exists(self):
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][INSTRUCTIONS_ENTRY],
+            {
+                "name": "instructions",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "none configured",
+                "fallback": INSTRUCTIONS_FALLBACK,
+            },
+        )
+
+
 INSTRUCTIONS_SCHEMA = (
     'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\t\tREQUIRED\n\t\tREPEATABLE\n'
     "\tFIELD REASONING deepest|deep|standard|light\n\t\tREQUIRED\n"

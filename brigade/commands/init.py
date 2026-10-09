@@ -1,4 +1,5 @@
 from importlib.resources import files
+from pathlib import Path
 from string import Template
 
 from brigade.command import Command
@@ -10,11 +11,8 @@ from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
 SHIPPED_DATA = files("brigade.corpus") / "data"
-SCHEMA_FILE = "_schema.awawa"
 GITIGNORE_FILE = ".gitignore"
-CONFIGURATION_FILE = "config.toml"
 GITIGNORE_CONTENT = "config.toml\n"
-COMMITTED_FILES = (SCHEMA_FILE, GITIGNORE_FILE)
 COMMIT_MESSAGE = "brigade init: the operational corpus"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
@@ -46,8 +44,7 @@ def _render_configuration(runtime: Runtime) -> str:
     return template.substitute(state_root=runtime.paths.state_root, cache_root=runtime.paths.cache_root)
 
 
-def _ensure_file(runtime: Runtime, name: str, file_name: str, content: bytes) -> dict:
-    path = runtime.paths.config_root / file_name
+def _ensure_file(name: str, path: Path, content: bytes) -> dict:
     item = {"name": name, "path": str(path)}
     if not path.exists():
         try:
@@ -95,16 +92,18 @@ def _decide_exit_code(document: dict) -> int:
 def init(request, runtime: Runtime) -> dict:
     _require_identity(runtime)
     repository = _ensure_repository(runtime)
+    gitignore = runtime.paths.config_root / GITIGNORE_FILE
     shipped_files = [
-        ("schema", SCHEMA_FILE, (SHIPPED_DATA / "schema.awawa.tpl").read_bytes()),
-        (".gitignore", GITIGNORE_FILE, GITIGNORE_CONTENT.encode("utf-8")),
-        ("config.toml", CONFIGURATION_FILE, _render_configuration(runtime).encode("utf-8")),
+        ("schema", runtime.paths.schema_file, (SHIPPED_DATA / "schema.awawa.tpl").read_bytes()),
+        (".gitignore", gitignore, GITIGNORE_CONTENT.encode("utf-8")),
+        ("config.toml", runtime.paths.configuration_file, _render_configuration(runtime).encode("utf-8")),
     ]
-    file_items = [_ensure_file(runtime, name, file_name, content) for name, file_name, content in shipped_files]
+    committed_files = (runtime.paths.schema_file, gitignore)
+    file_items = [_ensure_file(name, path, content) for name, path, content in shipped_files]
     created_to_commit = tuple(
-        file_name
-        for (_, file_name, _), item in zip(shipped_files, file_items, strict=True)
-        if file_name in COMMITTED_FILES and item["state"] == "created"
+        path.name
+        for (_, path, _), item in zip(shipped_files, file_items, strict=True)
+        if path in committed_files and item["state"] == "created"
     )
     if created_to_commit:
         commit_files(
