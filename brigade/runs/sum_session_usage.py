@@ -9,7 +9,7 @@ def sum_session_usage(transcripts: TranscriptsAnswer) -> TokenUsage:
         *transcripts.messages,
         *(message for subagent in transcripts.subagents for message in subagent.messages),
     ]
-    usage_by_id = {message.id: message.usage for message in messages if message.usage is not None}
-    return TokenUsage(
-        **{counter: sum(getattr(usage, counter) for usage in usage_by_id.values()) for counter in USAGE_COUNTERS}
-    )
+    measured = [message for message in messages if message.usage is not None]
+    usage_by_id = {message.id: message.usage for message in measured if message.id is not None}
+    usages = [*usage_by_id.values(), *(message.usage for message in measured if message.id is None)]
+    return TokenUsage(**{counter: sum(getattr(usage, counter) for usage in usages) for counter in USAGE_COUNTERS})
