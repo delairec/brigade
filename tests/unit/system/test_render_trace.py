@@ -14,6 +14,11 @@ class RenderTraceTest(unittest.TestCase):
                 "ran sleep 30, timed out after 100 ms",
             ),
             ("not found", ProcessTrace(("awawa", "lint"), "/", "not_found", None, 1), "ran awawa lint, not on PATH"),
+            (
+                "no working directory",
+                ProcessTrace(("awawa", "show"), "/srv/absent", "no_working_directory", None, 1),
+                "ran awawa show, no working directory /srv/absent",
+            ),
             ("cut", ProcessTrace(("claude", "-p"), "/", "cut", None, 400), "ran claude -p, cut after 400 ms"),
             (
                 "spawned",

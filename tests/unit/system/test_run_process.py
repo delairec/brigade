@@ -98,6 +98,29 @@ class RunProcessInAWorkingDirectoryThatDoesNotExistTest(unittest.TestCase):
         # Assert
         self.assertNotIsInstance(refusal.exception, ToolNotFound)
 
+    def test_should_trace_the_missing_directory_rather_than_a_command_off_the_path(self):
+        # Arrange
+        traces = []
+        request = ProcessRequest(argv=("true",), cwd="/brigade-absent-directory", timeout_s=10)
+
+        # Act
+        with self.assertRaises(ToolFailure):
+            run_process(request, traces.append)
+
+        # Assert
+        self.assertEqual(
+            traces,
+            [
+                ProcessTrace(
+                    argv=("true",),
+                    cwd="/brigade-absent-directory",
+                    outcome="no_working_directory",
+                    exit_code=None,
+                    duration_ms=ANY,
+                )
+            ],
+        )
+
 
 class RunProcessOfACommandOffThePathTest(unittest.TestCase):
     def test_should_trace_the_command_not_found_before_refusing_it(self):

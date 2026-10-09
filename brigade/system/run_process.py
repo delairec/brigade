@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from brigade.errors import ToolFailure, ToolNotFound
 from brigade.system.build_process_environment import build_process_environment
-from brigade.system.process_trace import EXITED, NOT_FOUND, TIMED_OUT, ProcessTrace
+from brigade.system.process_trace import EXITED, NO_WORKING_DIRECTORY, NOT_FOUND, TIMED_OUT, ProcessTrace
 
 EVERY_EXIT_CODE = tuple(range(256))
 
@@ -68,9 +68,10 @@ def run_process(request: ProcessRequest, record_trace: Callable[[ProcessTrace], 
             **_describe_input(request.stdin),
         )
     except FileNotFoundError as missing:
-        record_trace(_trace(request, NOT_FOUND, None, _measure_since(started)))
         if missing.filename == request.cwd:
+            record_trace(_trace(request, NO_WORKING_DIRECTORY, None, _measure_since(started)))
             raise ToolFailure(f"{request.argv[0]}: no working directory {request.cwd}") from None
+        record_trace(_trace(request, NOT_FOUND, None, _measure_since(started)))
         raise ToolNotFound(f"{request.argv[0]} not on PATH") from None
     except subprocess.TimeoutExpired:
         record_trace(_trace(request, TIMED_OUT, None, _measure_since(started)))
