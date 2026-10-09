@@ -1819,6 +1819,9 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 		+ "answer never carries it; the two shapes differ, and RunResult stays a kind of its own"
 	SOURCE "pull request #68 of the brigade repository, delivering @TASK.B74"
 		REF @TASK.B74
+	SOURCE "DESC 1 and DESC 2 amended in pull request #81 of the brigade repository, delivering"
+		+ "@TASK.B83"
+		REF @TASK.B83
 
 DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 	TITLE "a run keeps a journal, one short timestamped JSON record per action of its client,"
