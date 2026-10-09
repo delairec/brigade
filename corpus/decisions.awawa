@@ -1881,3 +1881,21 @@ DECISION RunFinishedCountsTheMainSessionAndTheSessionWithItsSubAgents
 		+ "juste leur trouver un nom parlant pour qu'on sache que l'un est seulement le main agent,"
 		+ "et l'autre est l'agent+subagents\"; the names main_steps and total_steps"
 		REF @TASK.B83
+
+DECISION BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
+	TITLE "brigade counts the steps and sums the usage of a session from the transcripts answer,"
+		+ "the same way for every client; a client adapter only reads its transcript into that"
+		+ "answer"
+	STATUS active
+	DESC "a message of the transcripts answer carries its id, its usage and the number of its tool"
+		+ "calls, and the answer carries the transcript of each sub-agent; the steps of a"
+		+ "transcript are its tool calls plus one, its usage the sum over its distinct message ids"
+	DESC "binds @TASK.B83 and @TASK.B84"
+		REF @TASK.B83
+		REF @TASK.B84
+	REJECTED "the Claude Code adapter counting, through parse-result called without stdout for a"
+		+ "cut segment: each adapter would repeat the counting, and a client whose transcript is"
+		+ "read would still need its own rule"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B84, \"brigade, de façon"
+		+ "générique\""
+		REF @TASK.B84
