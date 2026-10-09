@@ -3727,7 +3727,7 @@ TASK B78
 	TITLE "a role a project names is looked up in the next source only when awawa answers that its"
 		+ "AGENT entity is not defined; every other failure of awawa stops the resolution with its"
 		+ "message"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "roles"
 	ROLE ada
@@ -3735,17 +3735,36 @@ TASK B78
 		+ "\"is not defined in the workspace\" on stderr raises an error of its own naming the"
 		+ "entity; every other exit, and a timeout, raises the ToolFailure naming the command and"
 		+ "its stderr"
+		IMPL "brigade/corpus/read_entity.py::raise EntityNotDefined(f\"{target} is not defined in"
+			+ "{root}\")"
+		IMPL "tests/unit/corpus/test_read_entity.py::def"
+			+ "test_should_refuse_naming_the_command_and_its_stderr(self):"
+		IMPL "tests/integration/corpus/test_read_entity.py::def"
+			+ "test_should_refuse_an_unreadable_corpus_with_the_stderr_of_awawa(self):"
 	SPEC "resolve_role on a slot a project binds to a name tries the next source only on that"
 		+ "unknown-entity error; a ToolFailure of awawa show or of awawa context propagates"
+		IMPL "brigade/roles/resolve_role.py::except EntityNotDefined:"
 	SPEC "run_process given a working directory that does not exist raises a ToolFailure naming"
 		+ "that directory, not the ToolNotFound \"<tool> not on PATH\""
+		IMPL "brigade/system/run_process.py::raise ToolFailure(f\"{request.argv[0]}: no working"
+			+ "directory {request.cwd}\") from None"
 	SPEC "unit tests prove each case: in tests/unit/roles/test_resolve_role.py an unknown entity"
 		+ "falls through to the next source and an exit 2 of awawa raises, the test that reads"
 		+ "every ToolFailure as not found being rewritten; in tests/unit/system/test_run_process.py"
 		+ "a missing working directory raises naming it"
+		IMPL "tests/unit/roles/test_resolve_role.py::def"
+			+ "test_should_look_for_the_named_role_in_the_next_source_when_awawa_does_not_know_the_entity(self):"
+		IMPL "tests/unit/roles/test_resolve_role.py::def"
+			+ "test_should_stop_on_a_failure_of_awawa_show_rather_than_look_elsewhere(self):"
+		IMPL "tests/unit/system/test_run_process.py::def"
+			+ "test_should_refuse_naming_the_directory_rather_than_the_command(self):"
 	SPEC "brigade run on a project whose ROLE binds a slot to a name, with an awawa that fails"
 		+ "otherwise than on an unknown entity, exits 1 with awawa's stderr in its message and"
 		+ "launches no client"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_exit_1_with_the_stderr_of_awawa_when_the_instructions_corpus_is_unreadable(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_launch_no_client_when_the_instructions_corpus_is_unreadable(self):"
 	AFTER @TASK.B77
 	RATIONALE "F11 of the foundations review: resolve_role.py:144-149 turns any ToolFailure of"
 		+ "awawa while reading a named AGENT entity into \"not found\" and tries the next source,"
@@ -3771,6 +3790,7 @@ TASK B78
 		+ "fix the issues reported by max in this milestone\"; F11 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 	SOURCE "the user's rulings of 2026-10-09 in the refinement of B78"
+	DELIVERED_BY 75
 
 TASK B79
 	TITLE "A run keeps a live journal of one short timestamped record per action of its client,"
