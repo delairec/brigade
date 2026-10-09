@@ -1173,8 +1173,9 @@ TASK B21
 	MILESTONE @MILESTONE.M1
 	COMPONENT "validation"
 	ROLE prudence
-	SPEC "a throwaway repository with a starter corpus delivers a three-task wave unattended from"
-		+ "wave new to the integration pull request"
+	SPEC "a throwaway repository, its corpus written from a schema prepared for the rehearsal that"
+		+ "declares the types a wave needs, delivers a three-task wave unattended from wave new to"
+		+ "the integration pull request"
 	SPEC "the ledger holds every run"
 	SPEC "steps per run and steps to first edit are recorded as the first budgets"
 	SPEC "the same rehearsal runs on the fake adapter as the test suite's end-to-end case"
@@ -1183,12 +1184,16 @@ TASK B21
 	AFTER @TASK.B19
 	AFTER @TASK.B20
 	AFTER @TASK.B71
-	AFTER @TASK.B81
 	RATIONALE "it follows @TASK.B71, the launch options and the real run rehearsed, F1 and F22 of"
-		+ "the foundations review, and @TASK.B81, the starter corpus the sandbox repository needs,"
-		+ "F15"
+		+ "the foundations review"
 		REF @TASK.B71
+	RATIONALE "the sandbox corpus is written from a prepared schema: project add --init-corpus"
+		+ "comes with @TASK.B55 in M7, and a rehearsal needs a corpus, not the onboarding command"
+		REF @TASK.B55
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B81, \"Je prends ta reco\": B81"
+		+ "archived as a duplicate of @TASK.B55, which stays in M7"
 		REF @TASK.B81
+		REF @TASK.B55
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"
@@ -2094,8 +2099,14 @@ TASK B55
 		REF @TASK.B04
 		REF @TASK.B10
 		REF @TASK.B46
+	RATIONALE "F15 of the foundations review found no task naming project add --init-corpus and"
+		+ "@TASK.B81 was drafted in F0; B81 was archived as a duplicate of this task, which stays"
+		+ "in M7, the sandbox of @TASK.B21 writing its corpus from a prepared schema"
+		REF @TASK.B81
+		REF @TASK.B21
 	SOURCE "the Artifact Brigade Blueprint, plan section 13; the user's ruling of 2026-10-06 in the"
 		+ "refinement of B04"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B81, \"Je prends ta reco\""
 
 TASK B56
 	TITLE "a state or configuration directory brigade cannot write: exit 1 naming the path, and"
@@ -4009,7 +4020,13 @@ TASK B80
 TASK B81
 	TITLE "brigade project add --init-corpus writes a starter corpus into the project's corpus"
 		+ "folder on a branch and opens the pull request"
-	STATUS draft
+	STATUS archived
+	DESC "archived on 2026-10-09 as a duplicate of @TASK.B55, which names project add --init-corpus"
+		+ "since 2026-10-06 and stays in M7; F15 of the foundations review missed it, and the"
+		+ "sandbox of @TASK.B21 writes its corpus from a prepared schema instead, on the user's"
+		+ "ruling in the refinement of B81"
+		REF @TASK.B55
+		REF @TASK.B21
 	MILESTONE @MILESTONE.F0
 	COMPONENT "registry"
 	ROLE ada

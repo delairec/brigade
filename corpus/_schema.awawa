@@ -104,5 +104,9 @@ SCHEMA OPEN_QUESTION
 		REQUIRED
 	FIELD STATUS open|closed
 		REQUIRED
+	FIELD BLOCKS @TASK
+		REPEATABLE
+		CONVERSE BLOCKED_BY
+		DESC "a task that cannot be ratified until the question is ruled"
 	WHEN STATUS closed
 		GATE suppressed
