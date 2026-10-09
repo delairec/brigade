@@ -5774,3 +5774,29 @@ TASK B112
 		REF @TASK.B111
 	SOURCE "the user's words of 2026-10-09, \"oui pour le draft que tu proposes mais dans une"
 		+ "future milestone\""
+
+TASK B113
+	TITLE "brigade runs show <id> --follow prints the journal of a run, then each record appended"
+		+ "to it, until the run ends"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "brigade runs show <id> --follow prints the summary and the journal as --log does, then"
+		+ "each record appended to runs/<id>/journal.jsonl, read every journal_poll_s seconds,"
+		+ "until the run is finished; it then prints the outcome of the run and exits with the exit"
+		+ "code runs show gives it"
+	SPEC "a line of the journal not yet whole is printed once whole; an interrupt from the terminal"
+		+ "ends the command with exit code 130 and no traceback"
+	SPEC "tests/cli prove, on a detached run of the fake client, that --follow prints a record"
+		+ "written after the command started and exits once the run is finished"
+	RATIONALE "@TASK.B79 writes the journal live, but runs show reads it once and exits: watch of"
+		+ "runs show --log keeps the start of a journal longer than the terminal and cuts its end,"
+		+ "the user's finding of 2026-10-09, and tail -f of journal.jsonl prints raw JSON records"
+		REF @TASK.B79
+	RATIONALE "in @MILESTONE.F0 and first among its drafts, at the user's request: following a run"
+		+ "is how a wave of brigade on itself is watched"
+		REF @MILESTONE.F0
+	SOURCE "the user's words of 2026-10-09, \"le watch ça ne marche pas car il affiche le début du"
+		+ "journal et cut ce qui dépasse du terminal\" and \"la tâche en draft ok, de préférence à"
+		+ "faire passer en prio en f0\""
