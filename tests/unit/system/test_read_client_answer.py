@@ -44,6 +44,16 @@ TRANSCRIPTS_WITHOUT_TOOL_CALLS = {
     "messages": [{"role": "assistant", "timestamp": None, "content": "Done."}],
     "subagents": [],
 }
+TRANSCRIPTS_WITHOUT_MESSAGE_ID = {
+    "schema_version": 1,
+    "messages": [{"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0, "usage": None}],
+    "subagents": [],
+}
+TRANSCRIPTS_WITHOUT_MESSAGE_USAGE = {
+    "schema_version": 1,
+    "messages": [{"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0, "id": "msg_b84"}],
+    "subagents": [],
+}
 
 
 class ReadClientAnswerTest(unittest.TestCase):
@@ -66,6 +76,18 @@ class ReadClientAnswerTest(unittest.TestCase):
                 TRANSCRIPTS_QUESTION,
                 TRANSCRIPTS_WITHOUT_TOOL_CALLS,
                 "client adapter vibe answered transcripts: lacks the key messages[0].tool_calls",
+            ),
+            (
+                "a message without its id",
+                TRANSCRIPTS_QUESTION,
+                TRANSCRIPTS_WITHOUT_MESSAGE_ID,
+                "client adapter vibe answered transcripts: lacks the key messages[0].id",
+            ),
+            (
+                "a message without its usage",
+                TRANSCRIPTS_QUESTION,
+                TRANSCRIPTS_WITHOUT_MESSAGE_USAGE,
+                "client adapter vibe answered transcripts: lacks the key messages[0].usage",
             ),
         )
         for name, question, answer, expected_message in cases:
