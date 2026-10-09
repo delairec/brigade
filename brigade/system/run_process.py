@@ -3,7 +3,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from brigade.errors import ToolFailure, ToolNotFound
+from brigade.errors import CommandFailed, ToolFailure, ToolNotFound
 from brigade.system.build_process_environment import build_process_environment
 from brigade.system.process_trace import EXITED, NO_WORKING_DIRECTORY, NOT_FOUND, TIMED_OUT, ProcessTrace
 
@@ -86,5 +86,5 @@ def run_process(request: ProcessRequest, record_trace: Callable[[ProcessTrace], 
     )
     record_trace(_trace(request, EXITED, record.exit_code, record.duration_ms))
     if record.exit_code not in request.acceptable_exit_codes:
-        raise ToolFailure(f"{_describe_command(request.argv)} exited {record.exit_code}: {record.stderr.strip()}")
+        raise CommandFailed(record.argv, record.exit_code, record.stderr)
     return record

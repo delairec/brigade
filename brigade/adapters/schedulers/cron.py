@@ -3,7 +3,7 @@ from importlib.resources import files
 from pathlib import Path
 from string import Template
 
-from brigade.errors import ToolFailure, ToolNotFound
+from brigade.errors import CommandFailed, ToolNotFound
 from brigade.runtime import Runtime
 from brigade.system.run_process import ProcessRequest
 
@@ -45,7 +45,7 @@ def _list_crontab(runtime: Runtime) -> list[str]:
         return record.stdout.splitlines()
     if NO_CRONTAB in record.stderr:
         return []
-    raise ToolFailure(f"crontab -l exited {record.exit_code}: {record.stderr.strip()}")
+    raise CommandFailed(record.argv, record.exit_code, record.stderr)
 
 
 def install(request: dict, runtime: Runtime) -> dict:

@@ -3,7 +3,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from brigade.errors import EntityNotDefined, ToolFailure
+from brigade.errors import CommandFailed, EntityNotDefined
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 AWAWA_TIMEOUT_S = 30.0
@@ -42,7 +42,7 @@ def read_entity(
     if record.exit_code == ENTITY_NOT_SHOWN:
         if UNKNOWN_ENTITY_DIAGNOSTIC in record.stderr:
             raise EntityNotDefined(f"{target} is not defined in {root}")
-        raise ToolFailure(f"{' '.join(argv)} exited {record.exit_code}: {record.stderr.strip()}")
+        raise CommandFailed(record.argv, record.exit_code, record.stderr)
     shown = json.loads(record.stdout)
     fields = tuple(
         EntityField(name=field["name"], value="".join(_decode_atom(atom) for atom in field["atoms"]))
