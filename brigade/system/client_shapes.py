@@ -32,6 +32,7 @@ CLIENT_REQUEST_SHAPES = {
     "resume-argv": {**LAUNCH_REQUEST, "session_id": TEXT},
     "parse-result": {"schema_version": SCHEMA_VERSION, "exit_code": COUNT, "stdout": TEXT, "stderr": TEXT},
     "transcripts": {"schema_version": SCHEMA_VERSION, "session_id": TEXT, "worktree": TEXT},
+    "actions": {"schema_version": SCHEMA_VERSION, "output": TEXT},
 }
 
 COMMAND_ANSWER = {
@@ -47,7 +48,8 @@ CLIENT_ANSWER_SHAPES = {
         "client": TEXT,
         "version_argv": Field(kinds=(list,), nullable=True, items=TEXT, non_empty=True),
         "operations": Field(
-            kinds=(list,), items=Field(kinds=(str,), values=("probe", "launch", "result", "resume", "transcripts"))
+            kinds=(list,),
+            items=Field(kinds=(str,), values=("probe", "launch", "result", "resume", "transcripts", "actions")),
         ),
         "features": Field(kinds=(list,), items=Field(kinds=(str,), values=("step_count", "tool_grants", "reset_hour"))),
         "models": Field(kinds=(dict,)),
@@ -87,6 +89,16 @@ CLIENT_ANSWER_SHAPES = {
                     "timestamp": OPTIONAL_TEXT,
                     "content": Field(kinds=(str, list)),
                 },
+            ),
+        ),
+    },
+    "actions": {
+        "schema_version": SCHEMA_VERSION,
+        "actions": Field(
+            kinds=(list,),
+            items=Field(
+                kinds=(dict,),
+                fields={"kind": Field(kinds=(str,), values=("tool", "text", "result")), "summary": TEXT},
             ),
         ),
     },

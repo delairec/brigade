@@ -26,6 +26,9 @@
 # The days a trail of ticks/ and commands/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
 # trail_days = 7
 
+# The seconds between two reads of a running segment's output into the journal of its run, a positive number.
+# journal_poll_s = 2
+
 # The model and effort a reasoning level maps to, replacing that row of the client adapter's table;
 # levels deepest, deep, standard, light.
 # [reasoning.deep]

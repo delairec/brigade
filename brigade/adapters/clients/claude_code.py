@@ -9,7 +9,7 @@ from brigade.errors import BrigadeError
 SCHEMA_VERSION = 1
 CLIENT_NAME = "claude-code"
 EXECUTABLE = "claude"
-UNATTENDED_OPTIONS = ("--print", "--output-format", "json", "--permission-mode", "dontAsk")
+UNATTENDED_OPTIONS = ("--print", "--output-format", "stream-json", "--verbose", "--permission-mode", "dontAsk")
 REASONING_DEFAULTS = {
     "deepest": {"model": "fable", "effort": "max"},
     "deep": {"model": "fable", "effort": "high"},
@@ -29,6 +29,7 @@ RATE_LIMIT_PHRASES = ("limit reached", "hit your limit", "usage limit", "rate li
 RESET_PATTERN = re.compile(r"resets (?:at )?(\d{1,2})(?::(\d{2}))?(am|pm)?(?: \(([^)]+)\))?", re.IGNORECASE)
 ERROR_SUBTYPE_PREFIX = "error"
 TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
+IDENTIFYING_ARGUMENTS = ("file_path", "command", "pattern", "path", "url", "query")
 
 
 def _bind_models(request: dict) -> dict:
@@ -43,7 +44,7 @@ def _probe(request: dict) -> dict:
         "schema_version": SCHEMA_VERSION,
         "client": CLIENT_NAME,
         "version_argv": [EXECUTABLE, "--version"],
-        "operations": ["probe", "launch", "result", "resume", "transcripts"],
+        "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
         "features": ["step_count", "tool_grants", "reset_hour"],
         "models": _bind_models(request),
     }
@@ -78,14 +79,19 @@ def _build_command(request: dict, session_options: list[str]) -> dict:
     }
 
 
-def _read_result_object(stdout: str):
+def _read_event(line: str) -> dict:
     try:
-        result = json.loads(stdout)
+        event = json.loads(line)
     except ValueError:
-        return None
-    if not isinstance(result, dict) or result.get("type") != "result":
-        return None
-    return result
+        return {}
+    if not isinstance(event, dict):
+        return {}
+    return event
+
+
+def _read_result_object(stdout: str):
+    events = (_read_event(line) for line in reversed(stdout.splitlines()))
+    return next((event for event in events if event.get("type") == "result"), None)
 
 
 def _read_usage(result: dict):
@@ -143,6 +149,37 @@ def _parse_result(request: dict) -> dict:
     }
 
 
+def _summarise_tool_call(item: dict) -> str:
+    tool_input = item["input"]
+    argument = next((tool_input[name] for name in IDENTIFYING_ARGUMENTS if name in tool_input), None)
+    return item["name"] if argument is None else f"{item['name']} {argument}"
+
+
+def _read_content_actions(event: dict) -> list[dict]:
+    actions = []
+    for item in event["message"]["content"]:
+        if item.get("type") == "tool_use":
+            actions.append({"kind": "tool", "summary": _summarise_tool_call(item)})
+        elif item.get("type") == "text":
+            actions.append({"kind": "text", "summary": item["text"].partition("\n")[0]})
+    return actions
+
+
+def _read_event_actions(event: dict) -> list[dict]:
+    if event.get("type") == "assistant":
+        return _read_content_actions(event)
+    if event.get("type") == "result":
+        outcome = "done" if _classify_error(event, event.get("result")) is None else "failed"
+        return [{"kind": "result", "summary": outcome}]
+    return []
+
+
+def _read_actions(request: dict) -> dict:
+    events = [_read_event(line) for line in request["output"].splitlines()]
+    actions = [action for event in events for action in _read_event_actions(event)]
+    return {"schema_version": SCHEMA_VERSION, "actions": actions}
+
+
 def _name_project_directory(worktree: str) -> str:
     return re.sub(r"[^A-Za-z0-9]", "-", worktree)
 
@@ -175,4 +212,6 @@ def answer(operation: str, request: dict) -> dict:
         return _parse_result(request)
     if operation == "transcripts":
         return _read_transcripts(request)
+    if operation == "actions":
+        return _read_actions(request)
     raise BrigadeError(f"the claude-code client adapter does not answer {operation}")

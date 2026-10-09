@@ -202,3 +202,45 @@ class ReadConfigurationOfTheTrailDaysTest(ReadConfigurationTestCase):
 
         # Assert
         self.assertEqual(configuration.trail_days, 30)
+
+
+class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
+    def test_should_answer_2_and_no_finding_when_the_key_is_absent(self):
+        # Arrange
+        self.path.write_text('client = "fake"\n')
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual((configuration.journal_poll_s, configuration.findings), (2, ()))
+
+    def test_should_answer_the_seconds_the_key_sets(self):
+        # Arrange
+        self.path.write_text("journal_poll_s = 0.5\n")
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.journal_poll_s, 0.5)
+
+    def test_should_keep_the_default_and_record_a_finding_naming_the_key_and_the_file(self):
+        rows = [
+            ("a string", 'journal_poll_s = "2"\n', "journal_poll_s is a string, not a positive number,"),
+            ("zero", "journal_poll_s = 0\n", "journal_poll_s is 0, not a positive number,"),
+            ("a boolean", "journal_poll_s = true\n", "journal_poll_s is a boolean, not a positive number,"),
+        ]
+        for case, content, expected_problem in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.path.write_text(content)
+
+                # Act
+                configuration = read_configuration(self.path)
+
+                # Assert
+                self.assertEqual(
+                    (configuration.journal_poll_s, configuration.findings),
+                    (2, (f"{expected_problem} in {self.path}; the default of 2 s holds",)),
+                )

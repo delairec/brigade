@@ -179,6 +179,12 @@ def _check_steps(reading: Configuration | BrigadeError, runtime: Runtime) -> lis
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
 
 
+def _check_configuration(reading: Configuration | BrigadeError) -> list[dict]:
+    if isinstance(reading, BrigadeError):
+        return []
+    return [_create_prerequisite("config", "finding", finding) for finding in reading.findings]
+
+
 def _render_prerequisite(item: dict) -> str:
     return f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['detail']}"
 
@@ -234,6 +240,7 @@ def doctor(request, runtime: Runtime) -> dict:
             _check_awawa_web(runtime),
             _check_instructions(reading, runtime),
             *_check_steps(reading, runtime),
+            *_check_configuration(reading),
         ],
     }
 

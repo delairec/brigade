@@ -1,4 +1,5 @@
 from brigade.runtime import Runtime
+from brigade.system.actions_answer import ActionsAnswer
 from brigade.system.client_command import ClientCommand
 from brigade.system.client_question import ClientQuestion
 from brigade.system.parse_result_answer import ParseResultAnswer
@@ -10,7 +11,7 @@ from brigade.system.transcripts_answer import TranscriptsAnswer
 
 def ask_named_client(
     client, question: ClientQuestion, configuration: Configuration, runtime: Runtime
-) -> ProbeAnswer | ClientCommand | ParseResultAnswer | TranscriptsAnswer:
+) -> ProbeAnswer | ClientCommand | ParseResultAnswer | TranscriptsAnswer | ActionsAnswer:
     request = {
         **question.request.to_document(),
         "reasoning_table": {

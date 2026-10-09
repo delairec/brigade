@@ -1,9 +1,17 @@
 import json
+import shutil
 import subprocess
+from unittest.mock import ANY
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
 
 UNKNOWN_RUN = "20990101T000000Z-abcdef"
+ACTIONS_RECORDING = (
+    "Reading the task\n"
+    "Writing the test\n"
+    '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+    ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}\n'
+)
 
 
 class RunsTestCase(RunTestCase):
@@ -100,43 +108,18 @@ class BrigadeRunsListOfARunningRunTest(RunsTestCase):
         self.assertEqual(listed["state"], "running")
 
 
-class BrigadeRunsLogsTest(RunsTestCase):
-    def test_should_print_the_output_of_the_client_as_a_document(self):
+class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT + 'operations = "actions"\n')
+        self.record_lines("builder", ACTIONS_RECORDING)
+
+    def test_should_describe_the_run_and_its_segments_in_a_document(self):
         # Arrange
-        self.configure_fake(COUNTING_CLIENT)
-        self.record("builder", DONE_RESULT)
         run_id = self.run_deliver_to_its_end()
 
         # Act
-        completed = self.run_brigade("runs", "logs", run_id, "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout), {"schema_version": 1, "run": run_id, "lines": [json.dumps(DONE_RESULT)]}
-        )
-
-    def test_should_print_the_output_of_the_client_as_text(self):
-        # Arrange
-        self.configure_fake(COUNTING_CLIENT)
-        self.record("builder", DONE_RESULT)
-        run_id = self.run_deliver_to_its_end()
-
-        # Act
-        completed = self.run_brigade("runs", "logs", run_id)
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, json.dumps(DONE_RESULT) + "\n")
-
-    def test_should_print_the_last_lines_of_every_segment_with_tail(self):
-        # Arrange
-        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
-        self.record("builder", TURN_LIMIT_RESULT)
-        run_id = self.run_deliver_to_its_end()
-
-        # Act
-        completed = self.run_brigade("runs", "logs", run_id, "--tail", "2", "--json")
+        completed = self.run_brigade("runs", "show", run_id, "--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -144,15 +127,277 @@ class BrigadeRunsLogsTest(RunsTestCase):
             json.loads(completed.stdout),
             {
                 "schema_version": 1,
-                "run": run_id,
-                "lines": [json.dumps(TURN_LIMIT_RESULT), json.dumps(TURN_LIMIT_RESULT)],
+                "run": {
+                    "run": run_id,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "state": "finished",
+                    "outcome": "done",
+                },
+                "segments": [{"segment": 1, "outcome": "done"}],
+                "journal": None,
             },
         )
 
-    def test_should_exit_1_naming_an_unknown_run(self):
+    def test_should_print_the_summary_of_the_run_then_its_segments(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+
         # Act
-        completed = self.run_brigade("runs", "logs", UNKNOWN_RUN)
+        completed = self.run_brigade("runs", "show", run_id)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                f"run        {run_id}",
+                "procedure  deliver",
+                "slot       build",
+                "role       builder",
+                "project    -",
+                "state      finished",
+                "outcome    done",
+                "",
+                "segment  outcome",
+                "1        done",
+            ],
+        )
+
+    def test_should_add_the_journal_of_the_actions_in_order_with_log(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["journal"],
+            [
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Reading the task",
+                    "cut": False,
+                },
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Writing the test",
+                    "cut": False,
+                },
+                {"schema_version": 1, "at": ANY, "segment": 1, "kind": "result", "summary": "done", "cut": False},
+            ],
+        )
+
+    def test_should_print_one_line_per_record_giving_its_time_segment_kind_and_summary_with_log(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--log")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertRegex(
+            completed.stdout,
+            r"\n1        done\n\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Reading the task\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Writing the test\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n$",
+        )
+
+    def test_should_leave_out_the_record_still_being_written_with_log(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        with (self.runs / run_id / "journal.jsonl").open("a", encoding="utf-8") as journal:
+            journal.write('{"schema_version": 1, "at": "2026-')
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["journal"],
+            [
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Reading the task",
+                    "cut": False,
+                },
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Writing the test",
+                    "cut": False,
+                },
+                {"schema_version": 1, "at": ANY, "segment": 1, "kind": "result", "summary": "done", "cut": False},
+            ],
+        )
+
+    def test_should_exit_1_naming_the_line_of_the_journal_that_is_no_record_with_log(self):
+        rows = [
+            ("a line of no JSON", "Reading the task\n", "not a JSON document"),
+            ("a record lacking its time", '{"schema_version": 1, "segment": 1}\n', "lacks the key at"),
+        ]
+        for case, line, reason in rows:
+            with self.subTest(case=case):
+                # Arrange
+                run_id = self.run_deliver_to_its_end()
+                journal_path = self.runs / run_id / "journal.jsonl"
+                with journal_path.open("a", encoding="utf-8") as journal:
+                    journal.write(line)
+
+                # Act
+                completed = self.run_brigade("runs", "show", run_id, "--log")
+
+                # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(
+                    completed.stderr, f"brigade runs show: line 4 of {journal_path} is not a journal record: {reason}\n"
+                )
+
+    def test_should_exit_1_naming_an_unknown_run(self):
+        rows = [("an unknown id", UNKNOWN_RUN), ("a path", "../runs")]
+        for case, run_id in rows:
+            with self.subTest(case=case):
+                # Act
+                completed = self.run_brigade("runs", "show", run_id)
+
+                # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, f"brigade runs show: no run {run_id}\n")
+
+    def test_should_exit_1_naming_a_path_to_a_run_rather_than_its_id(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        path_to_the_run = f"../runs/{run_id}"
+
+        # Act
+        completed = self.run_brigade("runs", "show", path_to_the_run)
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stderr, f"brigade runs logs: no run {UNKNOWN_RUN}\n")
+        self.assertEqual(completed.stderr, f"brigade runs show: no run {path_to_the_run}\n")
+
+    def test_should_show_a_dead_run_with_no_segment_and_an_empty_journal(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        gone.wait()
+        (self.runs / run_id / "result.json").unlink()
+        (self.runs / run_id / "journal.jsonl").unlink()
+        shutil.rmtree(self.runs / run_id / "segments")
+        (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["run"]["state"], document["segments"], document["journal"]), ("dead", [], []))
+
+
+class BrigadeRunJournalOfAClientWithNoActionsOperationTest(RunsTestCase):
+    def test_should_hold_one_raw_record_per_line_cut_to_200_characters(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        run_id = self.run_deliver_to_its_end()
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["journal"],
+            [
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "raw",
+                    "summary": (
+                        '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": {"input_tokens": 120,'
+                        ' "output_tokens": 3400, "cache_creation_input_tokens": 16778, "cache_read_input_tokens":'
+                        ' 98000}, "session_id": "fake'
+                    ),
+                    "cut": True,
+                }
+            ],
+        )
+
+
+class BrigadeRunsShowOfARunHandedOverTest(RunsTestCase):
+    def test_should_list_the_segments_in_their_order(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", TURN_LIMIT_RESULT)
+        run_id = self.run_deliver_to_its_end()
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["segments"],
+            [
+                {"segment": 1, "outcome": "failed"},
+                {"segment": 2, "outcome": "failed"},
+                {"segment": 3, "outcome": "failed"},
+            ],
+        )
+
+
+class BrigadeRunsShowOfARunningRunTest(RunsTestCase):
+    def test_should_show_the_running_segment_with_no_outcome_and_no_record_yet(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n')
+        self.record("builder", DONE_RESULT)
+        run_id = self.run_deliver("--detach").stdout.strip()
+        self.wait_for_file(self.runs / run_id / "segments" / "1" / "brief.md")
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
+
+        # Assert
+        self.wait_for_file(self.runs / run_id / "result.json")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(
+            (document["run"]["state"], document["segments"], document["journal"]),
+            ("running", [{"segment": 1, "outcome": None}], []),
+        )
+
+
+class BrigadeRunJournalOfADetachedRunTest(RunsTestCase):
+    def test_should_gain_records_while_the_client_writes_its_lines(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'operations = "actions"\ninterval = "1"\n', keys="journal_poll_s = 0.1\n")
+        self.record_lines("builder", ACTIONS_RECORDING)
+        run_id = self.run_deliver("--detach").stdout.strip()
+
+        # Act
+        self.wait_for_line(self.runs / run_id / "journal.jsonl")
+
+        # Assert
+        finished_before_its_first_record = (self.runs / run_id / "result.json").exists()
+        self.wait_for_file(self.runs / run_id / "result.json")
+        self.assertFalse(finished_before_its_first_record)

@@ -51,7 +51,7 @@ class ClaudeCodeProbeTest(unittest.TestCase):
                 "schema_version": 1,
                 "client": "claude-code",
                 "version_argv": ["claude", "--version"],
-                "operations": ["probe", "launch", "result", "resume", "transcripts"],
+                "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
                 "features": ["step_count", "tool_grants", "reset_hour"],
                 "models": {"deepest": "fable", "deep": "fable", "standard": "opus", "light": "sonnet"},
             },
@@ -86,7 +86,8 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                     "claude",
                     "--print",
                     "--output-format",
-                    "json",
+                    "stream-json",
+                    "--verbose",
                     "--permission-mode",
                     "dontAsk",
                     "--model",
@@ -121,7 +122,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 launch = answer("launch-argv", request)
 
                 # Assert
-                self.assertEqual(launch["argv"][6:10], expected_model_and_effort)
+                self.assertEqual(launch["argv"][7:11], expected_model_and_effort)
 
     def test_should_take_the_row_the_configuration_sets_for_a_level(self):
         # Arrange
@@ -131,7 +132,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
         launch = answer("launch-argv", request)
 
         # Assert
-        self.assertEqual(launch["argv"][6:10], ["--model", "sonnet", "--effort", "low"])
+        self.assertEqual(launch["argv"][7:11], ["--model", "sonnet", "--effort", "low"])
 
     def test_should_grant_the_tools_of_each_capability(self):
         rows = [
@@ -187,7 +188,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 launch = answer("launch-argv", request)
 
                 # Assert
-                self.assertEqual(launch["argv"][10:12], ["--max-turns", expected_max_turns])
+                self.assertEqual(launch["argv"][11:13], ["--max-turns", expected_max_turns])
 
 
 class ClaudeCodeResumeTest(unittest.TestCase):
@@ -207,7 +208,8 @@ class ClaudeCodeResumeTest(unittest.TestCase):
                     "claude",
                     "--print",
                     "--output-format",
-                    "json",
+                    "stream-json",
+                    "--verbose",
                     "--permission-mode",
                     "dontAsk",
                     "--resume",
@@ -427,6 +429,79 @@ class ClaudeCodeResultTest(unittest.TestCase):
             },
         )
 
+    def test_should_read_the_result_event_that_ends_a_stream(self):
+        # Arrange
+        stream = (
+            '{"type":"system","subtype":"init","session_id":"ada28962"}\n'
+            '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done."}]}}\n'
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":3,"result":"Done.",'
+            '"session_id":"ada28962","usage":{"input_tokens":9,"cache_creation_input_tokens":16778,'
+            '"cache_read_input_tokens":13803,"output_tokens":55}}\n'
+        )
+
+        # Act
+        result = parse_claude_output(stream)
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "done",
+                "steps": 3,
+                "usage": {
+                    "input_tokens": 9,
+                    "output_tokens": 55,
+                    "cache_creation_input_tokens": 16778,
+                    "cache_read_input_tokens": 13803,
+                },
+                "session_id": "ada28962",
+                "duration_ms": 1369,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+
+    def test_should_read_the_last_of_two_result_events(self):
+        # Arrange
+        stream = (
+            '{"type":"result","subtype":"error_during_execution","is_error":true,"num_turns":2,"session_id":"s1"}\n'
+            '{"type":"result","subtype":"success","is_error":false,"num_turns":5,"session_id":"s1"}\n'
+        )
+
+        # Act
+        result = parse_claude_output(stream)
+
+        # Assert
+        self.assertEqual((result["outcome"], result["steps"]), ("done", 5))
+
+    def test_should_report_a_stream_that_holds_no_result_event(self):
+        # Arrange
+        stream = (
+            '{"type":"system","subtype":"init","session_id":"ada28962"}\n'
+            '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Reading."}]}}\n'
+        )
+
+        # Act
+        result = parse_claude_output(stream, stderr="Error: interrupted\n", exit_code=1)
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "failed",
+                "steps": None,
+                "usage": None,
+                "session_id": None,
+                "duration_ms": None,
+                "error_class": "unreadable_output",
+                "reset": None,
+                "message": "Error: interrupted",
+            },
+        )
+
     def test_should_report_no_usage_when_the_result_object_carries_none(self):
         # Arrange
         result_without_usage = (
@@ -450,6 +525,113 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 "error_class": None,
                 "reset": None,
                 "message": None,
+            },
+        )
+
+
+def read_claude_actions(output: str) -> dict:
+    return answer(
+        "actions",
+        {"schema_version": 1, "output": output, "reasoning_table": {}, "settings": {}, "home": "/home/ada"},
+    )
+
+
+class ClaudeCodeActionsTest(unittest.TestCase):
+    def test_should_name_each_tool_call_by_the_argument_that_identifies_it(self):
+        rows = [
+            (
+                "a path",
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"Read","input":{"file_path":"/srv/b42/README.md","limit":40}}]}}\n'
+                ),
+                "Read /srv/b42/README.md",
+            ),
+            (
+                "a command",
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"Bash","input":{"command":"python3 -m unittest","timeout":600}}]}}\n'
+                ),
+                "Bash python3 -m unittest",
+            ),
+            (
+                "a pattern",
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"Grep","input":{"pattern":"def answer","path":"brigade"}}]}}\n'
+                ),
+                "Grep def answer",
+            ),
+            (
+                "no argument",
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"TodoWrite","input":{"todos":[]}}]}}\n'
+                ),
+                "TodoWrite",
+            ),
+        ]
+        for case, event, expected_summary in rows:
+            with self.subTest(case=case):
+                # Act
+                actions = read_claude_actions(event)
+
+                # Assert
+                self.assertEqual(
+                    actions, {"schema_version": 1, "actions": [{"kind": "tool", "summary": expected_summary}]}
+                )
+
+    def test_should_give_the_first_line_of_a_text(self):
+        # Arrange
+        event = (
+            '{"type":"assistant","message":{"role":"assistant","content":'
+            '[{"type":"text","text":"I read the task first.\\nThen I write the test."}]}}\n'
+        )
+
+        # Act
+        actions = read_claude_actions(event)
+
+        # Assert
+        self.assertEqual(
+            actions, {"schema_version": 1, "actions": [{"kind": "text", "summary": "I read the task first."}]}
+        )
+
+    def test_should_give_the_outcome_of_the_segment_for_the_result_event(self):
+        rows = [
+            ("done", '{"type":"result","subtype":"success","is_error":false,"num_turns":3}\n', "done"),
+            ("failed", '{"type":"result","subtype":"error_max_turns","is_error":true,"num_turns":94}\n', "failed"),
+        ]
+        for case, event, expected_summary in rows:
+            with self.subTest(case=case):
+                # Act
+                actions = read_claude_actions(event)
+
+                # Assert
+                self.assertEqual(
+                    actions, {"schema_version": 1, "actions": [{"kind": "result", "summary": expected_summary}]}
+                )
+
+    def test_should_read_the_actions_of_every_event_in_order_and_skip_the_others(self):
+        # Arrange
+        output = (
+            '{"type":"system","subtype":"init","session_id":"ada28962"}\n'
+            '{"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Plan."},'
+            '{"type":"text","text":"Reading."},{"type":"tool_use","id":"t1","name":"Glob","input":{"pattern":"*.py"}}]}}\n'
+            '{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"a.py"}]}}\n'
+            "not a json line\n"
+            "[]\n"
+        )
+
+        # Act
+        actions = read_claude_actions(output)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            {
+                "schema_version": 1,
+                "actions": [{"kind": "text", "summary": "Reading."}, {"kind": "tool", "summary": "Glob *.py"}],
             },
         )
 

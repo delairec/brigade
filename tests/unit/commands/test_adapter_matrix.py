@@ -80,6 +80,7 @@ class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
                     "result": "absent",
                     "resume": "fallback",
                     "transcripts": "fallback",
+                    "actions": "fallback",
                     "step_count": "fallback",
                     "tool_grants": "fallback",
                     "reset_hour": "fallback",

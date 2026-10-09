@@ -138,6 +138,7 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         self.assertEqual(
             sorted(path.relative_to(run_directory).as_posix() for path in run_directory.rglob("*") if path.is_file()),
             [
+                "journal.jsonl",
                 "pid",
                 "processes.jsonl",
                 "progress.md",
@@ -145,6 +146,7 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
                 "role.md",
                 "run.json",
                 "segments/1/brief.md",
+                "segments/1/result.json",
                 "segments/1/stderr.log",
                 "segments/1/stdout.log",
             ],
@@ -225,7 +227,8 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
             [
                 "--print",
                 "--output-format",
-                "json",
+                "stream-json",
+                "--verbose",
                 "--permission-mode",
                 "dontAsk",
                 "--model",

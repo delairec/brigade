@@ -121,7 +121,8 @@ class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
                     "claude",
                     "--print",
                     "--output-format",
-                    "json",
+                    "stream-json",
+                    "--verbose",
                     "--permission-mode",
                     "dontAsk",
                     "--model",
@@ -242,7 +243,8 @@ class BrigadeAdapterResumeArgvTest(AdapterTestCase):
                 "claude",
                 "--print",
                 "--output-format",
-                "json",
+                "stream-json",
+                "--verbose",
                 "--permission-mode",
                 "dontAsk",
                 "--resume",
@@ -287,6 +289,38 @@ class BrigadeAdapterTranscriptsTest(AdapterTestCase):
                 ],
             },
         )
+
+
+class BrigadeAdapterActionsTest(AdapterTestCase):
+    def test_should_read_the_actions_of_the_output_the_request_carries(self):
+        # Arrange
+        self.machine.write_configuration('client = "claude-code"\n')
+        request = json.dumps(
+            {
+                "schema_version": 1,
+                "output": '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Reading."}]}}\n',
+            }
+        )
+
+        # Act
+        completed = self.run_adapter("actions", "--json", request=request)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout), {"schema_version": 1, "actions": [{"kind": "text", "summary": "Reading."}]}
+        )
+
+    def test_should_name_the_key_a_request_lacks(self):
+        # Arrange
+        self.machine.write_configuration('client = "claude-code"\n')
+
+        # Act
+        completed = self.run_adapter("actions", request='{"schema_version": 1}')
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade adapter actions: the request on stdin: lacks the key output\n")
 
 
 class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
