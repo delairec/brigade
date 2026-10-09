@@ -10,6 +10,10 @@ class ToolNotFound(ToolFailure):
     pass
 
 
+class EntityNotDefined(BrigadeError):
+    pass
+
+
 class UsageError(BrigadeError):
     pass
 

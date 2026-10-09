@@ -774,6 +774,46 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["role"], "verifier")
 
+    @unittest.skipIf(os.geteuid() == 0, "root reads what the permissions refuse")
+    def test_should_exit_1_with_the_stderr_of_awawa_when_the_instructions_corpus_is_unreadable(self):
+        # Arrange
+        instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
+        agents = instructions.root / "agents.awawa"
+        agents.chmod(0o000)
+        self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
+        self.record("verifier", DONE_RESULT)
+        self.register('ROLE "build=verifier"')
+
+        # Act
+        completed = self.run_slot()
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (
+                1,
+                (
+                    f"brigade run: awawa show @AGENT.verifier --json {instructions.root} exited 2:"
+                    f" awawa: {agents}: Permission denied (os error 13)\n"
+                ),
+            ),
+        )
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads what the permissions refuse")
+    def test_should_launch_no_client_when_the_instructions_corpus_is_unreadable(self):
+        # Arrange
+        instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
+        (instructions.root / "agents.awawa").chmod(0o000)
+        self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
+        self.record("verifier", DONE_RESULT)
+        self.register('ROLE "build=verifier"')
+
+        # Act
+        self.run_slot()
+
+        # Assert
+        self.assertEqual(self.read_events("run.finished"), [])
+
     def test_should_exit_1_naming_a_project_role_found_nowhere(self):
         # Arrange
         self.register('ROLE "build=nobody"')

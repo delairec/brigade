@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.corpus.read_entity_package import read_entity_package
-from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
+from brigade.errors import BrigadeError, EntityNotDefined
 from brigade.roles.check_front_matter import check_front_matter
 from brigade.roles.list_built_in_role_files import list_built_in_role_files
 from brigade.roles.list_machine_role_files import list_machine_role_files
@@ -142,9 +142,7 @@ def _find_named_agent(lookup: AgentLookup, slot: str, name: str) -> RoleFile | N
         return None
     try:
         return _read_agent(name, slot, Path(configuration.instructions), lookup.runtime)
-    except ToolNotFound:
-        raise
-    except ToolFailure:
+    except EntityNotDefined:
         return None
 
 

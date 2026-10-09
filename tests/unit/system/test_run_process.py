@@ -73,6 +73,32 @@ class RunProcessOfARefusedExitCodeTest(unittest.TestCase):
         )
 
 
+class RunProcessInAWorkingDirectoryThatDoesNotExistTest(unittest.TestCase):
+    def test_should_refuse_naming_the_directory_rather_than_the_command(self):
+        # Arrange
+        traces = []
+        request = ProcessRequest(argv=("true",), cwd="/brigade-absent-directory", timeout_s=10)
+
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            run_process(request, traces.append)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "true: no working directory /brigade-absent-directory")
+
+    def test_should_not_report_the_command_off_the_path(self):
+        # Arrange
+        traces = []
+        request = ProcessRequest(argv=("true",), cwd="/brigade-absent-directory", timeout_s=10)
+
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            run_process(request, traces.append)
+
+        # Assert
+        self.assertNotIsInstance(refusal.exception, ToolNotFound)
+
+
 class RunProcessOfACommandOffThePathTest(unittest.TestCase):
     def test_should_trace_the_command_not_found_before_refusing_it(self):
         # Arrange

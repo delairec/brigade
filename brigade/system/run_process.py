@@ -67,8 +67,10 @@ def run_process(request: ProcessRequest, record_trace: Callable[[ProcessTrace], 
             check=False,
             **_describe_input(request.stdin),
         )
-    except FileNotFoundError:
+    except FileNotFoundError as missing:
         record_trace(_trace(request, NOT_FOUND, None, _measure_since(started)))
+        if missing.filename == request.cwd:
+            raise ToolFailure(f"{request.argv[0]}: no working directory {request.cwd}") from None
         raise ToolNotFound(f"{request.argv[0]} not on PATH") from None
     except subprocess.TimeoutExpired:
         record_trace(_trace(request, TIMED_OUT, None, _measure_since(started)))
