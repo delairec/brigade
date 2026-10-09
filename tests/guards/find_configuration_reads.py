@@ -6,6 +6,8 @@ READER_MODULES = tuple(("system", f"{name}.py") for name in READER_NAMES)
 PACKAGE_ALLOWED_TO_READ = "commands"
 PURGE_OF_THE_TRAILS = ("system", "remove_expired_trails.py")
 CONFIGURATION_FILE_ATTRIBUTE = "configuration_file"
+CONFIGURATION_FILE_CONSTANT = "CONFIGURATION_FILE"
+CONFIGURATION_FILE_NAME = "config.toml"
 TOML_PARSERS = ("load", "loads")
 
 
@@ -28,8 +30,16 @@ def _parses_toml(node: ast.AST) -> bool:
     return node.func.attr in TOML_PARSERS and isinstance(owner, ast.Name) and owner.id == "tomllib"
 
 
+def _names_configuration_file(node: ast.AST) -> bool:
+    if isinstance(node, ast.Attribute):
+        return node.attr == CONFIGURATION_FILE_ATTRIBUTE
+    if isinstance(node, ast.Name):
+        return node.id == CONFIGURATION_FILE_CONSTANT
+    return isinstance(node, ast.Constant) and node.value == CONFIGURATION_FILE_NAME
+
+
 def _reaches_configuration_file(tree: ast.AST) -> bool:
-    return any(isinstance(node, ast.Attribute) and node.attr == CONFIGURATION_FILE_ATTRIBUTE for node in ast.walk(tree))
+    return any(_names_configuration_file(node) for node in ast.walk(tree))
 
 
 def _find_reader_calls(tree: ast.AST) -> list[tuple[int, str]]:

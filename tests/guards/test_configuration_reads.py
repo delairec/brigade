@@ -44,6 +44,19 @@ class ConfigurationReadsGuardTest(unittest.TestCase):
                 "document = tomllib.loads(runtime.paths.configuration_file.read_text())\n",
                 "brigade/runs/plan_run.py:1 parses config.toml",
             ),
+            (
+                "brigade/runs/read_run_setting.py",
+                'document = tomllib.loads((paths.config_root / "config.toml").read_text())\n',
+                "brigade/runs/read_run_setting.py:1 parses config.toml",
+            ),
+            (
+                "brigade/roles/resolve_role.py",
+                (
+                    "from brigade.system.paths import CONFIGURATION_FILE\n"
+                    "document = tomllib.loads((paths.config_root / CONFIGURATION_FILE).read_text())\n"
+                ),
+                "brigade/roles/resolve_role.py:2 parses config.toml",
+            ),
         ]
         for module_path, source, expected_violation in rows:
             with self.subTest(module=module_path), tempfile.TemporaryDirectory() as root:
