@@ -4278,7 +4278,7 @@ TASK B83
 		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
 			+ "test_should_report_the_usage_and_the_cost_of_the_whole_session_of_run_2ee96f(self):"
 	SPEC "run.finished carries as duration_ms the wall time brigade measured for the segment;"
-		+ "brigade/runs/run_segments.py prefers it to the duration_ms the client reports"
+		+ "brigade/runs/describe_finished.py prefers it to the duration_ms the client reports"
 		IMPL "brigade/runs/describe_finished.py::duration_ms=record.measured_ms,"
 		IMPL "tests/unit/runs/test_describe_finished.py::def"
 			+ "test_should_record_the_steps_counted_from_the_transcripts_the_measured_duration_and_the_cost(self):"
