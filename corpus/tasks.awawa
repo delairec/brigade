@@ -4285,6 +4285,10 @@ TASK B83
 		REF @TASK.B92
 		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		REF @DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
+	RATIONALE "the key cost_usd joins the answer of parse-result for every adapter: the external"
+		+ "adapter brigade-client-vibe on the PATH of this machine, outside the repository, answers"
+		+ "it null once this task merges, or client = \"vibe\" is refused for lacking the key"
+		REF @DECISION.AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
 	SOURCE "the user's answer of 2026-10-07, a draft in F0, on the session's report of the ledger"
 		+ "lines of run 20261007T101817Z-2ee96f"
 	SOURCE "the user's rulings of 2026-10-09 at the refinement of this task: cost_usd joins the"
@@ -4352,6 +4356,11 @@ TASK B84
 		+ "@TASK.B108 is null; no price table is held, so a cut segment has no cost_usd"
 		REF @TASK.B108
 		REF @DECISION.BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
+	RATIONALE "the key session_id joins the answer of launch-argv and resume-argv for every"
+		+ "adapter: the external adapter brigade-client-vibe on the PATH of this machine, outside"
+		+ "the repository, answers it null once this task merges, or client = \"vibe\" is refused"
+		+ "for lacking the key"
+		REF @DECISION.AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
 	SOURCE "item 1 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
 	SOURCE "the user's rulings of 2026-10-09 at the refinement of this task: the session id"
