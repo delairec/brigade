@@ -429,11 +429,13 @@ class RunsFollowTestCase(RunsTestCase):
         follow.send_signal(signal.SIGINT)
         return follow.communicate(timeout=FOLLOW_WAIT_S)[0]
 
+    def read_through_blank_line(self, follow: subprocess.Popen) -> None:
+        while follow.stdout.readline() not in (BLANK_LINE, END_OF_OUTPUT):
+            pass
+
     def read_opening(self, follow: subprocess.Popen) -> None:
-        while follow.stdout.readline() not in (BLANK_LINE, END_OF_OUTPUT):
-            pass
-        while follow.stdout.readline() not in (BLANK_LINE, END_OF_OUTPUT):
-            pass
+        self.read_through_blank_line(follow)
+        self.read_through_blank_line(follow)
 
 
 class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):

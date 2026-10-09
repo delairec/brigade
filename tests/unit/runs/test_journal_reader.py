@@ -13,8 +13,8 @@ WRITING_LINE = (
     '{"schema_version": 1, "at": "2026-10-09T14:00:02Z", "segment": 1, "kind": "text",'
     ' "summary": "Writing the test", "cut": false}\n'
 )
-WRITING_LINE_START = WRITING_LINE[:40]
-WRITING_LINE_END = WRITING_LINE[40:]
+WRITING_LINE_START = '{"schema_version": 1, "at": "2026-10-09T1'
+WRITING_LINE_END = '4:00:02Z", "segment": 1, "kind": "text", "summary": "Writing the test", "cut": false}\n'
 
 
 class JournalReaderTest(unittest.TestCase):
