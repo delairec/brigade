@@ -180,9 +180,10 @@ one to its reasoning level. A slot resolves to the first of:
 3. brigade's built-in role, under `brigade/roles/data/`.
 
 ```
-brigade roles list [--json]          # the slot, the role, its source and the model of each slot
-brigade roles show <slot> [--json]   # the role file the slot resolves to
-brigade roles lint [--json]          # the built-in and the machine role files; exit 1 on a finding
+brigade roles list [--json]                  # the slot, the role, its source and the model of each slot
+brigade roles show <slot> [--json]           # the role file the slot resolves to
+brigade roles show <slot> --short [--json]   # its front matter and the size of its body, in lines and bytes
+brigade roles lint [--json]                  # the built-in and the machine role files; exit 1 on a finding
 ```
 
 ## Runs

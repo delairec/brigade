@@ -20,6 +20,19 @@ MACHINE_PLANNER = (
     "---\n"
     "You plan the waves of this machine.\n"
 )
+MACHINE_PLANNER_WITH_AN_ACCENTED_BODY = (
+    "---\n"
+    "name: planner\n"
+    "slot: plan\n"
+    "work: the plan of a wave\n"
+    "reasoning: light\n"
+    "capabilities: read\n"
+    "budget: 20\n"
+    "returns: the wave plan\n"
+    "---\n"
+    "Vous planifiez les vagues de cette machine.\n"
+    "À chaque tick, une vague au plus.\n"
+)
 PLANNER_PACKAGE = (
     "AGENT planner\n"
     '\tWORK "the plan of a wave"\n'
@@ -197,6 +210,61 @@ class BrigadeRolesFromTheMachineRolesDirectoryTest(RolesTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stderr, f"brigade roles show: slot plan is declared by both {first} and {second}\n")
+
+
+class BrigadeRolesShowShortTest(RolesTestCase):
+    def test_should_return_the_front_matter_and_the_size_of_the_body_without_the_body(self):
+        # Arrange
+        self.write_machine_role("planner.md", MACHINE_PLANNER_WITH_AN_ACCENTED_BODY)
+
+        # Act
+        completed = self.run_roles("show", "plan", "--short", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "slot": "plan",
+                "role": "planner",
+                "source": "machine",
+                "front_matter": {
+                    "name": "planner",
+                    "slot": "plan",
+                    "work": "the plan of a wave",
+                    "reasoning": "light",
+                    "capabilities": "read",
+                    "budget": "20",
+                    "returns": "the wave plan",
+                },
+                "body_lines": 2,
+                "body_bytes": 79,
+            },
+        )
+
+    def test_should_print_the_front_matter_block_followed_by_the_size_of_the_body(self):
+        # Arrange
+        self.write_machine_role("planner.md", MACHINE_PLANNER_WITH_AN_ACCENTED_BODY)
+
+        # Act
+        completed = self.run_roles("show", "plan", "--short")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout,
+            "---\n"
+            "name: planner\n"
+            "slot: plan\n"
+            "work: the plan of a wave\n"
+            "reasoning: light\n"
+            "capabilities: read\n"
+            "budget: 20\n"
+            "returns: the wave plan\n"
+            "---\n"
+            "body: 2 lines, 79 bytes, source machine\n",
+        )
 
 
 @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")

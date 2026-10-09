@@ -7,10 +7,17 @@ from brigade.system.read_optional_configuration import read_optional_configurati
 
 DOCUMENT_SCHEMA_VERSION = 1
 FINAL_NEWLINE = "\n"
+NO_BODY = ""
 
 
 def _render_text(document: dict) -> str:
-    return render_role_file(document["front_matter"], document["body"]).removesuffix(FINAL_NEWLINE)
+    if "body" in document:
+        return render_role_file(document["front_matter"], document["body"]).removesuffix(FINAL_NEWLINE)
+    front_matter_block = render_role_file(document["front_matter"], NO_BODY)
+    return (
+        f"{front_matter_block}body: {document['body_lines']} lines, {document['body_bytes']} bytes,"
+        f" source {document['source']}"
+    )
 
 
 def _read_request(options):
@@ -24,21 +31,30 @@ def _decide_exit_code(document: dict) -> int:
 def roles_show(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     resolved = resolve_role(request.slot, runtime, NO_PROJECT_BINDINGS, configuration)
-    return {
+    identity = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "slot": resolved.slot,
         "role": resolved.role,
         "source": resolved.source,
         "front_matter": resolved.front_matter,
-        "body": resolved.body,
     }
+    if request.short:
+        return {
+            **identity,
+            "body_lines": len(resolved.body.splitlines()),
+            "body_bytes": len(resolved.body.encode("utf-8")),
+        }
+    return {**identity, "body": resolved.body}
 
 
 COMMAND = Command(
     path=("roles", "show"),
     help="print the role file a slot resolves to",
     group_help="list, show and lint the roles each slot resolves to",
-    arguments=(Argument(("slot",), {"choices": SLOTS}),),
+    arguments=(
+        Argument(("slot",), {"choices": SLOTS}),
+        Argument(("--short",), {"action": "store_true", "help": "print the front matter and the size of the body"}),
+    ),
     run=roles_show,
     read_request=_read_request,
     render_text=_render_text,
