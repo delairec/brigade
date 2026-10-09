@@ -1121,6 +1121,7 @@ TASK B19
 	AFTER @TASK.B14
 	AFTER @TASK.B71
 	AFTER @TASK.B106
+	AFTER @TASK.B112
 	RATIONALE "it follows @TASK.B71: the resume from a progress file rests on the client being able"
 		+ "to write it, F1 of the foundations review"
 		REF @TASK.B71
@@ -5445,3 +5446,58 @@ TASK B110
 		+ "refinement, the text of --short the front-matter block followed by one line, the size of"
 		+ "the body in lines and in bytes"
 	DELIVERED_BY 74
+
+TASK B111
+	TITLE "a fallback configured in config.toml takes over a run whose client reports its quota"
+		+ "exhausted"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "runs"
+	ROLE ada
+	DESC "to settle in the refinement: what a fallback names, another model of the same client, a"
+		+ "row of [reasoning] or another client adapter; whether it is set per reasoning level, per"
+		+ "slot or once; whether the run resumes its session on the fallback or relaunches from its"
+		+ "progress file; how the fallback composes with the pause of @TASK.B19, taken first or"
+		+ "only when no fallback is configured; what the ledger records of the switch; the"
+		+ "exhausted quota is the one @TASK.B112 classifies"
+		REF @TASK.B19
+		REF @TASK.B112
+	SPEC "a run whose segment ends on an exhausted quota, with a fallback configured, continues on"
+		+ "the fallback, and the ledger records the switch with the client and model left and taken"
+	SPEC "without a fallback configured, the run ends as @TASK.B19 sets"
+		REF @TASK.B19
+	RATIONALE "run 20261009T114125Z-b7c554, the review of pull request #76 on the slot review bound"
+		+ "to a role of deep reasoning, model fable, failed after 33 seconds on \"You're out of"
+		+ "usage credits\" while the runs on opus went on; brigade classified it error_class"
+		+ "execution, reset null, RATE_LIMIT_PHRASES of brigade/adapters/clients/claude_code.py"
+		+ "naming no credit, and the review was relaunched by hand on the slot build"
+	RATIONALE "in @MILESTONE.ADD0: the pause of @TASK.B19 covers the MVP, the fallback is an"
+		+ "improvement found while running brigade on itself"
+		REF @MILESTONE.ADD0
+		REF @TASK.B19
+	SOURCE "the user's words of 2026-10-09, \"je pense on peut ajouter une tâche en ADD0 pour"
+		+ "rendre configurable un fallback quand le quota est épuisé\""
+
+TASK B112
+	TITLE "the claude-code adapter classifies \"out of usage credits\" as a rate limit"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "adapters"
+	ROLE ada
+	SPEC "parse-result of brigade/adapters/clients/claude_code.py classifies a result whose message"
+		+ "names usage credits run out, \"You're out of usage credits\", error_class rate_limit,"
+		+ "reset null when the message names no hour"
+	SPEC "a unit test of tests/unit/adapters/clients/test_claude_code.py reads the result document"
+		+ "of run 20261009T114125Z-b7c554 and finds error_class rate_limit"
+	RATIONALE "run 20261009T114125Z-b7c554 failed on \"You're out of usage credits\" and brigade"
+		+ "classified it error_class execution, RATE_LIMIT_PHRASES of"
+		+ "brigade/adapters/clients/claude_code.py, \"limit reached\", \"hit your limit\", \"usage"
+		+ "limit\" and \"rate limit\", naming no credit; the pause of @TASK.B19 acts on a"
+		+ "rate_limit result alone and would never pause on it"
+		REF @TASK.B19
+	RATIONALE "in @MILESTONE.M1 with @TASK.B19, which it comes before; the fallback of @TASK.B111"
+		+ "reads the same classification"
+		REF @MILESTONE.M1
+		REF @TASK.B111
+	SOURCE "the user's words of 2026-10-09, \"oui pour le draft que tu proposes mais dans une"
+		+ "future milestone\""
