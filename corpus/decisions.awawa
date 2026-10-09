@@ -1861,3 +1861,23 @@ DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		+ "\"ligne\") et horodatées non?\"; \"le tail n'est pas fait à l'intérieur, ça reste à moi"
 		+ "(ou au bot) de passer le log en tail\"; on the format, \"en jsonl c'est bien\""
 		REF @TASK.B79
+
+DECISION RunFinishedCountsTheMainSessionAndTheSessionWithItsSubAgents
+	TITLE "run.finished counts the steps twice: main_steps, the main session, against which a"
+		+ "budget and the client's turn limit are read, and total_steps, the session with its"
+		+ "sub-agents, the extent of the task"
+	STATUS active
+	DESC "main_steps replaces steps in run.finished from schema_version 2; a reader of a budget"
+		+ "reads main_steps, a reader of the extent of a task reads total_steps"
+	DESC "binds @TASK.B83"
+		REF @TASK.B83
+	REJECTED "the main session alone: steps would not tell the extent of a task that delegates"
+	REJECTED "the sub-agents counted into steps: the count would no longer compare with the budget"
+		+ "of the procedure nor with --max-turns, which counts the main session alone"
+	REJECTED "steps kept and steps_with_subagents or subagent_steps added beside it: the user chose"
+		+ "two names that each say what they count, steps being renamed through the upgrade on read"
+	SOURCE "the user's rulings of 2026-10-09 in the refinement of @TASK.B83: \"steps est aussi"
+		+ "utilisée pour connaitre l'ampleur d'une tâche non? On pourrait stocker les 2, il faut"
+		+ "juste leur trouver un nom parlant pour qu'on sache que l'un est seulement le main agent,"
+		+ "et l'autre est l'agent+subagents\"; the names main_steps and total_steps"
+		REF @TASK.B83

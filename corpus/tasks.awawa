@@ -4205,9 +4205,10 @@ TASK B82
 	DELIVERED_BY 56
 
 TASK B83
-	TITLE "A Claude Code session that ran a sub-agent is recorded whole: its usage, its duration"
-		+ "and its steps, not those of the turns after its last task notification"
-	STATUS draft
+	TITLE "A Claude Code session whose result follows a task notification is recorded whole: its"
+		+ "usage, its cost, its duration and its steps, not those of the turns after its last"
+		+ "notification"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
@@ -4219,11 +4220,26 @@ TASK B83
 	SPEC "run.finished carries as duration_ms the wall time brigade measured for the segment;"
 		+ "brigade/runs/run_segments.py prefers it to the duration_ms the client reports"
 	SPEC "when the result object follows a task notification, its origin.kind task-notification,"
-		+ "steps is null with the reason that the client reported the turns after its last"
-		+ "notification only, never the num_turns of those turns"
+		+ "parse-result answers steps null, never the num_turns of the turns after the last"
+		+ "notification"
+	SPEC "run.finished goes to schema_version 2: steps becomes main_steps, the steps of the main"
+		+ "session, and total_steps is added, main_steps plus the steps of each sub-agent of the"
+		+ "session counted the same way; the Claude Code adapter counts both from the transcript of"
+		+ "the session and of its subagents directory, read through the transcripts operation; on a"
+		+ "session whose result follows no notification main_steps equals its num_turns, as on"
+		+ "session de26d2c6-3b58-4d9e-9bb4-292f6b9e64de, 52; a transcript that cannot be read"
+		+ "leaves main_steps to the steps parse-result answered, and a count still unknown is null"
+		+ "with its reason in nulls"
+	SPEC "a run.finished line of schema_version 1 is upgraded on read and never rewritten: its"
+		+ "steps read as main_steps, its total_steps null with a reason naming schema 1"
+	SPEC "parse-result answers cost_usd, the total_cost_usd of the result object, and run.finished"
+		+ "carries it; it is absent from the line when the client reports no cost"
 	SPEC "the fixture run through brigade adapter parse-result prints the usage of the whole"
-		+ "session and steps null, and the existing rows of"
-		+ "tests/unit/adapters/clients/test_claude_code.py still pass"
+		+ "session, cost_usd 3.6302823999999987 and steps null; a unit row on the transcript of"
+		+ "session 857d4221-e962-4128-8096-759d8feb0ced, home directory scrubbed, pins main_steps"
+		+ "and a total_steps that adds the steps of its one sub-agent; the existing rows of"
+		+ "tests/unit/adapters/clients/test_claude_code.py, tests/unit/ledger/test_run_finished.py"
+		+ "and tests/cli/test_ledger.py still pass"
 	AFTER @TASK.B71
 	RATIONALE "found by the session on 2026-10-07 on the first run of brigade on itself, run"
 		+ "20261007T101817Z-2ee96f, ada delivering @TASK.B71 as pull request #52: the run lasted"
@@ -4232,7 +4248,8 @@ TASK B83
 		+ "output_tokens 1986; the result object, origin.kind task-notification and result_index 1,"
 		+ "covers the two turns that followed the notification of the sub-agent ada launched;"
 		+ "brigade/adapters/clients/claude_code.py reads num_turns, usage and duration_ms from that"
-		+ "object, and run_segments.py:64 takes the client's duration over the one it measured"
+		+ "object, and _describe_finished of brigade/runs/run_segments.py takes the client's"
+		+ "duration over the one it measured"
 		REF @TASK.B71
 	RATIONALE "seen again on run 20261007T184817Z-13636c, procedure awawa-pr-review-round: its"
 		+ "result.json reports steps 3 and duration_ms 21805, its result object origin.kind"
@@ -4241,16 +4258,37 @@ TASK B83
 	RATIONALE "the budgets of @TASK.B37 are computed from the steps and the usage of the ledger; a"
 		+ "run that delegates to a sub-agent would read as two steps and nineteen seconds"
 		REF @TASK.B37
-	RATIONALE "left to the refinement: whether steps can be counted whole from the transcript of"
-		+ "the session, which the transcripts operation already reads, rather than reported null;"
-		+ "and whether total_cost_usd joins the ledger"
 	RATIONALE "a second occurrence on 2026-10-07: the review round of pull request #56, run"
 		+ "20261007T142949Z-327ab0, ran 10 min 23 s, brief at 16:29:50, stdout at 16:40:13, 2.10"
 		+ "USD, and the ledger of 2026-10 records 4 steps and 32 331 ms, the result object covering"
 		+ "only the turns after the last task notification; recorded in"
 		+ "docs/follow-up/2026-10-07-b82-run.md"
+	RATIONALE "examined on 2026-10-09 over the 15 segments whose stdout is readable: 5 end on a"
+		+ "result object of origin.kind task-notification, and 4 of them report"
+		+ "subagent_stats.spawned 0, the notification of a background task rather than of a"
+		+ "sub-agent, hence the title; on the sessions ending on no notification, num_turns equals"
+		+ "the tool calls of the main transcript plus one, 51 + 1 on session de26d2c6 and 56 + 1 on"
+		+ "session eca43c28; session 857d4221 holds 41 tool calls in its main transcript and 11 in"
+		+ "the one of its sub-agent"
+	RATIONALE "main_steps compares a run with its budget and with --max-turns, a quarter above it,"
+		+ "which counts the turns of the main session alone; total_steps measures the extent of the"
+		+ "task; usage and cost_usd already hold the whole session, its sub-agents included,"
+		+ "modelUsage reporting 42255 output tokens where the two transcripts hold 34 610"
+		REF @DECISION.RunFinishedCountsTheMainSessionAndTheSessionWithItsSubAgents
+	RATIONALE "cost_usd serves @TASK.B92, which prints the cost of a run, while the ledger holds no"
+		+ "model and no price to compute it from the usage; the upgrade on read follows DESC 3 of"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry, and a cost_usd"
+		+ "absent when unreported follows"
+		+ "@DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent"
+		REF @TASK.B92
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+		REF @DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
 	SOURCE "the user's answer of 2026-10-07, a draft in F0, on the session's report of the ledger"
 		+ "lines of run 20261007T101817Z-2ee96f"
+	SOURCE "the user's rulings of 2026-10-09 at the refinement of this task: cost_usd joins the"
+		+ "ledger; \"steps est aussi utilisée pour connaitre l'ampleur d'une tâche non? On pourrait"
+		+ "stocker les 2, il faut juste leur trouver un nom parlant\"; the names main_steps and"
+		+ "total_steps; the task ratified"
 
 TASK B84
 	TITLE "A segment cut at the wall-time limit is measured: the session id is set at launch, and"
