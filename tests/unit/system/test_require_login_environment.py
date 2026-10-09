@@ -42,8 +42,8 @@ class RequireLoginEnvironmentTestCase(unittest.TestCase):
     def tearDown(self):
         self.root.cleanup()
 
-    def require(self, forge: ForgeDouble):
-        demand = LoginDemand(forge=forge, forge_name="github", login="octo-bot", key="verify", attempts=3)
+    def require(self, forge: ForgeDouble, attempts: int = 3):
+        demand = LoginDemand(forge=forge, forge_name="github", login="octo-bot", key="verify", attempts=attempts)
         return require_login_environment(demand, self.runtime, self.waits.append)
 
 
@@ -87,14 +87,21 @@ class RequireLoginEnvironmentWhenGhNeverPrintsTheTokenTest(RequireLoginEnvironme
         self.forge = ForgeDouble([NO_TOKEN, NO_TOKEN, NO_TOKEN])
 
     def test_should_stop_on_an_error_naming_the_login_and_the_attempts(self):
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            self.require(self.forge)
+        rows = [
+            (1, "gh printed no token for the login octo-bot, bound to verify, after 1 attempt"),
+            (3, "gh printed no token for the login octo-bot, bound to verify, after 3 attempts"),
+        ]
+        for attempts, expected in rows:
+            with self.subTest(attempts=attempts):
+                # Arrange
+                forge = ForgeDouble([NO_TOKEN, NO_TOKEN, NO_TOKEN])
 
-        # Assert
-        self.assertEqual(
-            str(refusal.exception), "gh printed no token for the login octo-bot, bound to verify, after 3 attempts"
-        )
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    self.require(forge, attempts)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), expected)
 
     def test_should_wait_after_every_attempt_but_the_last(self):
         # Act

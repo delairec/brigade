@@ -34,6 +34,7 @@ def require_login_environment(demand: LoginDemand, runtime: Runtime, wait: Calla
             wait(delay_s)
             delay_s *= DELAY_GROWTH
     append_event(runtime.paths, runtime.now, ForgeAccountUnavailable(login=demand.login, key=demand.key))
+    noun = "attempt" if demand.attempts == 1 else "attempts"
     raise LoginUnavailable(
-        f"gh printed no token for the login {demand.login}, bound to {demand.key}, after {demand.attempts} attempts"
+        f"gh printed no token for the login {demand.login}, bound to {demand.key}, after {demand.attempts} {noun}"
     )

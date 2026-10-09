@@ -1025,6 +1025,9 @@ class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
 ENVIRONMENT_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-environment"
 ACCOUNTS_GH = Path(__file__).resolve().parent / "fixtures" / "executables" / "gh-accounts"
 BOUND_SLOTS = (
+    'client = "claude-code"\nforge_attempts = 1\n[forge_accounts]\nbuild = "octo-builder"\nverify = "refused-bot"\n'
+)
+BOUND_SLOTS_READ_TWICE = (
     'client = "claude-code"\nforge_attempts = 2\n[forge_accounts]\nbuild = "octo-builder"\nverify = "refused-bot"\n'
 )
 
@@ -1101,7 +1104,7 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stderr),
-            (1, "brigade run: gh printed no token for the login refused-bot, bound to verify, after 2 attempts\n"),
+            (1, "brigade run: gh printed no token for the login refused-bot, bound to verify, after 1 attempt\n"),
         )
 
     def test_should_record_the_login_unavailable_in_the_ledger(self):
@@ -1123,6 +1126,9 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
         )
 
     def test_should_start_no_run_after_reading_the_token_forge_attempts_times(self):
+        # Arrange
+        self.machine.write_configuration(BOUND_SLOTS_READ_TWICE)
+
         # Act
         self.run_slot("verify", "--detach")
 
