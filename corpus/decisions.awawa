@@ -754,6 +754,16 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	SOURCE "runs show --follow in DESC 7 on the user's ruling of 2026-10-09 in the refinement of"
 		+ "@TASK.B113"
 		REF @TASK.B113
+	DESC "brigade runs show <id> --follow is the one command that writes to stdout before its"
+		+ "document: the text of --log, then each record as it reads it, flushed; its document, the"
+		+ "state and the outcome of the run at the end and whether a signal ended the follow, is"
+		+ "rendered once after them, and --json, which would mix records with the document, is a"
+		+ "usage error with it, from @TASK.B113"
+		REF @TASK.B113
+	REJECTED "the records of --follow on stderr as diagnostics, stdout keeping the document alone:"
+		+ "the journal is what the reader of --follow asks for and pipes into tail or grep"
+	SOURCE "DESC 16 in pull request #85 of the brigade repository, delivering @TASK.B113"
+		REF @TASK.B113
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"
