@@ -5825,6 +5825,8 @@ TASK B113
 		IMPL "tests/unit/runs/test_run_follower.py::def"
 			+ "test_should_read_the_last_record_of_a_run_that_ends_while_it_reads_the_run(self):"
 		IMPL "tests/cli/test_runs.py::def"
+			+ "test_should_read_the_run_again_only_every_journal_poll_s_seconds(self):"
+		IMPL "tests/cli/test_runs.py::def"
 			+ "test_should_print_a_record_written_after_it_started_and_exit_0_once_the_run_is_done(self):"
 		IMPL "tests/cli/test_runs.py::def"
 			+ "test_should_print_the_journal_as_log_does_then_the_state_and_outcome_of_the_run(self):"
