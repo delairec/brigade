@@ -43,9 +43,16 @@ which already has write access to this repository: there is nothing to request.
 
 ## Bootstrap
 
-Milestones M0 and M1 are delivered by the existing machinery: the roles of the instructions corpus, one pull
-request per task. From M2, brigade delivers its own waves. `awawa status TASK --where MILESTONE==@MILESTONE.M0 .`
-lists the tasks of a milestone.
+Brigade delivers its own waves, one pull request per task: a wave launched by `/awawa-plan-wave-start` cuts one
+worktree per task from the base, `git worktree add .claude/worktrees/<id> -b <branch> origin/<base>`, and starts
+each task as a brigade run, never as an `Agent` call:
+
+```
+brigade run awawa-task --slot build --project brigade --cwd .claude/worktrees/<id> --brief <file> --detach task=@TASK.X base=<base>
+```
+
+`--brief` carries what the session established; `brigade runs list` follows the runs.
+`awawa status TASK --where MILESTONE==@MILESTONE.F0 .` lists the tasks of a milestone.
 
 ## Commands
 
