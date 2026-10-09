@@ -3993,7 +3993,7 @@ TASK B79
 
 TASK B80
 	TITLE "The README sentence on coverage names the fail_under threshold of .coveragerc"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "docs"
 	ROLE ada
@@ -4002,6 +4002,7 @@ TASK B80
 		+ "figure, .coveragerc being the figure's home: grep -n \"failing on no threshold\""
 		+ "README.md prints nothing and grep -n fail_under README.md prints the line of that"
 		+ "sentence"
+		IMPL "README.md::`fail_under` threshold of `.coveragerc`, never lowered"
 	RATIONALE "F13 of the foundations review: the README sentence on the CI reads \"a report read"
 		+ "in the job log only and failing on no threshold\" while .coveragerc sets fail_under = 93"
 		+ "since @TASK.B70; DESC 6 of"
@@ -4016,6 +4017,7 @@ TASK B80
 	SOURCE "the user's ruling of 2026-10-09 in the refinement of B80, \"Aucun chiffre\": the README"
 		+ "quotes no figure, and @TASK.B96 no longer edits it"
 		REF @TASK.B96
+	DELIVERED_BY 79
 
 TASK B81
 	TITLE "brigade project add --init-corpus writes a starter corpus into the project's corpus"
