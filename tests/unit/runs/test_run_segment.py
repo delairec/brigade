@@ -1,6 +1,6 @@
 import json
+import signal
 import subprocess
-import sys
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -34,7 +34,8 @@ LAUNCH_ANSWER = {
     "session_id": None,
 }
 UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-CUT_AT_ONCE_S = 0.05
+LIMIT_ALREADY_REACHED_S = 0.0
+PID_HELD_BY_NO_PROCESS = 2**31 - 1
 
 
 TRANSCRIPTS_ANSWER = {
@@ -187,21 +188,18 @@ class SpawnDouble:
         return ExitedProcessDouble()
 
 
-class SpawnNeverEndingDouble:
-    def __init__(self):
-        self.processes = []
+class ProcessStoppedAtTheLimitDouble:
+    pid = PID_HELD_BY_NO_PROCESS
 
+    def wait(self, timeout: float) -> int:
+        return -signal.SIGTERM
+
+
+class SpawnOutlivingTheLimitDouble:
     def spawn(self, request):
         request.stdout.write_text("Reading the task\n", encoding="utf-8")
         request.stderr.write_text("", encoding="utf-8")
-        process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], start_new_session=True)
-        self.processes.append(process)
-        return process
-
-    def stop(self) -> None:
-        for process in self.processes:
-            process.kill()
-            process.wait()
+        return ProcessStoppedAtTheLimitDouble()
 
 
 def _report_nothing(trace) -> None:
@@ -428,13 +426,15 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.spawn = SpawnNeverEndingDouble()
-        self.addCleanup(self.spawn.stop)
+        self.spawn = SpawnOutlivingTheLimitDouble()
 
     def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
         # Arrange
         plan = _create_plan(
-            self.root, client_type=ClientAnsweringItsSessionDouble, reads_transcripts=True, wall_limit_s=CUT_AT_ONCE_S
+            self.root,
+            client_type=ClientAnsweringItsSessionDouble,
+            reads_transcripts=True,
+            wall_limit_s=LIMIT_ALREADY_REACHED_S,
         )
 
         # Act
@@ -467,7 +467,10 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
             with self.subTest(client=client_type.__name__):
                 # Arrange
                 plan = _create_plan(
-                    self.root, client_type=client_type, reads_transcripts=reads_transcripts, wall_limit_s=CUT_AT_ONCE_S
+                    self.root,
+                    client_type=client_type,
+                    reads_transcripts=reads_transcripts,
+                    wall_limit_s=LIMIT_ALREADY_REACHED_S,
                 )
 
                 # Act
