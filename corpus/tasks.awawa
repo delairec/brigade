@@ -3982,19 +3982,18 @@ TASK B79
 
 TASK B80
 	TITLE "The README sentence on coverage names the fail_under threshold of .coveragerc"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "docs"
 	ROLE ada
-	SPEC "the sentence of README.md on the CI's coverage job no longer reads \"failing on no"
-		+ "threshold\": it names fail_under of .coveragerc as the threshold the job fails below and"
-		+ "says the threshold is never lowered; it quotes no figure, .coveragerc being the figure's"
-		+ "home"
-	SPEC "grep -n threshold README.md prints that sentence and no sentence contradicting"
-		+ ".coveragerc"
-	RATIONALE "F13 of the foundations review: README.md:266-268 reads \"a report read in the job"
-		+ "log only and failing on no threshold\" while .coveragerc:7 sets fail_under = 93 since"
-		+ "@TASK.B70; DESC 6 of"
+	SPEC "the sentence of README.md on the CI's coverage job names fail_under of .coveragerc as the"
+		+ "threshold the job fails below and says the threshold is never lowered, quoting no"
+		+ "figure, .coveragerc being the figure's home: grep -n \"failing on no threshold\""
+		+ "README.md prints nothing and grep -n fail_under README.md prints the line of that"
+		+ "sentence"
+	RATIONALE "F13 of the foundations review: the README sentence on the CI reads \"a report read"
+		+ "in the job log only and failing on no threshold\" while .coveragerc sets fail_under = 93"
+		+ "since @TASK.B70; DESC 6 of"
 		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade reads \"coverage"
 		+ "fails the run below the fail_under of .coveragerc\" and \"a threshold, once set, is"
 		+ "never lowered\""
@@ -4003,6 +4002,9 @@ TASK B80
 	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
 		+ "fix the issues reported by max in this milestone\"; F13 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B80, \"Aucun chiffre\": the README"
+		+ "quotes no figure, and @TASK.B96 no longer edits it"
+		REF @TASK.B96
 
 TASK B81
 	TITLE "brigade project add --init-corpus writes a starter corpus into the project's corpus"
@@ -4607,9 +4609,7 @@ TASK B96
 	SPEC ".coveragerc sets fail_under = 100 and the coverage job of the CI passes at that threshold"
 		+ "with awawa on PATH; the pull request body quotes the TOTAL line of the job next to the"
 		+ "local one of @TASK.B70's commands"
-	SPEC "the README sentence on coverage, as @TASK.B80 leaves it, reads the threshold of 100"
 	AFTER @TASK.B95
-	AFTER @TASK.B80
 	RATIONALE "found in the review of pull request #56: .coveragerc sets fail_under = 93, the"
 		+ "figure @TASK.B70 read in a CI without awawa, and the coverage job printed 94 % on #56,"
 		+ "job 112779485130; the 100 % of @TASK.B70 and of SPEC 7 of @TASK.B82 held only on a"
@@ -4621,8 +4621,12 @@ TASK B96
 		REF @TASK.B82
 		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @TASK.B95
+	RATIONALE "the README names fail_under of .coveragerc without its figure, as @TASK.B80 leaves"
+		+ "it, so raising the threshold touches .coveragerc alone"
+		REF @TASK.B80
 	SOURCE "item 9 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
 		+ "the user's answer of 2026-10-07, \"Copie privée (licence OK)\""
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B80, \"Aucun chiffre\""
 
 TASK B97
 	TITLE "brigade reads the subprocess trails: the records of a run, a tick or a command returned"

@@ -1321,8 +1321,9 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	DESC "the CI runs five development tools on every pull request touching a file outside the"
 		+ "paths @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob names, and"
 		+ "on every push to main: zizmor on .github/workflows/, ruff check and ruff format --check,"
-		+ "semgrep scan with the Python and security rule packs, vulture, and coverage.py in report"
-		+ "mode; @TASK.B62 to @TASK.B66 deliver them, one tool per pull request"
+		+ "semgrep scan with the Python and security rule packs, vulture, and coverage.py, failing"
+		+ "below the fail_under of .coveragerc; @TASK.B62 to @TASK.B66 deliver them, one tool per"
+		+ "pull request"
 		REF @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 		REF @TASK.B62
 		REF @TASK.B63
@@ -1396,6 +1397,9 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
 	SOURCE "the user's rulings of 2026-10-06 on the CI tooling proposals: \"tout ce que tu as mis"
 		+ "en oui\", then \"tout ce qui est utile est bon à prendre\""
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B80, \"Corriger DESC 1\":"
+		+ "DESC 1 read coverage.py in report mode, which DESC 6 had ended"
+		REF @TASK.B80
 
 DECISION TestClassNamesCarryTheSuffixTestThatVultureReads
 	TITLE "every unittest.TestCase class of tests/ is named after the behaviour it pins, then the"
