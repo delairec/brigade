@@ -88,6 +88,70 @@ class SumSessionUsageTest(unittest.TestCase):
             TokenUsage(input_tokens=3, output_tokens=30, cache_creation_input_tokens=300, cache_read_input_tokens=3000),
         )
 
+    def test_should_count_each_message_without_an_id_on_its_own(self):
+        # Arrange
+        transcripts = TranscriptsAnswer.from_document(
+            {
+                "schema_version": 1,
+                "messages": [
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": "Reading the task.",
+                        "tool_calls": 0,
+                        "id": NO_ID,
+                        "usage": {
+                            "input_tokens": 1,
+                            "output_tokens": 10,
+                            "cache_creation_input_tokens": 100,
+                            "cache_read_input_tokens": 1000,
+                        },
+                    },
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": "Writing the test.",
+                        "tool_calls": 0,
+                        "id": NO_ID,
+                        "usage": {
+                            "input_tokens": 1,
+                            "output_tokens": 10,
+                            "cache_creation_input_tokens": 100,
+                            "cache_read_input_tokens": 1000,
+                        },
+                    },
+                ],
+                "subagents": [
+                    {
+                        "messages": [
+                            {
+                                "role": "assistant",
+                                "timestamp": None,
+                                "content": "Done.",
+                                "tool_calls": 0,
+                                "id": NO_ID,
+                                "usage": {
+                                    "input_tokens": 1,
+                                    "output_tokens": 10,
+                                    "cache_creation_input_tokens": 100,
+                                    "cache_read_input_tokens": 1000,
+                                },
+                            },
+                        ]
+                    },
+                ],
+            }
+        )
+
+        # Act
+        usage = sum_session_usage(transcripts)
+
+        # Assert
+        self.assertEqual(
+            usage,
+            TokenUsage(input_tokens=3, output_tokens=30, cache_creation_input_tokens=300, cache_read_input_tokens=3000),
+        )
+
 
 class SumSessionUsageOfRecordedSessionsTest(unittest.TestCase):
     def setUp(self):
