@@ -669,11 +669,11 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	DESC "--json and the common options are declared once on a parent parser attached to every"
 		+ "subcommand; brigade --version with or without --json stays as @TASK.B01 delivered it"
 		REF @TASK.B01
-	DESC "a long-lived command, tick --loop or serve, writes diagnostics to stderr and exits 0 on"
-		+ "SIGTERM and SIGINT; brigade keeps no log file of its own besides runs/<id>/; the"
-		+ "scheduler adapter decides where stderr goes, the journal or the file the cron line"
-		+ "names; the cron line discards the stdout of each tick, its document, which the heartbeat"
-		+ "tick.json already records"
+	DESC "a long-lived command, tick --loop, serve or runs show --follow, writes diagnostics to"
+		+ "stderr and exits 0 on SIGTERM and SIGINT; brigade keeps no log file of its own besides"
+		+ "runs/<id>/; the scheduler adapter decides where stderr goes, the journal or the file the"
+		+ "cron line names; the cron line discards the stdout of each tick, its document, which the"
+		+ "heartbeat tick.json already records"
 	DESC "binds @TASK.B02 first, which introduces the renderer, the exit mapping, the parent parser"
 		+ "and the runtime builder, then every command task"
 		REF @TASK.B02
@@ -751,6 +751,9 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	SOURCE "DESC 2 amended for brigade roles show on the user's rulings of 2026-10-09 in the"
 		+ "refinement of @TASK.B110"
 		REF @TASK.B110
+	SOURCE "runs show --follow in DESC 7 on the user's ruling of 2026-10-09 in the refinement of"
+		+ "@TASK.B113"
+		REF @TASK.B113
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"
@@ -1838,8 +1841,9 @@ DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		+ "client whose adapter declares no such operation has one raw record per line of its"
 		+ "stdout, cut to the same length"
 	DESC "brigade runs show <id> --log prints the journal, one line per record, and --json the same"
-		+ "records in a document; brigade takes no --tail and no --follow: the reader pipes the"
-		+ "output into tail, or follows the file with tail -f"
+		+ "records in a document; --follow prints it, then each record appended, until the run"
+		+ "ends, from @TASK.B113; brigade takes no --tail: the reader pipes the output into tail"
+		REF @TASK.B113
 	DESC "segments/<n>/stdout.log and stderr.log stay the raw output of the client, the input of"
 		+ "its adapter, returned whole by no command"
 	DESC "a failure of the journal never ends the segment unbounded: an actions answer the adapter"
@@ -1853,8 +1857,7 @@ DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		+ "MB with a line of 200 655 characters, so a line count bounds nothing"
 	REJECTED "a text journal.log followed with tail -f: a brigade reader of the journal would parse"
 		+ "a rendering back"
-	REJECTED "a --follow of brigade: tail already follows a file, and the reader keeps the choice"
-		+ "of its bound"
+	REJECTED "tail -f of journal.jsonl as the way to follow a run: it prints raw JSON records"
 	REJECTED "the segment stopped when its actions operation fails: the journal observes the run,"
 		+ "and a client stopped for it loses the work of its segment"
 	RATIONALE "the reader of a run, a person or a bot, follows what the run does, not the"
@@ -1866,6 +1869,10 @@ DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		+ "\"ligne\") et horodatées non?\"; \"le tail n'est pas fait à l'intérieur, ça reste à moi"
 		+ "(ou au bot) de passer le log en tail\"; on the format, \"en jsonl c'est bien\""
 		REF @TASK.B79
+	SOURCE "DESC 4 amended and the REJECTED of a --follow of brigade lifted on the user's ruling of"
+		+ "2026-10-09 in the refinement of @TASK.B113: \"on a besoin de pouvoir voir défiler le log"
+		+ "du run\""
+		REF @TASK.B113
 
 DECISION RunFinishedCountsTheMainSessionAndTheSessionWithItsSubAgents
 	TITLE "run.finished counts the steps twice: main_steps, the main session, against which a"
