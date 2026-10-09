@@ -642,7 +642,11 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "stand-down, and returns none; --json prints it; the text is rendered from the document,"
 		+ "so the text never shows a fact the document lacks"
 	DESC "a document is bounded: a long result goes to a file under $XDG_STATE_HOME/brigade/ and"
-		+ "the document carries its path and a summary"
+		+ "the document carries its path and a summary; the journal of a run, brigade runs show"
+		+ "<id> --log, is bounded record by record and its length is the run's, the reader taking"
+		+ "its tail, as"
+		+ "@DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails sets"
+		REF @DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 	DESC "stdout carries the document only; stderr carries diagnostics and errors; under --json an"
 		+ "error still goes to stderr and stdout stays empty, awawa's convention"
 	DESC "exit codes: 0 done, or stood down: another run holds the lock the command needs, one"
@@ -733,6 +737,9 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	SOURCE "DESC 15 on the user's words of 2026-10-07 in the review of pull request #56: \"il"
 		+ "faudrait aussi que ça s'affiche dans un tableau à entête non?\""
 		REF @TASK.B82
+	SOURCE "DESC 2 amended for the journal of a run on the user's rulings of 2026-10-09 in the"
+		+ "refinement of @TASK.B79"
+		REF @TASK.B79
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"
@@ -1437,12 +1444,15 @@ DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 		+ "with grep, sed or awk"
 	DESC "a line brigade prints on stderr or writes to a log renders a record; no brigade command"
 		+ "parses it back"
-	DESC "the stdout and stderr of a client segment, kept as raw text, are reached through a"
-		+ "brigade command that bounds and summarises them, as @TASK.B79 and @TASK.B97 settle"
-		REF @TASK.B79
+	DESC "the stdout and stderr of a client segment stay raw text, the input of its adapter,"
+		+ "returned whole by no command: a run is read through its journal, as"
+		+ "@DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails sets,"
+		+ "and the trails through @TASK.B97"
+		REF @DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		REF @TASK.B97
-	DESC "binds @TASK.B72 and @TASK.B97"
+	DESC "binds @TASK.B72, @TASK.B79 and @TASK.B97"
 		REF @TASK.B72
+		REF @TASK.B79
 		REF @TASK.B97
 	REJECTED "traces written as free text and searched with grep, sed or awk: every reader"
 		+ "rediscovers the format, and an agent spends its steps searching instead of being handed"
@@ -1456,6 +1466,8 @@ DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 		+ "l'agents ia puisse utiliser un outil qui remonte les infos dont il a besoin sans avoir à"
 		+ "chercher par lui-même\""
 		REF @TASK.B72
+	SOURCE "DESC 4 amended on the user's rulings of 2026-10-09 in the refinement of @TASK.B79"
+		REF @TASK.B79
 
 DECISION APreflightIsANamedSetOfCollectorsAndChecks
 	TITLE "a preflight is a named set of mechanical actions, collectors and checks, run on demand"
@@ -1775,3 +1787,42 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 		+ "answer never carries it; the two shapes differ, and RunResult stays a kind of its own"
 	SOURCE "pull request #68 of the brigade repository, delivering @TASK.B74"
 		REF @TASK.B74
+
+DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
+	TITLE "a run keeps a journal, one short timestamped JSON record per action of its client,"
+		+ "written as the run goes; brigade prints it whole and the reader takes its tail"
+	STATUS active
+	DESC "a run appends to runs/<id>/journal.jsonl one JSON record per action of its client,"
+		+ "carrying schema_version, the time brigade read it, the segment, the kind and a summary"
+		+ "of 200 characters at most, the record naming whether the summary was cut"
+	DESC "the journal is written while the segment runs: the run reads the new output of the client"
+		+ "every journal_poll_s seconds of config.toml, 2 by default, and once more when the"
+		+ "segment ends, so that tail -f of the file follows the run"
+	DESC "the actions are read by an operation actions of the client adapter, which turns the new"
+		+ "output of a segment into the actions it holds; the core names no event of a client; a"
+		+ "client whose adapter declares no such operation has one raw record per line of its"
+		+ "stdout, cut to the same length"
+	DESC "brigade runs show <id> --log prints the journal, one line per record, and --json the same"
+		+ "records in a document; brigade takes no --tail and no --follow: the reader pipes the"
+		+ "output into tail, or follows the file with tail -f"
+	DESC "segments/<n>/stdout.log and stderr.log stay the raw output of the client, the input of"
+		+ "its adapter, returned whole by no command"
+	DESC "binds @TASK.B79"
+		REF @TASK.B79
+	REJECTED "the paths and line counts of the logs of a segment: the reader opens and searches the"
+		+ "files, against DESC 2 of the decision that every trace is read through a brigade command"
+	REJECTED "the raw logs returned whole or cut by --tail: the stdout of a vibe segment reached 2"
+		+ "MB with a line of 200 655 characters, so a line count bounds nothing"
+	REJECTED "a text journal.log followed with tail -f: a brigade reader of the journal would parse"
+		+ "a rendering back"
+	REJECTED "a --follow of brigade: tail already follows a file, and the reader keeps the choice"
+		+ "of its bound"
+	RATIONALE "the reader of a run, a person or a bot, follows what the run does, not the"
+		+ "transcript of its client: vibe writes its whole session on stdout, every turn, its"
+		+ "reasoning and the content of every file a tool read, and claude-code under"
+		+ "--output-format json writes one result document at the end of the session"
+	SOURCE "the user's rulings of 2026-10-09 in the refinement of @TASK.B79: \"On ne devrait pas"
+		+ "avoir des logs de 2mo. On devrait avoir un journal avec des entrées courtes (1"
+		+ "\"ligne\") et horodatées non?\"; \"le tail n'est pas fait à l'intérieur, ça reste à moi"
+		+ "(ou au bot) de passer le log en tail\"; on the format, \"en jsonl c'est bien\""
+		REF @TASK.B79
