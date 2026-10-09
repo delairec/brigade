@@ -212,6 +212,34 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         )
 
 
+class BrigadeRunOfAClientReadingTranscriptsTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(f'{COUNTING_CLIENT}operations = "transcripts"\n')
+        self.record("builder", DONE_RESULT)
+        transcripts = {
+            "schema_version": 1,
+            "messages": [
+                {"role": "user", "timestamp": None, "content": "Deliver B83.", "tool_calls": 0},
+                {"role": "assistant", "timestamp": None, "content": [], "tool_calls": 2},
+            ],
+            "subagents": [
+                {"messages": [{"role": "assistant", "timestamp": None, "content": [], "tool_calls": 1}]},
+            ],
+        }
+        (self.recordings / "fake-session.transcripts.json").write_text(json.dumps(transcripts))
+
+    def test_should_record_the_steps_of_the_main_session_and_of_the_session_with_its_sub_agent(self):
+        # Act
+        completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace))
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["main_steps"], 3)
+        self.assertEqual(finished["total_steps"], 5)
+
+
 class BrigadeRunOnClaudeCodeTest(RunTestCase):
     def setUp(self):
         super().setUp()
