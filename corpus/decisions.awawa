@@ -1982,5 +1982,7 @@ DECISION TheSessionOfASegmentIsTheOneItsResultReportsElseTheOneNamedAtLaunch
 		+ "brigade generates, so the transcripts recorded for fake-session in tests/cli/test_run.py"
 		+ "would no longer be read, against the SPEC of the task that keeps those rows passing, and"
 		+ "a client naming its session in its result only would lose it"
-	SOURCE "pull request #86 of the brigade repository, delivering @TASK.B84"
+	SOURCE "the user's ruling of 2026-10-09 on the review of pull request #86 of the brigade"
+		+ "repository, the coded session kept and SPEC 1 of @TASK.B84 rewritten to state it:"
+		+ "\"ok\", answering \"On garde le comportement codé et on réécrit SPEC 1 ?\""
 		REF @TASK.B84

@@ -4402,8 +4402,11 @@ TASK B84
 		+ "the launch-argv answer carries the session_id the client will use, null when the client"
 		+ "takes none at launch; the Claude Code adapter passes it as --session-id and answers it,"
 		+ "the fake adapter answers it unchanged; resume-argv never carries --session-id; the"
-		+ "session of the run.finished line of a segment is the session_id of the launch-argv"
-		+ "answer, a null one naming its reason in nulls"
+		+ "session of the run.finished line of a segment that exits is the session_id its"
+		+ "parse-result answer reports, that of the launch-argv answer when it reports none, null"
+		+ "naming its reason in nulls when neither names one; the session of a segment cut at the"
+		+ "wall-time limit is the session_id of the launch-argv answer, a null one naming its"
+		+ "reason in nulls"
 		IMPL "brigade/runs/run_segment.py::session_id=str(uuid.uuid4()),"
 		IMPL "brigade/adapters/clients/claude_code.py::return _build_command(request,"
 			+ "[\"--session-id\", request[\"session_id\"]])"
@@ -4510,6 +4513,10 @@ TASK B84
 	SOURCE "the user's ruling of 2026-10-09 on the review of pull request #86, the unfinished last"
 		+ "line of a sub-agent transcript ignored as that of the session file: \"Les sous-agents"
 		+ "dans #86 ok\""
+	SOURCE "the user's ruling of 2026-10-09 on the review of pull request #86, the session of a"
+		+ "segment that exits read from its parse-result answer as coded and SPEC 1 rewritten to"
+		+ "state it: \"ok\", answering \"On garde le comportement codé et on réécrit SPEC 1 ?\""
+		REF @DECISION.TheSessionOfASegmentIsTheOneItsResultReportsElseTheOneNamedAtLaunch
 
 TASK B85
 	TITLE "A segment cut at the wall-time limit records a signal of its own, carrying the limit in"
