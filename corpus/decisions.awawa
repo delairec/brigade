@@ -1794,12 +1794,14 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 	TITLE "the dataclass of a ledger event declares every field brigade writes and a line must"
 		+ "carry them all; a measure no collector reported is absent, never null"
 	STATUS active
-	DESC "a run.finished line carries the 17 fields run_segments writes and a signal.recorded line"
-		+ "its 6; the reader refuses a line lacking one, as it refuses any line lacking a field of"
-		+ "its event"
+	DESC "a run.finished line carries the 18 fields describe_finished writes and a signal.recorded"
+		+ "line its 6; the reader refuses a line lacking one, as it refuses any line lacking a"
+		+ "field of its event"
 		REF @TASK.B74
-	DESC "steps_to_first_edit and oversized_output_steps are optional on RunFinished: absent from"
-		+ "the line until a collector reports them, and never written null"
+	DESC "steps_to_first_edit, oversized_output_steps and cost_usd are optional on RunFinished:"
+		+ "absent from the line until a collector or the client reports them, and never written"
+		+ "null"
+		REF @TASK.B83
 	DESC "an event the ledger does not declare is read as UndeclaredEvent, its name alone: the"
 		+ "overview counts it, and no wave or project view reads a key of its own"
 	DESC "the answers of launch-argv and resume-argv share one shape and one kind, ClientCommand"
@@ -1817,6 +1819,9 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 		+ "answer never carries it; the two shapes differ, and RunResult stays a kind of its own"
 	SOURCE "pull request #68 of the brigade repository, delivering @TASK.B74"
 		REF @TASK.B74
+	SOURCE "DESC 1 and DESC 2 amended in pull request #81 of the brigade repository, delivering"
+		+ "@TASK.B83"
+		REF @TASK.B83
 
 DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 	TITLE "a run keeps a journal, one short timestamped JSON record per action of its client,"

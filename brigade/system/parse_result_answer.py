@@ -13,6 +13,7 @@ class ParseResultAnswer:
     usage: TokenUsage | None
     session_id: str | None
     duration_ms: int | None
+    cost_usd: float | None
     error_class: str | None
     reset: ResetHour | None
     message: str | None
@@ -27,6 +28,7 @@ class ParseResultAnswer:
             usage=None if usage is None else TokenUsage.from_document(usage),
             session_id=document["session_id"],
             duration_ms=document["duration_ms"],
+            cost_usd=document["cost_usd"],
             error_class=document["error_class"],
             reset=None if reset is None else ResetHour.from_document(reset),
             message=document["message"],
@@ -40,6 +42,7 @@ class ParseResultAnswer:
             "usage": None if self.usage is None else self.usage.to_document(),
             "session_id": self.session_id,
             "duration_ms": self.duration_ms,
+            "cost_usd": self.cost_usd,
             "error_class": self.error_class,
             "reset": None if self.reset is None else self.reset.to_document(),
             "message": self.message,

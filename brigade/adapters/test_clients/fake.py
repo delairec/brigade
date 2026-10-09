@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
 from brigade.errors import BrigadeError
@@ -15,6 +16,7 @@ NO_DELAY = "0"
 NO_PROGRESS = ""
 NO_INTERVAL = "0"
 SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
+TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
@@ -84,6 +86,11 @@ def _read_actions(request: dict) -> dict:
     return {"schema_version": SCHEMA_VERSION, "actions": actions}
 
 
+def _replay_transcripts(request: dict) -> dict:
+    recording = Path(request["settings"]["recordings"]) / f"{request['session_id']}{TRANSCRIPTS_RECORDING_SUFFIX}"
+    return json.loads(recording.read_text(encoding="utf-8"))
+
+
 def answer(operation: str, request: dict) -> dict:
     if operation == "probe":
         return _probe(request)
@@ -93,4 +100,6 @@ def answer(operation: str, request: dict) -> dict:
         return _replay_result(request)
     if operation == "actions" and operation in _read_list_setting(request, "operations"):
         return _read_actions(request)
+    if operation == "transcripts" and operation in _read_list_setting(request, "operations"):
+        return _replay_transcripts(request)
     raise BrigadeError(f"the fake client adapter does not answer {operation}")

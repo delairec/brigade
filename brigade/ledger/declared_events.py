@@ -12,6 +12,9 @@ from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 
 LEDGER_SCHEMA_VERSION = 1
+RUN_FINISHED_SCHEMA_VERSION = 2
+WRITTEN_SCHEMA_VERSIONS = {RunFinished.name: RUN_FINISHED_SCHEMA_VERSION}
+READABLE_SCHEMA_VERSIONS = {RunFinished.name: (LEDGER_SCHEMA_VERSION, RUN_FINISHED_SCHEMA_VERSION)}
 DECLARED_EVENTS = {
     kind.name: kind
     for kind in (

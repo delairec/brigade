@@ -132,7 +132,8 @@ comma-separated features its probe declares (`step_count`, `tool_grants`, `reset
 tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, `progress`, a line it
 appends to the progress file of the run, and `interval`, the seconds it waits after each line of its recording;
 `operations`, comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result
-document is a result and any other line a text.
+document is a result and any other line a text; with `transcripts`, it answers the document
+`<session_id>.transcripts.json` of `recordings`.
 
 `brigade adapter <operation>` (or with `--json`) answers one operation of the configured adapter, the request read as
 a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv`, `transcripts` and `actions`. An external adapter

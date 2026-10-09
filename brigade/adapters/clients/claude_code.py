@@ -25,10 +25,19 @@ CAPABILITY_TOOLS = {
 PROGRESS_FILE_TOOLS = ("Write", "Edit")
 TURN_MARGIN_DIVISOR = 4
 USAGE_COUNTERS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+MODEL_USAGE_COUNTERS = {
+    "input_tokens": "inputTokens",
+    "output_tokens": "outputTokens",
+    "cache_creation_input_tokens": "cacheCreationInputTokens",
+    "cache_read_input_tokens": "cacheReadInputTokens",
+}
+TASK_NOTIFICATION_ORIGIN = "task-notification"
 RATE_LIMIT_PHRASES = ("limit reached", "hit your limit", "usage limit", "rate limit")
 RESET_PATTERN = re.compile(r"resets (?:at )?(\d{1,2})(?::(\d{2}))?(am|pm)?(?: \(([^)]+)\))?", re.IGNORECASE)
 ERROR_SUBTYPE_PREFIX = "error"
 TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
+SUBAGENTS_DIRECTORY = "subagents"
+SUBAGENT_TRANSCRIPTS = "*.jsonl"
 IDENTIFYING_ARGUMENTS = ("file_path", "command", "pattern", "path", "url", "query")
 
 
@@ -94,7 +103,16 @@ def _read_result_object(stdout: str):
     return next((event for event in events if event.get("type") == "result"), None)
 
 
+def _sum_model_usage(model_usage: dict) -> dict:
+    return {
+        counter: sum(model[name] for model in model_usage.values()) for counter, name in MODEL_USAGE_COUNTERS.items()
+    }
+
+
 def _read_usage(result: dict):
+    model_usage = result.get("modelUsage")
+    if isinstance(model_usage, dict):
+        return _sum_model_usage(model_usage)
     usage = result.get("usage")
     if not isinstance(usage, dict):
         return None
@@ -130,6 +148,12 @@ def _classify_error(result: dict, message):
     return None
 
 
+def _read_steps(result: dict):
+    if result.get("origin", {}).get("kind") == TASK_NOTIFICATION_ORIGIN:
+        return None
+    return result.get("num_turns")
+
+
 def _parse_result(request: dict) -> dict:
     result = _read_result_object(request["stdout"])
     if result is None:
@@ -139,10 +163,11 @@ def _parse_result(request: dict) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
         "outcome": "done" if error_class is None else "failed",
-        "steps": result.get("num_turns"),
+        "steps": _read_steps(result),
         "usage": _read_usage(result),
         "session_id": result.get("session_id"),
         "duration_ms": result.get("duration_ms"),
+        "cost_usd": result.get("total_cost_usd"),
         "error_class": error_class,
         "reset": _read_reset(message) if error_class == "rate_limit" else None,
         "message": None if error_class is None else message,
@@ -184,21 +209,46 @@ def _name_project_directory(worktree: str) -> str:
     return re.sub(r"[^A-Za-z0-9]", "-", worktree)
 
 
+def _count_tool_calls(content) -> int:
+    if isinstance(content, str):
+        return 0
+    return sum(1 for item in content if item.get("type") == "tool_use")
+
+
+def _describe_message(entry: dict) -> dict:
+    content = entry["message"]["content"]
+    return {
+        "role": entry["message"]["role"],
+        "timestamp": entry.get("timestamp"),
+        "content": content,
+        "tool_calls": _count_tool_calls(content),
+    }
+
+
+def _read_messages(content: str) -> list[dict]:
+    entries = [json.loads(line) for line in content.splitlines() if line.strip()]
+    return [_describe_message(entry) for entry in entries if entry.get("type") in TRANSCRIPT_MESSAGE_TYPES]
+
+
+def _read_transcript(path: Path) -> list[dict]:
+    try:
+        return _read_messages(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        raise BrigadeError(f"unreadable transcript at {path}: {error}") from None
+
+
 def _read_transcripts(request: dict) -> dict:
     session_id = request["session_id"]
     project_directory = Path(request["home"]) / ".claude" / "projects" / _name_project_directory(request["worktree"])
     path = project_directory / f"{session_id}.jsonl"
-    try:
-        content = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise BrigadeError(f"no transcript of session {session_id} at {path}") from None
-    entries = [json.loads(line) for line in content.splitlines() if line.strip()]
-    messages = [
-        {"role": entry["message"]["role"], "timestamp": entry.get("timestamp"), "content": entry["message"]["content"]}
-        for entry in entries
-        if entry.get("type") in TRANSCRIPT_MESSAGE_TYPES
-    ]
-    return {"schema_version": SCHEMA_VERSION, "messages": messages}
+    if not path.exists():
+        raise BrigadeError(f"no transcript of session {session_id} at {path}")
+    subagent_paths = (project_directory / session_id / SUBAGENTS_DIRECTORY).glob(SUBAGENT_TRANSCRIPTS)
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "messages": _read_transcript(path),
+        "subagents": [{"messages": _read_transcript(subagent_path)} for subagent_path in subagent_paths],
+    }
 
 
 def answer(operation: str, request: dict) -> dict:

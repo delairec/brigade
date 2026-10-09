@@ -5,6 +5,9 @@ from pathlib import Path
 from brigade.adapters.clients.claude_code import answer
 from brigade.errors import BrigadeError
 
+FIXTURES = Path(__file__).parent / "fixtures" / "claude-code"
+CLI_FIXTURES = Path(__file__).parents[3] / "cli" / "fixtures" / "claude-code"
+
 LAUNCH_REQUEST = {
     "schema_version": 1,
     "worktree": "/srv/worktrees/b42",
@@ -258,6 +261,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 },
                 "session_id": "ada28962",
                 "duration_ms": 1369,
+                "cost_usd": 0.035,
                 "error_class": None,
                 "reset": None,
                 "message": None,
@@ -290,6 +294,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 },
                 "session_id": "ada28962",
                 "duration_ms": 600000,
+                "cost_usd": None,
                 "error_class": "turn_limit",
                 "reset": None,
                 "message": None,
@@ -322,6 +327,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 },
                 "session_id": "ada28962",
                 "duration_ms": 800,
+                "cost_usd": None,
                 "error_class": "rate_limit",
                 "reset": {"hour": "15:00", "timezone": "Europe/Paris"},
                 "message": "You've hit your limit · resets 3pm (Europe/Paris)",
@@ -377,6 +383,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 },
                 "session_id": "ada28962",
                 "duration_ms": 5000,
+                "cost_usd": None,
                 "error_class": "execution",
                 "reset": None,
                 "message": None,
@@ -400,6 +407,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
+                "cost_usd": None,
                 "error_class": "unreadable_output",
                 "reset": None,
                 "message": "Error: Invalid API key",
@@ -423,6 +431,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
+                "cost_usd": None,
                 "error_class": "unreadable_output",
                 "reset": None,
                 "message": "Error: interrupted",
@@ -457,6 +466,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 },
                 "session_id": "ada28962",
                 "duration_ms": 1369,
+                "cost_usd": None,
                 "error_class": None,
                 "reset": None,
                 "message": None,
@@ -496,11 +506,92 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
+                "cost_usd": None,
                 "error_class": "unreadable_output",
                 "reset": None,
                 "message": "Error: interrupted",
             },
         )
+
+    def test_should_sum_the_usage_of_every_model_the_session_used(self):
+        # Arrange
+        stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":4,"result":"ok",'
+            '"session_id":"s-42","usage":{"input_tokens":1,"cache_creation_input_tokens":2,'
+            '"cache_read_input_tokens":3,"output_tokens":4},'
+            '"modelUsage":{"claude-opus-5-5":{"inputTokens":100,"outputTokens":2000,"cacheReadInputTokens":30000,'
+            '"cacheCreationInputTokens":4000,"costUSD":1.5},"claude-haiku-5-5":{"inputTokens":10,"outputTokens":200,'
+            '"cacheReadInputTokens":3000,"cacheCreationInputTokens":400,"costUSD":0.1}}}'
+        )
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertEqual(
+            result["usage"],
+            {
+                "input_tokens": 110,
+                "output_tokens": 2200,
+                "cache_creation_input_tokens": 4400,
+                "cache_read_input_tokens": 33000,
+            },
+        )
+
+    def test_should_report_the_usage_and_the_cost_of_the_whole_session_of_run_2ee96f(self):
+        # Arrange
+        stdout = (CLI_FIXTURES / "result-after-task-notification.json").read_text()
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "done",
+                "steps": None,
+                "usage": {
+                    "input_tokens": 108,
+                    "output_tokens": 42255,
+                    "cache_creation_input_tokens": 230745,
+                    "cache_read_input_tokens": 5861342,
+                },
+                "session_id": "857d4221-e962-4128-8096-759d8feb0ced",
+                "duration_ms": 19091,
+                "cost_usd": 3.6302823999999987,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+
+    def test_should_count_no_steps_for_a_result_that_follows_a_task_notification(self):
+        # Arrange
+        stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":19091,"num_turns":2,"result":"ok",'
+            '"session_id":"s-42","origin":{"kind":"task-notification","producer":"session-task"}}'
+        )
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertIsNone(result["steps"])
+
+    def test_should_count_the_turns_of_a_result_that_answers_the_brief(self):
+        # Arrange
+        stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":19091,"num_turns":52,"result":"ok",'
+            '"session_id":"s-42","origin":{"kind":"user"}}'
+        )
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertEqual(result["steps"], 52)
 
     def test_should_report_no_usage_when_the_result_object_carries_none(self):
         # Arrange
@@ -522,6 +613,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": "s-42",
                 "duration_ms": 9000,
+                "cost_usd": None,
                 "error_class": None,
                 "reset": None,
                 "message": None,
@@ -682,14 +774,93 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "messages": [
-                    {"role": "user", "timestamp": "2026-10-06T10:00:00.000Z", "content": "Deliver the task B42."},
+                    {
+                        "role": "user",
+                        "timestamp": "2026-10-06T10:00:00.000Z",
+                        "content": "Deliver the task B42.",
+                        "tool_calls": 0,
+                    },
                     {
                         "role": "assistant",
                         "timestamp": "2026-10-06T10:00:09.000Z",
                         "content": [{"type": "text", "text": "Done."}],
+                        "tool_calls": 0,
                     },
                 ],
+                "subagents": [],
             },
+        )
+
+    def test_should_count_the_tool_calls_of_each_message_and_read_each_sub_agent_of_the_session(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        subagents = projects / "ada28962" / "subagents"
+        subagents.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z","message":{"role":"assistant",'
+            '"content":[{"type":"text","text":"Reading."},{"type":"tool_use","name":"Read","input":{}},'
+            '{"type":"tool_use","name":"Grep","input":{}}]}}\n'
+        )
+        (subagents / "agent-b2.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:01:00.000Z","message":{"role":"assistant",'
+            '"content":[{"type":"tool_use","name":"Bash","input":{}}]}}\n'
+        )
+        (subagents / "agent-a1.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:30.000Z","message":{"role":"user","content":"Make it pass."}}\n'
+        )
+        (subagents / "agent-a1.meta.json").write_text('{"agentType":"ada"}')
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(
+            transcripts["messages"],
+            [
+                {
+                    "role": "assistant",
+                    "timestamp": "2026-10-06T10:00:09.000Z",
+                    "content": [
+                        {"type": "text", "text": "Reading."},
+                        {"type": "tool_use", "name": "Read", "input": {}},
+                        {"type": "tool_use", "name": "Grep", "input": {}},
+                    ],
+                    "tool_calls": 2,
+                },
+            ],
+        )
+        self.assertCountEqual(
+            transcripts["subagents"],
+            [
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "timestamp": "2026-10-06T10:00:30.000Z",
+                            "content": "Make it pass.",
+                            "tool_calls": 0,
+                        },
+                    ]
+                },
+                {
+                    "messages": [
+                        {
+                            "role": "assistant",
+                            "timestamp": "2026-10-06T10:01:00.000Z",
+                            "content": [{"type": "tool_use", "name": "Bash", "input": {}}],
+                            "tool_calls": 1,
+                        },
+                    ]
+                },
+            ],
         )
 
     def test_should_refuse_a_session_with_no_file(self):
@@ -711,4 +882,92 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
         self.assertEqual(
             str(raised.exception),
             f"no transcript of session ada28962 at {self.home.name}/.claude/projects/-srv-b42/ada28962.jsonl",
+        )
+
+    def test_should_refuse_a_session_file_it_cannot_parse(self):
+        for case, transcript in [
+            ("a line cut short", '{"type":"assistant","message":{"role":"assi\n'),
+            ("a message entry without its message", '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z"}\n'),
+            ("a line that is not an object", '["assistant"]\n'),
+            ("a message whose content is null", '{"type":"assistant","message":{"role":"assistant","content":null}}\n'),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+                projects.mkdir(parents=True, exist_ok=True)
+                (projects / "ada28962.jsonl").write_text(transcript)
+                request = {
+                    "schema_version": 1,
+                    "session_id": "ada28962",
+                    "worktree": "/srv/b42",
+                    "reasoning_table": {},
+                    "settings": {},
+                    "home": self.home.name,
+                }
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    answer("transcripts", request)
+
+                # Assert
+                self.assertIn(
+                    f"unreadable transcript at {self.home.name}/.claude/projects/-srv-b42/ada28962.jsonl: ",
+                    str(raised.exception),
+                )
+
+    def test_should_refuse_a_sub_agent_transcript_still_being_written(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        subagents = projects / "ada28962" / "subagents"
+        subagents.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+        )
+        (subagents / "agent-x.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:01:00.000Z","message":{"role":"assistant","content":[{"ty'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            answer("transcripts", request)
+
+        # Assert
+        self.assertIn(
+            f"unreadable transcript at {self.home.name}/.claude/projects/-srv-b42/ada28962/subagents/agent-x.jsonl: ",
+            str(raised.exception),
+        )
+
+    def test_should_refuse_a_sub_agent_transcript_it_cannot_open(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        subagents = projects / "ada28962" / "subagents"
+        (subagents / "agent-x.jsonl").mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            answer("transcripts", request)
+
+        # Assert
+        self.assertIn(
+            f"unreadable transcript at {self.home.name}/.claude/projects/-srv-b42/ada28962/subagents/agent-x.jsonl: ",
+            str(raised.exception),
         )

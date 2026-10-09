@@ -5,8 +5,11 @@ from brigade.system.transcripts_answer import TranscriptsAnswer
 TRANSCRIPTS_DOCUMENT = {
     "schema_version": 1,
     "messages": [
-        {"role": "user", "timestamp": "2026-10-08T09:00:00Z", "content": "Deliver the task."},
-        {"role": "assistant", "timestamp": None, "content": [{"type": "text", "text": "Done."}]},
+        {"role": "user", "timestamp": "2026-10-08T09:00:00Z", "content": "Deliver the task.", "tool_calls": 0},
+        {"role": "assistant", "timestamp": None, "content": [{"type": "tool_use", "name": "Read"}], "tool_calls": 1},
+    ],
+    "subagents": [
+        {"messages": [{"role": "user", "timestamp": None, "content": "Make it pass.", "tool_calls": 0}]},
     ],
 }
 
@@ -22,8 +25,21 @@ class TranscriptsAnswerTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "messages": [
-                    {"role": "user", "timestamp": "2026-10-08T09:00:00Z", "content": "Deliver the task."},
-                    {"role": "assistant", "timestamp": None, "content": [{"type": "text", "text": "Done."}]},
+                    {
+                        "role": "user",
+                        "timestamp": "2026-10-08T09:00:00Z",
+                        "content": "Deliver the task.",
+                        "tool_calls": 0,
+                    },
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": [{"type": "tool_use", "name": "Read"}],
+                        "tool_calls": 1,
+                    },
+                ],
+                "subagents": [
+                    {"messages": [{"role": "user", "timestamp": None, "content": "Make it pass.", "tool_calls": 0}]},
                 ],
             },
         )

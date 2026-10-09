@@ -1,4 +1,8 @@
+import json
+import shutil
+import tempfile
 import unittest
+from pathlib import Path
 
 from brigade.adapters.test_clients.fake import answer
 from brigade.errors import BrigadeError
@@ -123,7 +127,7 @@ class FakeResultTest(unittest.TestCase):
         # Arrange
         recording = (
             '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
-            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}'
+            ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}'
         )
 
         # Act
@@ -150,6 +154,7 @@ class FakeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": "fake-session",
                 "duration_ms": 61000,
+                "cost_usd": None,
                 "error_class": None,
                 "reset": None,
                 "message": None,
@@ -181,6 +186,7 @@ class FakeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
+                "cost_usd": None,
                 "error_class": "unreadable_output",
                 "reset": None,
                 "message": "cat: /srv/recordings/builder.json: No such file or directory",
@@ -246,7 +252,7 @@ class FakeResultOfARecordingOfSeveralLinesTest(unittest.TestCase):
         recording = (
             "Reading the task\n"
             '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
-            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}\n'
+            ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 
         # Act
@@ -274,7 +280,7 @@ class FakeActionsTest(unittest.TestCase):
             "Reading the task\n"
             "\n"
             '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
-            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}\n'
+            ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 
         # Act
@@ -295,5 +301,45 @@ class FakeActionsTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "actions": [{"kind": "text", "summary": "Reading the task"}, {"kind": "result", "summary": "done"}],
+            },
+        )
+
+
+class FakeTranscriptsTest(unittest.TestCase):
+    def setUp(self):
+        self.recordings = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.recordings)
+
+    def test_should_answer_the_transcripts_recorded_for_the_session(self):
+        # Arrange
+        recorded = {
+            "schema_version": 1,
+            "messages": [{"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0}],
+            "subagents": [],
+        }
+        (self.recordings / "fake-session.transcripts.json").write_text(json.dumps(recorded))
+
+        # Act
+        transcripts = answer(
+            "transcripts",
+            {
+                "schema_version": 1,
+                "session_id": "fake-session",
+                "worktree": "/srv/worktrees/b83",
+                "reasoning_table": {},
+                "settings": {"operations": "transcripts", "recordings": str(self.recordings)},
+                "home": "/home/ada",
+            },
+        )
+
+        # Assert
+        self.assertEqual(
+            transcripts,
+            {
+                "schema_version": 1,
+                "messages": [{"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0}],
+                "subagents": [],
             },
         )

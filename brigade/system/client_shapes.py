@@ -42,6 +42,19 @@ COMMAND_ANSWER = {
     "stdin": OPTIONAL_TEXT,
 }
 
+TRANSCRIPT_MESSAGES = Field(
+    kinds=(list,),
+    items=Field(
+        kinds=(dict,),
+        fields={
+            "role": Field(kinds=(str,), values=("user", "assistant")),
+            "timestamp": OPTIONAL_TEXT,
+            "content": Field(kinds=(str, list)),
+            "tool_calls": COUNT,
+        },
+    ),
+)
+
 CLIENT_ANSWER_SHAPES = {
     "probe": {
         "schema_version": SCHEMA_VERSION,
@@ -72,6 +85,7 @@ CLIENT_ANSWER_SHAPES = {
         ),
         "session_id": OPTIONAL_TEXT,
         "duration_ms": OPTIONAL_COUNT,
+        "cost_usd": Field(kinds=(int, float), nullable=True),
         "error_class": Field(
             kinds=(str,), nullable=True, values=("rate_limit", "turn_limit", "execution", "unreadable_output")
         ),
@@ -80,17 +94,8 @@ CLIENT_ANSWER_SHAPES = {
     },
     "transcripts": {
         "schema_version": SCHEMA_VERSION,
-        "messages": Field(
-            kinds=(list,),
-            items=Field(
-                kinds=(dict,),
-                fields={
-                    "role": Field(kinds=(str,), values=("user", "assistant")),
-                    "timestamp": OPTIONAL_TEXT,
-                    "content": Field(kinds=(str, list)),
-                },
-            ),
-        ),
+        "messages": TRANSCRIPT_MESSAGES,
+        "subagents": Field(kinds=(list,), items=Field(kinds=(dict,), fields={"messages": TRANSCRIPT_MESSAGES})),
     },
     "actions": {
         "schema_version": SCHEMA_VERSION,

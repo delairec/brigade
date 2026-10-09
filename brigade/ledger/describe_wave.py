@@ -25,7 +25,7 @@ def _list_tasks(events: list) -> list[str]:
 
 def _summarize_by(runs: list[RunFinished], attribute: str) -> dict:
     names = sorted({getattr(run, attribute) for run in runs}, key=str)
-    return {name: summarize_steps(run.steps for run in runs if getattr(run, attribute) == name) for name in names}
+    return {name: summarize_steps(run.main_steps for run in runs if getattr(run, attribute) == name) for name in names}
 
 
 def _pair_pauses(entries: list[LedgerEntry]) -> list[dict]:

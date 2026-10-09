@@ -12,7 +12,8 @@ RUN_OF_A_WAVE_WITH_ITS_MEASURES = {
     "client": "claude-code",
     "project": "tidepool",
     "session": "session-b74",
-    "steps": 40,
+    "main_steps": 40,
+    "total_steps": 52,
     "duration_ms": 61000,
     "usage": {
         "input_tokens": 1200,
@@ -28,6 +29,7 @@ RUN_OF_A_WAVE_WITH_ITS_MEASURES = {
     "nulls": {},
     "steps_to_first_edit": 12,
     "oversized_output_steps": 1,
+    "cost_usd": 3.63,
 }
 RUN_REPORTING_NOTHING = {
     "run": "20261008T090000Z-b74a02",
@@ -38,7 +40,8 @@ RUN_REPORTING_NOTHING = {
     "client": "fake",
     "project": None,
     "session": None,
-    "steps": None,
+    "main_steps": None,
+    "total_steps": None,
     "duration_ms": 1500000,
     "usage": None,
     "outcome": "wall_limit",
@@ -51,7 +54,7 @@ RUN_REPORTING_NOTHING = {
 
 
 class RunFinishedTest(unittest.TestCase):
-    def test_should_write_back_a_run_carrying_every_field_and_both_measures(self):
+    def test_should_write_back_a_run_carrying_every_field_its_measures_and_its_cost(self):
         # Act
         document = RunFinished.from_document(RUN_OF_A_WAVE_WITH_ITS_MEASURES).to_document()
 
@@ -67,7 +70,8 @@ class RunFinishedTest(unittest.TestCase):
                 "client": "claude-code",
                 "project": "tidepool",
                 "session": "session-b74",
-                "steps": 40,
+                "main_steps": 40,
+                "total_steps": 52,
                 "duration_ms": 61000,
                 "usage": {
                     "input_tokens": 1200,
@@ -83,10 +87,11 @@ class RunFinishedTest(unittest.TestCase):
                 "nulls": {},
                 "steps_to_first_edit": 12,
                 "oversized_output_steps": 1,
+                "cost_usd": 3.63,
             },
         )
 
-    def test_should_write_back_a_run_whose_nullable_fields_are_null_and_whose_measures_are_absent(self):
+    def test_should_write_back_a_run_whose_nullable_fields_are_null_and_whose_measures_and_cost_are_absent(self):
         # Act
         document = RunFinished.from_document(RUN_REPORTING_NOTHING).to_document()
 
@@ -102,7 +107,8 @@ class RunFinishedTest(unittest.TestCase):
                 "client": "fake",
                 "project": None,
                 "session": None,
-                "steps": None,
+                "main_steps": None,
+                "total_steps": None,
                 "duration_ms": 1500000,
                 "usage": None,
                 "outcome": "wall_limit",

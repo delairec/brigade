@@ -7,7 +7,7 @@ from brigade.system.validate_document import Field
 
 DOCUMENT_SCHEMA_VERSION = 1
 RUN_RESULT_SHAPE = {
-    **CLIENT_ANSWER_SHAPES["parse-result"],
+    **{key: field for key, field in CLIENT_ANSWER_SHAPES["parse-result"].items() if key != "cost_usd"},
     "outcome": Field(kinds=(str,), values=("done", "failed", "wall_limit")),
 }
 
