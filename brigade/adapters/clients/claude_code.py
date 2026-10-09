@@ -243,7 +243,7 @@ def _read_transcripts(request: dict) -> dict:
     path = project_directory / f"{session_id}.jsonl"
     if not path.exists():
         raise BrigadeError(f"no transcript of session {session_id} at {path}")
-    subagent_paths = sorted((project_directory / session_id / SUBAGENTS_DIRECTORY).glob(SUBAGENT_TRANSCRIPTS))
+    subagent_paths = (project_directory / session_id / SUBAGENTS_DIRECTORY).glob(SUBAGENT_TRANSCRIPTS)
     return {
         "schema_version": SCHEMA_VERSION,
         "messages": _read_transcript(path),

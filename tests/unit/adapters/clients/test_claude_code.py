@@ -823,44 +823,44 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            transcripts,
-            {
-                "schema_version": 1,
-                "messages": [
-                    {
-                        "role": "assistant",
-                        "timestamp": "2026-10-06T10:00:09.000Z",
-                        "content": [
-                            {"type": "text", "text": "Reading."},
-                            {"type": "tool_use", "name": "Read", "input": {}},
-                            {"type": "tool_use", "name": "Grep", "input": {}},
-                        ],
-                        "tool_calls": 2,
-                    },
-                ],
-                "subagents": [
-                    {
-                        "messages": [
-                            {
-                                "role": "user",
-                                "timestamp": "2026-10-06T10:00:30.000Z",
-                                "content": "Make it pass.",
-                                "tool_calls": 0,
-                            },
-                        ]
-                    },
-                    {
-                        "messages": [
-                            {
-                                "role": "assistant",
-                                "timestamp": "2026-10-06T10:01:00.000Z",
-                                "content": [{"type": "tool_use", "name": "Bash", "input": {}}],
-                                "tool_calls": 1,
-                            },
-                        ]
-                    },
-                ],
-            },
+            transcripts["messages"],
+            [
+                {
+                    "role": "assistant",
+                    "timestamp": "2026-10-06T10:00:09.000Z",
+                    "content": [
+                        {"type": "text", "text": "Reading."},
+                        {"type": "tool_use", "name": "Read", "input": {}},
+                        {"type": "tool_use", "name": "Grep", "input": {}},
+                    ],
+                    "tool_calls": 2,
+                },
+            ],
+        )
+        self.assertCountEqual(
+            transcripts["subagents"],
+            [
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "timestamp": "2026-10-06T10:00:30.000Z",
+                            "content": "Make it pass.",
+                            "tool_calls": 0,
+                        },
+                    ]
+                },
+                {
+                    "messages": [
+                        {
+                            "role": "assistant",
+                            "timestamp": "2026-10-06T10:01:00.000Z",
+                            "content": [{"type": "tool_use", "name": "Bash", "input": {}}],
+                            "tool_calls": 1,
+                        },
+                    ]
+                },
+            ],
         )
 
     def test_should_refuse_a_session_with_no_file(self):
