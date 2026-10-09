@@ -4,7 +4,7 @@ from typing import ClassVar
 
 @dataclass(frozen=True)
 class ForgeAccountUnavailable:
-    name: ClassVar[str] = "forge_account_unavailable"
+    name: ClassVar[str] = "forge_account.unavailable"
     login: str
     key: str
 

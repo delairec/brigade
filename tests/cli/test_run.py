@@ -1113,12 +1113,12 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
 
         # Assert
         self.assertEqual(
-            self.read_events("forge_account_unavailable"),
+            self.read_events("forge_account.unavailable"),
             [
                 {
                     "schema_version": 1,
                     "ts": mock.ANY,
-                    "event": "forge_account_unavailable",
+                    "event": "forge_account.unavailable",
                     "login": "refused-bot",
                     "key": "verify",
                 }

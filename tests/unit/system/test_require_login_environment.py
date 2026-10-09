@@ -123,7 +123,7 @@ class RequireLoginEnvironmentWhenGhNeverPrintsTheTokenTest(RequireLoginEnvironme
             {
                 "schema_version": 1,
                 "ts": "2026-10-09T12:30:00Z",
-                "event": "forge_account_unavailable",
+                "event": "forge_account.unavailable",
                 "login": "octo-bot",
                 "key": "verify",
             },

@@ -7,7 +7,7 @@ class ForgeAccountUnavailableTest(unittest.TestCase):
     def test_should_read_the_login_and_the_key_bound_to_it(self):
         # Act
         event = ForgeAccountUnavailable.from_document(
-            {"event": "forge_account_unavailable", "login": "octo-bot", "key": "cli"}
+            {"event": "forge_account.unavailable", "login": "octo-bot", "key": "cli"}
         )
 
         # Assert

@@ -1022,7 +1022,7 @@ TASK B14
 		+ "through the forge adapter, records ledger events and moves the task state"
 	SPEC "the worktree the scheduler cut for the task is removed once its pull request is merged or"
 		+ "closed, never while a run holds it"
-	SPEC "a ledger event forge_account_unavailable pauses the wave of its project, which the user"
+	SPEC "a ledger event forge_account.unavailable pauses the wave of its project, which the user"
 		+ "resumes"
 	AFTER @TASK.B12
 	AFTER @TASK.B75
@@ -3533,7 +3533,7 @@ TASK B75
 		+ "an integer of config.toml, 3 by default, a value below 1 an error naming the key and the"
 		+ "file, the delay doubling from one second; the attempts exhausted, the command stops on"
 		+ "an error naming the login and the attempts, records the ledger event"
-		+ "forge_account_unavailable with the login and its slot or cli, and starts no run and no"
+		+ "forge_account.unavailable with the login and its slot or cli, and starts no run and no"
 		+ "gh subprocess for that login; no other account is used in its place"
 		IMPL "brigade/system/require_login_environment.py::def require_login_environment("
 		IMPL "brigade/system/read_configuration.py::def _read_forge_attempts(document: dict, path:"
@@ -3602,7 +3602,7 @@ TASK B75
 		+ "the active account would post reviews and merges under the user's account, which the"
 		+ "branch protection of plan section 18 cannot tell from the bot; the check before a wave"
 		+ "belongs to the preflight once it exists, @TASK.B98, and the pause of the wave on"
-		+ "forge_account_unavailable to the tick, @TASK.B14"
+		+ "forge_account.unavailable to the tick, @TASK.B14"
 		REF @TASK.B98
 		REF @TASK.B14
 	RATIONALE "the login each write ran as is recorded by the tasks that deliver the writes,"
@@ -3636,6 +3636,10 @@ TASK B75
 		+ "recorded by B16 and B17; the table [forge_accounts] per slot alone, forge_account"
 		+ "removed; refusal when a login has no token, forge_attempts configurable; after B72, B73"
 		+ "and B77; the review modes split into their own decision and tasks"
+	SOURCE "the user's ruling of 2026-10-09 on finding 3 of the review of pull request #80,"
+		+ "\"oui\", to the question \"rename it to a dotted form such as forge_account.unavailable"
+		+ "in those three entities and in the code, yes or no?\": the ledger event is named"
+		+ "forge_account.unavailable, as the other dotted events of the ledger"
 	DELIVERED_BY 80
 
 TASK B76

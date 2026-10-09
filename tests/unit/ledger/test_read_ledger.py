@@ -82,7 +82,7 @@ class ReadLedgerOfAForgeAccountUnavailableTest(ReadLedgerTestCase):
         # Arrange
         self.write_ledger(
             "2026-10.jsonl",
-            b'{"schema_version": 1, "ts": "2026-10-09T12:30:00Z", "event": "forge_account_unavailable",'
+            b'{"schema_version": 1, "ts": "2026-10-09T12:30:00Z", "event": "forge_account.unavailable",'
             b' "login": "octo-bot", "key": "verify"}\n',
         )
 
