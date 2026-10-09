@@ -6,7 +6,7 @@ MEASURED_RUNS_FOR_A_MEASUREMENT = 5
 
 
 def _summarize_procedure(runs: list[RunFinished]) -> dict:
-    summary = summarize_steps(run.steps for run in runs)
+    summary = summarize_steps(run.main_steps for run in runs)
     return {**summary, "estimate": summary["measured"] < MEASURED_RUNS_FOR_A_MEASUREMENT}
 
 

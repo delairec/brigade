@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 
 from brigade.errors import BrigadeError, CannotWrite
-from brigade.ledger.declared_events import LEDGER_SCHEMA_VERSION
+from brigade.ledger.declared_events import LEDGER_SCHEMA_VERSION, WRITTEN_SCHEMA_VERSIONS
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_locations import LEDGER_DIRECTORY, LOCK_FILE
@@ -26,7 +26,7 @@ def append_event(
     utc_instant = instant.astimezone(UTC)
     line = json.dumps(
         {
-            "schema_version": LEDGER_SCHEMA_VERSION,
+            "schema_version": WRITTEN_SCHEMA_VERSIONS.get(event.name, LEDGER_SCHEMA_VERSION),
             "ts": format_instant(utc_instant),
             "event": event.name,
             **event.to_document(),

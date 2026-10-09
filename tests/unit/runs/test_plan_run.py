@@ -48,6 +48,7 @@ class RunPlanOfASlotBoundToALoginTest(unittest.TestCase):
             brief=NO_BRIEF,
             counts_steps=True,
             reads_actions=False,
+            reads_transcripts=False,
             handovers=NO_HANDOVER,
             warnings=NO_WARNINGS,
             forge_environment={"GH_TOKEN": "token-of-octo-builder"},

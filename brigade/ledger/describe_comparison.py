@@ -18,7 +18,7 @@ def _summarize_reported(runs: list[RunFinished], measure: str) -> dict | None:
 def _describe_period(runs: list[RunFinished]) -> dict:
     return {
         "runs": len(runs),
-        "steps": summarize_steps(run.steps for run in runs),
+        "steps": summarize_steps(run.main_steps for run in runs),
         **{measure: _summarize_reported(runs, measure) for measure in REPORTED_MEASURES},
     }
 

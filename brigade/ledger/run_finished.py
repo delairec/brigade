@@ -15,7 +15,8 @@ class RunFinished:
     client: str
     project: str | None
     session: str | None
-    steps: int | None
+    main_steps: int | None
+    total_steps: int | None
     duration_ms: int
     usage: TokenUsage | None
     outcome: str
@@ -26,6 +27,7 @@ class RunFinished:
     nulls: dict
     steps_to_first_edit: int | None = None
     oversized_output_steps: int | None = None
+    cost_usd: float | None = None
 
     @classmethod
     def from_document(cls, document: dict) -> "RunFinished":
@@ -39,7 +41,8 @@ class RunFinished:
             client=document["client"],
             project=document["project"],
             session=document["session"],
-            steps=document["steps"],
+            main_steps=document["main_steps"],
+            total_steps=document["total_steps"],
             duration_ms=document["duration_ms"],
             usage=None if usage is None else TokenUsage.from_document(usage),
             outcome=document["outcome"],
@@ -50,12 +53,14 @@ class RunFinished:
             nulls=document["nulls"],
             steps_to_first_edit=document.get("steps_to_first_edit"),
             oversized_output_steps=document.get("oversized_output_steps"),
+            cost_usd=document.get("cost_usd"),
         )
 
     def to_document(self) -> dict:
         reported_measures = {
             "steps_to_first_edit": self.steps_to_first_edit,
             "oversized_output_steps": self.oversized_output_steps,
+            "cost_usd": self.cost_usd,
         }
         return {
             "run": self.run,
@@ -66,7 +71,8 @@ class RunFinished:
             "client": self.client,
             "project": self.project,
             "session": self.session,
-            "steps": self.steps,
+            "main_steps": self.main_steps,
+            "total_steps": self.total_steps,
             "duration_ms": self.duration_ms,
             "usage": None if self.usage is None else self.usage.to_document(),
             "outcome": self.outcome,

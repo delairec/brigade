@@ -2,7 +2,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.runs.compose_brief import BriefParts, compose_brief
+from brigade.runs.count_session_steps import SessionSteps, count_session_steps
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
     BRIEF_FILE,
@@ -25,6 +27,7 @@ from brigade.system.parse_result_answer import ParseResultAnswer
 from brigade.system.parse_result_request import ParseResultRequest
 from brigade.system.process_trace import CUT, EXITED, ProcessTrace
 from brigade.system.spawn_process import SpawnRequest
+from brigade.system.transcripts_request import TranscriptsRequest
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.system.write_text_file import write_text_file
@@ -33,6 +36,9 @@ FIRST_SEGMENT = 1
 PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
 WALL_LIMIT_OUTCOME = "wall_limit"
 GRACE_BEFORE_KILL_S = 30.0
+WALL_LIMIT_CUT = "cut at the wall-time limit"
+NO_TRANSCRIPT_READ = "the client reads no transcript"
+NO_SESSION_REPORTED = "the client reported no session"
 
 
 @dataclass(frozen=True)
@@ -41,6 +47,9 @@ class SegmentRecord:
     result: RunResult
     exit_code: int | None
     measured_ms: int
+    cost_usd: float | None
+    counted_steps: SessionSteps | None
+    uncounted: str | None
 
 
 def _compose_segment_brief(plan: RunPlan, number: int) -> str:
@@ -69,7 +78,7 @@ def _describe_role(plan: RunPlan) -> ClientRole:
     )
 
 
-def _ask_client(plan: RunPlan, runtime: Runtime, request: LaunchArgvRequest | ParseResultRequest):
+def _ask_client(plan: RunPlan, runtime: Runtime, request: LaunchArgvRequest | ParseResultRequest | TranscriptsRequest):
     return ask_named_client(plan.client_adapter, ClientQuestion(plan.client, request), plan.configuration, runtime)
 
 
@@ -97,6 +106,18 @@ def _describe_cut(plan: RunPlan, measured_ms: int) -> RunResult:
         reset=None,
         message=f"cut at the wall-time limit of {plan.wall_limit_s:g} s",
     )
+
+
+def _count_steps(plan: RunPlan, runtime: Runtime, session_id: str | None) -> tuple[SessionSteps | None, str | None]:
+    if not plan.reads_transcripts:
+        return None, NO_TRANSCRIPT_READ
+    if session_id is None:
+        return None, NO_SESSION_REPORTED
+    try:
+        transcripts = _ask_client(plan, runtime, TranscriptsRequest(session_id=session_id, worktree=str(plan.worktree)))
+    except BrigadeError as error:
+        return None, f"the transcript could not be read: {error}"
+    return count_session_steps(transcripts), None
 
 
 def _run_process(plan: RunPlan, number: int, runtime: Runtime, segment_directory: Path) -> SegmentRecord:
@@ -131,7 +152,15 @@ def _run_process(plan: RunPlan, number: int, runtime: Runtime, segment_directory
     runtime.trail.append(ProcessTrace(request.argv, request.cwd, outcome, exit_code=exit_code, duration_ms=measured_ms))
     if exit_code is None:
         cut = _describe_cut(plan, measured_ms)
-        return SegmentRecord(number=number, result=cut, exit_code=None, measured_ms=measured_ms)
+        return SegmentRecord(
+            number=number,
+            result=cut,
+            exit_code=None,
+            measured_ms=measured_ms,
+            cost_usd=None,
+            counted_steps=None,
+            uncounted=WALL_LIMIT_CUT,
+        )
     answer = _ask_client(
         plan,
         runtime,
@@ -141,7 +170,16 @@ def _run_process(plan: RunPlan, number: int, runtime: Runtime, segment_directory
             stderr=(segment_directory / STDERR_FILE).read_text(encoding="utf-8", errors="replace"),
         ),
     )
-    return SegmentRecord(number=number, result=_adopt_answer(answer), exit_code=exit_code, measured_ms=measured_ms)
+    counted_steps, uncounted = _count_steps(plan, runtime, answer.session_id)
+    return SegmentRecord(
+        number=number,
+        result=_adopt_answer(answer),
+        exit_code=exit_code,
+        measured_ms=measured_ms,
+        cost_usd=answer.cost_usd,
+        counted_steps=counted_steps,
+        uncounted=uncounted,
+    )
 
 
 def run_segment(plan: RunPlan, number: int, runtime: Runtime) -> SegmentRecord:

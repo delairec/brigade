@@ -547,7 +547,7 @@ TASK B06
 	SPEC "run.finished carries run, segment, procedure, slot, role, client, project, session,"
 		+ "steps, duration_ms, usage, outcome, error class and exit; a null field is named in nulls"
 		+ "with its reason"
-		IMPL "brigade/runs/run_segments.py::def _describe_finished(plan: RunPlan, record:"
+		IMPL "brigade/runs/describe_finished.py::def describe_finished(plan: RunPlan, record:"
 			+ "SegmentRecord) -> RunFinished:"
 		IMPL "tests/cli/test_run.py::def test_should_record_the_finished_run_in_the_ledger(self):"
 	SPEC "every run is held on the clock of the machine: at ceil(budget × 1.25) × seconds_per_step,"

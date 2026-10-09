@@ -5,6 +5,7 @@ UNREADABLE_RESULT = {
     "usage": None,
     "session_id": None,
     "duration_ms": None,
+    "cost_usd": None,
     "error_class": "unreadable_output",
     "reset": None,
 }

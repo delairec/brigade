@@ -6,7 +6,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import ANY
 
+from brigade.errors import BrigadeError
 from brigade.roles.resolve_role import ResolvedRole
+from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_result import RunResult
@@ -30,6 +32,13 @@ LAUNCH_ANSWER = {
 }
 
 
+TRANSCRIPTS_ANSWER = {
+    "schema_version": 1,
+    "messages": [{"role": "assistant", "timestamp": None, "content": [], "tool_calls": 2}],
+    "subagents": [{"messages": [{"role": "assistant", "timestamp": None, "content": [], "tool_calls": 1}]}],
+}
+
+
 class ClientDouble:
     def __init__(self):
         self.operations = []
@@ -40,6 +49,8 @@ class ClientDouble:
             return LAUNCH_ANSWER
         if operation == "actions":
             return {"schema_version": 1, "actions": [{"kind": "text", "summary": request["output"].strip()}]}
+        if operation == "transcripts":
+            return TRANSCRIPTS_ANSWER
         return {
             "schema_version": 1,
             "outcome": "done",
@@ -47,10 +58,25 @@ class ClientDouble:
             "usage": None,
             "session_id": "session-b73",
             "duration_ms": 4200,
+            "cost_usd": 0.42,
             "error_class": None,
             "reset": None,
             "message": request["stdout"],
         }
+
+
+class ClientRefusingToReadTranscriptsDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "transcripts":
+            raise BrigadeError("no transcript of session session-b73")
+        return super().answer(operation, request)
+
+
+class ClientReportingNoSessionDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "parse-result":
+            return {**super().answer(operation, request), "session_id": None}
+        return super().answer(operation, request)
 
 
 class ClientRefusingToReadActionsDouble(ClientDouble):
@@ -139,7 +165,9 @@ def _create_runtime(root: Path, spawn) -> Runtime:
     )
 
 
-def _create_plan(root: Path, reads_actions: bool = False, client_type: type = ClientDouble) -> RunPlan:
+def _create_plan(
+    root: Path, reads_actions: bool = False, client_type: type = ClientDouble, reads_transcripts: bool = False
+) -> RunPlan:
     return RunPlan(
         run_id="20261007T090000Z-b73a01",
         run_directory=root / "state" / "runs" / "20261007T090000Z-b73a01",
@@ -173,6 +201,7 @@ def _create_plan(root: Path, reads_actions: bool = False, client_type: type = Cl
         brief=NO_BRIEF,
         counts_steps=True,
         reads_actions=reads_actions,
+        reads_transcripts=reads_transcripts,
         handovers=NO_HANDOVER,
         warnings=NO_WARNINGS,
     )
@@ -225,6 +254,55 @@ class RunSegmentTest(unittest.TestCase):
                 message="the client finished the task",
             ),
         )
+
+
+class RunSegmentStepsTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+
+    def test_should_count_the_steps_of_the_session_from_the_transcripts_the_client_reads(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_transcripts=True)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+    def test_should_leave_the_steps_uncounted_with_their_reason(self):
+        rows = [
+            (ClientDouble, False, "the client reads no transcript"),
+            (
+                ClientRefusingToReadTranscriptsDouble,
+                True,
+                "the transcript could not be read: no transcript of session session-b73",
+            ),
+            (ClientReportingNoSessionDouble, True, "the client reported no session"),
+        ]
+        for client_type, reads_transcripts, expected_reason in rows:
+            with self.subTest(client=client_type.__name__):
+                # Arrange
+                plan = _create_plan(self.root, client_type=client_type, reads_transcripts=reads_transcripts)
+
+                # Act
+                record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+                # Assert
+                self.assertIsNone(record.counted_steps)
+                self.assertEqual(record.uncounted, expected_reason)
+
+    def test_should_keep_the_cost_the_client_reports(self):
+        # Arrange
+        plan = _create_plan(self.root)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        self.assertEqual(record.cost_usd, 0.42)
 
 
 class RunSegmentJournalTest(unittest.TestCase):

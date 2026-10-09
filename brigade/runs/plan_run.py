@@ -23,6 +23,7 @@ SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
 STEP_COUNT_FEATURE = "step_count"
 TOOL_GRANTS_FEATURE = "tool_grants"
 ACTIONS_OPERATION = "actions"
+TRANSCRIPTS_OPERATION = "transcripts"
 WRITE_CAPABILITY = "write"
 CAPABILITY_SEPARATOR = ","
 BINDING_SEPARATOR = "="
@@ -63,6 +64,7 @@ class RunPlan:
     brief: str | None
     counts_steps: bool
     reads_actions: bool
+    reads_transcripts: bool
     handovers: int
     warnings: tuple[str, ...]
     forge_environment: dict = field(default_factory=dict, repr=False)
@@ -179,6 +181,7 @@ def plan_run(request: RunRequest, setting: RunSetting, client_adapter, runtime: 
         brief=brief,
         counts_steps=counts_steps,
         reads_actions=ACTIONS_OPERATION in probe.operations,
+        reads_transcripts=TRANSCRIPTS_OPERATION in probe.operations,
         handovers=read_handovers(runtime, request.project),
         warnings=warnings,
     )

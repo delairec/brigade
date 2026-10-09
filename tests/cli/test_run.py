@@ -94,10 +94,11 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [finished] = self.read_events("run.finished")
         self.assertRegex(finished.pop("ts"), INSTANT_PATTERN)
+        self.assertLess(finished.pop("duration_ms"), 10000)
         self.assertEqual(
             finished,
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "event": "run.finished",
                 "run": json.loads(completed.stdout)["run"],
                 "segment": 1,
@@ -107,8 +108,8 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
                 "client": "fake",
                 "project": None,
                 "session": "fake-session",
-                "steps": 12,
-                "duration_ms": 61000,
+                "main_steps": 12,
+                "total_steps": None,
                 "usage": {
                     "input_tokens": 120,
                     "output_tokens": 3400,
@@ -124,8 +125,10 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
                     "project": "no project given",
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_IN_A_WAVE,
+                    "total_steps": "the client reads no transcript",
                     "error_class": "the run did not fail",
                 },
+                "cost_usd": 0.42,
             },
         )
 
@@ -188,7 +191,25 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
-        self.assertEqual(json.loads((run_directory / "result.json").read_text()), DONE_RESULT)
+        self.assertEqual(
+            json.loads((run_directory / "result.json").read_text()),
+            {
+                "schema_version": 1,
+                "outcome": "done",
+                "steps": 12,
+                "usage": {
+                    "input_tokens": 120,
+                    "output_tokens": 3400,
+                    "cache_creation_input_tokens": 16778,
+                    "cache_read_input_tokens": 98000,
+                },
+                "session_id": "fake-session",
+                "duration_ms": 61000,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
 
 
 class BrigadeRunOnClaudeCodeTest(RunTestCase):
@@ -548,7 +569,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
         self.assertEqual(
             finished,
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "event": "run.finished",
                 "run": json.loads(completed.stdout)["run"],
                 "segment": 1,
@@ -558,7 +579,8 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                 "client": "fake",
                 "project": None,
                 "session": None,
-                "steps": None,
+                "main_steps": None,
+                "total_steps": None,
                 "usage": None,
                 "outcome": "wall_limit",
                 "error_class": None,
@@ -570,7 +592,8 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_IN_A_WAVE,
                     "session": CUT,
-                    "steps": CUT,
+                    "main_steps": CUT,
+                    "total_steps": CUT,
                     "usage": CUT,
                     "error_class": CUT,
                     "exit": CUT,
@@ -617,7 +640,7 @@ class BrigadeRunWithAClientThatCountsNoStepsTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [finished] = self.read_events("run.finished")
-        self.assertEqual(finished["nulls"]["steps"], "the client counts no steps")
+        self.assertEqual(finished["nulls"]["main_steps"], "the client counts no steps")
 
 
 class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):

@@ -9,6 +9,7 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 RECORDINGS = FIXTURES / "recordings"
 CLAUDE_CODE_RESULT = FIXTURES / "claude-code" / "result-success.json"
+CLAUDE_CODE_RESULT_AFTER_NOTIFICATION = FIXTURES / "claude-code" / "result-after-task-notification.json"
 SCRIPTED_CLIENT = str(FIXTURES / "executables" / "client-scripted")
 BROKEN_CLIENT = str(FIXTURES / "executables" / "client-broken")
 
@@ -188,6 +189,45 @@ class BrigadeAdapterParseResultTest(AdapterTestCase):
                 },
                 "session_id": "ada28962-e848-49c0-8c36-97c10781d78f",
                 "duration_ms": 1369,
+                "cost_usd": 0.0352203,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+
+    def test_should_report_the_whole_session_of_a_result_that_follows_a_task_notification(self):
+        # Arrange
+        self.machine.write_configuration('client = "claude-code"\n')
+        request = json.dumps(
+            {
+                "schema_version": 1,
+                "exit_code": 0,
+                "stdout": CLAUDE_CODE_RESULT_AFTER_NOTIFICATION.read_text(),
+                "stderr": "",
+            }
+        )
+
+        # Act
+        completed = self.run_adapter("parse-result", "--json", request=request)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "outcome": "done",
+                "steps": None,
+                "usage": {
+                    "input_tokens": 108,
+                    "output_tokens": 42255,
+                    "cache_creation_input_tokens": 230745,
+                    "cache_read_input_tokens": 5861342,
+                },
+                "session_id": "857d4221-e962-4128-8096-759d8feb0ced",
+                "duration_ms": 19091,
+                "cost_usd": 3.6302823999999987,
                 "error_class": None,
                 "reset": None,
                 "message": None,
@@ -220,6 +260,7 @@ class BrigadeAdapterParseResultTest(AdapterTestCase):
                 },
                 "session_id": "fake-session-builder",
                 "duration_ms": 61000,
+                "cost_usd": 0.42,
                 "error_class": None,
                 "reset": None,
                 "message": None,
@@ -285,8 +326,14 @@ class BrigadeAdapterTranscriptsTest(AdapterTestCase):
             {
                 "schema_version": 1,
                 "messages": [
-                    {"role": "user", "timestamp": "2026-10-06T10:00:00.000Z", "content": "Deliver the task B42."}
+                    {
+                        "role": "user",
+                        "timestamp": "2026-10-06T10:00:00.000Z",
+                        "content": "Deliver the task B42.",
+                        "tool_calls": 0,
+                    }
                 ],
+                "subagents": [],
             },
         )
 

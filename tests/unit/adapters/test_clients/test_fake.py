@@ -123,7 +123,7 @@ class FakeResultTest(unittest.TestCase):
         # Arrange
         recording = (
             '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
-            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}'
+            ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}'
         )
 
         # Act
@@ -150,6 +150,7 @@ class FakeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": "fake-session",
                 "duration_ms": 61000,
+                "cost_usd": None,
                 "error_class": None,
                 "reset": None,
                 "message": None,
@@ -181,6 +182,7 @@ class FakeResultTest(unittest.TestCase):
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
+                "cost_usd": None,
                 "error_class": "unreadable_output",
                 "reset": None,
                 "message": "cat: /srv/recordings/builder.json: No such file or directory",
@@ -246,7 +248,7 @@ class FakeResultOfARecordingOfSeveralLinesTest(unittest.TestCase):
         recording = (
             "Reading the task\n"
             '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
-            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}\n'
+            ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 
         # Act
@@ -274,7 +276,7 @@ class FakeActionsTest(unittest.TestCase):
             "Reading the task\n"
             "\n"
             '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
-            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}\n'
+            ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 
         # Act
