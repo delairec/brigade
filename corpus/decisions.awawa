@@ -645,8 +645,12 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "the document carries its path and a summary; the journal of a run, brigade runs show"
 		+ "<id> --log, is bounded record by record and its length is the run's, the reader taking"
 		+ "its tail, as"
-		+ "@DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails sets"
+		+ "@DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails sets;"
+		+ "brigade roles show <slot> returns the resolved role file whole, a text handed whole to a"
+		+ "client, and --short bounds it to the front matter and the size of the body, from"
+		+ "@TASK.B110"
 		REF @DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
+		REF @TASK.B110
 	DESC "stdout carries the document only; stderr carries diagnostics and errors; under --json an"
 		+ "error still goes to stderr and stdout stays empty, awawa's convention"
 	DESC "exit codes: 0 done, or stood down: another run holds the lock the command needs, one"
@@ -740,6 +744,9 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	SOURCE "DESC 2 amended for the journal of a run on the user's rulings of 2026-10-09 in the"
 		+ "refinement of @TASK.B79"
 		REF @TASK.B79
+	SOURCE "DESC 2 amended for brigade roles show on the user's rulings of 2026-10-09 in the"
+		+ "refinement of @TASK.B110"
+		REF @TASK.B110
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"

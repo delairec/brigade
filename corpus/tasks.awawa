@@ -5365,18 +5365,18 @@ TASK B109
 TASK B110
 	TITLE "brigade roles show <slot> --short returns the resolved role without its body, for the"
 		+ "bots"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
 	ROLE ada
-	DESC "to be refined with the user; the SPEC lines are proposals"
-	SPEC "brigade roles show <slot> --short returns the slot, the role, the source, the front"
-		+ "matter and the line count of the body, without the body; without --short it returns the"
-		+ "resolved role file whole, as today; --json prints the same document"
-	SPEC "DESC 2 of EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable is amended:"
-		+ "brigade roles show without --short returns a role file whole, a text handed whole to a"
-		+ "client"
-		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	SPEC "brigade roles show <slot> --short --json prints a document carrying schema_version, the"
+		+ "slot, the role, the source, the front matter, body_lines, the line count of the body,"
+		+ "and body_bytes, its length in bytes encoded as UTF-8, and no body"
+	SPEC "the text of brigade roles show <slot> --short is the front-matter block of the resolved"
+		+ "role file between its --- lines, followed by one line body: <body_lines> lines,"
+		+ "<body_bytes> bytes, source <source>"
+	SPEC "without --short, brigade roles show <slot> prints the resolved role file whole and its"
+		+ "--json document carries the body, as before; python3 -m unittest passes"
 	AFTER @TASK.B77
 	RATIONALE "the second half of F12 of the foundations review: brigade roles show returns the"
 		+ "body of the role in its document, 964 lines and 54 kB for the slot build bound to ada"
@@ -5385,6 +5385,17 @@ TASK B110
 		REF @TASK.B79
 	RATIONALE "after @TASK.B77, which reads config.toml once in brigade/commands/roles_show.py"
 		REF @TASK.B77
+	RATIONALE "DESC 2 of @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable is"
+		+ "amended in the refinement of this task: the role file whole is a text handed whole to a"
+		+ "client, as DESC 5 of"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "keeps it, and --short is its bounded form; the size of the body in lines and in bytes"
+		+ "tells a bot what reading it whole would cost"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 	SOURCE "the user's words of 2026-10-09 in the refinement of B79, \"Et roles show on le traite à"
 		+ "part, on lui ajoute un flag --short pour les bots\"; F12 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's rulings of 2026-10-09 in the refinement of B110: DESC 2 amended in the"
+		+ "refinement, the text of --short the front-matter block followed by one line, the size of"
+		+ "the body in lines and in bytes"
