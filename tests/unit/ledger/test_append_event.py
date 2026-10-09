@@ -9,6 +9,7 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import LedgerEventRefused, append_event
 from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.system.paths import Paths
 
 PARIS_SUMMER_TIME = timezone(timedelta(hours=2))
 PROCESS_COUNT = 4
@@ -24,10 +25,21 @@ BUDGET_SIGNAL = SignalRecorded(
 )
 
 
+def create_paths(state_root: Path) -> Paths:
+    root = state_root.parents[1]
+    return Paths(
+        config_root=root / "config" / "brigade",
+        state_root=state_root,
+        cache_root=root / "cache" / "brigade",
+        home=root,
+        executable_search_path="",
+    )
+
+
 def append_signals(state_root: Path, writer: int) -> None:
     for index in range(EVENTS_PER_PROCESS):
         append_event(
-            state_root,
+            create_paths(state_root),
             datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
             SignalRecorded(
                 signal="budget_reached",
@@ -45,6 +57,7 @@ class AppendEventTestCase(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.state_root = Path(self.root.name) / "state" / "brigade"
         self.ledger = self.state_root / "ledger"
+        self.paths = create_paths(self.state_root)
 
     def tearDown(self):
         self.root.cleanup()
@@ -56,7 +69,7 @@ class AppendEventOfAnInstantWithATimeZoneTest(AppendEventTestCase):
         instant = datetime(2026, 10, 6, 9, 30, tzinfo=UTC)
 
         # Act
-        append_event(self.state_root, instant, BUDGET_SIGNAL)
+        append_event(self.paths, instant, BUDGET_SIGNAL)
 
         # Assert
         self.assertEqual(
@@ -81,7 +94,7 @@ class AppendEventOfAnInstantWithATimeZoneTest(AppendEventTestCase):
         instant = datetime(2026, 10, 1, 1, 30, tzinfo=PARIS_SUMMER_TIME)
 
         # Act
-        append_event(self.state_root, instant, BUDGET_SIGNAL)
+        append_event(self.paths, instant, BUDGET_SIGNAL)
 
         # Assert
         self.assertEqual(
@@ -97,7 +110,7 @@ class AppendEventOfAnInstantWithATimeZoneTest(AppendEventTestCase):
         instant = datetime(2026, 10, 6, 9, 30, tzinfo=UTC)
 
         # Act
-        append_event(self.state_root, instant, BUDGET_SIGNAL)
+        append_event(self.paths, instant, BUDGET_SIGNAL)
 
         # Assert
         self.assertEqual(
@@ -115,7 +128,7 @@ class AppendEventOfAnInstantWithNoTimeZoneTest(AppendEventTestCase):
 
         # Act
         with self.assertRaises(LedgerEventRefused) as refusal:
-            append_event(self.state_root, naive_instant, BUDGET_SIGNAL)
+            append_event(self.paths, naive_instant, BUDGET_SIGNAL)
 
         # Assert
         self.assertEqual(
@@ -160,7 +173,7 @@ class AppendEventWhereTheMachineRefusesTheWriteTest(AppendEventTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            append_event(self.state_root, self.instant, BUDGET_SIGNAL)
+            append_event(self.paths, self.instant, BUDGET_SIGNAL)
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.ledger}: Permission denied")
@@ -172,7 +185,7 @@ class AppendEventWhereTheMachineRefusesTheWriteTest(AppendEventTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            append_event(self.state_root, self.instant, BUDGET_SIGNAL)
+            append_event(self.paths, self.instant, BUDGET_SIGNAL)
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.ledger / '2026-10.jsonl'}: Permission denied")

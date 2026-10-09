@@ -3,6 +3,7 @@ from brigade.roles.render_role_file import render_role_file
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import SLOTS
+from brigade.system.read_optional_configuration import read_optional_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 FINAL_NEWLINE = "\n"
@@ -21,7 +22,8 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def roles_show(request, runtime: Runtime) -> dict:
-    resolved = resolve_role(request.slot, runtime, NO_PROJECT_BINDINGS)
+    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    resolved = resolve_role(request.slot, runtime, NO_PROJECT_BINDINGS, configuration)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "slot": resolved.slot,

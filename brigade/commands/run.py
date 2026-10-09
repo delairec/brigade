@@ -8,7 +8,7 @@ from brigade.runs.read_run_setting import read_run_setting
 from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import SLOTS
+from brigade.system.read_configuration import SLOTS, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 ARGUMENT_SEPARATOR = "="
@@ -68,7 +68,8 @@ def _describe_diagnostics(document: dict) -> list[str]:
 
 def run(request, runtime: Runtime) -> dict:
     run_request = _read_run_request(request)
-    setting = read_run_setting(run_request.project, runtime)
+    configuration = read_configuration(runtime.paths.configuration_file)
+    setting = read_run_setting(run_request.project, configuration, runtime)
     client_adapter = runtime.resolve_plugin("client", setting.client)
     plan = plan_run(run_request, setting, client_adapter, runtime)
     create_run_directory(plan)

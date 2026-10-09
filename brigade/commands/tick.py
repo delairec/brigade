@@ -22,18 +22,16 @@ from brigade.tick.run_rounds import Rounds, run_rounds
 DOCUMENT_SCHEMA_VERSION = 1
 TICK_INTERVAL_S = 300
 ROUND_CAP = 10
-HEARTBEAT_NAME = "tick.json"
-LOCK_DIRECTORY = "locks"
 LOCK_NAME = "tick.lock"
 COMMAND_NAME = "tick"
 
 
 def _locate_heartbeat(runtime: Runtime):
-    return runtime.paths.state_root / HEARTBEAT_NAME
+    return runtime.paths.heartbeat_file
 
 
 def _locate_lock(runtime: Runtime):
-    return runtime.paths.state_root / LOCK_DIRECTORY / LOCK_NAME
+    return runtime.paths.lock_directory / LOCK_NAME
 
 
 def _locate_trail(runtime: Runtime):

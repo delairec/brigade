@@ -67,3 +67,27 @@ class BuildPathsTest(unittest.TestCase):
                         executable_search_path="/bin:/usr/bin",
                     ),
                 )
+
+
+class PathsSharedBySeveralComponentsTest(unittest.TestCase):
+    def test_should_build_each_shared_file_and_directory_from_its_root(self):
+        paths = Paths(
+            config_root=Path("/srv/config/brigade"),
+            state_root=Path("/srv/state/brigade"),
+            cache_root=Path("/srv/cache/brigade"),
+            home=Path("/home/ada"),
+            executable_search_path="/usr/bin",
+        )
+        rows = [
+            ("configuration_file", Path("/srv/config/brigade/config.toml")),
+            ("lock_directory", Path("/srv/state/brigade/locks")),
+            ("heartbeat_file", Path("/srv/state/brigade/tick.json")),
+            ("schema_file", Path("/srv/config/brigade/_schema.awawa")),
+        ]
+        for shared_path, expected_path in rows:
+            with self.subTest(shared_path=shared_path):
+                # Act
+                path = getattr(paths, shared_path)
+
+                # Assert
+                self.assertEqual(path, expected_path)

@@ -10,7 +10,6 @@ from brigade.system.read_optional_configuration import read_optional_configurati
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 
 DOCUMENT_SCHEMA_VERSION = 1
-CONFIGURATION_FILE = "config.toml"
 LOG_FILE = "tick.log"
 CHOOSERS = {"configuration": "config.toml", "probe": "the probe of the user systemd instance"}
 
@@ -60,7 +59,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def scheduler_install(request, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
+    configuration = read_optional_configuration(runtime.paths.configuration_file)
     if configuration.scheduler is not None:
         name, chosen_by = configuration.scheduler, "configuration"
     else:

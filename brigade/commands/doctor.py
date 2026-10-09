@@ -13,9 +13,9 @@ from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configured_client import read_configured_client
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import Configuration, ConfigurationMissing, read_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
+from brigade.system.require_configured_client import require_configured_client
 from brigade.system.run_process import ProcessRequest
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -27,7 +27,7 @@ FORGE_FALLBACK = "local mode without a forge"
 FORGE_NAME = "github"
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
-CONFIGURATION_FILE = "config.toml"
+NO_INSTRUCTIONS = "none configured"
 STEPS_FALLBACK = "the wall-time limit of each run"
 STEP_COUNT_FEATURE = "step_count"
 STATE_WIDTH = 9
@@ -78,16 +78,29 @@ def _check_awawa(runtime: Runtime) -> dict:
     return _create_prerequisite("awawa", state, f"{version} (floor {floor})")
 
 
-def _probe_configured_client(runtime: Runtime) -> tuple[str, ProbeAnswer]:
-    configured = read_configured_client(runtime)
+def _read_configuration(runtime: Runtime) -> Configuration | BrigadeError:
+    try:
+        return read_configuration(runtime.paths.configuration_file)
+    except BrigadeError as error:
+        return error
+
+
+def _accept_configuration(reading: Configuration | BrigadeError) -> Configuration:
+    if isinstance(reading, BrigadeError):
+        raise reading
+    return reading
+
+
+def _probe_configured_client(reading: Configuration | BrigadeError, runtime: Runtime) -> tuple[str, ProbeAnswer]:
+    configured = require_configured_client(_accept_configuration(reading), runtime.paths.configuration_file)
     client = runtime.resolve_plugin("client", configured.name)
     question = ClientQuestion(configured.name, ProbeRequest())
     return configured.name, ask_named_client(client, question, configured.configuration, runtime)
 
 
-def _check_client(runtime: Runtime) -> dict:
+def _check_client(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
     try:
-        name, probe = _probe_configured_client(runtime)
+        name, probe = _probe_configured_client(reading, runtime)
     except BrigadeError as error:
         return _create_prerequisite("client", "finding", str(error))
     version_argv = probe.version_argv
@@ -140,11 +153,13 @@ def _describe_instructions(state: str, detail: str) -> dict:
     return _create_optional("instructions", state, detail, INSTRUCTIONS_FALLBACK)
 
 
-def _check_instructions(runtime: Runtime) -> dict:
+def _check_instructions(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
+    if isinstance(reading, ConfigurationMissing):
+        return _describe_instructions("warning", NO_INSTRUCTIONS)
     try:
-        configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
+        configuration = _accept_configuration(reading)
         if configuration.instructions is None:
-            return _describe_instructions("warning", "none configured")
+            return _describe_instructions("warning", NO_INSTRUCTIONS)
         report = lint_corpus(runtime.run_process, Path(configuration.instructions))
     except BrigadeError as error:
         return _describe_instructions("warning", str(error))
@@ -153,9 +168,9 @@ def _check_instructions(runtime: Runtime) -> dict:
     return _describe_instructions("warning", f"lint --strict fails in {configuration.instructions}")
 
 
-def _check_steps(runtime: Runtime) -> list[dict]:
+def _check_steps(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     try:
-        name, probe = _probe_configured_client(runtime)
+        name, probe = _probe_configured_client(reading, runtime)
     except BrigadeError:
         return []
     if STEP_COUNT_FEATURE in probe.features:
@@ -206,18 +221,19 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def doctor(request, runtime: Runtime) -> dict:
+    reading = _read_configuration(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "items": [
             _check_python(),
             _check_git(runtime),
             _check_awawa(runtime),
-            _check_client(runtime),
+            _check_client(reading, runtime),
             _check_scheduler(runtime),
             _check_forge(runtime),
             _check_awawa_web(runtime),
-            _check_instructions(runtime),
-            *_check_steps(runtime),
+            _check_instructions(reading, runtime),
+            *_check_steps(reading, runtime),
         ],
     }
 

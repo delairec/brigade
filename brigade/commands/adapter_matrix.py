@@ -10,7 +10,6 @@ from brigade.system.read_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 
 SCHEMA_VERSION = 1
-CONFIGURATION_FILE = "config.toml"
 OPERATION_CAPABILITIES = ("launch", "result", "resume", "transcripts")
 FEATURE_CAPABILITIES = ("step_count", "tool_grants", "reset_hour")
 CAPABILITIES = OPERATION_CAPABILITIES + FEATURE_CAPABILITIES
@@ -151,7 +150,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def adapter_matrix(request, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.config_root / CONFIGURATION_FILE)
+    configuration = read_optional_configuration(runtime.paths.configuration_file)
     rows = [_describe_adapter(runtime, configuration, adapter) for adapter in list_client_adapters(runtime)]
     return {"schema_version": SCHEMA_VERSION, "adapters": sorted(rows, key=_order_row), "fallbacks": FALLBACKS}
 

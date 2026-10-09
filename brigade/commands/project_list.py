@@ -31,7 +31,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def project_list(request, runtime: Runtime) -> dict:
-    require_operational_corpus(runtime.paths.config_root)
+    require_operational_corpus(runtime.paths)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "projects": [

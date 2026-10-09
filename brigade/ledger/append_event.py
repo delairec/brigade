@@ -1,14 +1,14 @@
 import json
 from datetime import UTC, datetime
-from pathlib import Path
 
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.ledger.declared_events import LEDGER_SCHEMA_VERSION
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.ledger_locations import LEDGER_DIRECTORY, LOCK_DIRECTORY, LOCK_FILE
+from brigade.ledger.ledger_locations import LEDGER_DIRECTORY, LOCK_FILE
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.system.hold_lock import hold_lock
+from brigade.system.paths import Paths
 
 MONTH_FILE_FORMAT = "%Y-%m.jsonl"
 
@@ -17,7 +17,7 @@ class LedgerEventRefused(BrigadeError):
     pass
 
 
-def append_event(state_root: Path, instant: datetime, event: RunFinished | SignalRecorded) -> None:
+def append_event(paths: Paths, instant: datetime, event: RunFinished | SignalRecorded) -> None:
     if instant.utcoffset() is None:
         raise LedgerEventRefused(f"the instant of the event {event.name} carries no time zone")
     utc_instant = instant.astimezone(UTC)
@@ -29,9 +29,9 @@ def append_event(state_root: Path, instant: datetime, event: RunFinished | Signa
             **event.to_document(),
         }
     )
-    ledger_directory = state_root / LEDGER_DIRECTORY
+    ledger_directory = paths.state_root / LEDGER_DIRECTORY
     month_file = ledger_directory / utc_instant.strftime(MONTH_FILE_FORMAT)
-    with hold_lock(state_root / LOCK_DIRECTORY / LOCK_FILE):
+    with hold_lock(paths.lock_directory / LOCK_FILE):
         try:
             ledger_directory.mkdir(parents=True, exist_ok=True)
             with open(month_file, "a", encoding="utf-8") as ledger_file:

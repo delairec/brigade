@@ -3,6 +3,7 @@ from pathlib import Path
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.runtime import Runtime
+from brigade.system.read_optional_configuration import read_optional_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 FIELD_NAME_WIDTH = 6
@@ -26,7 +27,8 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def corpus(request, runtime: Runtime) -> dict:
-    tree = prepare_project_tree(request, runtime)
+    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    tree = prepare_project_tree(request, configuration, runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": tree.project,

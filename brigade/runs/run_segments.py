@@ -94,10 +94,10 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
         record = run_segment(plan, len(records) + 1, runtime)
         records.append(record)
         instant += timedelta(milliseconds=record.measured_ms)
-        append_event(runtime.paths.state_root, instant, _describe_finished(plan, record))
+        append_event(runtime.paths, instant, _describe_finished(plan, record))
         if not _ends_on_budget(record):
             return records
-        append_event(runtime.paths.state_root, instant, _describe_signal(plan, record))
+        append_event(runtime.paths, instant, _describe_signal(plan, record))
         if record.number > plan.handovers or not _holds_progress(plan):
             return records
 

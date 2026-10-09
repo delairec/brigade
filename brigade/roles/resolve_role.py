@@ -10,9 +10,8 @@ from brigade.roles.list_built_in_role_files import list_built_in_role_files
 from brigade.roles.list_machine_role_files import list_machine_role_files
 from brigade.roles.parse_role_file import RoleFile, RoleFileUnreadable, parse_role_file
 from brigade.runtime import Runtime
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import Configuration
 
-CONFIGURATION_FILE = "config.toml"
 ROLE_FILE_PATTERN = "*.md"
 BUILT_IN_ROLESET = "builtin"
 CORPUS_ROLESET = "corpus"
@@ -48,8 +47,8 @@ class RoleSource:
 
 @dataclass(frozen=True)
 class AgentLookup:
-    configuration_path: Path
-    runtime: object
+    configuration: Configuration
+    runtime: Runtime
 
 
 @dataclass(frozen=True)
@@ -126,19 +125,19 @@ def _read_agent(name: str, slot: str, root: Path, runtime: Runtime) -> RoleFile:
 
 
 def _find_bound_agent(lookup: AgentLookup, slot: str) -> RoleFile | None:
-    configuration = read_optional_configuration(lookup.configuration_path)
+    configuration = lookup.configuration
     if slot not in configuration.slots:
         return None
     name = configuration.slots[slot]
     if configuration.instructions is None:
         raise BrigadeError(
-            f"slots.{slot} binds {name} but no instructions corpus is set in {lookup.configuration_path}"
+            f"slots.{slot} binds {name} but no instructions corpus is set in {lookup.runtime.paths.configuration_file}"
         )
     return _read_agent(name, slot, Path(configuration.instructions), lookup.runtime)
 
 
 def _find_named_agent(lookup: AgentLookup, slot: str, name: str) -> RoleFile | None:
-    configuration = read_optional_configuration(lookup.configuration_path)
+    configuration = lookup.configuration
     if configuration.instructions is None:
         return None
     try:
@@ -175,7 +174,7 @@ def _locate_roleset(bindings: RoleBindings) -> Path:
     return bindings.project_path / directory
 
 
-def _list_sources(slot: str, bindings: RoleBindings, runtime: Runtime) -> list[RoleSource]:
+def _list_sources(slot: str, bindings: RoleBindings, lookup: AgentLookup) -> list[RoleSource]:
     if bindings.roleset == BUILT_IN_ROLESET:
         return [_create_built_in_source()]
     if bindings.roleset is not None and bindings.roleset != CORPUS_ROLESET:
@@ -183,8 +182,9 @@ def _list_sources(slot: str, bindings: RoleBindings, runtime: Runtime) -> list[R
         return [_create_directory_source("roleset", roleset_files), _create_built_in_source()]
     machine_sources = []
     if bindings.roleset is None:
-        machine_sources = [_create_directory_source("machine", list_machine_role_files(runtime.paths.config_root))]
-    lookup = AgentLookup(configuration_path=runtime.paths.config_root / CONFIGURATION_FILE, runtime=runtime)
+        machine_sources = [
+            _create_directory_source("machine", list_machine_role_files(lookup.runtime.paths.config_root))
+        ]
     return [*machine_sources, _create_agent_source(lookup, slot), _create_built_in_source()]
 
 
@@ -207,8 +207,8 @@ def _resolve_bound_name(slot: str, bindings: RoleBindings, sources: list[RoleSou
     raise BrigadeError(f"@PROJECT.{bindings.project} binds {slot} to {name}, a role found nowhere")
 
 
-def resolve_role(slot: str, runtime: Runtime, bindings: RoleBindings) -> ResolvedRole:
-    sources = _list_sources(slot, bindings, runtime)
+def resolve_role(slot: str, runtime: Runtime, bindings: RoleBindings, configuration: Configuration) -> ResolvedRole:
+    sources = _list_sources(slot, bindings, AgentLookup(configuration=configuration, runtime=runtime))
     if slot in bindings.roles:
         return _resolve_bound_name(slot, bindings, sources)
     for source in sources:

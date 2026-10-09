@@ -142,7 +142,7 @@ def plan_run(request: RunRequest, setting: RunSetting, client_adapter, runtime: 
     client = setting.client
     directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=configuration.instructions)
     procedure = resolve_procedure(request.procedure, directories)
-    role = resolve_role(request.slot, runtime, _read_bindings(project))
+    role = resolve_role(request.slot, runtime, _read_bindings(project), configuration)
     role_capabilities = _read_role_capabilities(role)
     capabilities = tuple(capability for capability in procedure.capabilities if capability in role_capabilities)
     probe = ask_named_client(client_adapter, ClientQuestion(client, ProbeRequest()), configuration, runtime)

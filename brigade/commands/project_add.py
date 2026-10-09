@@ -116,7 +116,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def project_add(request, runtime: Runtime) -> dict:
-    require_operational_corpus(runtime.paths.config_root)
+    require_operational_corpus(runtime.paths)
     path = Path(request.path).resolve()
     name = _choose_name(request, path)
     if not detect_repository(runtime.run_process, path):

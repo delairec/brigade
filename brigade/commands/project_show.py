@@ -26,7 +26,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def project_show(request, runtime: Runtime) -> dict:
-    require_operational_corpus(runtime.paths.config_root)
+    require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.name)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

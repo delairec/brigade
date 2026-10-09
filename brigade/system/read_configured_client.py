@@ -1,21 +1,8 @@
-from dataclasses import dataclass
-
-from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration, read_configuration
-
-CONFIGURATION_FILE = "config.toml"
-
-
-@dataclass(frozen=True)
-class ConfiguredClient:
-    name: str
-    configuration: Configuration
+from brigade.system.read_configuration import read_configuration
+from brigade.system.require_configured_client import ConfiguredClient, require_configured_client
 
 
 def read_configured_client(runtime: Runtime) -> ConfiguredClient:
-    path = runtime.paths.config_root / CONFIGURATION_FILE
-    configuration = read_configuration(path)
-    if configuration.client is None:
-        raise BrigadeError(f"config.toml names no client: set the client key in {path}")
-    return ConfiguredClient(name=configuration.client, configuration=configuration)
+    path = runtime.paths.configuration_file
+    return require_configured_client(read_configuration(path), path)

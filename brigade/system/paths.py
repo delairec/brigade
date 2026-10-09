@@ -3,6 +3,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 APPLICATION_DIRECTORY = "brigade"
+CONFIGURATION_FILE = "config.toml"
+LOCK_DIRECTORY = "locks"
+HEARTBEAT_FILE = "tick.json"
+SCHEMA_FILE = "_schema.awawa"
 
 
 @dataclass(frozen=True)
@@ -12,6 +16,22 @@ class Paths:
     cache_root: Path
     home: Path
     executable_search_path: str
+
+    @property
+    def configuration_file(self) -> Path:
+        return self.config_root / CONFIGURATION_FILE
+
+    @property
+    def lock_directory(self) -> Path:
+        return self.state_root / LOCK_DIRECTORY
+
+    @property
+    def heartbeat_file(self) -> Path:
+        return self.state_root / HEARTBEAT_FILE
+
+    @property
+    def schema_file(self) -> Path:
+        return self.config_root / SCHEMA_FILE
 
 
 def _resolve_base(variable: str, home_relative_default: str) -> Path:

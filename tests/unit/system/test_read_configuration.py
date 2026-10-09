@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration, ReasoningRow, read_configuration
+from brigade.system.read_configuration import Configuration, ConfigurationMissing, ReasoningRow, read_configuration
 
 
 class ReadConfigurationTestCase(unittest.TestCase):
@@ -78,7 +78,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
 class ReadConfigurationWhenTheFileIsAbsentTest(ReadConfigurationTestCase):
     def test_should_refuse_naming_the_file_and_brigade_init(self):
         # Act
-        with self.assertRaises(BrigadeError) as raised:
+        with self.assertRaises(ConfigurationMissing) as raised:
             read_configuration(self.path)
 
         # Assert
