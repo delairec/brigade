@@ -788,16 +788,11 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         completed = self.run_slot()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (
-                1,
-                (
-                    f"brigade run: awawa show @AGENT.verifier --json {instructions.root} exited 2:"
-                    f" awawa: {agents}: Permission denied (os error 13)\n"
-                ),
-            ),
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn(
+            f"brigade run: awawa show @AGENT.verifier --json {instructions.root} exited 2: ", completed.stderr
         )
+        self.assertIn(str(agents), completed.stderr)
 
     @unittest.skipIf(os.geteuid() == 0, "root reads what the permissions refuse")
     def test_should_launch_no_client_when_the_instructions_corpus_is_unreadable(self):

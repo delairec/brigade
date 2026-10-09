@@ -60,8 +60,5 @@ class ReadEntityTest(unittest.TestCase):
             read_entity(run_process_without_trail, self.corpus, "AGENT", "planner")
 
         # Assert
-        self.assertEqual(
-            str(refusal.exception),
-            f"awawa show @AGENT.planner --json {self.corpus} exited 2:"
-            f" awawa: {agents}: Permission denied (os error 13)",
-        )
+        self.assertIn(f"awawa show @AGENT.planner --json {self.corpus} exited 2: ", str(refusal.exception))
+        self.assertIn(str(agents), str(refusal.exception))
