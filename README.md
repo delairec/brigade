@@ -129,11 +129,13 @@ Claude Code, `fake` for the adapter that replays recorded result documents, or a
 executable `brigade-client-<name>` is on your `PATH`. The table `[clients.<name>]` of `config.toml` holds the settings
 of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays, `features`, the
 comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`; none by default), and, for
-tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, and `progress`, a line it
-appends to the progress file of the run.
+tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, `progress`, a line it
+appends to the progress file of the run, and `interval`, the seconds it waits after each line of its recording;
+`operations`, comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result
+document is a result and any other line a text.
 
 `brigade adapter <operation>` (or with `--json`) answers one operation of the configured adapter, the request read as
-a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv` and `transcripts`. An external adapter
+a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv`, `transcripts` and `actions`. An external adapter
 answers the same operations as `brigade-client-<name> <operation>`, the request on stdin and its answer, a JSON
 document, on stdout; brigade checks every answer against the shape of its operation and names the adapter, the
 operation and the key of an answer that departs from it. The probe answers `models`, the model the adapter binds to
@@ -148,18 +150,19 @@ Every row carries its audience, a supported client or an adapter of the test sui
 test of `tests/guards/` fails when they drift.
 
 <!-- adapter matrix: begin -->
-| Supported client | Launch | Result | Resume | Transcripts | Step count | Tool grants | Reset hour |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| claude-code | full | full | full | full | full | full | full |
+| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| claude-code | full | full | full | full | full | full | full | full |
 
-| Test-suite adapter | Launch | Result | Resume | Transcripts | Step count | Tool grants | Reset hour |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| fake | full | full | fallback | fallback | fallback | fallback | fallback |
+| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback |
 
 Fallbacks:
 
 - no resume: a fresh launch from the progress file
-- no transcripts: brigade's own run logs
+- no transcripts: brigade's journal of the run
+- no actions: one raw record per line of the client's output
 - no step count: steps null and the run held on the clock alone
 - no tool grants: the client's unattended mode and a disposable worktree for a reading slot
 - no reset hour: now plus thirty minutes
@@ -191,7 +194,7 @@ brigade roles lint [--json]                  # the built-in and the machine role
 ```
 brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--detach] [key=value ...]
 brigade runs list [--json]                       # every run: id, procedure, slot, role, project, state, outcome
-brigade runs logs <id> [--tail N] [--json]       # the client's stdout then stderr, segment by segment
+brigade runs show <id> [--log] [--json]          # the summary of a run and its segments; --log adds its journal
 ```
 
 `brigade run` runs a procedure as a slot through the client adapter. A procedure is a Markdown file whose front matter
@@ -212,13 +215,23 @@ progress file, exported to it as `BRIGADE_PROGRESS_FILE`. It runs in `--cwd`, el
 current directory.
 
 Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.json` (what was resolved), `pid`,
-`role.md` (the role file passed), `progress.md`, `processes.jsonl` (its trail), `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`) and,
-written last, `result.json`, the normalised result of the last segment. Each segment appends one `run.finished` to the
+`role.md` (the role file passed), `progress.md`, `processes.jsonl` (its trail), `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`,
+`result.json`, the normalised result of the segment), `journal.jsonl` and, written last, `result.json`, the normalised
+result of the last segment. Each segment appends one `run.finished` to the
 ledger, every null field named in `nulls` with its reason. The command prints the run, text or `--json`, and exits 1
 when its outcome is not `done`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and
 exits 0, while brigade itself, started again in a new session with its output in `brigade.log`, runs the procedure to
 its end, writing the result and the ledger as the foreground command does. `runs list` reports a run `finished` once it
 has a result, `running` while its process lives, `dead` when the process is gone without one.
+
+During each segment brigade reads the new complete lines of `stdout.log` every `journal_poll_s` seconds of
+`config.toml`, 2 by default, and the rest once the segment ends, and appends to `journal.jsonl` one JSON record per
+action of the client: `schema_version`, `at` (the UTC instant brigade read it), `segment`, `kind` and `summary`, cut to
+200 characters with `cut` true. The adapter's `actions` operation turns the output into actions, `tool` (the tool and
+the path, command or pattern it acts on), `text` (its first line) and `result` (`done` or `failed`); a client whose
+probe declares no `actions` has one record of kind `raw` per line. `tail -f journal.jsonl` follows a run as it goes. A
+`journal_poll_s` that is no positive number keeps 2 s, and `brigade doctor` names it. `runs show` prints the summary of
+a run and the outcome of each segment, and with `--log` one line per record: its time, segment, kind and summary.
 
 Every run is held on the clock: at `ceil(budget × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
 `config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the
@@ -256,7 +269,7 @@ a run goes with its run. A detached run's records are written by the process it 
 writes, stdout keeping the document alone:
 
 ```
-brigade run: ran claude -p --output-format json, exit 0 in 41250 ms
+brigade run: ran claude --print --output-format stream-json --verbose, exit 0 in 41250 ms
 brigade run: ran /usr/bin/python3 /opt/brigade/bin/brigade run deliver --run-id 20261007T120000Z-48201, spawned pid 48213
 brigade scheduler status: ran crontab -l, not on PATH
 ```
@@ -314,7 +327,7 @@ gives the verdict that counts.
 - `brigade/adapters/schedulers/` — the scheduler plugins, `systemd.py`, `cron.py` and `loop.py`, reached by name only;
   the templates of the units and of the cron line live in its `data/` folder.
 - `brigade/runs/` — the run machinery: the procedure resolution, the brief, the segments and their hand-over, the run
-  directory read by `runs list` and `runs logs`.
+  directory read by `runs list` and `runs show`.
 - `corpus/` — the project's own awawa corpus: the schema, the milestones, the tasks, the decisions of the plan.
   Read it with `awawa status .` from this directory.
 - `artifact/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board,

@@ -70,6 +70,9 @@ class RunTestCase(unittest.TestCase):
     def run_brigade(self, *arguments: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments)
 
+    def record_lines(self, role: str, recording: str) -> None:
+        (self.recordings / f"{role}.json").write_text(recording)
+
     def read_events(self, name: str) -> list:
         lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
         return [event for event in map(json.loads, lines) if event["event"] == name]
@@ -82,6 +85,13 @@ class RunTestCase(unittest.TestCase):
         while not path.exists():
             if time.monotonic() > deadline:
                 self.fail(f"{path} never appeared")
+            time.sleep(FILE_POLL_S)
+
+    def wait_for_line(self, path: Path) -> None:
+        deadline = time.monotonic() + FILE_WAIT_S
+        while not path.exists() or not path.read_text().strip():
+            if time.monotonic() > deadline:
+                self.fail(f"{path} never held a line")
             time.sleep(FILE_POLL_S)
 
     def wait_for_exit(self, pid: int) -> None:

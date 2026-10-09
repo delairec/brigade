@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.system.name_toml_type import name_toml_type
+from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
 STRING_KEYS = ("client", "scheduler", "instructions")
@@ -37,6 +38,8 @@ class Configuration:
     slots: dict = field(default_factory=dict)
     seconds_per_step: int | float = SECONDS_PER_STEP_BY_DEFAULT
     trail_days: int = TRAIL_DAYS_BY_DEFAULT
+    journal_poll_s: int | float = JOURNAL_POLL_BY_DEFAULT_S
+    findings: tuple[str, ...] = ()
 
 
 def _require(value, kind: type, expected: str, location: str, path: Path):
@@ -128,6 +131,7 @@ def read_configuration(path: Path) -> Configuration:
             "slots",
             SECONDS_PER_STEP_KEY,
             TRAIL_DAYS_KEY,
+            JOURNAL_POLL_KEY,
         ),
         "",
         path,
@@ -136,6 +140,7 @@ def read_configuration(path: Path) -> Configuration:
         if key in document:
             _require(document[key], str, "a string", key, path)
     strings = {key: _require(document[key], str, "a string", key, path) for key in STRING_KEYS if key in document}
+    journal_poll_s, findings = read_journal_poll(document, path)
     return Configuration(
         **strings,
         refs_cache_mb=_read_refs_cache_mb(document, path),
@@ -144,4 +149,6 @@ def read_configuration(path: Path) -> Configuration:
         slots=_read_slots(document.get("slots", {}), path),
         seconds_per_step=_read_seconds_per_step(document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path),
         trail_days=read_trail_days(document, path),
+        journal_poll_s=journal_poll_s,
+        findings=findings,
     )

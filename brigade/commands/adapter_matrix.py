@@ -10,12 +10,13 @@ from brigade.system.read_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 
 SCHEMA_VERSION = 1
-OPERATION_CAPABILITIES = ("launch", "result", "resume", "transcripts")
+OPERATION_CAPABILITIES = ("launch", "result", "resume", "transcripts", "actions")
 FEATURE_CAPABILITIES = ("step_count", "tool_grants", "reset_hour")
 CAPABILITIES = OPERATION_CAPABILITIES + FEATURE_CAPABILITIES
 FALLBACKS = {
     "resume": "a fresh launch from the progress file",
-    "transcripts": "brigade's own run logs",
+    "transcripts": "brigade's journal of the run",
+    "actions": "one raw record per line of the client's output",
     "step_count": "steps null and the run held on the clock alone",
     "tool_grants": "the client's unattended mode and a disposable worktree for a reading slot",
     "reset_hour": "now plus thirty minutes",

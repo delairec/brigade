@@ -36,6 +36,7 @@ FORGE_ENTRY = 5
 AWAWA_WEB_ENTRY = 6
 INSTRUCTIONS_ENTRY = 7
 STEPS_ENTRY = 8
+CONFIGURATION_ENTRY_AFTER_THE_CLIENT_ITEMS = 8
 EVERY_TOOL_BUT_THE_CLIENT = [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 
@@ -481,6 +482,36 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
                         "kind": "prerequisite",
                         "state": "finding",
                         "detail": expected_detail,
+                        "fallback": None,
+                    },
+                )
+
+    def test_should_report_a_finding_naming_a_journal_poll_that_is_no_positive_number(self):
+        rows = [
+            ("zero", "journal_poll_s = 0\n", f"journal_poll_s is 0, not a positive number, in {self.configuration}"),
+            (
+                "a string",
+                'journal_poll_s = "2"\n',
+                f"journal_poll_s is a string, not a positive number, in {self.configuration}",
+            ),
+        ]
+        for case, journal_poll, expected_problem in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.write_configuration(CLAUDE_CODE_CONFIGURATION + journal_poll)
+
+                # Act
+                completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 1, completed.stderr)
+                self.assertEqual(
+                    json.loads(completed.stdout)["items"][CONFIGURATION_ENTRY_AFTER_THE_CLIENT_ITEMS],
+                    {
+                        "name": "config",
+                        "kind": "prerequisite",
+                        "state": "finding",
+                        "detail": f"{expected_problem}; the default of 2 s holds",
                         "fallback": None,
                     },
                 )

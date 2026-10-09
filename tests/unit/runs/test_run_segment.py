@@ -1,7 +1,9 @@
+import json
 import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import ANY
 
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.plan_run import RunPlan
@@ -28,9 +30,15 @@ LAUNCH_ANSWER = {
 
 
 class ClientDouble:
+    def __init__(self):
+        self.operations = []
+
     def answer(self, operation: str, request: dict) -> dict:
+        self.operations.append(operation)
         if operation == "launch-argv":
             return LAUNCH_ANSWER
+        if operation == "actions":
+            return {"schema_version": 1, "actions": [{"kind": "text", "summary": request["output"].strip()}]}
         return {
             "schema_version": 1,
             "outcome": "done",
@@ -52,12 +60,13 @@ class ExitedProcessDouble:
 
 
 class SpawnDouble:
-    def __init__(self):
+    def __init__(self, output: str = "the client finished the task"):
         self.requests = []
+        self.output = output
 
     def spawn(self, request):
         self.requests.append(request)
-        request.stdout.write_text("the client finished the task", encoding="utf-8")
+        request.stdout.write_text(self.output, encoding="utf-8")
         request.stderr.write_text("", encoding="utf-8")
         return ExitedProcessDouble()
 
@@ -92,7 +101,7 @@ def _create_runtime(root: Path, spawn: SpawnDouble) -> Runtime:
     )
 
 
-def _create_plan(root: Path) -> RunPlan:
+def _create_plan(root: Path, reads_actions: bool = False) -> RunPlan:
     return RunPlan(
         run_id="20261007T090000Z-b73a01",
         run_directory=root / "state" / "runs" / "20261007T090000Z-b73a01",
@@ -125,6 +134,7 @@ def _create_plan(root: Path) -> RunPlan:
         brief_path=None,
         brief=NO_BRIEF,
         counts_steps=True,
+        reads_actions=reads_actions,
         handovers=NO_HANDOVER,
         warnings=NO_WARNINGS,
     )
@@ -177,3 +187,62 @@ class RunSegmentTest(unittest.TestCase):
                 message="the client finished the task",
             ),
         )
+
+
+class RunSegmentJournalTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "journal.jsonl"
+
+    def test_should_journal_one_raw_record_per_line_of_a_client_that_reads_no_actions(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        self.assertEqual(
+            json.loads(self.journal.read_text()),
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "raw",
+                    "summary": "the client finished the task",
+                    "cut": False,
+                },
+        )
+
+    def test_should_journal_the_actions_the_client_reads_in_the_output(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=True)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        self.assertEqual(
+            json.loads(self.journal.read_text()),
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "the client finished the task",
+                    "cut": False,
+                },
+        )
+
+    def test_should_ask_the_client_for_no_actions_when_the_segment_wrote_nothing(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=True)
+        no_output = ""
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble(no_output)))
+
+        # Assert
+        self.assertEqual(plan.client_adapter.operations, ["launch-argv", "parse-result"])

@@ -102,11 +102,13 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                 "argv": [
                     "sh",
                     "-c",
-                    'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi; cat -- "$3"',
+                    'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"',
                     "fake",
                     "5",
                     "step 1 done",
                     "/srv/recordings/builder.json",
+                    "0",
                 ],
                 "environment": {},
                 "stdin": None,
@@ -186,7 +188,7 @@ class FakeResultTest(unittest.TestCase):
 
 class FakeUnsupportedOperationsTest(unittest.TestCase):
     def test_should_refuse_the_operations_it_does_not_replay(self):
-        rows = ["resume-argv", "transcripts"]
+        rows = ["resume-argv", "transcripts", "actions"]
         for operation in rows:
             with self.subTest(operation=operation):
                 # Act
@@ -195,3 +197,99 @@ class FakeUnsupportedOperationsTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), f"the fake client adapter does not answer {operation}")
+
+
+class FakeProbeOfDeclaredOperationsTest(unittest.TestCase):
+    def test_should_declare_the_operations_its_settings_name_beside_those_it_replays(self):
+        # Arrange
+        settings = {"operations": "actions"}
+
+        # Act
+        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/home/ada"})
+
+        # Assert
+        self.assertEqual(probe["operations"], ["probe", "launch", "result", "actions"])
+
+
+class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
+    def test_should_print_each_line_of_the_recording_then_wait_the_interval(self):
+        # Arrange
+        request = {**LAUNCH_REQUEST, "settings": {"recordings": "/srv/recordings", "interval": "1"}}
+
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        self.assertEqual(
+            launch["argv"],
+            [
+                "sh",
+                "-c",
+                'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"',
+                "fake",
+                "0",
+                "",
+                "/srv/recordings/builder.json",
+                "1",
+            ],
+        )
+
+
+class FakeResultOfARecordingOfSeveralLinesTest(unittest.TestCase):
+    def test_should_answer_the_result_document_of_its_last_line(self):
+        # Arrange
+        recording = (
+            "Reading the task\n"
+            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}\n'
+        )
+
+        # Act
+        result = answer(
+            "parse-result",
+            {
+                "schema_version": 1,
+                "exit_code": 0,
+                "stdout": recording,
+                "stderr": "",
+                "reasoning_table": {},
+                "settings": {},
+                "home": "/home/ada",
+            },
+        )
+
+        # Assert
+        self.assertEqual(result["outcome"], "done")
+
+
+class FakeActionsTest(unittest.TestCase):
+    def test_should_read_a_text_per_line_and_the_outcome_of_a_result_document(self):
+        # Arrange
+        output = (
+            "Reading the task\n"
+            "\n"
+            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            ' "duration_ms": 61000, "error_class": null, "reset": null, "message": null}\n'
+        )
+
+        # Act
+        actions = answer(
+            "actions",
+            {
+                "schema_version": 1,
+                "output": output,
+                "reasoning_table": {},
+                "settings": {"operations": "actions"},
+                "home": "/home/ada",
+            },
+        )
+
+        # Assert
+        self.assertEqual(
+            actions,
+            {
+                "schema_version": 1,
+                "actions": [{"kind": "text", "summary": "Reading the task"}, {"kind": "result", "summary": "done"}],
+            },
+        )

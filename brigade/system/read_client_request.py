@@ -1,6 +1,7 @@
 import json
 
 from brigade.errors import BrigadeError
+from brigade.system.actions_request import ActionsRequest
 from brigade.system.client_shapes import CLIENT_REQUEST_SHAPES
 from brigade.system.launch_argv_request import LaunchArgvRequest
 from brigade.system.parse_result_request import ParseResultRequest
@@ -13,12 +14,13 @@ REQUEST_KINDS = {
     "resume-argv": ResumeArgvRequest,
     "parse-result": ParseResultRequest,
     "transcripts": TranscriptsRequest,
+    "actions": ActionsRequest,
 }
 
 
 def read_client_request(
     operation: str, stdin: str
-) -> LaunchArgvRequest | ResumeArgvRequest | ParseResultRequest | TranscriptsRequest:
+) -> LaunchArgvRequest | ResumeArgvRequest | ParseResultRequest | TranscriptsRequest | ActionsRequest:
     try:
         document = json.loads(stdin)
     except json.JSONDecodeError as error:

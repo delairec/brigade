@@ -1,4 +1,5 @@
 from brigade.errors import BrigadeError
+from brigade.system.actions_answer import ActionsAnswer
 from brigade.system.client_command import ClientCommand
 from brigade.system.client_question import ClientQuestion
 from brigade.system.client_shapes import CLIENT_ANSWER_SHAPES
@@ -13,12 +14,13 @@ ANSWER_KINDS = {
     "resume-argv": ClientCommand,
     "parse-result": ParseResultAnswer,
     "transcripts": TranscriptsAnswer,
+    "actions": ActionsAnswer,
 }
 
 
 def read_client_answer(
     question: ClientQuestion, answer
-) -> ProbeAnswer | ClientCommand | ParseResultAnswer | TranscriptsAnswer:
+) -> ProbeAnswer | ClientCommand | ParseResultAnswer | TranscriptsAnswer | ActionsAnswer:
     operation = question.request.operation
     try:
         validate_document(answer, CLIENT_ANSWER_SHAPES[operation])

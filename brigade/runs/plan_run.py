@@ -22,6 +22,7 @@ from brigade.system.read_configuration import Configuration
 SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
 STEP_COUNT_FEATURE = "step_count"
 TOOL_GRANTS_FEATURE = "tool_grants"
+ACTIONS_OPERATION = "actions"
 WRITE_CAPABILITY = "write"
 CAPABILITY_SEPARATOR = ","
 BINDING_SEPARATOR = "="
@@ -61,6 +62,7 @@ class RunPlan:
     brief_path: Path | None
     brief: str | None
     counts_steps: bool
+    reads_actions: bool
     handovers: int
     warnings: tuple[str, ...]
 
@@ -175,6 +177,7 @@ def plan_run(request: RunRequest, setting: RunSetting, client_adapter, runtime: 
         brief_path=brief_path,
         brief=brief,
         counts_steps=counts_steps,
+        reads_actions=ACTIONS_OPERATION in probe.operations,
         handovers=read_handovers(runtime, request.project),
         warnings=warnings,
     )
