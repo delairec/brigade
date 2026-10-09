@@ -4,8 +4,8 @@ from pathlib import Path
 from brigade.command import Argument, Command
 from brigade.errors import UsageError
 from brigade.runs.describe_run import describe_run
-from brigade.runs.journal_reader import JournalReader
-from brigade.runs.run_locations import JOURNAL_FILE, RUNS_DIRECTORY
+from brigade.runs.run_follower import RunFollower
+from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runs.show_run import show_run
 from brigade.runtime import Runtime
 from brigade.system.poll_until_signalled import poll_until_signalled
@@ -69,30 +69,27 @@ def _print(text: str) -> None:
     sys.stdout.flush()
 
 
-class _RunFollower:
+class _FollowPrinter:
     def __init__(self, state_root: Path, run_id: str):
         self.state_root = state_root
         self.run_id = run_id
-        self.run_directory = state_root / RUNS_DIRECTORY / run_id
-        self.journal_reader = JournalReader(self.run_directory / JOURNAL_FILE)
-        self.run = None
+        self.follower = RunFollower(state_root / RUNS_DIRECTORY / run_id, describe_run)
+        self.opened = False
 
     def poll(self) -> bool:
-        if self.run is None:
+        if not self.opened:
             opening = show_run(self.state_root, self.run_id, with_journal=False)
-            self.run = opening["run"]
             _print(_render_text({**opening, "journal": NO_JOURNAL_YET}) + LINE_END)
-        else:
-            self.run = describe_run(self.run_directory)
-        _print("".join(_render_record(record) + LINE_END for record in self.journal_reader.read_whole_records()))
-        return self.run["state"] != RUNNING
+            self.opened = True
+        _print("".join(_render_record(record) + LINE_END for record in self.follower.read_records()))
+        return self.follower.run["state"] != RUNNING
 
 
 def _follow_run(run_id: str, runtime: Runtime) -> dict:
-    follower = _RunFollower(runtime.paths.state_root, run_id)
+    printer = _FollowPrinter(runtime.paths.state_root, run_id)
     interval_s = read_optional_configuration(runtime.paths.configuration_file).journal_poll_s
-    interrupted = poll_until_signalled(follower.poll, interval_s)
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": follower.run, "interrupted": interrupted}
+    interrupted = poll_until_signalled(printer.poll, interval_s)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": printer.follower.run, "interrupted": interrupted}
 
 
 def runs_show(request, runtime: Runtime) -> dict:
