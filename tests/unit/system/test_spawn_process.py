@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY
 
-from brigade.errors import ToolNotFound
+from brigade.errors import ToolFailure, ToolNotFound
 from brigade.system.process_trace import ProcessTrace
 from brigade.system.spawn_process import SpawnRequest, spawn_process
 
@@ -108,3 +108,53 @@ class SpawnProcessOfAMissingToolTest(SpawnProcessTestCase):
 
         # Assert
         self.assertEqual(self.traces, [])
+
+
+class SpawnProcessInAWorkingDirectoryThatDoesNotExistTest(SpawnProcessTestCase):
+    def spawn_in_missing_directory(self):
+        spawn_process(
+            SpawnRequest(
+                argv=("true",),
+                cwd="/brigade-absent-directory",
+                environment={},
+                stdin=None,
+                stdout=self.stdout,
+                stderr=self.stderr,
+            ),
+            self.traces.append,
+        )
+
+    def test_should_refuse_naming_the_directory_rather_than_the_command(self):
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            self.spawn_in_missing_directory()
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "true: no working directory /brigade-absent-directory")
+
+    def test_should_not_report_the_command_off_the_path(self):
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            self.spawn_in_missing_directory()
+
+        # Assert
+        self.assertNotIsInstance(refusal.exception, ToolNotFound)
+
+    def test_should_trace_the_missing_directory_rather_than_a_command_off_the_path(self):
+        # Act
+        with self.assertRaises(ToolFailure):
+            self.spawn_in_missing_directory()
+
+        # Assert
+        self.assertEqual(
+            self.traces,
+            [
+                ProcessTrace(
+                    argv=("true",),
+                    cwd="/brigade-absent-directory",
+                    outcome="no_working_directory",
+                    exit_code=None,
+                    duration_ms=ANY,
+                )
+            ],
+        )

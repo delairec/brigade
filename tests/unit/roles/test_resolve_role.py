@@ -4,7 +4,7 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
+from brigade.errors import BrigadeError, EntityNotDefined, ToolFailure, ToolNotFound
 from brigade.roles.resolve_role import ResolvedRole, RoleBindings, resolve_role
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
@@ -157,18 +157,58 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), "awawa not on PATH")
 
-    def test_should_look_for_the_named_role_in_the_next_source_when_awawa_fails(self):
+    def test_should_look_for_the_named_role_in_the_next_source_when_awawa_does_not_know_the_entity(self):
         # Arrange
-        def fail_awawa(request: ProcessRequest):
-            raise ToolFailure("awawa show exited 1: no entity @AGENT.planner")
+        def answer_unknown_entity(request: ProcessRequest) -> ProcessRecord:
+            return ProcessRecord(
+                argv=request.argv,
+                cwd=request.cwd,
+                exit_code=1,
+                stdout="",
+                stderr="awawa show: @AGENT.planner is not defined in the workspace\n",
+                duration_ms=1,
+            )
 
         bindings = create_bindings(None, roles={"build": "planner"})
 
         # Act
-        resolved = resolve_role("build", self.create_runtime(fail_awawa), bindings, self.configuration)
+        resolved = resolve_role("build", self.create_runtime(answer_unknown_entity), bindings, self.configuration)
 
         # Assert
         self.assertEqual((resolved.role, resolved.source), ("planner", "built-in"))
+
+    def test_should_stop_on_a_failure_of_awawa_show_rather_than_look_elsewhere(self):
+        # Arrange
+        def fail_awawa(request: ProcessRequest):
+            raise ToolFailure("awawa show @AGENT.planner --json /srv/instructions exited 2: awawa: unreadable root")
+
+        bindings = create_bindings(None, roles={"build": "planner"})
+
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            resolve_role("build", self.create_runtime(fail_awawa), bindings, self.configuration)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "awawa show @AGENT.planner --json /srv/instructions exited 2: awawa: unreadable root",
+        )
+
+    def test_should_stop_on_a_failure_of_awawa_context_rather_than_look_elsewhere(self):
+        # Arrange
+        def fail_awawa_context(request: ProcessRequest) -> ProcessRecord:
+            if request.argv[1] == "context":
+                raise ToolFailure("awawa context @AGENT.planner exited 2: awawa: unreadable root")
+            return _answer_awawa(request)
+
+        bindings = create_bindings(None, roles={"build": "planner"})
+
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            resolve_role("build", self.create_runtime(fail_awawa_context), bindings, self.configuration)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "awawa context @AGENT.planner exited 2: awawa: unreadable root")
 
 
 PLANNER_FIELDS = [
@@ -204,10 +244,9 @@ class ResolveRoleBoundByTheSlotsTableTest(unittest.TestCase):
             executable_search_path="",
         )
 
-    def test_should_resolve_the_agent_the_configuration_binds_with_no_config_toml_on_disk(self):
-        # Arrange
-        runtime = Runtime(
-            run_process=_answer_awawa,
+    def create_runtime(self, run_process) -> Runtime:
+        return Runtime(
+            run_process=run_process,
             spawn_process=_refuse_spawn,
             paths=self.paths,
             now=datetime(2026, 10, 9, 9, 0, tzinfo=UTC),
@@ -215,6 +254,10 @@ class ResolveRoleBoundByTheSlotsTableTest(unittest.TestCase):
             trail=TrailWriter(_keep_no_trace),
             resolve_plugin=_refuse_resolution,
         )
+
+    def test_should_resolve_the_agent_the_configuration_binds_with_no_config_toml_on_disk(self):
+        # Arrange
+        runtime = self.create_runtime(_answer_awawa)
         configuration = Configuration(instructions=str(self.instructions), slots={"plan": "planner"})
         no_project_bindings = create_bindings(None)
 
@@ -240,3 +283,25 @@ class ResolveRoleBoundByTheSlotsTableTest(unittest.TestCase):
                 body='AGENT planner\n\tWORK "the plan of a wave"\n',
             ),
         )
+
+    def test_should_refuse_an_agent_awawa_does_not_know_naming_it_and_the_corpus(self):
+        # Arrange
+        def answer_unknown_entity(request: ProcessRequest) -> ProcessRecord:
+            return ProcessRecord(
+                argv=request.argv,
+                cwd=request.cwd,
+                exit_code=1,
+                stdout="",
+                stderr="awawa show: @AGENT.planner is not defined in the workspace\n",
+                duration_ms=1,
+            )
+
+        configuration = Configuration(instructions=str(self.instructions), slots={"plan": "planner"})
+        no_project_bindings = create_bindings(None)
+
+        # Act
+        with self.assertRaises(EntityNotDefined) as refusal:
+            resolve_role("plan", self.create_runtime(answer_unknown_entity), no_project_bindings, configuration)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"@AGENT.planner is not defined in {self.instructions}")
