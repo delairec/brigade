@@ -45,6 +45,8 @@ class DoctorTestCase(unittest.TestCase):
     def setUp(self):
         self.config_home = tempfile.TemporaryDirectory()
         self.configuration = Path(self.config_home.name) / "brigade" / "config.toml"
+        self.state_home = Path(self.config_home.name) / "state"
+        self.gh_record = Path(self.config_home.name) / "gh.txt"
 
     def tearDown(self):
         self.config_home.cleanup()
@@ -53,10 +55,16 @@ class DoctorTestCase(unittest.TestCase):
         self.configuration.parent.mkdir(parents=True, exist_ok=True)
         self.configuration.write_text(content)
 
+    def read_every_state_file(self) -> str:
+        files = sorted(path for path in self.state_home.rglob("*") if path.is_file())
+        return "".join(path.read_text(encoding="utf-8", errors="replace") for path in files)
+
     def run_doctor(self, path_directories, *options):
         environment = {
             "PATH": os.pathsep.join(path_directories),
             "XDG_CONFIG_HOME": self.config_home.name,
+            "XDG_STATE_HOME": str(self.state_home),
+            "BRIGADE_GH_RECORD": str(self.gh_record),
             **forward_coverage_environment(),
         }
         return subprocess.run(  # noqa: S603 - the test's own command line
@@ -704,6 +712,34 @@ class BrigadeDoctorReportsTheForgeAccountsTest(DoctorTestCase):
                 },
             ],
         )
+
+    def test_should_read_the_token_of_each_bound_login_once(self):
+        # Arrange
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION + FORGE_ACCOUNTS)
+
+        # Act
+        self.run_doctor(EVERY_TOOL_WITH_THE_ACCOUNTS_GH, "--json")
+
+        # Assert
+        self.assertEqual(
+            self.gh_record.read_text().splitlines(),
+            [
+                "auth token --hostname github.com --user octo-bot",
+                "auth token --hostname github.com --user refused-bot",
+                "auth status --active --hostname github.com --json hosts",
+            ],
+        )
+
+    def test_should_write_the_token_nowhere(self):
+        # Arrange
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION + FORGE_ACCOUNTS)
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_WITH_THE_ACCOUNTS_GH, "--verbose", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn("token-of-", completed.stdout + completed.stderr + self.read_every_state_file())
 
     def test_should_run_gh_with_no_token_when_cli_is_bound_to_no_login(self):
         # Arrange

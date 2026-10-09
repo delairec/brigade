@@ -138,13 +138,19 @@ def _read_forge_accounts(reading: Configuration | BrigadeError) -> dict:
     return reading.forge_accounts
 
 
-def _check_forge(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
-    forge = runtime.resolve_plugin("forge", FORGE_NAME)
-    login = _read_forge_accounts(reading).get(CLI_KEY)
+def _read_login_environment(forge, login: str, runtime: Runtime) -> dict | None | ToolNotFound:
     try:
-        environment = UNBOUND_ENVIRONMENT if login is None else ask_login_environment(forge, FORGE_NAME, login, runtime)
-        if environment is None:
-            return _create_optional("forge", "warning", f"gh printed no token for {login}", FORGE_FALLBACK)
+        return ask_login_environment(forge, FORGE_NAME, login, runtime)
+    except ToolNotFound as error:
+        return error
+
+
+def _check_forge(forge, login: str | None, environment: dict | None | ToolNotFound, runtime: Runtime) -> dict:
+    if isinstance(environment, ToolNotFound):
+        return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
+    if environment is None:
+        return _create_optional("forge", "warning", f"gh printed no token for {login}", FORGE_FALLBACK)
+    try:
         account = ask_forge_account(forge, FORGE_NAME, environment, runtime)
     except ToolNotFound:
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
@@ -164,21 +170,26 @@ def _describe_forge_login(state: str, detail: str) -> dict:
     return _create_optional("forge login", state, detail, FORGE_LOGIN_FALLBACK)
 
 
-def _check_forge_login(forge, login: str, keys: list[str], runtime: Runtime) -> dict:
+def _check_forge_login(login: str, keys: list[str], environment: dict | None | ToolNotFound) -> dict:
     bound = ", ".join(keys)
-    try:
-        environment = ask_login_environment(forge, FORGE_NAME, login, runtime)
-    except ToolNotFound:
+    if isinstance(environment, ToolNotFound):
         return _describe_forge_login("warning", f"gh not on PATH for {login}, bound to {bound}")
     if environment is None:
         return _describe_forge_login("warning", f"gh printed no token for {login}, bound to {bound}")
     return _describe_forge_login("ok", f"{login} for {bound}")
 
 
-def _check_forge_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+def _check_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
-    keys_by_login = _group_keys_by_login(_read_forge_accounts(reading))
-    return [_check_forge_login(forge, login, keys, runtime) for login, keys in keys_by_login.items()]
+    forge_accounts = _read_forge_accounts(reading)
+    keys_by_login = _group_keys_by_login(forge_accounts)
+    environments = {login: _read_login_environment(forge, login, runtime) for login in keys_by_login}
+    cli_login = forge_accounts.get(CLI_KEY)
+    cli_environment = UNBOUND_ENVIRONMENT if cli_login is None else environments[cli_login]
+    return [
+        _check_forge(forge, cli_login, cli_environment, runtime),
+        *(_check_forge_login(login, keys, environments[login]) for login, keys in keys_by_login.items()),
+    ]
 
 
 def _check_awawa_web(runtime: Runtime) -> dict:
@@ -278,8 +289,7 @@ def doctor(request, runtime: Runtime) -> dict:
             _check_awawa(runtime),
             _check_client(reading, runtime),
             _check_scheduler(runtime),
-            _check_forge(reading, runtime),
-            *_check_forge_logins(reading, runtime),
+            *_check_forge_and_its_logins(reading, runtime),
             _check_awawa_web(runtime),
             _check_instructions(reading, runtime),
             *_check_steps(reading, runtime),

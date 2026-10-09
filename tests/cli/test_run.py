@@ -1079,6 +1079,15 @@ class BrigadeRunOfASlotBoundToALoginTest(ForgeAccountRunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertNotIn("token-of-", completed.stdout + completed.stderr + self.read_every_state_file())
 
+    def test_should_write_the_token_nowhere_when_the_run_is_detached(self):
+        # Act
+        started = self.run_slot("build", "--detach", "--verbose", "--json")
+
+        # Assert
+        self.assertEqual(started.returncode, 0, started.stderr)
+        self.wait_for_exit(json.loads(started.stdout)["pid"])
+        self.assertNotIn("token-of-", started.stdout + started.stderr + self.read_every_state_file())
+
 
 class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
     def setUp(self):
