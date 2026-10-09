@@ -1034,7 +1034,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     str(raised.exception),
                 )
 
-    def test_should_refuse_a_sub_agent_transcript_still_being_written(self):
+    def test_should_ignore_the_last_line_a_killed_sub_agent_was_writing(self):
         # Arrange
         projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
         subagents = projects / "ada28962" / "subagents"
@@ -1043,6 +1043,51 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
             '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
         )
         (subagents / "agent-x.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:30.000Z","message":{"role":"user","content":"Make it pass."}}\n'
+            '{"type":"assistant","timestamp":"2026-10-06T10:01:00.000Z","message":{"role":"assistant","content":[{"ty'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(
+            transcripts["subagents"],
+            [
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "timestamp": "2026-10-06T10:00:30.000Z",
+                            "content": "Make it pass.",
+                            "tool_calls": 0,
+                            "id": None,
+                            "usage": None,
+                        }
+                    ]
+                }
+            ],
+        )
+
+    def test_should_refuse_a_sub_agent_transcript_whose_line_before_the_last_is_cut_short(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        subagents = projects / "ada28962" / "subagents"
+        subagents.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+        )
+        (subagents / "agent-x.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:40.000Z","message":{"role":"assi\n'
+            '{"type":"user","timestamp":"2026-10-06T10:00:30.000Z","message":{"role":"user","content":"Make it pass."}}\n'
             '{"type":"assistant","timestamp":"2026-10-06T10:01:00.000Z","message":{"role":"assistant","content":[{"ty'
         )
         request = {

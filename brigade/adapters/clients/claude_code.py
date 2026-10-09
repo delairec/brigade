@@ -274,7 +274,7 @@ def _read_transcripts(request: dict) -> dict:
         "schema_version": SCHEMA_VERSION,
         "messages": _read_transcript(path, _split_written_lines),
         "subagents": [
-            {"messages": _read_transcript(subagent_path, str.splitlines)} for subagent_path in subagent_paths
+            {"messages": _read_transcript(subagent_path, _split_written_lines)} for subagent_path in subagent_paths
         ],
     }
 
