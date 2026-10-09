@@ -40,3 +40,19 @@ OPEN_QUESTION HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
 	SOURCE "the user's question of 2026-10-09 in the refinement of B81, \"si un corpus préexiste"
 		+ "lors de l'installation de brigade il se passe quoi?\", and the answer chosen, an open"
 		+ "question blocking B55"
+
+OPEN_QUESTION SubAgentTranscriptLeftUnfinishedByACut
+	QUESTION "when a segment is cut at the wall-time limit while a sub-agent is writing, is the"
+		+ "unfinished last line of the sub-agent transcript ignored like that of the session file,"
+		+ "or does it keep making the transcript unreadable?"
+	STATUS open
+	BLOCKS @TASK.B84
+	RATIONALE "@TASK.B84 ignores the unfinished last line of the session file only: its SPEC names"
+		+ "the transcript file and keeps passing the row"
+		+ "test_should_refuse_a_sub_agent_transcript_still_being_written of @TASK.B83; a segment"
+		+ "cut while a sub-agent is writing is therefore recorded with its steps and its usage"
+		+ "null, the reason naming the unreadable sub-agent transcript"
+		REF @TASK.B83
+		REF @TASK.B84
+	SOURCE "pull request #86 of the brigade repository, delivering @TASK.B84"
+		REF @TASK.B84

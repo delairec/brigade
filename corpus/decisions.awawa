@@ -1970,3 +1970,17 @@ DECISION TheForgeAdapterAnswersTheEnvironmentOfALoginAndDoctorReadsItOnce
 		+ "to the environment of brigade itself, and a second read costs one gh call"
 	SOURCE "pull request #80 of the brigade repository, delivering @TASK.B75"
 		REF @TASK.B75
+
+DECISION TheSessionOfASegmentIsTheOneItsResultReportsElseTheOneNamedAtLaunch
+	TITLE "the session of a segment that exits is the one its parse-result answer reports, the"
+		+ "session named at launch when it reports none; a segment cut at the wall-time limit takes"
+		+ "the session named at launch"
+	STATUS active
+	DESC "binds @TASK.B84"
+		REF @TASK.B84
+	REJECTED "the session named at launch for every segment: the fake answers unchanged the session"
+		+ "brigade generates, so the transcripts recorded for fake-session in tests/cli/test_run.py"
+		+ "would no longer be read, against the SPEC of the task that keeps those rows passing, and"
+		+ "a client naming its session in its result only would lose it"
+	SOURCE "pull request #86 of the brigade repository, delivering @TASK.B84"
+		REF @TASK.B84
