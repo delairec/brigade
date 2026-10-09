@@ -1121,6 +1121,7 @@ TASK B19
 	AFTER @TASK.B14
 	AFTER @TASK.B71
 	AFTER @TASK.B106
+	AFTER @TASK.B112
 	RATIONALE "it follows @TASK.B71: the resume from a progress file rests on the client being able"
 		+ "to write it, F1 of the foundations review"
 		REF @TASK.B71
