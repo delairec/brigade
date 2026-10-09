@@ -1899,3 +1899,21 @@ DECISION BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
 	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B84, \"brigade, de façon"
 		+ "générique\""
 		REF @TASK.B84
+
+DECISION AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
+	TITLE "a key added to an answer of the client adapter contract is required of every adapter,"
+		+ "null where the client cannot give it; an adapter that lacks it is refused"
+	STATUS active
+	DESC "binds @TASK.B83, whose parse-result answer gains cost_usd, and @TASK.B84, whose"
+		+ "launch-argv answer gains session_id; an adapter outside the repository, as"
+		+ "brigade-client-vibe on PATH, is brought to the contract by its owner when they merge"
+		REF @TASK.B83
+		REF @TASK.B84
+	REJECTED "the new keys optional, an absent one read as null: the contract would no longer say"
+		+ "what an adapter answers"
+	REJECTED "a schema_version 2 of the answers, version 1 upgraded on read: a weight the user did"
+		+ "not want for keys an adapter can answer null"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B84, on the session's"
+		+ "finding that brigade-client-vibe answers neither key: \"l'adaptateur doit fournir les"
+		+ "clés et respecter le contrat non?\""
+		REF @TASK.B84
