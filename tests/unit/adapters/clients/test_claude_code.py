@@ -541,26 +541,34 @@ class ClaudeCodeActionsTest(unittest.TestCase):
         rows = [
             (
                 "a path",
-                '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
-                '"name":"Read","input":{"file_path":"/srv/b42/README.md","limit":40}}]}}\n',
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"Read","input":{"file_path":"/srv/b42/README.md","limit":40}}]}}\n'
+                ),
                 "Read /srv/b42/README.md",
             ),
             (
                 "a command",
-                '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
-                '"name":"Bash","input":{"command":"python3 -m unittest","timeout":600}}]}}\n',
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"Bash","input":{"command":"python3 -m unittest","timeout":600}}]}}\n'
+                ),
                 "Bash python3 -m unittest",
             ),
             (
                 "a pattern",
-                '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
-                '"name":"Grep","input":{"pattern":"def answer","path":"brigade"}}]}}\n',
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"Grep","input":{"pattern":"def answer","path":"brigade"}}]}}\n'
+                ),
                 "Grep def answer",
             ),
             (
                 "no argument",
-                '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
-                '"name":"TodoWrite","input":{"todos":[]}}]}}\n',
+                (
+                    '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1",'
+                    '"name":"TodoWrite","input":{"todos":[]}}]}}\n'
+                ),
                 "TodoWrite",
             ),
         ]

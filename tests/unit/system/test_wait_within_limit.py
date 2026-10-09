@@ -34,7 +34,9 @@ class WaitWithinLimitOfAProcessWithNoGroupTest(WaitWithinLimitTestCase):
         process = self.start(["sleep", "0.5"], start_new_session=False)
 
         # Act
-        exit_code = wait_within_limit(process, WallLimit(limit_s=NO_TIME, grace_before_kill_s=ANY_GRACE_S, poll_s=ANY_POLL_S), _poll_nothing)
+        exit_code = wait_within_limit(
+            process, WallLimit(limit_s=NO_TIME, grace_before_kill_s=ANY_GRACE_S, poll_s=ANY_POLL_S), _poll_nothing
+        )
 
         # Assert
         self.assertEqual(exit_code, CUT)
@@ -47,7 +49,9 @@ class WaitWithinLimitOfAProcessIgnoringTheStopSignalTest(WaitWithinLimitTestCase
         process.stdout.readline()
 
         # Act
-        exit_code = wait_within_limit(process, WallLimit(limit_s=NO_TIME, grace_before_kill_s=SHORT_GRACE_S, poll_s=ANY_POLL_S), _poll_nothing)
+        exit_code = wait_within_limit(
+            process, WallLimit(limit_s=NO_TIME, grace_before_kill_s=SHORT_GRACE_S, poll_s=ANY_POLL_S), _poll_nothing
+        )
 
         # Assert
         self.assertEqual((exit_code, process.returncode), (CUT, -signal.SIGKILL))

@@ -102,8 +102,10 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                 "argv": [
                     "sh",
                     "-c",
-                    'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"',
+                    (
+                        'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                        ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
+                    ),
                     "fake",
                     "5",
                     "step 1 done",
@@ -225,8 +227,10 @@ class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
             [
                 "sh",
                 "-c",
-                'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"',
+                (
+                    'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
+                ),
                 "fake",
                 "0",
                 "",

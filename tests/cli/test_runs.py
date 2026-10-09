@@ -178,8 +178,22 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
         self.assertEqual(
             json.loads(completed.stdout)["journal"],
             [
-                {"schema_version": 1, "at": ANY, "segment": 1, "kind": "text", "summary": "Reading the task", "cut": False},
-                {"schema_version": 1, "at": ANY, "segment": 1, "kind": "text", "summary": "Writing the test", "cut": False},
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Reading the task",
+                    "cut": False,
+                },
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Writing the test",
+                    "cut": False,
+                },
                 {"schema_version": 1, "at": ANY, "segment": 1, "kind": "result", "summary": "done", "cut": False},
             ],
         )
@@ -240,9 +254,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual(
-            (document["run"]["state"], document["segments"], document["journal"]), ("dead", [], [])
-        )
+        self.assertEqual((document["run"]["state"], document["segments"], document["journal"]), ("dead", [], []))
 
 
 class BrigadeRunJournalOfAClientWithNoActionsOperationTest(RunsTestCase):

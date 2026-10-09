@@ -206,14 +206,14 @@ class RunSegmentJournalTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             json.loads(self.journal.read_text()),
-                {
-                    "schema_version": 1,
-                    "at": ANY,
-                    "segment": 1,
-                    "kind": "raw",
-                    "summary": "the client finished the task",
-                    "cut": False,
-                },
+            {
+                "schema_version": 1,
+                "at": ANY,
+                "segment": 1,
+                "kind": "raw",
+                "summary": "the client finished the task",
+                "cut": False,
+            },
         )
 
     def test_should_journal_the_actions_the_client_reads_in_the_output(self):
@@ -226,14 +226,14 @@ class RunSegmentJournalTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             json.loads(self.journal.read_text()),
-                {
-                    "schema_version": 1,
-                    "at": ANY,
-                    "segment": 1,
-                    "kind": "text",
-                    "summary": "the client finished the task",
-                    "cut": False,
-                },
+            {
+                "schema_version": 1,
+                "at": ANY,
+                "segment": 1,
+                "kind": "text",
+                "summary": "the client finished the task",
+                "cut": False,
+            },
         )
 
     def test_should_ask_the_client_for_no_actions_when_the_segment_wrote_nothing(self):
