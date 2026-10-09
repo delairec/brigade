@@ -51,7 +51,8 @@ each task as a brigade run, never as an `Agent` call:
 brigade run awawa-task --slot build --project brigade --cwd .claude/worktrees/<id> --brief <file> --detach task=@TASK.X base=<base>
 ```
 
-`--brief` carries what the session established; `brigade runs list` follows the runs.
+`--brief` carries what the session established; `brigade runs list` follows the runs, `brigade runs show --log <run>`
+one run live.
 `awawa status TASK --where MILESTONE==@MILESTONE.F0 .` lists the tasks of a milestone.
 
 ## Commands
