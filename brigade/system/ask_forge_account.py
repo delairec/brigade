@@ -8,8 +8,8 @@ from brigade.system.validate_document import DocumentInvalid, validate_document
 OPERATION = "describe_account"
 
 
-def ask_forge_account(forge, forge_name: str, runtime: Runtime) -> AccountAnswer:
-    answer = forge.describe_account(AccountRequest().to_document(), runtime)
+def ask_forge_account(forge, forge_name: str, environment: dict, runtime: Runtime) -> AccountAnswer:
+    answer = forge.describe_account(AccountRequest(environment).to_document(), runtime)
     try:
         validate_document(answer, FORGE_ANSWER_SHAPES[OPERATION])
     except DocumentInvalid as problem:

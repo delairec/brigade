@@ -8,8 +8,9 @@
 # What fires the tick: systemd, cron or loop.
 # scheduler = "systemd"
 
-# The GitHub account gh acts as for brigade's writes.
-# forge_account = ""
+# The attempts at reading the token of a login of [forge_accounts], 1 or more, the delay doubling from one second;
+# the attempts exhausted, the command stops and no other account is used in its place.
+# forge_attempts = 3
 
 # The root of an instructions corpus the roles are read from.
 # instructions = ""
@@ -44,3 +45,9 @@
 # slots plan, build, verify, review, rebase, report, triage, rules, explore.
 # [slots]
 # plan = ""
+
+# The gh login a slot acts as, or the key cli for the gh calls brigade makes itself: a process of a bound key
+# carries the token gh auth token --user <login> prints, an unbound one acts as gh's active account;
+# keys plan, build, verify, review, rebase, report, triage, rules, explore and cli.
+# [forge_accounts]
+# cli = ""

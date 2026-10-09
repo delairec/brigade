@@ -3,6 +3,7 @@ import os
 import shutil
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
 from tests.cli.temporary_instructions import TemporaryInstructions
@@ -1018,4 +1019,120 @@ class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
         self.assertEqual(
             ((run_directory / "brigade.log").read_text(), json.loads(listed.stdout)["runs"][0]["state"]),
             (f"brigade run: cannot write {run_directory / 'segments' / '1'}: Not a directory\n", "dead"),
+        )
+
+
+ENVIRONMENT_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-environment"
+ACCOUNTS_GH = Path(__file__).resolve().parent / "fixtures" / "executables" / "gh-accounts"
+BOUND_SLOTS = (
+    'client = "claude-code"\nforge_attempts = 2\n[forge_accounts]\nbuild = "octo-builder"\nverify = "refused-bot"\n'
+)
+
+
+class ForgeAccountRunTestCase(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.environment_record = Path(self.root.name) / "environment.txt"
+        self.gh_record = Path(self.root.name) / "gh.txt"
+        self.environment = {
+            **self.machine.describe_environment(),
+            "PATH": os.pathsep.join([str(ENVIRONMENT_CLAUDE), str(ACCOUNTS_GH), os.environ["PATH"]]),
+            "BRIGADE_ENVIRONMENT_RECORD": str(self.environment_record),
+            "BRIGADE_GH_RECORD": str(self.gh_record),
+        }
+
+    def run_slot(self, slot: str, *options: str):
+        return self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "run",
+            str(self.procedure),
+            "--slot",
+            slot,
+            "--cwd",
+            str(self.workspace),
+            *options,
+            environment=self.environment,
+        )
+
+
+class BrigadeRunOfASlotBoundToALoginTest(ForgeAccountRunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.write_configuration(BOUND_SLOTS)
+
+    def test_should_hand_the_client_segment_the_token_of_the_login_of_its_slot(self):
+        # Act
+        completed = self.run_slot("build")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, self.environment_record.read_text()),
+            (0, "token-of-octo-builder\n"),
+            completed.stderr,
+        )
+
+    def test_should_write_the_token_nowhere(self):
+        # Act
+        completed = self.run_slot("build", "--verbose", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn("token-of-", completed.stdout + completed.stderr + self.read_every_state_file())
+
+
+class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.write_configuration(BOUND_SLOTS)
+
+    def test_should_stop_on_an_error_naming_the_login_and_the_attempts(self):
+        # Act
+        completed = self.run_slot("verify")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade run: gh printed no token for the login refused-bot, bound to verify, after 2 attempts\n"),
+        )
+
+    def test_should_record_the_login_unavailable_in_the_ledger(self):
+        # Act
+        self.run_slot("verify")
+
+        # Assert
+        self.assertEqual(
+            self.read_events("forge_account_unavailable"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": mock.ANY,
+                    "event": "forge_account_unavailable",
+                    "login": "refused-bot",
+                    "key": "verify",
+                }
+            ],
+        )
+
+    def test_should_start_no_run_after_reading_the_token_forge_attempts_times(self):
+        # Act
+        self.run_slot("verify", "--detach")
+
+        # Assert
+        self.assertEqual(
+            (self.gh_record.read_text().splitlines(), list(self.runs.glob("*"))),
+            (["auth token --hostname github.com --user refused-bot"] * 2, []),
+        )
+
+
+class BrigadeRunOfASlotBoundToNoLoginTest(ForgeAccountRunTestCase):
+    def test_should_hand_the_client_segment_no_token(self):
+        # Arrange
+        self.machine.write_configuration('client = "claude-code"\n')
+
+        # Act
+        completed = self.run_slot("build")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, self.environment_record.read_text()), (0, "no GH_TOKEN\n"), completed.stderr
         )

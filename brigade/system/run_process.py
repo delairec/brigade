@@ -1,7 +1,7 @@
 import subprocess
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from brigade.errors import CommandFailed, ToolFailure
 from brigade.system.build_process_environment import build_process_environment
@@ -18,6 +18,7 @@ class ProcessRequest:
     timeout_s: float
     acceptable_exit_codes: tuple[int, ...] = (0,)
     stdin: str | None = None
+    environment: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -59,7 +60,7 @@ def run_process(request: ProcessRequest, record_trace: Callable[[ProcessTrace], 
         completed = subprocess.run(  # noqa: S603
             list(request.argv),
             cwd=request.cwd,
-            env=build_process_environment(),
+            env={**build_process_environment(), **request.environment},
             capture_output=True,
             text=True,
             encoding="utf-8",

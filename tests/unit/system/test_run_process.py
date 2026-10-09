@@ -31,6 +31,23 @@ class RunProcessPastItsTimeoutTest(unittest.TestCase):
         )
 
 
+class RunProcessWithTheVariablesOfItsCallerTest(unittest.TestCase):
+    def test_should_add_them_over_the_whitelisted_environment(self):
+        # Arrange
+        request = ProcessRequest(
+            argv=("sh", "-c", 'printf "%s" "$GH_TOKEN"'),
+            cwd="/",
+            timeout_s=10,
+            environment={"GH_TOKEN": "token-of-octo-bot"},
+        )
+
+        # Act
+        record = run_process(request, [].append)
+
+        # Assert
+        self.assertEqual(record.stdout, "token-of-octo-bot")
+
+
 class RunProcessOfAnAcceptedExitCodeTest(unittest.TestCase):
     def setUp(self):
         self.traces = []

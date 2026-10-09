@@ -661,3 +661,121 @@ class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
                         "fallback": INSTRUCTIONS_FALLBACK,
                     },
                 )
+
+
+GH_ACCOUNTS = str(EXECUTABLES / "gh-accounts")
+EVERY_TOOL_WITH_THE_ACCOUNTS_GH = [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACCOUNTS, AWAWA_WEB, CLAUDE]
+FORGE_ACCOUNTS = '[forge_accounts]\ncli = "octo-bot"\nbuild = "octo-bot"\nverify = "refused-bot"\n'
+FORGE_LOGIN_FALLBACK = "the commands acting as it stop"
+
+
+class BrigadeDoctorReportsTheForgeAccountsTest(DoctorTestCase):
+    def test_should_name_the_login_of_cli_on_the_forge_line_and_report_each_login(self):
+        # Arrange
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION + FORGE_ACCOUNTS)
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_WITH_THE_ACCOUNTS_GH, "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][FORGE_ENTRY : FORGE_ENTRY + 3],
+            [
+                {
+                    "name": "forge",
+                    "kind": "optional",
+                    "state": "ok",
+                    "detail": "gh as octo-bot",
+                    "fallback": "local mode without a forge",
+                },
+                {
+                    "name": "forge login",
+                    "kind": "optional",
+                    "state": "ok",
+                    "detail": "octo-bot for cli, build",
+                    "fallback": FORGE_LOGIN_FALLBACK,
+                },
+                {
+                    "name": "forge login",
+                    "kind": "optional",
+                    "state": "warning",
+                    "detail": "gh printed no token for refused-bot, bound to verify",
+                    "fallback": FORGE_LOGIN_FALLBACK,
+                },
+            ],
+        )
+
+    def test_should_run_gh_with_no_token_when_cli_is_bound_to_no_login(self):
+        # Arrange
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_WITH_THE_ACCOUNTS_GH, "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][FORGE_ENTRY : FORGE_ENTRY + 2],
+            [
+                {
+                    "name": "forge",
+                    "kind": "optional",
+                    "state": "ok",
+                    "detail": "gh as octo-user",
+                    "fallback": "local mode without a forge",
+                },
+                {
+                    "name": "awawa-web",
+                    "kind": "optional",
+                    "state": "ok",
+                    "detail": "on PATH",
+                    "fallback": "the dashboard's corpus view only",
+                },
+            ],
+        )
+
+    def test_should_warn_on_the_forge_line_when_gh_prints_no_token_for_the_login_of_cli(self):
+        # Arrange
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION + '[forge_accounts]\ncli = "refused-bot"\n')
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_WITH_THE_ACCOUNTS_GH, "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][FORGE_ENTRY],
+            {
+                "name": "forge",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "gh printed no token for refused-bot",
+                "fallback": "local mode without a forge",
+            },
+        )
+
+    def test_should_warn_on_each_login_when_gh_is_not_on_path(self):
+        # Arrange
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION + '[forge_accounts]\ncli = "octo-bot"\n')
+
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, SYSTEMD_RUNNING, AWAWA_WEB, CLAUDE], "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][FORGE_ENTRY : FORGE_ENTRY + 2],
+            [
+                {
+                    "name": "forge",
+                    "kind": "optional",
+                    "state": "warning",
+                    "detail": "gh not on PATH",
+                    "fallback": "local mode without a forge",
+                },
+                {
+                    "name": "forge login",
+                    "kind": "optional",
+                    "state": "warning",
+                    "detail": "gh not on PATH for octo-bot, bound to cli",
+                    "fallback": FORGE_LOGIN_FALLBACK,
+                },
+            ],
+        )

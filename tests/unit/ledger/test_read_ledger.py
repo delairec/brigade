@@ -3,6 +3,7 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
+from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import LedgerReading, SkippedLine, read_ledger
 from brigade.ledger.undeclared_event import UndeclaredEvent
@@ -72,6 +73,30 @@ class ReadLedgerWhenEveryLineIsWholeTest(ReadLedgerTestCase):
                 ),
                 files=(str(september), str(october)),
                 skipped=(),
+            ),
+        )
+
+
+class ReadLedgerOfAForgeAccountUnavailableTest(ReadLedgerTestCase):
+    def test_should_read_the_login_and_the_key_bound_to_it(self):
+        # Arrange
+        self.write_ledger(
+            "2026-10.jsonl",
+            b'{"schema_version": 1, "ts": "2026-10-09T12:30:00Z", "event": "forge_account_unavailable",'
+            b' "login": "octo-bot", "key": "verify"}\n',
+        )
+
+        # Act
+        reading = read_ledger(self.state_root)
+
+        # Assert
+        self.assertEqual(
+            reading.entries,
+            (
+                LedgerEntry(
+                    instant=datetime(2026, 10, 9, 12, 30, tzinfo=UTC),
+                    event=ForgeAccountUnavailable(login="octo-bot", key="verify"),
+                ),
             ),
         )
 

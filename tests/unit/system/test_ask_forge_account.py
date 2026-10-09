@@ -5,6 +5,7 @@ from brigade.system.account_answer import AccountAnswer
 from brigade.system.ask_forge_account import ask_forge_account
 
 NO_RUNTIME_NEEDED = None
+UNBOUND_ENVIRONMENT = {}
 
 
 class ForgeDouble:
@@ -23,10 +24,12 @@ class AskForgeAccountTest(unittest.TestCase):
         forge = ForgeDouble({"schema_version": 1, "login": "Clauche-bot"})
 
         # Act
-        account = ask_forge_account(forge, "github", NO_RUNTIME_NEEDED)
+        account = ask_forge_account(forge, "github", UNBOUND_ENVIRONMENT, NO_RUNTIME_NEEDED)
 
         # Assert
-        self.assertEqual((forge.requests, account), ([{"schema_version": 1}], AccountAnswer(login="Clauche-bot")))
+        self.assertEqual(
+            (forge.requests, account), ([{"schema_version": 1, "environment": {}}], AccountAnswer(login="Clauche-bot"))
+        )
 
     def test_should_refuse_an_answer_lacking_the_login_naming_the_forge(self):
         # Arrange
@@ -34,7 +37,7 @@ class AskForgeAccountTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            ask_forge_account(forge, "github", NO_RUNTIME_NEEDED)
+            ask_forge_account(forge, "github", UNBOUND_ENVIRONMENT, NO_RUNTIME_NEEDED)
 
         # Assert
         self.assertEqual(str(refusal.exception), "forge plugin github answered describe_account: lacks the key login")

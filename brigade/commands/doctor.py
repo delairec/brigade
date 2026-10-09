@@ -9,11 +9,12 @@ from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
+from brigade.system.ask_login_environment import ask_login_environment
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import Configuration, ConfigurationMissing, read_configuration
+from brigade.system.read_configuration import CLI_KEY, Configuration, ConfigurationMissing, read_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.require_configured_client import require_configured_client
 from brigade.system.run_process import ProcessRequest
@@ -25,6 +26,9 @@ PROBE_TIMEOUT_S = 10.0
 SCHEDULER_FALLBACK = "a cron line, or brigade tick --loop"
 FORGE_FALLBACK = "local mode without a forge"
 FORGE_NAME = "github"
+FORGE_LOGIN_FALLBACK = "the commands acting as it stop"
+UNBOUND_ENVIRONMENT = {}
+NO_FORGE_ACCOUNTS = {}
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 NO_INSTRUCTIONS = "none configured"
@@ -128,15 +132,53 @@ def _check_scheduler(runtime: Runtime) -> dict:
     return _create_optional("scheduler", "warning", f"no user systemd instance ({systemd_state})", SCHEDULER_FALLBACK)
 
 
-def _check_forge(runtime: Runtime) -> dict:
+def _read_forge_accounts(reading: Configuration | BrigadeError) -> dict:
+    if isinstance(reading, BrigadeError):
+        return NO_FORGE_ACCOUNTS
+    return reading.forge_accounts
+
+
+def _check_forge(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    login = _read_forge_accounts(reading).get(CLI_KEY)
     try:
-        account = ask_forge_account(forge, FORGE_NAME, runtime)
+        environment = UNBOUND_ENVIRONMENT if login is None else ask_login_environment(forge, FORGE_NAME, login, runtime)
+        if environment is None:
+            return _create_optional("forge", "warning", f"gh printed no token for {login}", FORGE_FALLBACK)
+        account = ask_forge_account(forge, FORGE_NAME, environment, runtime)
     except ToolNotFound:
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
     if account.login is None:
         return _create_optional("forge", "warning", "gh logged in to no account", FORGE_FALLBACK)
     return _create_optional("forge", "ok", f"gh as {account.login}", FORGE_FALLBACK)
+
+
+def _group_keys_by_login(forge_accounts: dict) -> dict:
+    keys_by_login = {}
+    for key, login in forge_accounts.items():
+        keys_by_login.setdefault(login, []).append(key)
+    return keys_by_login
+
+
+def _describe_forge_login(state: str, detail: str) -> dict:
+    return _create_optional("forge login", state, detail, FORGE_LOGIN_FALLBACK)
+
+
+def _check_forge_login(forge, login: str, keys: list[str], runtime: Runtime) -> dict:
+    bound = ", ".join(keys)
+    try:
+        environment = ask_login_environment(forge, FORGE_NAME, login, runtime)
+    except ToolNotFound:
+        return _describe_forge_login("warning", f"gh not on PATH for {login}, bound to {bound}")
+    if environment is None:
+        return _describe_forge_login("warning", f"gh printed no token for {login}, bound to {bound}")
+    return _describe_forge_login("ok", f"{login} for {bound}")
+
+
+def _check_forge_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    keys_by_login = _group_keys_by_login(_read_forge_accounts(reading))
+    return [_check_forge_login(forge, login, keys, runtime) for login, keys in keys_by_login.items()]
 
 
 def _check_awawa_web(runtime: Runtime) -> dict:
@@ -236,7 +278,8 @@ def doctor(request, runtime: Runtime) -> dict:
             _check_awawa(runtime),
             _check_client(reading, runtime),
             _check_scheduler(runtime),
-            _check_forge(runtime),
+            _check_forge(reading, runtime),
+            *_check_forge_logins(reading, runtime),
             _check_awawa_web(runtime),
             _check_instructions(reading, runtime),
             *_check_steps(reading, runtime),

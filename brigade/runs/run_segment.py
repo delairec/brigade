@@ -113,7 +113,7 @@ def _run_process(plan: RunPlan, number: int, runtime: Runtime, segment_directory
     request = SpawnRequest(
         argv=launch.argv,
         cwd=str(plan.worktree),
-        environment={**launch.environment, PROGRESS_FILE_VARIABLE: progress_file},
+        environment={**launch.environment, **plan.forge_environment, PROGRESS_FILE_VARIABLE: progress_file},
         stdin=launch.stdin,
         stdout=segment_directory / STDOUT_FILE,
         stderr=segment_directory / STDERR_FILE,
