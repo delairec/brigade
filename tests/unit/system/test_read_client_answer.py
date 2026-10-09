@@ -2,11 +2,30 @@ import unittest
 
 from brigade.errors import BrigadeError
 from brigade.system.client_question import ClientQuestion
+from brigade.system.client_role import ClientRole
+from brigade.system.launch_argv_request import LaunchArgvRequest
 from brigade.system.parse_result_request import ParseResultRequest
 from brigade.system.read_client_answer import read_client_answer
 from brigade.system.transcripts_request import TranscriptsRequest
 
 PARSE_RESULT_QUESTION = ClientQuestion("vibe", ParseResultRequest(exit_code=0, stdout="", stderr=""))
+LAUNCH_QUESTION = ClientQuestion(
+    "vibe",
+    LaunchArgvRequest(
+        worktree="/work/b84",
+        brief="Deliver the task B84.",
+        role=ClientRole(
+            name="ada",
+            package="AGENT ada",
+            package_file="/state/brigade/runs/r1/role.md",
+            capabilities=("read", "write"),
+            reasoning="standard",
+            budget=75,
+        ),
+        progress_file="/state/brigade/runs/r1/progress.md",
+        session_id="6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
+    ),
+)
 TRANSCRIPTS_QUESTION = ClientQuestion("vibe", TranscriptsRequest(session_id="session-b83", worktree="/work/b83"))
 RESULT_WITHOUT_COST = {
     "schema_version": 1,
@@ -19,6 +38,7 @@ RESULT_WITHOUT_COST = {
     "reset": None,
     "message": None,
 }
+LAUNCH_WITHOUT_SESSION = {"schema_version": 1, "argv": ["vibe"], "environment": {}, "stdin": "Deliver the task B84."}
 TRANSCRIPTS_WITHOUT_TOOL_CALLS = {
     "schema_version": 1,
     "messages": [{"role": "assistant", "timestamp": None, "content": "Done."}],
@@ -29,6 +49,12 @@ TRANSCRIPTS_WITHOUT_TOOL_CALLS = {
 class ReadClientAnswerTest(unittest.TestCase):
     def test_should_refuse_an_answer_lacking_a_key_of_the_contract_naming_the_adapter_and_the_key(self):
         cases = (
+            (
+                "a launch without its session",
+                LAUNCH_QUESTION,
+                LAUNCH_WITHOUT_SESSION,
+                "client adapter vibe answered launch-argv: lacks the key session_id",
+            ),
             (
                 "a result without its cost",
                 PARSE_RESULT_QUESTION,

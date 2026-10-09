@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -16,6 +17,7 @@ from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.read_configuration import Configuration
+from brigade.system.token_usage import TokenUsage
 from brigade.system.trail_writer import TrailWriter
 
 FIRST_SEGMENT = 1
@@ -29,22 +31,59 @@ LAUNCH_ANSWER = {
     "argv": ["double-client", "--print"],
     "environment": {"DOUBLE_CLIENT_MODE": "unattended"},
     "stdin": "the brief of the run",
+    "session_id": None,
 }
+UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+CUT_AT_ONCE_S = 0.05
 
 
 TRANSCRIPTS_ANSWER = {
     "schema_version": 1,
-    "messages": [{"role": "assistant", "timestamp": None, "content": [], "tool_calls": 2}],
-    "subagents": [{"messages": [{"role": "assistant", "timestamp": None, "content": [], "tool_calls": 1}]}],
+    "messages": [
+        {
+            "role": "assistant",
+            "timestamp": None,
+            "content": [],
+            "tool_calls": 2,
+            "id": "msg_main",
+            "usage": {
+                "input_tokens": 1,
+                "output_tokens": 10,
+                "cache_creation_input_tokens": 100,
+                "cache_read_input_tokens": 1000,
+            },
+        }
+    ],
+    "subagents": [
+        {
+            "messages": [
+                {
+                    "role": "assistant",
+                    "timestamp": None,
+                    "content": [],
+                    "tool_calls": 1,
+                    "id": "msg_sub",
+                    "usage": {
+                        "input_tokens": 2,
+                        "output_tokens": 20,
+                        "cache_creation_input_tokens": 200,
+                        "cache_read_input_tokens": 2000,
+                    },
+                }
+            ]
+        }
+    ],
 }
 
 
 class ClientDouble:
     def __init__(self):
         self.operations = []
+        self.requests = {}
 
     def answer(self, operation: str, request: dict) -> dict:
         self.operations.append(operation)
+        self.requests[operation] = request
         if operation == "launch-argv":
             return LAUNCH_ANSWER
         if operation == "actions":
@@ -77,6 +116,23 @@ class ClientReportingNoSessionDouble(ClientDouble):
         if operation == "parse-result":
             return {**super().answer(operation, request), "session_id": None}
         return super().answer(operation, request)
+
+
+class ClientAnsweringItsSessionDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "launch-argv":
+            return {**super().answer(operation, request), "session_id": request["session_id"]}
+        return super().answer(operation, request)
+
+
+class ClientAnsweringItsSessionAndReportingNoneDouble(ClientAnsweringItsSessionDouble, ClientReportingNoSessionDouble):
+    pass
+
+
+class ClientAnsweringItsSessionAndRefusingToReadTranscriptsDouble(
+    ClientAnsweringItsSessionDouble, ClientRefusingToReadTranscriptsDouble
+):
+    pass
 
 
 class ClientRefusingToReadActionsDouble(ClientDouble):
@@ -131,6 +187,23 @@ class SpawnDouble:
         return ExitedProcessDouble()
 
 
+class SpawnNeverEndingDouble:
+    def __init__(self):
+        self.processes = []
+
+    def spawn(self, request):
+        request.stdout.write_text("Reading the task\n", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], start_new_session=True)
+        self.processes.append(process)
+        return process
+
+    def stop(self) -> None:
+        for process in self.processes:
+            process.kill()
+            process.wait()
+
+
 def _report_nothing(trace) -> None:
     pass
 
@@ -166,7 +239,11 @@ def _create_runtime(root: Path, spawn) -> Runtime:
 
 
 def _create_plan(
-    root: Path, reads_actions: bool = False, client_type: type = ClientDouble, reads_transcripts: bool = False
+    root: Path,
+    reads_actions: bool = False,
+    client_type: type = ClientDouble,
+    reads_transcripts: bool = False,
+    wall_limit_s: float = 1500.0,
 ) -> RunPlan:
     return RunPlan(
         run_id="20261007T090000Z-b73a01",
@@ -195,7 +272,7 @@ def _create_plan(
         worktree=root / "project",
         disposable_worktree=False,
         capabilities=("read", "write"),
-        wall_limit_s=1500.0,
+        wall_limit_s=wall_limit_s,
         arguments=NO_ARGUMENTS,
         brief_path=None,
         brief=NO_BRIEF,
@@ -303,6 +380,103 @@ class RunSegmentStepsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.cost_usd, 0.42)
+
+
+class RunSegmentSessionTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+
+    def test_should_name_a_new_session_in_the_launch_request(self):
+        # Arrange
+        plan = _create_plan(self.root)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        self.assertRegex(plan.client_adapter.requests["launch-argv"]["session_id"], UUID_PATTERN)
+
+    def test_should_keep_the_session_the_client_reports_in_its_result(self):
+        # Arrange
+        plan = _create_plan(self.root, client_type=ClientAnsweringItsSessionDouble)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        self.assertEqual(record.result.session_id, "session-b73")
+
+    def test_should_take_the_session_named_at_launch_when_the_result_reports_none(self):
+        # Arrange
+        plan = _create_plan(
+            self.root, client_type=ClientAnsweringItsSessionAndReportingNoneDouble, reads_transcripts=True
+        )
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        launched_session = plan.client_adapter.requests["launch-argv"]["session_id"]
+        self.assertEqual(record.result.session_id, launched_session)
+        self.assertEqual(plan.client_adapter.requests["transcripts"]["session_id"], launched_session)
+
+
+class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.spawn = SpawnNeverEndingDouble()
+        self.addCleanup(self.spawn.stop)
+
+    def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
+        # Arrange
+        plan = _create_plan(
+            self.root, client_type=ClientAnsweringItsSessionDouble, reads_transcripts=True, wall_limit_s=CUT_AT_ONCE_S
+        )
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn))
+
+        # Assert
+        launched_session = plan.client_adapter.requests["launch-argv"]["session_id"]
+        self.assertEqual(plan.client_adapter.requests["transcripts"]["session_id"], launched_session)
+        self.assertEqual(record.result.outcome, "wall_limit")
+        self.assertEqual(record.result.session_id, launched_session)
+        self.assertEqual(
+            record.result.usage,
+            TokenUsage(input_tokens=3, output_tokens=30, cache_creation_input_tokens=300, cache_read_input_tokens=3000),
+        )
+        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertIsNone(record.uncounted)
+        self.assertIsNone(record.cost_usd)
+
+    def test_should_leave_a_cut_segment_unmeasured_with_its_reason(self):
+        rows = [
+            (ClientDouble, True, "the client names no session at launch"),
+            (ClientAnsweringItsSessionDouble, False, "the client reads no transcript"),
+            (
+                ClientAnsweringItsSessionAndRefusingToReadTranscriptsDouble,
+                True,
+                "the transcript could not be read: no transcript of session session-b73",
+            ),
+        ]
+        for client_type, reads_transcripts, expected_reason in rows:
+            with self.subTest(client=client_type.__name__):
+                # Arrange
+                plan = _create_plan(
+                    self.root, client_type=client_type, reads_transcripts=reads_transcripts, wall_limit_s=CUT_AT_ONCE_S
+                )
+
+                # Act
+                record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn))
+
+                # Assert
+                self.assertIsNone(record.counted_steps)
+                self.assertIsNone(record.result.usage)
+                self.assertEqual(record.uncounted, expected_reason)
 
 
 class RunSegmentJournalTest(unittest.TestCase):

@@ -13,6 +13,7 @@ LAUNCH_REQUEST = {
     "worktree": "/srv/worktrees/b42",
     "brief": "Deliver the task B42.",
     "progress_file": "/state/brigade/runs/r1/progress.md",
+    "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
     "role": {
         "name": "builder",
         "package": "AGENT builder",
@@ -93,6 +94,8 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                     "--verbose",
                     "--permission-mode",
                     "dontAsk",
+                    "--session-id",
+                    "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
                     "--model",
                     "opus",
                     "--effort",
@@ -106,6 +109,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 ],
                 "environment": {},
                 "stdin": "Deliver the task B42.",
+                "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
             },
         )
 
@@ -125,7 +129,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 launch = answer("launch-argv", request)
 
                 # Assert
-                self.assertEqual(launch["argv"][7:11], expected_model_and_effort)
+                self.assertEqual(launch["argv"][9:13], expected_model_and_effort)
 
     def test_should_take_the_row_the_configuration_sets_for_a_level(self):
         # Arrange
@@ -135,7 +139,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
         launch = answer("launch-argv", request)
 
         # Assert
-        self.assertEqual(launch["argv"][7:11], ["--model", "sonnet", "--effort", "low"])
+        self.assertEqual(launch["argv"][9:13], ["--model", "sonnet", "--effort", "low"])
 
     def test_should_grant_the_tools_of_each_capability(self):
         rows = [
@@ -191,7 +195,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 launch = answer("launch-argv", request)
 
                 # Assert
-                self.assertEqual(launch["argv"][11:13], ["--max-turns", expected_max_turns])
+                self.assertEqual(launch["argv"][13:15], ["--max-turns", expected_max_turns])
 
 
 class ClaudeCodeResumeTest(unittest.TestCase):
@@ -230,6 +234,7 @@ class ClaudeCodeResumeTest(unittest.TestCase):
                 ],
                 "environment": {},
                 "stdin": "Carry on from the progress file.",
+                "session_id": "ada28962",
             },
         )
 
@@ -779,12 +784,16 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                         "timestamp": "2026-10-06T10:00:00.000Z",
                         "content": "Deliver the task B42.",
                         "tool_calls": 0,
+                        "id": None,
+                        "usage": None,
                     },
                     {
                         "role": "assistant",
                         "timestamp": "2026-10-06T10:00:09.000Z",
                         "content": [{"type": "text", "text": "Done."}],
                         "tool_calls": 0,
+                        "id": None,
+                        "usage": None,
                     },
                 ],
                 "subagents": [],
@@ -834,6 +843,8 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                         {"type": "tool_use", "name": "Grep", "input": {}},
                     ],
                     "tool_calls": 2,
+                    "id": None,
+                    "usage": None,
                 },
             ],
         )
@@ -847,6 +858,8 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                             "timestamp": "2026-10-06T10:00:30.000Z",
                             "content": "Make it pass.",
                             "tool_calls": 0,
+                            "id": None,
+                            "usage": None,
                         },
                     ]
                 },
@@ -857,10 +870,116 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                             "timestamp": "2026-10-06T10:01:00.000Z",
                             "content": [{"type": "tool_use", "name": "Bash", "input": {}}],
                             "tool_calls": 1,
+                            "id": None,
+                            "usage": None,
                         },
                     ]
                 },
             ],
+        )
+
+    def test_should_answer_the_id_and_the_four_usage_counters_of_each_message(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        projects.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z","message":{"role":"assistant",'
+            '"id":"msg_01","content":[{"type":"text","text":"Done."}],"usage":{"input_tokens":3,"output_tokens":412,'
+            '"cache_creation_input_tokens":2048,"cache_read_input_tokens":16384,"service_tier":"standard"}}}\n'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(
+            transcripts["messages"],
+            [
+                {
+                    "role": "assistant",
+                    "timestamp": "2026-10-06T10:00:09.000Z",
+                    "content": [{"type": "text", "text": "Done."}],
+                    "tool_calls": 0,
+                    "id": "msg_01",
+                    "usage": {
+                        "input_tokens": 3,
+                        "output_tokens": 412,
+                        "cache_creation_input_tokens": 2048,
+                        "cache_read_input_tokens": 16384,
+                    },
+                },
+            ],
+        )
+
+    def test_should_ignore_the_last_line_a_killed_client_was_writing(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        projects.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z","message":{"role":"assistant","content":[{"ty'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(
+            transcripts["messages"],
+            [
+                {
+                    "role": "user",
+                    "timestamp": "2026-10-06T10:00:00.000Z",
+                    "content": "Go.",
+                    "tool_calls": 0,
+                    "id": None,
+                    "usage": None,
+                }
+            ],
+        )
+
+    def test_should_refuse_a_session_file_whose_line_before_the_last_is_cut_short(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        projects.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z","message":{"role":"assi\n'
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:10.000Z","message":{"role":"assistant","content":[{"ty'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            answer("transcripts", request)
+
+        # Assert
+        self.assertIn(
+            f"unreadable transcript at {self.home.name}/.claude/projects/-srv-b42/ada28962.jsonl: ",
+            str(raised.exception),
         )
 
     def test_should_refuse_a_session_with_no_file(self):

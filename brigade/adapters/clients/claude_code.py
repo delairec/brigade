@@ -85,6 +85,7 @@ def _build_command(request: dict, session_options: list[str]) -> dict:
         "argv": [EXECUTABLE, *UNATTENDED_OPTIONS, *session_options, *_build_role_options(request)],
         "environment": {},
         "stdin": request["brief"],
+        "session_id": request["session_id"],
     }
 
 
@@ -215,24 +216,49 @@ def _count_tool_calls(content) -> int:
     return sum(1 for item in content if item.get("type") == "tool_use")
 
 
+def _read_message_usage(message: dict):
+    usage = message.get("usage")
+    if usage is None:
+        return None
+    return {counter: usage.get(counter, 0) for counter in USAGE_COUNTERS}
+
+
 def _describe_message(entry: dict) -> dict:
-    content = entry["message"]["content"]
+    message = entry["message"]
+    content = message["content"]
     return {
-        "role": entry["message"]["role"],
+        "role": message["role"],
         "timestamp": entry.get("timestamp"),
         "content": content,
         "tool_calls": _count_tool_calls(content),
+        "id": message.get("id"),
+        "usage": _read_message_usage(message),
     }
 
 
-def _read_messages(content: str) -> list[dict]:
-    entries = [json.loads(line) for line in content.splitlines() if line.strip()]
+def _reads_as_json(line: str) -> bool:
+    try:
+        json.loads(line)
+    except ValueError:
+        return False
+    return True
+
+
+def _split_written_lines(content: str) -> list[str]:
+    written, _, last_line = content.rpartition("\n")
+    if _reads_as_json(last_line):
+        return content.splitlines()
+    return written.splitlines()
+
+
+def _read_messages(lines: list[str]) -> list[dict]:
+    entries = [json.loads(line) for line in lines if line.strip()]
     return [_describe_message(entry) for entry in entries if entry.get("type") in TRANSCRIPT_MESSAGE_TYPES]
 
 
-def _read_transcript(path: Path) -> list[dict]:
+def _read_transcript(path: Path, split_lines) -> list[dict]:
     try:
-        return _read_messages(path.read_text(encoding="utf-8"))
+        return _read_messages(split_lines(path.read_text(encoding="utf-8")))
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise BrigadeError(f"unreadable transcript at {path}: {error}") from None
 
@@ -246,8 +272,10 @@ def _read_transcripts(request: dict) -> dict:
     subagent_paths = (project_directory / session_id / SUBAGENTS_DIRECTORY).glob(SUBAGENT_TRANSCRIPTS)
     return {
         "schema_version": SCHEMA_VERSION,
-        "messages": _read_transcript(path),
-        "subagents": [{"messages": _read_transcript(subagent_path)} for subagent_path in subagent_paths],
+        "messages": _read_transcript(path, _split_written_lines),
+        "subagents": [
+            {"messages": _read_transcript(subagent_path, str.splitlines)} for subagent_path in subagent_paths
+        ],
     }
 
 
@@ -255,7 +283,7 @@ def answer(operation: str, request: dict) -> dict:
     if operation == "probe":
         return _probe(request)
     if operation == "launch-argv":
-        return _build_command(request, [])
+        return _build_command(request, ["--session-id", request["session_id"]])
     if operation == "resume-argv":
         return _build_command(request, ["--resume", request["session_id"]])
     if operation == "parse-result":

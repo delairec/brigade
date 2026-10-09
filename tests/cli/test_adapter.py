@@ -14,7 +14,7 @@ SCRIPTED_CLIENT = str(FIXTURES / "executables" / "client-scripted")
 BROKEN_CLIENT = str(FIXTURES / "executables" / "client-broken")
 
 LAUNCH_REQUEST = (
-    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.",'
+    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "session_id": "s1",'
     ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder", "package": "AGENT builder",'
     ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
     ' "budget": 75}}'
@@ -126,6 +126,8 @@ class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
                     "--verbose",
                     "--permission-mode",
                     "dontAsk",
+                    "--session-id",
+                    "s1",
                     "--model",
                     "sonnet",
                     "--effort",
@@ -139,6 +141,7 @@ class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
                 ],
                 "environment": {},
                 "stdin": "Deliver the task B42.",
+                "session_id": "s1",
             },
         )
 
@@ -158,6 +161,7 @@ class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
                 "argv": ["cat", "--", f"{RECORDINGS}/builder.json"],
                 "environment": {},
                 "stdin": None,
+                "session_id": "s1",
             },
         )
 
@@ -331,6 +335,8 @@ class BrigadeAdapterTranscriptsTest(AdapterTestCase):
                         "timestamp": "2026-10-06T10:00:00.000Z",
                         "content": "Deliver the task B42.",
                         "tool_calls": 0,
+                        "id": None,
+                        "usage": None,
                     }
                 ],
                 "subagents": [],

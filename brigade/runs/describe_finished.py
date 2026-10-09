@@ -2,13 +2,13 @@ import dataclasses
 
 from brigade.ledger.run_finished import RunFinished
 from brigade.runs.plan_run import RunPlan
-from brigade.runs.run_segment import WALL_LIMIT_CUT, WALL_LIMIT_OUTCOME, SegmentRecord
+from brigade.runs.run_segment import NO_SESSION_AT_LAUNCH, WALL_LIMIT_OUTCOME, SegmentRecord
 
 DONE_OUTCOME = "done"
 NO_FAILURE = "the run did not fail"
 NO_ERROR_CLASS = "the client reported no error class"
 NOT_IN_A_WAVE = "not launched by a wave"
-CUT_FIELDS = ("session", "main_steps", "total_steps", "usage", "error_class", "exit")
+WALL_LIMIT_CUT = "cut at the wall-time limit"
 NO_NULLS_EXPLAINED = {}
 
 
@@ -28,6 +28,18 @@ def _explain_client_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFin
     return {field: reason for field, reason in reasons.items() if getattr(finished, field) is None}
 
 
+def _explain_cut_nulls(record: SegmentRecord, finished: RunFinished) -> dict:
+    reasons = {
+        "session": NO_SESSION_AT_LAUNCH,
+        "main_steps": record.uncounted,
+        "total_steps": record.uncounted,
+        "usage": record.uncounted,
+        "error_class": WALL_LIMIT_CUT,
+        "exit": WALL_LIMIT_CUT,
+    }
+    return {field: reason for field, reason in reasons.items() if getattr(finished, field) is None}
+
+
 def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) -> dict:
     nulls = {}
     if finished.project is None:
@@ -35,7 +47,7 @@ def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) 
     nulls["wave"] = NOT_IN_A_WAVE
     nulls["task"] = NOT_IN_A_WAVE
     if finished.outcome == WALL_LIMIT_OUTCOME:
-        return {**nulls, **{field: WALL_LIMIT_CUT for field in CUT_FIELDS}}
+        return {**nulls, **_explain_cut_nulls(record, finished)}
     return {**nulls, **_explain_client_nulls(plan, record, finished)}
 
 

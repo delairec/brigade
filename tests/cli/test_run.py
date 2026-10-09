@@ -16,6 +16,7 @@ BUILT_IN_BUILDER = REPOSITORY_ROOT / "brigade" / "roles" / "data" / "builder.md"
 RECORDING_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-recording"
 NOT_IN_A_WAVE = "not launched by a wave"
 CUT = "cut at the wall-time limit"
+UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 1\n---\nAnswer at once.\n"
 MACHINE_BUILDER = (
     "---\n"
@@ -220,11 +221,29 @@ class BrigadeRunOfAClientReadingTranscriptsTest(RunTestCase):
         transcripts = {
             "schema_version": 1,
             "messages": [
-                {"role": "user", "timestamp": None, "content": "Deliver B83.", "tool_calls": 0},
-                {"role": "assistant", "timestamp": None, "content": [], "tool_calls": 2},
+                {
+                    "role": "user",
+                    "timestamp": None,
+                    "content": "Deliver B83.",
+                    "tool_calls": 0,
+                    "id": None,
+                    "usage": None,
+                },
+                {"role": "assistant", "timestamp": None, "content": [], "tool_calls": 2, "id": None, "usage": None},
             ],
             "subagents": [
-                {"messages": [{"role": "assistant", "timestamp": None, "content": [], "tool_calls": 1}]},
+                {
+                    "messages": [
+                        {
+                            "role": "assistant",
+                            "timestamp": None,
+                            "content": [],
+                            "tool_calls": 1,
+                            "id": None,
+                            "usage": None,
+                        }
+                    ]
+                },
             ],
         }
         (self.recordings / "fake-session.transcripts.json").write_text(json.dumps(transcripts))
@@ -272,8 +291,10 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
+        arguments = (run_directory / "progress.md").read_text().splitlines()
+        self.assertRegex(arguments.pop(7), UUID_PATTERN)
         self.assertEqual(
-            (run_directory / "progress.md").read_text().splitlines(),
+            arguments,
             [
                 "--print",
                 "--output-format",
@@ -281,6 +302,7 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
                 "--verbose",
                 "--permission-mode",
                 "dontAsk",
+                "--session-id",
                 "--model",
                 "opus",
                 "--effort",
@@ -594,6 +616,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
         [finished] = self.read_events("run.finished")
         self.assertRegex(finished.pop("ts"), INSTANT_PATTERN)
         self.assertLess(finished.pop("duration_ms"), 10000)
+        self.assertRegex(finished.pop("session"), UUID_PATTERN)
         self.assertEqual(
             finished,
             {
@@ -606,7 +629,6 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                 "role": "builder",
                 "client": "fake",
                 "project": None,
-                "session": None,
                 "main_steps": None,
                 "total_steps": None,
                 "usage": None,
@@ -619,10 +641,9 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "project": "no project given",
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_IN_A_WAVE,
-                    "session": CUT,
-                    "main_steps": CUT,
-                    "total_steps": CUT,
-                    "usage": CUT,
+                    "main_steps": "the client reads no transcript",
+                    "total_steps": "the client reads no transcript",
+                    "usage": "the client reads no transcript",
                     "error_class": CUT,
                     "exit": CUT,
                 },

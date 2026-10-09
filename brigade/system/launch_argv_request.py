@@ -13,6 +13,7 @@ class LaunchArgvRequest:
     brief: str
     role: ClientRole
     progress_file: str
+    session_id: str
 
     @classmethod
     def from_document(cls, document: dict) -> "LaunchArgvRequest":
@@ -21,6 +22,7 @@ class LaunchArgvRequest:
             brief=document["brief"],
             role=ClientRole.from_document(document["role"]),
             progress_file=document["progress_file"],
+            session_id=document["session_id"],
         )
 
     def to_document(self) -> dict:
@@ -30,4 +32,5 @@ class LaunchArgvRequest:
             "brief": self.brief,
             "role": self.role.to_document(),
             "progress_file": self.progress_file,
+            "session_id": self.session_id,
         }

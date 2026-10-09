@@ -6,6 +6,16 @@ OPTIONAL_TEXT = Field(kinds=(str,), nullable=True)
 COUNT = Field(kinds=(int,))
 OPTIONAL_COUNT = Field(kinds=(int,), nullable=True)
 ARGV = Field(kinds=(list,), items=TEXT, non_empty=True)
+USAGE = Field(
+    kinds=(dict,),
+    nullable=True,
+    fields={
+        "input_tokens": COUNT,
+        "output_tokens": COUNT,
+        "cache_creation_input_tokens": COUNT,
+        "cache_read_input_tokens": COUNT,
+    },
+)
 
 ROLE = Field(
     kinds=(dict,),
@@ -24,12 +34,13 @@ LAUNCH_REQUEST = {
     "brief": TEXT,
     "role": ROLE,
     "progress_file": TEXT,
+    "session_id": TEXT,
 }
 
 CLIENT_REQUEST_SHAPES = {
     "probe": {"schema_version": SCHEMA_VERSION},
     "launch-argv": LAUNCH_REQUEST,
-    "resume-argv": {**LAUNCH_REQUEST, "session_id": TEXT},
+    "resume-argv": LAUNCH_REQUEST,
     "parse-result": {"schema_version": SCHEMA_VERSION, "exit_code": COUNT, "stdout": TEXT, "stderr": TEXT},
     "transcripts": {"schema_version": SCHEMA_VERSION, "session_id": TEXT, "worktree": TEXT},
     "actions": {"schema_version": SCHEMA_VERSION, "output": TEXT},
@@ -40,6 +51,7 @@ COMMAND_ANSWER = {
     "argv": ARGV,
     "environment": Field(kinds=(dict,)),
     "stdin": OPTIONAL_TEXT,
+    "session_id": OPTIONAL_TEXT,
 }
 
 TRANSCRIPT_MESSAGES = Field(
@@ -51,6 +63,8 @@ TRANSCRIPT_MESSAGES = Field(
             "timestamp": OPTIONAL_TEXT,
             "content": Field(kinds=(str, list)),
             "tool_calls": COUNT,
+            "id": OPTIONAL_TEXT,
+            "usage": USAGE,
         },
     ),
 )
@@ -73,16 +87,7 @@ CLIENT_ANSWER_SHAPES = {
         "schema_version": SCHEMA_VERSION,
         "outcome": Field(kinds=(str,), values=("done", "failed")),
         "steps": OPTIONAL_COUNT,
-        "usage": Field(
-            kinds=(dict,),
-            nullable=True,
-            fields={
-                "input_tokens": COUNT,
-                "output_tokens": COUNT,
-                "cache_creation_input_tokens": COUNT,
-                "cache_read_input_tokens": COUNT,
-            },
-        ),
+        "usage": USAGE,
         "session_id": OPTIONAL_TEXT,
         "duration_ms": OPTIONAL_COUNT,
         "cost_usd": Field(kinds=(int, float), nullable=True),
