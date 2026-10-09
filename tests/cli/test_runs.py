@@ -1,3 +1,4 @@
+import contextlib
 import json
 import shutil
 import signal
@@ -16,6 +17,7 @@ ACTIONS_RECORDING = (
     ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
 )
 FOLLOW_WAIT_S = 30
+LONGER_THAN_THE_DEFAULT_POLL_S = 3
 BLANK_LINE = "\n"
 END_OF_OUTPUT = ""
 
@@ -421,6 +423,12 @@ class RunsFollowTestCase(RunsTestCase):
         self.addCleanup(follow.kill)
         return follow
 
+    def interrupt_after(self, follow: subprocess.Popen, delay_s: float) -> str:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            follow.wait(timeout=delay_s)
+        follow.send_signal(signal.SIGINT)
+        return follow.communicate(timeout=FOLLOW_WAIT_S)[0]
+
     def read_opening(self, follow: subprocess.Popen) -> None:
         while follow.stdout.readline() not in (BLANK_LINE, END_OF_OUTPUT):
             pass
@@ -455,6 +463,21 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n"
             r"\nstate      finished\noutcome    done\n$",
         )
+
+    def test_should_read_the_run_again_only_every_journal_poll_s_seconds(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n', keys="journal_poll_s = 3600\n")
+        self.record("builder", DONE_RESULT)
+        run_id = self.run_deliver("--detach").stdout.strip()
+        follow = self.start_follow(run_id)
+        self.read_opening(follow)
+        self.wait_for_file(self.runs / run_id / "result.json")
+
+        # Act
+        stdout = self.interrupt_after(follow, LONGER_THAN_THE_DEFAULT_POLL_S)
+
+        # Assert
+        self.assertEqual(stdout, "\nstate      running\noutcome    -\n")
 
     def test_should_exit_0_on_a_signal_and_leave_the_run_running(self):
         rows = [("SIGINT", signal.SIGINT), ("SIGTERM", signal.SIGTERM)]
