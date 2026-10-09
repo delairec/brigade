@@ -754,6 +754,24 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	SOURCE "runs show --follow in DESC 7 on the user's ruling of 2026-10-09 in the refinement of"
 		+ "@TASK.B113"
 		REF @TASK.B113
+	DESC "brigade runs show <id> --follow is the one command that writes to stdout before its"
+		+ "document: the text of --log, then each record as it reads it, flushed; its document, the"
+		+ "summary of the run as last read and whether a signal ended the follow, is rendered once"
+		+ "after them as the state and outcome lines, and --json, which would mix records with the"
+		+ "document, is a usage error with it; --follow only reads the run, it writes nothing under"
+		+ "the state directory or anywhere else, so following a run or not leaves no trace, from"
+		+ "@TASK.B113"
+		REF @TASK.B113
+	REJECTED "the records of --follow on stderr as diagnostics, stdout keeping the document alone:"
+		+ "the journal is what the reader of --follow asks for and pipes into tail or grep"
+	SOURCE "DESC 16 and its REJECTED in pull request #85 of the brigade repository, delivering"
+		+ "@TASK.B113, validated by the user's ruling of 2026-10-09 in its review: \"mais pourquoi"
+		+ "on enregistre le début ou la fin du suivi, pour moi ça devrait rien écrire cette"
+		+ "commande, c'est vraiment juste un oeilleton vers le déroulement du run, donc si je"
+		+ "follow ou pas, ça ne doit pas être tracé, on est d'accord là-dessus ou pas? sinon oui,"
+		+ "je valide la décision puisque c'est ce qu'on veut, sinon je ne vois pas comment suivre"
+		+ "le déroulé du run facilement pour un humain\""
+		REF @TASK.B113
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"

@@ -208,6 +208,7 @@ brigade roles lint [--json]                  # the built-in and the machine role
 brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--detach] [key=value ...]
 brigade runs list [--json]                       # every run: id, procedure, slot, role, project, state, outcome
 brigade runs show <id> [--log] [--json]          # the summary of a run and its segments; --log adds its journal
+brigade runs show <id> --follow                  # the same with --log, then each record as it is written
 ```
 
 `brigade run` runs a procedure as a slot through the client adapter. A procedure is a Markdown file whose front matter
@@ -242,9 +243,12 @@ During each segment brigade reads the new complete lines of `stdout.log` every `
 action of the client: `schema_version`, `at` (the UTC instant brigade read it), `segment`, `kind` and `summary`, cut to
 200 characters with `cut` true. The adapter's `actions` operation turns the output into actions, `tool` (the tool and
 the path, command or pattern it acts on), `text` (its first line) and `result` (`done` or `failed`); a client whose
-probe declares no `actions` has one record of kind `raw` per line. `tail -f journal.jsonl` follows a run as it goes. A
-`journal_poll_s` that is no positive number keeps 2 s, and `brigade doctor` names it. `runs show` prints the summary of
-a run and the outcome of each segment, and with `--log` one line per record: its time, segment, kind and summary.
+probe declares no `actions` has one record of kind `raw` per line. A `journal_poll_s` that is no positive number keeps
+2 s, and `brigade doctor` names it. `runs show` prints the summary of a run and the outcome of each segment, and with
+`--log` one line per record: its time, segment, kind and summary. `--follow` prints the same, then each record once
+its line is whole, read every `journal_poll_s` seconds, until the run is `finished` or `dead`; it then prints the
+state and the outcome of the run and exits as `brigade run` does, 0 when the outcome is `done`, 1 otherwise. SIGINT
+or SIGTERM ends the follow alone, exit 0, the run going on; `--follow` with `--json` exits 2.
 
 Every run is held on the clock: at `ceil(budget × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
 `config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the

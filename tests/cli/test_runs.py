@@ -1,9 +1,13 @@
+import contextlib
 import json
 import shutil
+import signal
 import subprocess
+import sys
 from unittest.mock import ANY
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
+from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 
 UNKNOWN_RUN = "20990101T000000Z-abcdef"
 ACTIONS_RECORDING = (
@@ -12,6 +16,10 @@ ACTIONS_RECORDING = (
     '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
     ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
 )
+FOLLOW_WAIT_S = 30
+LONGER_THAN_THE_DEFAULT_POLL_S = 3
+BLANK_LINE = "\n"
+END_OF_OUTPUT = ""
 
 
 class RunsTestCase(RunTestCase):
@@ -401,3 +409,169 @@ class BrigadeRunJournalOfADetachedRunTest(RunsTestCase):
         finished_before_its_first_record = (self.runs / run_id / "result.json").exists()
         self.wait_for_file(self.runs / run_id / "result.json")
         self.assertFalse(finished_before_its_first_record)
+
+
+class RunsFollowTestCase(RunsTestCase):
+    def start_follow(self, run_id: str) -> subprocess.Popen:
+        follow = subprocess.Popen(  # noqa: S603 - the test's own command line
+            [sys.executable, str(CLONE_ENTRY_POINT), "runs", "show", run_id, "--follow"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=self.machine.describe_environment(),
+        )
+        self.addCleanup(follow.kill)
+        return follow
+
+    def interrupt_after(self, follow: subprocess.Popen, delay_s: float) -> str:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            follow.wait(timeout=delay_s)
+        follow.send_signal(signal.SIGINT)
+        return follow.communicate(timeout=FOLLOW_WAIT_S)[0]
+
+    def read_through_blank_line(self, follow: subprocess.Popen) -> None:
+        while follow.stdout.readline() not in (BLANK_LINE, END_OF_OUTPUT):
+            pass
+
+    def read_opening(self, follow: subprocess.Popen) -> None:
+        self.read_through_blank_line(follow)
+        self.read_through_blank_line(follow)
+
+
+class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
+    def test_should_print_a_record_written_after_it_started_and_exit_0_once_the_run_is_done(self):
+        # Arrange
+        self.configure_fake(
+            COUNTING_CLIENT + 'operations = "actions"\ndelay = "1"\ninterval = "1"\n', keys="journal_poll_s = 0.1\n"
+        )
+        self.record_lines("builder", ACTIONS_RECORDING)
+        run_id = self.run_deliver("--detach").stdout.strip()
+        journal_path = self.runs / run_id / "journal.jsonl"
+        journal_path.touch()
+        follow = self.start_follow(run_id)
+        self.read_opening(follow)
+        journal_at_opening = journal_path.read_text()
+
+        # Act
+        stdout, stderr = follow.communicate(timeout=FOLLOW_WAIT_S)
+
+        # Assert
+        self.assertEqual(follow.returncode, 0, stderr)
+        self.assertNotIn("Writing the test", journal_at_opening)
+        self.assertRegex(
+            stdout,
+            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Reading the task\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Writing the test\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n"
+            r"\nstate      finished\noutcome    done\n$",
+        )
+
+    def test_should_read_the_run_again_only_every_journal_poll_s_seconds(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n', keys="journal_poll_s = 3600\n")
+        self.record("builder", DONE_RESULT)
+        run_id = self.run_deliver("--detach").stdout.strip()
+        follow = self.start_follow(run_id)
+        self.read_opening(follow)
+        self.wait_for_file(self.runs / run_id / "result.json")
+
+        # Act
+        stdout = self.interrupt_after(follow, LONGER_THAN_THE_DEFAULT_POLL_S)
+
+        # Assert
+        self.assertEqual(stdout, "\nstate      running\noutcome    -\n")
+
+    def test_should_exit_0_on_a_signal_and_leave_the_run_running(self):
+        rows = [("SIGINT", signal.SIGINT), ("SIGTERM", signal.SIGTERM)]
+        for name, stop_signal in rows:
+            with self.subTest(signal=name):
+                # Arrange
+                self.configure_fake(COUNTING_CLIENT + 'delay = "5"\n', keys="journal_poll_s = 0.1\n")
+                self.record("builder", DONE_RESULT)
+                run_id = self.run_deliver("--detach").stdout.strip()
+                follow = self.start_follow(run_id)
+                self.read_opening(follow)
+
+                # Act
+                follow.send_signal(stop_signal)
+
+                # Assert
+                stdout, stderr = follow.communicate(timeout=FOLLOW_WAIT_S)
+                shown = self.run_brigade("runs", "show", run_id, "--json")
+                self.wait_for_file(self.runs / run_id / "result.json")
+                self.assertEqual((follow.returncode, stderr), (0, ""))
+                self.assertEqual(stdout, "\nstate      running\noutcome    -\n")
+                self.assertEqual(json.loads(shown.stdout)["run"]["state"], "running")
+
+
+class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
+    def test_should_print_the_journal_as_log_does_then_the_state_and_outcome_of_the_run(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'operations = "actions"\n')
+        self.record_lines("builder", ACTIONS_RECORDING)
+        run_id = self.run_deliver_to_its_end()
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--follow")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertRegex(
+            completed.stdout,
+            rf"^run        {run_id}\n"
+            r"procedure  deliver\nslot       build\nrole       builder\nproject    -\n"
+            r"state      finished\noutcome    done\n\n"
+            r"segment  outcome\n1        done\n\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Reading the task\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Writing the test\n"
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n"
+            r"\nstate      finished\noutcome    done\n$",
+        )
+
+    def test_should_exit_as_brigade_run_does_by_the_outcome_of_the_run(self):
+        rows = [("done", DONE_RESULT, 0, "outcome    done"), ("failed", TURN_LIMIT_RESULT, 1, "outcome    failed")]
+        for case, result, exit_code, outcome_line in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.configure_fake(COUNTING_CLIENT)
+                self.record("builder", result)
+                run_id = self.run_deliver_to_its_end()
+
+                # Act
+                completed = self.run_brigade("runs", "show", run_id, "--follow")
+
+                # Assert
+                self.assertEqual(completed.returncode, exit_code, completed.stderr)
+                self.assertEqual(completed.stdout.splitlines()[-3:], ["", "state      finished", outcome_line])
+
+    def test_should_exit_1_once_it_sees_the_run_dead(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        run_id = self.run_deliver_to_its_end()
+        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        gone.wait()
+        (self.runs / run_id / "result.json").unlink()
+        (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--follow")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.stdout.splitlines()[-3:], ["", "state      dead", "outcome    -"])
+
+    def test_should_refuse_json_as_a_usage_error(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        run_id = self.run_deliver_to_its_end()
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--follow", "--json")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (2, "", "brigade runs show: --follow and --json exclude each other\n"),
+        )
