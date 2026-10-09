@@ -172,6 +172,8 @@ DECISION BrigadeNamesNoAiClientOutsideItsAdapters
 		+ "exec, OpenCode run, Gemini headless, read on 2026-10-05) and only Claude Code is"
 		+ "installed on the reference machine"
 	SOURCE "pull request #3 of the brigade repository"
+	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
+		REF @TASK.B79
 
 DECISION RolesAreSlotsBoundToRoleFiles
 	TITLE "a procedure calls a slot, never a role name; a role is a Markdown file with a flat front"
@@ -1094,6 +1096,8 @@ DECISION ClientAdaptersAnswerEveryOperationThroughOneFunction
 		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
 	SOURCE "pull request #16 of the brigade repository, delivering @TASK.B42"
 		REF @TASK.B42
+	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
+		REF @TASK.B79
 
 DECISION ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
 	TITLE "a corpus write formats, and on a failing lint restores, only the file brigade wrote; the"
@@ -1234,6 +1238,8 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
 		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B49"
+	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
+		REF @TASK.B79
 
 DECISION TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
 	TITLE "the CI installs awawa from the asset of a private release, pinned to one version, so"
@@ -1301,6 +1307,8 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		+ "running, finished and dead, without a write a crash could leave half done"
 	SOURCE "pull request #24 of the brigade repository, delivering @TASK.B06"
 		REF @TASK.B06
+	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
+		REF @TASK.B79
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture and coverage.py, each installed by pip from"
