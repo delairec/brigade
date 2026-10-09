@@ -5402,18 +5402,26 @@ TASK B109
 TASK B110
 	TITLE "brigade roles show <slot> --short returns the resolved role without its body, for the"
 		+ "bots"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
 	ROLE ada
 	SPEC "brigade roles show <slot> --short --json prints a document carrying schema_version, the"
 		+ "slot, the role, the source, the front matter, body_lines, the line count of the body,"
 		+ "and body_bytes, its length in bytes encoded as UTF-8, and no body"
+		IMPL "brigade/commands/roles_show.py::if request.short:"
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_return_the_front_matter_and_the_size_of_the_body_without_the_body"
 	SPEC "the text of brigade roles show <slot> --short is the front-matter block of the resolved"
 		+ "role file between its --- lines, followed by one line body: <body_lines> lines,"
 		+ "<body_bytes> bytes, source <source>"
+		IMPL "brigade/commands/roles_show.py::front_matter_block = render_role_file"
+		IMPL "tests/cli/test_roles.py::def"
+			+ "test_should_print_the_front_matter_block_followed_by_the_size_of_the_body"
 	SPEC "without --short, brigade roles show <slot> prints the resolved role file whole and its"
 		+ "--json document carries the body, as before; python3 -m unittest passes"
+		IMPL "brigade/commands/roles_show.py::return {**identity, \"body\": resolved.body}"
+		IMPL "tests/cli/test_roles.py::def test_should_print_the_shipped_role_file"
 	AFTER @TASK.B77
 	RATIONALE "the second half of F12 of the foundations review: brigade roles show returns the"
 		+ "body of the role in its document, 964 lines and 54 kB for the slot build bound to ada"
@@ -5436,3 +5444,4 @@ TASK B110
 	SOURCE "the user's rulings of 2026-10-09 in the refinement of B110: DESC 2 amended in the"
 		+ "refinement, the text of --short the front-matter block followed by one line, the size of"
 		+ "the body in lines and in bytes"
+	DELIVERED_BY 74
