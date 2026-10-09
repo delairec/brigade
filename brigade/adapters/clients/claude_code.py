@@ -220,7 +220,7 @@ def _read_message_usage(message: dict):
     usage = message.get("usage")
     if usage is None:
         return None
-    return {counter: usage.get(counter, 0) for counter in USAGE_COUNTERS}
+    return {counter: usage[counter] for counter in USAGE_COUNTERS}
 
 
 def _describe_message(entry: dict) -> dict:
