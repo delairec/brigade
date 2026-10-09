@@ -168,6 +168,18 @@ Fallbacks:
 - no reset hour: now plus thirty minutes
 <!-- adapter matrix: end -->
 
+An external adapter for Mistral Vibe, `brigade-client-vibe`, runs Vibe 2.26.0 unattended with `client = "vibe"`. It is
+not shipped in this repository: it lives on the `PATH` of the machine that installed it, until a built-in `vibe`
+adapter replaces it. With it on the `PATH`, `brigade adapter matrix --markdown` adds this row to the supported
+clients:
+
+| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| vibe | full | full | full | fallback | fallback | full | full | fallback |
+
+Its probe binds `mistral-large` to the levels deepest, deep and standard, and `mistral-medium-3.5` to light; it reads
+the usage of a session from Vibe's session store, `~/.vibe/logs/session/unified`.
+
 ## Roles
 
 A procedure calls a slot, never a role: `plan`, `build`, `verify`, `review`, `rebase`, `report`, `triage`, `rules`

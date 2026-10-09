@@ -1173,8 +1173,9 @@ TASK B21
 	MILESTONE @MILESTONE.M1
 	COMPONENT "validation"
 	ROLE prudence
-	SPEC "a throwaway repository with a starter corpus delivers a three-task wave unattended from"
-		+ "wave new to the integration pull request"
+	SPEC "a throwaway repository, its corpus written from a schema prepared for the rehearsal that"
+		+ "declares the types a wave needs, delivers a three-task wave unattended from wave new to"
+		+ "the integration pull request"
 	SPEC "the ledger holds every run"
 	SPEC "steps per run and steps to first edit are recorded as the first budgets"
 	SPEC "the same rehearsal runs on the fake adapter as the test suite's end-to-end case"
@@ -1183,12 +1184,16 @@ TASK B21
 	AFTER @TASK.B19
 	AFTER @TASK.B20
 	AFTER @TASK.B71
-	AFTER @TASK.B81
 	RATIONALE "it follows @TASK.B71, the launch options and the real run rehearsed, F1 and F22 of"
-		+ "the foundations review, and @TASK.B81, the starter corpus the sandbox repository needs,"
-		+ "F15"
+		+ "the foundations review"
 		REF @TASK.B71
+	RATIONALE "the sandbox corpus is written from a prepared schema: project add --init-corpus"
+		+ "comes with @TASK.B55 in M7, and a rehearsal needs a corpus, not the onboarding command"
+		REF @TASK.B55
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B81, \"Je prends ta reco\": B81"
+		+ "archived as a duplicate of @TASK.B55, which stays in M7"
 		REF @TASK.B81
+		REF @TASK.B55
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"
@@ -2094,8 +2099,14 @@ TASK B55
 		REF @TASK.B04
 		REF @TASK.B10
 		REF @TASK.B46
+	RATIONALE "F15 of the foundations review found no task naming project add --init-corpus and"
+		+ "@TASK.B81 was drafted in F0; B81 was archived as a duplicate of this task, which stays"
+		+ "in M7, the sandbox of @TASK.B21 writing its corpus from a prepared schema"
+		REF @TASK.B81
+		REF @TASK.B21
 	SOURCE "the Artifact Brigade Blueprint, plan section 13; the user's ruling of 2026-10-06 in the"
 		+ "refinement of B04"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B81, \"Je prends ta reco\""
 
 TASK B56
 	TITLE "a state or configuration directory brigade cannot write: exit 1 naming the path, and"
@@ -3982,19 +3993,18 @@ TASK B79
 
 TASK B80
 	TITLE "The README sentence on coverage names the fail_under threshold of .coveragerc"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "docs"
 	ROLE ada
-	SPEC "the sentence of README.md on the CI's coverage job no longer reads \"failing on no"
-		+ "threshold\": it names fail_under of .coveragerc as the threshold the job fails below and"
-		+ "says the threshold is never lowered; it quotes no figure, .coveragerc being the figure's"
-		+ "home"
-	SPEC "grep -n threshold README.md prints that sentence and no sentence contradicting"
-		+ ".coveragerc"
-	RATIONALE "F13 of the foundations review: README.md:266-268 reads \"a report read in the job"
-		+ "log only and failing on no threshold\" while .coveragerc:7 sets fail_under = 93 since"
-		+ "@TASK.B70; DESC 6 of"
+	SPEC "the sentence of README.md on the CI's coverage job names fail_under of .coveragerc as the"
+		+ "threshold the job fails below and says the threshold is never lowered, quoting no"
+		+ "figure, .coveragerc being the figure's home: grep -n \"failing on no threshold\""
+		+ "README.md prints nothing and grep -n fail_under README.md prints the line of that"
+		+ "sentence"
+	RATIONALE "F13 of the foundations review: the README sentence on the CI reads \"a report read"
+		+ "in the job log only and failing on no threshold\" while .coveragerc sets fail_under = 93"
+		+ "since @TASK.B70; DESC 6 of"
 		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade reads \"coverage"
 		+ "fails the run below the fail_under of .coveragerc\" and \"a threshold, once set, is"
 		+ "never lowered\""
@@ -4003,11 +4013,20 @@ TASK B80
 	SOURCE "the user's words of 2026-10-07, \"Read the report and create a milestone F0 + tasks to"
 		+ "fix the issues reported by max in this milestone\"; F13 of"
 		+ "docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B80, \"Aucun chiffre\": the README"
+		+ "quotes no figure, and @TASK.B96 no longer edits it"
+		REF @TASK.B96
 
 TASK B81
 	TITLE "brigade project add --init-corpus writes a starter corpus into the project's corpus"
 		+ "folder on a branch and opens the pull request"
-	STATUS draft
+	STATUS archived
+	DESC "archived on 2026-10-09 as a duplicate of @TASK.B55, which names project add --init-corpus"
+		+ "since 2026-10-06 and stays in M7; F15 of the foundations review missed it, and the"
+		+ "sandbox of @TASK.B21 writes its corpus from a prepared schema instead, on the user's"
+		+ "ruling in the refinement of B81"
+		REF @TASK.B55
+		REF @TASK.B21
 	MILESTONE @MILESTONE.F0
 	COMPONENT "registry"
 	ROLE ada
@@ -4186,9 +4205,10 @@ TASK B82
 	DELIVERED_BY 56
 
 TASK B83
-	TITLE "A Claude Code session that ran a sub-agent is recorded whole: its usage, its duration"
-		+ "and its steps, not those of the turns after its last task notification"
-	STATUS draft
+	TITLE "A Claude Code session whose result follows a task notification is recorded whole: its"
+		+ "usage, its cost, its duration and its steps, not those of the turns after its last"
+		+ "notification"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
@@ -4200,11 +4220,28 @@ TASK B83
 	SPEC "run.finished carries as duration_ms the wall time brigade measured for the segment;"
 		+ "brigade/runs/run_segments.py prefers it to the duration_ms the client reports"
 	SPEC "when the result object follows a task notification, its origin.kind task-notification,"
-		+ "steps is null with the reason that the client reported the turns after its last"
-		+ "notification only, never the num_turns of those turns"
+		+ "parse-result answers steps null, never the num_turns of the turns after the last"
+		+ "notification"
+	SPEC "run.finished goes to schema_version 2: steps becomes main_steps, the steps of the main"
+		+ "session, and total_steps is added, main_steps plus the steps of each sub-agent of the"
+		+ "session counted the same way; brigade counts both, for every client, from the answer of"
+		+ "the transcripts operation, whose messages carry the number of tool calls they make and"
+		+ "which carries the transcript of each sub-agent of the session, the Claude Code adapter"
+		+ "reading its subagents directory; the steps of a transcript are its tool calls plus one;"
+		+ "on a session whose result follows no notification main_steps equals its num_turns, as on"
+		+ "session de26d2c6-3b58-4d9e-9bb4-292f6b9e64de, 52; a transcript that cannot be read"
+		+ "leaves main_steps to the steps parse-result answered, and a count still unknown is null"
+		+ "with its reason in nulls"
+	SPEC "a run.finished line of schema_version 1 is upgraded on read and never rewritten: its"
+		+ "steps read as main_steps, its total_steps null with a reason naming schema 1"
+	SPEC "parse-result answers cost_usd, the total_cost_usd of the result object, and run.finished"
+		+ "carries it; it is absent from the line when the client reports no cost"
 	SPEC "the fixture run through brigade adapter parse-result prints the usage of the whole"
-		+ "session and steps null, and the existing rows of"
-		+ "tests/unit/adapters/clients/test_claude_code.py still pass"
+		+ "session, cost_usd 3.6302823999999987 and steps null; a unit row on the transcript of"
+		+ "session 857d4221-e962-4128-8096-759d8feb0ced, home directory scrubbed, pins main_steps"
+		+ "and a total_steps that adds the steps of its one sub-agent; the existing rows of"
+		+ "tests/unit/adapters/clients/test_claude_code.py, tests/unit/ledger/test_run_finished.py"
+		+ "and tests/cli/test_ledger.py still pass"
 	AFTER @TASK.B71
 	RATIONALE "found by the session on 2026-10-07 on the first run of brigade on itself, run"
 		+ "20261007T101817Z-2ee96f, ada delivering @TASK.B71 as pull request #52: the run lasted"
@@ -4213,7 +4250,8 @@ TASK B83
 		+ "output_tokens 1986; the result object, origin.kind task-notification and result_index 1,"
 		+ "covers the two turns that followed the notification of the sub-agent ada launched;"
 		+ "brigade/adapters/clients/claude_code.py reads num_turns, usage and duration_ms from that"
-		+ "object, and run_segments.py:64 takes the client's duration over the one it measured"
+		+ "object, and _describe_finished of brigade/runs/run_segments.py takes the client's"
+		+ "duration over the one it measured"
 		REF @TASK.B71
 	RATIONALE "seen again on run 20261007T184817Z-13636c, procedure awawa-pr-review-round: its"
 		+ "result.json reports steps 3 and duration_ms 21805, its result object origin.kind"
@@ -4222,33 +4260,74 @@ TASK B83
 	RATIONALE "the budgets of @TASK.B37 are computed from the steps and the usage of the ledger; a"
 		+ "run that delegates to a sub-agent would read as two steps and nineteen seconds"
 		REF @TASK.B37
-	RATIONALE "left to the refinement: whether steps can be counted whole from the transcript of"
-		+ "the session, which the transcripts operation already reads, rather than reported null;"
-		+ "and whether total_cost_usd joins the ledger"
 	RATIONALE "a second occurrence on 2026-10-07: the review round of pull request #56, run"
 		+ "20261007T142949Z-327ab0, ran 10 min 23 s, brief at 16:29:50, stdout at 16:40:13, 2.10"
 		+ "USD, and the ledger of 2026-10 records 4 steps and 32 331 ms, the result object covering"
 		+ "only the turns after the last task notification; recorded in"
 		+ "docs/follow-up/2026-10-07-b82-run.md"
+	RATIONALE "examined on 2026-10-09 over the 15 segments whose stdout is readable: 5 end on a"
+		+ "result object of origin.kind task-notification, and 4 of them report"
+		+ "subagent_stats.spawned 0, the notification of a background task rather than of a"
+		+ "sub-agent, hence the title; on the sessions ending on no notification, num_turns equals"
+		+ "the tool calls of the main transcript plus one, 51 + 1 on session de26d2c6 and 56 + 1 on"
+		+ "session eca43c28; session 857d4221 holds 41 tool calls in its main transcript and 11 in"
+		+ "the one of its sub-agent"
+	RATIONALE "main_steps compares a run with its budget and with --max-turns, a quarter above it,"
+		+ "which counts the turns of the main session alone; total_steps measures the extent of the"
+		+ "task; usage and cost_usd already hold the whole session, its sub-agents included,"
+		+ "modelUsage reporting 42255 output tokens where the two transcripts hold 34 610"
+		REF @DECISION.RunFinishedCountsTheMainSessionAndTheSessionWithItsSubAgents
+	RATIONALE "cost_usd serves @TASK.B92, which prints the cost of a run, while the ledger holds no"
+		+ "model and no price to compute it from the usage; the upgrade on read follows DESC 3 of"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry, and a cost_usd"
+		+ "absent when unreported follows"
+		+ "@DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent"
+		REF @TASK.B92
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+		REF @DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
+	RATIONALE "the key cost_usd joins the answer of parse-result for every adapter: the external"
+		+ "adapter brigade-client-vibe on the PATH of this machine, outside the repository, answers"
+		+ "it null once this task merges, or client = \"vibe\" is refused for lacking the key"
+		REF @DECISION.AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
 	SOURCE "the user's answer of 2026-10-07, a draft in F0, on the session's report of the ledger"
 		+ "lines of run 20261007T101817Z-2ee96f"
+	SOURCE "the user's rulings of 2026-10-09 at the refinement of this task: cost_usd joins the"
+		+ "ledger; \"steps est aussi utilisée pour connaitre l'ampleur d'une tâche non? On pourrait"
+		+ "stocker les 2, il faut juste leur trouver un nom parlant\"; the names main_steps and"
+		+ "total_steps; the task ratified"
+	SOURCE "the user's ruling of 2026-10-09 at the refinement of @TASK.B84: steps counted by"
+		+ "brigade from the transcripts answer for every client, not by the Claude Code adapter"
+		REF @TASK.B84
+		REF @DECISION.BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
 
 TASK B84
-	TITLE "A segment cut at the wall-time limit is measured: the session id is set at launch, and"
-		+ "its steps and its usage are read from the transcript"
-	STATUS draft
+	TITLE "A segment cut at the wall-time limit is measured: its session is known from launch, and"
+		+ "its steps and its usage are read from its transcript"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
-	SPEC "the launch argv of the Claude Code adapter carries --session-id with a UUID brigade"
-		+ "generates, recorded for the segment before the client starts, so that the session of a"
-		+ "segment is known whatever ends it"
-	SPEC "a segment ending with outcome wall_limit is recorded in run.finished with its session id,"
-		+ "its steps counted from the transcript and its usage summed from it, read through the"
-		+ "transcripts operation of the adapter; steps and usage are null only when the transcript"
-		+ "cannot be read, nulls naming the reason"
-	SPEC "a unit row on a transcript fixture of a cut session pins the steps and the usage read;"
-		+ "the existing rows of tests/unit/adapters/clients/test_claude_code.py and of"
+	SPEC "the launch-argv request carries session_id, a UUID brigade generates for the segment, and"
+		+ "the launch-argv answer carries the session_id the client will use, null when the client"
+		+ "takes none at launch; the Claude Code adapter passes it as --session-id and answers it,"
+		+ "the fake adapter answers it unchanged; resume-argv never carries --session-id; the"
+		+ "session of the run.finished line of a segment is the session_id of the launch-argv"
+		+ "answer, a null one naming its reason in nulls"
+	SPEC "each message of the transcripts answer carries its id and its usage, the four counters of"
+		+ "run.finished or null, the Claude Code adapter reading them from message.id and"
+		+ "message.usage; a last line of the transcript file that is not JSON, the line a killed"
+		+ "client was writing, is ignored, and any other such line makes the transcript unreadable"
+	SPEC "a segment ending with outcome wall_limit is recorded in run.finished with its session,"
+		+ "main_steps and total_steps counted by brigade from the transcripts answer, the tool"
+		+ "calls of each transcript plus one, and its usage summed by brigade over the distinct ids"
+		+ "of the messages of the session and of its sub-agents, each id counted once; cost_usd is"
+		+ "absent, error_class and exit stay null with the reason of the cut; steps and usage are"
+		+ "null only when the transcript cannot be read, nulls naming the reason"
+	SPEC "a unit row on a fixture reduced from the transcript of session"
+		+ "a47607d0-5a3d-4910-8978-9aad5d0e7796, keeping of each message its id, its usage and its"
+		+ "tool calls, home directory scrubbed, pins main_steps 106, total_steps 106 and the usage"
+		+ "188, 88524, 16937660 and 240807; a row pins that a truncated last line is ignored; the"
+		+ "existing rows of tests/unit/adapters/clients/test_claude_code.py and of"
 		+ "tests/cli/test_run.py still pass"
 	AFTER @TASK.B83
 	RATIONALE "found on run 20261007T105605Z-396068, @TASK.B82 delivered by brigade run --slot"
@@ -4260,13 +4339,34 @@ TASK B84
 		+ "steps and 2.33 USD; the cost of segment 1 is unknown"
 		REF @TASK.B82
 	RATIONALE "@TASK.B83 records whole a session whose result object covers the turns after a task"
-		+ "notification, a different cause with the same effect, and leaves to its refinement"
-		+ "whether steps can be counted from the transcript; the transcripts operation of @TASK.B42"
-		+ "already reads a session's JSONL file by its id, which is what a cut segment lacks"
+		+ "notification, a different cause with the same effect, and counts its steps from the"
+		+ "transcript; the transcripts operation of @TASK.B42 already reads a session's JSONL file"
+		+ "by its id, which is what a cut segment lacks"
 		REF @TASK.B83
 		REF @TASK.B42
+	RATIONALE "examined on 2026-10-09: the transcript of segment 1, session"
+		+ "a47607d0-5a3d-4910-8978-9aad5d0e7796 in the project directory of the worktree b82, spans"
+		+ "10:56:06Z to 11:43:06Z and holds 105 tool calls, each answered; Claude Code writes one"
+		+ "line per content block, each repeating the usage of its message, so a plain sum over the"
+		+ "lines reads 239 978 output tokens where the distinct messages hold 88 524; summed over"
+		+ "distinct ids, the transcript of session de26d2c6-3b58-4d9e-9bb4-292f6b9e64de gives"
+		+ "exactly the usage of its result object, 64, 26366, 3163768 and 91281"
+	RATIONALE "Claude Code 2.1.295 takes --session-id <uuid>; no run calls resume-argv, segment 2"
+		+ "being a fresh session; Mistral Vibe takes no session id at launch, so the answer of"
+		+ "@TASK.B108 is null; no price table is held, so a cut segment has no cost_usd"
+		REF @TASK.B108
+		REF @DECISION.BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
+	RATIONALE "the key session_id joins the answer of launch-argv and resume-argv for every"
+		+ "adapter: the external adapter brigade-client-vibe on the PATH of this machine, outside"
+		+ "the repository, answers it null once this task merges, or client = \"vibe\" is refused"
+		+ "for lacking the key"
+		REF @DECISION.AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
 	SOURCE "item 1 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+	SOURCE "the user's rulings of 2026-10-09 at the refinement of this task: the session id"
+		+ "generated by brigade and answered by the adapter, null when the client takes none; steps"
+		+ "and usage counted by brigade for every client; a truncated last line ignored; the task"
+		+ "ratified"
 
 TASK B85
 	TITLE "A segment cut at the wall-time limit records a signal of its own, carrying the limit in"
@@ -4607,9 +4707,7 @@ TASK B96
 	SPEC ".coveragerc sets fail_under = 100 and the coverage job of the CI passes at that threshold"
 		+ "with awawa on PATH; the pull request body quotes the TOTAL line of the job next to the"
 		+ "local one of @TASK.B70's commands"
-	SPEC "the README sentence on coverage, as @TASK.B80 leaves it, reads the threshold of 100"
 	AFTER @TASK.B95
-	AFTER @TASK.B80
 	RATIONALE "found in the review of pull request #56: .coveragerc sets fail_under = 93, the"
 		+ "figure @TASK.B70 read in a CI without awawa, and the coverage job printed 94 % on #56,"
 		+ "job 112779485130; the 100 % of @TASK.B70 and of SPEC 7 of @TASK.B82 held only on a"
@@ -4621,8 +4719,12 @@ TASK B96
 		REF @TASK.B82
 		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @TASK.B95
+	RATIONALE "the README names fail_under of .coveragerc without its figure, as @TASK.B80 leaves"
+		+ "it, so raising the threshold touches .coveragerc alone"
+		REF @TASK.B80
 	SOURCE "item 9 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
 		+ "the user's answer of 2026-10-07, \"Copie privée (licence OK)\""
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of B80, \"Aucun chiffre\""
 
 TASK B97
 	TITLE "brigade reads the subprocess trails: the records of a run, a tick or a command returned"

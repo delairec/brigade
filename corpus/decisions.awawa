@@ -1321,8 +1321,9 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	DESC "the CI runs five development tools on every pull request touching a file outside the"
 		+ "paths @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob names, and"
 		+ "on every push to main: zizmor on .github/workflows/, ruff check and ruff format --check,"
-		+ "semgrep scan with the Python and security rule packs, vulture, and coverage.py in report"
-		+ "mode; @TASK.B62 to @TASK.B66 deliver them, one tool per pull request"
+		+ "semgrep scan with the Python and security rule packs, vulture, and coverage.py, failing"
+		+ "below the fail_under of .coveragerc; @TASK.B62 to @TASK.B66 deliver them, one tool per"
+		+ "pull request"
 		REF @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 		REF @TASK.B62
 		REF @TASK.B63
@@ -1396,6 +1397,9 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
 	SOURCE "the user's rulings of 2026-10-06 on the CI tooling proposals: \"tout ce que tu as mis"
 		+ "en oui\", then \"tout ce qui est utile est bon à prendre\""
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B80, \"Corriger DESC 1\":"
+		+ "DESC 1 read coverage.py in report mode, which DESC 6 had ended"
+		REF @TASK.B80
 
 DECISION TestClassNamesCarryTheSuffixTestThatVultureReads
 	TITLE "every unittest.TestCase class of tests/ is named after the behaviour it pins, then the"
@@ -1857,3 +1861,59 @@ DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		+ "\"ligne\") et horodatées non?\"; \"le tail n'est pas fait à l'intérieur, ça reste à moi"
 		+ "(ou au bot) de passer le log en tail\"; on the format, \"en jsonl c'est bien\""
 		REF @TASK.B79
+
+DECISION RunFinishedCountsTheMainSessionAndTheSessionWithItsSubAgents
+	TITLE "run.finished counts the steps twice: main_steps, the main session, against which a"
+		+ "budget and the client's turn limit are read, and total_steps, the session with its"
+		+ "sub-agents, the extent of the task"
+	STATUS active
+	DESC "main_steps replaces steps in run.finished from schema_version 2; a reader of a budget"
+		+ "reads main_steps, a reader of the extent of a task reads total_steps"
+	DESC "binds @TASK.B83"
+		REF @TASK.B83
+	REJECTED "the main session alone: steps would not tell the extent of a task that delegates"
+	REJECTED "the sub-agents counted into steps: the count would no longer compare with the budget"
+		+ "of the procedure nor with --max-turns, which counts the main session alone"
+	REJECTED "steps kept and steps_with_subagents or subagent_steps added beside it: the user chose"
+		+ "two names that each say what they count, steps being renamed through the upgrade on read"
+	SOURCE "the user's rulings of 2026-10-09 in the refinement of @TASK.B83: \"steps est aussi"
+		+ "utilisée pour connaitre l'ampleur d'une tâche non? On pourrait stocker les 2, il faut"
+		+ "juste leur trouver un nom parlant pour qu'on sache que l'un est seulement le main agent,"
+		+ "et l'autre est l'agent+subagents\"; the names main_steps and total_steps"
+		REF @TASK.B83
+
+DECISION BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
+	TITLE "brigade counts the steps and sums the usage of a session from the transcripts answer,"
+		+ "the same way for every client; a client adapter only reads its transcript into that"
+		+ "answer"
+	STATUS active
+	DESC "a message of the transcripts answer carries its id, its usage and the number of its tool"
+		+ "calls, and the answer carries the transcript of each sub-agent; the steps of a"
+		+ "transcript are its tool calls plus one, its usage the sum over its distinct message ids"
+	DESC "binds @TASK.B83 and @TASK.B84"
+		REF @TASK.B83
+		REF @TASK.B84
+	REJECTED "the Claude Code adapter counting, through parse-result called without stdout for a"
+		+ "cut segment: each adapter would repeat the counting, and a client whose transcript is"
+		+ "read would still need its own rule"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B84, \"brigade, de façon"
+		+ "générique\""
+		REF @TASK.B84
+
+DECISION AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
+	TITLE "a key added to an answer of the client adapter contract is required of every adapter,"
+		+ "null where the client cannot give it; an adapter that lacks it is refused"
+	STATUS active
+	DESC "binds @TASK.B83, whose parse-result answer gains cost_usd, and @TASK.B84, whose"
+		+ "launch-argv answer gains session_id; an adapter outside the repository, as"
+		+ "brigade-client-vibe on PATH, is brought to the contract by its owner when they merge"
+		REF @TASK.B83
+		REF @TASK.B84
+	REJECTED "the new keys optional, an absent one read as null: the contract would no longer say"
+		+ "what an adapter answers"
+	REJECTED "a schema_version 2 of the answers, version 1 upgraded on read: a weight the user did"
+		+ "not want for keys an adapter can answer null"
+	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B84, on the session's"
+		+ "finding that brigade-client-vibe answers neither key: \"l'adaptateur doit fournir les"
+		+ "clés et respecter le contrat non?\""
+		REF @TASK.B84

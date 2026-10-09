@@ -16,3 +16,27 @@ OPEN_QUESTION WallTimeBudgetOfAClientThatCountsNoSteps
 		+ "@TASK.B06"
 		REF @TASK.B06
 	SOURCE "the user's ruling of 2026-10-06 in the refinement of B06"
+
+OPEN_QUESTION HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
+	QUESTION "when a project registered with brigade already holds an awawa corpus whose schema"
+		+ "declares no WAVE, or a TASK with other fields than those brigade reads and writes, does"
+		+ "brigade share that corpus, checking its schema, or keep a corpus of its own in a folder"
+		+ "of its own?"
+	STATUS open
+	BLOCKS @TASK.B55
+	RATIONALE "project add registers an existing corpus where it finds it, CORPUS being the common"
+		+ "parent of every tracked .awawa file (brigade/registry/discover_project.py), by DESC 3 of"
+		+ "@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus; nothing checks that"
+		+ "its schema declares what brigade writes there, the TASK and WAVE entities of @TASK.B10,"
+		+ "and --init-corpus of @TASK.B55 says nothing of a folder that already holds a corpus"
+		REF @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
+		REF @TASK.B10
+		REF @TASK.B55
+	RATIONALE "the options seen in the refinement of B81: a shared corpus, project add checking"
+		+ "that the schema declares the types and fields brigade needs and naming the missing ones;"
+		+ "or a separate corpus in a folder of brigade's, read as a workspace of its own, two"
+		+ "corpora in one repository making the common parent of their files the repository root,"
+		+ "which mixes them in one awawa workspace"
+	SOURCE "the user's question of 2026-10-09 in the refinement of B81, \"si un corpus préexiste"
+		+ "lors de l'installation de brigade il se passe quoi?\", and the answer chosen, an open"
+		+ "question blocking B55"
