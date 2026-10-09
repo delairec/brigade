@@ -3,9 +3,10 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from brigade.errors import CommandFailed, ToolFailure, ToolNotFound
+from brigade.errors import CommandFailed, ToolFailure
 from brigade.system.build_process_environment import build_process_environment
-from brigade.system.process_trace import EXITED, NO_WORKING_DIRECTORY, NOT_FOUND, TIMED_OUT, ProcessTrace
+from brigade.system.explain_launch_failure import explain_launch_failure
+from brigade.system.process_trace import EXITED, TIMED_OUT, ProcessTrace
 
 EVERY_EXIT_CODE = tuple(range(256))
 
@@ -68,11 +69,9 @@ def run_process(request: ProcessRequest, record_trace: Callable[[ProcessTrace], 
             **_describe_input(request.stdin),
         )
     except FileNotFoundError as missing:
-        if missing.filename == request.cwd:
-            record_trace(_trace(request, NO_WORKING_DIRECTORY, None, _measure_since(started)))
-            raise ToolFailure(f"{request.argv[0]}: no working directory {request.cwd}") from None
-        record_trace(_trace(request, NOT_FOUND, None, _measure_since(started)))
-        raise ToolNotFound(f"{request.argv[0]} not on PATH") from None
+        outcome, refusal = explain_launch_failure(request.argv, request.cwd, missing)
+        record_trace(_trace(request, outcome, None, _measure_since(started)))
+        raise refusal from None
     except subprocess.TimeoutExpired:
         record_trace(_trace(request, TIMED_OUT, None, _measure_since(started)))
         raise ToolFailure(f"{_describe_command(request.argv)} timed out after {request.timeout_s:g} s") from None

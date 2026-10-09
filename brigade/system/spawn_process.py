@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
 
-from brigade.errors import CannotWrite, ToolNotFound
+from brigade.errors import CannotWrite
 from brigade.system.build_process_environment import build_process_environment
-from brigade.system.process_trace import NOT_FOUND, ProcessTrace
+from brigade.system.explain_launch_failure import explain_launch_failure
+from brigade.system.process_trace import ProcessTrace
 
 
 @dataclass(frozen=True)
@@ -60,8 +61,9 @@ def spawn_process(request: SpawnRequest, record_trace: Callable[[ProcessTrace], 
                 stderr=stderr_file,
                 start_new_session=True,
             )
-        except FileNotFoundError:
+        except FileNotFoundError as missing:
             duration_ms = round((time.monotonic() - started) * 1000)
-            record_trace(ProcessTrace(request.argv, request.cwd, NOT_FOUND, exit_code=None, duration_ms=duration_ms))
-            raise ToolNotFound(f"{request.argv[0]} not on PATH") from None
+            outcome, refusal = explain_launch_failure(request.argv, request.cwd, missing)
+            record_trace(ProcessTrace(request.argv, request.cwd, outcome, exit_code=None, duration_ms=duration_ms))
+            raise refusal from None
     return process
