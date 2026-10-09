@@ -1833,6 +1833,9 @@ DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		+ "output into tail, or follows the file with tail -f"
 	DESC "segments/<n>/stdout.log and stderr.log stay the raw output of the client, the input of"
 		+ "its adapter, returned whole by no command"
+	DESC "a failure of the journal never ends the segment unbounded: an actions answer the adapter"
+		+ "fails to give or brigade refuses journals that output as raw records and the client runs"
+		+ "on; any other failure stops the client group before it leaves the wait"
 	DESC "binds @TASK.B79"
 		REF @TASK.B79
 	REJECTED "the paths and line counts of the logs of a segment: the reader opens and searches the"
@@ -1843,6 +1846,8 @@ DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		+ "a rendering back"
 	REJECTED "a --follow of brigade: tail already follows a file, and the reader keeps the choice"
 		+ "of its bound"
+	REJECTED "the segment stopped when its actions operation fails: the journal observes the run,"
+		+ "and a client stopped for it loses the work of its segment"
 	RATIONALE "the reader of a run, a person or a bot, follows what the run does, not the"
 		+ "transcript of its client: vibe writes its whole session on stdout, every turn, its"
 		+ "reasoning and the content of every file a tool read, and claude-code under"

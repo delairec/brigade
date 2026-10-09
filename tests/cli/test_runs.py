@@ -215,6 +215,62 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n$",
         )
 
+    def test_should_leave_out_the_record_still_being_written_with_log(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        with (self.runs / run_id / "journal.jsonl").open("a", encoding="utf-8") as journal:
+            journal.write('{"schema_version": 1, "at": "2026-')
+
+        # Act
+        completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["journal"],
+            [
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Reading the task",
+                    "cut": False,
+                },
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Writing the test",
+                    "cut": False,
+                },
+                {"schema_version": 1, "at": ANY, "segment": 1, "kind": "result", "summary": "done", "cut": False},
+            ],
+        )
+
+    def test_should_exit_1_naming_the_line_of_the_journal_that_is_no_record_with_log(self):
+        rows = [
+            ("a line of no JSON", "Reading the task\n", "not a JSON document"),
+            ("a record lacking its time", '{"schema_version": 1, "segment": 1}\n', "lacks the key at"),
+        ]
+        for case, line, reason in rows:
+            with self.subTest(case=case):
+                # Arrange
+                run_id = self.run_deliver_to_its_end()
+                journal_path = self.runs / run_id / "journal.jsonl"
+                with journal_path.open("a", encoding="utf-8") as journal:
+                    journal.write(line)
+
+                # Act
+                completed = self.run_brigade("runs", "show", run_id, "--log")
+
+                # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(
+                    completed.stderr, f"brigade runs show: line 4 of {journal_path} is not a journal record: {reason}\n"
+                )
+
     def test_should_exit_1_naming_an_unknown_run(self):
         rows = [("an unknown id", UNKNOWN_RUN), ("a path", "../runs")]
         for case, run_id in rows:

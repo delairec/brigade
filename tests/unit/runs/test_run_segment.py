@@ -1,4 +1,5 @@
 import json
+import subprocess
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -52,11 +53,44 @@ class ClientDouble:
         }
 
 
+class ClientRefusingToReadActionsDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "actions":
+            return {"schema_version": 1}
+        return super().answer(operation, request)
+
+
 class ExitedProcessDouble:
     pid = 4242
 
     def wait(self, **_limit) -> int:
         return 0
+
+
+class ProcessEndingItsLineAfterAPollDouble:
+    pid = 4242
+
+    def __init__(self, stdout: Path):
+        self._stdout = stdout
+        self._answers = [self._keep_running, self._end_the_line]
+
+    def wait(self, timeout: float) -> int:
+        return self._answers.pop(0)(timeout)
+
+    def _keep_running(self, timeout: float) -> int:
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _end_the_line(self, _timeout: float) -> int:
+        with self._stdout.open("a", encoding="utf-8") as stream:
+            stream.write("ng the test\n")
+        return 0
+
+
+class SpawnStoppingMidLineDouble:
+    def spawn(self, request):
+        request.stdout.write_text("Reading the task\nWriti", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return ProcessEndingItsLineAfterAPollDouble(request.stdout)
 
 
 class SpawnDouble:
@@ -83,7 +117,11 @@ def _refuse_resolution(kind: str, name: str):
     raise AssertionError(f"run_segment resolved the {kind} plugin {name}")
 
 
-def _create_runtime(root: Path, spawn: SpawnDouble) -> Runtime:
+def _read_journal_records(journal: Path) -> list[dict]:
+    return [json.loads(line) for line in journal.read_text(encoding="utf-8").splitlines()]
+
+
+def _create_runtime(root: Path, spawn) -> Runtime:
     return Runtime(
         run_process=_refuse_process,
         spawn_process=spawn.spawn,
@@ -101,7 +139,7 @@ def _create_runtime(root: Path, spawn: SpawnDouble) -> Runtime:
     )
 
 
-def _create_plan(root: Path, reads_actions: bool = False) -> RunPlan:
+def _create_plan(root: Path, reads_actions: bool = False, client_type: type = ClientDouble) -> RunPlan:
     return RunPlan(
         run_id="20261007T090000Z-b73a01",
         run_directory=root / "state" / "runs" / "20261007T090000Z-b73a01",
@@ -122,7 +160,7 @@ def _create_plan(root: Path, reads_actions: bool = False) -> RunPlan:
             body="You build.",
         ),
         client="double-client",
-        client_adapter=ClientDouble(),
+        client_adapter=client_type(),
         configuration=Configuration(),
         project=None,
         cwd=root / "project",
@@ -246,3 +284,53 @@ class RunSegmentJournalTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(plan.client_adapter.operations, ["launch-argv", "parse-result"])
+
+    def test_should_journal_a_line_the_client_was_still_writing_once_it_is_whole(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnStoppingMidLineDouble()))
+
+        # Assert
+        self.assertEqual(
+            _read_journal_records(self.journal),
+            [
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "raw",
+                    "summary": "Reading the task",
+                    "cut": False,
+                },
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "raw",
+                    "summary": "Writing the test",
+                    "cut": False,
+                },
+            ],
+        )
+
+    def test_should_journal_raw_records_of_an_output_whose_actions_the_client_fails_to_read(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=True, client_type=ClientRefusingToReadActionsDouble)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+
+        # Assert
+        self.assertEqual(
+            json.loads(self.journal.read_text()),
+            {
+                "schema_version": 1,
+                "at": ANY,
+                "segment": 1,
+                "kind": "raw",
+                "summary": "the client finished the task",
+                "cut": False,
+            },
+        )

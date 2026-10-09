@@ -2,6 +2,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from brigade.errors import BrigadeError
+from brigade.runs.journal_record import JournalRecord
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import JOURNAL_FILE
 from brigade.runtime import Runtime
@@ -9,11 +11,14 @@ from brigade.system.actions_request import ActionsRequest
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 
-DOCUMENT_SCHEMA_VERSION = 1
 SUMMARY_LIMIT = 200
 RAW_KIND = "raw"
 JOURNAL_INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 LINE_END = b"\n"
+
+
+def _read_raw_actions(output: str) -> list[tuple[str, str]]:
+    return [(RAW_KIND, line) for line in output.splitlines()]
 
 
 class SegmentJournalWriter:
@@ -38,20 +43,18 @@ class SegmentJournalWriter:
 
     def _read_actions(self, output: str) -> list[tuple[str, str]]:
         if not self._plan.reads_actions:
-            return [(RAW_KIND, line) for line in output.splitlines()]
+            return _read_raw_actions(output)
         question = ClientQuestion(self._plan.client, ActionsRequest(output=output))
-        answer = ask_named_client(self._plan.client_adapter, question, self._plan.configuration, self._runtime)
+        try:
+            answer = ask_named_client(self._plan.client_adapter, question, self._plan.configuration, self._runtime)
+        except BrigadeError:
+            return _read_raw_actions(output)
         return [(action.kind, action.summary) for action in answer.actions]
 
-    def _describe_record(self, at: str, kind: str, summary: str) -> dict:
-        return {
-            "schema_version": DOCUMENT_SCHEMA_VERSION,
-            "at": at,
-            "segment": self._number,
-            "kind": kind,
-            "summary": summary[:SUMMARY_LIMIT],
-            "cut": len(summary) > SUMMARY_LIMIT,
-        }
+    def _describe_record(self, at: str, kind: str, summary: str) -> JournalRecord:
+        return JournalRecord(
+            at=at, segment=self._number, kind=kind, summary=summary[:SUMMARY_LIMIT], cut=len(summary) > SUMMARY_LIMIT
+        )
 
     def _write(self, chunk: bytes) -> None:
         if not chunk:
@@ -60,4 +63,6 @@ class SegmentJournalWriter:
         actions = self._read_actions(chunk.decode("utf-8", errors="replace"))
         at = datetime.now(UTC).strftime(JOURNAL_INSTANT_FORMAT)
         with (self._plan.run_directory / JOURNAL_FILE).open("a", encoding="utf-8") as journal:
-            journal.writelines(json.dumps(self._describe_record(at, kind, summary)) + "\n" for kind, summary in actions)
+            journal.writelines(
+                json.dumps(self._describe_record(at, kind, summary).to_document()) + "\n" for kind, summary in actions
+            )

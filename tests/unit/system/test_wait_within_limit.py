@@ -73,3 +73,28 @@ class WaitWithinLimitOfAProcessThatRunsForSeveralPollsTest(WaitWithinLimitTestCa
         # Assert
         self.assertEqual(exit_code, 3)
         self.assertGreaterEqual(len(polls), 2)
+
+
+class PollFailure(Exception):
+    pass
+
+
+def _fail_to_poll() -> None:
+    raise PollFailure("the journal could not be read")
+
+
+class WaitWithinLimitOfAProcessWhosePollFailsTest(WaitWithinLimitTestCase):
+    def test_should_stop_the_group_before_the_failure_leaves_the_wait(self):
+        # Arrange
+        process = self.start(["sleep", "5"], start_new_session=True)
+
+        # Act
+        with self.assertRaises(PollFailure):
+            wait_within_limit(
+                process,
+                WallLimit(limit_s=LONG_LIMIT_S, grace_before_kill_s=SHORT_GRACE_S, poll_s=SHORT_POLL_S),
+                _fail_to_poll,
+            )
+
+        # Assert
+        self.assertEqual(process.returncode, -signal.SIGTERM)

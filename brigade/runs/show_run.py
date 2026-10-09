@@ -3,11 +3,14 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.runs.describe_run import describe_run
+from brigade.runs.journal_record import JOURNAL_RECORD_SHAPE, JournalRecord
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.run_locations import JOURNAL_FILE, RESULT_FILE, RUN_RECORD_FILE, RUNS_DIRECTORY, SEGMENTS_DIRECTORY
 from brigade.runs.run_result import RUN_RESULT_SHAPE, RunResult
+from brigade.system.validate_document import DocumentInvalid, validate_document
 
 DOCUMENT_SCHEMA_VERSION = 1
+LINE_END = "\n"
 
 
 def _describe_segment(segment_directory: Path) -> dict:
@@ -29,12 +32,26 @@ def _list_segments(run_directory: Path) -> list[dict]:
     return [_describe_segment(path) for path in sorted(segments_directory.iterdir(), key=_read_segment_number)]
 
 
+def _read_journal_record(journal_path: Path, number: int, line: str) -> dict:
+    location = f"line {number} of {journal_path}"
+    try:
+        document = json.loads(line)
+    except ValueError:
+        raise BrigadeError(f"{location} is not a journal record: not a JSON document") from None
+    try:
+        validate_document(document, JOURNAL_RECORD_SHAPE)
+    except DocumentInvalid as problem:
+        raise BrigadeError(f"{location} is not a journal record: {problem}") from None
+    return JournalRecord.from_document(document).to_document()
+
+
 def _read_journal(run_directory: Path) -> list[dict]:
     journal_path = run_directory / JOURNAL_FILE
     if not journal_path.exists():
         return []
     content = journal_path.read_text(encoding="utf-8")
-    return [json.loads(line) for line in content.splitlines()]
+    written = content[: content.rfind(LINE_END) + 1]
+    return [_read_journal_record(journal_path, number, line) for number, line in enumerate(written.splitlines(), 1)]
 
 
 def show_run(state_root: Path, run_id: str, with_journal: bool) -> dict:

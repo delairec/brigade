@@ -20,17 +20,25 @@ def _signal_group(process: subprocess.Popen, signal_number: int) -> None:
         pass
 
 
-def wait_within_limit(process: subprocess.Popen, limit: WallLimit, on_poll: Callable[[], None]) -> int | None:
-    deadline = time.monotonic() + limit.limit_s
-    while (remaining_s := deadline - time.monotonic()) > 0:
-        try:
-            return process.wait(timeout=min(limit.poll_s, remaining_s))
-        except subprocess.TimeoutExpired:
-            on_poll()
+def _stop_group(process: subprocess.Popen, grace_before_kill_s: float) -> None:
     _signal_group(process, signal.SIGTERM)
     try:
-        process.wait(timeout=limit.grace_before_kill_s)
+        process.wait(timeout=grace_before_kill_s)
     except subprocess.TimeoutExpired:
         _signal_group(process, signal.SIGKILL)
         process.wait()
+
+
+def wait_within_limit(process: subprocess.Popen, limit: WallLimit, on_poll: Callable[[], None]) -> int | None:
+    deadline = time.monotonic() + limit.limit_s
+    try:
+        while (remaining_s := deadline - time.monotonic()) > 0:
+            try:
+                return process.wait(timeout=min(limit.poll_s, remaining_s))
+            except subprocess.TimeoutExpired:
+                on_poll()
+    except BaseException:
+        _stop_group(process, limit.grace_before_kill_s)
+        raise
+    _stop_group(process, limit.grace_before_kill_s)
     return None
