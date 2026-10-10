@@ -1,11 +1,13 @@
 import sys
 from pathlib import Path
 
+import brigade
 from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.read_git_version import read_git_version
+from brigade.git.read_upstream_lag import read_upstream_lag
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
@@ -34,6 +36,7 @@ INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 NO_INSTRUCTIONS = "none configured"
 STEPS_FALLBACK = "the wall-time limit of each run"
 STEP_COUNT_FEATURE = "step_count"
+CHECKOUT_FALLBACK = "git pull in the checkout"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
 DETAIL_WIDTH = 36
@@ -232,6 +235,25 @@ def _check_steps(reading: Configuration | BrigadeError, runtime: Runtime) -> lis
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
 
 
+def _locate_checkout() -> Path | None:
+    package_parent = Path(brigade.__file__).resolve().parents[1]
+    return package_parent if package_parent.is_dir() else None
+
+
+def _check_checkout(runtime: Runtime) -> list[dict]:
+    checkout = _locate_checkout()
+    if checkout is None:
+        return []
+    try:
+        lag = read_upstream_lag(runtime.run_process, checkout)
+    except ToolFailure as error:
+        return [_create_optional("checkout", "warning", f"{checkout}: {error}", CHECKOUT_FALLBACK)]
+    if lag is None:
+        return []
+    detail = f"{checkout} at {lag.commit}, {lag.behind} behind {lag.upstream} at {lag.upstream_commit}"
+    return [_create_optional("checkout", "warning", detail, CHECKOUT_FALLBACK)]
+
+
 def _check_configuration(reading: Configuration | BrigadeError) -> list[dict]:
     if isinstance(reading, BrigadeError):
         return []
@@ -294,6 +316,7 @@ def doctor(request, runtime: Runtime) -> dict:
             _check_instructions(reading, runtime),
             *_check_steps(reading, runtime),
             *_check_configuration(reading),
+            *_check_checkout(runtime),
         ],
     }
 
