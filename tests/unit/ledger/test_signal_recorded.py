@@ -30,6 +30,27 @@ class SignalRecordedTest(unittest.TestCase):
             },
         )
 
+    def test_should_write_back_the_limit_of_a_segment_cut_on_the_clock(self):
+        # Arrange
+        document = {**SIGNAL_OF_A_PROJECT_RUN, "signal": "wall_limit_reached", "wall_limit_s": 1500}
+
+        # Act
+        written = SignalRecorded.from_document(document).to_document()
+
+        # Assert
+        self.assertEqual(
+            written,
+            {
+                "signal": "wall_limit_reached",
+                "project": "tidepool",
+                "procedure": "deliver",
+                "run": "20261008T090000Z-b74a01",
+                "segment": 1,
+                "budget": 40,
+                "wall_limit_s": 1500,
+            },
+        )
+
     def test_should_write_back_the_signal_of_a_run_given_no_project(self):
         # Arrange
         document = {**SIGNAL_OF_A_PROJECT_RUN, "project": None}

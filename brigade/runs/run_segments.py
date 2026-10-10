@@ -12,11 +12,16 @@ from brigade.runtime import Runtime
 from brigade.system.write_json_atomically import write_json_atomically
 
 BUDGET_REACHED = "budget_reached"
+WALL_LIMIT_REACHED = "wall_limit_reached"
 TURN_LIMIT = "turn_limit"
 
 
+def _is_cut_on_the_clock(record: SegmentRecord) -> bool:
+    return record.result.outcome == WALL_LIMIT_OUTCOME
+
+
 def _ends_on_budget(record: SegmentRecord) -> bool:
-    return record.result.error_class == TURN_LIMIT or record.result.outcome == WALL_LIMIT_OUTCOME
+    return record.result.error_class == TURN_LIMIT or _is_cut_on_the_clock(record)
 
 
 def _holds_progress(plan: RunPlan) -> bool:
@@ -24,13 +29,15 @@ def _holds_progress(plan: RunPlan) -> bool:
 
 
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
+    cut_on_the_clock = _is_cut_on_the_clock(record)
     return SignalRecorded(
-        signal=BUDGET_REACHED,
+        signal=WALL_LIMIT_REACHED if cut_on_the_clock else BUDGET_REACHED,
         project=plan.project,
         procedure=plan.procedure.name,
         run=plan.run_id,
         segment=record.number,
         budget=plan.procedure.budget,
+        wall_limit_s=plan.wall_limit_s if cut_on_the_clock else None,
     )
 
 

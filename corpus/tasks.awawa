@@ -4524,7 +4524,7 @@ TASK B84
 TASK B85
 	TITLE "A segment cut at the wall-time limit records a signal of its own, wall_limit_reached,"
 		+ "carrying the limit in seconds, never budget_reached"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
@@ -4532,14 +4532,33 @@ TASK B85
 		+ "signal is wall_limit_reached, carrying the procedure, the run, the segment, the budget"
 		+ "and wall_limit_s, the limit in seconds the segment was held to; budget_reached is"
 		+ "appended only when the client reports its turn limit reached"
+		IMPL "brigade/runs/run_segments.py::signal=WALL_LIMIT_REACHED if cut_on_the_clock else"
+			+ "BUDGET_REACHED,"
+		IMPL "brigade/runs/run_segments.py::wall_limit_s=plan.wall_limit_s if cut_on_the_clock else"
+			+ "None,"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_record_that_the_clock_cut_the_run_at_its_limit(self):"
 	SPEC "wall_limit_s is an optional field of signal.recorded, written on wall_limit_reached alone"
 		+ "and absent from every other signal; a signal.recorded line lacking it is read, so the"
 		+ "budget_reached lines already in the ledger stay readable"
+		IMPL "brigade/ledger/signal_recorded.py::wall_limit_s: float | None = None"
+		IMPL "brigade/ledger/signal_recorded.py::wall_limit_s=document.get(\"wall_limit_s\"),"
+		IMPL "tests/unit/ledger/test_signal_recorded.py::def"
+			+ "test_should_write_back_the_limit_of_a_segment_cut_on_the_clock(self):"
+		IMPL "tests/unit/ledger/test_signal_recorded.py::def"
+			+ "test_should_write_back_the_signal_of_a_project_run(self):"
 	SPEC "tests/cli runs brigade run as a subprocess with the fake client: a segment cut at its"
 		+ "wall-time limit appends the whole wall_limit_reached line, wall_limit_s included, and no"
 		+ "budget_reached; the same cut with a non-empty progress file is followed by a second"
 		+ "segment; a segment ending on the step cap still appends budget_reached, without"
 		+ "wall_limit_s"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_record_that_the_clock_cut_the_run_at_its_limit(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_relaunch_a_segment_cut_on_the_clock_with_progress_up_to_two_hand_overs(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_record_a_signal_naming_the_procedure_the_run_and_the_budget(self):"
+	DELIVERED_BY 89
 	RATIONALE "the ledger of 2026-10 holds, for segment 1 of run 20261007T105605Z-396068,"
 		+ "run.finished outcome wall_limit followed by signal.recorded budget_reached budget 75,"
 		+ "though the segment ended on the clock, not on the step cap: _ends_on_budget in"

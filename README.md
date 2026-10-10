@@ -252,8 +252,9 @@ or SIGTERM ends the follow alone, exit 0, the run going on; `--follow` with `--j
 
 Every run is held on the clock: at `ceil(budget × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
 `config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the
-segment ends with the outcome `wall_limit`. A segment that ends on its budget, the client's step cap or the clock,
-records a `signal.recorded` `budget_reached` naming the procedure, the run and the budget; when its progress file holds
+segment ends with the outcome `wall_limit`. A segment that ends on the client's step cap records a `signal.recorded`
+`budget_reached` naming the procedure, the run and the budget; one cut on the clock records a `wall_limit_reached`
+naming the same and `wall_limit_s`, the limit in seconds it was held to. In either case, when its progress file holds
 something, it is launched again as a fresh segment whose brief opens on that file, up to the `HANDOVERS` of the
 project's `POLICY`, 2 without one.
 
