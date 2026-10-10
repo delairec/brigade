@@ -5003,6 +5003,10 @@ TASK B95
 	MILESTONE @MILESTONE.F0
 	COMPONENT "ci"
 	ROLE ada
+	DESC "to be discussed apart with the user, 2026-10-10: whether the CI installs awawa at all,"
+		+ "awawa being a tool the user does not own; no release of awawa exists in any repository"
+		+ "of the user, and the GITHUB_TOKEN of a workflow reads the releases of its own repository"
+		+ "alone"
 	SPEC "one step of .github/workflows/ci.yml, run by every job that needs awawa, downloads the"
 		+ "awawa binary from the asset of a release of a private repository with the token the"
 		+ "workflow already holds, checks it against the version and the checksum pinned in the"
@@ -5071,12 +5075,10 @@ TASK B97
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
-	DESC "to be refined with the user: the command lines, how a run, a tick or a command is named"
-		+ "on them, the filters, and whether one query answers why a run, a tick or a command"
-		+ "failed by crossing the ledger, its trail and the logs of the run, and whether the trail"
-		+ "of a run is returned by brigade runs show <id> of @TASK.B94 rather than a command of its"
-		+ "own; the SPEC lines are proposals"
-		REF @TASK.B94
+	DESC "to be discussed apart with the user, 2026-10-10: whether brigade reads the trails at all"
+		+ "and in which command; brigade runs show <run> exists since @TASK.B79, and nothing reads"
+		+ "runs/<id>/processes.jsonl, ticks/ or commands/ today"
+		REF @TASK.B79
 	SPEC "a brigade command returns the records of the trail of a run, a tick or a command as one"
 		+ "document, and with a filter the records whose outcome is not exited with code 0 alone,"
 		+ "so that no reader searches a trail file itself"
@@ -5220,18 +5222,18 @@ TASK B101
 TASK B102
 	TITLE "A segment ends on an outcome the run declares or brigade names, never done by default,"
 		+ "and a run that hands over by itself is relaunched"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
 	SPEC "the brief of every segment asks the run to end its final message on the line brigade-end:"
-		+ "done, brigade-end: handed_over or brigade-end: blocked; the adapter reads the last line"
-		+ "of the final message in segments/<n>/stdout.log and carries the declaration in the"
-		+ "normalised result"
-		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
-	SPEC "a segment the client ends without error has the outcome its last line declares, done,"
-		+ "handed_over or blocked, and undeclared when that line is missing, unreadable or names"
-		+ "another value"
+		+ "done, brigade-end: handed_over or brigade-end: blocked; the Claude Code adapter reads"
+		+ "the last line of the final message its result event carries and answers parse-result"
+		+ "with the outcome that line declares, undeclared when the line is missing or names"
+		+ "another value, and failed on a client error as today"
+	SPEC "the outcome of the parse-result answer takes the values done, failed, handed_over,"
+		+ "blocked and undeclared, in brigade/system/client_shapes.py and in the client contract"
+		+ "the README states; the fake adapter plays each from a recording whose outcome names it"
 	SPEC "a segment ending on handed_over or undeclared with a non-empty progress file is"
 		+ "relaunched as a fresh segment with that file as its first context, on the same count of"
 		+ "POLICY.HANDOVERS as a segment ending on the step cap or the wall-time limit; a segment"
@@ -5240,9 +5242,13 @@ TASK B102
 		+ "signal is handed_over or undeclared, naming the procedure, the run and the segment,"
 		+ "never budget_reached"
 	SPEC "the outcome of a run is that of its last segment, in brigade runs list, in run.finished"
-		+ "and in result.json, and brigade run exits with the code the decision gives it: 0 done, 1"
-		+ "failed, 3 undeclared, 10 blocked, 11 wall_limit, 12 turn_limit, 20 handed_over"
-		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+		+ "and in result.json, a last segment that reached the client's step cap ending on"
+		+ "turn_limit; brigade run and brigade runs show --follow exit with the code the decision"
+		+ "gives it: 0 done, 1 failed, 3 undeclared, 10 blocked, 11 wall_limit, 12 turn_limit, 20"
+		+ "handed_over"
+	SPEC "unit rows of tests/unit/adapters/clients/test_claude_code.py pin the outcome read from a"
+		+ "result event whose final message ends on each of the three lines, on another last line,"
+		+ "and on a message quoting brigade-end: done above its last line"
 	SPEC "tests/cli runs brigade run as a subprocess with the fake client: a final message"
 		+ "declaring done exits 0 after one segment; handed_over then done exits 0 after two"
 		+ "segments, the second brief opening on the progress file; handed_over at every segment"
@@ -5258,25 +5264,38 @@ TASK B102
 		+ "committed and no pull request open; brigade runs list shows it finished done and brigade"
 		+ "run exited 0; run 20261007T173203Z-959674, launched by hand, delivered pull request #60"
 		REF @TASK.B72
-	RATIONALE "brigade/runs/run_segments.py, _ends_on_budget, relaunches a segment only on the"
-		+ "error class turn_limit or the outcome wall_limit, so a hand-over the run makes before"
-		+ "the client's turn cap ends _run_with_handovers on done; the hand-over at fifty steps is"
-		+ "the rule long_run_hands_over of the instructions corpus, a convention brigade does not"
-		+ "own"
+	RATIONALE "read at 9bed0a7: brigade/runs/run_segments.py:23-24, _ends_on_budget, relaunches a"
+		+ "segment only on the error class turn_limit or the cut on the clock, so a hand-over the"
+		+ "run makes before the client's turn cap ends _run_with_handovers, :44-56, on done;"
+		+ "brigade/commands/run.py:77-80 exits 1 on every outcome but done; the hand-over at fifty"
+		+ "steps is the rule long_run_hands_over of the instructions corpus, a convention brigade"
+		+ "does not own"
 	RATIONALE "a non-empty progress file cannot tell a hand-over from a delivery, as the rationale"
 		+ "of @TASK.B06 records, the file being written after each major step and kept at"
 		+ "completion; the user ruled for a declaration of the end over a detection of a run still"
 		+ "in progress, and for a code at every end so that no caller waits for a done that never"
 		+ "comes"
 		REF @TASK.B06
-	RATIONALE "the declaration is the last line of the final message, read from the log each"
-		+ "segment already keeps: nothing carries over from one segment to the next, no write is"
-		+ "granted beyond the progress file, and a tool output quoting the line is not read as the"
-		+ "declaration; a client that crashes before its final message ends undeclared"
+	RATIONALE "the declaration is the last line of the final message, which the adapter already"
+		+ "parses: brigade/adapters/clients/claude_code.py:158-175 reads the result event and drops"
+		+ "its text on success, message null at :174; nothing carries over from one segment to the"
+		+ "next, no write is granted beyond the progress file, and a tool output quoting the line"
+		+ "is not read as the declaration; a client that crashes before its final message gives no"
+		+ "result event, error_class unreadable_output, and ends failed with exit 1, never"
+		+ "undeclared"
+	RATIONALE "the declaration travels as values of the existing outcome key of parse-result, which"
+		+ "allows done and failed today, brigade/system/client_shapes.py:88, and no answer gains a"
+		+ "key, so @DECISION.AKeyAddedToTheClientContractIsRequiredOfEveryAdapter binds nothing"
+		+ "new; brigade-client-vibe, answering done or failed, keeps working and gains the"
+		+ "declaration in its own repository; the brief is composed in"
+		+ "brigade/runs/compose_brief.py:21-32"
+		REF @DECISION.AKeyAddedToTheClientContractIsRequiredOfEveryAdapter
 	RATIONALE "@TASK.B06 ends a run whose last segment reached the step cap on outcome failed and"
 		+ "exit 1; this task gives it turn_limit and 12, the code of a budget too tight, apart from"
-		+ "a client error"
+		+ "a client error; runs show --follow, brigade/commands/runs_show.py:61-64, exits 0 or 1"
+		+ "today and takes the same codes, so that @TASK.B114 adds 13 to both"
 		REF @TASK.B06
+		REF @TASK.B114
 	RATIONALE "after @TASK.B85, which gives the wall-time cut a signal of its own in the same"
 		+ "function of run_segments.py"
 		REF @TASK.B85
@@ -5290,37 +5309,50 @@ TASK B102
 TASK B103
 	TITLE "A segment whose steps exceed its budget records a signal of its own, whatever its"
 		+ "outcome, and the step cap the Claude Code adapter passes holds"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
-	SPEC "a segment whose steps exceed the budget of its procedure appends a signal.recorded event"
-		+ "whose signal is budget_exceeded, carrying the steps and the budget, whatever the"
-		+ "client's error class; the outcome and the exit code of the run are unchanged"
-	SPEC "tests/cli runs brigade run as a subprocess with the fake client reporting more steps than"
-		+ "the budget and no error: the run ends done, exit 0, and the ledger holds the"
-		+ "budget_exceeded signal; at or under the budget, no such signal"
-	SPEC "the cause of 57 turns under --max-turns 50 is established, num_turns counted otherwise"
-		+ "than --max-turns or the cap not applied, and the computation of max_turns in"
-		+ "brigade/adapters/clients/claude_code.py is corrected so that the step cap holds, or the"
-		+ "cause is reported with its evidence when it lies in the client"
+	SPEC "a segment whose main steps, counted as run.finished counts them, exceed the budget of its"
+		+ "procedure appends a signal.recorded event whose signal is budget_exceeded, carrying"
+		+ "steps and budget, whatever the client's error class, beside budget_reached when the"
+		+ "segment also reached the step cap; a segment whose steps are null appends none; the"
+		+ "outcome and the exit code of the run are unchanged"
+	SPEC "signal.recorded gains the optional field steps, written on budget_exceeded alone and"
+		+ "absent from every other signal, as DESC 1 of the decision declaring the ledger events"
+		+ "states"
+	SPEC "tests/cli runs brigade run as a subprocess with the fake client declaring step_count and"
+		+ "reporting one step more than the budget and no error: the run ends done, exit 0, and the"
+		+ "ledger holds the budget_exceeded signal with its steps and budget; at exactly the"
+		+ "budget, no such signal"
+	SPEC "the pull request states the cause of 57 turns under --max-turns 50, established by a run"
+		+ "of the client, num_turns counted otherwise than --max-turns or the cap not applied, and"
+		+ "corrects the computation of max_turns at brigade/adapters/clients/claude_code.py:65 so"
+		+ "that the step cap holds, or names the cause with its evidence when it lies in the"
+		+ "client, the computation then unchanged"
 	AFTER @TASK.B85
+	AFTER @TASK.B102
 	RATIONALE "run 20261007T175404Z-6108de, procedure review-pull-request, role reviewer, budget"
 		+ "40, wall_limit_s 1500: its result object reports subtype success and num_turns 57, and"
 		+ "the ledger holds run.finished steps 57 outcome done and no signal.recorded;"
-		+ "brigade/adapters/clients/claude_code.py:55 passes --max-turns 50, 40 plus a quarter"
-		+ "rounded up"
+		+ "brigade/adapters/clients/claude_code.py:65 computes --max-turns 50, 40 plus a quarter"
+		+ "rounded up, and :73-74 passes it"
 	RATIONALE "brigade/runs/run_segments.py appends a signal only when the error class is"
 		+ "turn_limit or the outcome wall_limit, so a run that overruns its budget without reaching"
 		+ "the cap goes unseen, though @TASK.B06 records the budget reached so that the user"
 		+ "decides between a budget too tight and a task to split"
 		REF @TASK.B06
+	RATIONALE "the steps compared are those describe_finished chooses, the main steps of the"
+		+ "transcripts or the steps of the result when the client counts them,"
+		+ "brigade/runs/describe_finished.py:52-57; a segment cut on the clock reports none, and"
+		+ "the wall-time limit already has its signal"
 	RATIONALE "the user ruled for a signal alone: a run that delivered keeps done and exit 0, as"
 		+ "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity gives it"
 		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
-	RATIONALE "after @TASK.B85, which gives each cause its own signal in the same function of"
-		+ "run_segments.py"
+	RATIONALE "after @TASK.B85, which gives each cause its own signal, and after @TASK.B102, which"
+		+ "adds the signals handed_over and undeclared, in the same function of run_segments.py"
 		REF @TASK.B85
+		REF @TASK.B102
 	SOURCE "a defect reported by another session on 2026-10-07, \"Le run de review a pris 57 étapes"
 		+ "pour un budget de 40 et a quand même été enregistré done, sans aucun signal de"
 		+ "dépassement\"; the user's rulings that day, a signal alone with the outcome unchanged,"
@@ -5879,20 +5911,13 @@ TASK B108
 		REF @TASK.B102
 
 TASK B109
-	TITLE "A brigade run that receives SIGTERM or SIGINT stops the client's process group, with the"
-		+ "grace and the kill of the wall limit, and ends the run on the outcome stopped, so that"
-		+ "no client outlives its run"
-	STATUS draft
+	TITLE "A brigade run that receives SIGTERM or SIGINT, or that brigade runs stop names, stops"
+		+ "the client's process group with the grace and the kill of the wall limit and ends on the"
+		+ "outcome stopped, so that no client outlives its run"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
-	DESC "to settle in the refinement: the exit code of stopped in the ranges of"
-		+ "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity; whether brigade runs stop"
-		+ "<run> is added beside list and logs, sending the signal to the pid of runs/<id>/pid, or"
-		+ "the signal stays the user's kill; what a signal received between two segments or before"
-		+ "the client is spawned ends on; the outcome of the client's record in processes.jsonl,"
-		+ "cut as at the wall limit or one of its own"
-		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
 	SPEC "brigade run that receives SIGTERM or SIGINT while a segment runs sends SIGTERM to the"
 		+ "process group of the client, waits the grace the wall limit waits, 30 s, sends SIGKILL"
 		+ "to the group when the client still lives, and waits for the process: when brigade run"
@@ -5901,15 +5926,23 @@ TASK B109
 		+ "its exit null and its nulls naming the stop, as those of a segment cut at the wall limit"
 		+ "name the cut; no further segment is launched, whatever the progress file holds;"
 		+ "result.json is written with outcome stopped, after the ledger events, and brigade run"
-		+ "exits with the code of stopped, never 0"
+		+ "exits 21, the code DESC 4 of the decision on exit codes gives stopped"
+	SPEC "a signal received before the client is spawned or between two segments ends the run the"
+		+ "same way, on outcome stopped and exit 21, no further segment launched"
+	SPEC "the record of the stopped client in runs/<id>/processes.jsonl has the outcome stopped and"
+		+ "its exit null, apart from cut, the wall limit"
+	SPEC "brigade runs stop <run> sends SIGTERM to the pid of runs/<id>/pid and exits 0 once the"
+		+ "run has finished on stopped; a run already finished, or holding no pid file, is refused"
+		+ "with exit 1 and a message naming the run and why"
 	SPEC "a detached run is stopped the same way by a SIGTERM or SIGINT sent to the pid of"
 		+ "runs/<id>/pid, the process brigade run --detach re-executes; brigade runs list then"
 		+ "shows it finished with outcome stopped, never dead"
 	SPEC "tests/cli prove it through the fake client with a delay: a detached run sent SIGTERM"
 		+ "through the pid of runs/<id>/pid ends with the client's process gone, result.json"
 		+ "carrying outcome stopped, one run.finished event with outcome stopped and brigade runs"
-		+ "list showing the run finished; a foreground run sent SIGINT ends the same way; a client"
-		+ "that ignores SIGTERM is killed after the grace, in a unit row with a short grace as"
+		+ "list showing the run finished; a foreground run sent SIGINT ends the same way; brigade"
+		+ "runs stop ends a detached run the same way and exits 1 on a finished run; a client that"
+		+ "ignores SIGTERM is killed after the grace, in a unit row with a short grace as"
 		+ "tests/unit/system/test_wait_within_limit.py proves the wall limit"
 	AFTER @TASK.B102
 	RATIONALE "observed on 2026-10-08 on run 20261008T204748Z-bd168e, brigade run --slot build"
@@ -5919,13 +5952,15 @@ TASK B109
 		+ "153457, survived, reparented to pid 1249, still running in the worktree and able to keep"
 		+ "editing it, and was killed by hand; brigade runs list then showed the run dead, and the"
 		+ "run directory holds no result.json"
-	RATIONALE "read at ac93cd8: brigade/system/spawn_process.py:61 spawns the client with"
+	RATIONALE "read at 9bed0a7: brigade/system/spawn_process.py:62 spawns the client with"
 		+ "start_new_session=True, in a session and a process group of its own, so that a SIGINT of"
 		+ "the terminal reaches brigade alone; os.killpg is called in"
-		+ "brigade/system/wait_within_limit.py:15-25 alone, on the wall limit;"
-		+ "brigade/system/repeat_until_signalled.py:7 handles SIGTERM and SIGINT for the tick loop"
-		+ "alone, and nothing in brigade run handles them; brigade runs offers list and logs,"
-		+ "brigade/commands/runs_list.py and brigade/commands/runs_logs.py, and no command stops a"
+		+ "brigade/system/wait_within_limit.py:16-29 alone, at the wall limit and on any"
+		+ "BaseException raised while waiting, :40-42, so a SIGINT already stops the group though"
+		+ "the run is recorded nowhere, and a SIGTERM, raising nothing, ends brigade at once;"
+		+ "brigade/system/poll_until_signalled.py handles SIGTERM and SIGINT for the tick loop and"
+		+ "brigade runs show --follow alone; brigade runs offers list and show,"
+		+ "brigade/commands/runs_list.py and brigade/commands/runs_show.py, and no command stops a"
 		+ "run"
 	RATIONALE "the decisions the code departs from:"
 		+ "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity, every end of a run has its"
@@ -5934,7 +5969,7 @@ TASK B109
 		+ "pid and the result file, which reads dead a run whose client still runs;"
 		+ "@DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap already sets the"
 		+ "signal, the grace and the kill of the client's group at the wall limit,"
-		+ "brigade/runs/run_segment.py:111-113, which a stop reuses"
+		+ "brigade/runs/run_segment.py:41 and :167-170, which a stop reuses"
 		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 		REF @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
@@ -5945,15 +5980,14 @@ TASK B109
 		+ "table stopped enters"
 		REF @MILESTONE.F0
 		REF @TASK.B102
-	RATIONALE "brigade runs stop <run> is left to the refinement: the user ruled on the task alone,"
-		+ "and a command beside the list and logs of @TASK.B06 is a ruling of its own; a stop by"
-		+ "signal, through the pid file every run keeps by"
-		+ "@DECISION.ThePidOfARunIsReplacedAtomically, needs no command"
-		REF @TASK.B06
+	RATIONALE "the user ruled on 2026-10-10 in the refinement: stopped exits 21, a stop the user"
+		+ "wants being normal operation without delivery, neither an error nor a warning; and"
+		+ "brigade runs stop beside list and show, so that no one reads the pid file every run"
+		+ "keeps by @DECISION.ThePidOfARunIsReplacedAtomically by hand"
 		REF @DECISION.ThePidOfARunIsReplacedAtomically
 	SOURCE "the user's words of 2026-10-08, « oui », to the question « Processus orphelin : quand"
 		+ "on tue brigade run, le client continue de tourner. Faut-il le consigner comme tâche"
-		+ "draft ? »"
+		+ "draft ? »; the user's ruling of 2026-10-10 in the refinement, « 21 + brigade runs stop »"
 
 TASK B110
 	TITLE "brigade roles show <slot> --short returns the resolved role without its body, for the"
@@ -6135,7 +6169,7 @@ TASK B113
 TASK B114
 	TITLE "A segment reaching its wall-time limit is stopped between two steps where its client"
 		+ "supports it, its result kept, and cut by signal only as the backstop"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
@@ -6147,9 +6181,10 @@ TASK B114
 		+ "null when the segment has no soft limit; an adapter whose probe does not declare"
 		+ "graceful_stop ignores it"
 	SPEC "the probe answer may declare the feature graceful_stop; its fallback, the hard cut at the"
-		+ "wall-time limit, is listed in DESC 2 of"
-		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters, in the fallbacks of brigade adapter"
-		+ "matrix and in a column Graceful stop of every supported-clients table of the README"
+		+ "wall-time limit, is listed in DESC 2 of the decision naming no AI client outside its"
+		+ "adapters, in the fallbacks of brigade adapter matrix and in a column Graceful stop of"
+		+ "the two tables of the README that brigade adapter matrix generates and of the"
+		+ "hand-written table of brigade-client-vibe"
 	SPEC "the parse-result answer may carry the outcome soft_limit, a session the client ended"
 		+ "itself once stop_at had passed; brigade records such a segment in run.finished and"
 		+ "segments/<n>/result.json as it records a segment ended done, its session, steps, usage"
@@ -6160,9 +6195,9 @@ TASK B114
 	SPEC "the hard cut is unchanged: a client still running at the wall-time limit gets SIGTERM to"
 		+ "its process group and SIGKILL 30 s later, and the segment ends on wall_limit, whether"
 		+ "stop_at was passed or not"
-	SPEC "soft_limit has the exit code 13, added to DESC 3 of"
-		+ "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity; brigade run and brigade runs"
-		+ "show --follow exit 13 for a run whose last segment ended on it"
+	SPEC "soft_limit has the exit code 13 that DESC 3 gives it in the decision on exit codes;"
+		+ "brigade run and brigade runs show --follow exit 13 for a run whose last segment ended on"
+		+ "it"
 	SPEC "the Claude Code adapter declares graceful_stop; given a stop_at, its argv adds --settings"
 		+ "with one PostToolUse hook of matcher *, whose command, carried whole in that value with"
 		+ "no file and no path of the machine, exits 0 and prints {\"continue\": false,"
@@ -6185,9 +6220,10 @@ TASK B114
 		+ "limit, that the segment is cut on wall_limit as before"
 	AFTER @TASK.B84
 	AFTER @TASK.B85
+	AFTER @TASK.B102
 	RATIONALE "today a segment reaching its wall-time limit is killed mid-step:"
-		+ "brigade/system/wait_within_limit.py:23-28 sends SIGTERM to the client's process group,"
-		+ "then SIGKILL after GRACE_BEFORE_KILL_S, 30 s, brigade/runs/run_segment.py:38; the user"
+		+ "brigade/system/wait_within_limit.py:23-29 sends SIGTERM to the client's process group,"
+		+ "then SIGKILL after GRACE_BEFORE_KILL_S, 30 s, brigade/runs/run_segment.py:41; the user"
 		+ "asked on 2026-10-09 for a cut that lets the agent finish the step in progress"
 		REF @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
 	RATIONALE "a cooperative stop keeps the client's result object, hence cost_usd, which a cut"
@@ -6247,29 +6283,43 @@ TASK B114
 TASK B115
 	TITLE "brigade needs Python 3.11.4 or later and always extracts a project archive under"
 		+ "tarfile's data filter"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "corpus"
 	ROLE ada
-	DESC "to be refined with the user: the floor check of brigade/python_floor.py, brigade doctor,"
-		+ "the README, the floor job of the CI and the title of @DECISION.PythonStandardLibraryOnly"
-		+ "move from 3.11 to 3.11.4; the fallback of brigade/corpus/prepare_tree.py extracting"
-		+ "without filter is removed"
 	SPEC "brigade/corpus/prepare_tree.py extracts the archive of a commit under the data filter of"
-		+ "tarfile on every Python brigade starts on, with no path extracting without it"
-	SPEC "under Python 3.11.3 brigade exits non-zero naming the version it needs, 3.11.4, and the"
-		+ "version it found, and brigade doctor reports the floor 3.11.4"
-	RATIONALE "brigade/corpus/prepare_tree.py:29-30 at 7348c1f keeps two paths, DATA_EXTRACTION ="
+		+ "tarfile and catches tarfile.FilterError, with no path extracting without the filter; the"
+		+ "skip of tests/integration/corpus/test_prepare_tree.py on a tarfile without data_filter"
+		+ "is removed"
+	SPEC "under Python 3.11.3 brigade exits non-zero with the message brigade needs Python 3.11.4"
+		+ "or later; this is Python 3.11.3, and brigade doctor reports the floor 3.11.4"
+	SPEC "the floor job of .github/workflows/ci.yml runs a Python below the floor, 3.11.3 where"
+		+ "setup-python offers it on the runner, 3.10 as today otherwise, and fails unless the"
+		+ "refusal names 3.11.4"
+	SPEC "the floor reads 3.11.4 in the README, in AGENTS.md and in the titles of the decision"
+		+ "PythonStandardLibraryOnly and the decision"
+		+ "BrigadeInstallsFromOneFileWithFourPrerequisites, the rationale of the first naming the"
+		+ "data filter beside tomllib"
+	RATIONALE "brigade/corpus/prepare_tree.py:29-30 at 9bed0a7 keeps two paths, DATA_EXTRACTION ="
 		+ "{\"filter\": \"data\"} if hasattr(tarfile, \"data_filter\") else {} and MEMBER_REFUSAL ="
 		+ "getattr(tarfile, \"FilterError\", ()): tarfile gained its data filter in 3.12,"
 		+ "backported to 3.11.4 by PEP 706, so under 3.11.0 to 3.11.3 brigade extracts without the"
-		+ "refusal @TASK.B68 delivers; the CI runs 3.11.17 and 3.14, never that branch, and the"
-		+ "coverage of the whole suite under both misses no line of the file, each fallback holding"
-		+ "on one line"
+		+ "refusal @TASK.B68 delivers; the CI runs the latest 3.11 and the latest Python, never"
+		+ "that branch, and the coverage of the whole suite under both misses no line of the file,"
+		+ "each fallback holding on one line"
 		REF @TASK.B68
+	RATIONALE "the floor is stated by @DECISION.PythonStandardLibraryOnly and"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, whose titles name it"
+		REF @DECISION.PythonStandardLibraryOnly
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	RATIONALE "raising the floor removes the second path rather than testing it, as @TASK.B88 does"
-		+ "for the arguments of brigade run"
+		+ "for the arguments of brigade run; brigade/python_floor.py:3 holds the floor as a tuple"
+		+ "that brigade/launcher.py:7 compares with three parts of sys.version_info, and doctor"
+		+ "formats it, brigade/commands/doctor.py:59"
 		REF @TASK.B88
+	RATIONALE "the copies of the floor in artifact/ follow at the next republish of the Blueprint,"
+		+ "which goes through the Artifact tool, and the dated documents of docs/follow-up/ are"
+		+ "never rewritten"
 	SOURCE "found in the refinement of B88 on 2026-10-10, after the user asked \"est-ce qu'il y a"
 		+ "d'autres endroits où on a du code propre à une version?\"; the user's ruling \"Brouillon"
 		+ "F0\""
@@ -6277,21 +6327,30 @@ TASK B115
 TASK B122
 	TITLE "a guard holds every test that prepares something before its first delimiter to open on #"
 		+ "Arrange"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "tests"
 	ROLE ada
-	DESC "to be refined with the user: a guard of tests/guards/ flags a test method whose first"
-		+ "statement stands before any # Arrange or # Act line, and the tests it flags are brought"
-		+ "to it in the same pull request"
-	SPEC "a guard of tests/guards/, wired into python3 -m unittest, fails naming the file and the"
-		+ "line of every test method that prepares something before its first # Arrange or # Act"
-		+ "delimiter"
-	SPEC "no test of tests/ is flagged by that guard"
+	SPEC "a guard of tests/guards/, discovered by python3 -m unittest as the other guards are,"
+		+ "fails naming the file and the line of every test method whose body holds a statement"
+		+ "before its first # Arrange or # Act comment; a method whose first statement is a for or"
+		+ "with block whose own body opens on such a comment passes, and rows bound above that"
+		+ "block are flagged"
+	SPEC "rows of the guard's own test feed it sources under subTest: a body opening on # Arrange"
+		+ "or on # Act passes, rows above # Arrange are flagged, a for over subTest opening on #"
+		+ "Act passes, the same loop under rows bound above it is flagged"
+	SPEC "no test of tests/ is flagged by that guard: the methods it flags are brought to it in the"
+		+ "same pull request"
 	RATIONALE "the review of #92 found the rows of a new test of tests/cli/test_run.py standing"
 		+ "above its first delimiter, against the rule test_aaa_structure of the instructions"
-		+ "corpus; the five such tests of the two files #92 touches were fixed there, and a scan of"
-		+ "the test methods whose first line is neither # Arrange nor # Act counts 86 more in 47"
-		+ "files at 15b8c71, no test of the repository putting # Arrange above a table of rows"
+		+ "corpus, under which # Arrange may be omitted when there is nothing to prepare; the five"
+		+ "such tests of the two files #92 touches were fixed there"
 		REF @TASK.B88
+	RATIONALE "a scan at 9bed0a7 of the 780 test methods counts 89 in 47 files whose first"
+		+ "statement precedes every delimiter, each of them holding one further down; most are a"
+		+ "for over subTest whose delimiters sit in the loop, four of them with nothing above the"
+		+ "loop, which the guard lets pass, the others preparing rows above it, as in #92"
+	RATIONALE "the guard follows tests/guards/test_resolver_calls.py and"
+		+ "tests/guards/find_resolver_calls.py: a finder walking the files with ast, asserted empty"
+		+ "on the real tree, and rows fed to it under subTest"
 	SOURCE "found in the first review round of #92 on 2026-10-10"
