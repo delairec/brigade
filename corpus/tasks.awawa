@@ -6337,6 +6337,7 @@ TASK B115
 		+ "setup-python offers it on the runner, 3.10 as today otherwise, and fails unless the"
 		+ "refusal names 3.11.4"
 		IMPL ".github/workflows/ci.yml::python-version: \"3.11.3\""
+		IMPL ".github/workflows/ci.yml::runs-on: ubuntu-24.04"
 		IMPL ".github/workflows/ci.yml::grep -F \"Python 3.11.4 or later\" refusal.txt"
 	SPEC "the floor reads 3.11.4 in the README, in AGENTS.md and in the titles of the decision"
 		+ "PythonStandardLibraryOnly and the decision"
