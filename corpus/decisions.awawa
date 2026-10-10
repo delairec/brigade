@@ -2001,6 +2001,8 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 	DESC "the steps of a run are the sum of the main_steps of its measured segments; a run whose"
 		+ "sum lacks a segment is partial, counted as such in every summary of steps and kept in"
 		+ "its percentiles, so that a computation can leave it out"
+	DESC "every summary of steps gives the runs and the segments side by side, the segments being"
+		+ "what the budget of a procedure caps; a run is dated by its last run.finished event"
 	DESC "binds @TASK.B86 and every later view of the ledger, @TASK.B37 among them"
 		REF @TASK.B86
 		REF @TASK.B37
@@ -2012,5 +2014,9 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 		+ "be told from a measure and left out"
 	REJECTED "the error classes counted by run alone: the turn limits that ended intermediate"
 		+ "segments would vanish from the overview"
+	REJECTED "the steps summarised by run alone: the steps a segment takes, which the budget caps,"
+		+ "would vanish from every view"
+	REJECTED "a run dated by its first segment: a run would enter a period of ledger compare before"
+		+ "it is finished"
 	SOURCE "the user's rulings of 2026-10-10 in the refinement of @TASK.B86"
 		REF @TASK.B86
