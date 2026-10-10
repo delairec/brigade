@@ -4622,18 +4622,25 @@ TASK B86
 
 TASK B87
 	TITLE "brigade doctor warns when the checkout it runs from is behind its upstream"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "install"
 	ROLE ada
-	SPEC "brigade doctor, run from a clone through bin/brigade or a link to it, reports as a"
-		+ "warning, never a finding, a checkout whose branch is behind its upstream as last"
-		+ "fetched, naming the checkout, its commit and the upstream's; a checkout up to date, a"
+	SPEC "brigade doctor, run from a clone through bin/brigade or a link to it, reports as an"
+		+ "optional item named checkout, in the warning state, never a finding, a checkout whose"
+		+ "branch is behind its upstream as last fetched, diverged included, the detail naming the"
+		+ "checkout, its commit, the upstream with its commit and the number of commits behind, the"
+		+ "fallback reading \"git pull in the checkout\"; a checkout up to date or only ahead, a"
 		+ "detached one, a clone without an upstream and a brigade run from dist/brigade.pyz print"
-		+ "no such line, and the check never fetches"
+		+ "no such item, and the check never fetches"
+	SPEC "a git read of the checkout that fails (git absent or failing, an upstream configured but"
+		+ "no longer fetched) reports the checkout item in the warning state, the detail naming the"
+		+ "checkout and the error, never a finding"
 	SPEC "git is read through the runner and the git gateway, as every subprocess is;"
 		+ "tests/cli/test_doctor.py proves the warning on a temporary clone one commit behind a"
-		+ "bare upstream and its absence on one up to date"
+		+ "bare upstream, its absence on one up to date, and the unreadable warning; the fake git"
+		+ "of the existing doctor tests answers the new reads as a checkout up to date, so their"
+		+ "expected reports stay as they are"
 	AFTER @TASK.B82
 	RATIONALE "on 2026-10-07 ~/.local/bin/brigade was a link to bin/brigade of the main checkout of"
 		+ "the clone, which stood at 61100fd while origin/main stood at 3deeea2 with the fix of"
@@ -4647,8 +4654,17 @@ TASK B87
 		REF @TASK.B45
 		REF @TASK.B02
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "the checkout is the work tree holding the brigade package that runs, not the"
+		+ "directory of the entry point: dist/ sits inside the clone, ignored by git, so a check"
+		+ "reading the entry point's directory would report from dist/brigade.pyz, whose package"
+		+ "lies inside the archive; the item appears only when it applies, as the steps item of"
+		+ "doctor does; the fake git of tests/cli/fixtures/executables/git-2.47.3 exits 2 on every"
+		+ "argument but --version, so the unreadable warning would reach every existing doctor test"
+		+ "unless it answers the new reads"
 	SOURCE "item 4 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+	SOURCE "the user's rulings of 2026-10-10 at the refinement of this task: a failing git read,"
+		+ "\"Avertissement « illisible »\"; the line, \"Remède en fallback\""
 
 TASK B88
 	TITLE "The extra arguments of brigade run are read the same way under every supported Python:"
