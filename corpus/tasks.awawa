@@ -6395,3 +6395,24 @@ TASK B122
 		+ "tests/guards/find_resolver_calls.py: a finder walking the files with ast, asserted empty"
 		+ "on the real tree, and rows fed to it under subTest"
 	SOURCE "found in the first review round of #92 on 2026-10-10"
+
+TASK B129
+	TITLE "The help the passthrough record of brigade corpus declares is printed by a --help, or"
+		+ "the passthrough record declares none"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "commands"
+	ROLE ada
+	SPEC "the help of the record of brigade/commands/corpus_awawa.py, run awawa in a registered"
+		+ "project's tree and pass its stdout, stderr and exit code through, is either printed by"
+		+ "brigade corpus --help and asserted by tests/cli/test_help.py, or no longer declared, the"
+		+ "record type of brigade/command.py making help optional for a passthrough record"
+	AFTER @TASK.B89
+	RATIONALE "brigade/cli.py builds its parser from the records whose render_passed_stderr is"
+		+ "None, so the help of the passthrough record reaches no parser and no --help prints it: a"
+		+ "value declared and read by nothing; the help of the corpus record already names --"
+		+ "<awawa args> runs awawa there; the choice between printing it and dropping it is the"
+		+ "refinement's"
+		REF @TASK.B82
+	SOURCE "finding 1 of the review of pull request #95 on 2026-10-10, by a brigade run of the role"
+		+ "prudence: \"No --help prints that help\""
