@@ -19,7 +19,7 @@ class HelpTestCase(unittest.TestCase):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments, "--help", environment=environment)
 
     def assert_listed(self, page: str, name: str, expected_help: str) -> None:
-        self.assertRegex(page, rf"\n +{name} +{re.escape(expected_help)}\n")
+        self.assertRegex(page, rf"\n +{name}\s+{re.escape(expected_help)}\n")
 
 
 class BrigadeHelpTest(HelpTestCase):
