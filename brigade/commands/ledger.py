@@ -7,7 +7,7 @@ from brigade.ledger.describe_overview import describe_overview
 from brigade.ledger.describe_project import describe_project
 from brigade.ledger.describe_skipped_lines import describe_skipped_lines
 from brigade.ledger.describe_wave import describe_wave
-from brigade.ledger.format_steps_line import format_steps_line
+from brigade.ledger.format_steps_lines import format_steps_lines
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
 from brigade.system.read_since import read_since
@@ -16,6 +16,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 NONE = "none"
 MILLISECONDS_PER_MINUTE = 60000
 MINUTES_PER_HOUR = 60
+STEPS_INDENT = "    "
 
 
 def _resolve_since(since: None | timedelta | date, now: datetime) -> datetime | None:
@@ -28,6 +29,14 @@ def _resolve_since(since: None | timedelta | date, now: datetime) -> datetime | 
 
 def _join_counts(counts: dict) -> str:
     return ", ".join(f"{name} {count}" for name, count in counts.items())
+
+
+def _join_finished(counts: dict) -> str:
+    return ", ".join([str(sum(counts.values())), *(f"{name} {count}" for name, count in counts.items())])
+
+
+def _join_counts_or_none(counts: dict) -> str:
+    return _join_counts(counts) or NONE
 
 
 def _join_or_none(items: list[str]) -> str:
@@ -50,18 +59,23 @@ def _render_overview(document: dict) -> list[str]:
         *(f"  {name:<{width}}  {count}" for name, count in events.items()),
     ]
     runs = document["runs"]
+    segments = document["segments"]
     if runs["outcomes"]:
-        lines.append(f"runs finished: {_join_counts(runs['outcomes'])}")
-    if runs["error_classes"]:
-        lines.append(f"error classes: {_join_counts(runs['error_classes'])}")
+        lines.append(f"runs finished: {_join_finished(runs['outcomes'])}")
+        lines.append(f"segments finished: {_join_finished(segments['outcomes'])}")
+    if segments["error_classes"]:
+        lines.append(f"error classes of runs: {_join_counts_or_none(runs['error_classes'])}")
+        lines.append(f"error classes of segments: {_join_counts(segments['error_classes'])}")
     return lines
 
 
 def _render_steps(heading: str, summaries: dict) -> list[str]:
     if not summaries:
         return [f"{heading}: {NONE}"]
-    width = max(len(name) for name in summaries)
-    return [f"{heading}:", *(format_steps_line(name, width, summary) for name, summary in summaries.items())]
+    lines = [f"{heading}:"]
+    for name, steps in summaries.items():
+        lines.extend([f"  {name}", *format_steps_lines(STEPS_INDENT, steps)])
+    return lines
 
 
 def _render_pause(pause: dict) -> str:

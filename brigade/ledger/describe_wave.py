@@ -1,12 +1,14 @@
 from datetime import datetime
 
 from brigade.errors import BrigadeError
+from brigade.ledger.finished_run import FinishedRun
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.group_runs import group_runs
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.run_finished import RunFinished
-from brigade.ledger.summarize_steps import summarize_steps
+from brigade.ledger.summarize_measure import summarize_measure
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
@@ -23,9 +25,12 @@ def _list_tasks(events: list) -> list[str]:
     return list(dict.fromkeys(event.task for event in events if getattr(event, "task", None) is not None))
 
 
-def _summarize_by(runs: list[RunFinished], attribute: str) -> dict:
-    names = sorted({getattr(run, attribute) for run in runs}, key=str)
-    return {name: summarize_steps(run.main_steps for run in runs if getattr(run, attribute) == name) for name in names}
+def _summarize_by(runs: list[FinishedRun], attribute: str) -> dict:
+    names = sorted({getattr(run.last, attribute) for run in runs}, key=str)
+    return {
+        name: summarize_measure([run for run in runs if getattr(run.last, attribute) == name], "main_steps")
+        for name in names
+    }
 
 
 def _pair_pauses(entries: list[LedgerEntry]) -> list[dict]:
@@ -55,7 +60,8 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
     events = [entry.event for entry in entries]
     first = min(entry.instant for entry in entries)
     last = max(entry.instant for entry in entries)
-    runs = [event for event in events if isinstance(event, RunFinished)]
+    runs = group_runs(entries)
+    segments = [event for event in events if isinstance(event, RunFinished)]
     pauses = _pair_pauses(entries)
     return {
         "view": "wave",
@@ -73,9 +79,9 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "pauses": pauses,
         "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
         "hand_overs": [
-            {"task": run.task, "role": run.role, "slot": run.slot, "segment": run.segment}
-            for run in runs
-            if run.segment >= FIRST_HAND_OVER_SEGMENT
+            {"task": segment.task, "role": segment.role, "slot": segment.slot, "segment": segment.segment}
+            for segment in segments
+            if segment.segment >= FIRST_HAND_OVER_SEGMENT
         ],
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
     }

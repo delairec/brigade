@@ -2003,6 +2003,12 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 		+ "its percentiles, so that a computation can leave it out"
 	DESC "every summary of steps gives the runs and the segments side by side, the segments being"
 		+ "what the budget of a procedure caps; a run is dated by its last run.finished event"
+	DESC "the runs measured are those with a sum, the partial runs among them, so that the partial"
+		+ "runs are a part of the measured runs and the unmeasured runs are those with no measured"
+		+ "segment"
+	DESC "the steps to the first edit of a run are partial only when a segment before the first one"
+		+ "reporting steps_to_first_edit lacks its main_steps: the segments after the first edit,"
+		+ "measured or not, leave the value exact, so that partial marks an underestimate alone"
 	DESC "binds @TASK.B86 and every later view of the ledger, @TASK.B37 among them"
 		REF @TASK.B86
 		REF @TASK.B37
@@ -2018,5 +2024,17 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 		+ "would vanish from every view"
 	REJECTED "a run dated by its first segment: a run would enter a period of ledger compare before"
 		+ "it is finished"
+	REJECTED "the partial runs counted apart from the measured runs: measured would no longer count"
+		+ "the runs that enter the percentiles, as it does for the segments"
+	REJECTED "the steps to the first edit partial when any segment of the run lacks them: every run"
+		+ "whose first edit falls in a later segment would be marked partial while exact, and left"
+		+ "out with the underestimates"
 	SOURCE "the user's rulings of 2026-10-10 in the refinement of @TASK.B86"
+		REF @TASK.B86
+	SOURCE "pull request #91 of the brigade repository, delivering @TASK.B86: the runs measured"
+		+ "include the partial runs"
+		REF @TASK.B86
+	SOURCE "the user's ruling of 2026-10-10 on the review of pull request #91, \"Sous-estimation"
+		+ "seule\": the steps to the first edit are partial only when a segment before the first"
+		+ "edit has no main_steps measured"
 		REF @TASK.B86

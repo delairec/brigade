@@ -24,12 +24,12 @@ WAVE_OCTOBER_LINES = (
     ' "error_class": null, "steps": 30}\n'
     '{"schema_version": 1, "ts": "2026-10-01T00:41\n'
     '{"schema_version": 1, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-a00002", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-a00003", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 12}\n'
@@ -37,49 +37,49 @@ WAVE_OCTOBER_LINES = (
     ' "task": "TP146", "pr": 291, "rounds": 1}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:40:00Z", "event": "task.parked", "wave": "tp/16", "task": "TP147"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tp/17", "task": "TP150",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-a00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 20}\n'
 )
 BUDGET_LINES = (
     '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 90}\n'
     '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00002", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 80}\n'
     '{"schema_version": 1, "ts": "2026-10-01T10:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00003", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 12}\n'
     '{"schema_version": 1, "ts": "2026-10-01T11:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP148",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T12:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP149",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00005", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 10}\n'
     '{"schema_version": 1, "ts": "2026-10-01T13:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00006", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 8}\n'
     '{"schema_version": 1, "ts": "2026-10-01T14:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP150",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00007", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 20}\n'
     '{"schema_version": 1, "ts": "2026-10-01T15:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP151",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-b00008", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 30}\n'
@@ -88,27 +88,27 @@ COMPARISON_LINES = (
     '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tp/16",'
     ' "project": "tidepool"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-c00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 40, "steps_to_first_edit": 12}\n'
     '{"schema_version": 1, "ts": "2026-10-02T09:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP147",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-c00002", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 60}\n'
     '{"schema_version": 1, "ts": "2026-10-02T23:59:59Z", "event": "run.finished", "wave": "tp/16", "task": "TP148",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-c00003", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": null}\n'
     '{"schema_version": 1, "ts": "2026-10-03T00:00:00Z", "event": "run.finished", "wave": "tp/17", "task": "TP150",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-c00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 20, "steps_to_first_edit": 4, "oversized_output_steps": 1}\n'
     '{"schema_version": 1, "ts": "2026-10-04T09:00:00Z", "event": "run.finished", "wave": "tp/17", "task": "TP151",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "run": "20261001T000000Z-c00005", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": 30}\n'
@@ -154,6 +154,23 @@ UNMEASURED_RUN_LINES = (
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-study", "role": "dora", "slot": "study", "segment": 1, "outcome": "done",'
     ' "error_class": null, "steps": null}\n'
+)
+RUN_OF_TWO_SEGMENTS_LINES = (
+    '{"schema_version": 1, "ts": "2026-10-02T09:00:00Z", "event": "run.finished", "wave": "tp/20", "task": "TP160",'
+    ' "run": "20261002T080000Z-d00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": null, "nulls": {},'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "wall_limit",'
+    ' "error_class": null, "steps": null}\n'
+    '{"schema_version": 1, "ts": "2026-10-02T12:00:00Z", "event": "run.finished", "wave": "tp/20", "task": "TP161",'
+    ' "run": "20261002T110000Z-d00002", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "error_class": null, "steps": 20, "steps_to_first_edit": 6}\n'
+    '{"schema_version": 1, "ts": "2026-10-03T09:00:00Z", "event": "run.finished", "wave": "tp/20", "task": "TP160",'
+    ' "run": "20261002T080000Z-d00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
+    ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 2, "outcome": "done",'
+    ' "error_class": null, "steps": 30, "steps_to_first_edit": 4, "oversized_output_steps": 1}\n'
 )
 
 
@@ -205,7 +222,8 @@ class BrigadeLedgerOverviewTest(LedgerTestCase):
                 "last": "2026-10-01T02:00:00Z",
                 "files": [str(self.september), str(self.october)],
                 "skipped": [{"file": str(self.october), "line": 3, "reason": "not JSON"}],
-                "runs": {"outcomes": {"done": 4, "failed": 1}, "error_classes": {"rate_limit": 1}},
+                "runs": {"outcomes": {"done": 4}, "error_classes": {}},
+                "segments": {"outcomes": {"done": 4, "failed": 1}, "error_classes": {"rate_limit": 1}},
             },
         )
 
@@ -214,10 +232,8 @@ class BrigadeLedgerOverviewTest(LedgerTestCase):
         completed = self.run_ledger()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (0, f"brigade ledger: skipped {self.october}:3: not JSON\n"),
-        )
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, f"brigade ledger: skipped {self.october}:3: not JSON\n")
 
     def test_should_print_the_overview_as_text(self):
         # Act
@@ -236,8 +252,10 @@ class BrigadeLedgerOverviewTest(LedgerTestCase):
                 "  wave.paused   1",
                 "  wave.resumed  1",
                 "  wave.started  1",
-                "runs finished: done 4, failed 1",
-                "error classes: rate_limit 1",
+                "runs finished: 4, done 4",
+                "segments finished: 5, done 4, failed 1",
+                "error classes of runs: none",
+                "error classes of segments: rate_limit 1",
             ],
         )
 
@@ -260,6 +278,7 @@ class BrigadeLedgerOverviewWithNoLedgerTest(LedgerTestCase):
                 "files": [],
                 "skipped": [],
                 "runs": {"outcomes": {}, "error_classes": {}},
+                "segments": {"outcomes": {}, "error_classes": {}},
             },
         )
 
@@ -268,10 +287,8 @@ class BrigadeLedgerOverviewWithNoLedgerTest(LedgerTestCase):
         completed = self.run_ledger()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout.splitlines()),
-            (0, ["events: 0", "files read: 0", "lines skipped: 0"]),
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.splitlines(), ["events: 0", "files read: 0", "lines skipped: 0"])
 
 
 class BrigadeLedgerWaveTest(LedgerTestCase):
@@ -299,12 +316,24 @@ class BrigadeLedgerWaveTest(LedgerTestCase):
                 "pull_requests": [{"task": "TP146", "pr": 291, "rounds": 1}],
                 "steps": {
                     "by_slot": {
-                        "build": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50},
-                        "review": {"measured": 1, "unmeasured": 0, "p50": 12, "p90": 12},
+                        "build": {
+                            "runs": {"measured": 1, "partial": 0, "unmeasured": 1, "p50": 80, "p90": 80},
+                            "segments": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50},
+                        },
+                        "review": {
+                            "runs": {"measured": 1, "partial": 0, "unmeasured": 0, "p50": 12, "p90": 12},
+                            "segments": {"measured": 1, "unmeasured": 0, "p50": 12, "p90": 12},
+                        },
                     },
                     "by_role": {
-                        "builder": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50},
-                        "remi": {"measured": 1, "unmeasured": 0, "p50": 12, "p90": 12},
+                        "builder": {
+                            "runs": {"measured": 1, "partial": 0, "unmeasured": 1, "p50": 80, "p90": 80},
+                            "segments": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50},
+                        },
+                        "remi": {
+                            "runs": {"measured": 1, "partial": 0, "unmeasured": 0, "p50": 12, "p90": 12},
+                            "segments": {"measured": 1, "unmeasured": 0, "p50": 12, "p90": 12},
+                        },
                     },
                 },
                 "pauses": [
@@ -329,11 +358,19 @@ class BrigadeLedgerWaveTest(LedgerTestCase):
                 "tasks: TP146, TP147",
                 "pull requests: #291 TP146 rounds 1",
                 "steps by slot:",
-                "  build   p50 30  p90 50  measured 2  unmeasured 1",
-                "  review  p50 12  p90 12  measured 1  unmeasured 0",
+                "  build",
+                "    runs p50 80  p90 80  measured 1  partial 0  unmeasured 1",
+                "    segments p50 30  p90 50  measured 2  unmeasured 1",
+                "  review",
+                "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 0",
+                "    segments p50 12  p90 12  measured 1  unmeasured 0",
                 "steps by role:",
-                "  builder  p50 30  p90 50  measured 2  unmeasured 1",
-                "  remi     p50 12  p90 12  measured 1  unmeasured 0",
+                "  builder",
+                "    runs p50 80  p90 80  measured 1  partial 0  unmeasured 1",
+                "    segments p50 30  p90 50  measured 2  unmeasured 1",
+                "  remi",
+                "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 0",
+                "    segments p50 12  p90 12  measured 1  unmeasured 0",
                 "pauses: 1, 2h00m in all",
                 "  2026-09-30T22:15:00Z to 2026-10-01T00:15:00Z  2h00m",
                 "hand-overs: TP146 builder build segment 2",
@@ -354,9 +391,9 @@ class BrigadeLedgerWaveStillPausedTest(LedgerTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertEqual(
-            (document["pauses"], document["paused_ms"]),
-            ([{"paused_at": "2026-09-30T22:15:00Z", "resumed_at": None, "duration_ms": None}], 0),
+            document["pauses"], [{"paused_at": "2026-09-30T22:15:00Z", "resumed_at": None, "duration_ms": None}]
         )
+        self.assertEqual(document["paused_ms"], 0)
 
     def test_should_print_the_open_pause_as_text(self):
         # Arrange
@@ -373,9 +410,13 @@ class BrigadeLedgerWaveStillPausedTest(LedgerTestCase):
                 "tasks: TP146",
                 "pull requests: none",
                 "steps by slot:",
-                "  build  p50 50  p90 50  measured 1  unmeasured 0",
+                "  build",
+                "    runs p50 50  p90 50  measured 1  partial 0  unmeasured 0",
+                "    segments p50 50  p90 50  measured 1  unmeasured 0",
                 "steps by role:",
-                "  builder  p50 50  p90 50  measured 1  unmeasured 0",
+                "  builder",
+                "    runs p50 50  p90 50  measured 1  partial 0  unmeasured 0",
+                "    segments p50 50  p90 50  measured 1  unmeasured 0",
                 "pauses: 1, 0h00m in all",
                 "  2026-09-30T22:15:00Z, still paused",
                 "hand-overs: none",
@@ -397,12 +438,10 @@ class BrigadeLedgerWaveWithARepeatedPauseTest(LedgerTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertEqual(
-            (document["pauses"], document["paused_ms"]),
-            (
-                [{"paused_at": "2026-10-01T09:00:00Z", "resumed_at": "2026-10-01T10:00:00Z", "duration_ms": 3600000}],
-                3600000,
-            ),
+            document["pauses"],
+            [{"paused_at": "2026-10-01T09:00:00Z", "resumed_at": "2026-10-01T10:00:00Z", "duration_ms": 3600000}],
         )
+        self.assertEqual(document["paused_ms"], 3600000)
 
     def test_should_print_none_for_what_the_wave_did_not_do(self):
         # Act
@@ -434,10 +473,9 @@ class BrigadeLedgerWaveUnknownTest(LedgerTestCase):
         completed = self.run_ledger("--wave", "tp/99", "--json")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade ledger: no event names the wave tp/99\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, "brigade ledger: no event names the wave tp/99\n")
 
 
 class BrigadeLedgerProjectTest(LedgerTestCase):
@@ -476,7 +514,8 @@ class BrigadeLedgerProjectTest(LedgerTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["since"], document["waves_started"]), ("2026-10-01T00:00:00Z", 1))
+        self.assertEqual(document["since"], "2026-10-01T00:00:00Z")
+        self.assertEqual(document["waves_started"], 1)
 
     def test_should_print_the_counts_as_text(self):
         # Act
@@ -503,20 +542,18 @@ class BrigadeLedgerProjectWithNoEventTest(LedgerTestCase):
         completed = self.run_ledger("--project", "tidepool")
 
         # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            (completed.returncode, completed.stdout.splitlines()),
-            (
-                0,
-                [
-                    "project tidepool",
-                    "waves started: 0",
-                    "orders done: 0",
-                    "pull requests merged: 0",
-                    "signals recorded: 0",
-                    "patterns ratified: 0",
-                    "constraints delivered: 0",
-                ],
-            ),
+            completed.stdout.splitlines(),
+            [
+                "project tidepool",
+                "waves started: 0",
+                "orders done: 0",
+                "pull requests merged: 0",
+                "signals recorded: 0",
+                "patterns ratified: 0",
+                "constraints delivered: 0",
+            ],
         )
 
 
@@ -553,8 +590,16 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
                 "schema_version": 1,
                 "last": 20,
                 "procedures": {
-                    "awawa-pr-review": {"measured": 2, "unmeasured": 0, "p50": 8, "p90": 12, "estimate": True},
-                    "awawa-task": {"measured": 5, "unmeasured": 1, "p50": 30, "p90": 90, "estimate": False},
+                    "awawa-pr-review": {
+                        "runs": {"measured": 2, "partial": 0, "unmeasured": 0, "p50": 8, "p90": 12},
+                        "segments": {"measured": 2, "unmeasured": 0, "p50": 8, "p90": 12},
+                        "estimate": True,
+                    },
+                    "awawa-task": {
+                        "runs": {"measured": 5, "partial": 0, "unmeasured": 1, "p50": 30, "p90": 90},
+                        "segments": {"measured": 5, "unmeasured": 1, "p50": 30, "p90": 90},
+                        "estimate": False,
+                    },
                 },
                 "skipped": [],
             },
@@ -568,7 +613,11 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout)["procedures"]["awawa-task"],
-            {"measured": 3, "unmeasured": 0, "p50": 20, "p90": 30, "estimate": True},
+            {
+                "runs": {"measured": 3, "partial": 0, "unmeasured": 0, "p50": 20, "p90": 30},
+                "segments": {"measured": 3, "unmeasured": 0, "p50": 20, "p90": 30},
+                "estimate": True,
+            },
         )
 
     def test_should_print_the_budgets_as_text(self):
@@ -580,8 +629,12 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
             completed.stdout.splitlines(),
             [
                 "steps over the last 20 runs finished of each procedure:",
-                "  awawa-pr-review  p50 8  p90 12  measured 2  unmeasured 0  estimate",
-                "  awawa-task       p50 30  p90 90  measured 5  unmeasured 1",
+                "  awawa-pr-review  estimate",
+                "    runs p50 8  p90 12  measured 2  partial 0  unmeasured 0",
+                "    segments p50 8  p90 12  measured 2  unmeasured 0",
+                "  awawa-task",
+                "    runs p50 30  p90 90  measured 5  partial 0  unmeasured 1",
+                "    segments p50 30  p90 90  measured 5  unmeasured 1",
             ],
         )
 
@@ -599,7 +652,9 @@ class BrigadeLedgerBudgetsWithNoMeasuredRunTest(LedgerTestCase):
             completed.stdout.splitlines(),
             [
                 "steps over the last 20 runs finished of each procedure:",
-                "  awawa-study  p50 -  p90 -  measured 0  unmeasured 1  estimate",
+                "  awawa-study  estimate",
+                "    runs p50 -  p90 -  measured 0  partial 0  unmeasured 1",
+                "    segments p50 -  p90 -  measured 0  unmeasured 1",
             ],
         )
 
@@ -608,10 +663,8 @@ class BrigadeLedgerBudgetsWithNoMeasuredRunTest(LedgerTestCase):
         completed = self.run_ledger("budgets")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout.splitlines()),
-            (0, ["steps over the last 20 runs finished of each procedure:"]),
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.splitlines(), ["steps over the last 20 runs finished of each procedure:"])
 
 
 class BrigadeLedgerCompareTest(LedgerTestCase):
@@ -633,15 +686,32 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
                 "periods": {
                     "before": {
                         "runs": 3,
-                        "steps": {"measured": 2, "unmeasured": 1, "p50": 40, "p90": 60},
-                        "steps_to_first_edit": {"measured": 1, "unmeasured": 2, "p50": 12, "p90": 12},
+                        "segments": 3,
+                        "steps": {
+                            "runs": {"measured": 2, "partial": 0, "unmeasured": 1, "p50": 40, "p90": 60},
+                            "segments": {"measured": 2, "unmeasured": 1, "p50": 40, "p90": 60},
+                        },
+                        "steps_to_first_edit": {
+                            "runs": {"measured": 1, "partial": 0, "unmeasured": 2, "p50": 12, "p90": 12},
+                            "segments": {"measured": 1, "unmeasured": 2, "p50": 12, "p90": 12},
+                        },
                         "oversized_output_steps": None,
                     },
                     "from": {
                         "runs": 2,
-                        "steps": {"measured": 2, "unmeasured": 0, "p50": 20, "p90": 30},
-                        "steps_to_first_edit": {"measured": 1, "unmeasured": 1, "p50": 4, "p90": 4},
-                        "oversized_output_steps": {"measured": 1, "unmeasured": 1, "p50": 1, "p90": 1},
+                        "segments": 2,
+                        "steps": {
+                            "runs": {"measured": 2, "partial": 0, "unmeasured": 0, "p50": 20, "p90": 30},
+                            "segments": {"measured": 2, "unmeasured": 0, "p50": 20, "p90": 30},
+                        },
+                        "steps_to_first_edit": {
+                            "runs": {"measured": 1, "partial": 0, "unmeasured": 1, "p50": 4, "p90": 4},
+                            "segments": {"measured": 1, "unmeasured": 1, "p50": 4, "p90": 4},
+                        },
+                        "oversized_output_steps": {
+                            "runs": {"measured": 1, "partial": 0, "unmeasured": 1, "p50": 1, "p90": 1},
+                            "segments": {"measured": 1, "unmeasured": 1, "p50": 1, "p90": 1},
+                        },
                     },
                 },
                 "skipped": [],
@@ -656,14 +726,24 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "before 2026-10-03: 3 runs finished",
-                "  steps                   p50 40  p90 60  measured 2  unmeasured 1",
-                "  steps to first edit     p50 12  p90 12  measured 1  unmeasured 2",
-                "  oversized output steps  not reported",
-                "from 2026-10-03: 2 runs finished",
-                "  steps                   p50 20  p90 30  measured 2  unmeasured 0",
-                "  steps to first edit     p50 4  p90 4  measured 1  unmeasured 1",
-                "  oversized output steps  p50 1  p90 1  measured 1  unmeasured 1",
+                "before 2026-10-03: 3 runs finished, 3 segments",
+                "  steps:",
+                "    runs p50 40  p90 60  measured 2  partial 0  unmeasured 1",
+                "    segments p50 40  p90 60  measured 2  unmeasured 1",
+                "  steps to first edit:",
+                "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 2",
+                "    segments p50 12  p90 12  measured 1  unmeasured 2",
+                "  oversized output steps: not reported",
+                "from 2026-10-03: 2 runs finished, 2 segments",
+                "  steps:",
+                "    runs p50 20  p90 30  measured 2  partial 0  unmeasured 0",
+                "    segments p50 20  p90 30  measured 2  unmeasured 0",
+                "  steps to first edit:",
+                "    runs p50 4  p90 4  measured 1  partial 0  unmeasured 1",
+                "    segments p50 4  p90 4  measured 1  unmeasured 1",
+                "  oversized output steps:",
+                "    runs p50 1  p90 1  measured 1  partial 0  unmeasured 1",
+                "    segments p50 1  p90 1  measured 1  unmeasured 1",
             ],
         )
 
@@ -678,7 +758,199 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
                 completed = self.run_ledger("compare", "--before", before, "--json")
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_message))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
+                self.assertEqual(completed.stderr, expected_message)
+
+
+class BrigadeLedgerRunOfTwoSegmentsTest(LedgerTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_ledger("2026-10", RUN_OF_TWO_SEGMENTS_LINES)
+
+    def test_should_count_the_run_once_by_its_last_segment_beside_its_two_segments(self):
+        # Act
+        completed = self.run_ledger("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(document["runs"], {"outcomes": {"done": 2}, "error_classes": {}})
+        self.assertEqual(document["segments"], {"outcomes": {"done": 2, "wall_limit": 1}, "error_classes": {}})
+
+    def test_should_print_the_runs_and_the_segments_finished_as_text(self):
+        # Act
+        completed = self.run_ledger()
+
+        # Assert
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                "events: 3, from 2026-10-02T09:00:00Z to 2026-10-03T09:00:00Z",
+                "files read: 1",
+                "lines skipped: 0",
+                "  run.finished  3",
+                "runs finished: 2, done 2",
+                "segments finished: 3, done 2, wall_limit 1",
+            ],
+        )
+
+    def test_should_measure_the_budget_of_the_run_by_the_sum_of_its_measured_segments(self):
+        rows = [
+            (
+                "20",
+                {
+                    "runs": {"measured": 2, "partial": 1, "unmeasured": 0, "p50": 20, "p90": 30},
+                    "segments": {"measured": 2, "unmeasured": 1, "p50": 20, "p90": 30},
+                    "estimate": True,
+                },
+            ),
+            (
+                "1",
+                {
+                    "runs": {"measured": 1, "partial": 1, "unmeasured": 0, "p50": 30, "p90": 30},
+                    "segments": {"measured": 1, "unmeasured": 1, "p50": 30, "p90": 30},
+                    "estimate": True,
+                },
+            ),
+        ]
+        for last, expected_summary in rows:
+            with self.subTest(last=last):
+                # Act
+                completed = self.run_ledger("budgets", "--last", last, "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(json.loads(completed.stdout)["procedures"], {"awawa-task": expected_summary})
+
+    def test_should_print_the_budget_of_the_runs_and_of_the_segments_as_text(self):
+        # Act
+        completed = self.run_ledger("budgets")
+
+        # Assert
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                "steps over the last 20 runs finished of each procedure:",
+                "  awawa-task  estimate",
+                "    runs p50 20  p90 30  measured 2  partial 1  unmeasured 0",
+                "    segments p50 20  p90 30  measured 2  unmeasured 1",
+            ],
+        )
+
+    def test_should_date_the_run_by_its_last_segment_in_the_comparison(self):
+        # Act
+        completed = self.run_ledger("compare", "--before", "2026-10-03", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["periods"]["from"],
+            {
+                "runs": 1,
+                "segments": 2,
+                "steps": {
+                    "runs": {"measured": 1, "partial": 1, "unmeasured": 0, "p50": 30, "p90": 30},
+                    "segments": {"measured": 1, "unmeasured": 1, "p50": 30, "p90": 30},
+                },
+                "steps_to_first_edit": {
+                    "runs": {"measured": 1, "partial": 1, "unmeasured": 0, "p50": 4, "p90": 4},
+                    "segments": {"measured": 1, "unmeasured": 1, "p50": 4, "p90": 4},
+                },
+                "oversized_output_steps": {
+                    "runs": {"measured": 1, "partial": 1, "unmeasured": 0, "p50": 1, "p90": 1},
+                    "segments": {"measured": 1, "unmeasured": 1, "p50": 1, "p90": 1},
+                },
+            },
+        )
+
+    def test_should_print_the_comparison_of_the_runs_and_of_the_segments_as_text(self):
+        # Act
+        completed = self.run_ledger("compare", "--before", "2026-10-03")
+
+        # Assert
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                "before 2026-10-03: 1 runs finished, 1 segments",
+                "  steps:",
+                "    runs p50 20  p90 20  measured 1  partial 0  unmeasured 0",
+                "    segments p50 20  p90 20  measured 1  unmeasured 0",
+                "  steps to first edit:",
+                "    runs p50 6  p90 6  measured 1  partial 0  unmeasured 0",
+                "    segments p50 6  p90 6  measured 1  unmeasured 0",
+                "  oversized output steps: not reported",
+                "from 2026-10-03: 1 runs finished, 2 segments",
+                "  steps:",
+                "    runs p50 30  p90 30  measured 1  partial 1  unmeasured 0",
+                "    segments p50 30  p90 30  measured 1  unmeasured 1",
+                "  steps to first edit:",
+                "    runs p50 4  p90 4  measured 1  partial 1  unmeasured 0",
+                "    segments p50 4  p90 4  measured 1  unmeasured 1",
+                "  oversized output steps:",
+                "    runs p50 1  p90 1  measured 1  partial 1  unmeasured 0",
+                "    segments p50 1  p90 1  measured 1  unmeasured 1",
+            ],
+        )
+
+    def test_should_summarize_the_steps_of_the_wave_by_run_and_by_segment(self):
+        # Act
+        completed = self.run_ledger("--wave", "tp/20", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(
+            document["steps"],
+            {
+                "by_slot": {
+                    "build": {
+                        "runs": {"measured": 2, "partial": 1, "unmeasured": 0, "p50": 20, "p90": 30},
+                        "segments": {"measured": 2, "unmeasured": 1, "p50": 20, "p90": 30},
+                    }
+                },
+                "by_role": {
+                    "builder": {
+                        "runs": {"measured": 2, "partial": 1, "unmeasured": 0, "p50": 20, "p90": 30},
+                        "segments": {"measured": 2, "unmeasured": 1, "p50": 20, "p90": 30},
+                    }
+                },
+            },
+        )
+
+    def test_should_keep_one_hand_over_per_segment_of_the_wave(self):
+        # Act
+        completed = self.run_ledger("--wave", "tp/20", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(document["hand_overs"], [{"task": "TP160", "role": "builder", "slot": "build", "segment": 2}])
+
+    def test_should_print_the_steps_of_the_wave_by_run_and_by_segment_as_text(self):
+        # Act
+        completed = self.run_ledger("--wave", "tp/20")
+
+        # Assert
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                "wave tp/20: 2026-10-02T09:00:00Z to 2026-10-03T09:00:00Z, wall time 24h00m",
+                "tasks: TP160, TP161",
+                "pull requests: none",
+                "steps by slot:",
+                "  build",
+                "    runs p50 20  p90 30  measured 2  partial 1  unmeasured 0",
+                "    segments p50 20  p90 30  measured 2  unmeasured 1",
+                "steps by role:",
+                "  builder",
+                "    runs p50 20  p90 30  measured 2  partial 1  unmeasured 0",
+                "    segments p50 20  p90 30  measured 2  unmeasured 1",
+                "pauses: 0, 0h00m in all",
+                "hand-overs: TP160 builder build segment 2",
+                "parked: none",
+            ],
+        )
 
 
 class BrigadeLedgerUsageTest(LedgerTestCase):
@@ -697,5 +969,6 @@ class BrigadeLedgerUsageTest(LedgerTestCase):
                 completed = self.run_ledger(*arguments)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout), (2, ""))
+                self.assertEqual(completed.returncode, 2)
+                self.assertEqual(completed.stdout, "")
                 self.assertIn(expected_message, completed.stderr)
