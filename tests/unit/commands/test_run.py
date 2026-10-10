@@ -95,6 +95,7 @@ class RunTextTest(unittest.TestCase):
 
 class RunExtraArgumentTest(unittest.TestCase):
     def test_should_leave_every_word_but_an_option_to_the_procedure(self):
+        # Arrange
         rows = [
             ("an argument of the procedure", "task=B06", True),
             ("an unknown option", "--frobnicate", False),

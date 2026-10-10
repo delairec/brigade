@@ -356,6 +356,7 @@ PROCEDURE_OF_THE_CORPUS = "---\ncapabilities: read\nbudget: 30\n---\nReview the 
 
 class BrigadeRunOfAProcedureOffItsDeclarationTest(RunTestCase):
     def test_should_exit_1_naming_the_procedure_and_what_it_lacks(self):
+        # Arrange
         rows = [
             ("no budget", "---\ncapabilities: read\n---\nBody.\n", "lacks budget in its front matter"),
             ("no capabilities", "---\nbudget: 10\n---\nBody.\n", "lacks capabilities in its front matter"),
@@ -379,7 +380,8 @@ class BrigadeRunOfAProcedureOffItsDeclarationTest(RunTestCase):
 
 class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
     def test_should_exit_1_naming_what_it_cannot_plan_from(self):
-        missing = self.workspace / "missing"
+        # Arrange
+        missing =self.workspace / "missing"
         rows = [
             ("a directory that does not exist", ["--cwd", str(missing)], f"no directory {missing}"),
             (
@@ -427,6 +429,7 @@ class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
 
 class BrigadeRunOfKeyValueArgumentsAroundTheOptionsTest(RunTestCase):
     def test_should_hand_the_run_every_argument_wherever_it_stands_among_the_options(self):
+        # Arrange
         rows = [
             ("after the options", ["--slot", "build", "a=1", "b=2"]),
             ("before the options", ["a=1", "b=2", "--slot", "build"]),
@@ -1055,6 +1058,7 @@ class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWriteTest(RunTestCase):
         )
 
     def test_should_exit_1_naming_the_file_of_the_run_it_cannot_write(self):
+        # Arrange
         rows = [
             ("20261006T120000Z-b57001", "pid", ()),
             ("20261006T120000Z-b57002", "role.md", ()),
