@@ -5088,21 +5088,35 @@ TASK B96
 TASK B97
 	TITLE "brigade processes returns the subprocesses a run, a tick or a command started, the"
 		+ "failed ones alone on request"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
 	SPEC "brigade processes list returns one entry per trail held, newest first: the run, the tick"
 		+ "or the command it belongs to, its id, its instant, its count of records and its count of"
 		+ "records whose outcome is not exited with code 0"
+		IMPL "brigade/commands/processes_list.py::def processes_list(request, runtime: Runtime) ->"
+			+ "dict:"
+		IMPL "brigade/processes/list_invocations.py::def list_invocations(state_root: Path) ->"
+			+ "list[dict]:"
+		IMPL "brigade/processes/locate_trails.py::def locate_trails(state_root: Path) ->"
+			+ "list[Trail]:"
 	SPEC "brigade processes show <id> returns the records of the trail of that run, tick or command"
 		+ "as one document, each record as written, <id> being a run id or the id brigade processes"
 		+ "list prints for a tick or a command; --failed keeps the records whose outcome is not"
 		+ "exited with code 0; an id no trail holds fails, naming it"
+		IMPL "brigade/commands/processes_show.py::def processes_show(request, runtime: Runtime) ->"
+			+ "dict:"
+		IMPL "brigade/processes/show_invocation.py::def show_invocation(state_root: Path,"
+			+ "invocation_id: str, failed_only: bool) -> dict:"
+		IMPL "brigade/processes/is_failed_record.py::def is_failed_record(record: dict) -> bool:"
 	SPEC "the text rendering of show prints one line per record, its outcome, its exit code or its"
 		+ "duration, and its argv joined by shlex.join; --json prints the document"
+		IMPL "brigade/commands/processes_show.py::def _render_record(record: dict) -> str:"
 	SPEC "tests/cli prove, in a temporary state directory, list over a run, a tick and a command,"
 		+ "show with and without --failed, and an id no trail holds"
+		IMPL "tests/cli/test_processes.py::class BrigadeProcessesListTest(ProcessesTestCase):"
+		IMPL "tests/cli/test_processes.py::class BrigadeProcessesShowTest(ProcessesTestCase):"
 	AFTER @TASK.B72
 	RATIONALE "by @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads a trail is read"
 		+ "through a brigade command, never searched with grep, sed or awk; @TASK.B72 writes the"
@@ -5123,6 +5137,7 @@ TASK B97
 	SOURCE "the user's words of 2026-10-10 at the refinement of B97, \"je suis ok pour une commande"
 		+ "mais je n'aime pas le nom \"trails\", ce n'est pas assez parlant. Peut être que ça"
 		+ "rejoint brigade doctor, en passant un flag ?\", and the answer chosen, brigade processes"
+	DELIVERED_BY 97
 
 TASK B98
 	TITLE "A milestone and its draft tasks plan the preflight: named lists of mechanical checks run"
