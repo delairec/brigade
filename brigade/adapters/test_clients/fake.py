@@ -59,6 +59,7 @@ def _build_launch(request: dict) -> dict:
         "argv": _build_argv(request["settings"], f"{recordings}/{request['role']['name']}.json"),
         "environment": {},
         "stdin": None,
+        "session_id": request["session_id"],
     }
 
 

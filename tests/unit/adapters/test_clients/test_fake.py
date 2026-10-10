@@ -12,6 +12,7 @@ LAUNCH_REQUEST = {
     "worktree": "/srv/worktrees/b42",
     "brief": "Deliver the task B42.",
     "progress_file": "/state/brigade/runs/r1/progress.md",
+    "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
     "role": {
         "name": "builder",
         "package": "AGENT builder",
@@ -58,6 +59,7 @@ class FakeLaunchTest(unittest.TestCase):
                 "argv": ["cat", "--", "/srv/recordings/builder.json"],
                 "environment": {},
                 "stdin": None,
+                "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
             },
         )
 
@@ -118,6 +120,7 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                 ],
                 "environment": {},
                 "stdin": None,
+                "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
             },
         )
 
@@ -316,7 +319,9 @@ class FakeTranscriptsTest(unittest.TestCase):
         # Arrange
         recorded = {
             "schema_version": 1,
-            "messages": [{"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0}],
+            "messages": [
+                {"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0, "id": None, "usage": None}
+            ],
             "subagents": [],
         }
         (self.recordings / "fake-session.transcripts.json").write_text(json.dumps(recorded))
@@ -339,7 +344,16 @@ class FakeTranscriptsTest(unittest.TestCase):
             transcripts,
             {
                 "schema_version": 1,
-                "messages": [{"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0}],
+                "messages": [
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": "Done.",
+                        "tool_calls": 0,
+                        "id": None,
+                        "usage": None,
+                    }
+                ],
                 "subagents": [],
             },
         )

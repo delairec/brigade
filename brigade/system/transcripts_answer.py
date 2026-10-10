@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from brigade.system.token_usage import TokenUsage
+
 DOCUMENT_SCHEMA_VERSION = 1
 
 
@@ -9,18 +11,30 @@ class TranscriptMessage:
     timestamp: str | None
     content: str | list
     tool_calls: int
+    id: str | None
+    usage: TokenUsage | None
 
     @classmethod
     def from_document(cls, document: dict) -> "TranscriptMessage":
+        usage = document["usage"]
         return cls(
             role=document["role"],
             timestamp=document["timestamp"],
             content=document["content"],
             tool_calls=document["tool_calls"],
+            id=document["id"],
+            usage=None if usage is None else TokenUsage.from_document(usage),
         )
 
     def to_document(self) -> dict:
-        return {"role": self.role, "timestamp": self.timestamp, "content": self.content, "tool_calls": self.tool_calls}
+        return {
+            "role": self.role,
+            "timestamp": self.timestamp,
+            "content": self.content,
+            "tool_calls": self.tool_calls,
+            "id": self.id,
+            "usage": None if self.usage is None else self.usage.to_document(),
+        }
 
 
 def _read_messages(documents: list) -> tuple[TranscriptMessage, ...]:
