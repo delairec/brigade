@@ -4667,29 +4667,46 @@ TASK B87
 		+ "\"Avertissement « illisible »\"; the line, \"Remède en fallback\""
 
 TASK B88
-	TITLE "The extra arguments of brigade run are read the same way under every supported Python:"
-		+ "no path of brigade/ reachable under 3.11 alone"
-	STATUS draft
+	TITLE "brigade run reads its key=value arguments through one path under every supported Python"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
 	ROLE ada
-	SPEC "brigade run <procedure> key=value ..., with words after its options, gives one document"
-		+ "under Python 3.11 and 3.12, a test of tests/cli/test_run.py running on the matrix of the"
-		+ "CI proving it"
-	SPEC "no line or branch of brigade/cli.py or brigade/commands/run.py is reachable under 3.11"
-		+ "alone: the branch that 3.12 never reaches is removed, or the coverage job combines the"
-		+ "measures of 3.11 and 3.12 so that the 100 % of @TASK.B70 holds on the combined measure"
+	SPEC "brigade run <procedure> --slot build a=1 b=2, brigade run <procedure> a=1 b=2 --slot"
+		+ "build and brigade run <procedure> a=1 --slot build b=2 each give one document whose run"
+		+ "carries both arguments, a=1 and b=2, a test of tests/cli/test_run.py proving the three"
+		+ "forms on every Python of the CI matrix"
+	SPEC "brigade run declares no key=value positional: every key=value word reaches the procedure"
+		+ "through the extra arguments, whatever its place among the options and whatever the"
+		+ "Python"
+	SPEC "a word of brigade run that does not start with - and holds no = exits 1 with \"brigade"
+		+ "run: the argument <word> is not key=value\", as =B06 does, a row of"
+		+ "BrigadeRunOfARequestItCannotPlanTest proving it"
+	SPEC "brigade run --help names the key=value arguments of the procedure"
 	AFTER @TASK.B82
-	RATIONALE "found in the review of pull request #56: the extra arguments of brigade run after"
-		+ "its options, brigade/cli.py:179-184 and brigade/commands/run.py:52-53 at the head of"
-		+ "#56, are reachable under Python 3.11 only, since from 3.12 argparse hands those words to"
-		+ "the nargs=\"*\" positional; the coverage job of .github/workflows/ci.yml runs on 3.11"
-		+ "alone, python-version \"3.11\" at line 119, so the path counts as covered there and"
-		+ "never runs on 3.12"
+	RATIONALE "found in the review of pull request #56 and checked on 166ae81 on 2026-10-10:"
+		+ "brigade run reads its key=value words through two paths, the nargs=\"*\" positional"
+		+ "arguments of brigade/commands/run.py and the extra arguments that brigade/cli.py leaves"
+		+ "to accept_extra_argument; under 3.11 the words after the options take the second path,"
+		+ "under 3.12 and later the first, and on every version a word placed before an option"
+		+ "takes the first and the words after it the second; no CLI test sends a key=value word"
+		+ "through the extra arguments under 3.12 or later, yet the coverage of the whole suite"
+		+ "under 3.11 and under 3.14 misses no line of brigade/cli.py or brigade/commands/run.py,"
+		+ "since tests/unit/commands/test_run.py calls accept_extra_argument directly and"
+		+ "tests/cli/test_usage.py drives the refusal of an unknown option: the coverage figure"
+		+ "cannot reveal the gap, only the CLI test of the forms can"
 		REF @TASK.B70
+	RATIONALE "the version-dependent split is removed rather than measured: without the positional,"
+		+ "argparse leaves every key=value word to the extra arguments identically under 3.11, 3.13"
+		+ "and 3.14, a probe of the run parser showing it; combining the coverage of 3.11 and 3.x"
+		+ "would keep two paths whose share depends on the version, and raising the Python floor to"
+		+ "3.12 would not remove the extra arguments the mixed form needs"
 	SOURCE "item 10 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
 		+ "the user's words of 2026-10-07, \"seulement après la review on lancera lex pour"
 		+ "l'écriture dans le corpus\""
+	SOURCE "the user's rulings of 2026-10-10 in the refinement of B88, \"test forme mêlée ok, mais"
+		+ "comme pour les autres morceaux de code spécifiques, on doit isoler, c'est possible?\","
+		+ "then \"Un seul chemin\" and no task to raise the Python floor"
 
 TASK B89
 	TITLE "The help strings, the message of --since and the modes of brigade tick are guarded by"
@@ -6120,3 +6137,33 @@ TASK B114
 		+ "maximum agnostique, et qu'on isole le spécifique dans un module dédié.\"; then \"oui\""
 		+ "to the split into core, client contract, Claude Code adapter, fake adapter and"
 		+ "brigade-client-vibe, and to the verification of the facts"
+
+TASK B115
+	TITLE "brigade needs Python 3.11.4 or later and always extracts a project archive under"
+		+ "tarfile's data filter"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "corpus"
+	ROLE ada
+	DESC "to be refined with the user: the floor check of brigade/python_floor.py, brigade doctor,"
+		+ "the README, the floor job of the CI and the title of @DECISION.PythonStandardLibraryOnly"
+		+ "move from 3.11 to 3.11.4; the fallback of brigade/corpus/prepare_tree.py extracting"
+		+ "without filter is removed"
+	SPEC "brigade/corpus/prepare_tree.py extracts the archive of a commit under the data filter of"
+		+ "tarfile on every Python brigade starts on, with no path extracting without it"
+	SPEC "under Python 3.11.3 brigade exits non-zero naming the version it needs, 3.11.4, and the"
+		+ "version it found, and brigade doctor reports the floor 3.11.4"
+	RATIONALE "brigade/corpus/prepare_tree.py:29-30 at 7348c1f keeps two paths, DATA_EXTRACTION ="
+		+ "{\"filter\": \"data\"} if hasattr(tarfile, \"data_filter\") else {} and MEMBER_REFUSAL ="
+		+ "getattr(tarfile, \"FilterError\", ()): tarfile gained its data filter in 3.12,"
+		+ "backported to 3.11.4 by PEP 706, so under 3.11.0 to 3.11.3 brigade extracts without the"
+		+ "refusal @TASK.B68 delivers; the CI runs 3.11.17 and 3.14, never that branch, and the"
+		+ "coverage of the whole suite under both misses no line of the file, each fallback holding"
+		+ "on one line"
+		REF @TASK.B68
+	RATIONALE "raising the floor removes the second path rather than testing it, as @TASK.B88 does"
+		+ "for the arguments of brigade run"
+		REF @TASK.B88
+	SOURCE "found in the refinement of B88 on 2026-10-10, after the user asked \"est-ce qu'il y a"
+		+ "d'autres endroits où on a du code propre à une version?\"; the user's ruling \"Brouillon"
+		+ "F0\""
