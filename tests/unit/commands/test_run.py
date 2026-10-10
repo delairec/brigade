@@ -94,11 +94,11 @@ class RunTextTest(unittest.TestCase):
 
 
 class RunExtraArgumentTest(unittest.TestCase):
-    def test_should_accept_after_the_options_a_key_value_argument_alone(self):
+    def test_should_leave_every_word_but_an_option_to_the_procedure(self):
         rows = [
             ("an argument of the procedure", "task=B06", True),
             ("an unknown option", "--frobnicate", False),
-            ("a word with no key", "B06", False),
+            ("a word with no separator", "B06", True),
         ]
         for case, extra, expected_acceptance in rows:
             with self.subTest(case=case):

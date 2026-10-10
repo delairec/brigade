@@ -388,6 +388,7 @@ class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
                 f"no brief file {missing}",
             ),
             ("an argument with no key", ["--cwd", str(self.workspace), "=B06"], "the argument =B06 is not key=value"),
+            ("a word with no separator", ["--cwd", str(self.workspace), "B06"], "the argument B06 is not key=value"),
         ]
         self.configure_fake(COUNTING_CLIENT)
         for case, options, refusal in rows:
@@ -422,6 +423,36 @@ class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
             (completed.returncode, completed.stderr),
             (1, f"brigade run: config.toml names no client: set the client key in {configuration}\n"),
         )
+
+
+class BrigadeRunOfKeyValueArgumentsAroundTheOptionsTest(RunTestCase):
+    def test_should_hand_the_run_every_argument_wherever_it_stands_among_the_options(self):
+        rows = [
+            ("after the options", ["--slot", "build", "a=1", "b=2"]),
+            ("before the options", ["a=1", "b=2", "--slot", "build"]),
+            ("on both sides of an option", ["a=1", "--slot", "build", "b=2"]),
+        ]
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        for case, words in rows:
+            with self.subTest(case=case):
+                # Act
+                completed = self.run_brigade("run", "--cwd", str(self.workspace), "--json", str(self.procedure), *words)
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                run_record = self.read_run_record(json.loads(completed.stdout)["run"])
+                self.assertEqual(run_record["arguments"], {"a": "1", "b": "2"})
+
+
+class BrigadeRunHelpTest(RunTestCase):
+    def test_should_name_the_key_value_arguments_of_the_procedure(self):
+        # Act
+        completed = self.run_brigade("run", "--help")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("key=value", completed.stdout)
 
 
 class BrigadeRunWithNoDirectoryGivenTest(RunTestCase):

@@ -14,7 +14,6 @@ from brigade.system.read_configuration import SLOTS, Configuration, read_configu
 from brigade.system.require_login_environment import LoginDemand, require_login_environment
 
 DOCUMENT_SCHEMA_VERSION = 1
-ARGUMENT_SEPARATOR = "="
 SINGLE_SEGMENT = 1
 FORGE_NAME = "github"
 UNBOUND_ENVIRONMENT = {}
@@ -68,11 +67,11 @@ def _render_text(document: dict) -> str:
 
 
 def _read_request(options):
-    return argparse.Namespace(**{**vars(options), "arguments": [*options.arguments, *options.extra_arguments]})
+    return argparse.Namespace(**{**vars(options), "arguments": options.extra_arguments})
 
 
 def _accept_extra_argument(extra: str) -> bool:
-    return not extra.startswith("-") and ARGUMENT_SEPARATOR in extra
+    return not extra.startswith("-")
 
 
 def _decide_exit_code(document: dict) -> int:
@@ -118,14 +117,19 @@ COMMAND = Command(
     path=("run",),
     help="run a procedure as a slot through the client adapter",
     arguments=(
-        Argument(("procedure",), {"help": "a procedure name, or the path of its Markdown file"}),
+        Argument(
+            ("procedure",),
+            {
+                "help": "a procedure name, or the path of its Markdown file; its arguments, key=value words, follow it"
+                " before or after the options"
+            },
+        ),
         Argument(("--slot",), {"required": True, "choices": SLOTS, "help": "the slot the run takes its role from"}),
         Argument(("--project",), {"help": "the registered project the run belongs to"}),
         Argument(("--cwd",), {"help": "the directory the client runs in; the project's path, else the current one"}),
         Argument(("--brief",), {"help": "a file whose text the run receives as its brief"}),
         Argument(("--detach",), {"action": "store_true", "help": "run in the background and print the run id"}),
         Argument(("--run-id",), {"help": argparse.SUPPRESS}),
-        Argument(("arguments",), {"nargs": "*", "metavar": "key=value", "help": "an argument of the procedure"}),
     ),
     run=run,
     read_request=_read_request,
