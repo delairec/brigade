@@ -2066,22 +2066,3 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 		+ "seule\": the steps to the first edit are partial only when a segment before the first"
 		+ "edit has no main_steps measured"
 		REF @TASK.B86
-
-DECISION AnImplementedTaskSpecALaterTaskMakesFalseIsRewrittenInPlaceNamingThatTask
-	TITLE "a SPEC of an implemented task that a later task makes false is rewritten in place by"
-		+ "that later task, naming it, and its IMPL anchored on the code that now holds"
-	STATUS active
-	REJECTED "archiving the earlier task: its other SPEC lines still hold and would lose their"
-		+ "anchors"
-	REJECTED "deleting the SPEC line: the corpus would lose what the earlier task delivered and"
-		+ "which task changed it"
-	REJECTED "leaving the IMPL on the removed code: awawa lint --strict fails on an anchor that no"
-		+ "longer occurs"
-	RATIONALE "@TASK.B115 raised the floor to Python 3.11.4 and removed the second extraction path"
-		+ "@TASK.B68 had kept for 3.11.0 to 3.11.3, making false a SPEC of B68 and the floor named"
-		+ "by a SPEC of @TASK.B01"
-		REF @TASK.B115
-		REF @TASK.B68
-		REF @TASK.B01
-	SOURCE "pull request #96 of the brigade repository, delivering @TASK.B115"
-		REF @TASK.B115
