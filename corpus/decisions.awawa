@@ -1817,8 +1817,10 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 	STATUS active
 	DESC "a run.finished line carries the 18 fields describe_finished writes and a signal.recorded"
 		+ "line its 6; the reader refuses a line lacking one, as it refuses any line lacking a"
-		+ "field of its event"
+		+ "field of its event; wall_limit_s is optional on signal.recorded, written on the signal"
+		+ "wall_limit_reached alone and absent from every other"
 		REF @TASK.B74
+		REF @TASK.B85
 	DESC "steps_to_first_edit, oversized_output_steps and cost_usd are optional on RunFinished:"
 		+ "absent from the line until a collector or the client reports them, and never written"
 		+ "null"
@@ -1843,6 +1845,8 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 	SOURCE "DESC 1 and DESC 2 amended in pull request #81 of the brigade repository, delivering"
 		+ "@TASK.B83"
 		REF @TASK.B83
+	SOURCE "DESC 1 amended on 2026-10-10 by the user's ruling in the refinement of @TASK.B85"
+		REF @TASK.B85
 
 DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 	TITLE "a run keeps a journal, one short timestamped JSON record per action of its client,"
@@ -1986,3 +1990,33 @@ DECISION TheSessionOfASegmentIsTheOneItsResultReportsElseTheOneNamedAtLaunch
 		+ "repository, the coded session kept and SPEC 1 of @TASK.B84 rewritten to state it:"
 		+ "\"ok\", answering \"On garde le comportement codé et on réécrit SPEC 1 ?\""
 		REF @TASK.B84
+
+DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSegments
+	TITLE "a view of brigade ledger counts a run once, by the outcome of its last segment, and"
+		+ "measures it by the sum of its measured segments, marked partial when one is not measured"
+	STATUS active
+	DESC "a view of brigade ledger that counts or measures runs groups the run.finished events by"
+		+ "run id; the outcome and the error class of a run are those of its last event, and the"
+		+ "overview counts the segments, by outcome and by error class, beside the runs"
+	DESC "the steps of a run are the sum of the main_steps of its measured segments; a run whose"
+		+ "sum lacks a segment is partial, counted as such in every summary of steps and kept in"
+		+ "its percentiles, so that a computation can leave it out"
+	DESC "every summary of steps gives the runs and the segments side by side, the segments being"
+		+ "what the budget of a procedure caps; a run is dated by its last run.finished event"
+	DESC "binds @TASK.B86 and every later view of the ledger, @TASK.B37 among them"
+		REF @TASK.B86
+		REF @TASK.B37
+	REJECTED "one count per run.finished event: a run cut and resumed counts once per segment, and"
+		+ "a segment cut on the step cap stops at the budget, so the budget measures itself"
+	REJECTED "a run with an unmeasured segment left unmeasured: the steps its measured segments"
+		+ "spent would be lost to every summary"
+	REJECTED "the sum of the measured segments with nothing marking it: an underestimate could not"
+		+ "be told from a measure and left out"
+	REJECTED "the error classes counted by run alone: the turn limits that ended intermediate"
+		+ "segments would vanish from the overview"
+	REJECTED "the steps summarised by run alone: the steps a segment takes, which the budget caps,"
+		+ "would vanish from every view"
+	REJECTED "a run dated by its first segment: a run would enter a period of ledger compare before"
+		+ "it is finished"
+	SOURCE "the user's rulings of 2026-10-10 in the refinement of @TASK.B86"
+		REF @TASK.B86
