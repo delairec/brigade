@@ -4522,29 +4522,43 @@ TASK B84
 		REF @DECISION.TheSessionOfASegmentIsTheOneItsResultReportsElseTheOneNamedAtLaunch
 
 TASK B85
-	TITLE "A segment cut at the wall-time limit records a signal of its own, carrying the limit in"
-		+ "seconds, never budget_reached"
-	STATUS draft
+	TITLE "A segment cut at the wall-time limit records a signal of its own, wall_limit_reached,"
+		+ "carrying the limit in seconds, never budget_reached"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
 	SPEC "a segment whose outcome is wall_limit appends to the ledger a signal.recorded event whose"
-		+ "signal names the wall-time cut and carries the limit in seconds the segment was held to;"
-		+ "budget_reached is appended only when the client reports its turn limit reached"
-	SPEC "the ledger lines of a segment cut at its limit and of one ending on the turn limit are"
-		+ "proven by unit rows on brigade/runs/run_segments.py, and the hand-over after a cut still"
-		+ "runs the next segment"
+		+ "signal is wall_limit_reached, carrying the procedure, the run, the segment, the budget"
+		+ "and wall_limit_s, the limit in seconds the segment was held to; budget_reached is"
+		+ "appended only when the client reports its turn limit reached"
+	SPEC "wall_limit_s is an optional field of signal.recorded, written on wall_limit_reached alone"
+		+ "and absent from every other signal; a signal.recorded line lacking it is read, so the"
+		+ "budget_reached lines already in the ledger stay readable"
+	SPEC "tests/cli runs brigade run as a subprocess with the fake client: a segment cut at its"
+		+ "wall-time limit appends the whole wall_limit_reached line, wall_limit_s included, and no"
+		+ "budget_reached; the same cut with a non-empty progress file is followed by a second"
+		+ "segment; a segment ending on the step cap still appends budget_reached, without"
+		+ "wall_limit_s"
 	RATIONALE "the ledger of 2026-10 holds, for segment 1 of run 20261007T105605Z-396068,"
 		+ "run.finished outcome wall_limit followed by signal.recorded budget_reached budget 75,"
-		+ "though the segment ended on the clock, not on the step cap:"
-		+ "brigade/runs/run_segments.py:23-24 ends a segment on budget when the error class is the"
-		+ "turn limit or the outcome is wall_limit, and _describe_signal, lines 75-77, names"
-		+ "budget_reached for both; DESC 3 of"
-		+ "@DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap reads \"the segment"
-		+ "ends with outcome wall_limit, distinct from the step cap\""
+		+ "though the segment ended on the clock, not on the step cap: _ends_on_budget in"
+		+ "brigade/runs/run_segments.py ends a segment on budget when the error class is the turn"
+		+ "limit or the outcome is wall_limit, and _describe_signal names budget_reached for both;"
+		+ "DESC 3 of @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap reads \"the"
+		+ "segment ends with outcome wall_limit, distinct from the step cap\""
 		REF @DECISION.EveryRunIsHeldOnTheClockAtThirtySecondsPerStepOfItsCap
+	RATIONALE "the user ruled on 2026-10-10: the name wall_limit_reached, after budget_reached and"
+		+ "the outcome wall_limit; wall_limit_s optional, the limit the run plan already holds, so"
+		+ "that the six fields every signal carries and the lines already written hold, DESC 1 of"
+		+ "@DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent"
+		+ "amended to say so; the proof in tests/cli, where BrigadeRunOnTheClockTest of"
+		+ "tests/cli/test_run.py already cuts the fake client on the clock but checks the budget of"
+		+ "the signal alone, and where no test yet hands over after a cut"
+		REF @DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
 	SOURCE "item 2 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+	SOURCE "the user's rulings of 2026-10-10 in the refinement of B85"
 
 TASK B86
 	TITLE "brigade ledger counts runs and segments apart: a run cut and resumed counts once, by the"
@@ -5970,8 +5984,8 @@ TASK B114
 		+ "segments/<n>/result.json as it records a segment ended done, its session, steps, usage"
 		+ "and cost_usd included"
 	SPEC "a segment ending on soft_limit continues the run as a segment cut at the wall-time limit"
-		+ "does: a signal.recorded budget_reached, then a fresh segment from the progress file"
-		+ "while hand-overs remain and the file is not empty"
+		+ "does: a signal.recorded wall_limit_reached carrying wall_limit_s, then a fresh segment"
+		+ "from the progress file while hand-overs remain and the file is not empty"
 	SPEC "the hard cut is unchanged: a client still running at the wall-time limit gets SIGTERM to"
 		+ "its process group and SIGKILL 30 s later, and the segment ends on wall_limit, whether"
 		+ "stop_at was passed or not"
@@ -5999,6 +6013,7 @@ TASK B114
 		+ "is done; and through the fake client declaring nothing, with a delay past the wall-time"
 		+ "limit, that the segment is cut on wall_limit as before"
 	AFTER @TASK.B84
+	AFTER @TASK.B85
 	RATIONALE "today a segment reaching its wall-time limit is killed mid-step:"
 		+ "brigade/system/wait_within_limit.py:23-28 sends SIGTERM to the client's process group,"
 		+ "then SIGKILL after GRACE_BEFORE_KILL_S, 30 s, brigade/runs/run_segment.py:38; the user"
@@ -6047,6 +6062,10 @@ TASK B114
 		+ "own"
 		REF @TASK.B109
 		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+	RATIONALE "a segment ending on soft_limit appends the signal of @TASK.B85, wall_limit_reached:"
+		+ "the cause is the clock, and the outcome soft_limit already tells how the segment"
+		+ "stopped; the user's ruling of 2026-10-10 in the refinement of B85"
+		REF @TASK.B85
 	SOURCE "the user's words of 2026-10-09: \"il y a pas moyen de faire en sorte que l'on coupe un"
 		+ "agent en le laissant terminer une step en cours?\"; after the session proposed a Claude"
 		+ "Code hook, \"ok mais ça veut dire qu'on fait du spécifique. J'aimerais que l'on soit au"

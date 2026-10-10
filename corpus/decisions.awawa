@@ -1817,8 +1817,10 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 	STATUS active
 	DESC "a run.finished line carries the 18 fields describe_finished writes and a signal.recorded"
 		+ "line its 6; the reader refuses a line lacking one, as it refuses any line lacking a"
-		+ "field of its event"
+		+ "field of its event; wall_limit_s is optional on signal.recorded, written on the signal"
+		+ "wall_limit_reached alone and absent from every other"
 		REF @TASK.B74
+		REF @TASK.B85
 	DESC "steps_to_first_edit, oversized_output_steps and cost_usd are optional on RunFinished:"
 		+ "absent from the line until a collector or the client reports them, and never written"
 		+ "null"
@@ -1843,6 +1845,8 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 	SOURCE "DESC 1 and DESC 2 amended in pull request #81 of the brigade repository, delivering"
 		+ "@TASK.B83"
 		REF @TASK.B83
+	SOURCE "DESC 1 amended on 2026-10-10 by the user's ruling in the refinement of @TASK.B85"
+		REF @TASK.B85
 
 DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 	TITLE "a run keeps a journal, one short timestamped JSON record per action of its client,"
