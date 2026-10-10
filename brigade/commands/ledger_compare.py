@@ -3,7 +3,7 @@ from dataclasses import asdict
 from brigade.command import Argument, Command
 from brigade.ledger.describe_comparison import describe_comparison
 from brigade.ledger.describe_skipped_lines import describe_skipped_lines
-from brigade.ledger.format_steps_line import format_steps_line
+from brigade.ledger.format_steps_lines import format_steps_lines
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
 from brigade.system.read_day import read_day
@@ -14,20 +14,20 @@ MEASURE_LABELS = {
     "steps_to_first_edit": "steps to first edit",
     "oversized_output_steps": "oversized output steps",
 }
-LABEL_WIDTH = max(len(label) for label in MEASURE_LABELS.values())
+STEPS_INDENT = "    "
 NOT_REPORTED = "not reported"
 
 
-def _render_measure(label: str, summary) -> str:
-    if summary is None:
-        return f"  {label:<{LABEL_WIDTH}}  {NOT_REPORTED}"
-    return format_steps_line(label, LABEL_WIDTH, summary)
+def _render_measure(label: str, steps) -> list[str]:
+    if steps is None:
+        return [f"  {label}: {NOT_REPORTED}"]
+    return [f"  {label}:", *format_steps_lines(STEPS_INDENT, steps)]
 
 
 def _render_period(heading: str, period: dict) -> list[str]:
     return [
-        f"{heading}: {period['runs']} runs finished",
-        *(_render_measure(label, period[measure]) for measure, label in MEASURE_LABELS.items()),
+        f"{heading}: {period['runs']} runs finished, {period['segments']} segments",
+        *(line for measure, label in MEASURE_LABELS.items() for line in _render_measure(label, period[measure])),
     ]
 
 

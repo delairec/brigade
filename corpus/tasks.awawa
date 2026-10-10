@@ -4176,7 +4176,7 @@ TASK B82
 		+ "prepare_project_tree to brigade/corpus/, and an argument reader several command modules"
 		+ "share (_read_positive_count, _read_day, _read_since of cli.py) to brigade/system/"
 		IMPL "brigade/ledger/describe_skipped_lines.py::def describe_skipped_lines("
-		IMPL "brigade/ledger/format_steps_line.py::def format_steps_line("
+		IMPL "brigade/ledger/format_steps_lines.py::def format_steps_lines("
 		IMPL "brigade/corpus/prepare_project_tree.py::def prepare_project_tree("
 		IMPL "brigade/system/read_positive_count.py::def read_positive_count("
 		IMPL "brigade/system/read_day.py::def read_day("

@@ -3,7 +3,7 @@ from dataclasses import asdict
 from brigade.command import Argument, Command
 from brigade.ledger.describe_budgets import describe_budgets
 from brigade.ledger.describe_skipped_lines import describe_skipped_lines
-from brigade.ledger.format_steps_line import format_steps_line
+from brigade.ledger.format_steps_lines import format_steps_lines
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
 from brigade.system.read_positive_count import read_positive_count
@@ -11,14 +11,15 @@ from brigade.system.read_positive_count import read_positive_count
 DOCUMENT_SCHEMA_VERSION = 1
 LAST_RUNS_BY_DEFAULT = 20
 ESTIMATE_MARK = "  estimate"
+STEPS_INDENT = "    "
 
 
 def _render_text(document: dict) -> str:
     procedures = document["procedures"]
-    width = max((len(name) for name in procedures), default=0)
     lines = [f"steps over the last {document['last']} runs finished of each procedure:"]
     for name, summary in procedures.items():
-        lines.append(format_steps_line(name, width, summary) + (ESTIMATE_MARK if summary["estimate"] else ""))
+        lines.append(f"  {name}" + (ESTIMATE_MARK if summary["estimate"] else ""))
+        lines.extend(format_steps_lines(STEPS_INDENT, summary))
     return "\n".join(lines)
 
 
