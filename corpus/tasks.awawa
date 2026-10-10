@@ -4750,7 +4750,7 @@ TASK B87
 
 TASK B88
 	TITLE "brigade run reads its key=value arguments through one path under every supported Python"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
 	ROLE ada
@@ -4758,13 +4758,20 @@ TASK B88
 		+ "build and brigade run <procedure> a=1 --slot build b=2 each give one document whose run"
 		+ "carries both arguments, a=1 and b=2, a test of tests/cli/test_run.py proving the three"
 		+ "forms on every Python of the CI matrix"
+		IMPL "tests/cli/test_run.py::class"
+			+ "BrigadeRunOfKeyValueArgumentsAroundTheOptionsTest(RunTestCase):"
 	SPEC "brigade run declares no key=value positional: every key=value word reaches the procedure"
 		+ "through the extra arguments, whatever its place among the options and whatever the"
 		+ "Python"
+		IMPL "brigade/commands/run.py::return argparse.Namespace(**{**vars(options), \"arguments\":"
+			+ "options.extra_arguments})"
 	SPEC "a word of brigade run that does not start with - and holds no = exits 1 with \"brigade"
 		+ "run: the argument <word> is not key=value\", as =B06 does, a row of"
 		+ "BrigadeRunOfARequestItCannotPlanTest proving it"
+		IMPL "tests/cli/test_run.py::(\"a word with no separator\", [\"--cwd\","
+			+ "str(self.workspace), \"B06\"], \"the argument B06 is not key=value\"),"
 	SPEC "brigade run --help names the key=value arguments of the procedure"
+		IMPL "tests/cli/test_run.py::class BrigadeRunHelpTest(RunTestCase):"
 	AFTER @TASK.B82
 	RATIONALE "found in the review of pull request #56 and checked on 166ae81 on 2026-10-10:"
 		+ "brigade run reads its key=value words through two paths, the nargs=\"*\" positional"
@@ -4789,6 +4796,7 @@ TASK B88
 	SOURCE "the user's rulings of 2026-10-10 in the refinement of B88, \"test forme mêlée ok, mais"
 		+ "comme pour les autres morceaux de code spécifiques, on doit isoler, c'est possible?\","
 		+ "then \"Un seul chemin\" and no task to raise the Python floor"
+	DELIVERED_BY 92
 
 TASK B89
 	TITLE "The help strings, the message of --since and the modes of brigade tick are guarded by"
@@ -6249,3 +6257,25 @@ TASK B115
 	SOURCE "found in the refinement of B88 on 2026-10-10, after the user asked \"est-ce qu'il y a"
 		+ "d'autres endroits où on a du code propre à une version?\"; the user's ruling \"Brouillon"
 		+ "F0\""
+
+TASK B122
+	TITLE "a guard holds every test that prepares something before its first delimiter to open on #"
+		+ "Arrange"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "tests"
+	ROLE ada
+	DESC "to be refined with the user: a guard of tests/guards/ flags a test method whose first"
+		+ "statement stands before any # Arrange or # Act line, and the tests it flags are brought"
+		+ "to it in the same pull request"
+	SPEC "a guard of tests/guards/, wired into python3 -m unittest, fails naming the file and the"
+		+ "line of every test method that prepares something before its first # Arrange or # Act"
+		+ "delimiter"
+	SPEC "no test of tests/ is flagged by that guard"
+	RATIONALE "the review of #92 found the rows of a new test of tests/cli/test_run.py standing"
+		+ "above its first delimiter, against the rule test_aaa_structure of the instructions"
+		+ "corpus; the five such tests of the two files #92 touches were fixed there, and a scan of"
+		+ "the test methods whose first line is neither # Arrange nor # Act counts 86 more in 47"
+		+ "files at 15b8c71, no test of the repository putting # Arrange above a table of rows"
+		REF @TASK.B88
+	SOURCE "found in the first review round of #92 on 2026-10-10"
