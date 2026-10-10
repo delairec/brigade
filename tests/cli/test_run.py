@@ -381,7 +381,7 @@ class BrigadeRunOfAProcedureOffItsDeclarationTest(RunTestCase):
 class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
     def test_should_exit_1_naming_what_it_cannot_plan_from(self):
         # Arrange
-        missing =self.workspace / "missing"
+        missing = self.workspace / "missing"
         rows = [
             ("a directory that does not exist", ["--cwd", str(missing)], f"no directory {missing}"),
             (
