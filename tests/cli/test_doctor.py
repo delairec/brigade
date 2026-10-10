@@ -9,7 +9,8 @@ from pathlib import Path
 
 from tests.cli.forward_coverage_environment import forward_coverage_environment
 
-CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
 EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables"
 
 GIT = str(EXECUTABLES / "git-2.47.3")
@@ -24,6 +25,7 @@ GH_ACTIVE = str(EXECUTABLES / "gh-active")
 GH_LOGGED_OUT = str(EXECUTABLES / "gh-logged-out")
 AWAWA_WEB = str(EXECUTABLES / "awawa-web")
 CLAUDE = str(EXECUTABLES / "claude-2.1.291")
+REAL_GIT = shutil.which("git")
 
 CLAUDE_CODE_CONFIGURATION = 'client = "claude-code"\n'
 
@@ -60,6 +62,9 @@ class DoctorTestCase(unittest.TestCase):
         return "".join(path.read_text(encoding="utf-8", errors="replace") for path in files)
 
     def run_doctor(self, path_directories, *options):
+        return self.run_doctor_from(CLONE_ENTRY_POINT, path_directories, *options)
+
+    def run_doctor_from(self, entry_point, path_directories, *options):
         environment = {
             "PATH": os.pathsep.join(path_directories),
             "XDG_CONFIG_HOME": self.config_home.name,
@@ -68,7 +73,7 @@ class DoctorTestCase(unittest.TestCase):
             **forward_coverage_environment(),
         }
         return subprocess.run(  # noqa: S603 - the test's own command line
-            [sys.executable, CLONE_ENTRY_POINT, "doctor", *options],
+            [sys.executable, entry_point, "doctor", *options],
             capture_output=True,
             text=True,
             env=environment,
@@ -814,4 +819,141 @@ class BrigadeDoctorReportsTheForgeAccountsTest(DoctorTestCase):
                     "fallback": FORGE_LOGIN_FALLBACK,
                 },
             ],
+        )
+
+
+GIT_ENVIRONMENT = {
+    "GIT_AUTHOR_NAME": "brigade tests",
+    "GIT_AUTHOR_EMAIL": "tests@brigade.invalid",
+    "GIT_AUTHOR_DATE": "2026-10-07T09:00:00Z",
+    "GIT_COMMITTER_NAME": "brigade tests",
+    "GIT_COMMITTER_EMAIL": "tests@brigade.invalid",
+    "GIT_COMMITTER_DATE": "2026-10-07T09:00:00Z",
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+}
+EVERY_TOOL_BUT_GIT = [AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+CHECKOUT_FALLBACK = "git pull in the checkout"
+
+
+def run_git(directory: Path, *arguments: str) -> None:
+    subprocess.run(  # noqa: S603 - the test's own command line
+        [REAL_GIT, *arguments],
+        cwd=directory,
+        env={**os.environ, **GIT_ENVIRONMENT},
+        capture_output=True,
+        check=True,
+    )
+
+
+class BrigadeDoctorRunFromACloneTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine = tempfile.TemporaryDirectory()
+        root = Path(self.machine.name).resolve()
+        self.clone = root / "clone"
+        self.git_directory = root / "git"
+        self.git_directory.mkdir()
+        (self.git_directory / "git").symlink_to(REAL_GIT)
+        run_git(root, "init", "--quiet", "--bare", "--initial-branch=main", "upstream.git")
+        run_git(root, "clone", "--quiet", "upstream.git", "clone")
+        run_git(self.clone, "commit", "--quiet", "--allow-empty", "--message=the release the clone runs")
+        run_git(self.clone, "push", "--quiet", "origin", "main")
+        run_git(root, "clone", "--quiet", "upstream.git", "upstream-work")
+        run_git(root / "upstream-work", "commit", "--quiet", "--allow-empty", "--message=the fix the clone lacks")
+        run_git(root / "upstream-work", "push", "--quiet", "origin", "main")
+        shutil.copytree(
+            REPOSITORY_ROOT / "brigade", self.clone / "brigade", ignore=shutil.ignore_patterns("__pycache__")
+        )
+        shutil.copytree(REPOSITORY_ROOT / "bin", self.clone / "bin")
+        shutil.copy(REPOSITORY_ROOT / "build.py", self.clone)
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+
+    def tearDown(self):
+        self.machine.cleanup()
+        super().tearDown()
+
+    def run_clone_doctor(self, *options):
+        return self.run_doctor_from(
+            self.clone / "bin" / "brigade", [str(self.git_directory), *EVERY_TOOL_BUT_GIT], *options
+        )
+
+    def test_should_warn_that_the_checkout_is_behind_its_upstream(self):
+        # Arrange
+        run_git(self.clone, "fetch", "--quiet")
+
+        # Act
+        completed = self.run_clone_doctor("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][-1],
+            {
+                "name": "checkout",
+                "kind": "optional",
+                "state": "warning",
+                "detail": f"{self.clone} at de446f3, 1 behind origin/main at 8885daa",
+                "fallback": "git pull in the checkout",
+            },
+        )
+
+    def test_should_report_no_checkout_up_to_date_with_its_upstream_as_last_fetched(self):
+        # Act
+        completed = self.run_clone_doctor()
+
+        # Assert
+        self.assertNotIn("checkout", completed.stdout)
+
+    def test_should_report_no_checkout_from_the_zipapp_built_in_the_clone(self):
+        # Arrange
+        run_git(self.clone, "fetch", "--quiet")
+        subprocess.run([sys.executable, self.clone / "build.py"], check=True)  # noqa: S603 - the test's own command line
+        zipapp = self.clone / "dist" / "brigade.pyz"
+
+        # Act
+        completed = self.run_doctor_from(zipapp, [str(self.git_directory), *EVERY_TOOL_BUT_GIT])
+
+        # Assert
+        self.assertNotIn("checkout", completed.stdout)
+
+    def test_should_warn_that_the_checkout_is_unreadable_when_its_upstream_is_no_longer_fetched(self):
+        # Arrange
+        run_git(self.clone, "update-ref", "-d", "refs/remotes/origin/main")
+
+        # Act
+        completed = self.run_clone_doctor("--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][-1],
+            {
+                "name": "checkout",
+                "kind": "optional",
+                "state": "warning",
+                "detail": f"{self.clone}: git rev-parse --short --verify --end-of-options origin/main exited 128: "
+                "fatal: Needed a single revision",
+                "fallback": CHECKOUT_FALLBACK,
+            },
+        )
+
+
+class BrigadeDoctorWithoutGitTest(DoctorTestCase):
+    def test_should_warn_that_the_checkout_is_unreadable(self):
+        # Arrange
+        self.write_configuration(CLAUDE_CODE_CONFIGURATION)
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_BUT_GIT, "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["items"][-1],
+            {
+                "name": "checkout",
+                "kind": "optional",
+                "state": "warning",
+                "detail": f"{REPOSITORY_ROOT}: git not on PATH",
+                "fallback": CHECKOUT_FALLBACK,
+            },
         )

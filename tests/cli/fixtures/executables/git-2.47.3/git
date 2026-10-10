@@ -1,5 +1,8 @@
 #!/bin/sh
 case "$*" in
   "--version") echo "git version 2.47.3" ;;
+  "for-each-ref "*) echo "* 61100fd origin/main" ;;
+  "rev-parse "*) echo "61100fd" ;;
+  "rev-list "*) printf '0\t0\n' ;;
   *) exit 2 ;;
 esac
