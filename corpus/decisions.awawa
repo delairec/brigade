@@ -1990,3 +1990,27 @@ DECISION TheSessionOfASegmentIsTheOneItsResultReportsElseTheOneNamedAtLaunch
 		+ "repository, the coded session kept and SPEC 1 of @TASK.B84 rewritten to state it:"
 		+ "\"ok\", answering \"On garde le comportement codé et on réécrit SPEC 1 ?\""
 		REF @TASK.B84
+
+DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSegments
+	TITLE "a view of brigade ledger counts a run once, by the outcome of its last segment, and"
+		+ "measures it by the sum of its measured segments, marked partial when one is not measured"
+	STATUS active
+	DESC "a view of brigade ledger that counts or measures runs groups the run.finished events by"
+		+ "run id; the outcome and the error class of a run are those of its last event, and the"
+		+ "overview counts the segments, by outcome and by error class, beside the runs"
+	DESC "the steps of a run are the sum of the main_steps of its measured segments; a run whose"
+		+ "sum lacks a segment is partial, counted as such in every summary of steps and kept in"
+		+ "its percentiles, so that a computation can leave it out"
+	DESC "binds @TASK.B86 and every later view of the ledger, @TASK.B37 among them"
+		REF @TASK.B86
+		REF @TASK.B37
+	REJECTED "one count per run.finished event: a run cut and resumed counts once per segment, and"
+		+ "a segment cut on the step cap stops at the budget, so the budget measures itself"
+	REJECTED "a run with an unmeasured segment left unmeasured: the steps its measured segments"
+		+ "spent would be lost to every summary"
+	REJECTED "the sum of the measured segments with nothing marking it: an underestimate could not"
+		+ "be told from a measure and left out"
+	REJECTED "the error classes counted by run alone: the turn limits that ended intermediate"
+		+ "segments would vanish from the overview"
+	SOURCE "the user's rulings of 2026-10-10 in the refinement of @TASK.B86"
+		REF @TASK.B86
