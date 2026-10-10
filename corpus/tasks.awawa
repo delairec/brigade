@@ -1055,10 +1055,10 @@ TASK B16
 	COMPONENT "the pass"
 	ROLE ada
 	ROLE lex
-	SPEC "the verify slot receives the verification package and gives its verdict, pass or changes"
+	SPEC "the review slot receives the verification package and gives its verdict, pass or changes"
 		+ "requested, through verdict, recorded in the ledger event"
 	SPEC "under POLICY.REVIEW approval the verdict is a GitHub review approving or requesting"
-		+ "changes under the login of the verify slot; under verdict it is the ledger event alone"
+		+ "changes under the login of the review slot; under verdict it is the ledger event alone"
 	SPEC "the ledger event of a review posted carries the login the review ran as"
 	AFTER @TASK.B15
 	AFTER @TASK.B75
@@ -1102,7 +1102,7 @@ TASK B18
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
-	SPEC "changes requested starts a run of the review slot through review context|reply"
+	SPEC "changes requested starts a run of the remediate slot through review context|reply"
 	SPEC "a failing check starts a fix by the build slot"
 	SPEC "a branch behind integration is rebased by git and the rebase slot runs only on a conflict"
 		+ "through rebase context|done"
@@ -4833,39 +4833,51 @@ TASK B89
 		+ "l'écriture dans le corpus\""
 
 TASK B90
-	TITLE "The review slot is the slot of the review round: the built-in reviewer answers the"
-		+ "review of a pull request, and a procedure that addresses the threads launches on it"
-	STATUS draft
+	TITLE "The review slot verifies and reviews a pull request, and a slot remediate answers its"
+		+ "review"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "roles"
 	ROLE ada
-	ROLE lex
-	SPEC "the built-in role of the review slot, brigade/roles/data/reviewer.md, declares the work"
-		+ "of answering the review of a pull request it did not review, with capabilities read,"
-		+ "write and shell, and its body says so; brigade roles lint stays green and brigade roles"
-		+ "show review prints it"
-	SPEC "the work of the verify slot stays the verdict on a pull request against its acceptance"
-		+ "criteria, as @TASK.B16 delivers it; no tenth slot is added"
-	SPEC "a run of a procedure that addresses the review threads of a pull request launches on the"
-		+ "review slot, proven by a test of tests/cli/test_run.py on the fake adapter"
+	SPEC "brigade/roles/data/reviewer.md, slot review, works as one read-only pass on a pull"
+		+ "request it did not write: a verdict per acceptance criterion of its task with the"
+		+ "command or the line that proves it, then the defects, untested paths and departures from"
+		+ "the conventions the project states, graded, each with its file, line and reason;"
+		+ "capabilities read and shell; brigade/roles/data/verifier.md is removed"
+	SPEC "brigade/roles/data/remediator.md, named remediator, slot remediate, reasoning standard,"
+		+ "capabilities read, write and shell, answers the review of a pull request it did not"
+		+ "review: each thread fixed or challenged with its reason, the branch put on its base and"
+		+ "pushed; it returns the threads answered, the commits pushed and the state of the checks"
+	SPEC "the slots are plan, build, review, remediate, rebase, report, triage, rules and explore"
+		+ "in brigade/system/read_configuration.py, the comments of"
+		+ "brigade/corpus/data/config.toml.tpl, the example of brigade/corpus/data/schema.awawa.tpl"
+		+ "and the Roles section of the README; brigade roles list shows these nine and no verify,"
+		+ "and brigade roles lint stays green"
+	SPEC "tests/cli/test_run.py writes a procedure file declaring the capabilities read, write and"
+		+ "shell and runs it on the fake client: with --slot remediate, run.json holds the slot"
+		+ "remediate, the role remediator, the role source built-in and the capabilities read,"
+		+ "write and shell; with --slot review, the capabilities read and shell"
 	RATIONALE "found while launching the review round of pull request #56 on 2026-10-07, run"
 		+ "20261007T142949Z-327ab0: the review slot binds the built-in reviewer, read-only, whose"
 		+ "work reads \"reviews a pull request\", so the procedure awawa-pr-review-round, which"
-		+ "addresses the threads, writes the corpus and pushes, was launched on the build slot;"
-		+ "@TASK.B18 already plans \"changes requested starts a run of the review slot through"
-		+ "review context|reply\" and @TASK.B16 the verdict on the verify slot: the slot of the"
-		+ "review round exists in the plan, and the built-in reviewer contradicts the work the plan"
-		+ "gives its slot; a tenth slot, as the follow-up file proposed, would amend DESC 1 of"
-		+ "@DECISION.RolesAreSlotsBoundToRoleFiles for a work a slot already carries; @TASK.B09"
-		+ "plans planner, reporter and triager, not this"
-		REF @TASK.B18
-		REF @TASK.B16
+		+ "addresses the threads, writes the corpus and pushes, was launched on the build slot"
+	RATIONALE "read at 2ec048c: brigade/runs/plan_run.py:152 keeps the capabilities of the"
+		+ "procedure that the role allows, and :161 gives a disposable worktree to a run without"
+		+ "write, so a review round launched on the review slot loses write and its commits; the"
+		+ "remediate row of SPEC 4 fails on that cut until a role allowing write holds the slot;"
+		+ "brigade ships no procedure, so the test writes its own"
+	RATIONALE "the user ruled on 2026-10-10 the slots of @DECISION.RolesAreSlotsBoundToRoleFiles,"
+		+ "amended in place: verify merges into review, which verifies and reviews in one pass, and"
+		+ "remediate answers the review; @TASK.B16 gives its verdict on the review slot and"
+		+ "@TASK.B18 starts the review round on remediate, both realigned in the same change"
 		REF @DECISION.RolesAreSlotsBoundToRoleFiles
-		REF @TASK.B09
+		REF @TASK.B16
+		REF @TASK.B18
 	RATIONALE "on the author's machine the [slots] table of config.toml binds build alone, so"
-		+ "review resolved to the built-in role; binding review to the AGENT entity whose WORK"
-		+ "names the review round is that machine's configuration, never brigade's, by"
-		+ "@DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares"
+		+ "review resolved to the built-in role; binding a slot to an AGENT entity is that"
+		+ "machine's configuration, never brigade's, by"
+		+ "@DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares; a [slots] table"
+		+ "naming verify is that machine's to rewrite"
 		REF @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
 	SOURCE "item 12 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
@@ -5136,7 +5148,7 @@ TASK B98
 
 TASK B99
 	TITLE "POLICY.REVIEW chooses approval or verdict, and doctor warns when a project under"
-		+ "approval has no distinct logins for its build and verify slots"
+		+ "approval has no distinct logins for its build and review slots"
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
@@ -5144,7 +5156,7 @@ TASK B99
 	SPEC "the POLICY schema brigade init installs, brigade/corpus/data/schema.awawa.tpl, declares"
 		+ "REVIEW approval|verdict, verdict by default"
 	SPEC "brigade doctor reports a warning naming the project for each project whose POLICY sets"
-		+ "REVIEW approval while the build and verify slots of [forge_accounts] are unbound or"
+		+ "REVIEW approval while the build and review slots of [forge_accounts] are unbound or"
 		+ "bound to one login"
 	SPEC "tests/cli prove the default, the field read from a policy, and the warning with one login"
 		+ "and with two"
@@ -5157,7 +5169,7 @@ TASK B99
 		REF @TASK.B17
 		REF @TASK.B100
 	RATIONALE "GitHub refuses an approval by the author of a pull request: under approval the build"
-		+ "slot that opens it and the verify slot that approves it need two logins"
+		+ "slot that opens it and the review slot that approves it need two logins"
 	SOURCE "the user's rulings of 2026-10-07 at the refinement of B75: a task of M1 for approval"
 		+ "and verdict, before B16 and B17; POLICY.REVIEW, verdict by default"
 
@@ -5169,12 +5181,12 @@ TASK B100
 	COMPONENT "tick"
 	ROLE ada
 	DESC "to be refined with the user: how the wave counts as delivered, the X tasks of the user's"
-		+ "words; how the verify slot verifies a task branch before its local merge; how this mode"
+		+ "words; how the review slot verifies a task branch before its local merge; how this mode"
 		+ "stands to FORGE none of @TASK.B46, which merges into integration with git and opens no"
 		+ "pull request"
 		REF @TASK.B46
 	SPEC "the POLICY schema declares REVIEW local; under it no pull request is opened per task,"
-		+ "each task verified by the verify slot is merged into integration on the machine, and one"
+		+ "each task verified by the review slot is merged into integration on the machine, and one"
 		+ "pull request from integration to main is opened once the wave is delivered"
 	AFTER @TASK.B99
 	AFTER @TASK.B17
