@@ -44,7 +44,7 @@ class CheckFrontMatterTest(unittest.TestCase):
                 {**DECLARED, "slot": "cook"},
                 RoleProblem(
                     key="slot",
-                    problem="is cook, not one of plan, build, verify, review, rebase, report, triage, rules, explore",
+                    problem="is cook, not one of plan, build, review, remediate, rebase, report, triage, rules, explore",
                 ),
             ),
             (

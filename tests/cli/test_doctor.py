@@ -678,7 +678,7 @@ class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
 
 GH_ACCOUNTS = str(EXECUTABLES / "gh-accounts")
 EVERY_TOOL_WITH_THE_ACCOUNTS_GH = [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACCOUNTS, AWAWA_WEB, CLAUDE]
-FORGE_ACCOUNTS = '[forge_accounts]\ncli = "octo-bot"\nbuild = "octo-bot"\nverify = "refused-bot"\n'
+FORGE_ACCOUNTS = '[forge_accounts]\ncli = "octo-bot"\nbuild = "octo-bot"\nreview = "refused-bot"\n'
 FORGE_LOGIN_FALLBACK = "the commands acting as it stop"
 
 
@@ -712,7 +712,7 @@ class BrigadeDoctorReportsTheForgeAccountsTest(DoctorTestCase):
                     "name": "forge login",
                     "kind": "optional",
                     "state": "warning",
-                    "detail": "gh printed no token for refused-bot, bound to verify",
+                    "detail": "gh printed no token for refused-bot, bound to review",
                     "fallback": FORGE_LOGIN_FALLBACK,
                 },
             ],
