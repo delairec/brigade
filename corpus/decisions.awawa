@@ -2083,3 +2083,5 @@ DECISION AnImplementedTaskSpecALaterTaskMakesFalseIsRewrittenInPlaceNamingThatTa
 		REF @TASK.B115
 		REF @TASK.B68
 		REF @TASK.B01
+	SOURCE "pull request #96 of the brigade repository, delivering @TASK.B115"
+		REF @TASK.B115

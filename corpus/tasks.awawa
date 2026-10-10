@@ -6314,7 +6314,7 @@ TASK B114
 TASK B115
 	TITLE "brigade needs Python 3.11.4 or later and always extracts a project archive under"
 		+ "tarfile's data filter"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "corpus"
 	ROLE ada
@@ -6322,15 +6322,32 @@ TASK B115
 		+ "tarfile and catches tarfile.FilterError, with no path extracting without the filter; the"
 		+ "skip of tests/integration/corpus/test_prepare_tree.py on a tarfile without data_filter"
 		+ "is removed"
+		IMPL "brigade/corpus/prepare_tree.py::commit_tar.extractall(staged_tree, filter=\"data\")"
+		IMPL "brigade/corpus/prepare_tree.py::except tarfile.FilterError as error:"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::class"
+			+ "PrepareTreeOfACommitHoldingALinkOutsideItsTreeTest(PrepareTreeTestCase):"
 	SPEC "under Python 3.11.3 brigade exits non-zero with the message brigade needs Python 3.11.4"
 		+ "or later; this is Python 3.11.3, and brigade doctor reports the floor 3.11.4"
+		IMPL "brigade/python_floor.py::PYTHON_FLOOR = (3, 11, 4)"
+		IMPL "tests/unit/test_python_floor.py::((3, 11, 3), \"brigade needs Python 3.11.4 or later;"
+			+ "this is Python 3.11.3\"),"
+		IMPL "tests/cli/test_doctor.py::class"
+			+ "BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):"
 	SPEC "the floor job of .github/workflows/ci.yml runs a Python below the floor, 3.11.3 where"
 		+ "setup-python offers it on the runner, 3.10 as today otherwise, and fails unless the"
 		+ "refusal names 3.11.4"
+		IMPL ".github/workflows/ci.yml::python-version: \"3.11.3\""
+		IMPL ".github/workflows/ci.yml::grep -F \"Python 3.11.4 or later\" refusal.txt"
 	SPEC "the floor reads 3.11.4 in the README, in AGENTS.md and in the titles of the decision"
 		+ "PythonStandardLibraryOnly and the decision"
 		+ "BrigadeInstallsFromOneFileWithFourPrerequisites, the rationale of the first naming the"
 		+ "data filter beside tomllib"
+		IMPL "README.md::brigade needs Python 3.11.4 or later and nothing outside its standard"
+			+ "library."
+		IMPL "AGENTS.md::Python 3.11.4 or later, standard library only"
+		IMPL "corpus/decisions.awawa::TITLE \"brigade is Python 3.11.4 or later"
+		IMPL "corpus/decisions.awawa::zipapp or a clone; Python 3.11.4 or later, git,"
+		IMPL "corpus/decisions.awawa::3.11.4 the floor tarfile's data filter"
 	RATIONALE "brigade/corpus/prepare_tree.py:29-30 at 9bed0a7 keeps two paths, DATA_EXTRACTION ="
 		+ "{\"filter\": \"data\"} if hasattr(tarfile, \"data_filter\") else {} and MEMBER_REFUSAL ="
 		+ "getattr(tarfile, \"FilterError\", ()): tarfile gained its data filter in 3.12,"
@@ -6354,6 +6371,7 @@ TASK B115
 	SOURCE "found in the refinement of B88 on 2026-10-10, after the user asked \"est-ce qu'il y a"
 		+ "d'autres endroits où on a du code propre à une version?\"; the user's ruling \"Brouillon"
 		+ "F0\""
+	DELIVERED_BY 96
 
 TASK B122
 	TITLE "a guard holds every test that prepares something before its first delimiter to open on #"
