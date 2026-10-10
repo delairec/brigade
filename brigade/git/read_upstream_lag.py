@@ -6,7 +6,8 @@ from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 READ_TIMEOUT_S = 10.0
 CURRENT_BRANCH_MARK = "*"
-BRANCH_FORMAT = "--format=%(HEAD) %(objectname:short) %(upstream:short)"
+BRANCH_FORMAT = "--format=%(HEAD)%09%(objectname:short)%09%(upstream:short)"
+FIELD_SEPARATOR = "\t"
 NO_CURRENT_BRANCH = ("", "")
 
 
@@ -25,7 +26,7 @@ def _read(run_process: Callable[[ProcessRequest], ProcessRecord], checkout: Path
 
 def _find_current_branch(branches: str) -> tuple[str, str]:
     for line in branches.splitlines():
-        mark, commit, upstream = line.split(" ")
+        mark, commit, upstream = line.split(FIELD_SEPARATOR)
         if mark == CURRENT_BRANCH_MARK:
             return commit, upstream
     return NO_CURRENT_BRANCH
