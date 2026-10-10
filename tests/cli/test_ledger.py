@@ -958,7 +958,10 @@ class BrigadeLedgerUsageTest(LedgerTestCase):
         rows = [
             (("--since", "7d"), "--since needs --project"),
             (("--wave", "tp/16", "--project", "tidepool"), "not allowed with argument"),
-            (("--project", "tidepool", "--since", "yesterday"), "argument --since"),
+            (
+                ("--project", "tidepool", "--since", "yesterday"),
+                "brigade ledger: error: argument --since: 'yesterday' is neither <n>d nor a day YYYY-MM-DD\n",
+            ),
             (("budgets", "--last", "0"), "argument --last"),
             (("compare",), "the following arguments are required: --before"),
             (("compare", "--before", "2026-13-01"), "argument --before"),
