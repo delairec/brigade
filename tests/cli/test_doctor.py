@@ -834,6 +834,7 @@ GIT_ENVIRONMENT = {
 }
 EVERY_TOOL_BUT_GIT = [AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 CHECKOUT_FALLBACK = "git pull in the checkout"
+LAST_ITEM_BEFORE_THE_CHECKOUT = "instructions"
 
 
 def run_git(directory: Path, *arguments: str) -> None:
@@ -900,10 +901,11 @@ class BrigadeDoctorRunFromACloneTest(DoctorTestCase):
 
     def test_should_report_no_checkout_up_to_date_with_its_upstream_as_last_fetched(self):
         # Act
-        completed = self.run_clone_doctor()
+        completed = self.run_clone_doctor("--json")
 
         # Assert
-        self.assertNotIn("checkout", completed.stdout)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["items"][-1]["name"], LAST_ITEM_BEFORE_THE_CHECKOUT)
 
     def test_should_report_no_checkout_from_the_zipapp_built_in_the_clone(self):
         # Arrange
@@ -912,10 +914,11 @@ class BrigadeDoctorRunFromACloneTest(DoctorTestCase):
         zipapp = self.clone / "dist" / "brigade.pyz"
 
         # Act
-        completed = self.run_doctor_from(zipapp, [str(self.git_directory), *EVERY_TOOL_BUT_GIT])
+        completed = self.run_doctor_from(zipapp, [str(self.git_directory), *EVERY_TOOL_BUT_GIT], "--json")
 
         # Assert
-        self.assertNotIn("checkout", completed.stdout)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["items"][-1]["name"], LAST_ITEM_BEFORE_THE_CHECKOUT)
 
     def test_should_warn_that_the_checkout_is_unreadable_when_its_upstream_is_no_longer_fetched(self):
         # Arrange
