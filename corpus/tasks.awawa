@@ -4836,7 +4836,7 @@ TASK B89
 TASK B90
 	TITLE "The review slot verifies and reviews a pull request, and a slot remediate answers its"
 		+ "review"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "roles"
 	ROLE ada
@@ -4845,19 +4845,26 @@ TASK B90
 		+ "command or the line that proves it, then the defects, untested paths and departures from"
 		+ "the conventions the project states, graded, each with its file, line and reason;"
 		+ "capabilities read and shell; brigade/roles/data/verifier.md is removed"
+		IMPL "brigade/roles/data/reviewer.md::work: verifies and reviews a pull request it did not"
+			+ "write"
 	SPEC "brigade/roles/data/remediator.md, named remediator, slot remediate, reasoning standard,"
 		+ "capabilities read, write and shell, answers the review of a pull request it did not"
 		+ "review: each thread fixed or challenged with its reason, the branch put on its base and"
 		+ "pushed; it returns the threads answered, the commits pushed and the state of the checks"
+		IMPL "brigade/roles/data/remediator.md::slot: remediate"
 	SPEC "the slots are plan, build, review, remediate, rebase, report, triage, rules and explore"
 		+ "in brigade/system/read_configuration.py, the comments of"
 		+ "brigade/corpus/data/config.toml.tpl, the example of brigade/corpus/data/schema.awawa.tpl"
 		+ "and the Roles section of the README; brigade roles list shows these nine and no verify,"
 		+ "and brigade roles lint stays green"
+		IMPL "brigade/system/read_configuration.py::SLOTS = (\"plan\", \"build\", \"review\","
+			+ "\"remediate\","
+		IMPL "tests/cli/test_roles.py::\"remediate  remediator  built-in  opus\","
 	SPEC "tests/cli/test_run.py writes a procedure file declaring the capabilities read, write and"
 		+ "shell and runs it on the fake client: with --slot remediate, run.json holds the slot"
 		+ "remediate, the role remediator, the role source built-in and the capabilities read,"
 		+ "write and shell; with --slot review, the capabilities read and shell"
+		IMPL "tests/cli/test_run.py::class BrigadeRunOfTheReviewAndRemediateSlotsTest(RunTestCase):"
 	RATIONALE "found while launching the review round of pull request #56 on 2026-10-07, run"
 		+ "20261007T142949Z-327ab0: the review slot binds the built-in reviewer, read-only, whose"
 		+ "work reads \"reviews a pull request\", so the procedure awawa-pr-review-round, which"
@@ -4882,6 +4889,7 @@ TASK B90
 		REF @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
 	SOURCE "item 12 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+	DELIVERED_BY 99
 
 TASK B91
 	TITLE "A message handed to a running run, read by its next segment or by its relaunch"
