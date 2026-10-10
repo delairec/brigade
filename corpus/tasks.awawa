@@ -4622,7 +4622,7 @@ TASK B86
 
 TASK B87
 	TITLE "brigade doctor warns when the checkout it runs from is behind its upstream"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "install"
 	ROLE ada
@@ -4633,14 +4633,30 @@ TASK B87
 		+ "fallback reading \"git pull in the checkout\"; a checkout up to date or only ahead, a"
 		+ "detached one, a clone without an upstream and a brigade run from dist/brigade.pyz print"
 		+ "no such item, and the check never fetches"
+		IMPL "brigade/commands/doctor.py::def _check_checkout(runtime: Runtime) -> list[dict]:"
+		IMPL "brigade/commands/doctor.py::def _locate_checkout() -> Path | None:"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_warn_that_the_checkout_is_behind_its_upstream(self):"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_report_no_checkout_up_to_date_with_its_upstream_as_last_fetched(self):"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_report_no_checkout_from_the_zipapp_built_in_the_clone(self):"
+		IMPL "tests/unit/git/test_read_upstream_lag.py::class ReadUpstreamLagWithNothingBehindTest"
 	SPEC "a git read of the checkout that fails (git absent or failing, an upstream configured but"
 		+ "no longer fetched) reports the checkout item in the warning state, the detail naming the"
 		+ "checkout and the error, never a finding"
+		IMPL "brigade/commands/doctor.py::f\"{checkout}: {error}\""
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_warn_that_the_checkout_is_unreadable_when_its_upstream_is_no_longer_fetched(self):"
+		IMPL "tests/cli/test_doctor.py::class BrigadeDoctorWithoutGitTest"
 	SPEC "git is read through the runner and the git gateway, as every subprocess is;"
 		+ "tests/cli/test_doctor.py proves the warning on a temporary clone one commit behind a"
 		+ "bare upstream, its absence on one up to date, and the unreadable warning; the fake git"
 		+ "of the existing doctor tests answers the new reads as a checkout up to date, so their"
 		+ "expected reports stay as they are"
+		IMPL "brigade/git/read_upstream_lag.py::def read_upstream_lag("
+		IMPL "tests/cli/fixtures/executables/git-2.47.3/git::for-each-ref"
+		IMPL "tests/cli/test_doctor.py::class BrigadeDoctorRunFromACloneTest"
 	AFTER @TASK.B82
 	RATIONALE "on 2026-10-07 ~/.local/bin/brigade was a link to bin/brigade of the main checkout of"
 		+ "the clone, which stood at 61100fd while origin/main stood at 3deeea2 with the fix of"
@@ -4665,6 +4681,7 @@ TASK B87
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
 	SOURCE "the user's rulings of 2026-10-10 at the refinement of this task: a failing git read,"
 		+ "\"Avertissement « illisible »\"; the line, \"Remède en fallback\""
+	DELIVERED_BY 90
 
 TASK B88
 	TITLE "brigade run reads its key=value arguments through one path under every supported Python"
