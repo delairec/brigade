@@ -9,7 +9,7 @@ The entry point exists with twelve commands so far, `brigade --version`, `brigad
 
 ## Install
 
-brigade needs Python 3.11 or later and nothing outside its standard library.
+brigade needs Python 3.11.4 or later and nothing outside its standard library.
 
 From a clone, link the entry point into a directory on your `PATH`; brigade then runs from any working directory:
 
@@ -27,9 +27,9 @@ python3 build.py
 python3 dist/brigade.pyz --version
 ```
 
-Below Python 3.11, brigade exits non-zero and names the version it needs and the version it found.
+Below Python 3.11.4, brigade exits non-zero and names the version it needs and the version it found.
 
-`brigade doctor` (or `brigade doctor --json`) tells whether brigade can run on the machine: Python 3.11 or later, git,
+`brigade doctor` (or `brigade doctor --json`) tells whether brigade can run on the machine: Python 3.11.4 or later, git,
 awawa 2.7 or later and the probe of the client adapter `config.toml` names are checked, a missing one is a finding and
 the exit code is 1; a user systemd instance, gh
 and the account it is logged in as, awawa-web and the instructions corpus `config.toml` names, `awawa lint --strict`

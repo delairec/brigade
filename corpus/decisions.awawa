@@ -25,15 +25,15 @@ DECISION TheToolIsNamedBrigade
 	SOURCE "the Artifact Brigade Blueprint, plan section 3"
 
 DECISION PythonStandardLibraryOnly
-	TITLE "brigade is Python 3.11 or later, standard library only, with POSIX sh only in the"
+	TITLE "brigade is Python 3.11.4 or later, standard library only, with POSIX sh only in the"
 		+ "optional scheduler files; no third-party dependency"
 	STATUS active
 	REJECTED "a Bun or TypeScript CLI: ties a machine-wide tool to a JavaScript toolchain the"
 		+ "instructions corpus does not have"
 	REJECTED "a TUI framework: a new dependency for views the web dashboard renders"
 	RATIONALE "the hooks, the unattended runner and the user's local context page are already"
-		+ "Python and sh; 3.11 is the floor tomllib needs and nothing in the plan needs a later"
-		+ "feature"
+		+ "Python and sh; 3.11 is the floor tomllib needs, 3.11.4 the floor tarfile's data filter"
+		+ "needs, backported there by PEP 706, and nothing in the plan needs a later feature"
 	SOURCE "the Artifact Brigade Blueprint, plan section 15 and 16"
 
 DECISION ADeterministicTickReplacesTheCoordinatorAgent
@@ -221,11 +221,11 @@ DECISION RolesAreSlotsBoundToRoleFiles
 		REF @TASK.B90
 
 DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
-	TITLE "brigade installs on any Linux from one zipapp or a clone; Python 3.11 or later, git,"
+	TITLE "brigade installs on any Linux from one zipapp or a clone; Python 3.11.4 or later, git,"
 		+ "awawa and one adapted AI client are the prerequisites; the scheduler, the forge account,"
 		+ "the instructions corpus and the IDE tools are optional"
 	STATUS active
-	DESC "brigade doctor checks Python 3.11 or later, git, awawa 2.7 or later and the configured"
+	DESC "brigade doctor checks Python 3.11.4 or later, git, awawa 2.7 or later and the configured"
 		+ "client adapter's probe, and reports each optional item with its fallback as a warning,"
 		+ "never a finding"
 	DESC "optional with its fallback: a user systemd instance, else a cron line or brigade tick"
@@ -2066,3 +2066,20 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 		+ "seule\": the steps to the first edit are partial only when a segment before the first"
 		+ "edit has no main_steps measured"
 		REF @TASK.B86
+
+DECISION AnImplementedTaskSpecALaterTaskMakesFalseIsRewrittenInPlaceNamingThatTask
+	TITLE "a SPEC of an implemented task that a later task makes false is rewritten in place by"
+		+ "that later task, naming it, and its IMPL anchored on the code that now holds"
+	STATUS active
+	REJECTED "archiving the earlier task: its other SPEC lines still hold and would lose their"
+		+ "anchors"
+	REJECTED "deleting the SPEC line: the corpus would lose what the earlier task delivered and"
+		+ "which task changed it"
+	REJECTED "leaving the IMPL on the removed code: awawa lint --strict fails on an anchor that no"
+		+ "longer occurs"
+	RATIONALE "@TASK.B115 raised the floor to Python 3.11.4 and removed the second extraction path"
+		+ "@TASK.B68 had kept for 3.11.0 to 3.11.3, making false a SPEC of B68 and the floor named"
+		+ "by a SPEC of @TASK.B01"
+		REF @TASK.B115
+		REF @TASK.B68
+		REF @TASK.B01

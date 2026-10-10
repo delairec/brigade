@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-PYTHON_FLOOR = (3, 11)
+PYTHON_FLOOR = (3, 11, 4)
 
 
 def refuse_python_below_floor(version: tuple[int, ...]) -> None:

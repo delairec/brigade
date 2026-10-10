@@ -34,7 +34,7 @@ awawa fmt --check . && awawa lint --strict .                              # the 
 
 ## Stack
 
-Python 3.11 or later, standard library only; tests with `unittest`.
+Python 3.11.4 or later, standard library only; tests with `unittest`.
 
 ## Branches and GitHub
 

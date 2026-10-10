@@ -98,7 +98,7 @@ class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         python_detail = document["items"][PYTHON_ENTRY]["detail"]
-        self.assertRegex(python_detail, r"^3\.\d+\.\d+ \(floor 3\.11\)$")
+        self.assertRegex(python_detail, r"^3\.\d+\.\d+ \(floor 3\.11\.4\)$")
         self.assertEqual(
             document,
             {
@@ -175,7 +175,7 @@ class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         report_lines = completed.stdout.splitlines()
-        self.assertRegex(report_lines[1], r"^ok       python       3\.\d+\.\d+ \(floor 3\.11\)$")
+        self.assertRegex(report_lines[1], r"^ok       python       3\.\d+\.\d+ \(floor 3\.11\.4\)$")
         self.assertEqual(
             report_lines,
             [
