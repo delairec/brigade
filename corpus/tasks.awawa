@@ -6175,3 +6175,25 @@ TASK B115
 	SOURCE "found in the refinement of B88 on 2026-10-10, after the user asked \"est-ce qu'il y a"
 		+ "d'autres endroits où on a du code propre à une version?\"; the user's ruling \"Brouillon"
 		+ "F0\""
+
+TASK B122
+	TITLE "a guard holds every test that prepares something before its first delimiter to open on #"
+		+ "Arrange"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "tests"
+	ROLE ada
+	DESC "to be refined with the user: a guard of tests/guards/ flags a test method whose first"
+		+ "statement stands before any # Arrange or # Act line, and the tests it flags are brought"
+		+ "to it in the same pull request"
+	SPEC "a guard of tests/guards/, wired into python3 -m unittest, fails naming the file and the"
+		+ "line of every test method that prepares something before its first # Arrange or # Act"
+		+ "delimiter"
+	SPEC "no test of tests/ is flagged by that guard"
+	RATIONALE "the review of #92 found the rows of a new test of tests/cli/test_run.py standing"
+		+ "above its first delimiter, against the rule test_aaa_structure of the instructions"
+		+ "corpus; the five such tests of the two files #92 touches were fixed there, and a scan of"
+		+ "the test methods whose first line is neither # Arrange nor # Act counts 86 more in 47"
+		+ "files at 15b8c71, no test of the repository putting # Arrange above a table of rows"
+		REF @TASK.B88
+	SOURCE "found in the first review round of #92 on 2026-10-10"
