@@ -152,7 +152,7 @@ def _classify_error(result: dict, message):
 
 
 def _read_declared_outcome(message) -> str:
-    last_line = (message or "").rstrip().rpartition("\n")[2].strip()
+    last_line = (message or "").rstrip().rpartition("\n")[2].lstrip()
     return END_DECLARATIONS.get(last_line, UNDECLARED)
 
 

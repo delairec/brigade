@@ -635,6 +635,8 @@ class ClaudeCodeEndDeclarationTest(unittest.TestCase):
             ("done", "Pull request #96 is open.\\nbrigade-end: done", "done"),
             ("handed over", "Progress written.\\nbrigade-end: handed_over", "handed_over"),
             ("blocked", "The ruling is the user's.\\nbrigade-end: blocked", "blocked"),
+            ("a line break after the declaration", "Pull request #96 is open.\\nbrigade-end: done\\n", "done"),
+            ("an indented declaration", "Pull request #96 is open.\\n  brigade-end: done", "done"),
             ("another last line", "Pull request #96 is open.", "undeclared"),
             ("another value", "Pull request #96 is open.\\nbrigade-end: finished", "undeclared"),
             ("a quotation above the last line", "The brief asks for brigade-end: done.\\nI stop here.", "undeclared"),
