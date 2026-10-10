@@ -180,7 +180,7 @@ DECISION RolesAreSlotsBoundToRoleFiles
 		+ "matter and a system prompt body; a slot resolves to a role in a fixed order ending on"
 		+ "brigade's built-in roles"
 	STATUS active
-	DESC "the slots are plan, build, verify, review, rebase, report, triage, rules and explore"
+	DESC "the slots are plan, build, review, remediate, rebase, report, triage, rules and explore"
 	DESC "a role file declares name, slot, reasoning (deepest, deep, standard, light), capabilities"
 		+ "(read, write, shell, net), budget and returns; its body is the whole system prompt of"
 		+ "the run"
@@ -192,7 +192,7 @@ DECISION RolesAreSlotsBoundToRoleFiles
 	DESC "the reasoning level maps to a model and an effort in the client adapter's table,"
 		+ "overridable in the machine config; a role file never names a model"
 	DESC "brigade ships a built-in role for every slot, named after its work: planner, builder,"
-		+ "verifier, reviewer, rebaser, reporter, triager, rulewriter and explorer"
+		+ "reviewer, remediator, rebaser, reporter, triager, rulewriter and explorer"
 	DESC "an AGENT entity declares no slot: it takes the slot a table of config.toml written by its"
 		+ "user binds it to; brigade ships no binding and no name of its author's agents"
 	REJECTED "roles living only in the instructions corpus: presupposes that corpus on every"
@@ -210,6 +210,15 @@ DECISION RolesAreSlotsBoundToRoleFiles
 	SOURCE "pull request #3 of the brigade repository"
 	SOURCE "DESC 7 added on the user's ruling of 2026-10-06 in the refinement of B43"
 	SOURCE "DESC 6 and the last REJECTED: the review of pull request #20 of the brigade repository"
+	REJECTED "a verify slot apart from review: the verdict on the acceptance criteria and the"
+		+ "search for defects read the same pull request, one pass answers both"
+	REJECTED "the review round on the build slot: answering a review the run did not write, fixing"
+		+ "or challenging each thread, is a work of its own, and a slot is named after its work"
+	REJECTED "the built-in reviewer turned into the role answering the review: no built-in role"
+		+ "would search a pull request for defects any more"
+	RATIONALE "the user ruled on 2026-10-10, in the refinement of @TASK.B90: verify merges into"
+		+ "review, and remediate answers the review"
+		REF @TASK.B90
 
 DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
 	TITLE "brigade installs on any Linux from one zipapp or a clone; Python 3.11 or later, git,"
@@ -1632,8 +1641,8 @@ DECISION ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 		+ "logins before a wave"
 	DESC "every write to the forge records in its ledger event the login it ran as"
 	DESC "POLICY.REVIEW sets the review mode of a project: verdict, the default, the verdict of the"
-		+ "verify slot recorded in the ledger and the merge into integration needing no GitHub"
-		+ "approval; approval, the verify slot posting a review that approves or requests changes"
+		+ "review slot recorded in the ledger and the merge into integration needing no GitHub"
+		+ "approval; approval, the review slot posting a review that approves or requests changes"
 		+ "under its login, distinct from the login of the build slot, and the merge waiting for"
 		+ "the approval; local, the tasks merged into integration on the machine and one pull"
 		+ "request from integration to main opened once the wave is delivered"
@@ -1642,7 +1651,7 @@ DECISION ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 		+ "the task branch before its merge on the machine"
 		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
 	REJECTED "one forge account for every write, the key forge_account config.toml accepted until"
-		+ "now: GitHub refuses an approval by the author of a pull request, so a verify slot cannot"
+		+ "now: GitHub refuses an approval by the author of a pull request, so a review slot cannot"
 		+ "approve the pull request its build slot opened under the same account"
 	REJECTED "forge_account as the default login and [forge_accounts] overriding a slot: the user"
 		+ "ruled the table alone, one place naming every login"
@@ -1677,8 +1686,12 @@ DECISION EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
 		+ "other end, an end the run did not declare included, has its outcome and its code"
 	DESC "0 done; 1 failed, an error of the client; 2 a usage error; 3 undeclared, a segment ended"
 		+ "without the run's declaration of its end"
-	DESC "10 blocked, the run waits for a ruling; 11 wall_limit; 12 turn_limit"
-	DESC "20 handed_over, the run handed over and no hand-over is left"
+	DESC "10 blocked, the run waits for a ruling; 11 wall_limit; 12 turn_limit; 13 soft_limit, a"
+		+ "segment its client stopped at the soft limit, @TASK.B114"
+		REF @TASK.B114
+	DESC "20 handed_over, the run handed over and no hand-over is left; 21 stopped, the run stopped"
+		+ "by a signal or by brigade runs stop, @TASK.B109"
+		REF @TASK.B109
 	DESC "binds @TASK.B102"
 		REF @TASK.B102
 	REJECTED "a code written only for done, its absence meaning a run still in progress: a run"
@@ -1818,9 +1831,11 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 	DESC "a run.finished line carries the 18 fields describe_finished writes and a signal.recorded"
 		+ "line its 6; the reader refuses a line lacking one, as it refuses any line lacking a"
 		+ "field of its event; wall_limit_s is optional on signal.recorded, written on the signal"
-		+ "wall_limit_reached alone and absent from every other"
+		+ "wall_limit_reached alone and absent from every other; steps is optional on"
+		+ "signal.recorded, written on the signal budget_exceeded alone"
 		REF @TASK.B74
 		REF @TASK.B85
+		REF @TASK.B103
 	DESC "steps_to_first_edit, oversized_output_steps and cost_usd are optional on RunFinished:"
 		+ "absent from the line until a collector or the client reports them, and never written"
 		+ "null"
