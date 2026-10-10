@@ -250,8 +250,10 @@ class BrigadeProcessesUnreadableTrailTest(ProcessesTestCase):
                     (completed.returncode, completed.stderr),
                     (
                         1,
-                        f"brigade processes {subcommand}: line 2 of {self.tick_trail} is not a process record:"
-                        " not a JSON document\n",
+                        (
+                            f"brigade processes {subcommand}: line 2 of {self.tick_trail} is not a process record:"
+                            " not a JSON document\n"
+                        ),
                     ),
                 )
 
@@ -276,10 +278,12 @@ class BrigadeProcessesStrayFileTest(ProcessesTestCase):
                     (completed.returncode, completed.stdout),
                     (
                         0,
-                        "kind     id                                 instant               processes  failed\n"
-                        "command  20261010T110000Z-scheduler-status  2026-10-10T11:00:00Z  1          1\n"
-                        "tick     20261009T100000Z                   2026-10-09T10:00:00Z  2          1\n"
-                        "run      20261008T090000Z-a1b2c3            2026-10-08T09:00:00Z  3          2\n",
+                        (
+                            "kind     id                                 instant               processes  failed\n"
+                            "command  20261010T110000Z-scheduler-status  2026-10-10T11:00:00Z  1          1\n"
+                            "tick     20261009T100000Z                   2026-10-09T10:00:00Z  2          1\n"
+                            "run      20261008T090000Z-a1b2c3            2026-10-08T09:00:00Z  3          2\n"
+                        ),
                     ),
                     completed.stderr,
                 )
