@@ -2,6 +2,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ARGUMENT_SEPARATOR = "="
+END_OF_SEGMENT = (
+    "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+    " brigade-end: handed_over when a next segment resumes it from the progress file,"
+    " brigade-end: blocked when it waits for a ruling."
+)
 
 
 @dataclass(frozen=True)
@@ -29,4 +34,5 @@ def compose_brief(parts: BriefParts) -> str:
     if parts.brief is not None:
         sections.append(("Brief", parts.brief))
     sections.append(("Progress file", str(parts.progress_file)))
+    sections.append(("End of segment", END_OF_SEGMENT))
     return "\n".join(_render_section(title, text) for title, text in sections)

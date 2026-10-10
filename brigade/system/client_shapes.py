@@ -85,7 +85,7 @@ CLIENT_ANSWER_SHAPES = {
     "resume-argv": COMMAND_ANSWER,
     "parse-result": {
         "schema_version": SCHEMA_VERSION,
-        "outcome": Field(kinds=(str,), values=("done", "failed")),
+        "outcome": Field(kinds=(str,), values=("done", "failed", "handed_over", "blocked", "undeclared")),
         "steps": OPTIONAL_COUNT,
         "usage": USAGE,
         "session_id": OPTIONAL_TEXT,

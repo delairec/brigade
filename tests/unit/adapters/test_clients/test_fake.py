@@ -77,6 +77,54 @@ class FakeLaunchTest(unittest.TestCase):
         )
 
 
+class FakeLaunchOfASegmentResumedFromItsProgressTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.recordings = Path(self.root.name) / "recordings"
+        self.recordings.mkdir()
+        (self.recordings / "builder.json").write_text("{}")
+        self.progress_file = Path(self.root.name) / "progress.md"
+
+    def tearDown(self):
+        self.root.cleanup()
+
+    def launch(self) -> dict:
+        settings = {"recordings": str(self.recordings)}
+        return answer("launch-argv", {**LAUNCH_REQUEST, "progress_file": str(self.progress_file), "settings": settings})
+
+    def test_should_print_the_resumed_recording_of_the_role_when_the_progress_file_holds_something(self):
+        # Arrange
+        (self.recordings / "builder.resumed.json").write_text("{}")
+        self.progress_file.write_text("step 1 done\n")
+
+        # Act
+        launch = self.launch()
+
+        # Assert
+        self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.resumed.json"])
+
+    def test_should_print_the_recording_of_the_role_on_an_empty_progress_file(self):
+        # Arrange
+        (self.recordings / "builder.resumed.json").write_text("{}")
+        self.progress_file.write_text("")
+
+        # Act
+        launch = self.launch()
+
+        # Assert
+        self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])
+
+    def test_should_print_the_recording_of_the_role_when_it_has_no_resumed_recording(self):
+        # Arrange
+        self.progress_file.write_text("step 1 done\n")
+
+        # Act
+        launch = self.launch()
+
+        # Assert
+        self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])
+
+
 class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
     def test_should_declare_the_features_its_settings_name(self):
         # Arrange
