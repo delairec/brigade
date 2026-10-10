@@ -36,7 +36,7 @@ def create_run(segments: tuple[RunFinished, ...]) -> FinishedRun:
 
 
 class FinishedRunTest(unittest.TestCase):
-    def test_should_take_the_outcome_of_its_last_segment(self):
+    def test_should_be_ended_by_its_last_segment(self):
         # Arrange
         cut_segment = create_segment(outcome="wall_limit")
         resumed_segment = create_segment(segment=2, outcome="done")

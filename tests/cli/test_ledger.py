@@ -232,10 +232,8 @@ class BrigadeLedgerOverviewTest(LedgerTestCase):
         completed = self.run_ledger()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (0, f"brigade ledger: skipped {self.october}:3: not JSON\n"),
-        )
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, f"brigade ledger: skipped {self.october}:3: not JSON\n")
 
     def test_should_print_the_overview_as_text(self):
         # Act
@@ -289,10 +287,8 @@ class BrigadeLedgerOverviewWithNoLedgerTest(LedgerTestCase):
         completed = self.run_ledger()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout.splitlines()),
-            (0, ["events: 0", "files read: 0", "lines skipped: 0"]),
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.splitlines(), ["events: 0", "files read: 0", "lines skipped: 0"])
 
 
 class BrigadeLedgerWaveTest(LedgerTestCase):
@@ -395,9 +391,9 @@ class BrigadeLedgerWaveStillPausedTest(LedgerTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertEqual(
-            (document["pauses"], document["paused_ms"]),
-            ([{"paused_at": "2026-09-30T22:15:00Z", "resumed_at": None, "duration_ms": None}], 0),
+            document["pauses"], [{"paused_at": "2026-09-30T22:15:00Z", "resumed_at": None, "duration_ms": None}]
         )
+        self.assertEqual(document["paused_ms"], 0)
 
     def test_should_print_the_open_pause_as_text(self):
         # Arrange
@@ -442,12 +438,10 @@ class BrigadeLedgerWaveWithARepeatedPauseTest(LedgerTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertEqual(
-            (document["pauses"], document["paused_ms"]),
-            (
-                [{"paused_at": "2026-10-01T09:00:00Z", "resumed_at": "2026-10-01T10:00:00Z", "duration_ms": 3600000}],
-                3600000,
-            ),
+            document["pauses"],
+            [{"paused_at": "2026-10-01T09:00:00Z", "resumed_at": "2026-10-01T10:00:00Z", "duration_ms": 3600000}],
         )
+        self.assertEqual(document["paused_ms"], 3600000)
 
     def test_should_print_none_for_what_the_wave_did_not_do(self):
         # Act
@@ -479,10 +473,9 @@ class BrigadeLedgerWaveUnknownTest(LedgerTestCase):
         completed = self.run_ledger("--wave", "tp/99", "--json")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade ledger: no event names the wave tp/99\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, "brigade ledger: no event names the wave tp/99\n")
 
 
 class BrigadeLedgerProjectTest(LedgerTestCase):
@@ -521,7 +514,8 @@ class BrigadeLedgerProjectTest(LedgerTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["since"], document["waves_started"]), ("2026-10-01T00:00:00Z", 1))
+        self.assertEqual(document["since"], "2026-10-01T00:00:00Z")
+        self.assertEqual(document["waves_started"], 1)
 
     def test_should_print_the_counts_as_text(self):
         # Act
@@ -548,20 +542,18 @@ class BrigadeLedgerProjectWithNoEventTest(LedgerTestCase):
         completed = self.run_ledger("--project", "tidepool")
 
         # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            (completed.returncode, completed.stdout.splitlines()),
-            (
-                0,
-                [
-                    "project tidepool",
-                    "waves started: 0",
-                    "orders done: 0",
-                    "pull requests merged: 0",
-                    "signals recorded: 0",
-                    "patterns ratified: 0",
-                    "constraints delivered: 0",
-                ],
-            ),
+            completed.stdout.splitlines(),
+            [
+                "project tidepool",
+                "waves started: 0",
+                "orders done: 0",
+                "pull requests merged: 0",
+                "signals recorded: 0",
+                "patterns ratified: 0",
+                "constraints delivered: 0",
+            ],
         )
 
 
@@ -671,10 +663,8 @@ class BrigadeLedgerBudgetsWithNoMeasuredRunTest(LedgerTestCase):
         completed = self.run_ledger("budgets")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout.splitlines()),
-            (0, ["steps over the last 20 runs finished of each procedure:"]),
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.splitlines(), ["steps over the last 20 runs finished of each procedure:"])
 
 
 class BrigadeLedgerCompareTest(LedgerTestCase):
@@ -768,7 +758,9 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
                 completed = self.run_ledger("compare", "--before", before, "--json")
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_message))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
+                self.assertEqual(completed.stderr, expected_message)
 
 
 class BrigadeLedgerRunOfTwoSegmentsTest(LedgerTestCase):
@@ -783,13 +775,8 @@ class BrigadeLedgerRunOfTwoSegmentsTest(LedgerTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual(
-            (document["runs"], document["segments"]),
-            (
-                {"outcomes": {"done": 2}, "error_classes": {}},
-                {"outcomes": {"done": 2, "wall_limit": 1}, "error_classes": {}},
-            ),
-        )
+        self.assertEqual(document["runs"], {"outcomes": {"done": 2}, "error_classes": {}})
+        self.assertEqual(document["segments"], {"outcomes": {"done": 2, "wall_limit": 1}, "error_classes": {}})
 
     def test_should_print_the_runs_and_the_segments_finished_as_text(self):
         # Act
@@ -906,7 +893,7 @@ class BrigadeLedgerRunOfTwoSegmentsTest(LedgerTestCase):
             ],
         )
 
-    def test_should_summarize_the_steps_of_the_wave_by_run_and_keep_one_hand_over_per_segment(self):
+    def test_should_summarize_the_steps_of_the_wave_by_run_and_by_segment(self):
         # Act
         completed = self.run_ledger("--wave", "tp/20", "--json")
 
@@ -914,25 +901,31 @@ class BrigadeLedgerRunOfTwoSegmentsTest(LedgerTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertEqual(
-            (document["steps"], document["hand_overs"]),
-            (
-                {
-                    "by_slot": {
-                        "build": {
-                            "runs": {"measured": 2, "partial": 1, "unmeasured": 0, "p50": 20, "p90": 30},
-                            "segments": {"measured": 2, "unmeasured": 1, "p50": 20, "p90": 30},
-                        }
-                    },
-                    "by_role": {
-                        "builder": {
-                            "runs": {"measured": 2, "partial": 1, "unmeasured": 0, "p50": 20, "p90": 30},
-                            "segments": {"measured": 2, "unmeasured": 1, "p50": 20, "p90": 30},
-                        }
-                    },
+            document["steps"],
+            {
+                "by_slot": {
+                    "build": {
+                        "runs": {"measured": 2, "partial": 1, "unmeasured": 0, "p50": 20, "p90": 30},
+                        "segments": {"measured": 2, "unmeasured": 1, "p50": 20, "p90": 30},
+                    }
                 },
-                [{"task": "TP160", "role": "builder", "slot": "build", "segment": 2}],
-            ),
+                "by_role": {
+                    "builder": {
+                        "runs": {"measured": 2, "partial": 1, "unmeasured": 0, "p50": 20, "p90": 30},
+                        "segments": {"measured": 2, "unmeasured": 1, "p50": 20, "p90": 30},
+                    }
+                },
+            },
         )
+
+    def test_should_keep_one_hand_over_per_segment_of_the_wave(self):
+        # Act
+        completed = self.run_ledger("--wave", "tp/20", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(document["hand_overs"], [{"task": "TP160", "role": "builder", "slot": "build", "segment": 2}])
 
     def test_should_print_the_steps_of_the_wave_by_run_and_by_segment_as_text(self):
         # Act
@@ -976,5 +969,6 @@ class BrigadeLedgerUsageTest(LedgerTestCase):
                 completed = self.run_ledger(*arguments)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout), (2, ""))
+                self.assertEqual(completed.returncode, 2)
+                self.assertEqual(completed.stdout, "")
                 self.assertIn(expected_message, completed.stderr)
