@@ -2968,12 +2968,13 @@ TASK B70
 		+ "= subprocess): coverage run -m unittest, coverage combine, coverage report -m, with"
 		+ "awawa on PATH, give TOTAL 3679 statements, 94 missed, 594 branches, 53 partial, 97%; the"
 		+ "coverage job of the CI reports 89% at the same commit because 64 tests skip without"
-		+ "awawa, as @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere binds; the"
+		+ "awawa, as the earlier form of"
+		+ "@DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi bound; the"
 		+ "local figure is the one this task brings to 100%; measured again at c7cdec5, the head of"
 		+ "main after @TASK.B69, the local run gives 3688 statements, 102 missed, 594 branches, 55"
 		+ "partial, 96%, and the CI run 37542826149 gives 89%, 318 missed"
 		REF @TASK.B66
-		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
+		REF @DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
 		REF @TASK.B69
 	RATIONALE "the largest gaps of the report at 2dcbc20: brigade/system/spawn_process.py at 70%"
 		+ "(lines 22-30 _feed, 36, 61-62 ToolNotFound, 64 the stdin thread: no tested caller passes"
@@ -4997,66 +4998,79 @@ TASK B94
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
 
 TASK B95
-	TITLE "awawa in the CI from the asset of a private release, pinned to one version, and a corpus"
-		+ "job running awawa fmt --check and awawa lint --strict"
-	STATUS draft
+	TITLE "the tests that need awawa replay recorded outputs of the real awawa where awawa is not"
+		+ "on PATH, so that no test skips in the CI for want of it"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
-	COMPONENT "ci"
+	COMPONENT "tests"
 	ROLE ada
-	DESC "to be discussed apart with the user, 2026-10-10: whether the CI installs awawa at all,"
-		+ "awawa being a tool the user does not own; no release of awawa exists in any repository"
-		+ "of the user, and the GITHUB_TOKEN of a workflow reads the releases of its own repository"
-		+ "alone"
-	SPEC "one step of .github/workflows/ci.yml, run by every job that needs awawa, downloads the"
-		+ "awawa binary from the asset of a release of a private repository with the token the"
-		+ "workflow already holds, checks it against the version and the checksum pinned in the"
-		+ "workflow, puts it on PATH and prints awawa --version; the step fails on a version or a"
-		+ "checksum that differs"
-	SPEC "a corpus job runs awawa fmt --check . and awawa lint --strict . on every pull request and"
-		+ "every push to main, and fails on a would-change or a lint error"
-	SPEC "the test jobs of the matrix and the coverage job skip no test for want of awawa: the log"
-		+ "of each reads OK without skipped=, and a test that needs awawa still skips on a machine"
-		+ "without it"
-	SPEC "the README names the private release the CI reads and the way its asset is renewed when"
-		+ "the pinned awawa is bumped"
+	SPEC "a fake awawa answers each call a test makes with the stdout, the stderr, the exit code"
+		+ "and the files rewritten that the real awawa produced for the same arguments on the same"
+		+ "input files, recorded under tests/ from awawa 2.7.0, the version each recording names; a"
+		+ "call with no recording fails the test, naming its arguments"
+	SPEC "every test that needs awawa runs against the real awawa when shutil.which(\"awawa\")"
+		+ "finds it and against the fake otherwise; no unittest.skipUnless(shutil.which(\"awawa\"))"
+		+ "remains under tests/"
+	SPEC "with awawa on PATH, a test runs every recording against the real binary and fails on a"
+		+ "difference, naming the recording, the version it names and the version awawa --version"
+		+ "prints"
+	SPEC "the logs of the test jobs of the matrix and of the coverage job of"
+		+ ".github/workflows/ci.yml show no test skipped for want of awawa, and ci.yml installs no"
+		+ "awawa and runs no awawa command"
+	SPEC "the Develop section of the README says that the tests run on the recordings where awawa"
+		+ "is not on PATH, and how a recording is made or renewed from the real binary"
 	SPEC "nothing under brigade/ changes: awawa stays a prerequisite checked by brigade doctor,"
 		+ "never shipped in dist/brigade.pyz"
 	RATIONALE "found in the review of pull request #56: every CI job skipped 70 tests, OK"
 		+ "(skipped=70) on main 3deeea2 and on #56, and no job ran awawa fmt --check or awawa lint"
-		+ "--strict, so #52 merged with two L016 that broke lint --strict on main; the ruling of"
-		+ "2026-10-06 that kept awawa out of the CI is replaced in place by"
-		+ "@DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere, which this task"
-		+ "binds; the repository that holds the private release is the refinement's"
-		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
-	RATIONALE "the asset is downloaded, never built: @DECISION.AwawaIsWrappedAsItIs; the pin and"
-		+ "the checksum follow the pinned tools of"
-		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade, though awawa, a"
-		+ "prerequisite of brigade, is not one of them"
+		+ "--strict, so #52 merged with two L016 that broke lint --strict on main; the user ruled"
+		+ "on 2026-10-10 that the tests replay recorded outputs and that the corpus job is dropped,"
+		+ "which @DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi records"
+		REF @DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
+	RATIONALE "the private release of the earlier form had no ground: no release of awawa exists in"
+		+ "any repository of the user (gh release list -R delairec/brigade printed nothing,"
+		+ "2026-10-10), and the GITHUB_TOKEN of a workflow reads the releases of its own repository"
+		+ "alone"
+	RATIONALE "replaying recordings is the way the client fake already works,"
+		+ "tests/cli/fixtures/recordings/ read by the fake adapter, and the integration tests of"
+		+ "tests/integration/corpus already inject the function that runs the process,"
+		+ "read_entity(run_process_without_trail, ...); the comparison with the real binary keeps"
+		+ "what those tests prove, that brigade reads the output awawa really prints, and a"
+		+ "recording carries the file awawa fmt rewrites, by"
+		+ "@DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote"
+		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
+	RATIONALE "the tests that need awawa sat at 2026-10-10 in nine skipUnless of tests/cli"
+		+ "(test_doctor, test_run, test_corpus, test_project, test_roles, test_init) and"
+		+ "tests/integration/corpus (test_read_entity, test_read_entity_package,"
+		+ "test_read_entities); brigade calls awawa context, fmt, lint, show and status"
+	RATIONALE "awawa is wrapped as it is, by @DECISION.AwawaIsWrappedAsItIs: the fake stands in for"
+		+ "the binary in the tests alone"
 		REF @DECISION.AwawaIsWrappedAsItIs
-		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
-	SOURCE "item 8 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
-		+ "the user's words of 2026-10-07, \"A moins que ça ne coute rien d'avoir une copie d'awawa"
-		+ "embarquée ... Si on peut l'avoir en privé\", and the answer chosen, \"Copie privée"
-		+ "(licence OK)\""
+	SOURCE "item 8 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56"
+	SOURCE "the user's words of 2026-10-10 at the refinement of B95, \"On pourrait pas faire un"
+		+ "fake ?\", then \"pourquoi on pourrait pas utiliser le dake dans les tests d'inté? le job"
+		+ "corpus c'est pas très grave de ne pas le faire\", and the answer chosen, the recordings"
+		+ "compared locally with the real binary"
 
 TASK B96
-	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, with awawa on its PATH,"
-		+ "fails below the figure of B70"
+	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, its tests that need"
+		+ "awawa replaying the recordings of B95, fails below the figure of B70"
 	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "ci"
 	ROLE ada
-	SPEC ".coveragerc sets fail_under = 100 and the coverage job of the CI passes at that threshold"
-		+ "with awawa on PATH; the pull request body quotes the TOTAL line of the job next to the"
-		+ "one the same commands print locally"
+	SPEC ".coveragerc sets fail_under = 100 and the coverage job of the CI passes at that"
+		+ "threshold, its tests that need awawa run on the recordings of B95; the pull request body"
+		+ "quotes the TOTAL line of the job next to the one the same commands print locally with"
+		+ "awawa on PATH"
 	AFTER @TASK.B95
 	RATIONALE "found in the review of pull request #56: .coveragerc sets fail_under = 93, the"
 		+ "figure @TASK.B70 read in a CI without awawa, and the coverage job printed 94 % on #56,"
 		+ "job 112779485130; the 100 % of @TASK.B70 and of SPEC 7 of @TASK.B82 held only on a"
 		+ "machine with awawa on PATH; DESC 6 of"
 		+ "@DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade now names this"
-		+ "task as the one that raises the threshold once @TASK.B95 puts awawa on the CI's PATH;"
-		+ "SPEC 6 and 7 of @TASK.B70, implemented, stay the record of its delivery"
+		+ "task as the one that raises the threshold once @TASK.B95 runs the tests that need awawa"
+		+ "in the CI; SPEC 6 and 7 of @TASK.B70, implemented, stay the record of its delivery"
 		REF @TASK.B70
 		REF @TASK.B82
 		REF @DECISION.TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
@@ -5067,29 +5081,48 @@ TASK B96
 	SOURCE "item 9 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
 		+ "the user's answer of 2026-10-07, \"Copie privée (licence OK)\""
 	SOURCE "the user's ruling of 2026-10-09 in the refinement of B80, \"Aucun chiffre\""
+	SOURCE "SPEC 1 and the TITLE amended on the user's ruling of 2026-10-10 at the refinement of"
+		+ "@TASK.B95: the CI installs no awawa, the tests replay recordings"
+		REF @TASK.B95
 
 TASK B97
-	TITLE "brigade reads the subprocess trails: the records of a run, a tick or a command returned"
-		+ "as a document, the failed ones alone on request"
-	STATUS draft
+	TITLE "brigade processes returns the subprocesses a run, a tick or a command started, the"
+		+ "failed ones alone on request"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
-	DESC "to be discussed apart with the user, 2026-10-10: whether brigade reads the trails at all"
-		+ "and in which command; brigade runs show <run> exists since @TASK.B79, and nothing reads"
-		+ "runs/<id>/processes.jsonl, ticks/ or commands/ today"
-		REF @TASK.B79
-	SPEC "a brigade command returns the records of the trail of a run, a tick or a command as one"
-		+ "document, and with a filter the records whose outcome is not exited with code 0 alone,"
-		+ "so that no reader searches a trail file itself"
+	SPEC "brigade processes list returns one entry per trail held, newest first: the run, the tick"
+		+ "or the command it belongs to, its id, its instant, its count of records and its count of"
+		+ "records whose outcome is not exited with code 0"
+	SPEC "brigade processes show <id> returns the records of the trail of that run, tick or command"
+		+ "as one document, each record as written, <id> being a run id or the id brigade processes"
+		+ "list prints for a tick or a command; --failed keeps the records whose outcome is not"
+		+ "exited with code 0; an id no trail holds fails, naming it"
+	SPEC "the text rendering of show prints one line per record, its outcome, its exit code or its"
+		+ "duration, and its argv joined by shlex.join; --json prints the document"
+	SPEC "tests/cli prove, in a temporary state directory, list over a run, a tick and a command,"
+		+ "show with and without --failed, and an id no trail holds"
 	AFTER @TASK.B72
 	RATIONALE "by @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads a trail is read"
 		+ "through a brigade command, never searched with grep, sed or awk; @TASK.B72 writes the"
-		+ "trails, this task reads them"
+		+ "trails, this task reads them; at 2026-10-10 brigade/system/trail_writer.py,"
+		+ "trail_locations.py and remove_expired_trails.py write and expire them and no module"
+		+ "reads them, and the state directory of the reference machine held 448 command trails"
 		REF @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 		REF @TASK.B72
+	RATIONALE "a record carries argv, cwd, exit, duration_ms, outcome and, for a spawned run, pid,"
+		+ "and no stderr: the command answers what failed and how, not why"
+	RATIONALE "the user ruled the name processes, the word trail saying nothing to a reader; the"
+		+ "key trail_days of config.toml and the files keep their names; a flag of brigade doctor"
+		+ "was set aside, as @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads"
+		+ "records"
+		REF @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 	SOURCE "the user's ruling of 2026-10-07 at the refinement of B72: the reader of the trails is a"
 		+ "draft of its own in F0, after B72"
+	SOURCE "the user's words of 2026-10-10 at the refinement of B97, \"je suis ok pour une commande"
+		+ "mais je n'aime pas le nom \"trails\", ce n'est pas assez parlant. Peut être que ça"
+		+ "rejoint brigade doctor, en passant un flag ?\", and the answer chosen, brigade processes"
 
 TASK B98
 	TITLE "A milestone and its draft tasks plan the preflight: named lists of mechanical checks run"

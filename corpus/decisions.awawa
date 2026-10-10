@@ -1271,47 +1271,52 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
 		REF @TASK.B79
 
-DECISION TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
-	TITLE "the CI installs awawa from the asset of a private release, pinned to one version, so"
-		+ "that no test that needs awawa skips there and a corpus job runs fmt --check and lint"
-		+ "--strict; brigade embeds no awawa"
+DECISION TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
+	TITLE "the tests that need awawa replay recorded outputs of the real awawa where it is not on"
+		+ "PATH, compared with the real binary where it is, so that no test skips in the CI; the CI"
+		+ "installs no awawa and runs no corpus job; brigade embeds no awawa"
 	STATUS active
-	DESC "a test that needs awawa skips when awawa is not on PATH, so that the suite still runs on"
-		+ "a machine without it"
-	DESC ".github/workflows/ci.yml downloads the awawa binary, its version pinned, from the asset"
-		+ "of a release of a private repository of the user, with the token the workflow already"
-		+ "holds, before every job that runs the tests or the corpus checks; the repository holding"
-		+ "the release is named by @TASK.B95"
-		REF @TASK.B95
-	DESC "a corpus job runs awawa fmt --check and awawa lint --strict on every pull request and"
-		+ "every push to main"
-	DESC "the tests that need awawa still run locally before a push"
+	DESC "a test that needs awawa runs against the real awawa when it is on PATH, and otherwise"
+		+ "against a fake that replays what the real awawa produced for the same call: stdout,"
+		+ "stderr, exit code and the files it rewrote, each recording naming the awawa version it"
+		+ "was made with; no test skips for want of awawa"
+	DESC "where awawa is on PATH, a test runs every recording against the real binary and fails on"
+		+ "a difference, so that a bump of awawa changing an output fails before a push"
+	DESC "the CI installs no awawa and runs no awawa command: the corpus is checked by the awawa"
+		+ "corpus gate of the pre-commit hook on the machine that commits"
 	DESC "brigade embeds no awawa: awawa stays a prerequisite by"
 		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, wrapped as it is by"
-		+ "@DECISION.AwawaIsWrappedAsItIs"
+		+ "@DECISION.AwawaIsWrappedAsItIs; the fake stands in for it in the tests alone"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 		REF @DECISION.AwawaIsWrappedAsItIs
 	DESC "binds @TASK.B95 and @TASK.B96"
 		REF @TASK.B95
 		REF @TASK.B96
-	REJECTED "the CI without awawa, the ruling of 2026-10-06: pull request #52 merged with two L016"
-		+ "that broke awawa lint --strict on main, and every CI job skipped 70 tests, OK"
-		+ "(skipped=70) on main 3deeea2 and on #56"
+	REJECTED "the CI without awawa, its tests skipped, the ruling of 2026-10-06: pull request #52"
+		+ "merged with two L016 that broke awawa lint --strict on main, and every CI job skipped 70"
+		+ "tests, OK (skipped=70) on main 3deeea2 and on #56"
+	REJECTED "the awawa binary downloaded by the CI from the asset of a private release, the ruling"
+		+ "of 2026-10-07: no release of awawa exists in any repository of the user, a workflow's"
+		+ "GITHUB_TOKEN reads the releases of its own repository alone, and awawa is a tool the"
+		+ "user does not own"
+	REJECTED "a corpus job running awawa fmt --check and awawa lint --strict in the CI: it needs"
+		+ "the real binary, and the user judged its absence minor"
+	REJECTED "a fake whose recordings are never compared with the real binary: a bump of awawa"
+		+ "changing an output would break brigade with no test failing"
 	REJECTED "awawa embedded in dist/brigade.pyz or in the repository: a zipapp cannot reasonably"
 		+ "carry a 1.6 MB native ELF, and awawa is a prerequisite wrapped as it is"
-	REJECTED "a Docker image carrying awawa for the CI: heavier than one release asset downloaded"
-		+ "in about five lines of YAML"
-	REJECTED "a public copy of awawa: a third party's tool; the copy stays private, as the private"
-		+ "repository allows"
-	RATIONALE "the user ruled on 2026-10-07: brigade will not embed awawa, the repository"
-		+ "delairec/brigade is private (gh repo view delairec/brigade --json visibility prints"
-		+ "PRIVATE), so a private copy costs little, and the licence of awawa allows it, which the"
-		+ "user confirmed; the incident of #52 is the evidence the ruling of 2026-10-06 lacked"
-	SOURCE "the user's words of 2026-10-07, \"A moins que ça ne coute rien d'avoir une copie"
-		+ "d'awawa embarquée, mais je ne sais pas ce qu'il faut faire pour que ça marche. Via"
-		+ "docker peut être? Si on peut l'avoir en privé\", and the answer chosen, \"Copie privée"
-		+ "(licence OK)\""
-	SOURCE "the user's ruling of 2026-10-06 during wave M0, the earlier form, replaced in place"
+	REJECTED "a Docker image carrying awawa for the CI: the same third-party binary to host, and"
+		+ "heavier"
+	RATIONALE "the user ruled on 2026-10-10, refining @TASK.B95: the tests replay recorded outputs,"
+		+ "as the client fake replays tests/cli/fixtures/recordings/, and the corpus job is"
+		+ "dropped; the comparison with the real binary keeps what the integration tests prove,"
+		+ "that brigade reads the output awawa really prints"
+		REF @TASK.B95
+	SOURCE "the user's words of 2026-10-10 at the refinement of B95, \"On pourrait pas faire un"
+		+ "fake ?\", then \"pourquoi on pourrait pas utiliser le dake dans les tests d'inté? le job"
+		+ "corpus c'est pas très grave de ne pas le faire\""
+	SOURCE "the earlier forms, replaced in place: the user's ruling of 2026-10-06 during wave M0,"
+		+ "then the answer of 2026-10-07, \"Copie privée (licence OK)\""
 
 DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	TITLE "a run keeps one directory under runs/<id>/ for all its segments, one folder"
@@ -1375,8 +1380,9 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	DESC ".github/workflows/ci.yml declares permissions: contents: read at its top level and"
 		+ "persist-credentials: false on every actions/checkout step"
 	DESC "coverage fails the run below the fail_under of .coveragerc: @TASK.B70 set it at the"
-		+ "figure of the CI without awawa, 93, and @TASK.B96 sets it at 100 once awawa reaches the"
-		+ "CI by @TASK.B95; a threshold, once set, is never lowered"
+		+ "figure of the CI without awawa, 93, and @TASK.B96 sets it at 100 once @TASK.B95 runs the"
+		+ "tests that need awawa in the CI on recorded outputs; a threshold, once set, is never"
+		+ "lowered"
 		REF @TASK.B70
 		REF @TASK.B96
 		REF @TASK.B95
@@ -1420,11 +1426,11 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	RATIONALE "the user ruled on 2026-10-07, refining @TASK.B70, which measures coverage with the"
 		+ "tests that need awawa, skipped in the CI by the earlier form of"
-		+ "@DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere: coverage runs"
+		+ "@DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi: coverage runs"
 		+ "locally in a virtual environment outside the repository, and the threshold is set at the"
 		+ "figure of the CI"
 		REF @TASK.B70
-		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
+		REF @DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
 	SOURCE "the user's rulings of 2026-10-06 on the CI tooling proposals: \"tout ce que tu as mis"
 		+ "en oui\", then \"tout ce qui est utile est bon à prendre\""
 	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B80, \"Corriger DESC 1\":"
@@ -1507,7 +1513,7 @@ DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 	DESC "the stdout and stderr of a client segment stay raw text, the input of its adapter,"
 		+ "returned whole by no command: a run is read through its journal, as"
 		+ "@DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails sets,"
-		+ "and the trails through @TASK.B97"
+		+ "and the trails through brigade processes, which @TASK.B97 delivers"
 		REF @DECISION.ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 		REF @TASK.B97
 	DESC "binds @TASK.B72, @TASK.B79 and @TASK.B97"
@@ -1519,6 +1525,10 @@ DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 		+ "the facts it needs"
 	REJECTED "the subprocess records in the ledger: about 17 000 a day for one project in M1 by the"
 		+ "risk R5 of the foundations review, read again by every view of brigade ledger"
+	REJECTED "a flag of brigade doctor reading the trails: doctor answers whether the machine is"
+		+ "ready now and its exit code says so, the trails what past commands did"
+	REJECTED "a command named trails: the word says nothing to a reader; the key trail_days and the"
+		+ "files keep the name"
 	RATIONALE "brigade mechanises the reading of its own journals, so that an agent asks a tool for"
 		+ "the facts it needs and searches nothing itself"
 	SOURCE "the user's words of 2026-10-07 at the refinement of @TASK.B72, \"les logs doivent être"
@@ -1528,6 +1538,9 @@ DECISION EveryTraceIsAStructuredRecordThatABrigadeCommandReads
 		REF @TASK.B72
 	SOURCE "DESC 4 amended on the user's rulings of 2026-10-09 in the refinement of @TASK.B79"
 		REF @TASK.B79
+	SOURCE "DESC 4 amended and two REJECTED added on the user's rulings of 2026-10-10 at the"
+		+ "refinement of @TASK.B97"
+		REF @TASK.B97
 
 DECISION APreflightIsANamedSetOfCollectorsAndChecks
 	TITLE "a preflight is a named set of mechanical actions, collectors and checks, run on demand"
@@ -1577,11 +1590,6 @@ DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 	DESC "the push trigger on main carries no filter: every merge runs the whole suite"
 	DESC "no job of ci.yml reads those paths: the tests write their own corpora in temporary"
 		+ "directories, and no .awawa file lies outside corpus/"
-	DESC "the corpus job of @TASK.B95 lives in a workflow of its own, which runs on every pull"
-		+ "request as DESC 3 of @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere"
-		+ "sets, so that a pull request touching only corpus/ is still checked"
-		REF @TASK.B95
-		REF @DECISION.TheCiInstallsAwawaFromAPrivateReleaseAndNoTestSkipsThere
 	REJECTED "a first job detecting the changed paths and an if: on every job: about fifteen lines"
 		+ "of YAML for checks reported skipped, which matter only under required status checks, and"
 		+ "main has no branch protection"
@@ -1592,6 +1600,11 @@ DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 		+ "vulture and coverage, none of which reads a file it changed"
 	SOURCE "the user's rulings of 2026-10-07: paths-ignore of the workflow rather than a detecting"
 		+ "job or a paths list, delivered by a pull request of its own without a task"
+	SOURCE "DESC 4, the corpus job of @TASK.B95 in a workflow of its own, removed on the user's"
+		+ "ruling of 2026-10-10 at the refinement of @TASK.B95: the CI runs no corpus job, by"
+		+ "@DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi"
+		REF @TASK.B95
+		REF @DECISION.TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
 
 DECISION ATrailIsWrittenOnlyForWorkDoneAndThePurgeReadsTrailDaysAlone
 	TITLE "the trail of a command is written at its end when it ran a subprocess, the trail of a"
