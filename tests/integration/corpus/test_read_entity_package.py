@@ -1,9 +1,9 @@
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entity_package import read_entity_package
+from tests.awawa.provide_awawa import provide_awawa
 from tests.integration.run_process_without_trail import run_process_without_trail
 
 SCHEMA = (
@@ -17,9 +17,9 @@ AGENTS = (
 )
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class ReadEntityPackageTest(unittest.TestCase):
     def setUp(self):
+        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)
         (self.corpus / "_schema.awawa").write_text(SCHEMA)

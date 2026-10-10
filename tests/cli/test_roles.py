@@ -1,9 +1,9 @@
 import json
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
+from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_instructions import TemporaryInstructions
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 
@@ -267,10 +267,10 @@ class BrigadeRolesShowShortTest(RolesTestCase):
         )
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
     def setUp(self):
         super().setUp()
+        provide_awawa(self)
         self.instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
         self.machine.write_configuration(f'instructions = "{self.instructions.root}"\n[slots]\nplan = "planner"\n')
 

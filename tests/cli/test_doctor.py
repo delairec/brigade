@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.forward_coverage_environment import forward_coverage_environment
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -619,10 +620,10 @@ CLEAN_AGENT = 'AGENT planner\n\tWORK "the plan of a wave"\n\tREASONING deep\n'
 AGENT_LACKING_ITS_REASONING = 'AGENT planner\n\tWORK "the plan of a wave"\n'
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
     def setUp(self):
         super().setUp()
+        provide_awawa(self)
         self.instructions = Path(self.config_home.name) / "instructions"
         self.instructions.mkdir()
         (self.instructions / "_schema.awawa").write_text(INSTRUCTIONS_SCHEMA)
