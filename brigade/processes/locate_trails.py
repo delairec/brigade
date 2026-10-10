@@ -23,12 +23,18 @@ class Trail:
     path: Path
 
 
-def _read_instant(trail_id: str) -> datetime:
-    return datetime.strptime(trail_id[:TRAIL_INSTANT_LENGTH], TRAIL_INSTANT_FORMAT).replace(tzinfo=UTC)
+def _read_instant(trail_id: str) -> datetime | None:
+    try:
+        return datetime.strptime(trail_id[:TRAIL_INSTANT_LENGTH], TRAIL_INSTANT_FORMAT).replace(tzinfo=UTC)
+    except ValueError:
+        return None
 
 
-def _describe_trail(kind: str, trail_id: str, path: Path) -> Trail:
-    return Trail(kind=kind, id=trail_id, instant=_read_instant(trail_id), path=path)
+def _describe_trail(kind: str, trail_id: str, path: Path) -> Trail | None:
+    instant = _read_instant(trail_id)
+    if instant is None:
+        return None
+    return Trail(kind=kind, id=trail_id, instant=instant, path=path)
 
 
 def locate_trails(state_root: Path) -> list[Trail]:
@@ -41,4 +47,4 @@ def locate_trails(state_root: Path) -> list[Trail]:
         for kind, directory in SETTLED_TRAIL_KINDS
         for path in (state_root / directory).glob(f"*{TRAIL_SUFFIX}")
     ]
-    return [*run_trails, *settled_trails]
+    return [trail for trail in (*run_trails, *settled_trails) if trail is not None]
