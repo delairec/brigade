@@ -308,7 +308,17 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             [row["role"] for row in json.loads(completed.stdout)["roles"]],
-            ["planner", "builder", "reviewer", "remediator", "rebaser", "reporter", "triager", "rulewriter", "explorer"],
+            [
+                "planner",
+                "builder",
+                "reviewer",
+                "remediator",
+                "rebaser",
+                "reporter",
+                "triager",
+                "rulewriter",
+                "explorer",
+            ],
         )
 
     def test_should_fill_the_front_matter_from_the_entity_and_the_body_from_its_package(self):
