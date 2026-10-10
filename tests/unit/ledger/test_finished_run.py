@@ -101,11 +101,15 @@ class FinishedRunTest(unittest.TestCase):
             ),
             (
                 (create_segment(main_steps=40), create_segment(main_steps=30, steps_to_first_edit=5)),
-                RunMeasure(value=45, partial=True),
+                RunMeasure(value=45, partial=False),
             ),
             (
                 (create_segment(main_steps=40, steps_to_first_edit=12), create_segment(main_steps=30)),
-                RunMeasure(value=12, partial=True),
+                RunMeasure(value=12, partial=False),
+            ),
+            (
+                (create_segment(main_steps=40, steps_to_first_edit=12), create_segment()),
+                RunMeasure(value=12, partial=False),
             ),
             (
                 (create_segment(), create_segment(main_steps=30, steps_to_first_edit=5)),

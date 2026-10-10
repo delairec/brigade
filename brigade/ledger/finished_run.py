@@ -41,5 +41,8 @@ class FinishedRun:
         editing = next((index for index, value in enumerate(reported) if value is not None), None)
         if editing is None:
             return RunMeasure(value=None, partial=False)
-        steps_before = sum(segment.main_steps or 0 for segment in self.segments[:editing])
-        return RunMeasure(value=steps_before + reported[editing], partial=None in reported)
+        steps_before = [segment.main_steps for segment in self.segments[:editing]]
+        measured_before = [steps for steps in steps_before if steps is not None]
+        return RunMeasure(
+            value=sum(measured_before) + reported[editing], partial=len(measured_before) < len(steps_before)
+        )

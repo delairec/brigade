@@ -4599,8 +4599,10 @@ TASK B86
 			+ "test_should_date_the_run_by_its_last_segment_in_the_comparison(self):"
 	SPEC "oversized_output_steps of a run is the sum over the segments reporting it, and"
 		+ "steps_to_first_edit the main_steps of the segments before the first one reporting it"
-		+ "plus its value; a run lacking either measure at one of its segments is partial for that"
-		+ "measure"
+		+ "plus its value; a run lacking oversized_output_steps at one of its segments is partial"
+		+ "for it, and a run lacking main_steps at a segment before the first one reporting"
+		+ "steps_to_first_edit is partial for steps_to_first_edit, the segments after it leaving it"
+		+ "exact"
 		IMPL "brigade/ledger/finished_run.py::def oversized_output_steps(self) -> RunMeasure:"
 		IMPL "brigade/ledger/finished_run.py::def steps_to_first_edit(self) -> RunMeasure:"
 		IMPL "tests/unit/ledger/test_finished_run.py::def"
@@ -4656,6 +4658,10 @@ TASK B86
 	SOURCE "item 3 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
 	SOURCE "the user's rulings of 2026-10-10 in the refinement of B86"
+	SOURCE "the user's ruling of 2026-10-10 on the review of pull request #91, \"Sous-estimation"
+		+ "seule\", which narrowed SPEC 3: a run is partial for steps_to_first_edit only when a"
+		+ "segment before the first edit lacks its main_steps"
+		REF @DECISION.ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSegments
 
 TASK B87
 	TITLE "brigade doctor warns when the checkout it runs from is behind its upstream"

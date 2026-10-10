@@ -311,9 +311,10 @@ unknown `schema_version` is skipped, named with its file and line on stderr and 
 exits 0. A run cut and resumed is one run of several segments, one `run.finished` event each: it counts once, by the
 outcome and the error class of its last segment, and is dated by it. Every summary of steps gives the runs and the
 segments side by side: a run is measured by the sum of its measured segments, partial when one of them is not
-measured, and kept in the percentiles; a run with no measured segment is unmeasured. Percentiles are taken by nearest
-rank, and a procedure with fewer than five measured runs is marked as an estimate. `compare` exits 1 when one of its
-two periods holds no finished run.
+measured, and kept in the percentiles; a run with no measured segment is unmeasured. The steps to the first edit of a
+run add the steps of the segments before the one that edited, and are partial only when one of those is not
+measured. Percentiles are taken by nearest rank, and a procedure with fewer than five measured runs is marked as an
+estimate. `compare` exits 1 when one of its two periods holds no finished run.
 
 ## Develop
 
