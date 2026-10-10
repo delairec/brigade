@@ -4998,7 +4998,7 @@ TASK B94
 TASK B95
 	TITLE "the tests that need awawa replay recorded outputs of the real awawa where awawa is not"
 		+ "on PATH, so that no test skips in the CI for want of it"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "tests"
 	ROLE ada
@@ -5006,19 +5006,36 @@ TASK B95
 		+ "and the files rewritten that the real awawa produced for the same arguments on the same"
 		+ "input files, recorded under tests/ from awawa 2.7.0, the version each recording names; a"
 		+ "call with no recording fails the test, naming its arguments"
+		IMPL "tests/awawa/replay_awawa.py::def main(argv: list[str]) -> int:"
+		IMPL "tests/awawa/test_replay_awawa.py::class FakeAwawaReplayTest(FakeAwawaTestCase):"
+		IMPL "tests/awawa/test_replay_awawa.py::class"
+			+ "FakeAwawaWithoutARecordingTest(FakeAwawaTestCase):"
+		IMPL "tests/awawa/test_replay_awawa.py::class FakeAwawaRecordingTest(FakeAwawaTestCase):"
 	SPEC "every test that needs awawa runs against the real awawa when shutil.which(\"awawa\")"
 		+ "finds it and against the fake otherwise; no unittest.skipUnless(shutil.which(\"awawa\"))"
 		+ "remains under tests/"
+		IMPL "tests/awawa/provide_awawa.py::def provide_awawa(test_case: unittest.TestCase) ->"
+			+ "None:"
+		IMPL "tests/cli/test_run.py::provide_awawa(self)"
 	SPEC "with awawa on PATH, a test runs every recording against the real binary and fails on a"
 		+ "difference, naming the recording, the version it names and the version awawa --version"
 		+ "prints"
+		IMPL "tests/awawa/test_recordings.py::def"
+			+ "test_should_answer_every_recorded_call_as_it_was_recorded(self):"
+		IMPL "tests/awawa/replay_recording.py::def replay_recording(test_case: unittest.TestCase,"
+			+ "call: dict) -> dict:"
 	SPEC "the logs of the test jobs of the matrix and of the coverage job of"
 		+ ".github/workflows/ci.yml show no test skipped for want of awawa, and ci.yml installs no"
 		+ "awawa and runs no awawa command"
+		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: coverage run -m unittest"
 	SPEC "the Develop section of the README says that the tests run on the recordings where awawa"
 		+ "is not on PATH, and how a recording is made or renewed from the real binary"
+		IMPL "README.md::rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest"
 	SPEC "nothing under brigade/ changes: awawa stays a prerequisite checked by brigade doctor,"
 		+ "never shipped in dist/brigade.pyz"
+		IMPL "brigade/commands/doctor.py::return _create_prerequisite(\"awawa\", \"finding\","
+			+ "f\"not on PATH (floor {floor})\")"
 	RATIONALE "found in the review of pull request #56: every CI job skipped 70 tests, OK"
 		+ "(skipped=70) on main 3deeea2 and on #56, and no job ran awawa fmt --check or awawa lint"
 		+ "--strict, so #52 merged with two L016 that broke lint --strict on main; the user ruled"
@@ -5049,6 +5066,7 @@ TASK B95
 		+ "fake ?\", then \"pourquoi on pourrait pas utiliser le dake dans les tests d'inté? le job"
 		+ "corpus c'est pas très grave de ne pas le faire\", and the answer chosen, the recordings"
 		+ "compared locally with the real binary"
+	DELIVERED_BY 100
 
 TASK B96
 	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, its tests that need"
