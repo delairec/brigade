@@ -57,8 +57,8 @@ def describe_built_in_roles(model_of_deep, model_of_standard, model_of_light) ->
     return [
         {"slot": "plan", "role": "planner", "source": "built-in", "model": model_of_deep},
         {"slot": "build", "role": "builder", "source": "built-in", "model": model_of_standard},
-        {"slot": "verify", "role": "verifier", "source": "built-in", "model": model_of_deep},
         {"slot": "review", "role": "reviewer", "source": "built-in", "model": model_of_deep},
+        {"slot": "remediate", "role": "remediator", "source": "built-in", "model": model_of_standard},
         {"slot": "rebase", "role": "rebaser", "source": "built-in", "model": model_of_light},
         {"slot": "report", "role": "reporter", "source": "built-in", "model": model_of_standard},
         {"slot": "triage", "role": "triager", "source": "built-in", "model": model_of_standard},
@@ -127,16 +127,16 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "slot     role        source    model",
-                "plan     planner     built-in  fable",
-                "build    builder     built-in  opus",
-                "verify   verifier    built-in  fable",
-                "review   reviewer    built-in  fable",
-                "rebase   rebaser     built-in  sonnet",
-                "report   reporter    built-in  opus",
-                "triage   triager     built-in  opus",
-                "rules    rulewriter  built-in  fable",
-                "explore  explorer    built-in  sonnet",
+                "slot       role        source    model",
+                "plan       planner     built-in  fable",
+                "build      builder     built-in  opus",
+                "review     reviewer    built-in  fable",
+                "remediate  remediator  built-in  opus",
+                "rebase     rebaser     built-in  sonnet",
+                "report     reporter    built-in  opus",
+                "triage     triager     built-in  opus",
+                "rules      rulewriter  built-in  fable",
+                "explore    explorer    built-in  sonnet",
             ],
         )
 
@@ -308,7 +308,17 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             [row["role"] for row in json.loads(completed.stdout)["roles"]],
-            ["planner", "builder", "verifier", "reviewer", "rebaser", "reporter", "triager", "rulewriter", "explorer"],
+            [
+                "planner",
+                "builder",
+                "reviewer",
+                "remediator",
+                "rebaser",
+                "reporter",
+                "triager",
+                "rulewriter",
+                "explorer",
+            ],
         )
 
     def test_should_fill_the_front_matter_from_the_entity_and_the_body_from_its_package(self):
@@ -393,11 +403,11 @@ class BrigadeRolesLintTest(RolesTestCase):
                     "brigade/roles/data/explorer.md",
                     "brigade/roles/data/planner.md",
                     "brigade/roles/data/rebaser.md",
+                    "brigade/roles/data/remediator.md",
                     "brigade/roles/data/reporter.md",
                     "brigade/roles/data/reviewer.md",
                     "brigade/roles/data/rulewriter.md",
                     "brigade/roles/data/triager.md",
-                    "brigade/roles/data/verifier.md",
                 ],
                 "findings": [],
             },

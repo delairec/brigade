@@ -40,7 +40,7 @@ SCHEMA PROJECT
 		DESC "builtin, corpus, or a directory of role files; the resolution order when absent"
 	FIELD ROLE string
 		REPEATABLE
-		DESC "slot=role, an override of the binding, e.g. verify=prudence"
+		DESC "slot=role, an override of the binding, e.g. remediate=builder"
 	FIELD PRIVATE string
 		REPEATABLE
 		DESC "a regular expression the privacy scan and the scrubber refuse, e.g. stn_[0-9a-f]{12}"

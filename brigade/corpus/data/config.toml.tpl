@@ -42,12 +42,12 @@
 # recordings = ""
 
 # The role a slot runs, read from an AGENT entity of the instructions corpus, one key per slot bound;
-# slots plan, build, verify, review, rebase, report, triage, rules, explore.
+# slots plan, build, review, remediate, rebase, report, triage, rules, explore.
 # [slots]
 # plan = ""
 
 # The gh login a slot acts as, or the key cli for the gh calls brigade makes itself: a process of a bound key
 # carries the token gh auth token --user <login> prints, an unbound one acts as gh's active account;
-# keys plan, build, verify, review, rebase, report, triage, rules, explore and cli.
+# keys plan, build, review, remediate, rebase, report, triage, rules, explore and cli.
 # [forge_accounts]
 # cli = ""

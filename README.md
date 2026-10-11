@@ -188,9 +188,9 @@ the usage of a session from Vibe's session store, `~/.vibe/logs/session/unified`
 
 ## Roles
 
-A procedure calls a slot, never a role: `plan`, `build`, `verify`, `review`, `rebase`, `report`, `triage`, `rules`
-and `explore`. A role is a Markdown file, a front matter between two `---` lines declaring `name`, `slot`, `work`,
-`reasoning` (`deepest`, `deep`, `standard`, `light`), `capabilities` (`read`, `write`, `shell`, `net`,
+A procedure calls a slot, never a role: `plan`, `build`, `review`, `remediate`, `rebase`, `report`, `triage`,
+`rules` and `explore`. A role is a Markdown file, a front matter between two `---` lines declaring `name`, `slot`,
+`work`, `reasoning` (`deepest`, `deep`, `standard`, `light`), `capabilities` (`read`, `write`, `shell`, `net`,
 comma-separated), `budget` and `returns`, then the system prompt; it never names a model, the client adapter binds
 one to its reasoning level. A slot resolves to the first of:
 

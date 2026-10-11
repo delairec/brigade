@@ -512,6 +512,49 @@ class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):
         )
 
 
+class BrigadeRunOfTheReviewAndRemediateSlotsTest(RunTestCase):
+    def test_should_keep_write_for_the_remediate_slot_alone(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("remediator", DONE_RESULT)
+        self.record("reviewer", DONE_RESULT)
+        self.procedure.write_text("---\ncapabilities: read, write, shell\nbudget: 75\n---\nAnswer the review.\n")
+
+        for slot, role, capabilities in [
+            ("remediate", "remediator", ["read", "write", "shell"]),
+            ("review", "reviewer", ["read", "shell"]),
+        ]:
+            with self.subTest(slot=slot):
+                # Act
+                completed = self.run_brigade(
+                    "run", str(self.procedure), "--slot", slot, "--cwd", str(self.workspace), "task=B06", "--json"
+                )
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                run_id = json.loads(completed.stdout)["run"]
+                self.assertEqual(
+                    self.read_run_record(run_id),
+                    {
+                        "schema_version": 1,
+                        "run": run_id,
+                        "procedure": "deliver",
+                        "procedure_path": str(self.procedure),
+                        "slot": slot,
+                        "role": role,
+                        "role_source": "built-in",
+                        "client": "fake",
+                        "project": None,
+                        "cwd": str(self.workspace),
+                        "worktree": str(self.workspace),
+                        "capabilities": capabilities,
+                        "budget": 75,
+                        "wall_limit_s": 2820,
+                        "arguments": {"task": "B06"},
+                    },
+                )
+
+
 class BrigadeRunDetachedTest(RunTestCase):
     def test_should_print_the_run_id_and_exit_0_while_the_run_finishes_in_the_background(self):
         # Arrange
@@ -1001,15 +1044,15 @@ class BrigadeRunOfAProjectTest(RunTestCase):
 
     def test_should_bind_the_slot_to_the_role_the_project_names(self):
         # Arrange
-        self.register('ROLE "build=verifier"')
-        self.record("verifier", DONE_RESULT)
+        self.register('ROLE "build=reviewer"')
+        self.record("reviewer", DONE_RESULT)
 
         # Act
         completed = self.run_slot()
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["role"], "verifier")
+        self.assertEqual(json.loads(completed.stdout)["role"], "reviewer")
 
     def test_should_exit_1_naming_a_project_role_binding_with_no_name(self):
         # Arrange
@@ -1055,15 +1098,15 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         # Arrange
         instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
         self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
-        self.record("verifier", DONE_RESULT)
-        self.register('ROLE "build=verifier"')
+        self.record("reviewer", DONE_RESULT)
+        self.register('ROLE "build=reviewer"')
 
         # Act
         completed = self.run_slot()
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["role"], "verifier")
+        self.assertEqual(json.loads(completed.stdout)["role"], "reviewer")
 
     @unittest.skipIf(os.geteuid() == 0, "root reads what the permissions refuse")
     def test_should_exit_1_with_the_stderr_of_awawa_when_the_instructions_corpus_is_unreadable(self):
@@ -1072,8 +1115,8 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         agents = instructions.root / "agents.awawa"
         agents.chmod(0o000)
         self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
-        self.record("verifier", DONE_RESULT)
-        self.register('ROLE "build=verifier"')
+        self.record("reviewer", DONE_RESULT)
+        self.register('ROLE "build=reviewer"')
 
         # Act
         completed = self.run_slot()
@@ -1081,7 +1124,7 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertIn(
-            f"brigade run: awawa show @AGENT.verifier --json {instructions.root} exited 2: ", completed.stderr
+            f"brigade run: awawa show @AGENT.reviewer --json {instructions.root} exited 2: ", completed.stderr
         )
         self.assertIn(str(agents), completed.stderr)
 
@@ -1091,8 +1134,8 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
         (instructions.root / "agents.awawa").chmod(0o000)
         self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
-        self.record("verifier", DONE_RESULT)
-        self.register('ROLE "build=verifier"')
+        self.record("reviewer", DONE_RESULT)
+        self.register('ROLE "build=reviewer"')
 
         # Act
         self.run_slot()
@@ -1313,10 +1356,10 @@ class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
 ENVIRONMENT_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-environment"
 ACCOUNTS_GH = Path(__file__).resolve().parent / "fixtures" / "executables" / "gh-accounts"
 BOUND_SLOTS = (
-    'client = "claude-code"\nforge_attempts = 1\n[forge_accounts]\nbuild = "octo-builder"\nverify = "refused-bot"\n'
+    'client = "claude-code"\nforge_attempts = 1\n[forge_accounts]\nbuild = "octo-builder"\nreview = "refused-bot"\n'
 )
 BOUND_SLOTS_READ_TWICE = (
-    'client = "claude-code"\nforge_attempts = 2\n[forge_accounts]\nbuild = "octo-builder"\nverify = "refused-bot"\n'
+    'client = "claude-code"\nforge_attempts = 2\n[forge_accounts]\nbuild = "octo-builder"\nreview = "refused-bot"\n'
 )
 
 
@@ -1387,17 +1430,17 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
 
     def test_should_stop_on_an_error_naming_the_login_and_the_attempts(self):
         # Act
-        completed = self.run_slot("verify")
+        completed = self.run_slot("review")
 
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stderr),
-            (1, "brigade run: gh printed no token for the login refused-bot, bound to verify, after 1 attempt\n"),
+            (1, "brigade run: gh printed no token for the login refused-bot, bound to review, after 1 attempt\n"),
         )
 
     def test_should_record_the_login_unavailable_in_the_ledger(self):
         # Act
-        self.run_slot("verify")
+        self.run_slot("review")
 
         # Assert
         self.assertEqual(
@@ -1408,7 +1451,7 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
                     "ts": mock.ANY,
                     "event": "forge_account.unavailable",
                     "login": "refused-bot",
-                    "key": "verify",
+                    "key": "review",
                 }
             ],
         )
@@ -1418,7 +1461,7 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
         self.machine.write_configuration(BOUND_SLOTS_READ_TWICE)
 
         # Act
-        self.run_slot("verify", "--detach")
+        self.run_slot("review", "--detach")
 
         # Assert
         self.assertEqual(
