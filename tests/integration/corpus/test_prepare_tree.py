@@ -1,6 +1,5 @@
 import os
 import subprocess
-import tarfile
 import tempfile
 import unittest
 from dataclasses import replace
@@ -144,7 +143,6 @@ class PrepareTreeOfACommitHoldingALinkInsideItsTreeTest(PrepareTreeTestCase):
         self.assertEqual((tree.root / "docs" / "app.py").read_text(), "print('app')\n")
 
 
-@unittest.skipUnless(hasattr(tarfile, "data_filter"), "tarfile has no data filter before Python 3.11.4")
 class PrepareTreeOfACommitHoldingALinkOutsideItsTreeTest(PrepareTreeTestCase):
     def test_should_refuse_the_link_naming_the_project_and_the_member(self):
         for target in ["../../../.ssh/id_ed25519", "/home/someone/.ssh/id_ed25519"]:

@@ -1,6 +1,10 @@
 TASK B01
 	TITLE "Repository skeleton and entry point"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-10: @TASK.B115 raised the Python floor of brigade from 3.11 to"
+		+ "3.11.4, making false the SPEC of this task declaring the floor 3.11, whose anchor on"
+		+ "PYTHON_FLOOR = (3, 11) no longer occurs"
+		REF @TASK.B115
 	MILESTONE @MILESTONE.M0
 	COMPONENT "cli"
 	ROLE ada
@@ -2558,7 +2562,6 @@ TASK B63
 		+ "commented with its cause and what covers the case; ruff.toml holds no ignore added to"
 		+ "make the run pass"
 		IMPL "brigade/system/run_process.py::# S603: argv is a tuple run with no shell"
-		IMPL "brigade/corpus/prepare_tree.py::# S202: the archive is git archive of a commit"
 	SPEC "a fix that changes a behaviour, an S or a B finding answered, is named in the pull"
 		+ "request body with the finding it answers; python3 -m unittest passes on every commit"
 		IMPL "brigade/python_floor.py::from __future__ import annotations"
@@ -2780,7 +2783,13 @@ TASK B67
 TASK B68
 	TITLE "the archive of a registered project is extracted under tarfile's data filter: a member"
 		+ "escaping the tree is refused, naming the project and the member"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-10: @TASK.B115 raised the Python floor of brigade to 3.11.4 and"
+		+ "removed the extraction without the data filter this task kept for Python 3.11.0 to"
+		+ "3.11.3, making false its SPEC on the conditional and the noqa: S202, whose anchors no"
+		+ "longer occur; B115 delivers the extraction under the data filter on every Python brigade"
+		+ "runs on"
+		REF @TASK.B115
 	MILESTONE @MILESTONE.M0
 	COMPONENT "corpus"
 	ROLE ada
@@ -6393,7 +6402,7 @@ TASK B114
 TASK B115
 	TITLE "brigade needs Python 3.11.4 or later and always extracts a project archive under"
 		+ "tarfile's data filter"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "corpus"
 	ROLE ada
@@ -6401,15 +6410,33 @@ TASK B115
 		+ "tarfile and catches tarfile.FilterError, with no path extracting without the filter; the"
 		+ "skip of tests/integration/corpus/test_prepare_tree.py on a tarfile without data_filter"
 		+ "is removed"
+		IMPL "brigade/corpus/prepare_tree.py::commit_tar.extractall(staged_tree, filter=\"data\")"
+		IMPL "brigade/corpus/prepare_tree.py::except tarfile.FilterError as error:"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::class"
+			+ "PrepareTreeOfACommitHoldingALinkOutsideItsTreeTest(PrepareTreeTestCase):"
 	SPEC "under Python 3.11.3 brigade exits non-zero with the message brigade needs Python 3.11.4"
 		+ "or later; this is Python 3.11.3, and brigade doctor reports the floor 3.11.4"
+		IMPL "brigade/python_floor.py::PYTHON_FLOOR = (3, 11, 4)"
+		IMPL "tests/unit/test_python_floor.py::((3, 11, 3), \"brigade needs Python 3.11.4 or later;"
+			+ "this is Python 3.11.3\"),"
+		IMPL "tests/cli/test_doctor.py::class"
+			+ "BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):"
 	SPEC "the floor job of .github/workflows/ci.yml runs a Python below the floor, 3.11.3 where"
 		+ "setup-python offers it on the runner, 3.10 as today otherwise, and fails unless the"
 		+ "refusal names 3.11.4"
+		IMPL ".github/workflows/ci.yml::python-version: \"3.11.3\""
+		IMPL ".github/workflows/ci.yml::runs-on: ubuntu-24.04"
+		IMPL ".github/workflows/ci.yml::grep -F \"Python 3.11.4 or later\" refusal.txt"
 	SPEC "the floor reads 3.11.4 in the README, in AGENTS.md and in the titles of the decision"
 		+ "PythonStandardLibraryOnly and the decision"
 		+ "BrigadeInstallsFromOneFileWithFourPrerequisites, the rationale of the first naming the"
 		+ "data filter beside tomllib"
+		IMPL "README.md::brigade needs Python 3.11.4 or later and nothing outside its standard"
+			+ "library."
+		IMPL "AGENTS.md::Python 3.11.4 or later, standard library only"
+		IMPL "corpus/decisions.awawa::TITLE \"brigade is Python 3.11.4 or later"
+		IMPL "corpus/decisions.awawa::zipapp or a clone; Python 3.11.4 or later, git,"
+		IMPL "corpus/decisions.awawa::3.11.4 the floor tarfile's data filter"
 	RATIONALE "brigade/corpus/prepare_tree.py:29-30 at 9bed0a7 keeps two paths, DATA_EXTRACTION ="
 		+ "{\"filter\": \"data\"} if hasattr(tarfile, \"data_filter\") else {} and MEMBER_REFUSAL ="
 		+ "getattr(tarfile, \"FilterError\", ()): tarfile gained its data filter in 3.12,"
@@ -6433,6 +6460,7 @@ TASK B115
 	SOURCE "found in the refinement of B88 on 2026-10-10, after the user asked \"est-ce qu'il y a"
 		+ "d'autres endroits où on a du code propre à une version?\"; the user's ruling \"Brouillon"
 		+ "F0\""
+	DELIVERED_BY 96
 
 TASK B122
 	TITLE "a guard holds every test that prepares something before its first delimiter to open on #"

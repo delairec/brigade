@@ -26,8 +26,6 @@ WORKTREE_KIND = "worktree"
 EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 NANOSECONDS_PER_MICROSECOND = 1000
 NOTHING_MEASURED = 0
-DATA_EXTRACTION = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
-MEMBER_REFUSAL = getattr(tarfile, "FilterError", ())
 
 
 @dataclass(frozen=True)
@@ -88,9 +86,7 @@ def _create_staging(root: Path) -> Path:
 def _unpack(archive: Path, staged_tree: Path, root: Path) -> None:
     with tarfile.open(archive) as commit_tar:
         try:
-            # S202: the archive is git archive of a commit of the project; from Python 3.11.4 tarfile's data filter
-            # refuses a link out of the tree, an absolute or .. path and a device file; 3.11.0 to 3.11.3 extract as is
-            commit_tar.extractall(staged_tree, **DATA_EXTRACTION)  # noqa: S202
+            commit_tar.extractall(staged_tree, filter="data")
         except OSError as error:
             raise CannotWrite(root, error) from error
 
@@ -103,7 +99,7 @@ def _stage_tree(
     archive_commit(run_process, request.repository, sha, archive)
     try:
         _unpack(archive, staged_tree, root)
-    except MEMBER_REFUSAL as error:
+    except tarfile.FilterError as error:
         raise BrigadeError(
             f"the archive of @PROJECT.{request.project} holds {error.tarinfo.name}, a member tarfile's data filter"
             " refuses"
