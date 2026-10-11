@@ -4,7 +4,7 @@ import time
 from collections.abc import Callable
 
 from brigade.command import Argument, Command, ExclusiveArguments
-from brigade.errors import StandingDown
+from brigade.errors import StandingDown, UsageError
 from brigade.ledger.format_instant import format_instant
 from brigade.runtime import Runtime
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
@@ -139,7 +139,9 @@ def tick(request, runtime: Runtime) -> dict:
         return _tick_once(runtime)
     if request.mode == "dry-run":
         return _plan_dry(runtime)
-    return _tick_in_loop(request.create_runtime)
+    if request.mode == "loop":
+        return _tick_in_loop(request.create_runtime)
+    raise UsageError(f"unknown mode {request.mode!r}: --once, --dry-run or --loop")
 
 
 COMMAND = Command(

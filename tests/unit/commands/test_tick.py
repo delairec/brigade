@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from brigade.commands.tick import COMMAND
+from brigade.errors import UsageError
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
@@ -52,6 +53,11 @@ def _create_runtime(root: Path, now: datetime) -> Runtime:
     )
 
 
+def _stop_the_loop_it_entered() -> Runtime:
+    os.kill(os.getpid(), signal.SIGTERM)
+    raise AssertionError("brigade tick entered the loop")
+
+
 def _create_round_factory(rounds: list[tuple[Runtime, signal.Signals]]):
     remaining = iter(rounds)
 
@@ -89,3 +95,24 @@ class TickLoopTest(unittest.TestCase):
         self.assertCountEqual(
             os.listdir(self.root / "state" / "ticks"), ["20261007T090000Z.jsonl", "20261007T090500Z.jsonl"]
         )
+
+
+class TickWithoutAKnownModeTest(unittest.TestCase):
+    def test_should_refuse_the_mode_without_entering_the_loop(self):
+        rows = [
+            (None, "unknown mode None: --once, --dry-run or --loop"),
+            ("weekly", "unknown mode 'weekly': --once, --dry-run or --loop"),
+        ]
+        for mode, expected_message in rows:
+            with self.subTest(mode=mode):
+                # Arrange
+                directory = self.enterContext(tempfile.TemporaryDirectory())
+                runtime = _create_runtime(Path(directory), datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC))
+                request = SimpleNamespace(mode=mode, create_runtime=_stop_the_loop_it_entered)
+
+                # Act
+                with self.assertRaises(UsageError) as raised, contextlib.redirect_stderr(io.StringIO()):
+                    COMMAND.run(request, runtime)
+
+                # Assert
+                self.assertEqual(str(raised.exception), expected_message)

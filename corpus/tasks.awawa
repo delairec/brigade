@@ -4802,21 +4802,28 @@ TASK B88
 TASK B89
 	TITLE "The help strings, the message of --since and the modes of brigade tick are guarded by"
 		+ "tests; an unknown tick mode is refused"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "tests"
 	ROLE ada
 	SPEC "tests/cli/test_help.py reads brigade --help and the help of each group and asserts the"
 		+ "help each command record declares"
+		IMPL "tests/cli/test_help.py::class BrigadeHelpTest(HelpTestCase):"
+		IMPL "tests/cli/test_help.py::class BrigadeGroupHelpTest(HelpTestCase):"
 	SPEC "a test of tests/cli asserts the whole message brigade ledger prints for a --since value"
 		+ "that is no day, 'yesterday' is neither <n>d nor a day YYYY-MM-DD, not only its prefix"
 		+ "argument --since"
+		IMPL "tests/cli/test_ledger.py::(\"--project\", \"tidepool\", \"--since\", \"yesterday\"),"
 	SPEC "brigade/commands/tick.py dispatches once, dry-run and loop by name and raises UsageError"
 		+ "on any other mode, None included, so that brigade tick exits 2 by the"
 		+ "exception-to-exit-code table and never enters the loop; a unit test of"
 		+ "tests/unit/commands/test_tick.py proves the refusal of an unknown mode, and"
 		+ "BrigadeTickWithoutAModeTest of tests/cli/test_tick.py, which asserts exit 2 already,"
 		+ "stays green"
+		IMPL "brigade/commands/tick.py::raise UsageError(f\"unknown mode {request.mode!r}: --once,"
+			+ "--dry-run or --loop\")"
+		IMPL "tests/unit/commands/test_tick.py::class TickWithoutAKnownModeTest(unittest.TestCase):"
+		IMPL "tests/cli/test_tick.py::class BrigadeTickWithoutAModeTest(TickTestCase):"
 	AFTER @TASK.B82
 	AFTER @TASK.B79
 	RATIONALE "found in the review of pull request #56: no test reads brigade --help or the help of"
@@ -4832,6 +4839,7 @@ TASK B89
 	SOURCE "item 11 of docs/follow-up/2026-10-07-b82-run.md, from the review of pull request #56;"
 		+ "the user's words of 2026-10-07, \"seulement après la review on lancera lex pour"
 		+ "l'écriture dans le corpus\""
+	DELIVERED_BY 95
 
 TASK B90
 	TITLE "The review slot verifies and reviews a pull request, and a slot remediate answers its"
@@ -6387,3 +6395,24 @@ TASK B122
 		+ "tests/guards/find_resolver_calls.py: a finder walking the files with ast, asserted empty"
 		+ "on the real tree, and rows fed to it under subTest"
 	SOURCE "found in the first review round of #92 on 2026-10-10"
+
+TASK B129
+	TITLE "The help the passthrough record of brigade corpus declares is printed by a --help, or"
+		+ "the passthrough record declares none"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "commands"
+	ROLE ada
+	SPEC "the help of the record of brigade/commands/corpus_awawa.py, run awawa in a registered"
+		+ "project's tree and pass its stdout, stderr and exit code through, is either printed by"
+		+ "brigade corpus --help and asserted by tests/cli/test_help.py, or no longer declared, the"
+		+ "record type of brigade/command.py making help optional for a passthrough record"
+	AFTER @TASK.B89
+	RATIONALE "brigade/cli.py builds its parser from the records whose render_passed_stderr is"
+		+ "None, so the help of the passthrough record reaches no parser and no --help prints it: a"
+		+ "value declared and read by nothing; the help of the corpus record already names --"
+		+ "<awawa args> runs awawa there; the choice between printing it and dropping it is the"
+		+ "refinement's"
+		REF @TASK.B82
+	SOURCE "finding 1 of the review of pull request #95 on 2026-10-10, by a brigade run of the role"
+		+ "prudence: \"No --help prints that help\""
