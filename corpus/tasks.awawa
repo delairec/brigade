@@ -6571,3 +6571,26 @@ TASK B131
 	SOURCE "found on 2026-10-11 in the CI of pull request #101, red on main since the squash merge"
 		+ "of #100 combined the recordings of its branch with the schema of #99"
 	DELIVERED_BY 102
+
+TASK B132
+	TITLE "the CI runs the awawa corpus gate: awawa fmt --check and awawa lint --strict on every"
+		+ "pull request"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "ci"
+	ROLE ada
+	SPEC "the CI runs awawa fmt --check . and awawa lint --strict . on every pull request, so a"
+		+ "merge that interleaves the entities of a corpus file fails the gate instead of landing"
+		+ "on main"
+	RATIONALE "the merge commit 2dad2fe interleaved @TASK.B130 and @TASK.B131 and the squash merge"
+		+ "216ab70 landed the corrupted tree on main: the local pre-commit gate runs on neither the"
+		+ "merge commit nor the squash, and the CI runs no corpus gate, so the review of pull"
+		+ "request #103 found the delivered tree failing a gate the branch's own diff passed"
+		REF @TASK.B130
+		REF @TASK.B131
+	RATIONALE "the gate is the only check that reads the corpus as a whole, and"
+		+ "@DECISION.TheCorpusGateVerdictsAreMeasuredOnTheDeliveredTree rules that a pull request"
+		+ "body quotes its verdicts on the delivered tree; the CI holding the gate to every pull"
+		+ "request closes the gap the review found"
+		REF @DECISION.TheCorpusGateVerdictsAreMeasuredOnTheDeliveredTree
+	SOURCE "the review of pull request #103, finding 1, 2026-10-11"
