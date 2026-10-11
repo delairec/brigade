@@ -6517,13 +6517,15 @@ TASK B129
 TASK B131
 	TITLE "the awawa recordings of the tests regenerated against the operational schema of pull"
 		+ "request #99"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "tests"
 	ROLE ada
 	SPEC "tests/awawa/recordings holds one recording per awawa call of the suite, each carrying the"
 		+ "operational schema installed by brigade init from the template of main"
+		IMPL "tests/awawa/recordings/status-14577ea46296.json::e.g. remediate=builder"
 	SPEC "python3 -m unittest passes with no awawa on PATH, every test running on the fake"
+		IMPL "tests/awawa/test_recordings.py::class"
 	RATIONALE "the fake awawa of @TASK.B95 replays a recording matched on the arguments, the"
 		+ "working directory and the content of the .awawa files read; #99 (4df4775) changed a DESC"
 		+ "of SCHEMA PROJECT in brigade/corpus/data/schema.awawa.tpl, installed by brigade init as"
@@ -6536,3 +6538,4 @@ TASK B131
 		REF @TASK.B95
 	SOURCE "found on 2026-10-11 in the CI of pull request #101, red on main since the squash merge"
 		+ "of #100 combined the recordings of its branch with the schema of #99"
+	DELIVERED_BY 102
