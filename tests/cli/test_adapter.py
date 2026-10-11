@@ -364,6 +364,26 @@ class BrigadeAdapterActionsTest(AdapterTestCase):
             json.loads(completed.stdout), {"schema_version": 1, "actions": [{"kind": "text", "summary": "Reading."}]}
         )
 
+    def test_should_print_the_actions_as_indented_text(self):
+        # Arrange
+        self.machine.write_configuration('client = "claude-code"\n')
+        request = json.dumps(
+            {
+                "schema_version": 1,
+                "output": '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Reading."}]}}\n',
+            }
+        )
+
+        # Act
+        completed = self.run_adapter("actions", request=request)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout,
+            '{\n  "schema_version": 1,\n  "actions": [\n    {\n      "kind": "text",\n      "summary": "Reading."\n    }\n  ]\n}\n',
+        )
+
     def test_should_name_the_key_a_request_lacks(self):
         # Arrange
         self.machine.write_configuration('client = "claude-code"\n')

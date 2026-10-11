@@ -2959,7 +2959,7 @@ TASK B70
 	SPEC ".coveragerc sets fail_under to the TOTAL percentage of the coverage job of the CI at the"
 		+ "head of the pull request, rounded down to an integer: the job fails when a later pull"
 		+ "request brings the figure below it"
-		IMPL ".coveragerc::fail_under = 93"
+		IMPL ".coveragerc::fail_under = 100"
 	AFTER @TASK.B66
 	AFTER @TASK.B69
 	RATIONALE "the user ruled on 2026-10-07: « la définition du TDD est: pas de ligne de code sans"
@@ -5095,7 +5095,7 @@ TASK B95
 TASK B96
 	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, its tests that need"
 		+ "awawa replaying the recordings of B95, fails below the figure of B70"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "ci"
 	ROLE ada
@@ -5103,6 +5103,14 @@ TASK B96
 		+ "threshold, its tests that need awawa run on the recordings of B95; the pull request body"
 		+ "quotes the TOTAL line of the job next to the one the same commands print locally with"
 		+ "awawa on PATH"
+		IMPL ".coveragerc::fail_under = 100"
+		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
+			+ "test_should_read_the_last_line_of_a_file_that_ends_on_a_complete_message(self):"
+		IMPL "tests/cli/test_adapter.py::def test_should_print_the_actions_as_indented_text(self):"
+		IMPL "tests/unit/system/test_trail_writer.py::class"
+			+ "TrailWriterThatCannotWriteTest(TrailWriterTestCase):"
+		IMPL "tests/unit/commands/test_doctor.py::class"
+			+ "DoctorCheckOfACheckoutTest(unittest.TestCase):"
 	AFTER @TASK.B95
 	RATIONALE "found in the review of pull request #56: .coveragerc sets fail_under = 93, the"
 		+ "figure @TASK.B70 read in a CI without awawa, and the coverage job printed 94 % on #56,"
@@ -5124,6 +5132,7 @@ TASK B96
 	SOURCE "SPEC 1 and the TITLE amended on the user's ruling of 2026-10-10 at the refinement of"
 		+ "@TASK.B95: the CI installs no awawa, the tests replay recordings"
 		REF @TASK.B95
+	DELIVERED_BY 103
 
 TASK B97
 	TITLE "brigade processes returns the subprocesses a run, a tick or a command started, the"
@@ -6543,7 +6552,9 @@ TASK B130
 TASK B131
 	TITLE "the awawa recordings of the tests regenerated against the operational schema of pull"
 		+ "request #99"
-  SPEC "tests/cli/test_run.py imports shutil again"
+	STATUS implemented
+	MILESTONE @MILESTONE.F0
+	SPEC "tests/cli/test_run.py imports shutil again"
 		IMPL "tests/cli/test_run.py::import shutil"
 	SPEC "python3 -m unittest passes on main with no error, and ruff check reports nothing"
 		IMPL "tests/cli/test_run.py::class BrigadeRunEndDeclarationTest(RunTestCase):"

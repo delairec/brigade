@@ -1002,6 +1002,50 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
             ],
         )
 
+    def test_should_read_the_last_line_of_a_file_that_ends_on_a_complete_message(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        projects.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Go."}}\n'
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z","message":{"role":"assistant",'
+            '"content":[{"type":"text","text":"Done."}]}}'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(
+            transcripts["messages"],
+            [
+                {
+                    "role": "user",
+                    "timestamp": "2026-10-06T10:00:00.000Z",
+                    "content": "Go.",
+                    "tool_calls": 0,
+                    "id": None,
+                    "usage": None,
+                },
+                {
+                    "role": "assistant",
+                    "timestamp": "2026-10-06T10:00:09.000Z",
+                    "content": [{"type": "text", "text": "Done."}],
+                    "tool_calls": 0,
+                    "id": None,
+                    "usage": None,
+                },
+            ],
+        )
+
     def test_should_refuse_a_session_file_whose_line_before_the_last_is_cut_short(self):
         # Arrange
         projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"

@@ -4,4 +4,4 @@ patch = subprocess
 branch = True
 
 [report]
-fail_under = 93
+fail_under = 100

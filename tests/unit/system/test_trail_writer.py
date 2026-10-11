@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import CannotWrite
 from brigade.system.process_trace import ProcessTrace
 from brigade.system.trail_writer import TrailWriter
 
@@ -105,3 +106,17 @@ class TrailWriterAlreadyLocatedTest(TrailWriterTestCase):
 
         # Assert
         self.assertEqual((len(self.read_lines()), fallback.exists()), (1, False))
+
+
+class TrailWriterThatCannotWriteTest(TrailWriterTestCase):
+    def test_should_refuse_a_destination_it_cannot_write(self):
+        # Arrange
+        blocked = Path(self.root.name) / "blocked"
+        blocked.mkdir()
+
+        # Act
+        with self.assertRaises(CannotWrite) as raised:
+            self.trail.locate(blocked)
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {blocked}: Is a directory")
