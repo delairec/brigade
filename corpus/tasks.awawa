@@ -2959,7 +2959,7 @@ TASK B70
 	SPEC ".coveragerc sets fail_under to the TOTAL percentage of the coverage job of the CI at the"
 		+ "head of the pull request, rounded down to an integer: the job fails when a later pull"
 		+ "request brings the figure below it"
-		IMPL ".coveragerc::fail_under = 93"
+		IMPL ".coveragerc::fail_under = 100"
 	AFTER @TASK.B66
 	AFTER @TASK.B69
 	RATIONALE "the user ruled on 2026-10-07: « la définition du TDD est: pas de ligne de code sans"
