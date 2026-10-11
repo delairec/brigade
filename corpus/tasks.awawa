@@ -6513,3 +6513,26 @@ TASK B129
 		REF @TASK.B82
 	SOURCE "finding 1 of the review of pull request #95 on 2026-10-10, by a brigade run of the role"
 		+ "prudence: \"No --help prints that help\""
+
+TASK B130
+	TITLE "the shutil import of tests/cli/test_run.py restored, dropped by the squash merge of pull"
+		+ "request #100"
+	STATUS implemented
+	MILESTONE @MILESTONE.F0
+	COMPONENT "tests"
+	ROLE ada
+	SPEC "tests/cli/test_run.py imports shutil again"
+		IMPL "tests/cli/test_run.py::import shutil"
+	SPEC "python3 -m unittest passes on main with no error, and ruff check reports nothing"
+		IMPL "tests/cli/test_run.py::class BrigadeRunEndDeclarationTest(RunTestCase):"
+	RATIONALE "the squash merge of #100 (c677be5) applied the removal of import shutil, correct on"
+		+ "its branch a3e5964 where @TASK.B95 had replaced the nine skipUnless(shutil.which("
+		+ "\"awawa\")) by provide_awawa, onto the main that #98 (ac7ae47) had meanwhile given a"
+		+ "shutil.rmtree in BrigadeRunEndDeclarationTest, which empties the ledger between the two"
+		+ "subtests of test_should_record_a_signal_naming_how_a_segment_ended_without_delivery; the"
+		+ "import went, the rmtree stayed, and main fails its tests and ruff since"
+		REF @TASK.B95
+	RATIONALE "the rmtree is not awawa's: it must stay, the import is what the merge dropped"
+	SOURCE "found on 2026-10-11 while resuming pull request #96, whose rebase onto main inherits"
+		+ "the failure; ratified by the user the same day"
+	DELIVERED_BY 101
