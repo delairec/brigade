@@ -17,6 +17,7 @@ NO_PROGRESS = ""
 NO_INTERVAL = "0"
 SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
 TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
+RESUMED_RECORDING_SUFFIX = ".resumed.json"
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
@@ -50,13 +51,21 @@ def _build_argv(settings: dict, recording: str) -> list[str]:
     ]
 
 
+def _choose_recording(recordings: str, request: dict) -> str:
+    role = request["role"]["name"]
+    resumed = Path(recordings) / f"{role}{RESUMED_RECORDING_SUFFIX}"
+    if resumed.exists() and Path(request["progress_file"]).read_text(encoding="utf-8").strip():
+        return str(resumed)
+    return f"{recordings}/{role}.json"
+
+
 def _build_launch(request: dict) -> dict:
     recordings = request["settings"].get("recordings")
     if recordings is None:
         raise BrigadeError("the fake client adapter needs recordings in the table [clients.fake] of config.toml")
     return {
         "schema_version": SCHEMA_VERSION,
-        "argv": _build_argv(request["settings"], f"{recordings}/{request['role']['name']}.json"),
+        "argv": _build_argv(request["settings"], _choose_recording(recordings, request)),
         "environment": {},
         "stdin": None,
         "session_id": request["session_id"],

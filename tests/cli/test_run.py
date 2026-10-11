@@ -173,7 +173,11 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
             "# Brief\n\n"
             "Deliver B06.\n\n"
             "# Progress file\n\n"
-            f"{run_directory / 'progress.md'}\n",
+            f"{run_directory / 'progress.md'}\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
         )
 
     def test_should_keep_the_package_of_the_resolved_role(self):
@@ -289,7 +293,7 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
         )
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 3, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         arguments = (run_directory / "progress.md").read_text().splitlines()
         self.assertRegex(arguments.pop(7), UUID_PATTERN)
@@ -545,7 +549,7 @@ class BrigadeRunHandOverTest(RunTestCase):
         completed = self.run_deliver()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 12, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertEqual(
             document,
@@ -558,7 +562,7 @@ class BrigadeRunHandOverTest(RunTestCase):
                 "client": "fake",
                 "project": None,
                 "segments": 3,
-                "outcome": "failed",
+                "outcome": "turn_limit",
             },
         )
 
@@ -570,7 +574,7 @@ class BrigadeRunHandOverTest(RunTestCase):
         completed = self.run_deliver()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 12, completed.stderr)
         self.assertEqual(len(self.read_events("run.finished")), 3)
 
     def test_should_give_the_progress_file_as_the_first_context_of_the_next_segment(self):
@@ -581,7 +585,7 @@ class BrigadeRunHandOverTest(RunTestCase):
         completed = self.run_deliver()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 12, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         self.assertEqual(
             (run_directory / "segments" / "2" / "brief.md").read_text(),
@@ -590,7 +594,11 @@ class BrigadeRunHandOverTest(RunTestCase):
             "# Procedure deliver\n\n"
             "Deliver the task the brief names.\n\n"
             "# Progress file\n\n"
-            f"{run_directory / 'progress.md'}\n",
+            f"{run_directory / 'progress.md'}\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
         )
 
     def test_should_not_relaunch_a_segment_ended_on_the_step_cap_with_an_empty_progress_file(self):
@@ -601,7 +609,7 @@ class BrigadeRunHandOverTest(RunTestCase):
         completed = self.run_deliver()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 12, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["segments"], 1)
 
     def test_should_record_a_signal_naming_the_procedure_the_run_and_the_budget(self):
@@ -612,7 +620,7 @@ class BrigadeRunHandOverTest(RunTestCase):
         completed = self.run_deliver()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 12, completed.stderr)
         [signal] = self.read_events("signal.recorded")
         self.assertRegex(signal.pop("ts"), INSTANT_PATTERN)
         self.assertEqual(
@@ -646,7 +654,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
         completed = self.run_quick()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 11, completed.stderr)
         [finished] = self.read_events("run.finished")
         self.assertRegex(finished.pop("ts"), INSTANT_PATTERN)
         self.assertLess(finished.pop("duration_ms"), 10000)
@@ -689,7 +697,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
         completed = self.run_quick()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 11, completed.stderr)
         [signal] = self.read_events("signal.recorded")
         self.assertRegex(signal.pop("ts"), INSTANT_PATTERN)
         self.assertEqual(
@@ -717,8 +725,152 @@ class BrigadeRunOnTheClockTest(RunTestCase):
         completed = self.run_quick()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 11, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["segments"], 3)
+
+
+class BrigadeRunEndDeclarationTest(RunTestCase):
+    def run_deliver(self):
+        return self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json")
+
+    def record_resumed(self, role: str, result: dict) -> None:
+        (self.recordings / f"{role}.resumed.json").write_text(json.dumps(result))
+
+    def test_should_exit_0_after_one_segment_declaring_done(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", DONE_RESULT)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["segments"], 1)
+
+    def test_should_relaunch_a_segment_handed_over_and_exit_0_once_the_next_declares_done(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", {**DONE_RESULT, "outcome": "handed_over"})
+        self.record_resumed("builder", DONE_RESULT)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["segments"], document["outcome"]), (2, "done"))
+        second_brief = (self.runs / document["run"] / "segments" / "2" / "brief.md").read_text()
+        self.assertRegex(second_brief, r"\A# Progress so far\n\nstep 1 done\n")
+
+    def test_should_exit_20_after_the_last_hand_over_of_a_run_handed_over_at_every_segment(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", {**DONE_RESULT, "outcome": "handed_over"})
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 20, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["segments"], document["outcome"]), (3, "handed_over"))
+
+    def test_should_exit_10_after_one_segment_declaring_blocked_whatever_its_progress(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", {**DONE_RESULT, "outcome": "blocked"})
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 10, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["segments"], 1)
+
+    def test_should_relaunch_an_undeclared_segment_and_exit_3_after_the_last_hand_over(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", {**DONE_RESULT, "outcome": "undeclared"})
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 3, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["segments"], document["outcome"]), (3, "undeclared"))
+
+    def test_should_exit_3_after_one_undeclared_segment_with_an_empty_progress_file(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", {**DONE_RESULT, "outcome": "undeclared"})
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 3, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["segments"], 1)
+
+    def test_should_exit_1_after_one_segment_ended_on_a_client_error(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n')
+        self.record("builder", {**TURN_LIMIT_RESULT, "error_class": "execution", "message": "the client crashed"})
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["segments"], document["outcome"]), (1, "failed"))
+
+    def test_should_record_a_signal_naming_how_a_segment_ended_without_delivery(self):
+        rows = [("handed over", "handed_over"), ("undeclared", "undeclared")]
+        for case, outcome in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.configure_fake(COUNTING_CLIENT)
+                self.record("builder", {**DONE_RESULT, "outcome": outcome})
+                shutil.rmtree(self.ledger, ignore_errors=True)
+
+                # Act
+                completed = self.run_deliver()
+
+                # Assert
+                [signal] = self.read_events("signal.recorded")
+                self.assertRegex(signal.pop("ts"), INSTANT_PATTERN)
+                self.assertEqual(
+                    signal,
+                    {
+                        "schema_version": 1,
+                        "event": "signal.recorded",
+                        "signal": outcome,
+                        "project": None,
+                        "procedure": "deliver",
+                        "run": json.loads(completed.stdout)["run"],
+                        "segment": 1,
+                        "budget": 75,
+                    },
+                )
+
+    def test_should_end_the_run_on_turn_limit_in_its_list_its_result_and_its_last_finished_event(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", TURN_LIMIT_RESULT)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        run_id = json.loads(completed.stdout)["run"]
+        [listed] = json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
+        self.assertEqual(listed["outcome"], "turn_limit")
+        self.assertEqual(json.loads((self.runs / run_id / "result.json").read_text())["outcome"], "turn_limit")
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["outcome"], "turn_limit")
 
 
 class BrigadeRunWithAClientThatCountsNoStepsTest(RunTestCase):
@@ -1015,7 +1167,7 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         completed = self.run_slot()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 12, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["segments"], 2)
 
     def test_should_take_the_handovers_of_the_policy_of_its_own_project_only(self):
@@ -1033,7 +1185,7 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         completed = self.run_slot()
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 12, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["segments"], 2)
 
     def write_role_file(self, directory: Path, name: str, slot: str) -> None:
@@ -1206,7 +1358,7 @@ class BrigadeRunOfASlotBoundToALoginTest(ForgeAccountRunTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, self.environment_record.read_text()),
-            (0, "token-of-octo-builder\n"),
+            (3, "token-of-octo-builder\n"),
             completed.stderr,
         )
 
@@ -1215,7 +1367,7 @@ class BrigadeRunOfASlotBoundToALoginTest(ForgeAccountRunTestCase):
         completed = self.run_slot("build", "--verbose", "--json")
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 3, completed.stderr)
         self.assertNotIn("token-of-", completed.stdout + completed.stderr + self.read_every_state_file())
 
     def test_should_write_the_token_nowhere_when_the_run_is_detached(self):
@@ -1285,5 +1437,5 @@ class BrigadeRunOfASlotBoundToNoLoginTest(ForgeAccountRunTestCase):
 
         # Assert
         self.assertEqual(
-            (completed.returncode, self.environment_record.read_text()), (0, "no GH_TOKEN\n"), completed.stderr
+            (completed.returncode, self.environment_record.read_text()), (3, "no GH_TOKEN\n"), completed.stderr
         )

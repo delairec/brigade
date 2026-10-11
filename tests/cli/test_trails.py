@@ -86,7 +86,7 @@ class BrigadeRunTrailTest(RunTestCase):
         completed = self.run_brigade("run", str(quick), "--slot", "build", "--cwd", str(self.workspace), "--json")
 
         # Assert
-        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertEqual(completed.returncode, 11, completed.stderr)
         [record] = read_trail(self.runs / json.loads(completed.stdout)["run"] / "processes.jsonl")
         self.assertEqual((record["outcome"], record["exit"]), ("cut", None))
 

@@ -183,7 +183,7 @@ class BrigadeAdapterParseResultTest(AdapterTestCase):
             json.loads(completed.stdout),
             {
                 "schema_version": 1,
-                "outcome": "done",
+                "outcome": "undeclared",
                 "steps": 1,
                 "usage": {
                     "input_tokens": 9,
@@ -221,7 +221,7 @@ class BrigadeAdapterParseResultTest(AdapterTestCase):
             json.loads(completed.stdout),
             {
                 "schema_version": 1,
-                "outcome": "done",
+                "outcome": "undeclared",
                 "steps": None,
                 "usage": {
                     "input_tokens": 108,

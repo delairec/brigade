@@ -4,6 +4,7 @@ import time
 
 from brigade.command import Argument, Command
 from brigade.runs.create_run_directory import create_run_directory
+from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.detach_run import detach_run
 from brigade.runs.plan_run import RunPlan, RunRequest, plan_run
 from brigade.runs.read_run_setting import read_run_setting
@@ -75,9 +76,7 @@ def _accept_extra_argument(extra: str) -> bool:
 
 
 def _decide_exit_code(document: dict) -> int:
-    if document.get("outcome", "done") != "done":
-        return 1
-    return 0
+    return decide_run_exit_code(document.get("outcome", "done"))
 
 
 def _describe_diagnostics(document: dict) -> list[str]:

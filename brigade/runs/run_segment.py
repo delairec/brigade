@@ -38,6 +38,7 @@ from brigade.system.write_text_file import write_text_file
 FIRST_SEGMENT = 1
 PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
 WALL_LIMIT_OUTCOME = "wall_limit"
+TURN_LIMIT = "turn_limit"
 GRACE_BEFORE_KILL_S = 30.0
 NO_TRANSCRIPT_READ = "the client reads no transcript"
 NO_SESSION_REPORTED = "the client reported no session"
@@ -87,7 +88,7 @@ def _ask_client(plan: RunPlan, runtime: Runtime, request: LaunchArgvRequest | Pa
 
 def _adopt_answer(answer: ParseResultAnswer, session_id: str | None) -> RunResult:
     return RunResult(
-        outcome=answer.outcome,
+        outcome=TURN_LIMIT if answer.error_class == TURN_LIMIT else answer.outcome,
         steps=answer.steps,
         usage=answer.usage,
         session_id=session_id,

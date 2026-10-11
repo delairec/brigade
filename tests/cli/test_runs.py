@@ -28,7 +28,7 @@ class RunsTestCase(RunTestCase):
 
     def run_deliver_to_its_end(self) -> str:
         completed = self.run_deliver("--json")
-        self.assertIn(completed.returncode, (0, 1), completed.stderr)
+        self.assertIn(completed.returncode, (0, 1, 3, 10, 12), completed.stderr)
         return json.loads(completed.stdout)["run"]
 
 
@@ -367,9 +367,9 @@ class BrigadeRunsShowOfARunHandedOverTest(RunsTestCase):
         self.assertEqual(
             json.loads(completed.stdout)["segments"],
             [
-                {"segment": 1, "outcome": "failed"},
-                {"segment": 2, "outcome": "failed"},
-                {"segment": 3, "outcome": "failed"},
+                {"segment": 1, "outcome": "turn_limit"},
+                {"segment": 2, "outcome": "turn_limit"},
+                {"segment": 3, "outcome": "turn_limit"},
             ],
         )
 
@@ -529,7 +529,13 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
         )
 
     def test_should_exit_as_brigade_run_does_by_the_outcome_of_the_run(self):
-        rows = [("done", DONE_RESULT, 0, "outcome    done"), ("failed", TURN_LIMIT_RESULT, 1, "outcome    failed")]
+        rows = [
+            ("done", DONE_RESULT, 0, "outcome    done"),
+            ("failed", {**TURN_LIMIT_RESULT, "error_class": "execution"}, 1, "outcome    failed"),
+            ("undeclared", {**DONE_RESULT, "outcome": "undeclared"}, 3, "outcome    undeclared"),
+            ("blocked", {**DONE_RESULT, "outcome": "blocked"}, 10, "outcome    blocked"),
+            ("turn limit", TURN_LIMIT_RESULT, 12, "outcome    turn_limit"),
+        ]
         for case, result, exit_code, outcome_line in rows:
             with self.subTest(case=case):
                 # Arrange

@@ -39,6 +39,8 @@ TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
 SUBAGENTS_DIRECTORY = "subagents"
 SUBAGENT_TRANSCRIPTS = "*.jsonl"
 IDENTIFYING_ARGUMENTS = ("file_path", "command", "pattern", "path", "url", "query")
+END_DECLARATIONS = {f"brigade-end: {outcome}": outcome for outcome in ("done", "handed_over", "blocked")}
+UNDECLARED = "undeclared"
 
 
 def _bind_models(request: dict) -> dict:
@@ -149,6 +151,17 @@ def _classify_error(result: dict, message):
     return None
 
 
+def _read_declared_outcome(message) -> str:
+    last_line = (message or "").rstrip().rpartition("\n")[2].lstrip()
+    return END_DECLARATIONS.get(last_line, UNDECLARED)
+
+
+def _decide_outcome(error_class, message) -> str:
+    if error_class is not None:
+        return "failed"
+    return _read_declared_outcome(message)
+
+
 def _read_steps(result: dict):
     if result.get("origin", {}).get("kind") == TASK_NOTIFICATION_ORIGIN:
         return None
@@ -163,7 +176,7 @@ def _parse_result(request: dict) -> dict:
     error_class = _classify_error(result, message)
     return {
         "schema_version": SCHEMA_VERSION,
-        "outcome": "done" if error_class is None else "failed",
+        "outcome": _decide_outcome(error_class, message),
         "steps": _read_steps(result),
         "usage": _read_usage(result),
         "session_id": result.get("session_id"),
@@ -195,8 +208,8 @@ def _read_event_actions(event: dict) -> list[dict]:
     if event.get("type") == "assistant":
         return _read_content_actions(event)
     if event.get("type") == "result":
-        outcome = "done" if _classify_error(event, event.get("result")) is None else "failed"
-        return [{"kind": "result", "summary": outcome}]
+        message = event.get("result")
+        return [{"kind": "result", "summary": _decide_outcome(_classify_error(event, message), message)}]
     return []
 
 

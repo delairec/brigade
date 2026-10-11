@@ -3,6 +3,7 @@ from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.errors import UsageError
+from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.describe_run import describe_run
 from brigade.runs.run_follower import RunFollower
 from brigade.runs.run_locations import RUNS_DIRECTORY
@@ -59,9 +60,9 @@ def _read_request(options):
 
 
 def _decide_exit_code(document: dict) -> int:
-    if "interrupted" not in document or document["interrupted"] or document["run"]["outcome"] == "done":
+    if "interrupted" not in document or document["interrupted"]:
         return 0
-    return 1
+    return decide_run_exit_code(document["run"]["outcome"])
 
 
 def _print(text: str) -> None:

@@ -243,7 +243,8 @@ class ClaudeCodeResultTest(unittest.TestCase):
     def test_should_normalise_a_successful_result(self):
         # Arrange
         stdout = (
-            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":1,"result":"ok",'
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":1,'
+            '"result":"Delivered.\\nbrigade-end: done",'
             '"session_id":"ada28962","total_cost_usd":0.035,"usage":{"input_tokens":9,"cache_creation_input_tokens":16778,'
             '"cache_read_input_tokens":13803,"output_tokens":55,"service_tier":"standard"}}'
         )
@@ -448,7 +449,8 @@ class ClaudeCodeResultTest(unittest.TestCase):
         stream = (
             '{"type":"system","subtype":"init","session_id":"ada28962"}\n'
             '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done."}]}}\n'
-            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":3,"result":"Done.",'
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":3,'
+            '"result":"Done.\\nbrigade-end: done",'
             '"session_id":"ada28962","usage":{"input_tokens":9,"cache_creation_input_tokens":16778,'
             '"cache_read_input_tokens":13803,"output_tokens":55}}\n'
         )
@@ -482,7 +484,8 @@ class ClaudeCodeResultTest(unittest.TestCase):
         # Arrange
         stream = (
             '{"type":"result","subtype":"error_during_execution","is_error":true,"num_turns":2,"session_id":"s1"}\n'
-            '{"type":"result","subtype":"success","is_error":false,"num_turns":5,"session_id":"s1"}\n'
+            '{"type":"result","subtype":"success","is_error":false,"num_turns":5,"result":"brigade-end: done",'
+            '"session_id":"s1"}\n'
         )
 
         # Act
@@ -555,7 +558,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             result,
             {
                 "schema_version": 1,
-                "outcome": "done",
+                "outcome": "undeclared",
                 "steps": None,
                 "usage": {
                     "input_tokens": 108,
@@ -602,7 +605,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
         # Arrange
         result_without_usage = (
             '{"type": "result", "subtype": "success", "is_error": false, "num_turns": 3, "session_id": "s-42",'
-            ' "duration_ms": 9000, "result": "Done.", "usage": null}'
+            ' "duration_ms": 9000, "result": "Done.\\nbrigade-end: done", "usage": null}'
         )
 
         # Act
@@ -624,6 +627,46 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 "message": None,
             },
         )
+
+
+class ClaudeCodeEndDeclarationTest(unittest.TestCase):
+    def test_should_answer_the_outcome_the_last_line_of_the_final_message_declares(self):
+        rows = [
+            ("done", "Pull request #96 is open.\\nbrigade-end: done", "done"),
+            ("handed over", "Progress written.\\nbrigade-end: handed_over", "handed_over"),
+            ("blocked", "The ruling is the user's.\\nbrigade-end: blocked", "blocked"),
+            ("a line break after the declaration", "Pull request #96 is open.\\nbrigade-end: done\\n", "done"),
+            ("an indented declaration", "Pull request #96 is open.\\n  brigade-end: done", "done"),
+            ("another last line", "Pull request #96 is open.", "undeclared"),
+            ("another value", "Pull request #96 is open.\\nbrigade-end: finished", "undeclared"),
+            ("a quotation above the last line", "The brief asks for brigade-end: done.\\nI stop here.", "undeclared"),
+        ]
+        for case, final_message, expected_outcome in rows:
+            with self.subTest(case=case):
+                # Arrange
+                stdout = (
+                    '{"type":"result","subtype":"success","is_error":false,"num_turns":12,'
+                    f'"result":"{final_message}","session_id":"s-42"}}'
+                )
+
+                # Act
+                result = parse_claude_output(stdout)
+
+                # Assert
+                self.assertEqual(result["outcome"], expected_outcome)
+
+    def test_should_answer_failed_on_a_client_error_whatever_its_last_line_declares(self):
+        # Arrange
+        stdout = (
+            '{"type":"result","subtype":"error_during_execution","is_error":true,"num_turns":12,'
+            '"result":"brigade-end: done","session_id":"s-42"}'
+        )
+
+        # Act
+        result = parse_claude_output(stdout, exit_code=1)
+
+        # Assert
+        self.assertEqual((result["outcome"], result["error_class"]), ("failed", "execution"))
 
 
 def read_claude_actions(output: str) -> dict:
@@ -696,7 +739,12 @@ class ClaudeCodeActionsTest(unittest.TestCase):
 
     def test_should_give_the_outcome_of_the_segment_for_the_result_event(self):
         rows = [
-            ("done", '{"type":"result","subtype":"success","is_error":false,"num_turns":3}\n', "done"),
+            (
+                "done",
+                '{"type":"result","subtype":"success","is_error":false,"num_turns":3,"result":"brigade-end: done"}\n',
+                "done",
+            ),
+            ("undeclared", '{"type":"result","subtype":"success","is_error":false,"num_turns":3}\n', "undeclared"),
             ("failed", '{"type":"result","subtype":"error_max_turns","is_error":true,"num_turns":94}\n', "failed"),
         ]
         for case, event, expected_summary in rows:

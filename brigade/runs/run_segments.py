@@ -7,21 +7,22 @@ from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.runs.describe_finished import describe_finished
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import PROGRESS_FILE, RESULT_FILE
-from brigade.runs.run_segment import WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
+from brigade.runs.run_segment import TURN_LIMIT, WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
 from brigade.runtime import Runtime
 from brigade.system.write_json_atomically import write_json_atomically
 
 BUDGET_REACHED = "budget_reached"
 WALL_LIMIT_REACHED = "wall_limit_reached"
-TURN_LIMIT = "turn_limit"
+RELAUNCH_SIGNALS = {
+    TURN_LIMIT: BUDGET_REACHED,
+    WALL_LIMIT_OUTCOME: WALL_LIMIT_REACHED,
+    "handed_over": "handed_over",
+    "undeclared": "undeclared",
+}
 
 
 def _is_cut_on_the_clock(record: SegmentRecord) -> bool:
     return record.result.outcome == WALL_LIMIT_OUTCOME
-
-
-def _ends_on_budget(record: SegmentRecord) -> bool:
-    return record.result.error_class == TURN_LIMIT or _is_cut_on_the_clock(record)
 
 
 def _holds_progress(plan: RunPlan) -> bool:
@@ -31,7 +32,7 @@ def _holds_progress(plan: RunPlan) -> bool:
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
     cut_on_the_clock = _is_cut_on_the_clock(record)
     return SignalRecorded(
-        signal=WALL_LIMIT_REACHED if cut_on_the_clock else BUDGET_REACHED,
+        signal=RELAUNCH_SIGNALS[record.result.outcome],
         project=plan.project,
         procedure=plan.procedure.name,
         run=plan.run_id,
@@ -49,7 +50,7 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
         records.append(record)
         instant += timedelta(milliseconds=record.measured_ms)
         append_event(runtime.paths, instant, describe_finished(plan, record))
-        if not _ends_on_budget(record):
+        if record.result.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))
         if record.number > plan.handovers or not _holds_progress(plan):
