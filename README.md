@@ -3,9 +3,9 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with twelve commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+The entry point exists with thirteen commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
 `brigade adapter`, `brigade project`, `brigade ledger`, `brigade roles`, `brigade tick`, `brigade scheduler`,
-`brigade corpus`, `brigade run` and `brigade runs`; every other one is a task of the corpus.
+`brigade corpus`, `brigade run`, `brigade runs` and `brigade processes`; every other one is a task of the corpus.
 
 ## Install
 
@@ -282,6 +282,23 @@ The `spawned` line of a detached run and the lines of the process it re-executes
 each command, the trails of `ticks/` and `commands/` older than `trail_days` of `config.toml`, 7 by default, are
 removed; a `trail_days` that is no integer of 1 or more keeps every trail, and `brigade doctor` names it. The trail of
 a run goes with its run. A detached run's records are written by the process it re-executes.
+
+The trails are read through `brigade processes`, never searched by hand:
+
+```
+brigade processes list [--json]                  # every run, tick and command: kind, id, instant, processes, failed
+brigade processes show <id> [--failed] [--json]  # the records of one run, tick or command, as written
+```
+
+`list` prints one entry per trail, newest first, `failed` counting the records not exited with code 0. `show` takes a
+run id or the id `list` prints for a tick or a command; `--failed` keeps the records not exited with code 0, and an id
+no trail holds exits 1, naming it. Its text prints one line per record, `<outcome>  <exit code, else duration, else
+->  <argv>`:
+
+```
+exited  128  git fetch origin
+cut  600000 ms  claude -p 'deliver the task'
+```
 
 `--verbose`, accepted by every command, before its name as after it, prints on stderr one line per record the command
 writes, stdout keeping the document alone:
