@@ -2066,28 +2066,3 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 		+ "seule\": the steps to the first edit are partial only when a segment before the first"
 		+ "edit has no main_steps measured"
 		REF @TASK.B86
-
-DECISION TheCorpusGateVerdictsAreMeasuredOnTheDeliveredTree
-	TITLE "the corpus gate verdicts a pull request body quotes are measured on the delivered tree:"
-		+ "the head of the branch as it will merge, never on the branch's own diff nor on a head"
-		+ "before a rebase"
-	STATUS active
-	DESC "awawa fmt --check and awawa lint --strict run on the head commit of the pull request, the"
-		+ "tree the merge lands; a verdict measured on the branch's own diff, or on a head before a"
-		+ "rebase onto the base, is not a verdict of the delivered tree"
-	DESC "a merge can interleave the entities two pull requests append at the end of one corpus"
-		+ "file: the merge commit 2dad2fe interleaved @TASK.B130 and @TASK.B131, and the squash"
-		+ "merge 216ab70 landed the corrupted tree on main, the local pre-commit gate running on"
-		+ "neither the merge commit nor the squash"
-		REF @TASK.B130
-		REF @TASK.B131
-	DESC "the review of pull request #103 found the body quoting a clean corpus gate measured at"
-		+ "0fffb8c, the head before the rebase, while the delivered tree 07228dd failed the gate"
-		+ "with 8 errors inherited from main; the pull request repaired the corpus itself"
-	REJECTED "quoting the verdicts measured on the branch's own diff, or on a head before a rebase,"
-		+ "justified by the rebase changing no file of the branch"
-	RATIONALE "the corpus gate is the only check that reads the corpus as a whole and the CI runs"
-		+ "none, so the delivered tree is the only tree whose verdict a body may quote: a verdict"
-		+ "of the branch's own diff certifies a tree the merge does not land"
-		REF @TASK.B132
-	SOURCE "the review of pull request #103, finding 1, 2026-10-11"
