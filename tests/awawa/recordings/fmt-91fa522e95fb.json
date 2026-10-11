@@ -1,0 +1,20 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/projects.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/projects.awawa": "PROJECT app\n\tPATH \"<tmp:0>/projects/app\"\n\tMAIN \"main\"\n\tHEAVY \"make e2e\"\n\tFORGE \"none\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "version": "awawa 2.7.0"
+}

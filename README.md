@@ -359,6 +359,18 @@ coverage of `brigade/` by the whole suite with coverage.py, configured by `.cove
 ruff, semgrep, vulture, coverage and zizmor are pinned in `requirements-ci.txt`, which dependabot keeps current, and the
 pinned ruff gives the verdict that counts.
 
+The tests that need awawa run against the real awawa where it is on PATH, and otherwise against a fake that replays
+the recordings of `tests/awawa/recordings/`: what the real awawa printed, its exit code and the files it rewrote, for
+the same arguments on the same input files, each recording naming the awawa version it was made with. A call with no
+recording fails its test, naming its arguments. The CI installs no awawa, so its tests run on the recordings and none
+is skipped. Where awawa is on PATH, `tests/awawa/test_recordings.py` replays every recording against it and fails on a
+difference, naming the recording, its version and the version `awawa --version` prints. A recording is made, or
+renewed after a bump of awawa or a change of a call, from the real binary:
+
+```
+rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest   # awawa on PATH
+```
+
 ## Layout
 
 - `bin/brigade` — the entry point of a clone; `brigade/` — the package; `build.py` — the zipapp build.

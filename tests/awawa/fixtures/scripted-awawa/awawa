@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$1" in
+  --version) echo "awawa 2.7.0" ;;
+  fmt) printf 'TASK B1\n' > "$2"; echo "$2"; echo "1 file rewritten" >&2 ;;
+esac

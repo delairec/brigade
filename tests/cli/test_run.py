@@ -1,10 +1,10 @@
 import json
 import os
-import shutil
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
 from tests.cli.temporary_instructions import TemporaryInstructions
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT
@@ -987,10 +987,10 @@ class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):
         self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["worktree"], str(self.project.path))
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class BrigadeRunOfAProjectTest(RunTestCase):
     def setUp(self):
         super().setUp()
+        provide_awawa(self)
         initialised = self.machine.run_init()
         self.assertEqual(initialised.returncode, 0, initialised.stderr)
         self.configure_fake(COUNTING_CLIENT)

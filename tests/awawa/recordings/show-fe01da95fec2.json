@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@AGENT.verifier",
+      "--json",
+      "<tmp:0>/instructions"
+    ],
+    "cwd": "<tmp:0>/instructions",
+    "directories": [
+      "<tmp:0>/instructions"
+    ],
+    "inputs": {
+      "<tmp:0>/instructions/_schema.awawa": "SCHEMA AGENT\n\tDESC \"a role\"\n\tFIELD WORK string\n\t\tREQUIRED\n\t\tREPEATABLE\n\tFIELD REASONING deepest|deep|standard|light\n\t\tREQUIRED\n\tFIELD CAPABILITY read|write|shell|net\n\t\tREQUIRED\n\t\tREPEATABLE\n\tFIELD BUDGET uint\n\tFIELD RETURNS string\n\t\tREQUIRED\n\t\tREPEATABLE\n\tFIELD LOADS @RULE\n\t\tREPEATABLE\n\nSCHEMA RULE\n\tDESC \"a rule\"\n\tFIELD SPEC string\n\t\tREQUIRED\n",
+      "<tmp:0>/instructions/agents.awawa": null
+    }
+  },
+  "outcome": {
+    "exit_code": 2,
+    "rewritten": {},
+    "stderr": "awawa: <tmp:0>/instructions/agents.awawa: Permission denied (os error 13)\n",
+    "stdout": ""
+  },
+  "version": "awawa 2.7.0"
+}

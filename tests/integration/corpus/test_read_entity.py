@@ -1,5 +1,4 @@
 import os
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,15 +6,16 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import EntityNotDefined, ToolFailure
+from tests.awawa.provide_awawa import provide_awawa
 from tests.integration.run_process_without_trail import run_process_without_trail
 
 SCHEMA = 'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\t\tREPEATABLE\n\tFIELD BUDGET uint\n'
 AGENTS = 'AGENT planner\n\tWORK "the plan of a wave"\n\tWORK "the order of its tasks"\n\tBUDGET 40\n'
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class ReadEntityTest(unittest.TestCase):
     def setUp(self):
+        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)
         (self.corpus / "_schema.awawa").write_text(SCHEMA)

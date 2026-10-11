@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField, read_entities
+from tests.awawa.provide_awawa import provide_awawa
 from tests.integration.run_process_without_trail import run_process_without_trail
 
 SHIPPED_SCHEMA = Path(__file__).resolve().parents[3] / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
@@ -23,9 +24,9 @@ PROJECTS = (
 POLICY = "POLICY alpha_policy\n\tPROJECT @PROJECT.alpha\n"
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class ReadEntitiesTest(unittest.TestCase):
     def setUp(self):
+        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)
         shutil.copyfile(SHIPPED_SCHEMA, self.corpus / "_schema.awawa")

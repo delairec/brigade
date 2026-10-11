@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@AGENT.planner",
+      "--json",
+      "<tmp:0>/instructions"
+    ],
+    "cwd": "<tmp:0>/instructions",
+    "directories": [
+      "<tmp:0>/instructions"
+    ],
+    "inputs": {
+      "<tmp:0>/instructions/_schema.awawa": "SCHEMA AGENT\n\tDESC \"a role\"\n\tFIELD WORK string\n\t\tREQUIRED\n\t\tREPEATABLE\n\tFIELD REASONING deepest|deep|standard|light\n\t\tREQUIRED\n\tFIELD CAPABILITY read|write|shell|net\n\t\tREQUIRED\n\t\tREPEATABLE\n\tFIELD BUDGET uint\n\tFIELD RETURNS string\n\t\tREQUIRED\n\t\tREPEATABLE\n\tFIELD LOADS @RULE\n\t\tREPEATABLE\n\nSCHEMA RULE\n\tDESC \"a rule\"\n\tFIELD SPEC string\n\t\tREQUIRED\n",
+      "<tmp:0>/instructions/agents.awawa": "AGENT planner\n\tWORK \"the plan of a wave\"\n\tWORK \"the order of its tasks\"\n\tREASONING deep\n\tCAPABILITY read\n\tCAPABILITY shell\n\tBUDGET 40\n\tRETURNS \"the wave plan\"\n\tRETURNS \"the blockers\"\n\tLOADS @RULE.plans_are_short\n\nAGENT stray\n\tWORK \"anything\"\n\tREASONING light\n\tCAPABILITY read\n\tBUDGET 10\n\tRETURNS \"something\"\n\nRULE plans_are_short\n\tSPEC \"a plan fits one screen\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"AGENT\", \"name\": \"planner\", \"file\": \"<tmp:0>/instructions/agents.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"WORK\", \"atoms\": [\"\\\"the plan of a wave\\\"\"], \"fields\": []}, {\"name\": \"WORK\", \"atoms\": [\"\\\"the order of its tasks\\\"\"], \"fields\": []}, {\"name\": \"REASONING\", \"atoms\": [\"deep\"], \"fields\": []}, {\"name\": \"CAPABILITY\", \"atoms\": [\"read\"], \"fields\": []}, {\"name\": \"CAPABILITY\", \"atoms\": [\"shell\"], \"fields\": []}, {\"name\": \"BUDGET\", \"atoms\": [\"40\"], \"fields\": []}, {\"name\": \"RETURNS\", \"atoms\": [\"\\\"the wave plan\\\"\"], \"fields\": []}, {\"name\": \"RETURNS\", \"atoms\": [\"\\\"the blockers\\\"\"], \"fields\": []}, {\"name\": \"LOADS\", \"atoms\": [\"@RULE.plans_are_short\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "version": "awawa 2.7.0"
+}

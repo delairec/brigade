@@ -1,12 +1,12 @@
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
 
+from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.forward_coverage_environment import forward_coverage_environment
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 
@@ -109,14 +109,15 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
             [["commands"], False],
         )
 
-    @unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
     def test_should_create_a_corpus_that_lints_clean(self):
         # Arrange
+        provide_awawa(self)
         self.machine.run_init()
 
         # Act
         completed = subprocess.run(  # noqa: S603 - the test's own command line
             ["awawa", "lint", "--strict", str(self.machine.corpus)],  # noqa: S607 - awawa found on the PATH of the test
+            cwd=self.machine.corpus,
             capture_output=True,
             text=True,
             check=False,

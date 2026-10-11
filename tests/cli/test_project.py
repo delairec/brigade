@@ -1,13 +1,13 @@
 import fcntl
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 
@@ -16,9 +16,9 @@ INVALID_ENTITY = 'PROJECT bad-name\n\tPATH "/srv/bad"\n\tMAIN "main"\n\tSTATUS a
 LOCK_WAIT_S = 5
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class ProjectTestCase(unittest.TestCase):
     def setUp(self):
+        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
@@ -116,6 +116,7 @@ class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
         # Act
         completed = subprocess.run(  # noqa: S603 - the test's own command line
             ["awawa", "lint", "--strict", str(self.machine.corpus)],  # noqa: S607 - awawa found on the PATH of the test
+            cwd=self.machine.corpus,
             capture_output=True,
             text=True,
             check=False,

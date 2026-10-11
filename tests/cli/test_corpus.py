@@ -1,13 +1,13 @@
 import fcntl
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 
@@ -15,9 +15,9 @@ RELAY_EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables"
 LOCK_WAIT_S = 5
 
 
-@unittest.skipUnless(shutil.which("awawa"), "awawa is not on PATH")
 class CorpusTestCase(unittest.TestCase):
     def setUp(self):
+        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
