@@ -39,6 +39,20 @@ def _create_command(
     )
 
 
+def _capture_refusal(parser: argparse.ArgumentParser, arguments: list[str]) -> tuple[int, str]:
+    errors = io.StringIO()
+    with unittest.TestCase().assertRaises(SystemExit) as raised, contextlib.redirect_stderr(errors):
+        parser.parse_args(arguments)
+    return raised.exception.code, errors.getvalue()
+
+
+def _print_help(parser: argparse.ArgumentParser, arguments: list[str]) -> str:
+    page = io.StringIO()
+    with contextlib.suppress(SystemExit), contextlib.redirect_stdout(page):
+        parser.parse_args(arguments)
+    return page.getvalue()
+
+
 def _create_common_options() -> argparse.ArgumentParser:
     common_options = argparse.ArgumentParser(add_help=False)
     common_options.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
@@ -153,15 +167,13 @@ class AddCommandParsersOfAGroupWithNoCommandOfItsOwnTest(unittest.TestCase):
         show = _create_command(("project", "show"), "print a project", group_help="the projects")
         parser = argparse.ArgumentParser(prog="brigade")
         add_command_parsers(parser, (show,), _create_common_options())
-        errors = io.StringIO()
 
         # Act
-        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(errors):
-            parser.parse_args(["project"])
+        exit_code, errors = _capture_refusal(parser, ["project"])
 
         # Assert
-        self.assertEqual(raised.exception.code, 2)
-        self.assertIn("the following arguments are required: action", errors.getvalue())
+        self.assertEqual(exit_code, 2)
+        self.assertIn("the following arguments are required: action", errors)
 
     def test_should_parse_no_command_when_none_is_given(self):
         # Arrange
@@ -183,14 +195,12 @@ class AddCommandParsersOfAPassthroughRecordTest(unittest.TestCase):
         passthrough = _create_command(("tool",), "-- <tool args>: run the tool there", render_passed_stderr=_render)
         parser = argparse.ArgumentParser(prog="brigade")
         add_command_parsers(parser, (tool, passthrough), _create_common_options())
-        output = io.StringIO()
 
         # Act
-        with contextlib.suppress(SystemExit), contextlib.redirect_stdout(output):
-            parser.parse_args(["tool", "--help"])
+        page = _print_help(parser, ["tool", "--help"])
 
         # Assert
-        self.assertRegex(output.getvalue(), r"\noptions:\n(?:.+\n)+\n-- <tool args>: run the tool there\n\Z")
+        self.assertRegex(page, r"\noptions:\n(?:.+\n)+\n-- <tool args>: run the tool there\n\Z")
 
     def test_should_leave_the_command_record_of_its_path_parsing_that_path(self):
         # Arrange
