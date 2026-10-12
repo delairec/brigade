@@ -955,15 +955,15 @@ TASK B10
 	SPEC "brigade plan context <request>, for a REQUEST of the operational corpus whose STATUS is"
 		+ "planning, prints one package: the text of the request, awawa status of the project's"
 		+ "corpus, the titles of its active DECISION entities, its draft and todo tasks, the TASK"
-		+ "and WAVE schemas of that corpus, the next free task number, and the IMPL anchors indexed"
-		+ "by file; text and --json, the document carrying schema_version"
+		+ "and MILESTONE schemas of that corpus, the next free task number, and the IMPL anchors"
+		+ "indexed by file; text and --json, the document carrying schema_version"
 	SPEC "an unknown request, or one whose STATUS is not planning, exits 1 naming it; a project"
-		+ "corpus whose schema declares no WAVE type is reported in the package with that type"
+		+ "corpus whose schema declares no MILESTONE type is reported in the package with that type"
 		+ "named missing"
 	SPEC "brigade/runs/data/procedures/wave-plan.md is shipped and brigade run wave-plan --slot"
 		+ "plan request=<id> resolves it: the planner reads the package, writes one .awawa file"
-		+ "holding one WAVE entity and its TASK entities against the project's schema in its run"
-		+ "directory, and hands that file to brigade plan record"
+		+ "holding one MILESTONE entity and its TASK entities against the project's schema in its"
+		+ "run directory, and hands that file to brigade plan record"
 	SPEC "the built-in planner role declares the capabilities read, write and shell, and its body"
 		+ "writes only the plan file it is told to and changes nothing in the repository; brigade"
 		+ "roles lint stays green"
@@ -975,8 +975,8 @@ TASK B10
 		+ "the planning context in one command, the agent of the plan slot cuts the request into"
 		+ "tasks; recording the plan is @TASK.B139"
 		REF @TASK.B139
-	RATIONALE "the plan is an awawa file of WAVE and TASK entities, not a JSON document: a document"
-		+ "whose code does not exist yet is designed as entities, by DESC 4 of"
+	RATIONALE "the plan is an awawa file of MILESTONE and TASK entities, not a JSON document: a"
+		+ "document whose code does not exist yet is designed as entities, by DESC 4 of"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole,"
 		+ "and lint against the project's schema is its validation"
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
@@ -993,6 +993,9 @@ TASK B10
 		REF @TASK.B140
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10: the plan is recorded by a"
 		+ "task of its own, the awawa case is delivered first, and the task is ratified"
+	SOURCE "the user's ruling of 2026-10-13 in the refinement of B139: a wave is a MILESTONE of the"
+		+ "project's corpus, the plan one MILESTONE entity and its tasks, and brigade declares no"
+		+ "WAVE type"
 
 TASK B11
 	TITLE "brigade wave new|show|start|list record a request, launch its planning, start its wave"
@@ -1012,21 +1015,21 @@ TASK B11
 		+ "replaces an installed _schema.awawa that differs from the shipped one and commits it,"
 		+ "and brigade doctor reports an installed schema that differs from the shipped one"
 	SPEC "brigade wave start <request> moves a REQUEST from planned to running and records the"
-		+ "ledger event wave.started with its WAVE and project; a request in another STATUS exits 1"
-		+ "naming its STATUS"
+		+ "ledger event wave.started with its MILESTONE and project; a request in another STATUS"
+		+ "exits 1 naming its STATUS"
 	SPEC "brigade wave show of a planned request prints whether it waits for wave start, under"
 		+ "POLICY.PLAN_REVIEW ask, or for the next tick, under auto, the default when no POLICY"
 		+ "names the project"
-	SPEC "brigade wave show <request> prints the request, its STATUS, WAVE, BRANCH and CREATED_AT,"
-		+ "then one row per TASK of the wave read from the project's corpus at BRANCH through the"
-		+ "tree cache of brigade corpus: id, TITLE, state and pull request; text and --json"
-		+ "carrying schema_version"
+	SPEC "brigade wave show <request> prints the request, its STATUS, MILESTONE, BRANCH and"
+		+ "CREATED_AT, then one row per TASK of the wave read from the project's corpus at BRANCH"
+		+ "through the tree cache of brigade corpus: id, TITLE, state and pull request; text and"
+		+ "--json carrying schema_version"
 	SPEC "the ledger declares the event task.state with wave, task and state, state one of queued,"
 		+ "running, pr_open, verifying, verified, merged, changes_requested, fixing, parked and"
 		+ "paused:quota; show takes the state of a task from its last task.state event, queued when"
 		+ "none"
-	SPEC "brigade wave list prints one row per REQUEST, its name, project, STATUS, WAVE, BRANCH and"
-		+ "CREATED_AT, --project narrowing it to one project; text and --json carrying"
+	SPEC "brigade wave list prints one row per REQUEST, its name, project, STATUS, MILESTONE,"
+		+ "BRANCH and CREATED_AT, --project narrowing it to one project; text and --json carrying"
 		+ "schema_version"
 	SPEC "tests/cli proves new, start, show and list on a fixture project, the planner launched on"
 		+ "the fake adapter, awawa replayed from recorded outputs where it is not on PATH"
@@ -1052,6 +1055,8 @@ TASK B11
 		+ "planner detached, B11 delivers wave start, the ledger declares task.state, requests are"
 		+ "named <project>_<n> with a field created at, brigade init upgrades the installed schema,"
 		+ "and the task is ratified"
+	SOURCE "the user's ruling of 2026-10-13 in the refinement of B139: REQUEST.WAVE is renamed"
+		+ "REQUEST.MILESTONE"
 
 TASK B12
 	TITLE "brigade tick launches the startable tasks of every running wave in worktrees of their"
@@ -1483,6 +1488,7 @@ TASK B20
 	AFTER @TASK.B17
 	AFTER @TASK.B48
 	AFTER @TASK.B106
+	AFTER @TASK.B146
 	RATIONALE "designed as entities from the start, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
 		+ "sets: no code of the report exists yet, and a comparison of headings validates nothing"
@@ -1503,6 +1509,9 @@ TASK B20
 		+ "amending this task: \"ok pour le plan ci-dessus\""
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19, B20, B21 and B143: \"ok pour"
 		+ "une entité REPORT\""
+	SOURCE "the user's ruling of 2026-10-13 on pr-list: the collector is delivered by @TASK.B146, a"
+		+ "task of M1 this task follows"
+		REF @TASK.B146
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
@@ -1565,6 +1574,10 @@ TASK B23
 		+ "recipes"
 	SPEC "unresolved review threads on open pull requests of registered projects become signals"
 		+ "every tick, read through the forge adapter, GraphQL reviewThreads on GitHub"
+	SPEC "the built-in collector pr-threads, under the contract of B47, prints through the forge"
+		+ "adapter the unresolved review threads of the open pull requests of the project, each"
+		+ "with its pull request, path, line, author login and comments; summary counts them per"
+		+ "pull request"
 	AFTER @TASK.B22
 	AFTER @TASK.B14
 	AFTER @TASK.B47
@@ -1579,6 +1592,10 @@ TASK B24
 		+ "recipes"
 	SPEC "failing check runs on open pull requests and on main become signals carrying the first"
 		+ "failing step"
+	SPEC "the built-in collector check-runs, under the contract of B47, prints through the forge"
+		+ "adapter the failing check runs of the open pull requests and of PROJECT.MAIN, each with"
+		+ "its pull request or branch, name, conclusion and first failing step; summary counts them"
+		+ "per pull request"
 	AFTER @TASK.B22
 	AFTER @TASK.B14
 	AFTER @TASK.B47
@@ -1745,6 +1762,8 @@ TASK B35
 		+ "of every registered project and brigade's built-ins, e-mail addresses and home paths; a"
 		+ "set computed at run time is never stored"
 	SPEC "a fixture test proves no declared identifier survives"
+	SPEC "transcripts and transcript-findings are built-in collectors under the contract of B47,"
+		+ "listed by brigade collectors list and cached by brigade collect"
 	AFTER @TASK.B22
 	AFTER @TASK.B47
 
@@ -2059,34 +2078,39 @@ TASK B43
 	DELIVERED_BY 20
 
 TASK B44
-	TITLE "Second client adapter and the rehearsal on it"
-	STATUS draft
-	MILESTONE @MILESTONE.M1
-	COMPONENT "adapters"
+	TITLE "The sandbox rehearsal of B21 runs on vibe, and its report lists what the normalised"
+		+ "results of each client lack"
+	STATUS todo
+	MILESTONE @MILESTONE.M7
+	COMPONENT "validation"
 	ROLE ada
-	DESC "candidates read on 2026-10-05: OpenCode (run --format json, agent files with per-tool"
-		+ "permission, --session), Codex (exec --json, exec resume, sandbox modes), Gemini CLI (-p"
-		+ "--output-format json); none installed on the reference machine"
-	SPEC "an adapter for the client the user names before this task is ratified answers probe,"
-		+ "launch and result, and resume and transcripts where the client offers them"
-	SPEC "the sandbox rehearsal of B21 runs on it with the same three tasks and the ledger holds"
-		+ "both runs"
-	SPEC "the rehearsal report lists what the normalised results of the two clients lack, steps or"
-		+ "usage null"
-	SPEC "the README table of B49 gains the client's row through the generator"
+	SPEC "the sandbox rehearsal of B21 runs on the client vibe through the adapter of B108, with"
+		+ "the same three tasks, and the ledger holds the runs of both clients"
+	SPEC "a rehearsal report, docs/<date>-rehearsal-vibe.md of the brigade repository committed by"
+		+ "the pull request of this task, lists per client and per run what the normalised results"
+		+ "lack, steps or usage null, with the output of brigade ledger budgets for each client"
 	AFTER @TASK.B21
-	AFTER @TASK.B42
-	AFTER @TASK.B49
-	SPEC "a slot names the client its runs launch, so that two clients serve one project, the build"
-		+ "slot on one and the review slot on the other: the client of the slot, else the CLIENT of"
-		+ "the PROJECT entity, else the client of config.toml; the shape of the binding, a client"
-		+ "key per slot in [slots] or a field of the role, is ruled at the refinement"
+	AFTER @TASK.B108
 	RATIONALE "the user asked on 2026-10-07 whether two AI providers can coexist; the session found"
 		+ "one client per machine, the client key of config.toml, replaced per project by the"
-		+ "CLIENT of the PROJECT entity (brigade/runs/plan_run.py:156), and no decision or task"
-		+ "binding a client to a slot or a role; the user asked for the mention in this draft"
+		+ "CLIENT of the PROJECT entity (brigade/runs/read_run_setting.py:31), and no decision or"
+		+ "task binding a client to a slot or a role; the user asked for the mention in this draft,"
+		+ "and the client per slot is @TASK.B145, split from this task on 2026-10-13"
+		REF @TASK.B145
+	RATIONALE "the second client is vibe, 2.26.1 on the reference machine, where codex, opencode"
+		+ "and gemini, the candidates read on 2026-10-05, are not installed; its adapter is"
+		+ "@TASK.B108, whose SPEC 1 adds the row of vibe to the README table through the generator,"
+		+ "so this task adds none; @TASK.B21 produces no rehearsal report, so this task writes its"
+		+ "own; in @MILESTONE.M7 with B108, the client of the Portability milestone"
+		REF @TASK.B108
+		REF @TASK.B21
+		REF @MILESTONE.M7
 	SOURCE "the user's words of 2026-10-07, « oui ajoute la mention au draft », on the session's"
 		+ "proposal of a client per slot or per role, to settle at the ratification of this task"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47: « Le client"
+		+ "par slot part dans une nouvelle tâche (AFTER B42, B06, testable sur le fake) ; B44 ="
+		+ "répétition de B21 sur vibe + rapport des champs null, AFTER B21 et B108, déplacée en M7"
+		+ "avec B108. »; the task is ratified"
 
 TASK B45
 	TITLE "Fresh-account install rehearsal"
@@ -2114,8 +2138,7 @@ TASK B46
 	SPEC "FORGE none runs a wave on local branches: the pass reads the acceptance results of task"
 		+ "check instead of check runs, the verdict is kept in the ledger and the merge into"
 		+ "integration is a git merge"
-	SPEC "the collectors pr-list, pr-threads and check-runs declare themselves absent under FORGE"
-		+ "none"
+	SPEC "the collectors pr-threads and check-runs declare themselves absent under FORGE none"
 	AFTER @TASK.B02
 	AFTER @TASK.B17
 	AFTER @TASK.B42
@@ -2131,31 +2154,112 @@ TASK B46
 	SOURCE "F5 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 
 TASK B47
-	TITLE "Collector contract, runner and the built-in collectors"
-	STATUS draft
+	TITLE "brigade collect runs a collector under one contract, caches its document and ships the"
+		+ "built-ins git-log, git-diff-stat, worktrees, corpus and ledger"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
-	SPEC "a collector is an executable or a built-in that reads BRIGADE_PROJECT_PATH,"
-		+ "BRIGADE_SINCE, BRIGADE_RUN_DIR and BRIGADE_PARAMS from its environment and prints one"
-		+ "JSON document with schema, collector, collected_at, summary and items"
-	SPEC "brigade collect <name> [key=value...] runs one collector, writes its document and a"
-		+ "sidecar with command, duration, exit code and hash under the run directory, and prints"
-		+ "the summary; a cache keyed by the hash of command and inputs answers a repeated call,"
-		+ "--refresh bypasses it"
-	SPEC "collectors resolve in order: the project's .brigade/collectors/, the machine's collectors"
-		+ "directory, brigade-collector-<name> on PATH, the built-ins; brigade collectors list"
-		+ "prints them with their source"
-	SPEC "the built-ins: git-log, git-diff-stat, worktrees, corpus (awawa --json at a ref through"
-		+ "the corpus reader), ledger (an event slice with aggregates), pr-list, pr-threads and"
-		+ "check-runs (through the forge adapter), transcripts (through the client adapter,"
-		+ "scrubbed), shell (a command line declared in the study), study (another study's last"
-		+ "answer)"
-	SPEC "a collector never launches a model; the test suite proves it by running every built-in"
-		+ "with the fake adapter and no client on PATH"
+	SPEC "a collector is an executable or a built-in module of brigade/collectors/ that reads"
+		+ "BRIGADE_PROJECT_PATH, BRIGADE_SINCE, a date, BRIGADE_RUN_DIR when set and"
+		+ "BRIGADE_PARAMS, the key=value pairs as JSON, from its environment and prints one JSON"
+		+ "document on stdout; it exits 0 when its document is complete"
+	SPEC "the document carries schema_version, an integer from 1, collector, collected_at, summary"
+		+ "and items, and is validated against the shape declared beside the kind before brigade"
+		+ "reads it; a document that fails validation is a failure of the collector naming the key"
+	SPEC "brigade collect <name> [key=value ...] [--since <n>d|<date>] resolves the collector, runs"
+		+ "it through the process runner, writes its document and a sidecar holding the resolved"
+		+ "command, the parameters, the duration in ms, the exit code and the cache key, and prints"
+		+ "the summary and the path of the document, text and --json carrying schema_version;"
+		+ "inside a run the two files go under <BRIGADE_RUN_DIR>/collect/<name>/, outside a run"
+		+ "they are the cache entry"
+	SPEC "a collector that exits non-zero or prints no document validating is a failure naming the"
+		+ "collector, the exit code and the last 20 lines of its stderr; collect exits 1"
+	SPEC "the cache lives under $XDG_CACHE_HOME/brigade/collectors/; its key is the resolved"
+		+ "command, the parameters, since converted to a date, and the sha of HEAD of the project's"
+		+ "repository for git-log, git-diff-stat, worktrees and corpus, the size of the ledger for"
+		+ "ledger; a call whose key is in the cache answers from it and says so; a failure is never"
+		+ "cached"
+	SPEC "--refresh ignores the cache and replaces the entry"
+	SPEC "collectors resolve in order: <project>/.brigade/collectors/<name>,"
+		+ "$XDG_CONFIG_HOME/brigade/collectors/<name>, brigade-collector-<name> on PATH, the"
+		+ "built-ins of brigade/collectors/; the first found answers, and an unknown name exits 1"
+		+ "naming the four sources"
+	SPEC "brigade collectors list prints every collector found, its name and its source, project,"
+		+ "machine, PATH or built-in, text and --json carrying schema_version"
+	SPEC "the built-in git-log: items are the commits reachable from HEAD since BRIGADE_SINCE, each"
+		+ "with sha, author name, date, subject and the files changed; summary counts the commits"
+		+ "and the files"
+	SPEC "the built-in git-diff-stat: items are the files changed between the refs the parameters"
+		+ "from and to name, PROJECT.MAIN and HEAD by default, each with its insertions and"
+		+ "deletions; summary totals them"
+	SPEC "the built-in worktrees: items are the worktrees of the project's repository through the"
+		+ "gateway of brigade/git/, each with path, branch, head and whether it is detached or"
+		+ "locked; summary counts them"
+	SPEC "the built-in corpus: items are the entities of awawa status --json of the project's"
+		+ "corpus at the ref the parameter ref names, HEAD by default, read through the tree cache"
+		+ "of brigade corpus; summary is the counts by type and STATUS"
+	SPEC "the built-in ledger: items are the events of the ledger since BRIGADE_SINCE, narrowed to"
+		+ "the project of BRIGADE_PROJECT_PATH when it is registered; summary aggregates them by"
+		+ "event name and, for run.finished, by outcome"
+	SPEC "no built-in launches a model: the test suite runs every built-in with no client on PATH"
+		+ "and proves that no process other than git and awawa was spawned through the process"
+		+ "runner"
+	SPEC "tests/cli prove collect, a cache hit, --refresh, a failing collector left out of the"
+		+ "cache, collectors list over the four sources, and each built-in on a fixture repository,"
+		+ "awawa replayed from recorded outputs where it is not on PATH"
 	AFTER @TASK.B05
+	AFTER @TASK.B06
 	AFTER @TASK.B08
 	AFTER @TASK.B42
+	RATIONALE "the design is DESC 2 and 3 of"
+		+ "@DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun, a collector a declared"
+		+ "executable or built-in printing one JSON document, run by the CLI with the study's"
+		+ "parameters in its environment, cached by the hash of its command and inputs, never a"
+		+ "model, resolved project, machine, PATH, built-ins; collector is a plugin kind of"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported, reached by name"
+		+ "through the one resolver in that order and never imported by the core; the Blueprint,"
+		+ "plan section 10"
+		REF @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	RATIONALE "the document carries schema_version, an integer from 1, and is validated on entry,"
+		+ "as @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry requires; its"
+		+ "draft said schema, which DESC 1 of that decision listed for alignment at this refinement"
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "the scope is the user's: contract, runner, cache, resolution, collectors list and"
+		+ "the five built-ins that need git, awawa or the ledger alone; pr-list goes to @TASK.B146,"
+		+ "a task of M1 after this one and @TASK.B14, pr-threads to @TASK.B23 and check-runs to"
+		+ "@TASK.B24, which already claim them, the GitHub forge adapter holding describe_account"
+		+ "and read_login_environment alone; transcripts and its scrubber, DESC 1 of"
+		+ "@DECISION.MinedConstraintsAreDeliveredAsWaves, to @TASK.B35; shell and study, which read"
+		+ "the STUDY entity, to @TASK.B48, which comes after this task"
+		REF @TASK.B146
+		REF @TASK.B14
+		REF @TASK.B23
+		REF @TASK.B24
+		REF @DECISION.MinedConstraintsAreDeliveredAsWaves
+		REF @TASK.B35
+		REF @TASK.B48
+	RATIONALE "the cache key names the inputs a deterministic collector reads: the repository at"
+		+ "HEAD for the git collectors and corpus, the ledger's size for ledger, since as a date so"
+		+ "that <n>d of brigade/system/read_since.py keys one day once; a failure is never cached"
+		+ "and --refresh ignores the cache, the user's rulings"
+	RATIONALE "BRIGADE_RUN_DIR is exported by brigade run as a SPEC of @TASK.B13 says and no code"
+		+ "yet, so outside a run the document and the sidecar are the cache entry; no brigade"
+		+ "collect command exists; after @TASK.B06 for the process runner and the run directory,"
+		+ "@TASK.B05 for the ledger, @TASK.B08 for the tree cache of brigade corpus and @TASK.B42"
+		+ "for the resolver"
+		REF @TASK.B13
+		REF @TASK.B06
+		REF @TASK.B05
+		REF @TASK.B08
+		REF @TASK.B42
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47: « B47 ="
+		+ "contrat, runner, cache, résolution, collectors list + git-log, git-diff-stat, worktrees,"
+		+ "corpus, ledger. Forge → B23/B24/B46 qui les revendiquent déjà, transcripts → B35,"
+		+ "shell/study → B48. »; « Commande résolue + params + since converti en date + SHA de HEAD"
+		+ "(git, corpus) + taille du ledger (ledger) ; un échec n'est jamais mis en cache ;"
+		+ "--refresh l'ignore ; sous $XDG_CACHE_HOME/brigade/collectors/. »; the task is ratified"
 
 TASK B48
 	TITLE "STUDY entity, brigade study commands, study.md, scheduling by the tick"
@@ -2189,6 +2293,9 @@ TASK B48
 		+ "step.failed, order.parked and order.done with kind study"
 	SPEC "study list, show, pause and resume; list prints every study with its schedule, last run"
 		+ "and last outcome, text and --json"
+	SPEC "the built-in collectors shell, whose items are the stdout lines of the command line the"
+		+ "STUDY declares, and study, whose items are the last answer of the STUDY it names, run"
+		+ "under the contract of B47"
 	AFTER @TASK.B06
 	AFTER @TASK.B07
 	AFTER @TASK.B43
@@ -2434,7 +2541,7 @@ TASK B55
 	MILESTONE @MILESTONE.M7
 	COMPONENT "registry"
 	ROLE ada
-	SPEC "project add --init-corpus installs brigade's project corpus template, TASK, WAVE,"
+	SPEC "project add --init-corpus installs brigade's project corpus template, TASK, MILESTONE,"
 		+ "DECISION and OPEN_QUESTION, in the folder CORPUS names, corpus/ by default, on a branch,"
 		+ "and opens a pull request through the forge adapter"
 	SPEC "awawa lint --strict exits 0 on the installed corpus"
@@ -2454,6 +2561,8 @@ TASK B55
 	SOURCE "the Artifact Brigade Blueprint, plan section 13; the user's ruling of 2026-10-06 in the"
 		+ "refinement of B04"
 	SOURCE "the user's ruling of 2026-10-09 in the refinement of B81, \"Je prends ta reco\""
+	SOURCE "the user's ruling of 2026-10-13 in the refinement of B139: the template declares"
+		+ "MILESTONE, not WAVE"
 
 TASK B56
 	TITLE "a state or configuration directory brigade cannot write: exit 1 naming the path, and"
@@ -6026,115 +6135,152 @@ TASK B105
 		+ "rentrer dans ADD0 je suppose, c'est du confort\", then \"oui ok\""
 
 TASK B106
-	TITLE "The progress of a run is written and read through a document plugin, Markdown without"
-		+ "awawa, a one-file awawa corpus of STEP and HANDOVER entities where awawa is declared,"
-		+ "and the brief frames what the agent writes in it"
-	STATUS draft
+	TITLE "The progress of a run is kept in a form chosen by configuration, Markdown or an awawa"
+		+ "corpus, and every segment's brief frames what the agent writes in it"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	DESC "to settle in the refinement: how a role whose capabilities carry no shell formats and"
-		+ "lints the file after each append, as the rule progress_corpus_where_awawa_declared asks,"
-		+ "or whether brigade formats the file at each read as"
-		+ "@DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote does for a project"
-		+ "corpus; what a corpus awawa cannot read does to the relaunch; what the progress setting"
-		+ "of the fake client appends in the awawa form; what @TASK.B94 prints in the awawa form"
-		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
-		REF @TASK.B94
-	SPEC "document is a plugin kind resolved by name through the resolver of"
-		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported, with two built-in"
-		+ "plugins, markdown and awawa; every operation takes the document it serves, its path, its"
-		+ "schema resource and the frame of its content, and nothing of the kind names the progress"
-		+ "of a run: create the document, the text the brief carries about it, what a resuming run"
-		+ "reads of it, and whether it holds an entry"
-		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
-	SPEC "the progress of a run is the first document served by that kind, one file in either form,"
-		+ "the one path the write grant of @TASK.B71 names, exported as BRIGADE_PROGRESS_FILE,"
-		+ "whose extension conveys the form: runs/<id>/progress.md for the markdown plugin,"
-		+ "runs/<id>/progress.awawa for the awawa plugin, a corpus holding its schema then one STEP"
-		+ "per step completed and one HANDOVER per handover, named s1, s2, h1 in order of writing,"
-		+ "as the rule progress_corpus_where_awawa_declared of the instructions corpus sets; no run"
-		+ "keeps both"
-		REF @TASK.B71
-	SPEC "the form is the document key of config.toml, awawa by default, markdown by configuration;"
-		+ "the presence of awawa chooses nothing, awawa staying a prerequisite as"
-		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites sets, and brigade doctor is"
+	SPEC "document is a plugin kind resolved by name through the one resolver of"
+		+ "brigade/system/resolve_plugin.py, with two built-in plugins, markdown and awawa; an"
+		+ "unknown document name raises the error naming the kind and the name"
+	SPEC "every operation of the kind takes the document it serves, its path, its schema resource"
+		+ "and the frame of its content, and nothing of the kind names the progress of a run:"
+		+ "create the document, the text the brief carries about it, what a resuming run reads of"
+		+ "it, whether it holds an entry, and render it for a person"
+	SPEC "render for a person prints, in the awawa form, each entity as readable text and, with"
+		+ "--json, the entities; the markdown form prints the file as it is"
+	SPEC "the progress of a run is one file in either form, the one path the write grant of B71"
+		+ "names, exported as BRIGADE_PROGRESS_FILE: runs/<id>/progress.md for the markdown plugin,"
+		+ "runs/<id>/progress.awawa for the awawa plugin; no run keeps both"
+	SPEC "progress.awawa is a corpus holding its schema then one STEP per step completed and one"
+		+ "HANDOVER per handover, named s1, s2, h1 in order of writing, as the rule"
+		+ "progress_corpus_where_awawa_declared of the instructions corpus sets"
+	SPEC "the document key of config.toml chooses the form of what brigade creates, awawa by"
+		+ "default, markdown by configuration; the extension of a file brigade reads back routes it"
+		+ "to its plugin, .md to markdown and .awawa to awawa"
+	SPEC "the presence of awawa chooses nothing: awawa stays a prerequisite and brigade doctor is"
 		+ "unchanged"
-		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	SPEC "the command run resolves the document plugin through the runtime's resolver, as it"
-		+ "resolves the client, and RunPlan carries it; no module outside the plugin package reads"
-		+ "or writes the progress of a run"
+		+ "resolves the client, and RunPlan carries it"
+	SPEC "no module outside the plugin package reads or writes the progress of a run"
 	SPEC "brigade run creates the progress of the run before the first segment through the plugin:"
-		+ "an empty progress.md in the markdown form; in the awawa form, progress.awawa holding the"
-		+ "schema alone, the STEP and HANDOVER schema the rule progress_corpus_where_awawa_declared"
-		+ "holds in its EXAMPLE lines, shipped by brigade as a resource of its package under a name"
-		+ "not ending in .awawa, as @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources"
-		+ "sets, and read from no instructions corpus"
-		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		+ "an empty progress.md in the markdown form, progress.awawa holding the schema alone in"
+		+ "the awawa form"
+	SPEC "the STEP and HANDOVER schema is a resource of the package, in a data/ folder of the"
+		+ "component that reads it, under a name not ending in .awawa, read from no instructions"
+		+ "corpus and equal to the EXAMPLE lines of the rule progress_corpus_where_awawa_declared"
+	SPEC "a gateway of brigade/corpus/ formats then lints one file, awawa fmt <file> and awawa lint"
+		+ "--strict <file>, naming the file and never its directory"
+	SPEC "between two segments, whatever the role, brigade runs that gateway on progress.awawa"
+		+ "before composing the next brief"
+	SPEC "when that lint fails, the run continues: the brief of the next segment opens on the lint"
+		+ "output, the instruction to rewrite the file, and the file whole in place of the"
+		+ "inventory; the number of relaunches is unchanged"
 	SPEC "the brief of every segment names the path and the form of the progress and the frame of"
 		+ "the rule progress_entry_holds_what_resume_needs: one entry per major step, what it did"
 		+ "in one line, the facts it established, one line each and five at most, a fact being what"
 		+ "the next segment needs and no command gives back, and the next step as the procedure"
 		+ "names it, complete at the end; never command output, a diff, the course of the step, a"
 		+ "restatement of the brief or a fact an earlier entry holds; in the awawa form, one STEP"
-		+ "per step, one HANDOVER per handover holding what remains, and awawa fmt then awawa lint"
-		+ "on the file after each append, never on its directory"
+		+ "per step and one HANDOVER per handover holding what remains"
+	SPEC "the brief asks the agent to run awawa fmt then awawa lint on the file after each append,"
+		+ "naming the file, only when the capabilities of its role carry shell"
 	SPEC "the brief of a relaunched segment opens on what the plugin reads: the file as it is in"
 		+ "the markdown form; in the awawa form, the output of awawa status STEP <file>, awawa"
 		+ "status HANDOVER <file> and awawa show of the last entity, each naming the file, never"
 		+ "the file whole"
-	SPEC "the awawa plugin calls awawa through the gateway brigade/corpus/ alone, as"
-		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa requires"
-		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	SPEC "a segment is relaunched on the plugin's answer that the document holds an entry, never on"
+		+ "a non-empty file; progress.awawa holding its schema alone holds none"
+	SPEC "the progress setting of the fake client appends its text as it is in either form, and the"
+		+ "fake picks its resumed recording on the same answer of the plugin"
 	SPEC "each built-in plugin has its unit test under tests/unit, the awawa one proven against a"
 		+ "real corpus in a temporary directory; the resolver test proves that an unknown document"
 		+ "name raises the error naming the kind and the name"
 	SPEC "tests/cli run brigade run as a subprocess with the fake client in each form: a segment"
 		+ "that hands over is relaunched with a brief opening on the file in the markdown form and"
-		+ "on the inventory and the last entity in the awawa form; without the key the run uses the"
-		+ "awawa form, with document = markdown the markdown form"
+		+ "on the inventory and the last entity in the awawa form, the awawa case appending a"
+		+ "literal STEP s1 entity; an entry that fails lint gives a next brief opening on the lint"
+		+ "output and the file whole; without the key the run uses the awawa form, with document ="
+		+ "markdown the markdown form"
 	SPEC "the README's Runs section states the two forms, the extension, the key and the frame"
 	AFTER @TASK.B73
 	AFTER @TASK.B102
-	RATIONALE "brigade/runs/run_segment.py:38-39 reads runs/<id>/progress.md whole into the"
-		+ "Progress so far section of every relaunched brief, brigade/runs/compose_brief.py:23-24,"
-		+ "and brigade/runs/run_segments.py:27-28 tests it non-empty: the file joins the context of"
-		+ "each segment after the first, so what the agent writes in it is paid at every relaunch;"
-		+ "the user asked for a form that awawa reads entity by entity as the file grows, and for a"
-		+ "frame so that the agents write no useless detail"
+	AFTER @TASK.B71
+	RATIONALE "brigade/runs/run_segment.py::PROGRESS_FILE, read with read_text, reads"
+		+ "runs/<id>/progress.md whole into the Progress so far section of every relaunched brief,"
+		+ "brigade/runs/compose_brief.py::\"Progress so far\", and"
+		+ "brigade/runs/run_segments.py::_holds_progress tests it non-empty before a relaunch: the"
+		+ "file joins the context of each segment after the first, so what the agent writes in it"
+		+ "is paid at every relaunch; the user asked for a form that awawa reads entity by entity"
+		+ "as the file grows, and for a frame so that the agents write no useless detail;"
+		+ "PROGRESS_FILE is progress.md in brigade/runs/run_locations.py, the empty file is created"
+		+ "by brigade/runs/create_run_directory.py, and BRIGADE_PROGRESS_FILE is already exported"
+		+ "by run_segment.py"
 	RATIONALE "the user ruled for a plugin: Markdown where awawa is absent, a corpus where awawa is"
 		+ "declared; a kind with two built-in modules follows DESC 1 of"
 		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported, whose list of kinds"
-		+ "gains document at the ratification of this task; the choice is read from config.toml so"
-		+ "that a machine with awawa may keep Markdown"
+		+ "gains document at this ratification; brigade/system/resolve_plugin.py knows the built-in"
+		+ "kinds forge and scheduler, BUILT_IN_ENTRY_POINTS and BUILT_IN_PLUGIN_PACKAGES, beside"
+		+ "client, and raises no plugin kind for any other, and STRING_KEYS of"
+		+ "brigade/system/read_configuration.py, client, scheduler and instructions, has no"
+		+ "document key; the choice is read from config.toml so that a machine with awawa may keep"
+		+ "Markdown"
 		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	RATIONALE "the kind serves documents, not the progress of a run alone, because the user ruled"
 		+ "that every .md brigade handles must be manageable through awawa instead: the operations"
 		+ "take the document they serve, which costs the progress nothing more than passing its"
-		+ "path, schema and frame, and a later document joins by naming its own; the inventory of"
-		+ "the .md files brigade reads and writes, the decision and the tasks of that"
-		+ "generalisation are planned apart, and this task changes the progress of a run alone"
+		+ "path, schema and frame, and a later document joins by naming its own; this task delivers"
+		+ "the kind and the operations of the progress, and @TASK.B20, @TASK.B48 and @TASK.B51 add"
+		+ "read and validate when they arrive, as the user confirmed on 2026-10-13"
+		REF @TASK.B20
+		REF @TASK.B48
+		REF @TASK.B51
 	RATIONALE "the forms, the file and the frame are those of three rules of the instructions"
 		+ "corpus, delivered by its pull request #88: procedure_progress_outside_repository, the"
 		+ "extension as the form chosen by the runner and the last entry naming complete at the"
 		+ "end; progress_corpus_where_awawa_declared, one .awawa file holding the schema then STEP"
-		+ "and HANDOVER entities, read by inventory and last entity;"
-		+ "progress_entry_holds_what_resume_needs, five facts at most and no output, diff, course"
-		+ "or restatement; one file rather than a directory because a directory of several progress"
-		+ "corpora fails awawa lint on duplicate schemas, L005, and one file keeps the per-path"
-		+ "write grant of @TASK.B71; brigade reads none of them at run time: the instructions"
-		+ "corpus is optional, DESC 2 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites,"
-		+ "and a tool installed elsewhere reads nothing of its author's machine, the rule"
+		+ "and HANDOVER entities, read by inventory and last entity, formatted and linted naming"
+		+ "the file and never its directory; progress_entry_holds_what_resume_needs, five facts at"
+		+ "most and no output, diff, course or restatement; one file rather than a directory"
+		+ "because a directory of several progress corpora fails awawa lint on duplicate schemas,"
+		+ "L005, and one file keeps the per-path write grant of @TASK.B71; brigade reads none of"
+		+ "them at run time: the instructions corpus is optional, DESC 2 of"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, and a tool installed"
+		+ "elsewhere reads nothing of its author's machine, the rule"
 		+ "distributed_tool_free_of_authors_machine, so brigade ships its own copy of the schema"
 		+ "and carries the frame in its own brief, the copy kept equal to the rule's by hand"
 		REF @TASK.B71
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "the format and lint between two segments are brigade's for every role, the brief"
+		+ "asking the agent for them only where its role has shell, as the user ruled on 2026-10-13"
+		+ "with @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote as the precedent:"
+		+ "all nine shipped roles of brigade/roles/data/ carry shell, so a role without it is a"
+		+ "user's role; brigade/corpus/lint_corpus.py lints a root alone and format_files takes"
+		+ "paths, where the rule progress_corpus_where_awawa_declared asks fmt and lint naming the"
+		+ "file, hence the gateway on one file"
+		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
+	RATIONALE "a corpus awawa cannot read does not end the run, as the user ruled: the next brief"
+		+ "opens on the lint output, the instruction to rewrite the file and the file whole, since"
+		+ "the inventory cannot be read, and the count of relaunches does not change"
 	RATIONALE "brigade reads no completion marker from the file: the end of a segment is the"
 		+ "declaration of its last line, @TASK.B102, and a run that hands over leaves a HANDOVER"
 		+ "the next segment reads by type; the fresh-run test of the rule, a file holding no entry,"
 		+ "is the plugin's answer to whether the document holds one, which replaces the non-empty"
-		+ "test of run_segments.py"
+		+ "test of run_segments.py and the one of _choose_recording in"
+		+ "brigade/adapters/test_clients/fake.py, which picks the resumed recording when the"
+		+ "progress file stripped is non-empty and would pick it on a fresh run whose"
+		+ "progress.awawa holds the schema alone; the progress setting of the fake stays raw text,"
+		+ "the awawa case of tests/cli passing a literal STEP entity"
 		REF @TASK.B102
+	RATIONALE "render for a person is the user's ruling of 2026-10-13 for brigade runs show of"
+		+ "@TASK.B94 and the dashboard: each entity as readable text, the entities with --json, the"
+		+ "Markdown file as it is; B94 keeps its own text until its refinement"
+		REF @TASK.B94
+	RATIONALE "the document key chooses the form of what brigade creates and the extension routes"
+		+ "what brigade reads back, which reconciles SPEC 3 of @TASK.B107, routing a role or"
+		+ "procedure file by its extension, with the key this task reads"
+		REF @TASK.B107
 	RATIONALE "awawa stays a prerequisite, DESC 1 of"
 		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, as the user ruled on"
 		+ "2026-10-07 between the three options put to them, awawa optional and awawa embedded in"
@@ -6154,14 +6300,16 @@ TASK B106
 		REF @TASK.B94
 		REF @TASK.B91
 	RATIONALE "after @TASK.B73, which puts the resolver on Runtime and has the command run resolve"
-		+ "the plugins the core receives, and after @TASK.B102, which relaunches on the declaration"
-		+ "of the last line and composes the brief this task changes; the Claude Code adapter"
-		+ "grants the path the launch request names, brigade/adapters/clients/claude_code.py:57, so"
-		+ "the awawa form costs it nothing; DESC 1 of"
-		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast names"
-		+ "progress.md and is amended at the ratification to name the file of each form"
+		+ "the plugins the core receives, after @TASK.B102, which relaunches on the declaration of"
+		+ "the last line and composes the brief this task changes, and after @TASK.B71, whose write"
+		+ "grant names the path; the Claude Code adapter grants the path the launch request names,"
+		+ "brigade/adapters/clients/claude_code.py::PROGRESS_FILE_TOOLS and progress_rules read"
+		+ "from the progress_file of the request, so the awawa form costs it nothing; DESC 1 and 3"
+		+ "of @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast, naming"
+		+ "progress.md and the brief opening on the progress file, are amended at this ratification"
 		REF @TASK.B73
 		REF @TASK.B102
+		REF @TASK.B71
 		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	SOURCE "the user's words of 2026-10-07: \"ce fichier progress.md, à terme j'aimerais bien qu'il"
 		+ "soit normalisé, probabelement en passant par awawa, comme ça quand le fichier de"
@@ -6183,6 +6331,16 @@ TASK B106
 	SOURCE "pull request #88 of the instructions corpus, the rules"
 		+ "procedure_progress_outside_repository, progress_corpus_where_awawa_declared and"
 		+ "progress_entry_holds_what_resume_needs at its head 021ae05"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B106: « Entre deux segments,"
+		+ "brigade lance fmt puis lint sur progress.awawa avant de composer le brief suivant, pour"
+		+ "tout rôle ; le brief ne demande à l'agent de linter après chaque ajout que si son rôle a"
+		+ "shell. »; « Le run continue : le brief s'ouvre sur la sortie de lint, la consigne de"
+		+ "réécrire le fichier, et le fichier entier à défaut de l'inventaire ; le nombre de"
+		+ "relances ne change pas. »; « Le plugin rend chaque entité en texte lisible, --json donne"
+		+ "les entités ; la forme Markdown imprime le fichier tel quel. B106 gagne une opération «"
+		+ "rendre pour une personne ». »; « B106 livre le kind et les opérations du progress ;"
+		+ "B20/B48/B51 ajoutent lire+valider quand elles arrivent »; the fake's progress setting"
+		+ "stays raw text; the task is ratified"
 
 TASK B107
 	TITLE "A role file and a procedure file are accepted in an awawa form through the document"
@@ -6388,12 +6546,13 @@ TASK B108
 		+ "written once against their shapes"
 		REF @TASK.B84
 		REF @TASK.B102
-	RATIONALE "@TASK.B44, in @MILESTONE.M1, asks in its SPEC 1 for an adapter of the client the"
-		+ "user names before its ratification; vibe is that client and this task its adapter, B44"
-		+ "keeping the rehearsal on it, the row the README gains and the client per slot; the"
-		+ "refinement of B44 settles what it keeps"
+	RATIONALE "@TASK.B44 asked in its SPEC 1 for an adapter of the client the user names before its"
+		+ "ratification; vibe is that client and this task its adapter; refined on 2026-10-13 into"
+		+ "@MILESTONE.M7, B44 keeps the rehearsal on vibe, the README row is SPEC 1 of this task,"
+		+ "and the client per slot is @TASK.B145"
 		REF @TASK.B44
-		REF @MILESTONE.M1
+		REF @MILESTONE.M7
+		REF @TASK.B145
 	RATIONALE "in @MILESTONE.M7 rather than @MILESTONE.ADD0: Portability, a fresh-account install"
 		+ "rehearsal and the forge adapter with its local mode in the milestone table of the"
 		+ "Blueprint, artifact/parts/plan.html, is brigade run off the author's account and forge,"
@@ -6611,15 +6770,16 @@ TASK B111
 
 TASK B112
 	TITLE "the claude-code adapter classifies \"out of usage credits\" as a rate limit"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "adapters"
 	ROLE ada
 	SPEC "parse-result of brigade/adapters/clients/claude_code.py classifies a result whose message"
 		+ "names usage credits run out, \"You're out of usage credits\", error_class rate_limit,"
 		+ "reset null when the message names no hour"
-	SPEC "a unit test of tests/unit/adapters/clients/test_claude_code.py reads the result document"
-		+ "of run 20261009T114125Z-b7c554 and finds error_class rate_limit"
+	SPEC "a unit test of tests/unit/adapters/clients/test_claude_code.py reads a fixture of"
+		+ "tests/unit/adapters/clients/fixtures/ holding the result event of segment 1 of run"
+		+ "20261009T114125Z-b7c554, copied from it, and finds error_class rate_limit and reset null"
 	RATIONALE "run 20261009T114125Z-b7c554 failed on \"You're out of usage credits\" and brigade"
 		+ "classified it error_class execution, RATE_LIMIT_PHRASES of"
 		+ "brigade/adapters/clients/claude_code.py, \"limit reached\", \"hit your limit\", \"usage"
@@ -6629,9 +6789,12 @@ TASK B112
 	RATIONALE "in @MILESTONE.M1 with @TASK.B19, which it comes before; the fallback of @TASK.B111"
 		+ "reads the same classification"
 		REF @MILESTONE.M1
+		REF @TASK.B19
 		REF @TASK.B111
 	SOURCE "the user's words of 2026-10-09, \"oui pour le draft que tu proposes mais dans une"
 		+ "future milestone\""
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B142: the fixture copied into the"
+		+ "tests; the task is ratified"
 
 TASK B113
 	TITLE "brigade runs show <id> --follow prints the journal of a run as it is written, until the"
@@ -7354,24 +7517,39 @@ TASK B138
 		REF @TASK.B137
 
 TASK B139
-	TITLE "brigade plan record writes a wave's plan into the project's corpus on its integration"
-		+ "branch"
-	STATUS draft
+	TITLE "brigade plan record writes a wave's plan, one MILESTONE and its tasks, into the"
+		+ "project's corpus on its integration branch"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
 	ROLE ada
-	DESC "to be refined with the user: the shape of the correction request, the slug of the branch,"
-		+ "the fields of SCHEMA WAVE"
-	SPEC "brigade plan record <request> --file <plan.awawa> accepts a file holding one WAVE entity"
-		+ "and TASK entities only, and refuses, naming them, the types and fields the schema of the"
+	SPEC "brigade plan record <request> --file <plan.awawa> accepts, for a REQUEST whose STATUS is"
+		+ "planning, a file holding one MILESTONE entity and the TASK entities whose MILESTONE"
+		+ "names it, nothing else, and refuses, naming them, the types and fields the schema of the"
 		+ "project's corpus does not declare"
-	SPEC "the entities are written in one corpus transaction, awawa fmt on the files written and"
-		+ "awawa lint --strict on the corpus root, every file written restored when lint fails"
-	SPEC "a lint failure comes back to the planner as one correction request carrying the lint"
-		+ "output, bounded to one round"
-	SPEC "integration/<slug> is created from PROJECT.MAIN, the entities are committed on it, and it"
-		+ "is pushed when FORGE is github; the REQUEST receives WAVE and BRANCH and goes planned"
-	SPEC "the corpus of the brigade repository declares SCHEMA WAVE"
+	SPEC "the entities are written under the corpus folder the PROJECT entity of the project"
+		+ "declares, in one transaction under the lock of the corpus: awawa fmt on every file"
+		+ "written, awawa lint --strict on the corpus root"
+	SPEC "on a failing lint, plan record restores every file it wrote, prints the lint output,"
+		+ "records the ledger event plan.lint_failed carrying the request and the run, and exits 1"
+	SPEC "a second plan record failing lint for the same REQUEST in the same run is refused before"
+		+ "any write, naming the round already spent; the planner run ends on the outcome failed"
+		+ "and the REQUEST stays planning"
+	SPEC "the integration branch, integration/<NAME>-<slug>, NAME the name of the MILESTONE and"
+		+ "slug its TITLE lowercased with every run of characters other than letters and digits"
+		+ "replaced by one hyphen, is created from PROJECT.MAIN through a gateway of brigade/git/;"
+		+ "a branch already existing at that name exits 1 naming it, before any write"
+	SPEC "the entities are committed on the integration branch through the gateway of brigade/git/"
+	SPEC "when PROJECT.FORGE is github, the integration branch is pushed through a gateway of"
+		+ "brigade/git/"
+	SPEC "the REQUEST receives MILESTONE, the name of the entity, and BRANCH, and goes planned;"
+		+ "plan record prints the request, the milestone and the branch, text and --json carrying"
+		+ "schema_version"
+	SPEC "brigade/corpus/data/schema.awawa.tpl declares the field MILESTONE on REQUEST and no field"
+		+ "WAVE"
+	SPEC "tests/cli prove record, each refusal, the lint round and the branch already existing on a"
+		+ "fixture project whose REQUEST is written in the operational corpus of the fixture, awawa"
+		+ "replayed from recorded outputs where it is not on PATH"
 	AFTER @TASK.B10
 	RATIONALE "split from @TASK.B10 in its refinement: the Blueprint, plan section 5, row 3, has"
 		+ "the CLI record the plan; change_corpus_file writes one file per transaction and no"
@@ -7379,7 +7557,38 @@ TASK B139
 		REF @TASK.B10
 	RATIONALE "the plan travels on the integration branch of the wave, as @TASK.B38 drafts it"
 		REF @TASK.B38
+	RATIONALE "a wave is a MILESTONE of the project's corpus and its branch is named after it, as"
+		+ "@DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt rules: the plan"
+		+ "file holds one MILESTONE and its tasks, brigade declares no SCHEMA WAVE, and SCHEMA"
+		+ "REQUEST carries MILESTONE in place of WAVE, brigade/corpus/data/schema.awawa.tpl:126"
+		REF @DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
+	RATIONALE "the correction round is the user's: exit 1 with the lint output, the planner"
+		+ "correcting and relaunching once in its session, the second failure ending the run failed"
+		+ "with the REQUEST left in planning, and no resumption mechanism to build; the ledger"
+		+ "event is where the spent round is read"
+	RATIONALE "the transaction extends change_corpus_file of brigade/corpus/, whose CorpusChange"
+		+ "carries one file_name (brigade/corpus/change_corpus_file.py:17-23) and formats, lints,"
+		+ "restores and commits that file alone, to several files, under"
+		+ "@DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote: fmt on the files"
+		+ "brigade wrote and never on the root, lint on the root, the files written restored and"
+		+ "nothing else"
+		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
+	RATIONALE "the files go under the folder"
+		+ "@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus names, in the control"
+		+ "mode of @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus; brigade/git/ holds sixteen"
+		+ "gateways, add_detached_worktree to restore_files, none creating a branch nor pushing,"
+		+ "and @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa has every git"
+		+ "operation go through one"
+		REF @DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47: « Exit 1 +"
+		+ "sortie de lint ; le planner corrige et relance une fois dans sa session ; 2e échec = run"
+		+ "failed, REQUEST reste planning. Aucun mécanisme de reprise à construire. »; « si c'est"
+		+ "une branche d'intégration, ça devrait être le nom de la wave (ou milestone, pour moi"
+		+ "wave=milestone) »; « Oui MILESTONE mais REQUEST.WAVE doit être renommé REQUEST.MILESTONE"
+		+ "je suppose »; the slug is the NAME and the TITLE of the milestone; the task is ratified"
 
 TASK B140
 	TITLE "A project's corpus mode: brigade confined to an area of the corpus, or a project without"
@@ -7389,8 +7598,8 @@ TASK B140
 	COMPONENT "registry"
 	ROLE ada
 	DESC "to be refined with the user: the name of the field, the folder of the area mode and how"
-		+ "it stays a workspace of its own, where WAVE and TASK live without awawa, how project add"
-		+ "asks when it runs unattended"
+		+ "it stays a workspace of its own, where MILESTONE and TASK live without awawa, how"
+		+ "project add asks when it runs unattended"
 	SPEC "a field of the PROJECT entity carries the corpus mode, control, area or none; control"
 		+ "when absent"
 	SPEC "brigade project add, finding a corpus already in the repository, asks the user which mode"
@@ -7406,44 +7615,81 @@ TASK B140
 
 TASK B141
 	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	DESC "to be refined with the user: its name, its steps against the commands of @TASK.B13 and"
-		+ "@TASK.B142, and whether config.toml can name another procedure for the build slot"
-		REF @TASK.B13
-		REF @TASK.B142
-	SPEC "brigade/runs/data/procedures/ holds the procedure of the build slot and brigade run"
-		+ "resolves it by name without an instructions corpus"
+	SPEC "brigade/runs/data/procedures/build-task.md is the procedure of the build slot, budget 75,"
+		+ "and brigade run resolves it by name without an instructions corpus"
+	SPEC "build-task.md orders its steps: brigade task context, the failing tests of each SPEC"
+		+ "written first, the implementation, brigade task check until it passes, the commits,"
+		+ "brigade task pr, brigade task promote, and a report naming the pull request"
+	SPEC "the key build of the section [procedures] of config.toml names another procedure for the"
+		+ "build slot, resolved as the argument of brigade run is, and the tick launches it in"
+		+ "place of build-task"
+	SPEC "a unit test resolves build-task with no instructions corpus set; a test of the tick"
+		+ "proves that the key build of [procedures] replaces it"
+	AFTER @TASK.B12
+	AFTER @TASK.B13
+	AFTER @TASK.B142
 	RATIONALE "split from @TASK.B12 in its refinement: the tick launches a build run and brigade"
 		+ "ships no procedure, awawa-task.md living in the instructions corpus, which is optional"
 		REF @TASK.B12
+	RATIONALE "named build-task, not awawa-task: a shipped procedure resolves before the procedures"
+		+ "of the instructions corpus, _find_named of brigade/runs/resolve_procedure.py, and would"
+		+ "shadow the user's awawa-task; the budget of 75 is a declared estimate, that of"
+		+ "awawa-task, no run of build-task being recorded"
+	RATIONALE "its steps call the commands of @TASK.B13 and @TASK.B142, and the key replaces the"
+		+ "procedure the tick of @TASK.B12 launches"
+		REF @TASK.B12
+		REF @TASK.B13
+		REF @TASK.B142
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12: the build procedure is a task"
 		+ "of its own"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B142: the name build-task, the"
+		+ "key build of [procedures]; the task is ratified"
 
 TASK B142
 	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"
 		+ "pull request and the promotion of its task"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
 	ROLE ada
-	DESC "to be refined with the user: the bound of the check summary, the title and the body"
-		+ "template of the pull request, the ledger events of pr and promote, and the lock promote"
-		+ "takes on the repository"
 	SPEC "brigade task check runs the PROJECT.ACCEPTANCE commands, then awawa fmt --check . and"
-		+ "awawa lint --strict ., in the worktree of the task, and prints a bounded summary, one"
-		+ "line per command with its verdict; it exits 1 when one fails"
+		+ "awawa lint --strict ., in the worktree of the task, and prints one line per command, its"
+		+ "verdict, the command and its duration, followed for each failing command by the last 20"
+		+ "lines of its output; it exits 1 when one fails"
+	SPEC "brigade task check records its verdicts with the sha of HEAD in"
+		+ "$XDG_STATE_HOME/brigade/checks/<project>/<task>.json, written atomically; inside a run,"
+		+ "the whole output of each command is written under <run dir>/check/"
+	SPEC "brigade task pr refuses, naming the cause, a task whose last recorded check is not of"
+		+ "HEAD or has a failing command, and a task that carries no TYPE"
 	SPEC "brigade task pr pushes the task branch and opens its pull request on the wave's BRANCH"
-		+ "through the forge adapter, as the login of the build slot, with a body filled from a"
-		+ "template shipped in the package"
+		+ "through the forge adapter, as the login of the build slot, titled TYPE(COMPONENT): TITLE"
+		+ "(@TASK.<task>), the scope left out when the task has no COMPONENT, with a body filled"
+		+ "from a string.Template shipped in the package: the TITLE of the task, one line per SPEC,"
+		+ "the verdicts of the last check and the attribution lines"
 	SPEC "the pull request carries the GitHub milestone named after the TITLE of the task's"
-		+ "MILESTONE, created through the forge adapter when the repository has none of that name,"
-		+ "the creation recorded in the ledger"
-	SPEC "brigade task promote sets STATUS implemented and DELIVERED_BY on the task, runs awawa fmt"
-		+ "and awawa lint --strict, commits and pushes; the pull request number is the one brigade"
-		+ "task pr recorded in the ledger, --pr <n> naming another"
+		+ "MILESTONE, created through the forge adapter when the repository has none of that name"
+		+ "and recorded as the ledger event milestone.created carrying the project, the title and"
+		+ "the login"
+	SPEC "brigade task pr records the ledger event task.pr_opened carrying the project, the task,"
+		+ "the wave, the branch, the pull request number and the login"
+	SPEC "brigade task promote sets STATUS implemented and DELIVERED_BY on the task through"
+		+ "change_corpus_file of brigade/corpus/, which formats and lints under the lock of the"
+		+ "repository and restores the file when lint fails, then commits, pushes and records the"
+		+ "ledger event task.promoted carrying the project, the task, the pull request and the"
+		+ "commit; the pull request is the one of the last task.pr_opened of the task, --pr <n>"
+		+ "naming another"
+	SPEC "brigade task promote refuses before any write, naming it, STATUS implemented or"
+		+ "DELIVERED_BY when the TASK schema of the project's corpus does not declare it"
+	SPEC "the corpus of the brigade repository declares the field TYPE on TASK, one of build,"
+		+ "chore, ci, docs, feat, fix, perf, refactor, revert, style and test, and every task of"
+		+ "STATUS todo carries one"
+	SPEC "tests/cli prove check, promote and each refusal of pr and promote on a registered"
+		+ "repository in a temporary directory; unit tests prove the title, the body and the three"
+		+ "ledger events"
 	AFTER @TASK.B13
 	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
 		+ "lifecycle of the Blueprint, brigade task check, brigade task pr, brigade task promote"
@@ -7456,9 +7702,28 @@ TASK B142
 		+ "POLICY.REVIEW local no task pull request is opened, which @TASK.B100 delivers"
 		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 		REF @TASK.B100
+	RATIONALE "the title follows @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask:"
+		+ "the branch task/<slug>/<task> of @TASK.B12 names no type and the ids of brigade's tasks"
+		+ "carry none, so the task carries it"
+		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
+		REF @TASK.B12
+	RATIONALE "the check recorded against HEAD is what the body reports and what pr refuses to open"
+		+ "without, as the Blueprint has task pr fill the acceptance verdicts; every forge write"
+		+ "records its login, as"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode rules"
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+	RATIONALE "promote takes no lock of its own: change_corpus_file already holds the lock of the"
+		+ "repository's path and restores the file when lint fails, DESC 5 of"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory;"
+		+ "brigade/corpus/data/schema.awawa.tpl declares no SCHEMA TASK, so STATUS implemented and"
+		+ "DELIVERED_BY rest on the project's own schema, which promote checks before writing"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B13: check, pr and promote are a"
 		+ "task of their own; a missing milestone is created; promote reads the pull request from"
 		+ "the ledger"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B142: one line per command and"
+		+ "the last 20 lines of a failure; three ledger events; the task carries a required TYPE;"
+		+ "the task is ratified"
 
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
@@ -7513,3 +7778,98 @@ TASK B144
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19: \"toutes les vagues, mais je"
 		+ "pense qu'on doit prévoir un client fallback configurable (qui sera implémenté plus tard"
 		+ "en ADD0)\""
+
+TASK B145
+	TITLE "config.toml binds a client per slot in [slot_clients], so that two clients serve one"
+		+ "project"
+	STATUS todo
+	MILESTONE @MILESTONE.M1
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "config.toml accepts a table [slot_clients] mapping a slot among the nine to the name of a"
+		+ "client adapter, in the shape of [forge_accounts]; an unknown slot or a value that is no"
+		+ "string is an error naming the key and the file"
+	SPEC "the client of a run is the one [slot_clients] binds to its slot, else the CLIENT of the"
+		+ "PROJECT entity, else the client key of config.toml"
+	SPEC "the record of a run and its ledger event run.finished name the client the run used"
+	SPEC "brigade roles list, brigade doctor and the brigade adapter commands state the client they"
+		+ "answer for and name each slot [slot_clients] binds to another client, with that client"
+	SPEC "tests/cli prove, with two adapters of the test suite, that a slot bound in [slot_clients]"
+		+ "runs on its client while another slot runs on the client key, that PROJECT.CLIENT yields"
+		+ "to the slot's client, and each refusal of the table"
+	AFTER @TASK.B42
+	AFTER @TASK.B06
+	RATIONALE "the user asked on 2026-10-07 whether two AI providers can coexist; the session found"
+		+ "one client per machine, the client key of config.toml, replaced per project by the"
+		+ "CLIENT of the PROJECT entity (brigade/runs/read_run_setting.py:31), and no decision or"
+		+ "task binding a client to a slot or a role; the user asked for the mention in the draft"
+		+ "of @TASK.B44, from which this task was split on 2026-10-13"
+		REF @TASK.B44
+	RATIONALE "the binding is the table [slot_clients], as"
+		+ "@DECISION.ASlotClientIsBoundByTheSlotClientsTableOfConfigToml rules, beside [slots] of"
+		+ "@DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares, which binds the"
+		+ "role: _read_slots of brigade/system/read_configuration.py:98-101 accepts one string per"
+		+ "slot, and [forge_accounts], read_configuration.py:22, is already a table keyed by the"
+		+ "slots"
+		REF @DECISION.ASlotClientIsBoundByTheSlotClientsTableOfConfigToml
+		REF @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
+	RATIONALE "the global client is read by read_run_setting.py:31 for a run, and by"
+		+ "commands/roles_list.py and system/require_configured_client.py, the adapter commands and"
+		+ "doctor, alone; the table [reasoning] stays one for every client, as the DESC of"
+		+ "@TASK.B108 notes, and is not settled here"
+		REF @TASK.B108
+	RATIONALE "after @TASK.B42, the adapter contract and the fake, and @TASK.B06, brigade run and"
+		+ "PROJECT.CLIENT; the vibe adapter of @TASK.B108 and the rehearsal of @TASK.B44 need no"
+		+ "code of this task, so it stays in @MILESTONE.M1"
+		REF @TASK.B42
+		REF @TASK.B06
+		REF @TASK.B108
+		REF @TASK.B44
+		REF @MILESTONE.M1
+	SOURCE "the user's words of 2026-10-07, « oui ajoute la mention au draft », on the session's"
+		+ "proposal of a client per slot or per role"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47: « config.toml"
+		+ ": [slot_clients] review = \"vibe\" ; ordre : slot, sinon PROJECT.CLIENT, sinon client ;"
+		+ "même forme que [forge_accounts]. Le client est une propriété de la machine, le rôle"
+		+ "reste portable. »; the task is split from B44 and ratified"
+
+TASK B146
+	TITLE "The built-in collector pr-list prints the pull requests of a project through the forge"
+		+ "adapter"
+	STATUS todo
+	MILESTONE @MILESTONE.M1
+	COMPONENT "studies"
+	ROLE ada
+	SPEC "pr-list is a built-in collector under the contract of B47: its items are the pull"
+		+ "requests of the project, read through the forge adapter as the login of the key cli, the"
+		+ "read B14 adds, each with number, title, head branch, base, state open, merged or closed,"
+		+ "author login, draft state, review decision, the verdict of its check runs and the task"
+		+ "its head branch task/<slug>/<task> names; the parameter state narrows them, open by"
+		+ "default; summary counts them by state"
+	SPEC "under FORGE none, pr-list declares itself absent: brigade collectors list prints it"
+		+ "absent naming FORGE none, and brigade collect pr-list exits 1 naming it"
+	SPEC "tests prove the document from a recorded answer of the forge adapter, the absence under"
+		+ "FORGE none, and that no model is launched"
+	AFTER @TASK.B47
+	AFTER @TASK.B14
+	RATIONALE "split out of @TASK.B47 on 2026-10-13: commit 04e7293 of the brigade repository had"
+		+ "given pr-list to @TASK.B46, of @MILESTONE.M7, which made @TASK.B20, of @MILESTONE.M1,"
+		+ "follow a task of a later milestone; the user ruled a small task of M1 after @TASK.B47,"
+		+ "the contract, and @TASK.B14, which adds the reading of pull requests to the GitHub"
+		+ "adapter; @TASK.B46 keeps the absence of pr-threads and check-runs under FORGE none, and"
+		+ "B47 and B14 stay as ratified"
+		REF @TASK.B47
+		REF @TASK.B46
+		REF @MILESTONE.M7
+		REF @TASK.B20
+		REF @MILESTONE.M1
+		REF @TASK.B14
+	RATIONALE "its items carry what the task table of @TASK.B20 needs, the pull request of each"
+		+ "task of the wave with its state, and what @TASK.B14 reads for the tick, the verdict of"
+		+ "the check runs and the review state, so that one read serves both"
+		REF @TASK.B20
+		REF @TASK.B14
+	SOURCE "the user's ruling of 2026-10-13: « Une petite tâche M1, todo : le built-in pr-list sous"
+		+ "le contrat de B47, AFTER B47 et B14 (qui ajoute la lecture des PR à l'adaptateur"
+		+ "GitHub). B46 le retire, B20 passe AFTER cette tâche. B47 et B14 restent comme ratifiées."
+		+ "»"

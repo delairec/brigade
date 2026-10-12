@@ -54,8 +54,8 @@ DECISION HybridStorageCorpusAndLedger
 	TITLE "durable facts live in awawa corpora, high-volume events in an append-only JSONL ledger"
 	STATUS active
 	DESC "the brigade corpus holds PROJECT, POLICY, STUDY, ORDER, REQUEST, PATTERN and CONSTRAINT;"
-		+ "each project corpus keeps its WAVE and TASK entities; the ledger holds runs, states,"
-		+ "pauses and merges"
+		+ "each project corpus keeps its MILESTONE and TASK entities; the ledger holds runs,"
+		+ "states, pauses and merges"
 	REJECTED "everything in awawa: one entity per run means thousands of entities and git noise"
 	REJECTED "SQLite for everything: a second grammar without schema lint"
 	RATIONALE "the user's answer to the storage question; one home per fact, views rendered never"
@@ -515,16 +515,18 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		REF @TASK.B73
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
-	TITLE "client, forge, scheduler, collector, check and output are plugin kinds resolved by name"
-		+ "through one resolver; the core sees documents only and imports no plugin; Clean"
-		+ "Architecture's layering is not adopted"
+	TITLE "client, forge, scheduler, collector, check, output and document are plugin kinds"
+		+ "resolved by name through one resolver; the core sees documents only and imports no"
+		+ "plugin; Clean Architecture's layering is not adopted"
 	STATUS active
 	DESC "a built-in plugin is a module under its kind's package, an external one an executable"
 		+ "brigade-<kind>-<name> on PATH for the client kind; the forge and the scheduler kinds"
 		+ "resolve their built-in modules alone until @TASK.B76, post-MVP, delivers their"
 		+ "executables; one resolver turns a name into one object answering the kind's operations,"
-		+ "searched in the kind's declared order: project, machine, PATH, built-ins"
+		+ "searched in the kind's declared order: project, machine, PATH, built-ins; the document"
+		+ "kind resolves its two built-in modules, markdown and awawa, which @TASK.B106 delivers"
 		REF @TASK.B76
+		REF @TASK.B106
 	DESC "an operation takes a JSON-compatible dict and returns one, validated by the core on entry"
 		+ "as @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets; a module"
 		+ "plugin and an executable plugin are indistinguishable to the core; no plugin Python type"
@@ -548,7 +550,7 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		REF @TASK.B73
 	DESC "binds @TASK.B06, @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B23, @TASK.B24, @TASK.B42,"
-		+ "@TASK.B43, @TASK.B46, @TASK.B47 and @TASK.B48"
+		+ "@TASK.B43, @TASK.B46, @TASK.B47, @TASK.B48 and @TASK.B106"
 		REF @TASK.B06
 		REF @TASK.B07
 		REF @TASK.B12
@@ -560,6 +562,7 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		REF @TASK.B46
 		REF @TASK.B47
 		REF @TASK.B48
+		REF @TASK.B106
 	REJECTED "a typing.Protocol shared by core and adapters in a common module: an adapter needs no"
 		+ "brigade import to answer documents, and the graph stays one-directional"
 	REJECTED "calling brigade adapter as a subprocess for a built-in adapter: a process per"
@@ -598,6 +601,9 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	SOURCE "the spawner added to DESC 5 in pull request #65 of the brigade repository, delivering"
 		+ "@TASK.B73"
 		REF @TASK.B73
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106: the document kind"
+		+ "added to the TITLE and to DESC 1"
+		REF @TASK.B106
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
@@ -860,7 +866,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B50
 		REF @TASK.B52
 	DESC "binds @TASK.B03, @TASK.B07, @TASK.B09, @TASK.B10, @TASK.B12, @TASK.B13, @TASK.B16,"
-		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50, @TASK.B52 and @TASK.B142"
+		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50, @TASK.B52, @TASK.B106 and @TASK.B142"
 		REF @TASK.B03
 		REF @TASK.B07
 		REF @TASK.B09
@@ -874,6 +880,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B50
 		REF @TASK.B52
 		REF @TASK.B142
+		REF @TASK.B106
 	REJECTED "root-level roles/, recipes/, procedures/, schema/ and scheduler/, the Blueprint"
 		+ "plan's layout: build.py copies brigade/ alone, so a root-level file is absent from"
 		+ "dist/brigade.pyz"
@@ -884,6 +891,9 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		+ "reaches both"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106, whose schema resource"
+		+ "this decision binds"
+		REF @TASK.B106
 
 DECISION OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	TITLE "every subprocess goes through one runner of brigade/system, git and awawa through"
@@ -1033,11 +1043,10 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	STATUS active
 	DESC "every document brigade writes or reads, command output, ledger line, result, collector"
 		+ "document, recipe, config and answer file, carries schema_version, an integer per"
-		+ "document kind starting at 1, the name @TASK.B01 and @TASK.B02 fix; @TASK.B47 and"
-		+ "@TASK.B50 say schema and are aligned at their refinement"
+		+ "document kind starting at 1, the name @TASK.B01 and @TASK.B02 fix; @TASK.B50 says schema"
+		+ "and is aligned at its refinement"
 		REF @TASK.B01
 		REF @TASK.B02
-		REF @TASK.B47
 		REF @TASK.B50
 	DESC "one validator module checks an inbound document, an adapter answer, a collector output, a"
 		+ "plan JSON or a study answer, against a shape declared next to its kind, required keys,"
@@ -1260,9 +1269,9 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 	DESC "it amends DESC 1 of @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction, which"
 		+ "places every built-in adapter in brigade/adapters/clients"
 		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
-	DESC "binds @TASK.B49 and @TASK.B44"
+	DESC "binds @TASK.B49 and @TASK.B108, whose adapter gains its row through the generator"
 		REF @TASK.B49
-		REF @TASK.B44
+		REF @TASK.B108
 	REJECTED "one row per capability and a column per adapter: the task of the second client"
 		+ "already reads the table as gaining a row per client, and a column per client widens the"
 		+ "README with every adapter"
@@ -1285,6 +1294,9 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B49"
 	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
 		REF @TASK.B79
+	SOURCE "the user's ruling of 2026-10-13 in the refinement of B44: the README row of vibe is"
+		+ "delivered by @TASK.B108, B44 keeping the rehearsal alone"
+		REF @TASK.B108
 
 DECISION TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
 	TITLE "the tests that need awawa replay recorded outputs of the real awawa where it is not on"
@@ -1337,18 +1349,20 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	TITLE "a run keeps one directory under runs/<id>/ for all its segments, one folder"
 		+ "segments/<n>/ per segment, and result.json written last marks it finished"
 	STATUS active
-	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md,"
-		+ "journal.jsonl, the journal of the actions of every segment, segments/<n>/ with brief.md,"
-		+ "stdout.log, stderr.log and result.json, the normalised result of that segment, and"
-		+ "result.json, the normalised result of the last segment"
+	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md or"
+		+ "progress.awawa by the form the document key chooses, journal.jsonl, the journal of the"
+		+ "actions of every segment, segments/<n>/ with brief.md, stdout.log, stderr.log and"
+		+ "result.json, the normalised result of that segment, and result.json, the normalised"
+		+ "result of the last segment"
 	DESC "result.json is written atomically after the ledger events of the run: a run with a result"
 		+ "is finished, one whose pid lives without it is running, any other is dead"
-	DESC "a hand-over keeps the run id and numbers the segment; the brief of segment n opens on the"
-		+ "progress file"
-	DESC "binds @TASK.B06, and every task that reads a run, @TASK.B07 and @TASK.B19"
+	DESC "a hand-over keeps the run id and numbers the segment; the brief of segment n opens on"
+		+ "what the document plugin reads of the progress"
+	DESC "binds @TASK.B06, and every task that reads a run, @TASK.B07, @TASK.B19 and @TASK.B106"
 		REF @TASK.B06
 		REF @TASK.B07
 		REF @TASK.B19
+		REF @TASK.B106
 	REJECTED "a new run id per segment: the ledger's segment field and runs list would split one"
 		+ "run into several, and the progress file would move at each hand-over"
 	REJECTED "one stdout.log and stderr.log appended across segments: no reader could tell which"
@@ -1362,6 +1376,9 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		REF @TASK.B06
 	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
 		REF @TASK.B79
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106: DESC 1 names the file"
+		+ "of each form, DESC 3 what the document plugin reads"
+		REF @TASK.B106
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture and coverage.py, each installed by pip from"
@@ -2116,8 +2133,8 @@ DECISION AProjectChoosesHowBrigadeUsesItsCorpus
 		+ "PROJECT entity and control is delivered first"
 	STATUS active
 	CLOSES @OPEN_QUESTION.HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
-	DESC "control: brigade writes its WAVE and TASK entities in the project's corpus and refuses,"
-		+ "naming them, the types and fields its schema does not declare"
+	DESC "control: brigade writes its MILESTONE and TASK entities in the project's corpus and"
+		+ "refuses, naming them, the types and fields its schema does not declare"
 	DESC "area: brigade keeps to an area of its own in the repository; none: the project's waves"
 		+ "and tasks do not go through awawa, brigade itself still requiring it"
 	DESC "brigade project add, finding a corpus in the repository, asks the user which mode to set;"
@@ -2158,3 +2175,82 @@ DECISION ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
 		REF @TASK.B10
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12"
 		REF @TASK.B12
+
+DECISION TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
+	TITLE "the pull request of a task is titled TYPE(COMPONENT): TITLE (@TASK.<task>), TYPE a"
+		+ "required field of the task"
+	STATUS active
+	DESC "a task brigade delivers carries TYPE, a Conventional Commits type, and brigade task pr"
+		+ "refuses a task without one"
+	DESC "the title is TYPE(COMPONENT): TITLE (@TASK.<task>), the scope left out when the task has"
+		+ "no COMPONENT"
+	REJECTED "the subject of the first commit of the branch, with or without TYPE as a fallback:"
+		+ "the user ruled that the task carries the type"
+	REJECTED "the type as the prefix of the task id, the convention of the instructions corpus:"
+		+ "every brigade task would be renamed and a project of untyped ids could deliver nothing"
+	REJECTED "a type derived from the task, feat by default: often wrong"
+	RATIONALE "the branch task/<slug>/<task> names no type, and the rule"
+		+ "conventional_commit_subject of the instructions corpus binds the title of a pull request"
+		REF @TASK.B12
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of @TASK.B142"
+		REF @TASK.B142
+
+DECISION AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
+	TITLE "a wave is a MILESTONE of the project's corpus, its plan one MILESTONE entity and its"
+		+ "TASK entities; the REQUEST names it in MILESTONE, and its integration branch is"
+		+ "integration/<NAME>-<TITLE as a slug>"
+	STATUS active
+	DESC "the plan of a wave is one MILESTONE entity and the TASK entities whose MILESTONE names"
+		+ "it, written in the project's corpus; brigade declares no WAVE type"
+	DESC "SCHEMA REQUEST of the shipped operational schema carries MILESTONE, the name of that"
+		+ "entity, in place of WAVE"
+	DESC "the integration branch of a wave is integration/<NAME>-<slug>, NAME the name of the"
+		+ "MILESTONE and slug its TITLE lowercased with every run of characters other than letters"
+		+ "and digits replaced by one hyphen, integration/M9-runs-list-as-json for M9 \"runs list"
+		+ "as JSON\"; a branch already existing at that name is a refusal of brigade plan record"
+		+ "naming it"
+	DESC "binds @TASK.B139, @TASK.B10, @TASK.B11, @TASK.B12, @TASK.B13 and @TASK.B55"
+		REF @TASK.B139
+		REF @TASK.B10
+		REF @TASK.B11
+		REF @TASK.B12
+		REF @TASK.B13
+		REF @TASK.B55
+	REJECTED "a WAVE type distinct from MILESTONE: for the user a wave and a milestone are one"
+		+ "thing, and brigade's own corpus groups its tasks by MILESTONE, TASK.MILESTONE being"
+		+ "required"
+	REJECTED "integration/<slug> cut from the text of the request or from its number alone: the"
+		+ "branch names the wave, and the user chose the name and the title of its milestone"
+	RATIONALE "the user's words: « si c'est une branche d'intégration, ça devrait être le nom de la"
+		+ "wave (ou milestone, pour moi wave=milestone) » and « Oui MILESTONE mais REQUEST.WAVE"
+		+ "doit être renommé REQUEST.MILESTONE je suppose »; no SCHEMA WAVE existed anywhere, and"
+		+ "brigade/corpus/data/schema.awawa.tpl:126 declared FIELD WAVE string on REQUEST"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47"
+
+DECISION ASlotClientIsBoundByTheSlotClientsTableOfConfigToml
+	TITLE "the table [slot_clients] of config.toml binds a slot to a client adapter; a run's client"
+		+ "is the slot's, else PROJECT.CLIENT, else the client key"
+	STATUS active
+	DESC "[slot_clients] maps a slot among the nine to the name of a client adapter, in the shape"
+		+ "of [forge_accounts]; an unknown slot or a value that is no string is an error naming the"
+		+ "key and the file"
+	DESC "the client of a run is the one [slot_clients] binds to its slot, else the CLIENT of the"
+		+ "PROJECT entity, else the client key of config.toml"
+	DESC "the client is a property of the machine: a role file and an AGENT entity name no client,"
+		+ "and a role stays portable between machines"
+	DESC "binds @TASK.B145; it stands beside DESC 1 of"
+		+ "@DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares, [slots] binding the"
+		+ "role and [slot_clients] the client"
+		REF @TASK.B145
+		REF @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
+	REJECTED "a client key inside [slots]: a row of [slots] is one string, the name of an AGENT"
+		+ "entity, and [forge_accounts] already shows the form of a per-slot binding, a table of"
+		+ "its own"
+	REJECTED "a client field of the role file: the client is a property of the machine, and a role"
+		+ "file naming one would no longer be portable"
+	RATIONALE "the user's words: « config.toml : [slot_clients] review = \"vibe\" ; ordre : slot,"
+		+ "sinon PROJECT.CLIENT, sinon client ; même forme que [forge_accounts]. Le client est une"
+		+ "propriété de la machine, le rôle reste portable. »; the question is the user's of"
+		+ "2026-10-07, recorded in @TASK.B44, whether two AI providers can coexist"
+		REF @TASK.B44
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47"
