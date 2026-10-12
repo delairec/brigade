@@ -14,7 +14,6 @@ ACTIVE_STATUS = "active"
 OPEN_TASK_STATUSES = ("draft", "todo")
 ANCHOR_FIELD = "IMPL"
 ANCHOR_SEPARATOR = "::"
-QUOTE = '"'
 TRAILING_NUMBER = re.compile(r"\d+$")
 SCHEMA_NOT_DEFINED = 1
 SHOWN = (0,)
@@ -43,9 +42,7 @@ def _read_schema(run_process, root: Path, entity_type: str) -> str | None:
 
 
 def _decode_atom(atom: str) -> str:
-    if atom.startswith(QUOTE):
-        return json.loads(atom)
-    return atom
+    return json.loads(atom)
 
 
 def _read_value(fields: list, name: str) -> str:
