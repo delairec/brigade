@@ -6,6 +6,8 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.runs.list_runs import list_runs
+from brigade.runs.record_run_pid import record_run_pid
+from brigade.system.read_start_time import read_start_time
 
 RUN_ID = "20261007T090000Z-b70a01"
 RUN_RECORD = {
@@ -41,6 +43,8 @@ RUN_RECORD_WITHOUT_CLIENT = {
     "wall_limit_s": 1500.0,
     "arguments": {},
 }
+ANOTHER_START_TIME = 1
+ANOTHER_BOOT_ID = "0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f"
 RUN_RESULT = {
     "schema_version": 1,
     "outcome": "done",
@@ -104,13 +108,34 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
     def test_should_list_a_run_whose_process_is_alive_as_running(self):
         # Arrange
         self.start_run()
-        (self.run_directory / "pid").write_text(str(os.getpid()))
+        record_run_pid(self.run_directory, os.getpid())
 
         # Act
         [listed] = list_runs(self.state_root)
 
         # Assert
         self.assertEqual(listed["state"], "running")
+
+    def test_should_list_a_run_whose_pid_holds_a_process_of_another_identity_as_dead(self):
+        # Arrange
+        living_pid = os.getpid()
+        start_time = read_start_time(Path(f"/proc/{living_pid}/stat").read_text())
+        boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+        rows = [
+            ("a living process of another start time", f"{living_pid} {ANOTHER_START_TIME} {boot_id}\n"),
+            ("a living process recorded under another boot", f"{living_pid} {start_time} {ANOTHER_BOOT_ID}\n"),
+            ("the pid alone, written before the identity", f"{living_pid}\n"),
+        ]
+        self.start_run()
+        for case, written in rows:
+            with self.subTest(case=case):
+                (self.run_directory / "pid").write_text(written)
+
+                # Act
+                [listed] = list_runs(self.state_root)
+
+                # Assert
+                self.assertEqual(listed["state"], "dead")
 
 
 class ListRunsOfAFinishedRunTest(ListRunsTestCase):

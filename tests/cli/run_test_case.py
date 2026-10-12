@@ -108,7 +108,8 @@ class RunTestCase(unittest.TestCase):
             time.sleep(FILE_POLL_S)
 
     def read_run_pid(self, run_id: str) -> int:
-        return int((self.runs / run_id / "pid").read_text())
+        pid, _start_time, _boot_id = (self.runs / run_id / "pid").read_text().split()
+        return int(pid)
 
     def wait_for_client(self, brigade_pid: int) -> int:
         children = Path(f"/proc/{brigade_pid}/task/{brigade_pid}/children")

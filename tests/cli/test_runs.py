@@ -4,8 +4,10 @@ import shutil
 import signal
 import subprocess
 import sys
+from pathlib import Path
 from unittest.mock import ANY
 
+from brigade.runs.record_run_pid import record_run_pid
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 
@@ -21,6 +23,7 @@ CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
 LONGER_THAN_THE_DEFAULT_POLL_S = 3
 BLANK_LINE = "\n"
 END_OF_OUTPUT = ""
+ANOTHER_START_TIME = 1
 
 
 class RunsTestCase(RunTestCase):
@@ -635,16 +638,16 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs stop: run {run_id} holds no pid file\n"),
+            (1, "", f"brigade runs stop: run {run_id} holds no pid file naming its process\n"),
         )
 
     def test_should_refuse_a_dead_run_naming_the_pid_no_process_holds(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
         gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
-        (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
 
         # Act
         completed = self.run_brigade("runs", "stop", run_id)
@@ -652,8 +655,32 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs stop: run {run_id} is dead: no process holds its pid {gone.pid}\n"),
+            (1, "", f"brigade runs stop: run {run_id} is dead: no process of its identity holds its pid {gone.pid}\n"),
         )
+
+    def test_should_refuse_a_run_whose_pid_holds_a_process_of_another_start_time_and_signal_none(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        stranger = subprocess.Popen(["sleep", "120"])  # noqa: S607 - sleep found on the PATH of the test
+        self.addCleanup(stranger.wait)
+        self.addCleanup(stranger.kill)
+        boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+        (self.runs / run_id / "result.json").unlink()
+        (self.runs / run_id / "pid").write_text(f"{stranger.pid} {ANOTHER_START_TIME} {boot_id}\n")
+
+        # Act
+        completed = self.run_brigade("runs", "stop", run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (
+                1,
+                "",
+                f"brigade runs stop: run {run_id} is dead: no process of its identity holds its pid {stranger.pid}\n",
+            ),
+        )
+        self.assertIsNone(stranger.poll())
 
     def test_should_refuse_an_unknown_run(self):
         # Act
@@ -675,7 +702,7 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
             check=True,
         )
         (self.runs / run_id / "result.json").unlink()
-        (self.runs / run_id / "pid").write_text(orphan.stdout)
+        record_run_pid(self.runs / run_id, int(orphan.stdout))
 
         # Act
         completed = self.run_brigade("runs", "stop", run_id)

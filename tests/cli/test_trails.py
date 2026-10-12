@@ -119,8 +119,9 @@ class BrigadeRunDetachedTrailTest(RunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        run_directory = self.runs / completed.stdout.strip()
-        pid = int((run_directory / "pid").read_text())
+        run_id = completed.stdout.strip()
+        run_directory = self.runs / run_id
+        pid = self.read_run_pid(run_id)
         self.wait_for_file(run_directory / "result.json")
         self.wait_for_exit(pid)
         self.assertRegex(
@@ -140,8 +141,9 @@ class BrigadeRunDetachedTrailTest(RunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        run_directory = self.runs / completed.stdout.strip()
-        pid = int((run_directory / "pid").read_text())
+        run_id = completed.stdout.strip()
+        run_directory = self.runs / run_id
+        pid = self.read_run_pid(run_id)
         self.wait_for_file(run_directory / "result.json")
         self.wait_for_exit(pid)
         self.assertCountEqual(

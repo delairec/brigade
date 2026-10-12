@@ -577,7 +577,7 @@ class BrigadeRunDetachedTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_id = completed.stdout.strip()
         self.assertRegex(run_id, RUN_ID_PATTERN)
-        self.assertRegex((self.runs / run_id / "pid").read_text(), r"^\d+\n$")
+        self.assertRegex((self.runs / run_id / "pid").read_text(), r"^\d+ \d+ [0-9a-f-]{36}\n$")
         self.wait_for_file(self.runs / run_id / "result.json")
         [finished] = self.read_events("run.finished")
         self.assertEqual(finished["run"], run_id)

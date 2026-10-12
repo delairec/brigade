@@ -11,31 +11,38 @@ class ReadRunPidTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.run_directory = Path(directory.name)
 
-    def test_should_read_the_pid_the_run_wrote(self):
+    def test_should_read_the_pid_and_the_identity_of_the_process_the_run_wrote(self):
         # Arrange
-        (self.run_directory / "pid").write_text("4242\n")
+        (self.run_directory / "pid").write_text("4242 987654 0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f\n")
 
         # Act
-        pid = read_run_pid(self.run_directory)
+        recorded = read_run_pid(self.run_directory)
 
         # Assert
-        self.assertEqual(pid, 4242)
+        self.assertEqual(recorded, (4242, "987654 0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f"))
 
     def test_should_read_no_pid_before_the_run_wrote_one(self):
         # Act
-        pid = read_run_pid(self.run_directory)
+        recorded = read_run_pid(self.run_directory)
 
         # Assert
-        self.assertIsNone(pid)
+        self.assertIsNone(recorded)
 
-    def test_should_read_no_pid_from_a_file_holding_no_number(self):
-        for written in ["\n", "-4242\n", "pid\n"]:
-            with self.subTest(written=written):
+    def test_should_read_no_pid_from_a_file_not_of_the_form_pid_start_time_boot_id(self):
+        rows = [
+            ("an empty file", "\n"),
+            ("the pid alone, written before the identity", "4242\n"),
+            ("a pid that is no number", "pid 987654 0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f\n"),
+            ("a start time that is no number", "4242 start 0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f\n"),
+            ("a fourth field", "4242 987654 0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f extra\n"),
+        ]
+        for case, written in rows:
+            with self.subTest(case=case):
                 # Arrange
                 (self.run_directory / "pid").write_text(written)
 
                 # Act
-                pid = read_run_pid(self.run_directory)
+                recorded = read_run_pid(self.run_directory)
 
                 # Assert
-                self.assertIsNone(pid)
+                self.assertIsNone(recorded)
