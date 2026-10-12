@@ -3888,7 +3888,17 @@ TASK B78
 TASK B79
 	TITLE "A run keeps a live journal of one short timestamped record per action of its client,"
 		+ "printed by brigade runs show <id> --log; brigade runs logs is removed"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-12: three later tasks made false the clause of its SPEC on the"
+		+ "claude-code parse-result, that result.json, run.finished, steps, usage, session, outcome"
+		+ "and error class are unchanged: @TASK.B83 answers steps null for a result that follows a"
+		+ "task notification, @TASK.B114 answers the soft_limit outcome for a session its hook"
+		+ "stopped, and @TASK.B138 answers the duration summed over every result event of the"
+		+ "session rather than read from the last; the journal and the stream-json launch it"
+		+ "delivers stand"
+		REF @TASK.B83
+		REF @TASK.B114
+		REF @TASK.B138
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
