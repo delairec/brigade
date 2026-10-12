@@ -10,11 +10,11 @@ def _name(path: tuple[str, ...]) -> str:
     return " ".join(("brigade", *path))
 
 
-def _index_by_path(commands) -> dict[tuple[str, ...], Command]:
+def _index_by_path(commands, record_kind: str) -> dict[tuple[str, ...], Command]:
     by_path = {}
     for command in commands:
         if command.path in by_path:
-            raise ValueError(f"two command records declare {_name(command.path)}")
+            raise ValueError(f"two {record_kind} records declare {_name(command.path)}")
         by_path[command.path] = command
     return by_path
 
@@ -27,7 +27,9 @@ def _declare_help(helps: dict, path: tuple[str, ...], help_text) -> None:
 
 
 def _collect_epilogs(commands, by_path: dict[tuple[str, ...], Command]) -> dict[tuple[str, ...], str]:
-    passthroughs = _index_by_path(command for command in commands if command.render_passed_stderr is not None)
+    passthroughs = _index_by_path(
+        (command for command in commands if command.render_passed_stderr is not None), "passthrough"
+    )
     for path in passthroughs:
         if path not in by_path:
             raise ValueError(f"a passthrough record declares {_name(path)}, which no command record declares")
@@ -55,7 +57,7 @@ def _add_arguments(container, arguments) -> None:
 
 
 def add_command_parsers(parser, commands, common_options) -> None:
-    by_path = _index_by_path(command for command in commands if command.render_passed_stderr is None)
+    by_path = _index_by_path((command for command in commands if command.render_passed_stderr is None), "command")
     epilogs = _collect_epilogs(commands, by_path)
     helps = _collect_helps(by_path.values())
     parser.set_defaults(command=None)

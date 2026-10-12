@@ -235,4 +235,4 @@ class AddCommandParsersWhenTwoPassthroughRecordsDeclareOnePathTest(unittest.Test
             add_command_parsers(argparse.ArgumentParser(prog="brigade"), commands, _create_common_options())
 
         # Assert
-        self.assertEqual(str(raised.exception), "two command records declare brigade tool")
+        self.assertEqual(str(raised.exception), "two passthrough records declare brigade tool")
