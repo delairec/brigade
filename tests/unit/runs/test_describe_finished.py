@@ -360,3 +360,44 @@ class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(finished.nulls, expected_nulls)
+
+
+class DescribeFinishedOfASegmentWhoseAdapterFailedToLaunchItsClientTest(unittest.TestCase):
+    def test_should_name_the_failure_of_the_adapter_and_the_client_never_launched(self):
+        # Arrange
+        record = SegmentRecord(
+            number=1,
+            result=RunResult(
+                outcome="failed",
+                steps=None,
+                usage=None,
+                session_id=None,
+                duration_ms=0,
+                error_class=None,
+                reset=None,
+                message="client adapter claude-code answered launch-argv: lacks the key argv",
+            ),
+            exit_code=None,
+            measured_ms=0,
+            cost_usd=None,
+            counted_steps=None,
+            uncounted="the client was never launched",
+        )
+
+        # Act
+        finished = describe_finished(_create_plan(), record)
+
+        # Assert
+        self.assertEqual(
+            finished.nulls,
+            {
+                "wave": NOT_IN_A_WAVE,
+                "task": NOT_IN_A_WAVE,
+                "session": "the client names no session at launch",
+                "main_steps": "the client was never launched",
+                "total_steps": "the client was never launched",
+                "usage": "the client was never launched",
+                "error_class": "client adapter claude-code answered launch-argv: lacks the key argv",
+                "exit": "client adapter claude-code answered launch-argv: lacks the key argv",
+            },
+        )
