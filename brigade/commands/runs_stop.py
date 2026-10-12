@@ -25,7 +25,7 @@ def runs_stop(request, runtime: Runtime) -> dict:
 COMMAND = Command(
     path=("runs", "stop"),
     help="stop a run: its client's group gets SIGTERM, then SIGKILL after the grace",
-    group_help="list the runs and show one",
+    group_help="list the runs, show one and stop one",
     arguments=(Argument(("run",)),),
     run=runs_stop,
     read_request=_read_request,

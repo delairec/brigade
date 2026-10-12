@@ -214,6 +214,7 @@ brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief 
 brigade runs list [--json]                       # every run: id, procedure, slot, role, project, state, outcome
 brigade runs show <id> [--log] [--json]          # the summary of a run and its segments; --log adds its journal
 brigade runs show <id> --follow                  # the same with --log, then each record as it is written
+brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
 ```
 
 `brigade run` runs a procedure as a slot through the client adapter. A procedure is a Markdown file whose front matter
@@ -239,7 +240,7 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.jso
 result of the last segment. Each segment appends one `run.finished` to the
 ledger, every null field named in `nulls` with its reason. The command prints the run, text or `--json`, and exits
 with the code of its outcome, that of its last segment: 0 `done`, 1 `failed`, 3 `undeclared`, 10 `blocked`, 11
-`wall_limit`, 12 `turn_limit` (the last segment reached the client's step cap), 20 `handed_over`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and
+`wall_limit`, 12 `turn_limit` (the last segment reached the client's step cap), 20 `handed_over`, 21 `stopped`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and
 exits 0, while brigade itself, started again in a new session with its output in `brigade.log`, runs the procedure to
 its end, writing the result and the ledger as the foreground command does. `runs list` reports a run `finished` once it
 has a result, `running` while its process lives, `dead` when the process is gone without one.
@@ -268,6 +269,16 @@ A segment whose main steps, as `run.finished` counts them, exceed the budget of 
 `signal.recorded` `budget_exceeded` naming the procedure, the run, the segment, the budget and `steps`, the steps it
 took, whatever its outcome and beside its `budget_reached` when it also reached the step cap; a segment whose steps
 are null records none, and the signal launches nothing again.
+
+A run is stopped by SIGTERM or SIGINT sent to brigade, the pid in `runs/<run id>/pid`, which is the process
+`--detach` starts again. While a segment runs, brigade sends SIGTERM to the client's process group, SIGKILL 30 s
+later if it still lives, and waits for it: no process of the group outlives brigade. The segment ends on `stopped`,
+its `run.finished` with a null exit and its `nulls` naming the stop, its record in `processes.jsonl` on `stopped`, and
+no segment is launched again, whatever the progress file holds; a signal received before the client starts or between
+two segments ends the run the same way. `brigade run` exits 21, and `runs list` shows the run `finished` on
+`stopped`. `brigade runs stop <id>` sends that SIGTERM and exits 0 once the run has finished on `stopped`; a run
+already finished, holding no pid file, unknown, or whose pid no process holds, and a run the signal leaves on any
+other end than `stopped`, exit 1 naming the run and why.
 
 Two fallbacks follow the probe of the adapter. A client that counts no steps records null steps, the clock is the
 run's only bound, and `brigade run` and `brigade doctor` warn that the budget is held on the clock. A client that grants
