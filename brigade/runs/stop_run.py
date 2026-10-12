@@ -2,6 +2,7 @@ import os
 import signal
 import time
 from pathlib import Path
+from typing import NoReturn
 
 from brigade.errors import BrigadeError
 from brigade.runs.describe_run import describe_run
@@ -19,6 +20,10 @@ def _holds_its_process(recorded: RunProcess) -> bool:
     return read_process_identity(recorded.pid) == recorded.identity
 
 
+def _refuse_dead_run(run_id: str, pid: int) -> NoReturn:
+    raise BrigadeError(f"run {run_id} is dead: no process of its identity holds its pid {pid}")
+
+
 def stop_run(state_root: Path, run_id: str) -> dict:
     run = show_run(state_root, run_id, with_journal=False)["run"]
     if run["state"] == FINISHED:
@@ -28,8 +33,11 @@ def stop_run(state_root: Path, run_id: str) -> dict:
     if recorded is None:
         raise BrigadeError(f"run {run_id} holds no pid file naming its process")
     if not _holds_its_process(recorded):
-        raise BrigadeError(f"run {run_id} is dead: no process of its identity holds its pid {recorded.pid}")
-    os.kill(recorded.pid, signal.SIGTERM)
+        _refuse_dead_run(run_id, recorded.pid)
+    try:
+        os.kill(recorded.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        _refuse_dead_run(run_id, recorded.pid)
     while _holds_its_process(recorded):
         time.sleep(STOP_POLL_S)
     ended = describe_run(run_directory)
