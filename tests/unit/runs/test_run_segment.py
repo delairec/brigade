@@ -5,9 +5,11 @@ import os
 import signal
 import subprocess
 import tempfile
+import time
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest import mock
 from unittest.mock import ANY
 
 from brigade.errors import BrigadeError
@@ -182,6 +184,43 @@ class ClientAnsweringParseResultWithoutOutcomeDouble(ClientDouble):
                 "message": None,
             }
         return super().answer(operation, request)
+
+
+class ClientAnsweringItsSessionAndParseResultWithoutOutcomeDouble(
+    ClientAnsweringItsSessionDouble, ClientAnsweringParseResultWithoutOutcomeDouble
+):
+    pass
+
+
+class ClockDouble:
+    def __init__(self):
+        self.now_s = 1000.0
+
+    def read(self) -> float:
+        return self.now_s
+
+
+class ProcessExitingAfterAWhileDouble:
+    pid = 4242
+
+    def __init__(self, clock: ClockDouble, running_s: float):
+        self._clock = clock
+        self._running_s = running_s
+
+    def wait(self, **_limit) -> int:
+        self._clock.now_s += self._running_s
+        return 0
+
+
+class SpawnRunningAWhileDouble:
+    def __init__(self, clock: ClockDouble, running_s: float):
+        self._clock = clock
+        self._running_s = running_s
+
+    def spawn(self, request):
+        request.stdout.write_text("the client finished the task", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return ProcessExitingAfterAWhileDouble(self._clock, self._running_s)
 
 
 class ExitedProcessDouble:
@@ -915,6 +954,46 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.exit_code, 0)
+
+    def test_should_end_the_segment_failed_without_spawning_the_client_whose_launch_the_adapter_failed_to_give(self):
+        # Arrange
+        spawn = SpawnDouble()
+        plan = _create_plan(self.root, client_type=ClientAnsweringLaunchArgvWithoutSessionDouble)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            (spawn.requests, record.result.outcome, record.exit_code, record.uncounted),
+            ([], "failed", None, "the client was never launched"),
+        )
+
+    def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
+        # Arrange
+        plan = _create_plan(
+            self.root, client_type=ClientAnsweringItsSessionAndParseResultWithoutOutcomeDouble, reads_transcripts=True
+        )
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.result.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
+        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+    def test_should_keep_the_time_measured_until_the_client_exited(self):
+        # Arrange
+        clock = ClockDouble()
+        plan = _create_plan(self.root, client_type=ClientAnsweringParseResultWithoutOutcomeDouble)
+        runtime = _create_runtime(self.root, SpawnRunningAWhileDouble(clock, running_s=4.2))
+
+        # Act
+        with mock.patch.object(time, "monotonic", clock.read):
+            record = run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual((record.measured_ms, record.result.duration_ms), (4200, 4200))
 
     def test_should_write_the_failed_result_of_the_segment(self):
         rows = [
