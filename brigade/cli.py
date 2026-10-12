@@ -117,7 +117,7 @@ def _accepts(command, extras: list[str]) -> bool:
 def main(arguments: list[str]) -> int:
     commands = _discover_commands()
     passthroughs = [command for command in commands if command.render_passed_stderr is not None]
-    parser = _create_parser([command for command in commands if command.render_passed_stderr is None])
+    parser = _create_parser(commands)
     passthrough = _find_passthrough(arguments, passthroughs)
     separator = arguments.index(PASSTHROUGH_SEPARATOR) if passthrough is not None else len(arguments)
     options, extras = parser.parse_known_args(arguments[:separator])

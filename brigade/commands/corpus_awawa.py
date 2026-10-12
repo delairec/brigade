@@ -44,7 +44,7 @@ def corpus_awawa(request, runtime: Runtime) -> AwawaPassage:
 
 COMMAND = Command(
     path=("corpus",),
-    help="run awawa in a registered project's tree and pass its stdout, stderr and exit code through",
+    help="-- <awawa args>: run awawa in a registered project's tree and pass its stdout, stderr and exit code through",
     run=corpus_awawa,
     read_request=_read_request,
     render_text=_render_text,
