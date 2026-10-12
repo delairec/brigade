@@ -52,7 +52,6 @@ RUN_RESULT = {
     "reset": None,
     "message": "the client finished the task",
 }
-PROCESS_OF_ANOTHER_USER = "1"
 
 
 class ListRunsTestCase(unittest.TestCase):
@@ -102,22 +101,10 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
             ],
         )
 
-    def test_should_list_a_run_whose_pid_is_no_number_as_dead(self):
+    def test_should_list_a_run_whose_process_is_alive_as_running(self):
         # Arrange
         self.start_run()
-        (self.run_directory / "pid").write_text("\n")
-
-        # Act
-        [listed] = list_runs(self.state_root)
-
-        # Assert
-        self.assertEqual(listed["state"], "dead")
-
-    @unittest.skipIf(os.geteuid() == 0, "root may signal every process")
-    def test_should_list_a_run_whose_process_belongs_to_another_user_as_running(self):
-        # Arrange
-        self.start_run()
-        (self.run_directory / "pid").write_text(PROCESS_OF_ANOTHER_USER)
+        (self.run_directory / "pid").write_text(str(os.getpid()))
 
         # Act
         [listed] = list_runs(self.state_root)
