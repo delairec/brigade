@@ -74,7 +74,7 @@ class PreparationsBeforeDelimitersGuardTest(unittest.TestCase):
                 self.assertEqual(violations, [])
 
     def test_should_flag_a_test_preparing_something_before_its_first_delimiter(self):
-        for case, source in [
+        for case, source, violation in [
             (
                 "rows above # Arrange",
                 (
@@ -87,6 +87,7 @@ class PreparationsBeforeDelimitersGuardTest(unittest.TestCase):
                     "        # Act\n"
                     "        greetings = greet(names)\n"
                 ),
+                "tests/test_sample.py:2 test_should_greet prepares something before its first delimiter",
             ),
             (
                 "a for over subTest under rows bound above it",
@@ -99,6 +100,28 @@ class PreparationsBeforeDelimitersGuardTest(unittest.TestCase):
                     "                # Act\n"
                     "                greeting = greet(name)\n"
                 ),
+                "tests/test_sample.py:2 test_should_greet prepares something before its first delimiter",
+            ),
+            (
+                "rows above # Arrange in a test below one opening on # Arrange",
+                (
+                    "class SampleTest(unittest.TestCase):\n"
+                    "    def test_should_greet(self):\n"
+                    "        # Arrange\n"
+                    "        name = 'Ada'\n"
+                    "\n"
+                    "        # Act\n"
+                    "        greeting = greet(name)\n"
+                    "\n"
+                    "    def test_should_greet_everyone(self):\n"
+                    "        rows = ['Ada', 'Max']\n"
+                    "        # Arrange\n"
+                    "        names = rows\n"
+                    "\n"
+                    "        # Act\n"
+                    "        greetings = greet(names)\n"
+                ),
+                "tests/test_sample.py:9 test_should_greet_everyone prepares something before its first delimiter",
             ),
         ]:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as root:
@@ -111,7 +134,4 @@ class PreparationsBeforeDelimitersGuardTest(unittest.TestCase):
                 violations = find_preparations_before_delimiters(Path(root) / "tests")
 
                 # Assert
-                self.assertEqual(
-                    violations,
-                    ["tests/test_sample.py:2 test_should_greet prepares something before its first delimiter"],
-                )
+                self.assertEqual(violations, [violation])
