@@ -928,7 +928,13 @@ TASK B08
 
 TASK B09
 	TITLE "Built-in roles planner, reporter and triager"
-	STATUS draft
+	STATUS archived
+	DESC "archived on 2026-10-12: its three role files, planner, reporter and triager on the slots"
+		+ "plan, report and triage, and brigade roles lint green are delivered by @TASK.B43; the"
+		+ "import into the instructions corpus it was planned for gave way to the built-in roles of"
+		+ "@DECISION.RolesAreSlotsBoundToRoleFiles, on the user's ruling in the refinement of B09"
+		REF @TASK.B43
+		REF @DECISION.RolesAreSlotsBoundToRoleFiles
 	MILESTONE @MILESTONE.M1
 	COMPONENT "roles"
 	ROLE ada
@@ -941,41 +947,145 @@ TASK B09
 	AFTER @TASK.B43
 
 TASK B10
-	TITLE "Procedure wave-plan.md and brigade plan context|record"
-	STATUS draft
+	TITLE "Procedure wave-plan.md, brigade plan context, and a planner that writes its plan"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
 	ROLE ada
-	SPEC "plan context prints the planning package"
-	SPEC "plan record --file validates the plan JSON against the TASK and WAVE schema, writes the"
-		+ "entities, runs fmt and lint, creates the integration branch and commits"
-	SPEC "a lint failure comes back as one correction request"
+	SPEC "brigade plan context <request>, for a REQUEST of the operational corpus whose STATUS is"
+		+ "planning, prints one package: the text of the request, awawa status of the project's"
+		+ "corpus, the titles of its active DECISION entities, its draft and todo tasks, the TASK"
+		+ "and WAVE schemas of that corpus, the next free task number, and the IMPL anchors indexed"
+		+ "by file; text and --json, the document carrying schema_version"
+	SPEC "an unknown request, or one whose STATUS is not planning, exits 1 naming it; a project"
+		+ "corpus whose schema declares no WAVE type is reported in the package with that type"
+		+ "named missing"
+	SPEC "brigade/runs/data/procedures/wave-plan.md is shipped and brigade run wave-plan --slot"
+		+ "plan request=<id> resolves it: the planner reads the package, writes one .awawa file"
+		+ "holding one WAVE entity and its TASK entities against the project's schema in its run"
+		+ "directory, and hands that file to brigade plan record"
+	SPEC "the built-in planner role declares the capabilities read, write and shell, and its body"
+		+ "writes only the plan file it is told to and changes nothing in the repository; brigade"
+		+ "roles lint stays green"
+	SPEC "tests/cli proves plan context on a fixture project whose REQUEST is written in the"
+		+ "operational corpus of the fixture, awawa replayed from recorded outputs where it is not"
+		+ "on PATH"
 	AFTER @TASK.B04
-	AFTER @TASK.B09
+	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, rows 1 and 2: the CLI assembles"
+		+ "the planning context in one command, the agent of the plan slot cuts the request into"
+		+ "tasks; recording the plan is @TASK.B139"
+		REF @TASK.B139
+	RATIONALE "the plan is an awawa file of WAVE and TASK entities, not a JSON document: a document"
+		+ "whose code does not exist yet is designed as entities, by DESC 4 of"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole,"
+		+ "and lint against the project's schema is its validation"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+	RATIONALE "the procedure is a resource of the package under brigade/runs/data/procedures/,"
+		+ "where resolve_procedure looks first, as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets; the built-in"
+		+ "planner of @TASK.B43 declared read and shell and changed no file, so it could not write"
+		+ "its plan"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		REF @TASK.B43
+	RATIONALE "the project's corpus is the one brigade controls, the mode delivered first by"
+		+ "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus; the two other modes are @TASK.B140"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @TASK.B140
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10: the plan is recorded by a"
+		+ "task of its own, the awawa case is delivered first, and the task is ratified"
 
 TASK B11
-	TITLE "brigade wave new|show|list"
-	STATUS draft
+	TITLE "brigade wave new|show|start|list record a request, launch its planning, start its wave"
+		+ "and show its tasks with their states"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
 	ROLE ada
-	SPEC "a request becomes a REQUEST entity and a planned wave"
-	SPEC "show prints the task table with states from the ledger"
-	SPEC "POLICY.PLAN_REVIEW ask|auto is honoured"
-	AFTER @TASK.B10
+	SPEC "brigade wave new <project> \"<text>\" writes in requests.awawa of the operational corpus"
+		+ "a REQUEST named <project>_<n>, n the next free number among the project's requests"
+		+ "computed under the lock of the corpus, with PROJECT, TEXT verbatim, CREATED_AT the UTC"
+		+ "instant and STATUS planning, through awawa fmt, awawa lint --strict and a commit; an"
+		+ "unknown or paused project exits 1 naming it"
+	SPEC "wave new then launches brigade run wave-plan --slot plan request=<name> detached and"
+		+ "prints the name of the request and the id of the run, text and --json"
+	SPEC "SCHEMA REQUEST of the shipped schema declares CREATED_AT, a UTC instant; brigade init"
+		+ "replaces an installed _schema.awawa that differs from the shipped one and commits it,"
+		+ "and brigade doctor reports an installed schema that differs from the shipped one"
+	SPEC "brigade wave start <request> moves a REQUEST from planned to running and records the"
+		+ "ledger event wave.started with its WAVE and project; a request in another STATUS exits 1"
+		+ "naming its STATUS"
+	SPEC "brigade wave show of a planned request prints whether it waits for wave start, under"
+		+ "POLICY.PLAN_REVIEW ask, or for the next tick, under auto, the default when no POLICY"
+		+ "names the project"
+	SPEC "brigade wave show <request> prints the request, its STATUS, WAVE, BRANCH and CREATED_AT,"
+		+ "then one row per TASK of the wave read from the project's corpus at BRANCH through the"
+		+ "tree cache of brigade corpus: id, TITLE, state and pull request; text and --json"
+		+ "carrying schema_version"
+	SPEC "the ledger declares the event task.state with wave, task and state, state one of queued,"
+		+ "running, pr_open, verifying, verified, merged, changes_requested, fixing, parked and"
+		+ "paused:quota; show takes the state of a task from its last task.state event, queued when"
+		+ "none"
+	SPEC "brigade wave list prints one row per REQUEST, its name, project, STATUS, WAVE, BRANCH and"
+		+ "CREATED_AT, --project narrowing it to one project; text and --json carrying"
+		+ "schema_version"
+	SPEC "tests/cli proves new, start, show and list on a fixture project, the planner launched on"
+		+ "the fake adapter, awawa replayed from recorded outputs where it is not on PATH"
+	AFTER @TASK.B139
+	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, row 1, records the request with"
+		+ "brigade wave new, and its CLI table lists new, show, start and list, start being"
+		+ "implicit under PLAN_REVIEW auto; @TASK.B10 ships the planner's procedure and @TASK.B139"
+		+ "records the plan and moves the request to planned, and no other task launched the plan"
+		+ "slot nor owned the move from planned to running"
+		REF @TASK.B10
+		REF @TASK.B139
+	RATIONALE "under auto the tick starts a planned request as wave start does, and records each"
+		+ "state change of a task as task.state, both carried by @TASK.B12, which comes after this"
+		+ "task; the event is declared here so that show reads one source for every state, the ten"
+		+ "states of the Blueprint's task diagram"
+		REF @TASK.B12
+	RATIONALE "the number of a request is computed inside the rewrite of change_corpus_file, which"
+		+ "reads the file under the lock of the corpus, so two wave new cannot take the same name;"
+		+ "CREATED_AT is an identification beside the name, and brigade init wrote _schema.awawa"
+		+ "only when it was missing, so an installed operational corpus would refuse the field"
+		+ "without the upgrade"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B11: wave new launches the"
+		+ "planner detached, B11 delivers wave start, the ledger declares task.state, requests are"
+		+ "named <project>_<n> with a field created at, brigade init upgrades the installed schema,"
+		+ "and the task is ratified"
 
 TASK B12
-	TITLE "Scheduler: startable tasks, slots, worktrees, briefs, launches"
-	STATUS draft
+	TITLE "brigade tick launches the startable tasks of every running wave in worktrees of their"
+		+ "own, within the slots of each project"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
-	SPEC "startable means every AFTER merged and no live BLOCKED_BY"
-	SPEC "the overlap order comes from the plan"
-	SPEC "a worktree is cut from the integration head with the SETUP commands run and ancestry"
-		+ "asserted"
-	SPEC "the brief is filled from a template"
-	SPEC "the build slot is launched through brigade run within the slot cap"
+	SPEC "the snapshot of a tick holds every REQUEST whose STATUS is running, the TASK entities of"
+		+ "its wave read from the project's corpus at its BRANCH through the tree cache of brigade"
+		+ "corpus, the last task.state of each task and the live runs of each project; brigade tick"
+		+ "--dry-run prints them"
+	SPEC "a task is startable when its last task.state is queued or absent, every task it names in"
+		+ "AFTER has merged as its last task.state in the wave or STATUS implemented in the"
+		+ "project's corpus, and no entity whose STATUS its gate does not suppress cites it through"
+		+ "a field whose converse is BLOCKED_BY; the planner's tests prove each case on snapshot"
+		+ "rows"
+	SPEC "the tick launches at most PROJECT.SLOTS build runs of a project at once, 4 by default,"
+		+ "counting its live build runs, startable tasks taken in the order of their number"
+	SPEC "the worktree of a task is cut from the head of the wave's BRANCH on the branch"
+		+ "task/<slug>/<task>, slug the one of integration/<slug>, under the worktree root,"
+		+ ".brigade/worktrees/<task> of the repository by default and the key worktree_root of"
+		+ "config.toml otherwise, absolute or relative to the repository; the PROJECT.SETUP"
+		+ "commands run in it, git merge-base --is-ancestor of BRANCH and HEAD is asserted, and a"
+		+ "failure removes the worktree and records the failure"
+	SPEC "under the default root, the tick adds .brigade/ to the project's .gitignore and commits"
+		+ "it on the wave's BRANCH before it cuts the first worktree of the wave, once"
+	SPEC "the brief of a build run is filled from a template shipped in the package and names the"
+		+ "project, the wave, the task, BRANCH as its base and the worktree"
+	SPEC "the build run is launched detached through brigade run with the build procedure brigade"
+		+ "ships, --slot build, --project, --cwd the worktree and --brief the filled brief, and the"
+		+ "tick records task.state running for the task"
+	SPEC "under POLICY.PLAN_REVIEW auto, the default when no POLICY names the project, the tick"
+		+ "starts a planned request as brigade wave start does"
 	SPEC "the lock of each project's worktrees under $XDG_STATE_HOME/brigade/locks/ is taken by the"
 		+ "scheduler when it adds or removes a worktree of the project and by run_segments when it"
 		+ "adds or removes the disposable worktree of a reading slot"
@@ -984,6 +1094,7 @@ TASK B12
 	AFTER @TASK.B11
 	AFTER @TASK.B74
 	AFTER @TASK.B77
+	AFTER @TASK.B141
 	RATIONALE "F16 of the foundations review: run_segments.py:101-109 adds and removes the"
 		+ "disposable worktree of a reading slot without a lock on the project's worktrees,"
 		+ "harmless until this task cuts worktrees from the tick; DESC 1 of"
@@ -994,27 +1105,101 @@ TASK B12
 		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 		REF @TASK.B74
 		REF @TASK.B77
+	RATIONALE "the tick of @TASK.B07 is a skeleton, a snapshot holding now and a plan returning no"
+		+ "action; this task is its first planner, step 4 of the wave lifecycle of the Blueprint,"
+		+ "plan section 5, under @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction"
+		REF @TASK.B07
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	RATIONALE "the overlap order of the Blueprint is carried by AFTER edges, as"
+		+ "@DECISION.ThePlannerWritesEveryOverlapRulingAsAnAfterEdge rules, so the tick reads no"
+		+ "other order; the build procedure is @TASK.B141, brigade shipping none and awawa-task.md"
+		+ "living in an optional instructions corpus; the tick records running alone, each later"
+		+ "task recording the states it moves a task to"
+		REF @DECISION.ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
+		REF @TASK.B141
 	SOURCE "F16 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B12: the build procedure is a"
+		+ "task of its own, worktrees under <repo>/.brigade/worktrees/<task> by default,"
+		+ "configurable in config.toml, ignored by the project's .gitignore, the branch"
+		+ "task/<slug>/<task>, the overlap order an AFTER edge, and the task is ratified"
 
 TASK B13
-	TITLE "brigade task context|check|pr|promote"
-	STATUS draft
+	TITLE "brigade task context prints in one read the starting package of a build run in the"
+		+ "worktree of its task"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
 	ROLE ada
-	SPEC "context prints the whole starting package in one command"
-	SPEC "check runs the ACCEPTANCE commands plus fmt --check and lint --strict with a bounded"
-		+ "summary"
-	SPEC "pr pushes and opens the pull request with a templated body"
-	SPEC "the pull request pr opens carries the GitHub milestone named after the TITLE of the"
-		+ "task's MILESTONE"
-	SPEC "promote sets STATUS implemented and DELIVERED_BY, runs fmt and lint, commits and pushes"
+	SPEC "brigade task context [<task>], run in a worktree on the branch task/<slug>/<task>, reads"
+		+ "the task and the wave from that branch, integration/<slug> naming the REQUEST, and the"
+		+ "project from the registered repository that holds the worktree; a worktree on no such"
+		+ "branch, or a <task> other than the branch's, exits 1 naming it"
+	SPEC "the section worktree prints git merge-base --is-ancestor of the wave's BRANCH and HEAD"
+		+ "with its exit code, and the PROJECT.SETUP commands with their output as the tick kept"
+		+ "them when it cut the worktree"
+	SPEC "the tick keeps the commands and the output of the setup of each worktree it cuts in"
+		+ "$XDG_STATE_HOME/brigade/setups/<project>/<task>.log, which brigade task context reads"
+	SPEC "the section task prints awawa context @TASK.<task> --with-schema and awawa lint --closure"
+		+ "@TASK.<task> run in the worktree through the awawa gateway, each under its command line"
+	SPEC "when config.toml names an instructions corpus, the section rules prints awawa context"
+		+ "@TRIGGER.<name> --depth 1 --skip reasoning of that corpus for every TRIGGER of KIND path"
+		+ "whose GLOB matches a path an IMPL of the task anchors or a SPEC of the task names;"
+		+ "without one, the section is absent"
+	SPEC "the section project prints the text of the AGENTS.md at the root of the worktree, the"
+		+ "files it names not followed; without one, the section is absent"
+	SPEC "the section acceptance prints the PROJECT.ACCEPTANCE commands, then the PROJECT.HEAVY"
+		+ "commands marked as left to CI"
+	SPEC "the section reserved prints a task number reserved for the run: one above the highest of"
+		+ "the numbers of the project's corpus at the wave's BRANCH and of the numbers already"
+		+ "reserved for the project, the reservation written in"
+		+ "$XDG_STATE_HOME/brigade/reservations/<project>.json under a lock of"
+		+ "$XDG_STATE_HOME/brigade/locks/"
+	SPEC "brigade run exports BRIGADE_RUN_DIR, the directory of the run, to the client's process;"
+		+ "the section reserved prints <run dir>/tmp, created, as the run's temporary directory,"
+		+ "and the whole package is also written to <run dir>/context.md; outside a run, neither is"
+		+ "printed nor written"
+	SPEC "the section reserved prints the attribution lines of the run's commits: those of the key"
+		+ "attribution of config.toml when set, else those the probe of the client adapter answers,"
+		+ "else none"
+	SPEC "the section when done prints brigade task check, brigade task pr and brigade task promote"
+		+ "in that order"
+	SPEC "the command prints text and, with --json, one document carrying schema_version and one"
+		+ "key per section; tests/cli prove each section and the exit 1 cases on a registered"
+		+ "repository in a temporary directory through the fake adapter"
 	AFTER @TASK.B12
-	RATIONALE "F6 of the foundations review: the task said nothing of the GitHub milestone the pull"
-		+ "request must carry, which"
-		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle rules"
-		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
+	RATIONALE "step 5 of the wave lifecycle of the Blueprint, artifact/parts/plan.html: the build"
+		+ "run's first message is one command, brigade task context, measured against the 61 fresh"
+		+ "task runs whose first edit came after 23 steps in median with 134 000 tokens read; the"
+		+ "package lists ancestry and setup printed as commands and output, awawa context and lint"
+		+ "--closure, the path triggers' rules, the project files, the acceptance commands, the"
+		+ "reserved task number, the run's temp dir and the attribution lines, and the mockup of"
+		+ "artifact/parts/mockups.html writes it to runs/<id>/context.md"
+	RATIONALE "the user ruled every item of the Blueprint's package kept unless a reason is stated:"
+		+ "the one narrowing is the project section, the text of AGENTS.md without the files it"
+		+ "names, because a project brigade delivers carries a corpus whose rules reach the task"
+		+ "through awawa context, and AGENTS.md of such a project holds only what a session needs"
+		+ "before its first command"
+	RATIONALE "the setup output is kept by the tick rather than run again, so the package costs no"
+		+ "second setup and leaves the worktree as the tick cut it; the paths of the rules section"
+		+ "are those of IMPL and SPEC because a task not yet delivered often has no IMPL; the"
+		+ "attribution is the adapter's because the core names no client, as"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters rules, and config.toml overrides it"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	RATIONALE "git and awawa run through the gateways of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa; the reservation file and"
+		+ "its lock follow @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory; the"
+		+ "build procedure of @TASK.B141 calls this command first, and @TASK.B142 delivers the"
+		+ "three commands of the section when done"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+		REF @TASK.B141
+		REF @TASK.B142
 	SOURCE "F6 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B13: check, pr and promote split"
+		+ "to a task of their own; every item of the Blueprint's package implemented as planned"
+		+ "unless a reason is given; the setup output kept by the tick; the rules of the path"
+		+ "triggers of the IMPL and SPEC paths; AGENTS.md printed alone; the attribution from the"
+		+ "adapter, overridden by config.toml; the task is ratified"
 
 TASK B14
 	TITLE "Pull-request tracking in the tick"
@@ -1182,6 +1367,7 @@ TASK B21
 	SPEC "steps per run and steps to first edit are recorded as the first budgets"
 	SPEC "the same rehearsal runs on the fake adapter as the test suite's end-to-end case"
 	AFTER @TASK.B13
+	AFTER @TASK.B142
 	AFTER @TASK.B18
 	AFTER @TASK.B19
 	AFTER @TASK.B20
@@ -1249,7 +1435,6 @@ TASK B25
 		+ "OUTPUT entity:PATTERN, which validates, writes, formats, lints and commits"
 	SPEC "brigade study run triage runs it on demand; the tick runs it daily by default"
 	AFTER @TASK.B22
-	AFTER @TASK.B09
 	AFTER @TASK.B48
 
 TASK B26
@@ -2094,7 +2279,7 @@ TASK B55
 		+ "and opens a pull request through the forge adapter"
 	SPEC "awawa lint --strict exits 0 on the installed corpus"
 	AFTER @TASK.B04
-	AFTER @TASK.B10
+	AFTER @TASK.B139
 	AFTER @TASK.B46
 	RATIONALE "split from @TASK.B04 in its refinement: awawa's binary ships no starter, the WAVE"
 		+ "schema comes with @TASK.B10, and the pull request needs the forge adapter of @TASK.B46"
@@ -6997,3 +7182,110 @@ TASK B138
 		+ "session fresh\", on the session's proposal of this task with @TASK.B136 and @TASK.B137"
 		REF @TASK.B136
 		REF @TASK.B137
+
+TASK B139
+	TITLE "brigade plan record writes a wave's plan into the project's corpus on its integration"
+		+ "branch"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "planning"
+	ROLE ada
+	DESC "to be refined with the user: the shape of the correction request, the slug of the branch,"
+		+ "the fields of SCHEMA WAVE"
+	SPEC "brigade plan record <request> --file <plan.awawa> accepts a file holding one WAVE entity"
+		+ "and TASK entities only, and refuses, naming them, the types and fields the schema of the"
+		+ "project's corpus does not declare"
+	SPEC "the entities are written in one corpus transaction, awawa fmt on the files written and"
+		+ "awawa lint --strict on the corpus root, every file written restored when lint fails"
+	SPEC "a lint failure comes back to the planner as one correction request carrying the lint"
+		+ "output, bounded to one round"
+	SPEC "integration/<slug> is created from PROJECT.MAIN, the entities are committed on it, and it"
+		+ "is pushed when FORGE is github; the REQUEST receives WAVE and BRANCH and goes planned"
+	SPEC "the corpus of the brigade repository declares SCHEMA WAVE"
+	AFTER @TASK.B10
+	RATIONALE "split from @TASK.B10 in its refinement: the Blueprint, plan section 5, row 3, has"
+		+ "the CLI record the plan; change_corpus_file writes one file per transaction and no"
+		+ "gateway of the git package creates or pushes a branch"
+		REF @TASK.B10
+	RATIONALE "the plan travels on the integration branch of the wave, as @TASK.B38 drafts it"
+		REF @TASK.B38
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10"
+
+TASK B140
+	TITLE "A project's corpus mode: brigade confined to an area of the corpus, or a project without"
+		+ "awawa"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "registry"
+	ROLE ada
+	DESC "to be refined with the user: the name of the field, the folder of the area mode and how"
+		+ "it stays a workspace of its own, where WAVE and TASK live without awawa, how project add"
+		+ "asks when it runs unattended"
+	SPEC "a field of the PROJECT entity carries the corpus mode, control, area or none; control"
+		+ "when absent"
+	SPEC "brigade project add, finding a corpus already in the repository, asks the user which mode"
+		+ "to set"
+	SPEC "plan context and plan record honour the area and none modes"
+	AFTER @TASK.B139
+	RATIONALE "the modes of @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus left after the control"
+		+ "mode @TASK.B10 and @TASK.B139 deliver"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @TASK.B10
+		REF @TASK.B139
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10"
+
+TASK B141
+	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "runs"
+	ROLE ada
+	DESC "to be refined with the user: its name, its steps against the commands of @TASK.B13 and"
+		+ "@TASK.B142, and whether config.toml can name another procedure for the build slot"
+		REF @TASK.B13
+		REF @TASK.B142
+	SPEC "brigade/runs/data/procedures/ holds the procedure of the build slot and brigade run"
+		+ "resolves it by name without an instructions corpus"
+	RATIONALE "split from @TASK.B12 in its refinement: the tick launches a build run and brigade"
+		+ "ships no procedure, awawa-task.md living in the instructions corpus, which is optional"
+		REF @TASK.B12
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12: the build procedure is a task"
+		+ "of its own"
+
+TASK B142
+	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"
+		+ "pull request and the promotion of its task"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "agent side"
+	ROLE ada
+	DESC "to be refined with the user: the bound of the check summary, the title and the body"
+		+ "template of the pull request, the ledger events of pr and promote, and the lock promote"
+		+ "takes on the repository"
+	SPEC "brigade task check runs the PROJECT.ACCEPTANCE commands, then awawa fmt --check . and"
+		+ "awawa lint --strict ., in the worktree of the task, and prints a bounded summary, one"
+		+ "line per command with its verdict; it exits 1 when one fails"
+	SPEC "brigade task pr pushes the task branch and opens its pull request on the wave's BRANCH"
+		+ "through the forge adapter, as the login of the build slot, with a body filled from a"
+		+ "template shipped in the package"
+	SPEC "the pull request carries the GitHub milestone named after the TITLE of the task's"
+		+ "MILESTONE, created through the forge adapter when the repository has none of that name,"
+		+ "the creation recorded in the ledger"
+	SPEC "brigade task promote sets STATUS implemented and DELIVERED_BY on the task, runs awawa fmt"
+		+ "and awawa lint --strict, commits and pushes; the pull request number is the one brigade"
+		+ "task pr recorded in the ledger, --pr <n> naming another"
+	AFTER @TASK.B13
+	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
+		+ "lifecycle of the Blueprint, brigade task check, brigade task pr, brigade task promote"
+		+ "--pr N in artifact/parts/plan.html; the forge adapter answers no push nor pull request"
+		+ "today, brigade/adapters/forges/github.py holding the login environment and the account"
+		+ "alone"
+		REF @TASK.B13
+	RATIONALE "F6 of the foundations review: the milestone the pull request carries is the one"
+		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle rules; under"
+		+ "POLICY.REVIEW local no task pull request is opened, which @TASK.B100 delivers"
+		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
+		REF @TASK.B100
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B13: check, pr and promote are a"
+		+ "task of their own; a missing milestone is created; promote reads the pull request from"
+		+ "the ledger"

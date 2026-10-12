@@ -22,8 +22,7 @@ OPEN_QUESTION HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
 		+ "declares no WAVE, or a TASK with other fields than those brigade reads and writes, does"
 		+ "brigade share that corpus, checking its schema, or keep a corpus of its own in a folder"
 		+ "of its own?"
-	STATUS open
-	BLOCKS @TASK.B55
+	STATUS closed
 	RATIONALE "project add registers an existing corpus where it finds it, CORPUS being the common"
 		+ "parent of every tracked .awawa file (brigade/registry/discover_project.py), by DESC 3 of"
 		+ "@DECISION.TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus; nothing checks that"
@@ -40,3 +39,6 @@ OPEN_QUESTION HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
 	SOURCE "the user's question of 2026-10-09 in the refinement of B81, \"si un corpus préexiste"
 		+ "lors de l'installation de brigade il se passe quoi?\", and the answer chosen, an open"
 		+ "question blocking B55"
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B10, recorded by"
+		+ "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus

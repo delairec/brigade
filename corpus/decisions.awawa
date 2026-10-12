@@ -815,13 +815,14 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	DESC "the refs cache of brigade corpus has its lock,"
 		+ "$XDG_STATE_HOME/brigade/locks/refs-cache.lock: every placing, mark and removal of a"
 		+ "cached tree runs under it"
-	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13 and @TASK.B22"
+	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13, @TASK.B22 and @TASK.B142"
 		REF @TASK.B04
 		REF @TASK.B05
 		REF @TASK.B07
 		REF @TASK.B08
 		REF @TASK.B13
 		REF @TASK.B22
+		REF @TASK.B142
 	REJECTED "locks under $XDG_CACHE_HOME, the Blueprint plan's place: a cache may be deleted at"
 		+ "any time, and a deleted lock file breaks the exclusion"
 	REJECTED "PID-liveness or mkdir locks: the kernel releases flock when the process dies; no"
@@ -830,10 +831,10 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 		+ "elsewhere; the lock costs microseconds"
 	RATIONALE "DESC 4 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites names only the"
 		+ "refs and the collector caches for $XDG_CACHE_HOME and puts state under $XDG_STATE_HOME,"
-		+ "so locks in the state directory contradict no decision; @TASK.B13 promotes the ledger"
+		+ "so locks in the state directory contradict no decision; @TASK.B142 promotes the ledger"
 		+ "from parallel runs"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
-		REF @TASK.B13
+		REF @TASK.B142
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "the user's ruling of 2026-10-06 during wave M0, pull request #23 of the brigade"
 		+ "repository"
@@ -859,7 +860,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B50
 		REF @TASK.B52
 	DESC "binds @TASK.B03, @TASK.B07, @TASK.B09, @TASK.B10, @TASK.B12, @TASK.B13, @TASK.B16,"
-		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50 and @TASK.B52"
+		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50, @TASK.B52 and @TASK.B142"
 		REF @TASK.B03
 		REF @TASK.B07
 		REF @TASK.B09
@@ -872,6 +873,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B48
 		REF @TASK.B50
 		REF @TASK.B52
+		REF @TASK.B142
 	REJECTED "root-level roles/, recipes/, procedures/, schema/ and scheduler/, the Blueprint"
 		+ "plan's layout: build.py copies brigade/ alone, so a root-level file is absent from"
 		+ "dist/brigade.pyz"
@@ -2107,3 +2109,52 @@ DECISION TheStepCapOfClaudeCodeBoundsAnswersAndTheBudgetIsWatchedInSteps
 		+ "answers carrying 3 parallel tool calls and ended success with num_turns 4"
 	SOURCE "pull request #104, delivering @TASK.B103"
 		REF @TASK.B103
+
+DECISION AProjectChoosesHowBrigadeUsesItsCorpus
+	TITLE "a project whose repository already holds a corpus chooses how brigade uses it: brigade"
+		+ "controls it, keeps to an area of it, or works without awawa; the mode is a field of the"
+		+ "PROJECT entity and control is delivered first"
+	STATUS active
+	CLOSES @OPEN_QUESTION.HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
+	DESC "control: brigade writes its WAVE and TASK entities in the project's corpus and refuses,"
+		+ "naming them, the types and fields its schema does not declare"
+	DESC "area: brigade keeps to an area of its own in the repository; none: the project's waves"
+		+ "and tasks do not go through awawa, brigade itself still requiring it"
+	DESC "brigade project add, finding a corpus in the repository, asks the user which mode to set;"
+		+ "a project without a corpus is in control, brigade creating its corpus"
+	DESC "the mode is a field of the PROJECT entity of projects.awawa, beside CORPUS"
+	DESC "control is delivered first, by @TASK.B10 and @TASK.B139; area and none by @TASK.B140"
+		REF @TASK.B10
+		REF @TASK.B139
+		REF @TASK.B140
+	REJECTED "a single answer for every project, shared or separate: the user wants the choice"
+	REJECTED "the mode in config.toml: the PROJECT entity already holds the corpus folder of the"
+		+ "project"
+	REJECTED "the three modes delivered together by the first planning task: the none mode is not"
+		+ "designed yet"
+	RATIONALE "awawa stays a prerequisite of brigade, by"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites; the none mode concerns a"
+		+ "project's waves and tasks, not brigade's own corpus"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10: \"si on détecte un corpus"
+		+ "préexistant, on doit poser la question à l'utilisateur: soit il veut que brigade"
+		+ "contrôle le corpus, soit il veut que brigade se confine dans une aire, soit il ne veut"
+		+ "pas que brigade passer par awawa. Le tout rendu configurable dans le fichier de config\""
+
+DECISION ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
+	TITLE "two tasks of a wave that touch the same files are ordered by an AFTER edge the planner"
+		+ "writes, and the tick reads no other order"
+	STATUS active
+	DESC "when the planner finds that two tasks of a wave touch the same files, it writes AFTER on"
+		+ "the one that goes second, naming the first"
+	DESC "the scheduler orders tasks by their AFTER edges alone"
+		REF @TASK.B12
+	REJECTED "a field of SCHEMA WAVE listing the overlapping pairs, launched apart with no merge"
+		+ "order: the second task still has to start from a base holding the first to avoid a"
+		+ "conflict, which an AFTER edge already gives"
+	RATIONALE "the Blueprint, plan section 5, rows 2 and 4, has the planner rule the overlaps and"
+		+ "the tick take its order from the plan; one mechanism the tick already reads keeps the"
+		+ "schema of a wave free of a second ordering"
+		REF @TASK.B10
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12"
+		REF @TASK.B12
