@@ -1396,17 +1396,29 @@ TASK B18
 
 TASK B19
 	TITLE "Wave pause and resume: quota and forge account"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	SPEC "a rate-limit result pauses the wave with resume_at parsed from the message or set to now"
-		+ "plus 30 minutes"
-	SPEC "the first tick after resume_at resumes each suspended run through the adapter's resume,"
-		+ "or relaunches it from its progress file when the adapter has none"
-	SPEC "ledger events wave.paused, carrying the reason quota or forge_account, and wave.resumed"
-	SPEC "a ledger event forge_account.unavailable pauses the wave of its project until the user"
-		+ "resumes it with brigade wave resume"
+	SPEC "a run whose result carries error_class rate_limit pauses every running wave of the"
+		+ "machine, with resume_at the first instant after the tick's clock at the hour and in the"
+		+ "timezone of the result's reset, or that clock plus 30 minutes when reset is null; the"
+		+ "task of that run moves to paused:quota, and the tick starts no run of a paused wave"
+	SPEC "the first tick after resume_at resumes each run a rate limit stopped as a next segment of"
+		+ "the same run, through resume-argv with the session id of its last segment, or as a fresh"
+		+ "launch from its progress file when the client adapter declares no resume; it records"
+		+ "wave.resumed for each wave and moves each paused:quota task back to running"
+	SPEC "the ledger events wave.paused and wave.resumed, declared today with the field wave alone,"
+		+ "gain reason, quota or forge_account, and wave.paused gains resume_at, null under"
+		+ "forge_account; a wave is paused while its last wave.paused has no wave.resumed after it"
+	SPEC "a ledger event forge_account.unavailable pauses every running wave of the machine, reason"
+		+ "forge_account, until the user runs brigade wave resume [<request>], which records"
+		+ "wave.resumed for the request named or, without one, for every wave paused on"
+		+ "forge_account; a request whose wave is not paused exits 1 naming its state"
+	SPEC "tests/cli proves the pause on a rate limit with and without reset, the resume at"
+		+ "resume_at by resume-argv and by a fresh launch, the pause on forge_account.unavailable"
+		+ "and brigade wave resume with and without a request, through the fake adapter"
+	AFTER @TASK.B11
 	AFTER @TASK.B14
 	AFTER @TASK.B71
 	AFTER @TASK.B106
@@ -1419,33 +1431,54 @@ TASK B19
 		+ "task owns the pause and the resume of a wave"
 		REF @TASK.B14
 		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+	RATIONALE "every running wave is paused, not the wave of the run alone: config.toml names one"
+		+ "client for the machine, so a rate limit stops every launch of every project, and"
+		+ "forge_account.unavailable carries login and key, no project, a login bound in"
+		+ "config.toml serving every project; the resume follows"
+		+ "@DECISION.QuotaPausesTheWaveAndResumesTheSameSession, and a fallback client taking the"
+		+ "runs in place of the pause is @TASK.B144 of the post-MVP milestone"
+		REF @DECISION.QuotaPausesTheWaveAndResumesTheSameSession
+		REF @TASK.B144
+	RATIONALE "the facts this task starts from: brigade/ledger/wave_paused.py and wave_resumed.py"
+		+ "declare both events with the field wave alone and no code records them;"
+		+ "brigade/adapters/clients/claude_code.py answers reset as an hour and a timezone, no"
+		+ "date; a rate-limited run ends today on the outcome failed with error_class rate_limit;"
+		+ "@TASK.B11 delivers wave new, show, start and list and declares the state paused:quota,"
+		+ "no wave resume"
+		REF @TASK.B11
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
 		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
 		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default"
+		REF @TASK.B19
+		REF @TASK.B143
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19, B20, B21 and B143: \"toutes"
+		+ "les vagues, mais je pense qu'on doit prévoir un client fallback configurable (qui sera"
+		+ "implémenté plus tard en ADD0)\""
+		REF @TASK.B144
 
 TASK B20
 	TITLE "Built-in study wave-report"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
-	DESC "to settle in the refinement: the fields of the REPORT schema; where the entity of a"
-		+ "report lives, in the project's corpus under a schema the starter corpus of @TASK.B81"
-		+ "carries, or as a one-file corpus holding its schema beside its rendering"
-		REF @TASK.B81
-	SPEC "the report is one entity of the schema brigade ships for it, written and read through the"
-		+ "document kind of @TASK.B106; the collectors ledger, pr-list, corpus and git-diff-stat"
-		+ "fill its fields, the task table, the statistics, the dependency graph, the manual-test"
+	SPEC "the schema brigade ships for its operational corpus, beside STUDY and REQUEST, declares"
+		+ "SCHEMA REPORT: WAVE and PROJECT; the fields the CLI fills, TASK_ROW, STATISTIC, GRAPH,"
+		+ "MANUAL_TEST, INSTRUCTIONS_CHANGE and PARKED_QUESTION; the prose fields the report slot"
+		+ "fills, NARRATIVE, REASON, TESTER_STEP and SAMPLING; brigade init installs it as it"
+		+ "upgrades the installed schema"
+	SPEC "the report of a wave is one REPORT entity of the operational corpus, written and read"
+		+ "through the document kind; the collectors ledger, pr-list, corpus and git-diff-stat fill"
+		+ "the CLI fields, the task table, the statistics, the dependency graph, the manual-test"
 		+ "table from SPEC lines, the instructions-corpus change list and the parked questions, one"
 		+ "field each"
-		REF @TASK.B106
 	SPEC "the report slot completes the prose fields, the narrative, the reasons, the manual tests"
 		+ "in a tester's words and the sampling suggestions; study answer validates the answer by"
 		+ "awawa lint against the schema, refuses an answer that changed a field the CLI filled,"
-		+ "commits the report and its Markdown rendering waves/<n>-report.md under the project's"
-		+ "corpus folder on the integration branch and updates the integration pull request; the"
-		+ "Markdown is rendered from the entity for the person and for the dashboard, and brigade"
-		+ "reads it back nowhere"
+		+ "commits the REPORT entity to the operational corpus and its Markdown rendering"
+		+ "waves/<n>-report.md under the project's corpus folder on the integration branch, and"
+		+ "updates the integration pull request; the Markdown is rendered from the entity for the"
+		+ "person and for the dashboard, and brigade reads it back nowhere"
 	SPEC "the tick runs it when every task of the wave is merged or parked"
 	AFTER @TASK.B17
 	AFTER @TASK.B48
@@ -1456,21 +1489,34 @@ TASK B20
 		+ "of the content; after @TASK.B106, which introduces the document kind"
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 		REF @TASK.B106
+	RATIONALE "the entity is the answer entity of the study, as @TASK.B48 designs every study"
+		+ "answer: brigade reads the report once, the answer of the report slot, and lint validates"
+		+ "it; it lives in the operational corpus because brigade ships and upgrades that schema"
+		+ "(brigade/corpus/data/schema.awawa.tpl, @TASK.B11), while a project's corpus carries no"
+		+ "schema of brigade since @TASK.B81 was archived; the user kept the entity over an answer"
+		+ "as JSON carrying the prose alone, validated by a shape"
+		REF @TASK.B48
+		REF @TASK.B11
+		REF @TASK.B81
 	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
 		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
 		+ "amending this task: \"ok pour le plan ci-dessus\""
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19, B20, B21 and B143: \"ok pour"
+		+ "une entité REPORT\""
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "validation"
-	ROLE prudence
+	ROLE ada
 	SPEC "a throwaway repository, its corpus written from a schema prepared for the rehearsal that"
 		+ "declares the types a wave needs, delivers a three-task wave unattended from wave new to"
 		+ "the integration pull request"
 	SPEC "the ledger holds every run"
-	SPEC "steps per run and steps to first edit are recorded as the first budgets"
+	SPEC "the steps per run and the steps to first edit measured are written as the budget of the"
+		+ "front matter of each built-in procedure the wave ran, and quoted in the pull request"
+		+ "body with the output of brigade ledger budgets"
 	SPEC "the same rehearsal runs on the fake adapter as the test suite's end-to-end case"
 	AFTER @TASK.B13
 	AFTER @TASK.B142
@@ -1485,10 +1531,17 @@ TASK B21
 	RATIONALE "the sandbox corpus is written from a prepared schema: project add --init-corpus"
 		+ "comes with @TASK.B55 in M7, and a rehearsal needs a corpus, not the onboarding command"
 		REF @TASK.B55
+	RATIONALE "a builder runs the rehearsal, as for the real run of @TASK.B71: it writes the"
+		+ "end-to-end test and the budgets, and prudence verifies its pull request as any other; a"
+		+ "budget is the budget key of a procedure's front matter"
+		+ "(brigade/runs/resolve_procedure.py), which brigade ledger budgets measures"
+		REF @TASK.B71
 	SOURCE "the user's ruling of 2026-10-09 in the refinement of B81, \"Je prends ta reco\": B81"
 		+ "archived as a duplicate of @TASK.B55, which stays in M7"
 		REF @TASK.B81
 		REF @TASK.B55
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19, B20, B21 and B143: the role"
+		+ "ada"
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"
@@ -7410,7 +7463,7 @@ TASK B142
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
 		+ "conflict"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -7419,14 +7472,44 @@ TASK B143
 	SPEC "on a conflict the tick aborts the rebase and starts a run of the rebase slot through"
 		+ "brigade rebase context|done: context prints the branch, its base and the conflicting"
 		+ "files, done refuses a branch that does not descend from the head of BRANCH and pushes it"
-	SPEC "a run of the rebase slot counts as one round of @TASK.B18"
-		REF @TASK.B18
+	SPEC "a run of the rebase slot counts as one round of POLICY.VERIFY_ROUNDS"
+	SPEC "the git rebase runs under the lock of the project's worktrees, never while a run holds"
+		+ "the worktree, and waits for the next tick then"
+	SPEC "the ledger event task.rebased carries the task, the head before and after the rebase and"
+		+ "the login the push ran as"
 	AFTER @TASK.B17
 	AFTER @TASK.B18
 	RATIONALE "split from @TASK.B18 in its refinement; step 7b of the wave lifecycle of"
 		+ "artifact/parts/plan.html: a clean git rebase costs no step, the rebase slot runs only"
 		+ "when git reports a conflict"
 		REF @TASK.B18
+	RATIONALE "the snapshot of @TASK.B14 tells whether the base moved past the head; the push"
+		+ "records its login as every write to the forge does under"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode; the lock and the"
+		+ "wait follow the removal of the worktree in @TASK.B14, never while a run holds it"
+		REF @TASK.B14
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
 		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
 		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default"
+		REF @TASK.B19
+		REF @TASK.B143
+	SOURCE "the user's ratification of 2026-10-12 in the refinement of B19, B20, B21 and B143, the"
+		+ "lock of the worktrees and the ledger event task.rebased proposed with it"
+
+TASK B144
+	TITLE "A fallback client named in config.toml takes the runs of the machine when its client"
+		+ "reaches its rate limit"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "runs"
+	ROLE ada
+	DESC "to be refined with the user: which runs move to the fallback client, the suspended run or"
+		+ "the next launches alone; how the reasoning levels map onto it; when the machine returns"
+		+ "to its client"
+	SPEC "config.toml names a fallback client; a rate limit of the client moves the next launches"
+		+ "to it instead of pausing every running wave"
+	AFTER @TASK.B19
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19: \"toutes les vagues, mais je"
+		+ "pense qu'on doit prévoir un client fallback configurable (qui sera implémenté plus tard"
+		+ "en ADD0)\""
