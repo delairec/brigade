@@ -577,6 +577,50 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
                 # Assert
                 self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
 
+    def test_should_refuse_a_stop_instant_a_launch_or_a_resume_request_lacks_or_carries_as_no_text(self):
+        rows = [
+            (
+                "launch-argv",
+                (
+                    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "session_id":'
+                    ' "s1", "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder",'
+                    ' "package": "AGENT builder", "package_file": "/state/brigade/runs/r1/role.md",'
+                    ' "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+                ),
+                "brigade adapter launch-argv: the request on stdin: lacks the key stop_at\n",
+            ),
+            (
+                "resume-argv",
+                (
+                    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1",'
+                    ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder",'
+                    ' "package": "AGENT builder", "package_file": "/state/brigade/runs/r1/role.md",'
+                    ' "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+                ),
+                "brigade adapter resume-argv: the request on stdin: lacks the key stop_at\n",
+            ),
+            (
+                "launch-argv",
+                (
+                    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "session_id":'
+                    ' "s1", "stop_at": 1791451380, "progress_file": "/state/brigade/runs/r1/progress.md", "role":'
+                    ' {"name": "builder", "package": "AGENT builder", "package_file": "/state/brigade/runs/r1/role.md",'
+                    ' "capabilities": ["read"], "reasoning": "standard", "budget": 75}}'
+                ),
+                "brigade adapter launch-argv: the request on stdin: stop_at is an integer, not a string\n",
+            ),
+        ]
+        for operation, request, expected_refusal in rows:
+            with self.subTest(expected_refusal=expected_refusal):
+                # Arrange
+                self.machine.write_configuration('client = "claude-code"\n')
+
+                # Act
+                completed = self.run_adapter(operation, "--json", request=request)
+
+                # Assert
+                self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
+
     def test_should_refuse_an_invalid_request_before_reading_the_configuration(self):
         # Arrange
         request_lacking_its_role = '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42."}'
