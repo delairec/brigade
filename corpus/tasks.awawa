@@ -6879,7 +6879,7 @@ TASK B138
 	TITLE "The parse-result of the Claude Code adapter reads the duration of the whole session,"
 		+ "every result event summed, when a background command gives the session several result"
 		+ "events"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
@@ -6888,9 +6888,19 @@ TASK B138
 		+ "and 443460 on that of run 20261012T111839Z-1a7eb6, three events; the outcome, the"
 		+ "session, the usage and cost_usd stay read from the last event, and steps stays null"
 		+ "after a task notification, as today"
+		IMPL "brigade/adapters/clients/claude_code.py::def _sum_durations(result_events:"
+			+ "list[dict]) -> int:"
+		IMPL "brigade/adapters/clients/claude_code.py::result = result_events[-1]"
+		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
+			+ "test_should_report_the_duration_of_the_whole_session_of_run_b4a356_across_its_two_result_events(self):"
 	SPEC "a unit row of tests/unit/adapters/clients/test_claude_code.py feeds two result events of"
 		+ "one session and pins duration_ms as their sum, the outcome and cost_usd of the last; the"
 		+ "existing rows on the fixture result-after-task-notification.json still pass"
+		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
+			+ "test_should_report_the_duration_of_the_whole_session_of_run_b4a356_across_its_two_result_events(self):"
+		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
+			+ "test_should_report_the_usage_and_the_cost_of_the_whole_session_of_run_2ee96f(self):"
+	DELIVERED_BY 112
 	AFTER @TASK.B114
 	RATIONALE "verified by the session on 2026-10-12: a Claude Code session in -p stream-json mode"
 		+ "that waits on a background command emits one result event per turn, the later ones"
