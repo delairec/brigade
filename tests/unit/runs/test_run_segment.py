@@ -141,6 +141,13 @@ class ClientAnsweringItsSessionAndRefusingToReadTranscriptsDouble(
     pass
 
 
+class ClientStoppedAtTheSoftLimitDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "parse-result":
+            return {**super().answer(operation, request), "outcome": "soft_limit", "message": None}
+        return super().answer(operation, request)
+
+
 class ClientRefusingToReadActionsDouble(ClientDouble):
     def answer(self, operation: str, request: dict) -> dict:
         if operation == "actions":
@@ -211,6 +218,10 @@ def _report_nothing(trace) -> None:
     pass
 
 
+def _read_launch_instant() -> datetime:
+    return datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
+
+
 def _refuse_process(request):
     raise AssertionError(f"run_segment ran {request.argv}")
 
@@ -235,6 +246,7 @@ def _create_runtime(root: Path, spawn) -> Runtime:
             executable_search_path=NO_PATH_NEEDED,
         ),
         now=datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC),
+        read_clock=_read_launch_instant,
         entry_point=root / "bin" / "brigade",
         trail=TrailWriter(_report_nothing),
         resolve_plugin=_refuse_resolution,
@@ -385,6 +397,59 @@ class RunSegmentStepsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.cost_usd, 0.42)
+
+
+class RunSegmentSoftLimitTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+
+    def test_should_carry_the_soft_limit_read_on_the_clock_at_launch_in_the_launch_request(self):
+        # Arrange
+        plan = _create_plan(self.root)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(plan.client_adapter.requests["launch-argv"]["stop_at"], "2026-10-07T09:28:00Z")
+
+    def test_should_carry_no_soft_limit_for_a_wall_time_limit_not_above_the_margin(self):
+        # Arrange
+        plan = _create_plan(self.root, wall_limit_s=120.0)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertIsNone(plan.client_adapter.requests["launch-argv"]["stop_at"])
+
+    def test_should_record_a_segment_its_client_stopped_at_the_soft_limit_as_one_ended_done(self):
+        # Arrange
+        plan = _create_plan(self.root, client_type=ClientStoppedAtTheSoftLimitDouble)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            (record.result, record.exit_code, record.cost_usd),
+            (
+                RunResult(
+                    outcome="soft_limit",
+                    steps=12,
+                    usage=None,
+                    session_id="session-b73",
+                    duration_ms=4200,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                ),
+                0,
+                0.42,
+            ),
+        )
 
 
 class RunSegmentSessionTest(unittest.TestCase):

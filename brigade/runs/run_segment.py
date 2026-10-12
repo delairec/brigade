@@ -7,6 +7,7 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
+from brigade.runs.decide_stop_at import decide_stop_at
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
     BRIEF_FILE,
@@ -186,6 +187,7 @@ def _run_process(
             role=_describe_role(plan),
             progress_file=progress_file,
             session_id=str(uuid.uuid4()),
+            stop_at=decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s),
         ),
     )
     request = SpawnRequest(

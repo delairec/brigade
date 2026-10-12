@@ -40,6 +40,7 @@ def _create_runtime(root: Path) -> Runtime:
             executable_search_path=NO_PATH_NEEDED,
         ),
         now=datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
+        read_clock=lambda: datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
         entry_point=root / "bin" / "brigade",
         trail=TrailWriter(_report_nothing),
         resolve_plugin=_refuse_resolution,

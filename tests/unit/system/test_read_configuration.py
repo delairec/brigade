@@ -281,3 +281,44 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
                     (configuration.journal_poll_s, configuration.findings),
                     (2, (f"{expected_problem} in {self.path}; the default of 2 s holds",)),
                 )
+
+
+class ReadConfigurationOfTheSoftLimitMarginTest(ReadConfigurationTestCase):
+    def test_should_answer_120_when_the_key_is_absent(self):
+        # Arrange
+        self.path.write_text('client = "fake"\n')
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.soft_limit_margin_s, 120)
+
+    def test_should_answer_the_number_the_key_sets(self):
+        # Arrange
+        self.path.write_text("soft_limit_margin_s = 0.5\n")
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.soft_limit_margin_s, 0.5)
+
+    def test_should_refuse_a_value_that_is_no_positive_number_naming_the_key_and_the_file(self):
+        rows = [
+            ("a string", 'soft_limit_margin_s = "120"\n', "soft_limit_margin_s is a string, not a number,"),
+            ("zero", "soft_limit_margin_s = 0\n", "soft_limit_margin_s is 0, not a positive number,"),
+            ("a negative number", "soft_limit_margin_s = -5\n", "soft_limit_margin_s is -5, not a positive number,"),
+            ("a boolean", "soft_limit_margin_s = true\n", "soft_limit_margin_s is a boolean, not a number,"),
+        ]
+        for case, content, expected_problem in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.path.write_text(content)
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    read_configuration(self.path)
+
+                # Assert
+                self.assertEqual(str(raised.exception), f"{expected_problem} in {self.path}")

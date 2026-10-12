@@ -14,17 +14,20 @@ from brigade.system.write_json_atomically import write_json_atomically
 
 BUDGET_REACHED = "budget_reached"
 WALL_LIMIT_REACHED = "wall_limit_reached"
+SOFT_LIMIT_OUTCOME = "soft_limit"
+CLOCK_OUTCOMES = (WALL_LIMIT_OUTCOME, SOFT_LIMIT_OUTCOME)
 BUDGET_EXCEEDED = "budget_exceeded"
 RELAUNCH_SIGNALS = {
     TURN_LIMIT: BUDGET_REACHED,
     WALL_LIMIT_OUTCOME: WALL_LIMIT_REACHED,
+    SOFT_LIMIT_OUTCOME: WALL_LIMIT_REACHED,
     "handed_over": "handed_over",
     "undeclared": "undeclared",
 }
 
 
-def _is_cut_on_the_clock(record: SegmentRecord) -> bool:
-    return record.result.outcome == WALL_LIMIT_OUTCOME
+def _ends_on_the_clock(record: SegmentRecord) -> bool:
+    return record.result.outcome in CLOCK_OUTCOMES
 
 
 def _holds_progress(plan: RunPlan) -> bool:
@@ -32,7 +35,7 @@ def _holds_progress(plan: RunPlan) -> bool:
 
 
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
-    cut_on_the_clock = _is_cut_on_the_clock(record)
+    ended_on_the_clock = _ends_on_the_clock(record)
     return SignalRecorded(
         signal=RELAUNCH_SIGNALS[record.result.outcome],
         project=plan.project,
@@ -40,7 +43,7 @@ def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
         run=plan.run_id,
         segment=record.number,
         budget=plan.procedure.budget,
-        wall_limit_s=plan.wall_limit_s if cut_on_the_clock else None,
+        wall_limit_s=plan.wall_limit_s if ended_on_the_clock else None,
     )
 
 

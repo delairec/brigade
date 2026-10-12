@@ -29,7 +29,7 @@ class RunsTestCase(RunTestCase):
 
     def run_deliver_to_its_end(self) -> str:
         completed = self.run_deliver("--json")
-        self.assertIn(completed.returncode, (0, 1, 3, 10, 12), completed.stderr)
+        self.assertIn(completed.returncode, (0, 1, 3, 10, 12, 13), completed.stderr)
         return json.loads(completed.stdout)["run"]
 
 
@@ -536,6 +536,7 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
             ("undeclared", {**DONE_RESULT, "outcome": "undeclared"}, 3, "outcome    undeclared"),
             ("blocked", {**DONE_RESULT, "outcome": "blocked"}, 10, "outcome    blocked"),
             ("turn limit", TURN_LIMIT_RESULT, 12, "outcome    turn_limit"),
+            ("soft limit", {**DONE_RESULT, "outcome": "soft_limit"}, 13, "outcome    soft_limit"),
         ]
         for case, result, exit_code, outcome_line in rows:
             with self.subTest(case=case):

@@ -24,6 +24,10 @@
 # The seconds a run is given per step of its budget: the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_step.
 # seconds_per_step = 30
 
+# The seconds before the wall-time limit of a segment at which a client that supports it stops between two steps,
+# a positive number; a wall-time limit not above it gives no such stop.
+# soft_limit_margin_s = 120
+
 # The days a trail of ticks/ and commands/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
 # trail_days = 7
 

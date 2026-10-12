@@ -14,13 +14,13 @@ SCRIPTED_CLIENT = str(FIXTURES / "executables" / "client-scripted")
 BROKEN_CLIENT = str(FIXTURES / "executables" / "client-broken")
 
 LAUNCH_REQUEST = (
-    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "session_id": "s1",'
+    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "session_id": "s1", "stop_at": null,'
     ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder", "package": "AGENT builder",'
     ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
     ' "budget": 75}}'
 )
 RESUME_REQUEST = (
-    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1",'
+    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1", "stop_at": null,'
     ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder", "package": "AGENT builder",'
     ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
     ' "budget": 75}}'

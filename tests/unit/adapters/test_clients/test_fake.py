@@ -13,6 +13,7 @@ LAUNCH_REQUEST = {
     "brief": "Deliver the task B42.",
     "progress_file": "/state/brigade/runs/r1/progress.md",
     "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
+    "stop_at": None,
     "role": {
         "name": "builder",
         "package": "AGENT builder",
@@ -157,7 +158,8 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                     "sh",
                     "-c",
                     (
-                        'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                        'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+                        ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
                         ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
                     ),
                     "fake",
@@ -165,12 +167,56 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                     "step 1 done",
                     "/srv/recordings/builder.json",
                     "0",
+                    "0",
                 ],
                 "environment": {},
                 "stdin": None,
                 "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
             },
         )
+
+
+class FakeLaunchOfAClientStoppingAtItsSoftLimitTest(unittest.TestCase):
+    def test_should_print_the_recording_once_the_stop_at_has_passed_when_it_declares_graceful_stop(self):
+        # Arrange
+        request = {
+            **LAUNCH_REQUEST,
+            "settings": {"recordings": "/srv/recordings", "features": "graceful_stop"},
+            "stop_at": "2026-10-07T09:23:00Z",
+        }
+
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        self.assertEqual(
+            launch["argv"],
+            [
+                "sh",
+                "-c",
+                (
+                    'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+                    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
+                ),
+                "fake",
+                "0",
+                "",
+                "/srv/recordings/builder.json",
+                "0",
+                "1791364980",
+            ],
+        )
+
+    def test_should_ignore_the_stop_at_when_it_declares_no_graceful_stop(self):
+        # Arrange
+        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z"}
+
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        self.assertEqual(launch["argv"], ["cat", "--", "/srv/recordings/builder.json"])
 
 
 class FakeResultTest(unittest.TestCase):
@@ -285,7 +331,8 @@ class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
                 "sh",
                 "-c",
                 (
-                    'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                    'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+                    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
                     ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
                 ),
                 "fake",
@@ -293,6 +340,7 @@ class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
                 "",
                 "/srv/recordings/builder.json",
                 "1",
+                "0",
             ],
         )
 

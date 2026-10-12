@@ -26,6 +26,7 @@ class Runtime:
     spawn_process: Callable[[SpawnRequest], object]
     paths: Paths
     now: datetime
+    read_clock: Callable[[], datetime]
     entry_point: Path
     trail: TrailWriter
     resolve_plugin: Callable[[str, str], object]
@@ -51,6 +52,7 @@ def build_runtime(invocation: Invocation) -> Runtime:
         spawn_process=functools.partial(spawn_process, record_trace=trail.append),
         paths=paths,
         now=datetime.now(UTC),
+        read_clock=functools.partial(datetime.now, UTC),
         entry_point=Path(sys.argv[0]).absolute(),
         trail=trail,
         resolve_plugin=functools.partial(resolve_plugin, sources=sources),
