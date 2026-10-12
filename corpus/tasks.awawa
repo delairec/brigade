@@ -948,7 +948,7 @@ TASK B09
 
 TASK B10
 	TITLE "Procedure wave-plan.md, brigade plan context, and a planner that writes its plan"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
 	ROLE ada
@@ -957,19 +957,42 @@ TASK B10
 		+ "corpus, the titles of its active DECISION entities, its draft and todo tasks, the TASK"
 		+ "and MILESTONE schemas of that corpus, the next free task number, and the IMPL anchors"
 		+ "indexed by file; text and --json, the document carrying schema_version"
+		IMPL "brigade/commands/plan_context.py::def plan_context(request, runtime: Runtime) ->"
+			+ "dict:"
+		IMPL "brigade/planning/assemble_plan_context.py::def assemble_plan_context("
+		IMPL "tests/cli/test_plan.py::def"
+			+ "test_should_print_the_planning_package_as_a_versioned_document(self):"
+		IMPL "tests/cli/test_plan.py::def test_should_print_the_planning_package_as_text(self):"
 	SPEC "an unknown request, or one whose STATUS is not planning, exits 1 naming it; a project"
 		+ "corpus whose schema declares no MILESTONE type is reported in the package with that type"
 		+ "named missing"
+		IMPL "brigade/planning/read_planning_request.py::def read_planning_request(runtime:"
+			+ "Runtime, name: str) -> PlanningRequest:"
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanContextOfAnUnknownRequestTest(PlanContextTestCase):"
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanContextOfARequestNotPlanningTest(PlanContextTestCase):"
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanContextOnACorpusWithoutAWaveTypeTest(PlanContextTestCase):"
 	SPEC "brigade/runs/data/procedures/wave-plan.md is shipped and brigade run wave-plan --slot"
 		+ "plan request=<id> resolves it: the planner reads the package, writes one .awawa file"
 		+ "holding one MILESTONE entity and its TASK entities against the project's schema in its"
 		+ "run directory, and hands that file to brigade plan record"
+		IMPL "brigade/runs/data/procedures/wave-plan.md::# Procedure — cut one request into a wave"
+		IMPL "tests/cli/test_run.py::class"
+			+ "BrigadeRunOfTheShippedWavePlanProcedureTest(RunTestCase):"
 	SPEC "the built-in planner role declares the capabilities read, write and shell, and its body"
 		+ "writes only the plan file it is told to and changes nothing in the repository; brigade"
 		+ "roles lint stays green"
+		IMPL "brigade/roles/data/planner.md::capabilities: read, write, shell"
+		IMPL "brigade/roles/data/planner.md::Write only the plan file you are told to write"
+		IMPL "tests/cli/test_roles.py::def test_should_find_the_built_in_role_files_clean(self):"
 	SPEC "tests/cli proves plan context on a fixture project whose REQUEST is written in the"
 		+ "operational corpus of the fixture, awawa replayed from recorded outputs where it is not"
 		+ "on PATH"
+		IMPL "tests/cli/test_plan.py::class PlanContextTestCase(unittest.TestCase):"
+		IMPL "tests/awawa/provide_awawa.py::def provide_awawa(test_case: unittest.TestCase) ->"
+			+ "None:"
 	AFTER @TASK.B04
 	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, rows 1 and 2: the CLI assembles"
 		+ "the planning context in one command, the agent of the plan slot cuts the request into"
@@ -996,6 +1019,7 @@ TASK B10
 	SOURCE "the user's ruling of 2026-10-13 in the refinement of B139: a wave is a MILESTONE of the"
 		+ "project's corpus, the plan one MILESTONE entity and its tasks, and brigade declares no"
 		+ "WAVE type"
+	DELIVERED_BY 117
 
 TASK B11
 	TITLE "brigade wave new|show|start|list record a request, launch its planning, start its wave"
