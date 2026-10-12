@@ -9,6 +9,7 @@ from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import PROGRESS_FILE, RESULT_FILE
 from brigade.runs.run_segment import TURN_LIMIT, WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
 from brigade.runtime import Runtime
+from brigade.system.stop_signal_receiver import StopSignalReceiver
 from brigade.system.write_json_atomically import write_json_atomically
 
 BUDGET_REACHED = "budget_reached"
@@ -55,11 +56,11 @@ def _describe_budget_exceeded(plan: RunPlan, record: SegmentRecord, steps: int) 
     )
 
 
-def _run_with_handovers(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
+def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
     records = []
     instant = runtime.now
     while True:
-        record = run_segment(plan, len(records) + 1, runtime)
+        record = run_segment(plan, len(records) + 1, runtime, stop)
         records.append(record)
         instant += timedelta(milliseconds=record.measured_ms)
         finished = describe_finished(plan, record)
@@ -73,11 +74,11 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
             return records
 
 
-def run_segments(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
+def run_segments(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
     if plan.disposable_worktree:
         add_detached_worktree(runtime.run_process, plan.cwd, plan.worktree)
     try:
-        records = _run_with_handovers(plan, runtime)
+        records = _run_with_handovers(plan, runtime, stop)
     finally:
         if plan.disposable_worktree:
             remove_worktree(runtime.run_process, plan.cwd, plan.worktree)

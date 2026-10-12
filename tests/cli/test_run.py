@@ -1,6 +1,9 @@
 import json
 import os
 import shutil
+import signal
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -17,6 +20,9 @@ BUILT_IN_BUILDER = REPOSITORY_ROOT / "brigade" / "roles" / "data" / "builder.md"
 RECORDING_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-recording"
 NOT_IN_A_WAVE = "not launched by a wave"
 CUT = "cut at the wall-time limit"
+STOPPED = "stopped by a signal"
+CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
+STOP_WAIT_S = 60
 UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 1\n---\nAnswer at once.\n"
 MACHINE_BUILDER = (
@@ -575,6 +581,102 @@ class BrigadeRunDetachedTest(RunTestCase):
         self.wait_for_file(self.runs / run_id / "result.json")
         [finished] = self.read_events("run.finished")
         self.assertEqual(finished["run"], run_id)
+
+
+class BrigadeRunStoppedBySignalTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT + CLIENT_OUTLIVING_THE_TEST)
+        self.record("builder", DONE_RESULT)
+
+    def start_detached(self) -> str:
+        started = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach"
+        )
+        return started.stdout.strip()
+
+    def start_in_the_foreground(self) -> subprocess.Popen:
+        brigade = subprocess.Popen(  # noqa: S603 - the test's own command line
+            [sys.executable, str(CLONE_ENTRY_POINT), "run", str(self.procedure), "--slot", "build"]
+            + ["--cwd", str(self.workspace), "--json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=self.machine.describe_environment(),
+        )
+        self.addCleanup(brigade.wait)
+        self.addCleanup(brigade.kill)
+        return brigade
+
+    def test_should_stop_the_client_of_a_detached_run_sent_sigterm_and_list_the_run_finished_stopped(self):
+        # Arrange
+        run_id = self.start_detached()
+        brigade_pid = self.read_run_pid(run_id)
+        client_pid = self.wait_for_client(brigade_pid)
+        (self.runs / run_id / "progress.md").write_text("step 1 done\n")
+
+        # Act
+        os.kill(brigade_pid, signal.SIGTERM)
+
+        # Assert
+        self.wait_for_exit(brigade_pid)
+        self.assert_process_gone(client_pid)
+        self.assertEqual(json.loads((self.runs / run_id / "result.json").read_text())["outcome"], "stopped")
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["outcome"], "stopped")
+        [listed] = json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
+        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "stopped"))
+
+    def test_should_stop_the_client_of_a_foreground_run_sent_sigint_and_exit_21(self):
+        # Arrange
+        brigade = self.start_in_the_foreground()
+        client_pid = self.wait_for_client(brigade.pid)
+
+        # Act
+        brigade.send_signal(signal.SIGINT)
+
+        # Assert
+        stdout, stderr = brigade.communicate(timeout=STOP_WAIT_S)
+        self.assertEqual(brigade.returncode, 21, stderr)
+        self.assert_process_gone(client_pid)
+        run_id = json.loads(stdout)["run"]
+        self.assertEqual(json.loads(stdout)["outcome"], "stopped")
+        self.assertEqual(json.loads((self.runs / run_id / "result.json").read_text())["outcome"], "stopped")
+
+    def test_should_record_the_stop_in_the_finished_event_and_in_the_processes_of_the_run(self):
+        # Arrange
+        run_id = self.start_detached()
+        brigade_pid = self.read_run_pid(run_id)
+        self.wait_for_client(brigade_pid)
+
+        # Act
+        os.kill(brigade_pid, signal.SIGTERM)
+
+        # Assert
+        self.wait_for_exit(brigade_pid)
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(
+            (finished["outcome"], finished["exit"], finished["error_class"], finished["nulls"]),
+            (
+                "stopped",
+                None,
+                None,
+                {
+                    "project": "no project given",
+                    "wave": NOT_IN_A_WAVE,
+                    "task": NOT_IN_A_WAVE,
+                    "main_steps": "the client reads no transcript",
+                    "total_steps": "the client reads no transcript",
+                    "usage": "the client reads no transcript",
+                    "error_class": STOPPED,
+                    "exit": STOPPED,
+                },
+            ),
+        )
+        client_record = json.loads((self.runs / run_id / "processes.jsonl").read_text().splitlines()[-1])
+        self.assertEqual(
+            (client_record["argv"][0], client_record["outcome"], client_record["exit"]), ("sh", "stopped", None)
+        )
 
 
 class BrigadeRunHandOverTest(RunTestCase):

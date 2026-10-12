@@ -1,4 +1,7 @@
+import dataclasses
+import itertools
 import json
+import os
 import signal
 import subprocess
 import tempfile
@@ -16,7 +19,9 @@ from brigade.runs.run_result import RunResult
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
+from brigade.system.process_trace import ProcessTrace
 from brigade.system.read_configuration import Configuration
+from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.token_usage import TokenUsage
 from brigade.system.trail_writer import TrailWriter
 
@@ -294,7 +299,7 @@ class RunSegmentTest(unittest.TestCase):
         plan = _create_plan(self.root)
 
         # Act
-        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn))
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
 
         # Assert
         [request] = self.spawn.requests
@@ -311,7 +316,7 @@ class RunSegmentTest(unittest.TestCase):
         plan = _create_plan(self.root)
 
         # Act
-        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn))
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
 
         # Assert
         self.assertEqual(record.number, 1)
@@ -342,7 +347,7 @@ class RunSegmentStepsTest(unittest.TestCase):
         plan = _create_plan(self.root, reads_transcripts=True)
 
         # Act
-        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
@@ -363,7 +368,9 @@ class RunSegmentStepsTest(unittest.TestCase):
                 plan = _create_plan(self.root, client_type=client_type, reads_transcripts=reads_transcripts)
 
                 # Act
-                record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+                record = run_segment(
+                    plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver()
+                )
 
                 # Assert
                 self.assertIsNone(record.counted_steps)
@@ -374,7 +381,7 @@ class RunSegmentStepsTest(unittest.TestCase):
         plan = _create_plan(self.root)
 
         # Act
-        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         self.assertEqual(record.cost_usd, 0.42)
@@ -391,7 +398,7 @@ class RunSegmentSessionTest(unittest.TestCase):
         plan = _create_plan(self.root)
 
         # Act
-        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         self.assertRegex(plan.client_adapter.requests["launch-argv"]["session_id"], UUID_PATTERN)
@@ -401,7 +408,7 @@ class RunSegmentSessionTest(unittest.TestCase):
         plan = _create_plan(self.root, client_type=ClientAnsweringItsSessionDouble)
 
         # Act
-        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         self.assertEqual(record.result.session_id, "session-b73")
@@ -413,7 +420,7 @@ class RunSegmentSessionTest(unittest.TestCase):
         )
 
         # Act
-        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         launched_session = plan.client_adapter.requests["launch-argv"]["session_id"]
@@ -438,7 +445,7 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         )
 
         # Act
-        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn))
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
 
         # Assert
         launched_session = plan.client_adapter.requests["launch-argv"]["session_id"]
@@ -474,7 +481,7 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
                 )
 
                 # Act
-                record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn))
+                record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
 
                 # Assert
                 self.assertIsNone(record.counted_steps)
@@ -494,7 +501,7 @@ class RunSegmentJournalTest(unittest.TestCase):
         plan = _create_plan(self.root, reads_actions=False)
 
         # Act
-        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         self.assertEqual(
@@ -514,7 +521,7 @@ class RunSegmentJournalTest(unittest.TestCase):
         plan = _create_plan(self.root, reads_actions=True)
 
         # Act
-        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         self.assertEqual(
@@ -535,7 +542,7 @@ class RunSegmentJournalTest(unittest.TestCase):
         no_output = ""
 
         # Act
-        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble(no_output)))
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble(no_output)), StopSignalReceiver())
 
         # Assert
         self.assertEqual(plan.client_adapter.operations, ["launch-argv", "parse-result"])
@@ -545,7 +552,7 @@ class RunSegmentJournalTest(unittest.TestCase):
         plan = _create_plan(self.root, reads_actions=False)
 
         # Act
-        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnStoppingMidLineDouble()))
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnStoppingMidLineDouble()), StopSignalReceiver())
 
         # Assert
         self.assertEqual(
@@ -575,7 +582,7 @@ class RunSegmentJournalTest(unittest.TestCase):
         plan = _create_plan(self.root, reads_actions=True, client_type=ClientRefusingToReadActionsDouble)
 
         # Act
-        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()))
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
         self.assertEqual(
@@ -588,4 +595,174 @@ class RunSegmentJournalTest(unittest.TestCase):
                 "summary": "the client finished the task",
                 "cut": False,
             },
+        )
+
+
+class StopRequestedBeforeTheSpawnDouble:
+    requested = True
+
+    def raising(self):
+        raise AssertionError("run_segment waited for a client it should not have spawned")
+
+
+class StopArrivingAfterTheSpawnDouble:
+    requested = False
+
+    def raising(self):
+        return self
+
+    def __enter__(self):
+        raise StopRequested
+
+    def __exit__(self, *_exception):
+        return False
+
+
+class ClientStoppedWhileReadingActionsDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "actions":
+            os.kill(os.getpid(), signal.SIGTERM)
+        return super().answer(operation, request)
+
+
+class ProcessRunningPastAPollDouble:
+    pid = PID_HELD_BY_NO_PROCESS
+
+    def __init__(self):
+        self._answers = itertools.chain([self._keep_running], itertools.repeat(self._end_stopped))
+
+    def wait(self, timeout: float) -> int:
+        return next(self._answers)(timeout)
+
+    def _keep_running(self, timeout: float) -> int:
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _end_stopped(self, _timeout: float) -> int:
+        return -signal.SIGTERM
+
+
+class SpawnRunningPastAPollDouble:
+    def spawn(self, request):
+        request.stdout.write_text("Reading the task\n", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return ProcessRunningPastAPollDouble()
+
+
+class SpawnSleepingClientDouble:
+    def __init__(self, test: unittest.TestCase):
+        self.test = test
+        self.process = None
+
+    def spawn(self, request):
+        request.stdout.write_text("Reading the task\n", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        self.process = subprocess.Popen(["sleep", "5"], start_new_session=True)  # noqa: S607 - sleep found on the PATH
+        self.test.addCleanup(self.process.wait)
+        self.test.addCleanup(self.process.kill)
+        return self.process
+
+
+class RunSegmentStoppedBeforeItsClientIsSpawnedTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+
+    def test_should_end_the_segment_stopped_without_spawning_the_client(self):
+        # Arrange
+        spawn = SpawnDouble()
+
+        # Act
+        record = run_segment(
+            _create_plan(self.root),
+            FIRST_SEGMENT,
+            _create_runtime(self.root, spawn),
+            StopRequestedBeforeTheSpawnDouble(),
+        )
+
+        # Assert
+        self.assertEqual(
+            (spawn.requests, record.result.outcome, record.exit_code, record.uncounted),
+            ([], "stopped", None, "the client was never launched"),
+        )
+
+
+class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.spawn = SpawnSleepingClientDouble(self)
+
+    def test_should_stop_the_group_of_the_client_and_end_the_segment_stopped(self):
+        # Act
+        record = run_segment(
+            _create_plan(self.root),
+            FIRST_SEGMENT,
+            _create_runtime(self.root, self.spawn),
+            StopArrivingAfterTheSpawnDouble(),
+        )
+
+        # Assert
+        self.assertEqual(self.spawn.process.returncode, -signal.SIGTERM)
+        self.assertEqual(
+            (record.result.outcome, record.exit_code, record.result.message), ("stopped", None, "stopped by a signal")
+        )
+
+    def test_should_record_the_client_stopped_in_the_trail(self):
+        # Arrange
+        traces = []
+        runtime = dataclasses.replace(_create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append))
+
+        # Act
+        run_segment(_create_plan(self.root), FIRST_SEGMENT, runtime, StopArrivingAfterTheSpawnDouble())
+
+        # Assert
+        self.assertEqual(
+            traces,
+            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "stopped", None, ANY)],
+        )
+
+    def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
+        # Arrange
+        plan = _create_plan(self.root, client_type=ClientAnsweringItsSessionDouble, reads_transcripts=True)
+
+        # Act
+        record = run_segment(
+            plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopArrivingAfterTheSpawnDouble()
+        )
+
+        # Assert
+        self.assertEqual(record.result.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
+        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+
+class RunSegmentStoppedWhileItsJournalIsWrittenTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "journal.jsonl"
+
+    def test_should_keep_in_the_journal_the_lines_the_stop_arrived_on(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=True, client_type=ClientStoppedWhileReadingActionsDouble)
+
+        # Act
+        with StopSignalReceiver() as stop:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnRunningPastAPollDouble()), stop)
+
+        # Assert
+        self.assertEqual(
+            _read_journal_records(self.journal),
+            [
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Reading the task",
+                    "cut": False,
+                }
+            ],
         )

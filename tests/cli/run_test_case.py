@@ -107,6 +107,22 @@ class RunTestCase(unittest.TestCase):
                 self.fail(f"the process {pid} never exited")
             time.sleep(FILE_POLL_S)
 
+    def read_run_pid(self, run_id: str) -> int:
+        return int((self.runs / run_id / "pid").read_text())
+
+    def wait_for_client(self, brigade_pid: int) -> int:
+        children = Path(f"/proc/{brigade_pid}/task/{brigade_pid}/children")
+        deadline = time.monotonic() + FILE_WAIT_S
+        while not children.read_text().strip():
+            if time.monotonic() > deadline:
+                self.fail(f"brigade {brigade_pid} never spawned its client")
+            time.sleep(FILE_POLL_S)
+        return int(children.read_text().split()[0])
+
+    def assert_process_gone(self, pid: int) -> None:
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, NO_SIGNAL)
+
     def read_every_state_file(self) -> str:
         files = sorted(path for path in self.machine.state_home.rglob("*") if path.is_file())
         return "".join(path.read_text(encoding="utf-8", errors="replace") for path in files)

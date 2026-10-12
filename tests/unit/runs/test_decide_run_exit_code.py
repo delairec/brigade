@@ -13,6 +13,7 @@ class DecideRunExitCodeTest(unittest.TestCase):
             ("wall_limit", 11),
             ("turn_limit", 12),
             ("handed_over", 20),
+            ("stopped", 21),
         ]
         for outcome, expected_code in rows:
             with self.subTest(outcome=outcome):

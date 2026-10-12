@@ -17,6 +17,7 @@ NO_ARGUMENTS = {}
 NO_WARNINGS = ()
 NOT_IN_A_WAVE = "not launched by a wave"
 CUT = "cut at the wall-time limit"
+STOPPED = "stopped by a signal"
 
 
 def _create_plan(counts_steps: bool = True) -> RunPlan:
@@ -287,6 +288,68 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                     result=_create_cut(session_id=session_id, usage=None),
                     exit_code=None,
                     measured_ms=2820000,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted=uncounted,
+                )
+
+                # Act
+                finished = describe_finished(_create_plan(), record)
+
+                # Assert
+                self.assertEqual(finished.nulls, expected_nulls)
+
+
+class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
+    def test_should_name_the_stop_and_the_reason_a_stopped_segment_is_left_unmeasured(self):
+        rows = [
+            (
+                "a client stopped while it ran, naming no session at launch",
+                None,
+                "the client names no session at launch",
+                {
+                    "wave": NOT_IN_A_WAVE,
+                    "task": NOT_IN_A_WAVE,
+                    "session": "the client names no session at launch",
+                    "main_steps": "the client names no session at launch",
+                    "total_steps": "the client names no session at launch",
+                    "usage": "the client names no session at launch",
+                    "error_class": STOPPED,
+                    "exit": STOPPED,
+                },
+            ),
+            (
+                "a run stopped before its client was launched",
+                "a47607d0-5a3d-4910-8978-9aad5d0e7796",
+                "the client was never launched",
+                {
+                    "wave": NOT_IN_A_WAVE,
+                    "task": NOT_IN_A_WAVE,
+                    "main_steps": "the client was never launched",
+                    "total_steps": "the client was never launched",
+                    "usage": "the client was never launched",
+                    "error_class": STOPPED,
+                    "exit": STOPPED,
+                },
+            ),
+        ]
+        for case, session_id, uncounted, expected_nulls in rows:
+            with self.subTest(case):
+                # Arrange
+                record = SegmentRecord(
+                    number=1,
+                    result=RunResult(
+                        outcome="stopped",
+                        steps=None,
+                        usage=None,
+                        session_id=session_id,
+                        duration_ms=4000,
+                        error_class=None,
+                        reset=None,
+                        message="stopped by a signal",
+                    ),
+                    exit_code=None,
+                    measured_ms=4000,
                     cost_usd=None,
                     counted_steps=None,
                     uncounted=uncounted,

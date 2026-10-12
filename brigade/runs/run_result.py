@@ -9,7 +9,8 @@ DOCUMENT_SCHEMA_VERSION = 1
 RUN_RESULT_SHAPE = {
     **{key: field for key, field in CLIENT_ANSWER_SHAPES["parse-result"].items() if key != "cost_usd"},
     "outcome": Field(
-        kinds=(str,), values=("done", "failed", "handed_over", "blocked", "undeclared", "wall_limit", "turn_limit")
+        kinds=(str,),
+        values=("done", "failed", "handed_over", "blocked", "undeclared", "wall_limit", "turn_limit", "stopped"),
     ),
 }
 

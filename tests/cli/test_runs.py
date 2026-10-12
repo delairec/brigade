@@ -17,6 +17,7 @@ ACTIONS_RECORDING = (
     ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
 )
 FOLLOW_WAIT_S = 30
+CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
 LONGER_THAN_THE_DEFAULT_POLL_S = 3
 BLANK_LINE = "\n"
 END_OF_OUTPUT = ""
@@ -580,4 +581,107 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
             (2, "", "brigade runs show: --follow and --json exclude each other\n"),
+        )
+
+
+class BrigadeRunsStopOfARunningRunTest(RunsTestCase):
+    def test_should_stop_a_detached_run_and_exit_0_once_it_finished_stopped(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT + CLIENT_OUTLIVING_THE_TEST)
+        self.record("builder", DONE_RESULT)
+        run_id = self.run_deliver("--detach").stdout.strip()
+        client_pid = self.wait_for_client(self.read_run_pid(run_id))
+
+        # Act
+        completed = self.run_brigade("runs", "stop", run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout), (0, f"run {run_id} finished on stopped\n"), completed.stderr
+        )
+        self.assert_process_gone(client_pid)
+        [listed] = json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
+        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "stopped"))
+
+
+class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+
+    def test_should_refuse_a_finished_run_naming_its_outcome(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+
+        # Act
+        completed = self.run_brigade("runs", "stop", run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade runs stop: run {run_id} has already finished on done\n"),
+        )
+
+    def test_should_refuse_a_run_holding_no_pid_file(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        (self.runs / run_id / "result.json").unlink()
+        (self.runs / run_id / "pid").unlink()
+
+        # Act
+        completed = self.run_brigade("runs", "stop", run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade runs stop: run {run_id} holds no pid file\n"),
+        )
+
+    def test_should_refuse_a_dead_run_naming_the_pid_no_process_holds(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        gone.wait()
+        (self.runs / run_id / "result.json").unlink()
+        (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
+
+        # Act
+        completed = self.run_brigade("runs", "stop", run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade runs stop: run {run_id} is dead: no process holds its pid {gone.pid}\n"),
+        )
+
+    def test_should_refuse_an_unknown_run(self):
+        # Act
+        completed = self.run_brigade("runs", "stop", UNKNOWN_RUN)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade runs stop: no run {UNKNOWN_RUN}\n"),
+        )
+
+    def test_should_report_a_run_its_signal_left_dead_and_exit_1(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end()
+        orphan = subprocess.run(
+            ["sh", "-c", "sleep 120 >/dev/null 2>&1 & echo $!"],  # noqa: S607 - sh found on the PATH of the test
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        (self.runs / run_id / "result.json").unlink()
+        (self.runs / run_id / "pid").write_text(orphan.stdout)
+
+        # Act
+        completed = self.run_brigade("runs", "stop", run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade runs stop: run {run_id} ended dead, not stopped\n"),
         )

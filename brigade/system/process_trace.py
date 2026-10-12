@@ -6,6 +6,7 @@ TIMED_OUT = "timed_out"
 NOT_FOUND = "not_found"
 NO_WORKING_DIRECTORY = "no_working_directory"
 CUT = "cut"
+STOPPED = "stopped"
 SPAWNED = "spawned"
 
 
