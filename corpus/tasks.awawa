@@ -6595,21 +6595,30 @@ TASK B131
 TASK B136
 	TITLE "The liveness of a run is read from the identity of its process, not from its pid alone,"
 		+ "so that a pid recycled after a reboot never shows a dead run running"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
-	SPEC "record_run_pid records, with the pid of the run, what identifies its process: the start"
-		+ "time of the process, field 22 of /proc/<pid>/stat, and the boot id,"
-		+ "/proc/sys/kernel/random/boot_id"
+	SPEC "record_run_pid writes runs/<id>/pid as one line, <pid> <start time> <boot id>: the start"
+		+ "time of the process, field 22 of /proc/<pid>/stat, and the boot id of the running"
+		+ "kernel, /proc/sys/kernel/random/boot_id; the file is still replaced atomically"
 	SPEC "brigade runs list and brigade runs show read a run with no result.json as dead when its"
 		+ "pid is free, when the process holding the pid has another start time, or when the boot"
 		+ "id recorded is not the one of the running kernel; they read it running only when the pid"
-		+ "holds a process of the recorded identity"
+		+ "holds a process of the recorded identity; a pid file holding the pid alone, written"
+		+ "before this task, reads dead"
+	SPEC "brigade runs stop refuses a run whose pid does not hold a process of the recorded"
+		+ "identity as it refuses a run holding no pid file, and sends no signal"
+	SPEC "DESC 2 of the decision on the atomic replacement of the pid file is amended in the same"
+		+ "pull request: runs list reports dead a run whose pid file is missing, empty, not of the"
+		+ "form <pid> <start time> <boot id>, or naming a process of another identity"
 	SPEC "unit rows of tests/unit/runs/test_list_runs.py feed a pid file naming a living process"
 		+ "with another start time, and one recorded under another boot id: both runs are listed"
 		+ "dead; the rows of tests/cli/test_runs.py listing a detached run of the fake client"
-		+ "running, and a run whose process is gone dead, still pass"
+		+ "running, and a run whose process is gone dead, still pass; a unit row feeds a pid file"
+		+ "holding the pid alone and lists the run dead, and one of brigade runs stop feeds a pid"
+		+ "file naming a living process of another start time and pins the refusal, no signal sent"
+	AFTER @TASK.B109
 	RATIONALE "verified by the session on 2026-10-12: run 20261011T174055Z-9aa8e9 died at launch on"
 		+ "2026-10-11 19:40, its brigade.log reading client adapter vibe answered launch-argv:"
 		+ "lacks the key session_id, no result.json, its pid file holding 9574; the machine"
@@ -6625,9 +6634,10 @@ TASK B136
 		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast has a run"
 		+ "whose pid lives without a result running; DESC 2 of"
 		+ "@DECISION.ThePidOfARunIsReplacedAtomically has runs list read dead a pid file that is"
-		+ "not digits: a pid file carrying the identity with the pid amends that DESC, a file of"
-		+ "its own next to pid leaves it; the refinement settles which, and what a pid file written"
-		+ "before this task, the pid alone, reads as"
+		+ "not digits; the user ruled on 2026-10-12 in the refinement that the identity is carried"
+		+ "on the line of the pid, one atomic write keeping pid and identity together where a file"
+		+ "of its own would take two, which amends that DESC, and that a pid file holding the pid"
+		+ "alone reads dead, run 20261011T174055Z-9aa8e9 being one"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		REF @DECISION.ThePidOfARunIsReplacedAtomically
@@ -6641,10 +6651,11 @@ TASK B136
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 		REF @DECISION.PythonStandardLibraryOnly
 		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
-	RATIONALE "no AFTER edge on the running wave: @TASK.B109 and @TASK.B114 edit run_segment.py and"
-		+ "the adapters, neither describe_run.py nor record_run_pid.py; brigade runs stop of"
-		+ "@TASK.B109 reads the pid of runs/<id>/pid, which the carrier of the identity chosen at"
-		+ "the refinement must keep readable"
+	RATIONALE "after @TASK.B109, whose brigade runs stop sends SIGTERM to the pid of runs/<id>/pid:"
+		+ "a pid recycled after a reboot would have it signal a stranger, Rider.Backend in the case"
+		+ "above, so the user ruled on 2026-10-12 in the refinement that this task guards the stop"
+		+ "with the identity too; @TASK.B114 edits run_segment.py and the adapters, neither"
+		+ "describe_run.py nor record_run_pid.py, and needs no edge"
 		REF @TASK.B109
 		REF @TASK.B114
 	SOURCE "the user's words of 2026-10-12, \"ok pour les drafts, on fera le refinement dans une"
@@ -6656,7 +6667,7 @@ TASK B137
 	TITLE "An invalid answer of the client adapter to launch-argv or parse-result ends the run on"
 		+ "the outcome failed, with its run.finished and its result.json, instead of leaving it"
 		+ "dead with no result"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
@@ -6676,8 +6687,11 @@ TASK B137
 		+ "failed by brigade runs list, never dead, and brigade runs show prints its message"
 	SPEC "unit rows of tests/unit/runs/test_run_segment.py feed a client answering launch-argv"
 		+ "without session_id and parse-result without outcome, and pin the failed result and its"
-		+ "message; tests/cli prove through the fake client replaying an answer lacking a key that"
-		+ "such a run writes result.json, appends run.finished with outcome failed and exits 1"
+		+ "message; tests/cli prove through the fake client replaying a recording whose last line"
+		+ "lacks the key outcome, so that its parse-result answer is invalid, that such a run"
+		+ "writes result.json, appends run.finished with outcome failed and exits 1; the fake"
+		+ "client always answers launch-argv valid, so the launch-argv case is proven by the unit"
+		+ "rows alone"
 	AFTER @TASK.B109
 	AFTER @TASK.B114
 	RATIONALE "verified by the session on 2026-10-12 on run 20261011T174055Z-9aa8e9: the"
@@ -6705,17 +6719,18 @@ TASK B138
 	TITLE "The parse-result of the Claude Code adapter reads the duration of the whole session,"
 		+ "every result event summed, when a background command gives the session several result"
 		+ "events"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
 	SPEC "parse-result answers as duration_ms the sum of the duration_ms of every result event of"
 		+ "the stdout, 550962 on segments/1/stdout.log of run 20261012T113945Z-b4a356, two events,"
 		+ "and 443460 on that of run 20261012T111839Z-1a7eb6, three events; the outcome, the"
-		+ "session, the usage and cost_usd stay read from the last event"
+		+ "session, the usage and cost_usd stay read from the last event, and steps stays null"
+		+ "after a task notification, as today"
 	SPEC "a unit row of tests/unit/adapters/clients/test_claude_code.py feeds two result events of"
 		+ "one session and pins duration_ms as their sum, the outcome and cost_usd of the last; the"
-		+ "rows of @TASK.B83 on the fixture result-after-task-notification.json still pass"
+		+ "existing rows on the fixture result-after-task-notification.json still pass"
 	AFTER @TASK.B114
 	RATIONALE "verified by the session on 2026-10-12: a Claude Code session in -p stream-json mode"
 		+ "that waits on a background command emits one result event per turn, the later ones"
@@ -6740,7 +6755,8 @@ TASK B138
 		+ "null against main_steps 14 is by design, and the sums of num_turns, 15 and 51, would not"
 		+ "equal main_steps 14 and 49 either; run.finished carries the wall time brigade measured,"
 		+ "SPEC 2 of @TASK.B83, so the two files agree on the duration to the second, not to the"
-		+ "millisecond; whether result.json should carry the sum of num_turns is for the refinement"
+		+ "millisecond; the user ruled on 2026-10-12 in the refinement that steps stays null rather"
+		+ "than carrying the sum of num_turns, a figure main_steps would contradict"
 		REF @TASK.B83
 		REF @DECISION.BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
 	RATIONALE "the journal of 1a7eb6 read its first result event undeclared at 11:25:41Z, no"
