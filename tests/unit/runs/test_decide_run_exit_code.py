@@ -12,6 +12,7 @@ class DecideRunExitCodeTest(unittest.TestCase):
             ("blocked", 10),
             ("wall_limit", 11),
             ("turn_limit", 12),
+            ("soft_limit", 13),
             ("handed_over", 20),
             ("stopped", 21),
         ]

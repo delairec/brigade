@@ -129,7 +129,8 @@ Claude Code, `fake` for the adapter that replays recorded result documents, or a
 executable `brigade-client-<name>` is on your `PATH`. The table `[clients.<name>]` of `config.toml` holds the settings
 of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays, or `<role>.resumed.json`
 when that file exists and the progress file of the run holds something, `features`, the
-comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`; none by default), and, for
+comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by
+default), and, for
 tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, `progress`, a line it
 appends to the progress file of the run, and `interval`, the seconds it waits after each line of its recording;
 `operations`, comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result
@@ -145,7 +146,8 @@ each reasoning level.
 
 The `outcome` of a `parse-result` answer is `done`, `handed_over` or `blocked` as the run declares it on the last line
 of its final message, `brigade-end: <outcome>`, which the brief of every segment asks for; `undeclared` when that line
-is missing or names another value; `failed` on an error of the client.
+is missing or names another value; `failed` on an error of the client; `soft_limit` when the client ended the session
+itself once the `stop_at` of its request had passed.
 
 `brigade adapter matrix` prints one row per client adapter, built-in or `brigade-client-<name>` on your `PATH`, and one
 column per capability, read from its probe with the settings of `config.toml`: `full` when the probe declares it,
@@ -156,13 +158,13 @@ Every row carries its audience, a supported client or an adapter of the test sui
 test of `tests/guards/` fails when they drift.
 
 <!-- adapter matrix: begin -->
-| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| claude-code | full | full | full | full | full | full | full | full |
+| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| claude-code | full | full | full | full | full | full | full | full | full |
 
-| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback |
+| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |
 
 Fallbacks:
 
@@ -172,6 +174,7 @@ Fallbacks:
 - no step count: steps null and the run held on the clock alone
 - no tool grants: the client's unattended mode and a disposable worktree for a reading slot
 - no reset hour: now plus thirty minutes
+- no graceful stop: the hard cut at the wall-time limit
 <!-- adapter matrix: end -->
 
 An external adapter for Mistral Vibe, `brigade-client-vibe`, runs Vibe 2.26.0 unattended with `client = "vibe"`. It is
@@ -179,9 +182,9 @@ not shipped in this repository: it lives on the `PATH` of the machine that insta
 adapter replaces it. With it on the `PATH`, `brigade adapter matrix --markdown` adds this row to the supported
 clients:
 
-| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| vibe | full | full | full | fallback | fallback | full | full | fallback |
+| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| vibe | full | full | full | fallback | fallback | full | full | fallback | fallback |
 
 Its probe binds `mistral-large` to the levels deepest, deep and standard, and `mistral-medium-3.5` to light; it reads
 the usage of a session from Vibe's session store, `~/.vibe/logs/session/unified`.
@@ -240,7 +243,8 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.jso
 result of the last segment. Each segment appends one `run.finished` to the
 ledger, every null field named in `nulls` with its reason. The command prints the run, text or `--json`, and exits
 with the code of its outcome, that of its last segment: 0 `done`, 1 `failed`, 3 `undeclared`, 10 `blocked`, 11
-`wall_limit`, 12 `turn_limit` (the last segment reached the client's step cap), 20 `handed_over`, 21 `stopped`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and
+`wall_limit`, 12 `turn_limit` (the last segment reached the client's step cap), 13 `soft_limit`, 20 `handed_over`, 21
+`stopped`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and
 exits 0, while brigade itself, started again in a new session with its output in `brigade.log`, runs the procedure to
 its end, writing the result and the ledger as the foreground command does. `runs list` reports a run `finished` once it
 has a result, `running` while its process lives, `dead` when the process is gone without one.
@@ -259,8 +263,17 @@ or SIGTERM ends the follow alone, exit 0, the run going on; `--follow` with `--j
 
 Every run is held on the clock: at `ceil(budget × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
 `config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the
-segment ends with the outcome `wall_limit`. A segment that ends on the client's step cap records a `signal.recorded`
-`budget_reached` naming the procedure, the run and the budget; one cut on the clock records a `wall_limit_reached`
+segment ends with the outcome `wall_limit`, whether its soft limit has passed or not. The soft limit of a segment is
+its wall-time limit minus `soft_limit_margin_s` of `config.toml`, a positive number defaulting to 120, none when the
+limit is not above it: the `launch-argv` and `resume-argv` requests carry it as `stop_at`, the UTC instant to the
+second computed at launch, null without one. A client whose probe declares `graceful_stop` ends its session between two
+steps once `stop_at` has passed and answers the outcome `soft_limit`; brigade records that segment as one ended `done`,
+its session, steps, usage and `cost_usd` included, and the run goes on as after a cut on the clock. The Claude Code
+adapter passes a `PostToolUse` hook in `--settings` that stops the main session and its sub-agents after the tool call
+that passes `stop_at`; a client declaring no `graceful_stop` keeps the hard cut. A segment that ends on the client's
+step cap records a `signal.recorded`
+`budget_reached` naming the procedure, the run and the budget; one cut on the clock or ended on `soft_limit` records a
+`wall_limit_reached`
 naming the same and `wall_limit_s`, the limit in seconds it was held to. A segment ending on `handed_over` or
 `undeclared` records a `signal.recorded` of that name, naming the procedure, the run and the segment. In each of these
 cases, when its progress file holds something, it is launched again as a fresh segment whose brief opens on that file,

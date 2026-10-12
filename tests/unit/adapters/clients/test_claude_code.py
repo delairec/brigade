@@ -1,3 +1,5 @@
+import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +16,7 @@ LAUNCH_REQUEST = {
     "brief": "Deliver the task B42.",
     "progress_file": "/state/brigade/runs/r1/progress.md",
     "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
+    "stop_at": None,
     "role": {
         "name": "builder",
         "package": "AGENT builder",
@@ -56,7 +59,7 @@ class ClaudeCodeProbeTest(unittest.TestCase):
                 "client": "claude-code",
                 "version_argv": ["claude", "--version"],
                 "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
-                "features": ["step_count", "tool_grants", "reset_hour"],
+                "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
                 "models": {"deepest": "fable", "deep": "fable", "standard": "opus", "light": "sonnet"},
             },
         )
@@ -196,6 +199,115 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(launch["argv"][13:15], ["--max-turns", expected_max_turns])
+
+
+def run_stop_hook(stop_at: str) -> subprocess.CompletedProcess:
+    argv = answer("launch-argv", {**LAUNCH_REQUEST, "stop_at": stop_at})["argv"]
+    settings = json.loads(argv[argv.index("--settings") + 1])
+    command = settings["hooks"]["PostToolUse"][0]["hooks"][0]["command"]
+    return subprocess.run(  # noqa: S603 - the hook command the adapter under test built
+        ["sh", "-c", command],  # noqa: S607 - sh found on the PATH of the test
+        input="{}",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+class ClaudeCodeGracefulStopTest(unittest.TestCase):
+    def test_should_add_a_hook_stopping_the_session_after_the_tool_call_that_passes_its_stop_at(self):
+        # Arrange
+        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z"}
+
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        self.assertEqual(
+            launch["argv"][-2:],
+            [
+                "--settings",
+                (
+                    '{"hooks": {"PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": '
+                    '"[ \\"$(date -u +%s)\\" -ge 1791364980 ] && printf \'%s\\\\n\' '
+                    '\'{\\"continue\\": false, \\"stopReason\\": \\"the soft limit 2026-10-07T09:23:00Z has passed\\"}\'; '
+                    'exit 0"}]}]}}'
+                ),
+            ],
+        )
+
+    def test_should_print_nothing_before_the_stop_at_and_the_stop_once_it_has_passed(self):
+        rows = [
+            ("before", "2100-01-01T00:00:00Z", ""),
+            (
+                "after",
+                "2000-01-01T00:00:00Z",
+                '{"continue": false, "stopReason": "the soft limit 2000-01-01T00:00:00Z has passed"}\n',
+            ),
+        ]
+        for case, stop_at, expected_stdout in rows:
+            with self.subTest(case=case):
+                # Act
+                completed = run_stop_hook(stop_at)
+
+                # Assert
+                self.assertEqual((completed.returncode, completed.stdout), (0, expected_stdout))
+
+    def test_should_add_no_settings_without_a_stop_at(self):
+        # Act
+        launch = answer("launch-argv", LAUNCH_REQUEST)
+
+        # Assert
+        self.assertNotIn("--settings", launch["argv"])
+
+    def test_should_read_a_session_its_hook_stopped_as_stopped_at_the_soft_limit(self):
+        # Arrange
+        stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":7,'
+            '"result":"Running the tests.","terminal_reason":"hook_stopped",'
+            '"session_id":"ada28962","total_cost_usd":0.035,"usage":{"input_tokens":9,"cache_creation_input_tokens":16778,'
+            '"cache_read_input_tokens":13803,"output_tokens":55,"service_tier":"standard"}}'
+        )
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "soft_limit",
+                "steps": 7,
+                "usage": {
+                    "input_tokens": 9,
+                    "output_tokens": 55,
+                    "cache_creation_input_tokens": 16778,
+                    "cache_read_input_tokens": 13803,
+                },
+                "session_id": "ada28962",
+                "duration_ms": 1369,
+                "cost_usd": 0.035,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+
+    def test_should_read_the_declared_end_of_the_same_session_ended_without_its_hook(self):
+        # Arrange
+        stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":1369,"num_turns":7,'
+            '"result":"Delivered.\\nbrigade-end: done",'
+            '"session_id":"ada28962","total_cost_usd":0.035,"usage":{"input_tokens":9,"cache_creation_input_tokens":16778,'
+            '"cache_read_input_tokens":13803,"output_tokens":55,"service_tier":"standard"}}'
+        )
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertEqual(result["outcome"], "done")
 
 
 class ClaudeCodeResumeTest(unittest.TestCase):

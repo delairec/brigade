@@ -113,13 +113,13 @@ class BrigadeZipappTest(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |\n"
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
-            "| claude-code | full | full | full | full | full | full | full | full |\n"
+            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| claude-code | full | full | full | full | full | full | full | full | full |\n"
             "\n"
-            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |\n"
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
-            "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback |\n"
+            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
             "\n"
             "Fallbacks:\n"
             "\n"
@@ -128,5 +128,6 @@ class BrigadeZipappTest(unittest.TestCase):
             "- no actions: one raw record per line of the client's output\n"
             "- no step count: steps null and the run held on the clock alone\n"
             "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
-            "- no reset hour: now plus thirty minutes\n",
+            "- no reset hour: now plus thirty minutes\n"
+            "- no graceful stop: the hard cut at the wall-time limit\n",
         )

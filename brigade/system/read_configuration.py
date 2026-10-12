@@ -14,6 +14,8 @@ REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
 SECONDS_PER_STEP_KEY = "seconds_per_step"
 SECONDS_PER_STEP_BY_DEFAULT = 30
+SOFT_LIMIT_MARGIN_KEY = "soft_limit_margin_s"
+SOFT_LIMIT_MARGIN_BY_DEFAULT_S = 120
 SLOTS = ("plan", "build", "review", "remediate", "rebase", "report", "triage", "rules", "explore")
 CLI_KEY = "cli"
 FORGE_ACCOUNTS_KEY = "forge_accounts"
@@ -43,6 +45,7 @@ class Configuration:
     clients: dict = field(default_factory=dict)
     slots: dict = field(default_factory=dict)
     seconds_per_step: int | float = SECONDS_PER_STEP_BY_DEFAULT
+    soft_limit_margin_s: int | float = SOFT_LIMIT_MARGIN_BY_DEFAULT_S
     trail_days: int = TRAIL_DAYS_BY_DEFAULT
     journal_poll_s: int | float = JOURNAL_POLL_BY_DEFAULT_S
     findings: tuple[str, ...] = ()
@@ -122,11 +125,12 @@ def _read_refs_cache_mb(document: dict, path: Path) -> int:
     return value
 
 
-def _read_seconds_per_step(value, path: Path) -> int | float:
+def _read_positive_number(document: dict, key: str, default: int, path: Path) -> int | float:
+    value = document.get(key, default)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise BrigadeError(f"{SECONDS_PER_STEP_KEY} is {name_toml_type(value)}, not a number, in {path}")
+        raise BrigadeError(f"{key} is {name_toml_type(value)}, not a number, in {path}")
     if value <= 0:
-        raise BrigadeError(f"{SECONDS_PER_STEP_KEY} is {value}, not a positive number, in {path}")
+        raise BrigadeError(f"{key} is {value}, not a positive number, in {path}")
     return value
 
 
@@ -153,6 +157,7 @@ def read_configuration(path: Path) -> Configuration:
             "clients",
             "slots",
             SECONDS_PER_STEP_KEY,
+            SOFT_LIMIT_MARGIN_KEY,
             TRAIL_DAYS_KEY,
             JOURNAL_POLL_KEY,
             FORGE_ACCOUNTS_KEY,
@@ -172,7 +177,10 @@ def read_configuration(path: Path) -> Configuration:
         reasoning=_read_reasoning(document.get("reasoning", {}), path),
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),
-        seconds_per_step=_read_seconds_per_step(document.get(SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT), path),
+        seconds_per_step=_read_positive_number(document, SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT, path),
+        soft_limit_margin_s=_read_positive_number(
+            document, SOFT_LIMIT_MARGIN_KEY, SOFT_LIMIT_MARGIN_BY_DEFAULT_S, path
+        ),
         trail_days=read_trail_days(document, path),
         journal_poll_s=journal_poll_s,
         findings=findings,

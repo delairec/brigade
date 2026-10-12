@@ -35,6 +35,7 @@ LAUNCH_REQUEST = {
     "role": ROLE,
     "progress_file": TEXT,
     "session_id": TEXT,
+    "stop_at": OPTIONAL_TEXT,
 }
 
 CLIENT_REQUEST_SHAPES = {
@@ -78,14 +79,17 @@ CLIENT_ANSWER_SHAPES = {
             kinds=(list,),
             items=Field(kinds=(str,), values=("probe", "launch", "result", "resume", "transcripts", "actions")),
         ),
-        "features": Field(kinds=(list,), items=Field(kinds=(str,), values=("step_count", "tool_grants", "reset_hour"))),
+        "features": Field(
+            kinds=(list,),
+            items=Field(kinds=(str,), values=("step_count", "tool_grants", "reset_hour", "graceful_stop")),
+        ),
         "models": Field(kinds=(dict,)),
     },
     "launch-argv": COMMAND_ANSWER,
     "resume-argv": COMMAND_ANSWER,
     "parse-result": {
         "schema_version": SCHEMA_VERSION,
-        "outcome": Field(kinds=(str,), values=("done", "failed", "handed_over", "blocked", "undeclared")),
+        "outcome": Field(kinds=(str,), values=("done", "failed", "handed_over", "blocked", "undeclared", "soft_limit")),
         "steps": OPTIONAL_COUNT,
         "usage": USAGE,
         "session_id": OPTIONAL_TEXT,

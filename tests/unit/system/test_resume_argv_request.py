@@ -16,6 +16,7 @@ RESUME_DOCUMENT = {
     },
     "progress_file": "/state/runs/20261008T090000Z-b74a01/progress.md",
     "session_id": "session-b74",
+    "stop_at": "2026-10-08T10:58:00Z",
 }
 
 
@@ -41,5 +42,6 @@ class ResumeArgvRequestTest(unittest.TestCase):
                 },
                 "progress_file": "/state/runs/20261008T090000Z-b74a01/progress.md",
                 "session_id": "session-b74",
+                "stop_at": "2026-10-08T10:58:00Z",
             },
         )

@@ -1,6 +1,7 @@
 import json
 import math
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
@@ -41,6 +42,9 @@ SUBAGENT_TRANSCRIPTS = "*.jsonl"
 IDENTIFYING_ARGUMENTS = ("file_path", "command", "pattern", "path", "url", "query")
 END_DECLARATIONS = {f"brigade-end: {outcome}": outcome for outcome in ("done", "handed_over", "blocked")}
 UNDECLARED = "undeclared"
+STOP_AT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+HOOK_STOPPED = "hook_stopped"
+SOFT_LIMIT = "soft_limit"
 
 
 def _bind_models(request: dict) -> dict:
@@ -56,7 +60,7 @@ def _probe(request: dict) -> dict:
         "client": CLIENT_NAME,
         "version_argv": [EXECUTABLE, "--version"],
         "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
-        "features": ["step_count", "tool_grants", "reset_hour"],
+        "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
         "models": _bind_models(request),
     }
 
@@ -81,10 +85,29 @@ def _build_role_options(request: dict) -> list[str]:
     ]
 
 
+def _build_stop_hook(stop_at: str) -> str:
+    epoch = round(datetime.strptime(stop_at, STOP_AT_FORMAT).replace(tzinfo=UTC).timestamp())
+    stop = json.dumps({"continue": False, "stopReason": f"the soft limit {stop_at} has passed"})
+    return f"[ \"$(date -u +%s)\" -ge {epoch} ] && printf '%s\\n' '{stop}'; exit 0"
+
+
+def _build_stop_options(stop_at) -> list[str]:
+    if stop_at is None:
+        return []
+    hook = {"type": "command", "command": _build_stop_hook(stop_at)}
+    return ["--settings", json.dumps({"hooks": {"PostToolUse": [{"matcher": "*", "hooks": [hook]}]}})]
+
+
 def _build_command(request: dict, session_options: list[str]) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
-        "argv": [EXECUTABLE, *UNATTENDED_OPTIONS, *session_options, *_build_role_options(request)],
+        "argv": [
+            EXECUTABLE,
+            *UNATTENDED_OPTIONS,
+            *session_options,
+            *_build_role_options(request),
+            *_build_stop_options(request["stop_at"]),
+        ],
         "environment": {},
         "stdin": request["brief"],
         "session_id": request["session_id"],
@@ -156,9 +179,11 @@ def _read_declared_outcome(message) -> str:
     return END_DECLARATIONS.get(last_line, UNDECLARED)
 
 
-def _decide_outcome(error_class, message) -> str:
+def _decide_outcome(result: dict, error_class, message) -> str:
     if error_class is not None:
         return "failed"
+    if result.get("terminal_reason") == HOOK_STOPPED:
+        return SOFT_LIMIT
     return _read_declared_outcome(message)
 
 
@@ -176,7 +201,7 @@ def _parse_result(request: dict) -> dict:
     error_class = _classify_error(result, message)
     return {
         "schema_version": SCHEMA_VERSION,
-        "outcome": _decide_outcome(error_class, message),
+        "outcome": _decide_outcome(result, error_class, message),
         "steps": _read_steps(result),
         "usage": _read_usage(result),
         "session_id": result.get("session_id"),
@@ -209,7 +234,7 @@ def _read_event_actions(event: dict) -> list[dict]:
         return _read_content_actions(event)
     if event.get("type") == "result":
         message = event.get("result")
-        return [{"kind": "result", "summary": _decide_outcome(_classify_error(event, message), message)}]
+        return [{"kind": "result", "summary": _decide_outcome(event, _classify_error(event, message), message)}]
     return []
 
 

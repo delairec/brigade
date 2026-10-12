@@ -304,6 +304,7 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         arguments = (run_directory / "progress.md").read_text().splitlines()
         self.assertRegex(arguments.pop(7), UUID_PATTERN)
+        self.assertRegex(arguments.pop(), r'^\{"hooks": \{"PostToolUse": .*-ge \d+ \]')
         self.assertEqual(
             arguments,
             [
@@ -327,6 +328,7 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
                     f"Read,Glob,Grep,Edit,Write,NotebookEdit,Bash,Write(/{run_directory / 'progress.md'}),"
                     f"Edit(/{run_directory / 'progress.md'})"
                 ),
+                "--settings",
             ],
         )
 
@@ -935,6 +937,72 @@ class BrigadeRunOnTheClockTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 11, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["segments"], 3)
+
+
+class BrigadeRunAtTheSoftLimitTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(
+            'features = "step_count,tool_grants,graceful_stop"\nprogress = "step 1 done"\n',
+            keys="seconds_per_step = 2\nsoft_limit_margin_s = 3.5\n",
+        )
+        self.record("builder", {**DONE_RESULT, "outcome": "soft_limit", "steps": 1})
+        (self.recordings / "builder.resumed.json").write_text(json.dumps({**DONE_RESULT, "steps": 1}))
+        self.quick = self.procedure.with_name("quick.md")
+        self.quick.write_text(QUICK_PROCEDURE)
+
+    def run_quick(self):
+        return self.run_brigade("run", str(self.quick), "--slot", "build", "--cwd", str(self.workspace), "--json")
+
+    def test_should_keep_the_result_of_a_segment_stopped_at_the_soft_limit_then_resume_and_exit_0(self):
+        # Act
+        completed = self.run_quick()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["segments"], document["outcome"]), (2, "done"))
+        first, _ = self.read_events("run.finished")
+        self.assertEqual(
+            (first["outcome"], first["exit"], first["session"], first["cost_usd"]),
+            ("soft_limit", 0, "fake-session", 0.42),
+        )
+
+    def test_should_record_that_the_clock_ended_the_segment_stopped_at_the_soft_limit(self):
+        # Act
+        completed = self.run_quick()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [signal] = self.read_events("signal.recorded")
+        self.assertRegex(signal.pop("ts"), INSTANT_PATTERN)
+        self.assertEqual(
+            signal,
+            {
+                "schema_version": 1,
+                "event": "signal.recorded",
+                "signal": "wall_limit_reached",
+                "project": None,
+                "procedure": "quick",
+                "run": json.loads(completed.stdout)["run"],
+                "segment": 1,
+                "budget": 1,
+                "wall_limit_s": 4,
+            },
+        )
+
+    def test_should_cut_at_the_wall_time_limit_a_client_declaring_no_graceful_stop(self):
+        # Arrange
+        self.configure_fake(
+            COUNTING_CLIENT + 'delay = "10"\n', keys="seconds_per_step = 0.2\nsoft_limit_margin_s = 0.1\n"
+        )
+
+        # Act
+        completed = self.run_quick()
+
+        # Assert
+        self.assertEqual(completed.returncode, 11, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["outcome"], "wall_limit")
 
 
 class BrigadeRunEndDeclarationTest(RunTestCase):

@@ -19,6 +19,7 @@ FALLBACKS = {
     "step_count": "steps null and the run held on the clock alone",
     "tool_grants": "the client's unattended mode and a disposable worktree for a reading slot",
     "reset_hour": "now plus thirty minutes",
+    "graceful_stop": "the hard cut at the wall-time limit",
 }
 CLAUDE_CODE_ROW = {
     "name": "claude-code",
@@ -32,6 +33,7 @@ CLAUDE_CODE_ROW = {
         "step_count": "full",
         "tool_grants": "full",
         "reset_hour": "full",
+        "graceful_stop": "full",
     },
     "error": None,
 }
@@ -47,17 +49,19 @@ FAKE_ROW = {
         "step_count": "fallback",
         "tool_grants": "fallback",
         "reset_hour": "fallback",
+        "graceful_stop": "fallback",
     },
     "error": None,
 }
 TEXT_LEGEND = (
     "fallbacks\n"
-    "  no resume       a fresh launch from the progress file\n"
-    "  no transcripts  brigade's journal of the run\n"
-    "  no actions      one raw record per line of the client's output\n"
-    "  no step count   steps null and the run held on the clock alone\n"
-    "  no tool grants  the client's unattended mode and a disposable worktree for a reading slot\n"
-    "  no reset hour   now plus thirty minutes\n"
+    "  no resume         a fresh launch from the progress file\n"
+    "  no transcripts    brigade's journal of the run\n"
+    "  no actions        one raw record per line of the client's output\n"
+    "  no step count     steps null and the run held on the clock alone\n"
+    "  no tool grants    the client's unattended mode and a disposable worktree for a reading slot\n"
+    "  no reset hour     now plus thirty minutes\n"
+    "  no graceful stop  the hard cut at the wall-time limit\n"
 )
 
 
@@ -87,9 +91,9 @@ class BrigadeAdapterMatrixOfTheBuiltInAdaptersTest(AdapterMatrixTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "adapter      audience          launch  result  resume    transcripts  actions   step count  tool grants  reset hour\n"
-            "claude-code  supported client  full    full    full      full         full      full        full         full\n"
-            "fake         test suite        full    full    fallback  fallback     fallback  fallback    fallback     fallback\n"
+            "adapter      audience          launch  result  resume    transcripts  actions   step count  tool grants  reset hour  graceful stop\n"
+            "claude-code  supported client  full    full    full      full         full      full        full         full        full\n"
+            "fake         test suite        full    full    fallback  fallback     fallback  fallback    fallback     fallback    fallback\n"
             "\n" + TEXT_LEGEND,
         )
 
@@ -112,13 +116,13 @@ class BrigadeAdapterMatrixOfTheBuiltInAdaptersTest(AdapterMatrixTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |\n"
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
-            "| claude-code | full | full | full | full | full | full | full | full |\n"
+            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| claude-code | full | full | full | full | full | full | full | full | full |\n"
             "\n"
-            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour |\n"
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
-            "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback |\n"
+            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
             "\n"
             "Fallbacks:\n"
             "\n"
@@ -127,7 +131,8 @@ class BrigadeAdapterMatrixOfTheBuiltInAdaptersTest(AdapterMatrixTestCase):
             "- no actions: one raw record per line of the client's output\n"
             "- no step count: steps null and the run held on the clock alone\n"
             "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
-            "- no reset hour: now plus thirty minutes\n",
+            "- no reset hour: now plus thirty minutes\n"
+            "- no graceful stop: the hard cut at the wall-time limit\n",
         )
 
     def test_should_probe_each_adapter_with_its_settings_of_config_toml(self):
@@ -153,6 +158,7 @@ class BrigadeAdapterMatrixOfTheBuiltInAdaptersTest(AdapterMatrixTestCase):
                     "step_count": "full",
                     "tool_grants": "fallback",
                     "reset_hour": "fallback",
+                    "graceful_stop": "fallback",
                 },
                 "error": None,
             },
@@ -182,6 +188,7 @@ class BrigadeAdapterMatrixWithAnExecutableAdapterOnPathTest(AdapterMatrixTestCas
                         "step_count": "fallback",
                         "tool_grants": "fallback",
                         "reset_hour": "fallback",
+                        "graceful_stop": "fallback",
                     },
                     "error": None,
                 },
@@ -210,10 +217,10 @@ class BrigadeAdapterMatrixWhenAProbeFailsTest(AdapterMatrixTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(
             completed.stdout,
-            "adapter      audience          launch  result  resume    transcripts  actions   step count  tool grants  reset hour\n"
+            "adapter      audience          launch  result  resume    transcripts  actions   step count  tool grants  reset hour  graceful stop\n"
             "broken       supported client  error: client adapter broken answered probe: lacks the key version_argv\n"
-            "claude-code  supported client  full    full    full      full         full      full        full         full\n"
-            "fake         test suite        full    full    fallback  fallback     fallback  fallback    fallback     fallback\n"
+            "claude-code  supported client  full    full    full      full         full      full        full         full        full\n"
+            "fake         test suite        full    full    fallback  fallback     fallback  fallback    fallback     fallback    fallback\n"
             "\n" + TEXT_LEGEND,
         )
 
@@ -244,7 +251,7 @@ class BrigadeAdapterMatrixWhenAProbeFailsTest(AdapterMatrixTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertIn(
-            "| broken | error: client adapter broken answered probe: lacks the key version_argv |  |  |  |  |  |  |  |\n",
+            "| broken | error: client adapter broken answered probe: lacks the key version_argv |  |  |  |  |  |  |  |  |\n",
             completed.stdout,
         )
 
@@ -256,7 +263,7 @@ class BrigadeAdapterMatrixWhenAProbeFailsTest(AdapterMatrixTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertIn(
             f"| failing | error: {FAILING_CLIENT}/brigade-client-failing probe exited 3: no probe \\| no answer"
-            " |  |  |  |  |  |  |  |\n",
+            " |  |  |  |  |  |  |  |  |\n",
             completed.stdout,
         )
 

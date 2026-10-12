@@ -16,6 +16,7 @@ LAUNCH_DOCUMENT = {
     },
     "progress_file": "/state/runs/20261008T090000Z-b74a01/progress.md",
     "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
+    "stop_at": "2026-10-08T09:23:00Z",
 }
 
 
@@ -41,5 +42,6 @@ class LaunchArgvRequestTest(unittest.TestCase):
                 },
                 "progress_file": "/state/runs/20261008T090000Z-b74a01/progress.md",
                 "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
+                "stop_at": "2026-10-08T09:23:00Z",
             },
         )

@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
@@ -9,12 +10,16 @@ CLIENT_NAME = "fake"
 SETTING_SEPARATOR = ","
 REPLAYED_OPERATIONS = ["probe", "launch", "result"]
 SLOW_CLIENT_SCRIPT = (
-    'sleep "$1"; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+    'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
     ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
 )
 NO_DELAY = "0"
 NO_PROGRESS = ""
 NO_INTERVAL = "0"
+NO_SOFT_LIMIT = "0"
+GRACEFUL_STOP = "graceful_stop"
+STOP_AT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
 TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 RESUMED_RECORDING_SUFFIX = ".resumed.json"
@@ -36,8 +41,14 @@ def _probe(request: dict) -> dict:
     }
 
 
-def _build_argv(settings: dict, recording: str) -> list[str]:
-    if not any(name in settings for name in SLOW_CLIENT_SETTINGS):
+def _read_soft_limit(request: dict):
+    if request["stop_at"] is None or GRACEFUL_STOP not in _read_list_setting(request, "features"):
+        return None
+    return str(round(datetime.strptime(request["stop_at"], STOP_AT_FORMAT).replace(tzinfo=UTC).timestamp()))
+
+
+def _build_argv(settings: dict, recording: str, soft_limit) -> list[str]:
+    if soft_limit is None and not any(name in settings for name in SLOW_CLIENT_SETTINGS):
         return ["cat", "--", recording]
     return [
         "sh",
@@ -48,6 +59,7 @@ def _build_argv(settings: dict, recording: str) -> list[str]:
         settings.get("progress", NO_PROGRESS),
         recording,
         settings.get("interval", NO_INTERVAL),
+        soft_limit or NO_SOFT_LIMIT,
     ]
 
 
@@ -65,7 +77,7 @@ def _build_launch(request: dict) -> dict:
         raise BrigadeError("the fake client adapter needs recordings in the table [clients.fake] of config.toml")
     return {
         "schema_version": SCHEMA_VERSION,
-        "argv": _build_argv(request["settings"], _choose_recording(recordings, request)),
+        "argv": _build_argv(request["settings"], _choose_recording(recordings, request), _read_soft_limit(request)),
         "environment": {},
         "stdin": None,
         "session_id": request["session_id"],
