@@ -123,7 +123,7 @@ SCHEMA REQUEST
 		REQUIRED
 	FIELD STATUS planning|planned|running|paused|reporting|delivered|closed|cancelled
 		REQUIRED
-	FIELD MILESTONE string
+	FIELD WAVE string
 	FIELD BRANCH string
 	FIELD FROM @PATTERN
 	WHEN STATUS closed
