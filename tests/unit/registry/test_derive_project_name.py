@@ -6,6 +6,7 @@ from brigade.registry.derive_project_name import derive_project_name
 
 class DeriveProjectNameTest(unittest.TestCase):
     def test_should_turn_the_basename_into_an_identifier(self):
+        # Arrange
         rows = [
             ("/srv/brigade", "brigade"),
             ("/srv/my-app.v2", "my_app_v2"),

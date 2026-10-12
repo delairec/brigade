@@ -6,6 +6,7 @@ from brigade.system.name_toml_type import name_toml_type
 
 class NameTomlTypeTest(unittest.TestCase):
     def test_should_name_the_toml_type_of_a_parsed_value(self):
+        # Arrange
         rows = [
             ("a boolean", True, "a boolean"),
             ("an integer", 3, "an integer"),

@@ -181,6 +181,7 @@ class BrigadeProcessesShowTest(ProcessesTestCase):
         )
 
     def test_should_print_the_duration_of_a_record_with_no_exit_code_and_a_dash_without_either(self):
+        # Arrange
         rows = [
             ("a command not on PATH", COMMAND_ID, "not_found  3 ms  crontab -l\n"),
             ("a spawned run", TICK_ID, "exited  0  git status\nspawned  -  brigade run awawa-task --detach\n"),
@@ -194,6 +195,7 @@ class BrigadeProcessesShowTest(ProcessesTestCase):
                 self.assertEqual((completed.returncode, completed.stdout), (0, expected), completed.stderr)
 
     def test_should_exit_1_naming_an_id_no_trail_holds(self):
+        # Arrange
         rows = [("an unknown id", UNKNOWN_ID), ("a path to a trail", f"../runs/{RUN_ID}")]
         for case, invocation_id in rows:
             with self.subTest(case=case):
@@ -260,6 +262,7 @@ class BrigadeProcessesUnreadableTrailTest(ProcessesTestCase):
 
 class BrigadeProcessesStrayFileTest(ProcessesTestCase):
     def test_should_leave_out_of_the_list_a_file_whose_name_is_no_instant(self):
+        # Arrange
         rows = [
             ("a note among the commands", Path("commands") / "notes.jsonl"),
             ("a note among the ticks", Path("ticks") / "notes.jsonl"),

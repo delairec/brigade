@@ -39,6 +39,7 @@ class ParseRoleFileTest(unittest.TestCase):
         )
 
     def test_should_refuse_a_file_it_cannot_read_a_front_matter_from(self):
+        # Arrange
         rows = [
             ("no opening line", "name: ada\n---\nbody\n", "has no front matter between two --- lines"),
             ("no closing line", "---\nname: ada\nbody\n", "has no front matter between two --- lines"),

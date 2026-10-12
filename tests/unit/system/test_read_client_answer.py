@@ -59,6 +59,7 @@ TRANSCRIPTS_WITHOUT_MESSAGE_USAGE = {
 
 class ReadClientAnswerTest(unittest.TestCase):
     def test_should_refuse_an_answer_lacking_a_key_of_the_contract_naming_the_adapter_and_the_key(self):
+        # Arrange
         cases = (
             (
                 "a launch without its session",

@@ -80,6 +80,7 @@ class ReadLoginEnvironmentTest(unittest.TestCase):
         )
 
     def test_should_answer_no_environment_when_gh_prints_no_token(self):
+        # Arrange
         rows = [
             ("gh refuses the login", "", 1),
             ("gh prints an empty line", "\n", 0),

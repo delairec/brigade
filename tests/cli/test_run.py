@@ -1104,6 +1104,7 @@ class BrigadeRunEndDeclarationTest(RunTestCase):
         self.assertEqual((document["segments"], document["outcome"]), (1, "failed"))
 
     def test_should_record_a_signal_naming_how_a_segment_ended_without_delivery(self):
+        # Arrange
         rows = [("handed over", "handed_over"), ("undeclared", "undeclared")]
         for case, outcome in rows:
             with self.subTest(case=case):

@@ -198,6 +198,7 @@ class BrigadeInitWhenAFileDiffersFromTheShippedOneTest(unittest.TestCase):
         self.root.cleanup()
 
     def test_should_leave_the_file_as_it_is_and_report_it_differing(self):
+        # Arrange
         rows = [
             ("schema", "_schema.awawa", SCHEMA_ENTRY),
             (".gitignore", ".gitignore", GITIGNORE_ENTRY),
@@ -299,6 +300,7 @@ class BrigadeInitWhenTheSchemaIsMissingFromAnExistingRepositoryTest(unittest.Tes
 
 class BrigadeInitWithoutAGitIdentityTest(unittest.TestCase):
     def test_should_exit_1_naming_the_missing_key_before_creating_anything(self):
+        # Arrange
         rows = [
             (
                 "user.name",

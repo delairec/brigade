@@ -53,6 +53,7 @@ class PollUntilSignalledTest(unittest.TestCase):
         self.assertEqual((signalled, poller.calls), (False, 3))
 
     def test_should_finish_the_poll_under_way_and_stop_on_a_signal(self):
+        # Arrange
         rows = [("SIGTERM", signal.SIGTERM), ("SIGINT", signal.SIGINT)]
         for name, stop_signal in rows:
             with self.subTest(signal=name):

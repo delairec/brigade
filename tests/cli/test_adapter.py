@@ -514,6 +514,7 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
         self.assertEqual(completed.stderr, "brigade adapter launch-argv: the request on stdin: lacks the key role\n")
 
     def test_should_name_the_file_a_launch_request_lacks(self):
+        # Arrange
         rows = [
             (
                 (
@@ -544,6 +545,7 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
                 self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
 
     def test_should_name_the_session_a_launch_or_a_resume_request_lacks(self):
+        # Arrange
         rows = [
             (
                 "launch-argv",
@@ -578,6 +580,7 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
                 self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
 
     def test_should_refuse_a_stop_instant_a_launch_or_a_resume_request_lacks_or_carries_as_no_text(self):
+        # Arrange
         rows = [
             (
                 "launch-argv",

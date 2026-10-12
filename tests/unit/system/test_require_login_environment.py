@@ -87,6 +87,7 @@ class RequireLoginEnvironmentWhenGhNeverPrintsTheTokenTest(RequireLoginEnvironme
         self.forge = ForgeDouble([NO_TOKEN, NO_TOKEN, NO_TOKEN])
 
     def test_should_stop_on_an_error_naming_the_login_and_the_attempts(self):
+        # Arrange
         rows = [
             (1, "gh printed no token for the login octo-bot, bound to verify, after 1 attempt"),
             (3, "gh printed no token for the login octo-bot, bound to verify, after 3 attempts"),

@@ -34,6 +34,7 @@ class ValidateDocumentWhenTheDocumentFitsItsShapeTest(unittest.TestCase):
 
 class ValidateDocumentWhenTheDocumentDepartsFromItsShapeTest(unittest.TestCase):
     def test_should_name_the_key_and_what_is_wrong_with_it(self):
+        # Arrange
         rows = [
             (
                 "a missing key",

@@ -6801,7 +6801,7 @@ TASK B115
 TASK B122
 	TITLE "a guard holds every test that prepares something before its first delimiter to open on #"
 		+ "Arrange"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "tests"
 	ROLE ada
@@ -6810,11 +6810,21 @@ TASK B122
 		+ "before its first # Arrange or # Act comment; a method whose first statement is a for or"
 		+ "with block whose own body opens on such a comment passes, and rows bound above that"
 		+ "block are flagged"
+		IMPL "tests/guards/find_preparations_before_delimiters.py::def"
+			+ "find_preparations_before_delimiters(tests_root: Path) -> list[str]:"
+		IMPL "tests/guards/find_preparations_before_delimiters.py::def _opens_on_a_delimiter(block:"
+			+ "ast.AST, delimiter_lines: list[int]) -> bool:"
 	SPEC "rows of the guard's own test feed it sources under subTest: a body opening on # Arrange"
 		+ "or on # Act passes, rows above # Arrange are flagged, a for over subTest opening on #"
-		+ "Act passes, the same loop under rows bound above it is flagged"
+		+ "Act passes, the same loop under rows bound above it is flagged, rows above # Arrange in"
+		+ "a test below one opening on # Arrange are flagged"
+		IMPL "tests/guards/test_preparations_before_delimiters.py::class"
+			+ "PreparationsBeforeDelimitersGuardTest(unittest.TestCase):"
 	SPEC "no test of tests/ is flagged by that guard: the methods it flags are brought to it in the"
 		+ "same pull request"
+		IMPL "tests/guards/test_preparations_before_delimiters.py::def"
+			+ "test_should_find_no_test_preparing_something_before_its_first_delimiter(self):"
+	DELIVERED_BY 114
 	RATIONALE "the review of #92 found the rows of a new test of tests/cli/test_run.py standing"
 		+ "above its first delimiter, against the rule test_aaa_structure of the instructions"
 		+ "corpus, under which # Arrange may be omitted when there is nothing to prepare; the five"

@@ -18,6 +18,7 @@ class SubprocessUsesOfThePackageTest(unittest.TestCase):
 
 class SubprocessUsesGuardTest(unittest.TestCase):
     def test_should_flag_a_subprocess_import_outside_the_system_package_and_a_shell_anywhere(self):
+        # Arrange
         rows = [
             ("brigade/commands/doctor.py", "import subprocess\n", "brigade/commands/doctor.py:1 imports subprocess"),
             (
@@ -65,6 +66,7 @@ class SubprocessUsesGuardTest(unittest.TestCase):
                 self.assertEqual(violations, [expected_violation])
 
     def test_should_let_the_system_package_import_subprocess_without_a_shell(self):
+        # Arrange
         rows = [
             ("brigade/system/run_process.py", "import subprocess\nsubprocess.run(argv, shell=False)\n"),
             ("brigade/system/process/wait_within_limit.py", "from subprocess import Popen, TimeoutExpired\n"),

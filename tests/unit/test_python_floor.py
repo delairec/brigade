@@ -5,6 +5,7 @@ from brigade.python_floor import refuse_python_below_floor
 
 class PythonFloorTest(unittest.TestCase):
     def test_should_refuse_to_run_naming_the_floor_and_the_running_version_below_it(self):
+        # Arrange
         rows = [
             ((3, 11, 3), "brigade needs Python 3.11.4 or later; this is Python 3.11.3"),
             ((3, 10, 14), "brigade needs Python 3.11.4 or later; this is Python 3.10.14"),
@@ -21,6 +22,7 @@ class PythonFloorTest(unittest.TestCase):
 
 class PythonFloorWhenTheRunningVersionReachesItTest(unittest.TestCase):
     def test_should_let_brigade_run(self):
+        # Arrange
         let_through = None
         rows = [(3, 11, 4), (3, 13, 5)]
         for running_version in rows:

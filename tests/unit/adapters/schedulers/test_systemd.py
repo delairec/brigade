@@ -28,6 +28,7 @@ class ReadStatusOfAnInstalledTimerTest(unittest.TestCase):
         self.root.cleanup()
 
     def test_should_read_no_next_activation_when_systemctl_names_none(self):
+        # Arrange
         rows = [
             ("systemctl failing", 1, "Failed to connect to bus\n"),
             ("an empty answer", 0, "\n"),

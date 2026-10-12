@@ -28,6 +28,7 @@ class ReadProjectFieldTest(unittest.TestCase):
         self.assertEqual(client, "fake")
 
     def test_should_read_nothing_when_the_project_is_absent_or_lacks_the_field(self):
+        # Arrange
         rows = [
             ("no project", NO_PROJECT, CLIENT_FIELD),
             ("no such field", _create_project(EntityField(name=PATH_FIELD, value="/srv/brigade")), CLIENT_FIELD),

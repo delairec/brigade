@@ -238,6 +238,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
         )
 
     def test_should_name_the_reason_a_cut_segment_is_left_unmeasured(self):
+        # Arrange
         rows = [
             (
                 "a client naming no session at launch",
@@ -307,6 +308,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
 
 class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
     def test_should_name_the_stop_and_the_reason_a_stopped_segment_is_left_unmeasured(self):
+        # Arrange
         rows = [
             (
                 "a client stopped while it ran, naming no session at launch",
@@ -425,6 +427,7 @@ def _create_failure(session_id: str | None, usage: TokenUsage | None, message: s
 
 class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTest(unittest.TestCase):
     def test_should_name_the_failure_of_the_adapter_and_keep_what_the_transcripts_measured(self):
+        # Arrange
         parse_failure = "client adapter claude-code answered parse-result: lacks the key outcome"
         usage = TokenUsage(input_tokens=12, output_tokens=840, cache_creation_input_tokens=0, cache_read_input_tokens=0)
         rows = [

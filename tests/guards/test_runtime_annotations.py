@@ -18,6 +18,7 @@ class RuntimeAnnotationsOfThePackageTest(unittest.TestCase):
 
 class RuntimeAnnotationsGuardTest(unittest.TestCase):
     def test_should_flag_a_runtime_parameter_without_its_annotation(self):
+        # Arrange
         rows = [
             (
                 "a public function",
@@ -74,6 +75,7 @@ class RuntimeAnnotationsGuardTest(unittest.TestCase):
                 self.assertEqual(violations, [expected_violation])
 
     def test_should_let_a_runtime_annotated_as_a_runtime_and_a_function_taking_none_pass(self):
+        # Arrange
         rows = [
             ("an annotated runtime", "def read_projects(runtime: Runtime) -> None:\n    pass\n"),
             ("no runtime", "def plan(snapshot) -> None:\n    pass\n"),

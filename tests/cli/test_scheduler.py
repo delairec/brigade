@@ -257,6 +257,7 @@ class BrigadeSchedulerInstallWithTheLoopConfiguredTest(SchedulerTestCase):
 
 class BrigadeSchedulerInstallWithoutTheSchedulerKeyTest(SchedulerTestCase):
     def test_should_choose_systemd_where_the_user_instance_runs_else_cron(self):
+        # Arrange
         rows = [
             ("a running user instance", [SYSTEMD_USER_MANAGER, CRONTAB], "running", "systemd"),
             ("a degraded user instance", [SYSTEMD_USER_MANAGER, CRONTAB], "degraded", "systemd"),
@@ -339,6 +340,7 @@ class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSignTest(S
 
 class BrigadeSchedulerInstallWhenTheConfigurationNamesAnUnknownSchedulerTest(SchedulerTestCase):
     def test_should_exit_1_naming_the_scheduler(self):
+        # Arrange
         rows = [
             ('scheduler = "launchd"\n', "brigade scheduler install: no scheduler plugin launchd\n"),
             ('scheduler = "data"\n', "brigade scheduler install: no scheduler plugin data\n"),
@@ -398,6 +400,7 @@ class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectoryTest(Schedule
 
 class BrigadeSchedulerInstallOverAUnitItCannotWriteTest(SchedulerTestCase):
     def test_should_exit_1_naming_the_unit_it_cannot_write(self):
+        # Arrange
         rows = ["brigade.service", "brigade.timer"]
         for unit in rows:
             with self.subTest(unit=unit):
@@ -440,6 +443,7 @@ class BrigadeSchedulerInstallBeforeInitTest(SchedulerTestCase):
 
 class BrigadeSchedulerStatusWhenNothingIsInstalledTest(SchedulerTestCase):
     def test_should_report_none_and_no_tick_yet_and_exit_0(self):
+        # Arrange
         rows = [("every tool", [SYSTEMD_USER_MANAGER, CRONTAB]), ("no tool", [])]
         for machine, path_directories in rows:
             with self.subTest(machine=machine):

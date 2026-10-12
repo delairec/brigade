@@ -433,6 +433,7 @@ class RunSegmentStepsTest(unittest.TestCase):
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
 
     def test_should_leave_the_steps_uncounted_with_their_reason(self):
+        # Arrange
         rows = [
             (ClientDouble, False, "the client reads no transcript"),
             (
@@ -594,6 +595,7 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         self.assertIsNone(record.cost_usd)
 
     def test_should_leave_a_cut_segment_unmeasured_with_its_reason(self):
+        # Arrange
         rows = [
             (ClientDouble, True, "the client names no session at launch"),
             (ClientAnsweringItsSessionDouble, False, "the client reads no transcript"),
@@ -910,6 +912,7 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
         self.segment_result = run_directory / "segments" / "1" / "result.json"
 
     def test_should_end_the_segment_failed_naming_the_adapter_the_operation_and_the_problem(self):
+        # Arrange
         rows = [
             (
                 ClientAnsweringLaunchArgvWithoutSessionDouble,
@@ -946,6 +949,7 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
                 )
 
     def test_should_record_the_failure_of_the_adapter_apart_from_the_result_of_the_client(self):
+        # Arrange
         rows = [
             (
                 ClientAnsweringLaunchArgvWithoutSessionDouble,
@@ -1020,6 +1024,7 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
         self.assertEqual((record.measured_ms, record.result.duration_ms), (4200, 4200))
 
     def test_should_write_the_failed_result_of_the_segment(self):
+        # Arrange
         rows = [
             (
                 ClientAnsweringLaunchArgvWithoutSessionDouble,

@@ -112,6 +112,7 @@ class RemoveExpiredTrailsOfConfiguredDaysTest(RemoveExpiredTrailsTestCase):
         self.assertTrue(expired.exists())
 
     def test_should_keep_every_trail_when_trail_days_is_no_integer_of_1_or_more(self):
+        # Arrange
         rows = [
             ("zero", "trail_days = 0\n"),
             ("a string", 'trail_days = "7"\n'),

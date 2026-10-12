@@ -100,6 +100,7 @@ class TickLoopTest(unittest.TestCase):
 
 class TickWithoutAKnownModeTest(unittest.TestCase):
     def test_should_refuse_the_mode_without_entering_the_loop(self):
+        # Arrange
         rows = [
             (None, "unknown mode None: --once, --dry-run or --loop"),
             ("weekly", "unknown mode 'weekly': --once, --dry-run or --loop"),

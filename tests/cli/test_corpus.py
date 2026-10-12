@@ -204,6 +204,7 @@ class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
 
 class BrigadeCorpusOnWhatItCannotReadTest(CorpusTestCase):
     def test_should_exit_1_naming_what_it_cannot_read(self):
+        # Arrange
         rows = [
             ("an unknown project", ("ghost", "--ref", "main"), "brigade corpus: @PROJECT.ghost is not registered\n"),
             (

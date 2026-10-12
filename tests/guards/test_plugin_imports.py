@@ -18,6 +18,7 @@ class PluginImportsOfThePackageTest(unittest.TestCase):
 
 class PluginImportsGuardTest(unittest.TestCase):
     def test_should_flag_a_static_import_of_a_plugin_package_from_outside_it(self):
+        # Arrange
         rows = [
             (
                 "brigade/commands/doctor.py",
@@ -55,6 +56,7 @@ class PluginImportsGuardTest(unittest.TestCase):
                 self.assertEqual(violations, [expected_violation])
 
     def test_should_let_a_plugin_import_its_own_package_and_the_core_and_the_resolver_import_by_name(self):
+        # Arrange
         rows = [
             (
                 "brigade/adapters/test_clients/fake.py",

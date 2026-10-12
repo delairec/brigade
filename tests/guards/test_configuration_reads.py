@@ -18,6 +18,7 @@ class ConfigurationReadsOfThePackageTest(unittest.TestCase):
 
 class ConfigurationReadsGuardTest(unittest.TestCase):
     def test_should_flag_a_configuration_read_below_the_commands(self):
+        # Arrange
         rows = [
             (
                 "brigade/roles/resolve_role.py",
@@ -72,6 +73,7 @@ class ConfigurationReadsGuardTest(unittest.TestCase):
                 self.assertEqual(violations, [expected_violation])
 
     def test_should_let_the_commands_and_the_readers_read(self):
+        # Arrange
         rows = [
             ("brigade/commands/doctor.py", "configuration = read_configuration(runtime.paths.configuration_file)\n"),
             ("brigade/system/read_optional_configuration.py", "configuration = read_configuration(path)\n"),

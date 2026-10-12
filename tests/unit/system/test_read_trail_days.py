@@ -26,6 +26,7 @@ class ReadTrailDaysTest(unittest.TestCase):
         self.assertEqual(trail_days, 30)
 
     def test_should_refuse_a_value_that_is_no_integer_of_1_or_more_naming_the_key_and_the_file(self):
+        # Arrange
         rows = [
             ("zero", 0, "trail_days is 0, not 1 or more, in /home/ada/.config/brigade/config.toml"),
             ("a negative count", -3, "trail_days is -3, not 1 or more, in /home/ada/.config/brigade/config.toml"),

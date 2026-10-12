@@ -35,6 +35,7 @@ class ReadHeartbeatTest(unittest.TestCase):
         self.assertEqual(last_tick, Heartbeat(ts="2026-10-06T12:00:00Z", duration_ms=4, actions_applied=2))
 
     def test_should_refuse_a_file_that_is_not_a_heartbeat_naming_it(self):
+        # Arrange
         rows = [
             (
                 "an unknown version",

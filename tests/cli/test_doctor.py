@@ -198,6 +198,7 @@ class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
 
 class BrigadeDoctorWhenAPrerequisiteFailsTest(DoctorTestCase):
     def test_should_report_the_finding_and_exit_1(self):
+        # Arrange
         rows = [
             (
                 "git missing",
@@ -273,6 +274,7 @@ class BrigadeDoctorWhenAToolFailsTest(DoctorTestCase):
 
 class BrigadeDoctorWhenAnOptionalItemIsMissingTest(DoctorTestCase):
     def test_should_report_a_warning_with_its_fallback_and_exit_0(self):
+        # Arrange
         rows = [
             (
                 "systemctl missing",
@@ -425,6 +427,7 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
         )
 
     def test_should_report_a_finding_when_the_probe_fails(self):
+        # Arrange
         rows = [
             ("the client executable missing", 'client = "claude-code"\n', "claude-code: claude not on PATH"),
             (
@@ -475,6 +478,7 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
         )
 
     def test_should_report_a_finding_naming_a_trail_days_that_is_no_integer_of_1_or_more(self):
+        # Arrange
         rows = [
             ("zero", "trail_days = 0\n", f"trail_days is 0, not 1 or more, in {self.configuration}"),
             ("a string", 'trail_days = "7"\n', f"trail_days is a string, not an integer, in {self.configuration}"),
@@ -501,6 +505,7 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
                 )
 
     def test_should_report_a_finding_naming_a_journal_poll_that_is_no_positive_number(self):
+        # Arrange
         rows = [
             ("zero", "journal_poll_s = 0\n", f"journal_poll_s is 0, not a positive number, in {self.configuration}"),
             (
@@ -573,6 +578,7 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
 
 class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
     def test_should_report_the_error_of_the_one_read_in_each_check_that_needs_the_configuration(self):
+        # Arrange
         rows = [("client", CLIENT_ENTRY, "finding"), ("instructions", INSTRUCTIONS_ENTRY, "warning")]
         self.write_configuration('client = "claude-code\n')
         for check, entry, expected_state in rows:
@@ -650,6 +656,7 @@ class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
         )
 
     def test_should_report_whether_the_configured_corpus_lints_clean(self):
+        # Arrange
         rows = [
             ("a corpus that lints clean", CLEAN_AGENT, "ok", "lint --strict clean in"),
             ("a corpus with an error", AGENT_LACKING_ITS_REASONING, "warning", "lint --strict fails in"),

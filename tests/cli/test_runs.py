@@ -264,6 +264,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
         )
 
     def test_should_exit_1_naming_the_line_of_the_journal_that_is_no_record_with_log(self):
+        # Arrange
         rows = [
             ("a line of no JSON", "Reading the task\n", "not a JSON document"),
             ("a record lacking its time", '{"schema_version": 1, "segment": 1}\n', "lacks the key at"),
@@ -286,6 +287,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                 )
 
     def test_should_exit_1_naming_an_unknown_run(self):
+        # Arrange
         rows = [("an unknown id", UNKNOWN_RUN), ("a path", "../runs")]
         for case, run_id in rows:
             with self.subTest(case=case):
@@ -531,6 +533,7 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
         self.assertEqual(stdout, "\nstate      running\noutcome    -\n")
 
     def test_should_exit_0_on_a_signal_and_leave_the_run_running(self):
+        # Arrange
         rows = [("SIGINT", signal.SIGINT), ("SIGTERM", signal.SIGTERM)]
         for name, stop_signal in rows:
             with self.subTest(signal=name):
@@ -578,6 +581,7 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
         )
 
     def test_should_exit_as_brigade_run_does_by_the_outcome_of_the_run(self):
+        # Arrange
         rows = [
             ("done", DONE_RESULT, 0, "outcome    done"),
             ("failed", {**TURN_LIMIT_RESULT, "error_class": "execution"}, 1, "outcome    failed"),
