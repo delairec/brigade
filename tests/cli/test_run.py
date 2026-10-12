@@ -656,7 +656,7 @@ class BrigadeRunHandOverTest(RunTestCase):
         self.assertEqual(completed.returncode, 12, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["segments"], 1)
 
-    def test_should_record_a_signal_naming_the_procedure_the_run_and_the_budget(self):
+    def test_should_record_the_budget_exceeded_and_the_step_cap_reached_naming_the_procedure_and_the_run(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT)
 
@@ -665,6 +665,56 @@ class BrigadeRunHandOverTest(RunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 12, completed.stderr)
+        run = json.loads(completed.stdout)["run"]
+        [exceeded, reached] = self.read_events("signal.recorded")
+        self.assertRegex(exceeded.pop("ts"), INSTANT_PATTERN)
+        self.assertRegex(reached.pop("ts"), INSTANT_PATTERN)
+        self.assertEqual(
+            [exceeded, reached],
+            [
+                {
+                    "schema_version": 1,
+                    "event": "signal.recorded",
+                    "signal": "budget_exceeded",
+                    "project": None,
+                    "procedure": "deliver",
+                    "run": run,
+                    "segment": 1,
+                    "budget": 75,
+                    "steps": 94,
+                },
+                {
+                    "schema_version": 1,
+                    "event": "signal.recorded",
+                    "signal": "budget_reached",
+                    "project": None,
+                    "procedure": "deliver",
+                    "run": run,
+                    "segment": 1,
+                    "budget": 75,
+                },
+            ],
+        )
+
+
+class BrigadeRunOverItsBudgetTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+
+    def run_deliver(self):
+        return self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json")
+
+    def test_should_end_done_and_record_the_steps_over_the_budget(self):
+        # Arrange
+        self.record("builder", {**DONE_RESULT, "steps": 76})
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["outcome"], "done")
         [signal] = self.read_events("signal.recorded")
         self.assertRegex(signal.pop("ts"), INSTANT_PATTERN)
         self.assertEqual(
@@ -672,14 +722,26 @@ class BrigadeRunHandOverTest(RunTestCase):
             {
                 "schema_version": 1,
                 "event": "signal.recorded",
-                "signal": "budget_reached",
+                "signal": "budget_exceeded",
                 "project": None,
                 "procedure": "deliver",
                 "run": json.loads(completed.stdout)["run"],
                 "segment": 1,
                 "budget": 75,
+                "steps": 76,
             },
         )
+
+    def test_should_record_no_signal_for_a_segment_at_exactly_its_budget(self):
+        # Arrange
+        self.record("builder", {**DONE_RESULT, "steps": 75})
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_events("signal.recorded"), [])
 
 
 class BrigadeRunOnTheClockTest(RunTestCase):
@@ -949,6 +1011,19 @@ class BrigadeRunWithAClientThatCountsNoStepsTest(RunTestCase):
         self.assertEqual(
             finished["nulls"]["main_steps"], "the client counts no steps and the client reads no transcript"
         )
+
+    def test_should_record_no_budget_signal_for_steps_it_does_not_count(self):
+        # Arrange
+        self.record("builder", {**DONE_RESULT, "steps": 76})
+
+        # Act
+        completed = self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json"
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_events("signal.recorded"), [])
 
 
 class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):

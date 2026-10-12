@@ -547,7 +547,7 @@ TASK B06
 		IMPL "brigade/runs/run_segments.py::def _describe_signal(plan: RunPlan, record:"
 			+ "SegmentRecord) -> SignalRecorded:"
 		IMPL "tests/cli/test_run.py::def"
-			+ "test_should_record_a_signal_naming_the_procedure_the_run_and_the_budget(self):"
+			+ "test_should_record_the_budget_exceeded_and_the_step_cap_reached_naming_the_procedure_and_the_run(self):"
 	SPEC "run.finished carries run, segment, procedure, slot, role, client, project, session,"
 		+ "steps, duration_ms, usage, outcome, error class and exit; a null field is named in nulls"
 		+ "with its reason"
@@ -4564,7 +4564,7 @@ TASK B85
 		IMPL "tests/cli/test_run.py::def"
 			+ "test_should_relaunch_a_segment_cut_on_the_clock_with_progress_up_to_two_hand_overs(self):"
 		IMPL "tests/cli/test_run.py::def"
-			+ "test_should_record_a_signal_naming_the_procedure_the_run_and_the_budget(self):"
+			+ "test_should_record_the_budget_exceeded_and_the_step_cap_reached_naming_the_procedure_and_the_run(self):"
 	DELIVERED_BY 89
 	RATIONALE "the ledger of 2026-10 holds, for segment 1 of run 20261007T105605Z-396068,"
 		+ "run.finished outcome wall_limit followed by signal.recorded budget_reached budget 75,"
@@ -5437,7 +5437,7 @@ TASK B102
 TASK B103
 	TITLE "A segment whose steps exceed its budget records a signal of its own, whatever its"
 		+ "outcome, and the step cap the Claude Code adapter passes holds"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
@@ -5446,18 +5446,34 @@ TASK B103
 		+ "steps and budget, whatever the client's error class, beside budget_reached when the"
 		+ "segment also reached the step cap; a segment whose steps are null appends none; the"
 		+ "outcome and the exit code of the run are unchanged"
+		IMPL "brigade/runs/run_segments.py::if finished.main_steps is not None and"
+			+ "finished.main_steps > plan.procedure.budget:"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_record_the_budget_exceeded_and_the_step_cap_reached_naming_the_procedure_and_the_run(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_record_no_budget_signal_for_steps_it_does_not_count(self):"
 	SPEC "signal.recorded gains the optional field steps, written on budget_exceeded alone and"
 		+ "absent from every other signal, as DESC 1 of the decision declaring the ledger events"
 		+ "states"
+		IMPL "brigade/ledger/signal_recorded.py::steps: int | None = None"
+		IMPL "tests/unit/ledger/test_signal_recorded.py::def"
+			+ "test_should_write_back_the_steps_of_a_segment_over_its_budget(self):"
 	SPEC "tests/cli runs brigade run as a subprocess with the fake client declaring step_count and"
 		+ "reporting one step more than the budget and no error: the run ends done, exit 0, and the"
 		+ "ledger holds the budget_exceeded signal with its steps and budget; at exactly the"
 		+ "budget, no such signal"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_end_done_and_record_the_steps_over_the_budget(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_record_no_signal_for_a_segment_at_exactly_its_budget(self):"
 	SPEC "the pull request states the cause of 57 turns under --max-turns 50, established by a run"
 		+ "of the client, num_turns counted otherwise than --max-turns or the cap not applied, and"
 		+ "corrects the computation of max_turns at brigade/adapters/clients/claude_code.py:65 so"
 		+ "that the step cap holds, or names the cause with its evidence when it lies in the"
 		+ "client, the computation then unchanged"
+		IMPL "brigade/adapters/clients/claude_code.py::max_turns = role[\"budget\"] +"
+			+ "math.ceil(role[\"budget\"] / TURN_MARGIN_DIVISOR)"
+	DELIVERED_BY 104
 	AFTER @TASK.B85
 	AFTER @TASK.B102
 	RATIONALE "run 20261007T175404Z-6108de, procedure review-pull-request, role reviewer, budget"

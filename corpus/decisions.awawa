@@ -2066,3 +2066,24 @@ DECISION ALedgerViewCountsARunOnceByItsLastSegmentAndSumsTheStepsOfItsMeasuredSe
 		+ "seule\": the steps to the first edit are partial only when a segment before the first"
 		+ "edit has no main_steps measured"
 		REF @TASK.B86
+
+DECISION TheStepCapOfClaudeCodeBoundsAnswersAndTheBudgetIsWatchedInSteps
+	TITLE "the --max-turns brigade passes to Claude Code caps the model's answers, not brigade's"
+		+ "steps; its computation stays the budget plus a quarter, and a segment over its budget in"
+		+ "steps is caught by the signal budget_exceeded"
+	STATUS active
+	DESC "Claude Code's --max-turns counts the answers of the model; its num_turns, like the steps"
+		+ "brigade counts, is one plus the tool results, so an answer carrying several tool calls"
+		+ "adds several steps and a single turn"
+		REF @DECISION.BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
+	DESC "binds @TASK.B103"
+		REF @TASK.B103
+	REJECTED "a --max-turns computed so that the steps hold under the budget: no value bounds the"
+		+ "steps, an answer carrying any number of tool calls"
+	REJECTED "reading num_turns as a count of answers, to blame the client for a cap not applied:"
+		+ "session eca43c28 made 12 answers under --max-turns 50"
+	RATIONALE "session eca43c28 of run 20261007T175404Z-6108de holds 12 distinct assistant message"
+		+ "ids, 56 tool calls and num_turns 57; Claude Code 2.1.296 under --max-turns 2 made 2"
+		+ "answers carrying 3 parallel tool calls and ended success with num_turns 4"
+	SOURCE "pull request #104, delivering @TASK.B103"
+		REF @TASK.B103
