@@ -6889,7 +6889,7 @@ TASK B138
 		+ "session, the usage and cost_usd stay read from the last event, and steps stays null"
 		+ "after a task notification, as today"
 		IMPL "brigade/adapters/clients/claude_code.py::def _sum_durations(result_events:"
-			+ "list[dict]) -> int:"
+			+ "list[dict]) -> int | None:"
 		IMPL "brigade/adapters/clients/claude_code.py::result = result_events[-1]"
 		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
 			+ "test_should_report_the_duration_of_the_whole_session_of_run_b4a356_across_its_two_result_events(self):"
@@ -6900,6 +6900,12 @@ TASK B138
 			+ "test_should_report_the_duration_of_the_whole_session_of_run_b4a356_across_its_two_result_events(self):"
 		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
 			+ "test_should_report_the_usage_and_the_cost_of_the_whole_session_of_run_2ee96f(self):"
+	SPEC "a result event that carries no duration_ms, or a null one, adds nothing to the sum, never"
+		+ "a TypeError; duration_ms is null when no result event of the stdout carries a number"
+		IMPL "brigade/adapters/clients/claude_code.py::durations = [event[\"duration_ms\"] for"
+			+ "event in result_events if event.get(\"duration_ms\") is not None]"
+		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
+			+ "test_should_sum_only_the_durations_the_result_events_carry(self):"
 	DELIVERED_BY 112
 	AFTER @TASK.B114
 	RATIONALE "verified by the session on 2026-10-12: a Claude Code session in -p stream-json mode"

@@ -129,8 +129,9 @@ def _read_result_events(stdout: str) -> list[dict]:
     return [event for event in events if event.get("type") == "result"]
 
 
-def _sum_durations(result_events: list[dict]) -> int:
-    return sum(event.get("duration_ms", 0) for event in result_events)
+def _sum_durations(result_events: list[dict]) -> int | None:
+    durations = [event["duration_ms"] for event in result_events if event.get("duration_ms") is not None]
+    return sum(durations) if durations else None
 
 
 def _sum_model_usage(model_usage: dict) -> dict:

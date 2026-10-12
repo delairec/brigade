@@ -729,6 +729,30 @@ class ClaudeCodeResultTest(unittest.TestCase):
             },
         )
 
+    def test_should_sum_only_the_durations_the_result_events_carry(self):
+        for case, stdout, expected in [
+            (
+                "no event carries a duration",
+                '{"type":"result","subtype":"success","is_error":false,"num_turns":2,"session_id":"s1"}\n'
+                '{"type":"result","subtype":"success","is_error":false,"num_turns":5,"session_id":"s1"}\n',
+                None,
+            ),
+            (
+                "one event carries a null duration",
+                '{"type":"result","subtype":"success","is_error":false,"duration_ms":null,"num_turns":2,'
+                '"session_id":"s1"}\n'
+                '{"type":"result","subtype":"success","is_error":false,"duration_ms":4562,"num_turns":1,'
+                '"session_id":"s1"}\n',
+                4562,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                result = parse_claude_output(stdout)
+
+                # Assert
+                self.assertEqual(result["duration_ms"], expected)
+
     def test_should_count_no_steps_for_a_result_that_follows_a_task_notification(self):
         # Arrange
         stdout = (
