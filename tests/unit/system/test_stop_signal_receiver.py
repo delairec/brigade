@@ -11,6 +11,12 @@ def signal_itself(stop_signal: int) -> None:
     os.kill(os.getpid(), stop_signal)
 
 
+def finish_a_write_while_signalled(receiver: StopSignalReceiver, written: list[str]) -> None:
+    with receiver.holding():
+        signal_itself(signal.SIGTERM)
+        written.append("the whole write")
+
+
 class StopSignalReceiverTestCase(unittest.TestCase):
     def setUp(self):
         self.handlers_before = (signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT))
@@ -74,6 +80,47 @@ class StopSignalReceivedWhileWaitingTest(StopSignalReceiverTestCase):
 
         # Assert
         self.assertTrue(receiver.requested)
+
+
+class StopSignalReceivedWhileHoldingTest(StopSignalReceiverTestCase):
+    def test_should_raise_once_the_hold_ends_within_the_wait(self):
+        # Arrange
+        receiver = StopSignalReceiver()
+        written = []
+
+        # Act
+        with receiver, receiver.raising(), self.assertRaises(StopRequested):
+            finish_a_write_while_signalled(receiver, written)
+
+        # Assert
+        self.assertEqual(written, ["the whole write"])
+
+    def test_should_raise_once_the_hold_ends_and_let_the_stop_under_way_finish(self):
+        # Arrange
+        receiver = StopSignalReceiver()
+        written = []
+
+        with receiver, receiver.raising():
+            with self.assertRaises(StopRequested):
+                finish_a_write_while_signalled(receiver, written)
+
+            # Act
+            signal_itself(signal.SIGINT)
+
+        # Assert
+        self.assertTrue(receiver.requested)
+
+    def test_should_record_the_stop_and_raise_nothing_outside_the_wait(self):
+        # Arrange
+        receiver = StopSignalReceiver()
+        written = []
+
+        # Act
+        with receiver:
+            finish_a_write_while_signalled(receiver, written)
+
+        # Assert
+        self.assertEqual((written, receiver.requested), (["the whole write"], True))
 
 
 class StopSignalReceiverLeftTest(StopSignalReceiverTestCase):

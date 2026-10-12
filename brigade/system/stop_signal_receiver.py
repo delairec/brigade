@@ -35,6 +35,18 @@ class StopSignalReceiver:
         finally:
             self._raising = False
 
+    @contextlib.contextmanager
+    def holding(self) -> Iterator[None]:
+        raising = self._raising
+        self._raising = False
+        try:
+            yield
+        finally:
+            self._raising = raising
+        if self._raising and self.requested:
+            self._raising = False
+            raise StopRequested
+
     def _receive(self, _received: int, _frame) -> None:
         self.requested = True
         if self._raising:

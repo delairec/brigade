@@ -164,7 +164,7 @@ def _record_stop_before_launch(number: int, session_id: str | None) -> SegmentRe
 def _wait_for_client(process, limit: WallLimit, on_poll, stop: StopSignalReceiver) -> tuple[int | None, str]:
     try:
         with stop.raising():
-            exit_code = wait_within_limit(process, limit, on_poll)
+            exit_code = wait_within_limit(process, limit, stop.holding()(on_poll))
     except StopRequested:
         stop_process_group(process, limit.grace_before_kill_s)
         return None, STOPPED

@@ -1,5 +1,7 @@
 import dataclasses
+import itertools
 import json
+import os
 import signal
 import subprocess
 import tempfile
@@ -616,6 +618,36 @@ class StopArrivingAfterTheSpawnDouble:
         return False
 
 
+class ClientStoppedWhileReadingActionsDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "actions":
+            os.kill(os.getpid(), signal.SIGTERM)
+        return super().answer(operation, request)
+
+
+class ProcessRunningPastAPollDouble:
+    pid = PID_HELD_BY_NO_PROCESS
+
+    def __init__(self):
+        self._answers = itertools.chain([self._keep_running], itertools.repeat(self._end_stopped))
+
+    def wait(self, timeout: float) -> int:
+        return next(self._answers)(timeout)
+
+    def _keep_running(self, timeout: float) -> int:
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _end_stopped(self, _timeout: float) -> int:
+        return -signal.SIGTERM
+
+
+class SpawnRunningPastAPollDouble:
+    def spawn(self, request):
+        request.stdout.write_text("Reading the task\n", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return ProcessRunningPastAPollDouble()
+
+
 class SpawnSleepingClientDouble:
     def __init__(self, test: unittest.TestCase):
         self.test = test
@@ -703,3 +735,34 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
         # Assert
         self.assertEqual(record.result.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+
+class RunSegmentStoppedWhileItsJournalIsWrittenTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "journal.jsonl"
+
+    def test_should_keep_in_the_journal_the_lines_the_stop_arrived_on(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=True, client_type=ClientStoppedWhileReadingActionsDouble)
+
+        # Act
+        with StopSignalReceiver() as stop:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnRunningPastAPollDouble()), stop)
+
+        # Assert
+        self.assertEqual(
+            _read_journal_records(self.journal),
+            [
+                {
+                    "schema_version": 1,
+                    "at": ANY,
+                    "segment": 1,
+                    "kind": "text",
+                    "summary": "Reading the task",
+                    "cut": False,
+                }
+            ],
+        )
