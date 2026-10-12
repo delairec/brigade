@@ -6591,3 +6591,165 @@ TASK B131
 	SOURCE "found on 2026-10-11 while resuming pull request #96, whose rebase onto main inherits"
 		+ "the failure; ratified by the user the same day"
 	DELIVERED_BY 101
+
+TASK B136
+	TITLE "The liveness of a run is read from the identity of its process, not from its pid alone,"
+		+ "so that a pid recycled after a reboot never shows a dead run running"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "record_run_pid records, with the pid of the run, what identifies its process: the start"
+		+ "time of the process, field 22 of /proc/<pid>/stat, and the boot id,"
+		+ "/proc/sys/kernel/random/boot_id"
+	SPEC "brigade runs list and brigade runs show read a run with no result.json as dead when its"
+		+ "pid is free, when the process holding the pid has another start time, or when the boot"
+		+ "id recorded is not the one of the running kernel; they read it running only when the pid"
+		+ "holds a process of the recorded identity"
+	SPEC "unit rows of tests/unit/runs/test_list_runs.py feed a pid file naming a living process"
+		+ "with another start time, and one recorded under another boot id: both runs are listed"
+		+ "dead; the rows of tests/cli/test_runs.py listing a detached run of the fake client"
+		+ "running, and a run whose process is gone dead, still pass"
+	RATIONALE "verified by the session on 2026-10-12: run 20261011T174055Z-9aa8e9 died at launch on"
+		+ "2026-10-11 19:40, its brigade.log reading client adapter vibe answered launch-argv:"
+		+ "lacks the key session_id, no result.json, its pid file holding 9574; the machine"
+		+ "rebooted on 2026-10-12 at 11:13 (uptime -s), pid 9574 is now Rider.Backend of the user's"
+		+ "JetBrains install, started 13:26, and brigade runs list shows the run running"
+	RATIONALE "brigade/runs/describe_run.py:22-31 at 80d5ea9, _is_alive, does os.kill(pid, 0)"
+		+ "alone: any living process holding the pid reads as the run, and a PermissionError reads"
+		+ "as running too; the pid is written through record_run_pid by"
+		+ "brigade/runs/create_run_directory.py:35, the running process, and"
+		+ "brigade/runs/detach_run.py:36, the parent of a detached run"
+	RATIONALE "DESC 4 of @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa reads"
+		+ "liveness from the pid and the result file, and DESC 2 of"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast has a run"
+		+ "whose pid lives without a result running; DESC 2 of"
+		+ "@DECISION.ThePidOfARunIsReplacedAtomically has runs list read dead a pid file that is"
+		+ "not digits: a pid file carrying the identity with the pid amends that DESC, a file of"
+		+ "its own next to pid leaves it; the refinement settles which, and what a pid file written"
+		+ "before this task, the pid alone, reads as"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+		REF @DECISION.ThePidOfARunIsReplacedAtomically
+	RATIONALE "no decision of the corpus names /proc:"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites rules that brigade installs on"
+		+ "any Linux, @DECISION.PythonStandardLibraryOnly the standard library alone, and the"
+		+ "O_APPEND alternative @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory"
+		+ "rejected cites Linux; /proc is the kernel's interface on every Linux and reads with the"
+		+ "standard library, so the proposal stands within the rulings, and a port to another"
+		+ "system is ruled nowhere"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+		REF @DECISION.PythonStandardLibraryOnly
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+	RATIONALE "no AFTER edge on the running wave: @TASK.B109 and @TASK.B114 edit run_segment.py and"
+		+ "the adapters, neither describe_run.py nor record_run_pid.py; brigade runs stop of"
+		+ "@TASK.B109 reads the pid of runs/<id>/pid, which the carrier of the identity chosen at"
+		+ "the refinement must keep readable"
+		REF @TASK.B109
+		REF @TASK.B114
+	SOURCE "the user's words of 2026-10-12, \"ok pour les drafts, on fera le refinement dans une"
+		+ "session fresh\", on the session's proposal of this task with @TASK.B137 and @TASK.B138"
+		REF @TASK.B137
+		REF @TASK.B138
+
+TASK B137
+	TITLE "An invalid answer of the client adapter to launch-argv or parse-result ends the run on"
+		+ "the outcome failed, with its run.finished and its result.json, instead of leaving it"
+		+ "dead with no result"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "the BrigadeError read_client_answer raises on the launch-argv or the parse-result answer"
+		+ "of a segment ends the segment and the run on the outcome failed: run.finished is"
+		+ "appended with outcome failed, segments/<n>/result.json and runs/<id>/result.json are"
+		+ "written with outcome failed and a message naming the adapter, the operation and the"
+		+ "problem, as client adapter vibe answered launch-argv: lacks the key session_id, and"
+		+ "brigade run exits 1, the code of failed; no further segment is launched"
+	SPEC "the operations a segment asks the client are launch-argv,"
+		+ "brigade/runs/run_segment.py:146, parse-result, :178, transcripts, :110, and actions,"
+		+ "through the segment journal; a failure of transcripts or of actions is caught today,"
+		+ "leaving the steps uncounted with their reason or the journal raw, and keeps that"
+		+ "behaviour; probe is asked at plan time, brigade/runs/plan_run.py:153, before the run"
+		+ "directory exists, and its failure is refused before any run is recorded, as today"
+	SPEC "a detached run whose adapter answers launch-argv invalid is listed finished with outcome"
+		+ "failed by brigade runs list, never dead, and brigade runs show prints its message"
+	SPEC "unit rows of tests/unit/runs/test_run_segment.py feed a client answering launch-argv"
+		+ "without session_id and parse-result without outcome, and pin the failed result and its"
+		+ "message; tests/cli prove through the fake client replaying an answer lacking a key that"
+		+ "such a run writes result.json, appends run.finished with outcome failed and exits 1"
+	AFTER @TASK.B109
+	AFTER @TASK.B114
+	RATIONALE "verified by the session on 2026-10-12 on run 20261011T174055Z-9aa8e9: the"
+		+ "launch-argv answer of the adapter vibe failed validation,"
+		+ "brigade/system/validate_document.py:48 raising DocumentInvalid, turned into a"
+		+ "BrigadeError by brigade/system/read_client_answer.py:27; brigade/runs/run_segment.py at"
+		+ "80d5ea9 catches a BrigadeError around the transcripts read alone, :111, so the error"
+		+ "left run_segment, run_segments and the run command, caught by brigade/cli.py:145, which"
+		+ "printed it to brigade.log and exited 1: no run.finished, no result.json, and the run"
+		+ "read dead once its process was gone"
+	RATIONALE "@DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity gives every end of a run"
+		+ "an outcome and a code, 1 failed being an error of the client; an adapter answering"
+		+ "outside its contract is one, and today it is the one end without an outcome"
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+	RATIONALE "after @TASK.B109 and @TASK.B114, which both edit run_segment.py; F0 runs them one at"
+		+ "a time"
+		REF @TASK.B109
+		REF @TASK.B114
+	SOURCE "the user's words of 2026-10-12, \"ok pour les drafts, on fera le refinement dans une"
+		+ "session fresh\", on the session's proposal of this task with @TASK.B136 and @TASK.B138"
+		REF @TASK.B136
+		REF @TASK.B138
+
+TASK B138
+	TITLE "The parse-result of the Claude Code adapter reads the duration of the whole session,"
+		+ "every result event summed, when a background command gives the session several result"
+		+ "events"
+	STATUS draft
+	MILESTONE @MILESTONE.F0
+	COMPONENT "adapters"
+	ROLE ada
+	SPEC "parse-result answers as duration_ms the sum of the duration_ms of every result event of"
+		+ "the stdout, 550962 on segments/1/stdout.log of run 20261012T113945Z-b4a356, two events,"
+		+ "and 443460 on that of run 20261012T111839Z-1a7eb6, three events; the outcome, the"
+		+ "session, the usage and cost_usd stay read from the last event"
+	SPEC "a unit row of tests/unit/adapters/clients/test_claude_code.py feeds two result events of"
+		+ "one session and pins duration_ms as their sum, the outcome and cost_usd of the last; the"
+		+ "rows of @TASK.B83 on the fixture result-after-task-notification.json still pass"
+	AFTER @TASK.B114
+	RATIONALE "verified by the session on 2026-10-12: a Claude Code session in -p stream-json mode"
+		+ "that waits on a background command emits one result event per turn, the later ones"
+		+ "carrying origin.kind task-notification; run 20261012T113945Z-b4a356 has 2 result events,"
+		+ "success num_turns 14 duration_ms 546400 then success num_turns 1 duration_ms 4562, its"
+		+ "result.json duration_ms 4562 and steps null, its run.finished main_steps 14 and"
+		+ "duration_ms 551712; run 20261012T111839Z-1a7eb6 has 3, num_turns 47, 1 and 3,"
+		+ "duration_ms 420455, 2078 and 20927, its result.json duration_ms 20927, its run.finished"
+		+ "main_steps 49 and duration_ms 776065; brigade/adapters/clients/claude_code.py:104-106 at"
+		+ "80d5ea9 reads the last result event alone"
+	RATIONALE "what each result event reports, read from the two stdout logs: cumulative over the"
+		+ "session, total_cost_usd, 0.5680226 then 0.5950198, duration_api_ms, 75795 then 80334,"
+		+ "and modelUsage, whose sums on the last event, 30, 4604, 38753 and 963979, equal the"
+		+ "usage of the two events added; per event, num_turns, duration_ms and usage, 26 then 4"
+		+ "input tokens"
+	RATIONALE "what the proposal of 2026-10-12 named beyond the duration is ruled already: usage"
+		+ "and cost_usd are read from modelUsage and total_cost_usd of the last event, cumulative,"
+		+ "SPEC 1 and 6 of @TASK.B83, and result.json of b4a356 holds the whole session's usage and"
+		+ "cost; steps is null after a task notification by SPEC 3 of @TASK.B83, and run.finished"
+		+ "counts main_steps from the transcripts for every client,"
+		+ "@DECISION.BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient, so steps"
+		+ "null against main_steps 14 is by design, and the sums of num_turns, 15 and 51, would not"
+		+ "equal main_steps 14 and 49 either; run.finished carries the wall time brigade measured,"
+		+ "SPEC 2 of @TASK.B83, so the two files agree on the duration to the second, not to the"
+		+ "millisecond; whether result.json should carry the sum of num_turns is for the refinement"
+		REF @TASK.B83
+		REF @DECISION.BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient
+	RATIONALE "the journal of 1a7eb6 read its first result event undeclared at 11:25:41Z, no"
+		+ "brigade-end line yet, and the last one done at 11:31:35Z: the journal reads each event"
+		+ "as it comes, and that is not a defect"
+	RATIONALE "after @TASK.B114, which changes the parse-result of the same adapter, soft_limit"
+		+ "from terminal_reason hook_stopped"
+		REF @TASK.B114
+	SOURCE "the user's words of 2026-10-12, \"ok pour les drafts, on fera le refinement dans une"
+		+ "session fresh\", on the session's proposal of this task with @TASK.B136 and @TASK.B137"
+		REF @TASK.B136
+		REF @TASK.B137
