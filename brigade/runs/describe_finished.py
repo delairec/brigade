@@ -4,7 +4,6 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_segment import (
     NO_SESSION_AT_LAUNCH,
-    NOT_LAUNCHED,
     STOPPED_BY_A_SIGNAL,
     STOPPED_OUTCOME,
     WALL_LIMIT_OUTCOME,
@@ -51,8 +50,8 @@ def _explain_ending_nulls(record: SegmentRecord, finished: RunFinished, ending_r
 def _choose_ending_reason(record: SegmentRecord, finished: RunFinished) -> str | None:
     if finished.outcome in ENDING_REASONS:
         return ENDING_REASONS[finished.outcome]
-    if record.uncounted == NOT_LAUNCHED:
-        return record.result.message
+    if record.adapter_failure is not None:
+        return record.adapter_failure
     return None
 
 

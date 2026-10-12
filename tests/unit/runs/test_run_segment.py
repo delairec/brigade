@@ -945,6 +945,30 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
                     ),
                 )
 
+    def test_should_record_the_failure_of_the_adapter_apart_from_the_result_of_the_client(self):
+        rows = [
+            (
+                ClientAnsweringLaunchArgvWithoutSessionDouble,
+                "client adapter double-client answered launch-argv: lacks the key session_id",
+            ),
+            (
+                ClientAnsweringParseResultWithoutOutcomeDouble,
+                "client adapter double-client answered parse-result: lacks the key outcome",
+            ),
+        ]
+        for client_type, expected_failure in rows:
+            with self.subTest(client=client_type.__name__):
+                # Arrange
+                plan = _create_plan(self.root, client_type=client_type)
+
+                # Act
+                record = run_segment(
+                    plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver()
+                )
+
+                # Assert
+                self.assertEqual(record.adapter_failure, expected_failure)
+
     def test_should_keep_the_exit_code_of_the_client_whose_result_the_adapter_failed_to_parse(self):
         # Arrange
         plan = _create_plan(self.root, client_type=ClientAnsweringParseResultWithoutOutcomeDouble)

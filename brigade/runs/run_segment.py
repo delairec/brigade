@@ -63,6 +63,7 @@ class SegmentRecord:
     cost_usd: float | None
     counted_steps: SessionSteps | None
     uncounted: str | None
+    adapter_failure: str | None
 
 
 def _compose_segment_brief(plan: RunPlan, number: int) -> str:
@@ -148,6 +149,7 @@ def _measure_ending(plan: RunPlan, runtime: Runtime, number: int, ending: RunRes
         cost_usd=None,
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
+        adapter_failure=None,
     )
 
 
@@ -160,6 +162,7 @@ def _record_ending_before_launch(number: int, outcome: str, message: str, sessio
         cost_usd=None,
         counted_steps=None,
         uncounted=NOT_LAUNCHED,
+        adapter_failure=None,
     )
 
 
@@ -193,7 +196,8 @@ def _run_process(
             ),
         )
     except BrigadeError as error:
-        return _record_ending_before_launch(number, FAILED_OUTCOME, str(error), None)
+        record = _record_ending_before_launch(number, FAILED_OUTCOME, str(error), None)
+        return dataclasses.replace(record, adapter_failure=str(error))
     request = SpawnRequest(
         argv=launch.argv,
         cwd=str(plan.worktree),
@@ -234,7 +238,8 @@ def _run_process(
         )
     except BrigadeError as error:
         ending = _describe_ending(FAILED_OUTCOME, str(error), launch.session_id, measured_ms)
-        return dataclasses.replace(_measure_ending(plan, runtime, number, ending), exit_code=exit_code)
+        record = _measure_ending(plan, runtime, number, ending)
+        return dataclasses.replace(record, exit_code=exit_code, adapter_failure=str(error))
     session_id = launch.session_id if answer.session_id is None else answer.session_id
     transcripts, uncounted = _read_transcripts(plan, runtime, session_id, NO_SESSION_REPORTED)
     return SegmentRecord(
@@ -245,6 +250,7 @@ def _run_process(
         cost_usd=answer.cost_usd,
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
+        adapter_failure=None,
     )
 
 

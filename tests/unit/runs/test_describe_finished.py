@@ -78,6 +78,7 @@ class DescribeFinishedTest(unittest.TestCase):
             cost_usd=3.63,
             counted_steps=SessionSteps(main_steps=42, total_steps=54),
             uncounted=None,
+            adapter_failure=None,
         )
 
         # Act
@@ -124,6 +125,7 @@ class DescribeFinishedTest(unittest.TestCase):
             cost_usd=None,
             counted_steps=None,
             uncounted="the client reads no transcript",
+            adapter_failure=None,
         )
 
         # Act
@@ -161,6 +163,7 @@ class DescribeFinishedTest(unittest.TestCase):
                     cost_usd=None,
                     counted_steps=None,
                     uncounted=uncounted,
+                    adapter_failure=None,
                 )
 
                 # Act
@@ -197,6 +200,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
             cost_usd=None,
             counted_steps=SessionSteps(main_steps=106, total_steps=106),
             uncounted=None,
+            adapter_failure=None,
         )
 
         # Act
@@ -291,6 +295,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                     cost_usd=None,
                     counted_steps=None,
                     uncounted=uncounted,
+                    adapter_failure=None,
                 )
 
                 # Act
@@ -353,6 +358,7 @@ class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
                     cost_usd=None,
                     counted_steps=None,
                     uncounted=uncounted,
+                    adapter_failure=None,
                 )
 
                 # Act
@@ -382,6 +388,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToLaunchItsClientTest(unittest
             cost_usd=None,
             counted_steps=None,
             uncounted="the client was never launched",
+            adapter_failure="client adapter claude-code answered launch-argv: lacks the key argv",
         )
 
         # Act
@@ -399,5 +406,113 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToLaunchItsClientTest(unittest
                 "usage": "the client was never launched",
                 "error_class": "client adapter claude-code answered launch-argv: lacks the key argv",
                 "exit": "client adapter claude-code answered launch-argv: lacks the key argv",
+            },
+        )
+
+
+def _create_failure(session_id: str | None, usage: TokenUsage | None, message: str) -> RunResult:
+    return RunResult(
+        outcome="failed",
+        steps=None,
+        usage=usage,
+        session_id=session_id,
+        duration_ms=4200,
+        error_class=None,
+        reset=None,
+        message=message,
+    )
+
+
+class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTest(unittest.TestCase):
+    def test_should_name_the_failure_of_the_adapter_and_keep_what_the_transcripts_measured(self):
+        parse_failure = "client adapter claude-code answered parse-result: lacks the key outcome"
+        usage = TokenUsage(input_tokens=12, output_tokens=840, cache_creation_input_tokens=0, cache_read_input_tokens=0)
+        rows = [
+            (
+                "transcripts read",
+                "a47607d0-5a3d-4910-8978-9aad5d0e7796",
+                usage,
+                SessionSteps(main_steps=3, total_steps=5),
+                None,
+                {"wave": NOT_IN_A_WAVE, "task": NOT_IN_A_WAVE, "error_class": parse_failure},
+            ),
+            (
+                "no transcript read",
+                "a47607d0-5a3d-4910-8978-9aad5d0e7796",
+                None,
+                None,
+                "the client reads no transcript",
+                {
+                    "wave": NOT_IN_A_WAVE,
+                    "task": NOT_IN_A_WAVE,
+                    "main_steps": "the client reads no transcript",
+                    "total_steps": "the client reads no transcript",
+                    "usage": "the client reads no transcript",
+                    "error_class": parse_failure,
+                },
+            ),
+            (
+                "no session named at launch",
+                None,
+                None,
+                None,
+                "the client names no session at launch",
+                {
+                    "wave": NOT_IN_A_WAVE,
+                    "task": NOT_IN_A_WAVE,
+                    "session": "the client names no session at launch",
+                    "main_steps": "the client names no session at launch",
+                    "total_steps": "the client names no session at launch",
+                    "usage": "the client names no session at launch",
+                    "error_class": parse_failure,
+                },
+            ),
+        ]
+        for case, session_id, measured_usage, counted_steps, uncounted, expected_nulls in rows:
+            with self.subTest(case):
+                # Arrange
+                record = SegmentRecord(
+                    number=1,
+                    result=_create_failure(session_id=session_id, usage=measured_usage, message=parse_failure),
+                    exit_code=0,
+                    measured_ms=4200,
+                    cost_usd=None,
+                    counted_steps=counted_steps,
+                    uncounted=uncounted,
+                    adapter_failure=parse_failure,
+                )
+
+                # Act
+                finished = describe_finished(_create_plan(), record)
+
+                # Assert
+                self.assertEqual(finished.nulls, expected_nulls)
+
+    def test_should_explain_the_nulls_of_a_client_answering_failed_itself_by_what_the_client_reported(self):
+        # Arrange
+        record = SegmentRecord(
+            number=1,
+            result=_create_failure(session_id="a47607d0-5a3d-4910-8978-9aad5d0e7796", usage=None, message="API error"),
+            exit_code=1,
+            measured_ms=4200,
+            cost_usd=None,
+            counted_steps=None,
+            uncounted="the client reads no transcript",
+            adapter_failure=None,
+        )
+
+        # Act
+        finished = describe_finished(_create_plan(), record)
+
+        # Assert
+        self.assertEqual(
+            finished.nulls,
+            {
+                "wave": NOT_IN_A_WAVE,
+                "task": NOT_IN_A_WAVE,
+                "main_steps": "the client reported no step count and the client reads no transcript",
+                "total_steps": "the client reads no transcript",
+                "usage": "the client reported no usage",
+                "error_class": "the client reported no error class",
             },
         )
