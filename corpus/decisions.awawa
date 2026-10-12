@@ -2107,19 +2107,3 @@ DECISION TheStepCapOfClaudeCodeBoundsAnswersAndTheBudgetIsWatchedInSteps
 		+ "answers carrying 3 parallel tool calls and ended success with num_turns 4"
 	SOURCE "pull request #104, delivering @TASK.B103"
 		REF @TASK.B103
-
-DECISION RunsShowPrintsTheMessageOfTheRunAndRunsListDoesNot
-	TITLE "brigade runs show prints the message of the run's result after its outcome, and brigade"
-		+ "runs list does not"
-	STATUS active
-	DESC "show_run reads the message from runs/<id>/result.json: run.message in the JSON document,"
-		+ "a message line after outcome in the text, - when the run holds none; describe_run,"
-		+ "shared by runs list and the --follow ending, carries no message"
-	REJECTED "the message in describe_run: runs list and the ending of --follow would carry the"
-		+ "message of every run, a column too long for a table"
-	REJECTED "a message line printed only when the run holds one: every other field of the summary"
-		+ "is printed, - when absent"
-	RATIONALE "the message names why a run failed, the adapter answering outside its contract among"
-		+ "them; it is read where one run is examined, not where all are listed"
-	SOURCE "pull request #113, delivering @TASK.B137"
-		REF @TASK.B137
