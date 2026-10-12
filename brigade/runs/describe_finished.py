@@ -35,8 +35,7 @@ def _explain_client_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFin
     return {field: reason for field, reason in reasons.items() if getattr(finished, field) is None}
 
 
-def _explain_ending_nulls(record: SegmentRecord, finished: RunFinished) -> dict:
-    ending_reason = ENDING_REASONS[finished.outcome]
+def _explain_ending_nulls(record: SegmentRecord, finished: RunFinished, ending_reason: str) -> dict:
     reasons = {
         "session": NO_SESSION_AT_LAUNCH,
         "main_steps": record.uncounted,
@@ -48,15 +47,24 @@ def _explain_ending_nulls(record: SegmentRecord, finished: RunFinished) -> dict:
     return {field: reason for field, reason in reasons.items() if getattr(finished, field) is None}
 
 
+def _choose_ending_reason(record: SegmentRecord, finished: RunFinished) -> str | None:
+    if finished.outcome in ENDING_REASONS:
+        return ENDING_REASONS[finished.outcome]
+    if record.adapter_failure is not None:
+        return record.adapter_failure
+    return None
+
+
 def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) -> dict:
     nulls = {}
     if finished.project is None:
         nulls["project"] = "no project given"
     nulls["wave"] = NOT_IN_A_WAVE
     nulls["task"] = NOT_IN_A_WAVE
-    if finished.outcome in ENDING_REASONS:
-        return {**nulls, **_explain_ending_nulls(record, finished)}
-    return {**nulls, **_explain_client_nulls(plan, record, finished)}
+    ending_reason = _choose_ending_reason(record, finished)
+    if ending_reason is None:
+        return {**nulls, **_explain_client_nulls(plan, record, finished)}
+    return {**nulls, **_explain_ending_nulls(record, finished, ending_reason)}
 
 
 def _choose_main_steps(plan: RunPlan, record: SegmentRecord) -> int | None:

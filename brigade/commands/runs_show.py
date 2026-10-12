@@ -15,7 +15,7 @@ from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
-SUMMARY_FIELDS = ("run", "procedure", "slot", "role", "project", "state", "outcome")
+SUMMARY_FIELDS = ("run", "procedure", "slot", "role", "project", "state", "outcome", "message")
 SUMMARY_WIDTH = max(len(field) for field in SUMMARY_FIELDS)
 ENDING_FIELDS = ("state", "outcome")
 SEGMENT_COLUMNS = ("segment", "outcome")

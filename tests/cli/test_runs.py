@@ -147,6 +147,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                     "project": None,
                     "state": "finished",
                     "outcome": "done",
+                    "message": None,
                 },
                 "segments": [{"segment": 1, "outcome": "done"}],
                 "journal": None,
@@ -172,6 +173,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                 "project    -",
                 "state      finished",
                 "outcome    done",
+                "message    -",
                 "",
                 "segment  outcome",
                 "1        done",
@@ -322,7 +324,10 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["run"]["state"], document["segments"], document["journal"]), ("dead", [], []))
+        self.assertEqual(
+            (document["run"]["state"], document["run"]["message"], document["segments"], document["journal"]),
+            ("dead", None, [], []),
+        )
 
 
 class BrigadeRunJournalOfAClientWithNoActionsOperationTest(RunsTestCase):
@@ -353,6 +358,46 @@ class BrigadeRunJournalOfAClientWithNoActionsOperationTest(RunsTestCase):
                     "cut": True,
                 }
             ],
+        )
+
+
+class BrigadeRunsOfADetachedRunWhoseClientAnsweredOutsideItsContractTest(RunsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record(
+            "builder",
+            {
+                "schema_version": 1,
+                "steps": 12,
+                "usage": None,
+                "session_id": "fake-session",
+                "duration_ms": 61000,
+                "cost_usd": 0.42,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+        self.run_id = self.run_deliver("--detach").stdout.strip()
+        self.wait_for_file(self.runs / self.run_id / "result.json")
+
+    def test_should_list_the_run_finished_on_the_outcome_failed(self):
+        # Act
+        completed = self.run_brigade("runs", "list", "--json")
+
+        # Assert
+        [listed] = json.loads(completed.stdout)["runs"]
+        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "failed"))
+
+    def test_should_show_the_message_naming_the_adapter_the_operation_and_the_problem(self):
+        # Act
+        completed = self.run_brigade("runs", "show", self.run_id)
+
+        # Assert
+        self.assertIn(
+            "message    client adapter fake answered parse-result: lacks the key outcome",
+            completed.stdout.splitlines(),
         )
 
 
@@ -524,7 +569,7 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
             completed.stdout,
             rf"^run        {run_id}\n"
             r"procedure  deliver\nslot       build\nrole       builder\nproject    -\n"
-            r"state      finished\noutcome    done\n\n"
+            r"state      finished\noutcome    done\nmessage    -\n\n"
             r"segment  outcome\n1        done\n\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Reading the task\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Writing the test\n"

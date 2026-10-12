@@ -1149,6 +1149,57 @@ class BrigadeRunEndDeclarationTest(RunTestCase):
         self.assertEqual(finished["outcome"], "turn_limit")
 
 
+class BrigadeRunOfAClientAnsweringParseResultOutsideItsContractTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record(
+            "builder",
+            {
+                "schema_version": 1,
+                "steps": 12,
+                "usage": None,
+                "session_id": "fake-session",
+                "duration_ms": 61000,
+                "cost_usd": 0.42,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+
+    def run_deliver(self):
+        return self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--json")
+
+    def test_should_exit_1_after_one_segment_ended_failed(self):
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["segments"], document["outcome"]), (1, "failed"))
+
+    def test_should_write_the_result_of_the_run_naming_the_adapter_the_operation_and_the_problem(self):
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        result = json.loads((self.runs / json.loads(completed.stdout)["run"] / "result.json").read_text())
+        self.assertEqual(
+            (result["outcome"], result["message"]),
+            ("failed", "client adapter fake answered parse-result: lacks the key outcome"),
+        )
+
+    def test_should_append_the_end_of_the_run_on_the_outcome_failed(self):
+        # Act
+        self.run_deliver()
+
+        # Assert
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["outcome"], "failed")
+
+
 class BrigadeRunWithAClientThatCountsNoStepsTest(RunTestCase):
     def setUp(self):
         super().setUp()

@@ -5,9 +5,11 @@ import os
 import signal
 import subprocess
 import tempfile
+import time
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest import mock
 from unittest.mock import ANY
 
 from brigade.errors import BrigadeError
@@ -153,6 +155,72 @@ class ClientRefusingToReadActionsDouble(ClientDouble):
         if operation == "actions":
             return {"schema_version": 1}
         return super().answer(operation, request)
+
+
+class ClientAnsweringLaunchArgvWithoutSessionDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "launch-argv":
+            return {
+                "schema_version": 1,
+                "argv": ["double-client", "--print"],
+                "environment": {},
+                "stdin": "the brief of the run",
+            }
+        return super().answer(operation, request)
+
+
+class ClientAnsweringParseResultWithoutOutcomeDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "parse-result":
+            return {
+                "schema_version": 1,
+                "steps": 12,
+                "usage": None,
+                "session_id": "session-b73",
+                "duration_ms": 4200,
+                "cost_usd": 0.42,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            }
+        return super().answer(operation, request)
+
+
+class ClientAnsweringItsSessionAndParseResultWithoutOutcomeDouble(
+    ClientAnsweringItsSessionDouble, ClientAnsweringParseResultWithoutOutcomeDouble
+):
+    pass
+
+
+class ClockDouble:
+    def __init__(self):
+        self.now_s = 1000.0
+
+    def read(self) -> float:
+        return self.now_s
+
+
+class ProcessExitingAfterAWhileDouble:
+    pid = 4242
+
+    def __init__(self, clock: ClockDouble, running_s: float):
+        self._clock = clock
+        self._running_s = running_s
+
+    def wait(self, **_limit) -> int:
+        self._clock.now_s += self._running_s
+        return 0
+
+
+class SpawnRunningAWhileDouble:
+    def __init__(self, clock: ClockDouble, running_s: float):
+        self._clock = clock
+        self._running_s = running_s
+
+    def spawn(self, request):
+        request.stdout.write_text("the client finished the task", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return ProcessExitingAfterAWhileDouble(self._clock, self._running_s)
 
 
 class ExitedProcessDouble:
@@ -831,3 +899,145 @@ class RunSegmentStoppedWhileItsJournalIsWrittenTest(unittest.TestCase):
                 }
             ],
         )
+
+
+class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        run_directory = self.root / "state" / "runs" / "20261007T090000Z-b73a01"
+        self.segment_result = run_directory / "segments" / "1" / "result.json"
+
+    def test_should_end_the_segment_failed_naming_the_adapter_the_operation_and_the_problem(self):
+        rows = [
+            (
+                ClientAnsweringLaunchArgvWithoutSessionDouble,
+                "client adapter double-client answered launch-argv: lacks the key session_id",
+            ),
+            (
+                ClientAnsweringParseResultWithoutOutcomeDouble,
+                "client adapter double-client answered parse-result: lacks the key outcome",
+            ),
+        ]
+        for client_type, expected_message in rows:
+            with self.subTest(client=client_type.__name__):
+                # Arrange
+                plan = _create_plan(self.root, client_type=client_type)
+
+                # Act
+                record = run_segment(
+                    plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver()
+                )
+
+                # Assert
+                self.assertEqual(
+                    record.result,
+                    RunResult(
+                        outcome="failed",
+                        steps=None,
+                        usage=None,
+                        session_id=None,
+                        duration_ms=ANY,
+                        error_class=None,
+                        reset=None,
+                        message=expected_message,
+                    ),
+                )
+
+    def test_should_record_the_failure_of_the_adapter_apart_from_the_result_of_the_client(self):
+        rows = [
+            (
+                ClientAnsweringLaunchArgvWithoutSessionDouble,
+                "client adapter double-client answered launch-argv: lacks the key session_id",
+            ),
+            (
+                ClientAnsweringParseResultWithoutOutcomeDouble,
+                "client adapter double-client answered parse-result: lacks the key outcome",
+            ),
+        ]
+        for client_type, expected_failure in rows:
+            with self.subTest(client=client_type.__name__):
+                # Arrange
+                plan = _create_plan(self.root, client_type=client_type)
+
+                # Act
+                record = run_segment(
+                    plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver()
+                )
+
+                # Assert
+                self.assertEqual(record.adapter_failure, expected_failure)
+
+    def test_should_keep_the_exit_code_of_the_client_whose_result_the_adapter_failed_to_parse(self):
+        # Arrange
+        plan = _create_plan(self.root, client_type=ClientAnsweringParseResultWithoutOutcomeDouble)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.exit_code, 0)
+
+    def test_should_end_the_segment_failed_without_spawning_the_client_whose_launch_the_adapter_failed_to_give(self):
+        # Arrange
+        spawn = SpawnDouble()
+        plan = _create_plan(self.root, client_type=ClientAnsweringLaunchArgvWithoutSessionDouble)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            (spawn.requests, record.result.outcome, record.exit_code, record.uncounted),
+            ([], "failed", None, "the client was never launched"),
+        )
+
+    def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
+        # Arrange
+        plan = _create_plan(
+            self.root, client_type=ClientAnsweringItsSessionAndParseResultWithoutOutcomeDouble, reads_transcripts=True
+        )
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.result.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
+        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+    def test_should_keep_the_time_measured_until_the_client_exited(self):
+        # Arrange
+        clock = ClockDouble()
+        plan = _create_plan(self.root, client_type=ClientAnsweringParseResultWithoutOutcomeDouble)
+        runtime = _create_runtime(self.root, SpawnRunningAWhileDouble(clock, running_s=4.2))
+
+        # Act
+        with mock.patch.object(time, "monotonic", clock.read):
+            record = run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual((record.measured_ms, record.result.duration_ms), (4200, 4200))
+
+    def test_should_write_the_failed_result_of_the_segment(self):
+        rows = [
+            (
+                ClientAnsweringLaunchArgvWithoutSessionDouble,
+                "client adapter double-client answered launch-argv: lacks the key session_id",
+            ),
+            (
+                ClientAnsweringParseResultWithoutOutcomeDouble,
+                "client adapter double-client answered parse-result: lacks the key outcome",
+            ),
+        ]
+        for client_type, expected_message in rows:
+            with self.subTest(client=client_type.__name__):
+                # Arrange
+                plan = _create_plan(self.root, client_type=client_type)
+
+                # Act
+                run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+                # Assert
+                document = json.loads(self.segment_result.read_text(encoding="utf-8"))
+                self.assertEqual((document["outcome"], document["message"]), ("failed", expected_message))

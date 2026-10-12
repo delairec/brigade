@@ -43,6 +43,7 @@ FIRST_SEGMENT = 1
 PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
 WALL_LIMIT_OUTCOME = "wall_limit"
 STOPPED_OUTCOME = "stopped"
+FAILED_OUTCOME = "failed"
 STOPPED_BY_A_SIGNAL = "stopped by a signal"
 NOT_LAUNCHED = "the client was never launched"
 NOT_MEASURED_MS = 0
@@ -62,6 +63,7 @@ class SegmentRecord:
     cost_usd: float | None
     counted_steps: SessionSteps | None
     uncounted: str | None
+    adapter_failure: str | None
 
 
 def _compose_segment_brief(plan: RunPlan, number: int) -> str:
@@ -147,18 +149,20 @@ def _measure_ending(plan: RunPlan, runtime: Runtime, number: int, ending: RunRes
         cost_usd=None,
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
+        adapter_failure=None,
     )
 
 
-def _record_stop_before_launch(number: int, session_id: str | None) -> SegmentRecord:
+def _record_ending_before_launch(number: int, outcome: str, message: str, session_id: str | None) -> SegmentRecord:
     return SegmentRecord(
         number=number,
-        result=_describe_ending(STOPPED_OUTCOME, STOPPED_BY_A_SIGNAL, session_id, NOT_MEASURED_MS),
+        result=_describe_ending(outcome, message, session_id, NOT_MEASURED_MS),
         exit_code=None,
         measured_ms=NOT_MEASURED_MS,
         cost_usd=None,
         counted_steps=None,
         uncounted=NOT_LAUNCHED,
+        adapter_failure=None,
     )
 
 
@@ -178,18 +182,22 @@ def _run_process(
     brief = _compose_segment_brief(plan, number)
     write_text_file(segment_directory / BRIEF_FILE, brief)
     progress_file = str(plan.run_directory / PROGRESS_FILE)
-    launch = _ask_client(
-        plan,
-        runtime,
-        LaunchArgvRequest(
-            worktree=str(plan.worktree),
-            brief=brief,
-            role=_describe_role(plan),
-            progress_file=progress_file,
-            session_id=str(uuid.uuid4()),
-            stop_at=decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s),
-        ),
-    )
+    try:
+        launch = _ask_client(
+            plan,
+            runtime,
+            LaunchArgvRequest(
+                worktree=str(plan.worktree),
+                brief=brief,
+                role=_describe_role(plan),
+                progress_file=progress_file,
+                session_id=str(uuid.uuid4()),
+                stop_at=decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s),
+            ),
+        )
+    except BrigadeError as error:
+        record = _record_ending_before_launch(number, FAILED_OUTCOME, str(error), None)
+        return dataclasses.replace(record, adapter_failure=str(error))
     request = SpawnRequest(
         argv=launch.argv,
         cwd=str(plan.worktree),
@@ -199,7 +207,7 @@ def _run_process(
         stderr=segment_directory / STDERR_FILE,
     )
     if stop.requested:
-        return _record_stop_before_launch(number, launch.session_id)
+        return _record_ending_before_launch(number, STOPPED_OUTCOME, STOPPED_BY_A_SIGNAL, launch.session_id)
     started = time.monotonic()
     process = runtime.spawn_process(request)
     journal = SegmentJournalWriter(plan, number, runtime, segment_directory / STDOUT_FILE)
@@ -218,15 +226,20 @@ def _run_process(
         return _measure_ending(
             plan, runtime, number, _describe_ending(WALL_LIMIT_OUTCOME, cut, launch.session_id, measured_ms)
         )
-    answer = _ask_client(
-        plan,
-        runtime,
-        ParseResultRequest(
-            exit_code=exit_code,
-            stdout=(segment_directory / STDOUT_FILE).read_text(encoding="utf-8", errors="replace"),
-            stderr=(segment_directory / STDERR_FILE).read_text(encoding="utf-8", errors="replace"),
-        ),
-    )
+    try:
+        answer = _ask_client(
+            plan,
+            runtime,
+            ParseResultRequest(
+                exit_code=exit_code,
+                stdout=(segment_directory / STDOUT_FILE).read_text(encoding="utf-8", errors="replace"),
+                stderr=(segment_directory / STDERR_FILE).read_text(encoding="utf-8", errors="replace"),
+            ),
+        )
+    except BrigadeError as error:
+        ending = _describe_ending(FAILED_OUTCOME, str(error), launch.session_id, measured_ms)
+        record = _measure_ending(plan, runtime, number, ending)
+        return dataclasses.replace(record, exit_code=exit_code, adapter_failure=str(error))
     session_id = launch.session_id if answer.session_id is None else answer.session_id
     transcripts, uncounted = _read_transcripts(plan, runtime, session_id, NO_SESSION_REPORTED)
     return SegmentRecord(
@@ -237,6 +250,7 @@ def _run_process(
         cost_usd=answer.cost_usd,
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
+        adapter_failure=None,
     )
 
 
