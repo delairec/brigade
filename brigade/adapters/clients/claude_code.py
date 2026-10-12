@@ -124,9 +124,14 @@ def _read_event(line: str) -> dict:
     return event
 
 
-def _read_result_object(stdout: str):
-    events = (_read_event(line) for line in reversed(stdout.splitlines()))
-    return next((event for event in events if event.get("type") == "result"), None)
+def _read_result_events(stdout: str) -> list[dict]:
+    events = (_read_event(line) for line in stdout.splitlines())
+    return [event for event in events if event.get("type") == "result"]
+
+
+def _sum_durations(result_events: list[dict]) -> int | None:
+    durations = [event["duration_ms"] for event in result_events if event.get("duration_ms") is not None]
+    return sum(durations) if durations else None
 
 
 def _sum_model_usage(model_usage: dict) -> dict:
@@ -194,9 +199,10 @@ def _read_steps(result: dict):
 
 
 def _parse_result(request: dict) -> dict:
-    result = _read_result_object(request["stdout"])
-    if result is None:
+    result_events = _read_result_events(request["stdout"])
+    if not result_events:
         return describe_unreadable_output(request["stderr"])
+    result = result_events[-1]
     message = result.get("result")
     error_class = _classify_error(result, message)
     return {
@@ -205,7 +211,7 @@ def _parse_result(request: dict) -> dict:
         "steps": _read_steps(result),
         "usage": _read_usage(result),
         "session_id": result.get("session_id"),
-        "duration_ms": result.get("duration_ms"),
+        "duration_ms": _sum_durations(result_events),
         "cost_usd": result.get("total_cost_usd"),
         "error_class": error_class,
         "reset": _read_reset(message) if error_class == "rate_limit" else None,

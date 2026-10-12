@@ -687,6 +687,76 @@ class ClaudeCodeResultTest(unittest.TestCase):
             },
         )
 
+    def test_should_report_the_duration_of_the_whole_session_of_run_b4a356_across_its_two_result_events(self):
+        # Arrange
+        stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":546400,"num_turns":14,'
+            '"result":"Le merge de la PR vous revient.\\n\\nbrigade-end: done",'
+            '"session_id":"f65cafc3-c2b8-4d3e-b155-441279cbd0a2","total_cost_usd":0.5680226,'
+            '"modelUsage":{"claude-opus-5-5":{"inputTokens":26,"outputTokens":4454,"cacheReadInputTokens":889673,'
+            '"cacheCreationInputTokens":37613,"costUSD":0.5680226}},"terminal_reason":"completed"}\n'
+            '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"La CI est verte."}]}}\n'
+            '{"type":"result","subtype":"success","is_error":false,"duration_ms":4562,"num_turns":1,'
+            '"result":"11 checks passés, 0 en échec, PR `MERGEABLE`.\\n\\nbrigade-end: done",'
+            '"session_id":"f65cafc3-c2b8-4d3e-b155-441279cbd0a2","total_cost_usd":0.5950198,'
+            '"modelUsage":{"claude-opus-5-5":{"inputTokens":30,"outputTokens":4604,"cacheReadInputTokens":963979,'
+            '"cacheCreationInputTokens":38753,"costUSD":0.5950198}},"terminal_reason":"completed",'
+            '"origin":{"kind":"task-notification","producer":"session-task"}}\n'
+        )
+
+        # Act
+        result = parse_claude_output(stdout)
+
+        # Assert
+        self.assertEqual(
+            result,
+            {
+                "schema_version": 1,
+                "outcome": "done",
+                "steps": None,
+                "usage": {
+                    "input_tokens": 30,
+                    "output_tokens": 4604,
+                    "cache_creation_input_tokens": 38753,
+                    "cache_read_input_tokens": 963979,
+                },
+                "session_id": "f65cafc3-c2b8-4d3e-b155-441279cbd0a2",
+                "duration_ms": 550962,
+                "cost_usd": 0.5950198,
+                "error_class": None,
+                "reset": None,
+                "message": None,
+            },
+        )
+
+    def test_should_sum_only_the_durations_the_result_events_carry(self):
+        for case, stdout, expected in [
+            (
+                "no event carries a duration",
+                (
+                    '{"type":"result","subtype":"success","is_error":false,"num_turns":2,"session_id":"s1"}\n'
+                    '{"type":"result","subtype":"success","is_error":false,"num_turns":5,"session_id":"s1"}\n'
+                ),
+                None,
+            ),
+            (
+                "one event carries a null duration",
+                (
+                    '{"type":"result","subtype":"success","is_error":false,"duration_ms":null,"num_turns":2,'
+                    '"session_id":"s1"}\n'
+                    '{"type":"result","subtype":"success","is_error":false,"duration_ms":4562,"num_turns":1,'
+                    '"session_id":"s1"}\n'
+                ),
+                4562,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                result = parse_claude_output(stdout)
+
+                # Assert
+                self.assertEqual(result["duration_ms"], expected)
+
     def test_should_count_no_steps_for_a_result_that_follows_a_task_notification(self):
         # Arrange
         stdout = (
