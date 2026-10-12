@@ -38,6 +38,7 @@ class BuildPathsTest(unittest.TestCase):
         )
 
     def test_should_fall_back_to_the_home_directories_and_the_default_search_path(self):
+        # Arrange
         rows = [
             ("unset", {"HOME": "/home/ada"}),
             ("empty", {"HOME": "/home/ada", "XDG_CONFIG_HOME": "", "XDG_STATE_HOME": "", "XDG_CACHE_HOME": ""}),
@@ -71,6 +72,7 @@ class BuildPathsTest(unittest.TestCase):
 
 class PathsSharedBySeveralComponentsTest(unittest.TestCase):
     def test_should_build_each_shared_file_and_directory_from_its_root(self):
+        # Arrange
         paths = Paths(
             config_root=Path("/srv/config/brigade"),
             state_root=Path("/srv/state/brigade"),

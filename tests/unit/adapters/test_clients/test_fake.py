@@ -293,6 +293,7 @@ class FakeResultTest(unittest.TestCase):
 
 class FakeUnsupportedOperationsTest(unittest.TestCase):
     def test_should_refuse_the_operations_it_does_not_replay(self):
+        # Arrange
         rows = ["resume-argv", "transcripts", "actions"]
         for operation in rows:
             with self.subTest(operation=operation):

@@ -18,6 +18,7 @@ class ResolverCallsOfThePackageTest(unittest.TestCase):
 
 class ResolverCallsGuardTest(unittest.TestCase):
     def test_should_flag_a_plugin_resolved_by_a_core_module(self):
+        # Arrange
         rows = [
             (
                 "brigade/system/ask_named_client.py",
@@ -49,6 +50,7 @@ class ResolverCallsGuardTest(unittest.TestCase):
                 self.assertEqual(violations, [expected_violation])
 
     def test_should_let_the_command_line_the_runtime_and_the_commands_resolve(self):
+        # Arrange
         rows = [
             ("brigade/cli.py", 'forge = runtime.resolve_plugin("forge", "github")\n'),
             ("brigade/runtime.py", "resolver = functools.partial(resolve_plugin, sources=sources)\n"),

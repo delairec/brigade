@@ -166,6 +166,7 @@ class BrigadeTickDryRunTest(TickTestCase):
 
 class BrigadeTickLoopTest(TickTestCase):
     def test_should_tick_at_once_and_exit_0_on_a_signal(self):
+        # Arrange
         rows = [("SIGTERM", signal.SIGTERM), ("SIGINT", signal.SIGINT)]
         for name, stop_signal in rows:
             with self.subTest(signal=name):

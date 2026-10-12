@@ -179,6 +179,7 @@ class SumSessionUsageOfRecordedSessionsTest(unittest.TestCase):
         )
 
     def test_should_sum_the_usage_of_a_recorded_session_over_its_distinct_messages(self):
+        # Arrange
         rows = [
             (
                 "a session cut at the wall-time limit",

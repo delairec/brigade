@@ -153,6 +153,7 @@ class ListRunsOfAFinishedRunTest(ListRunsTestCase):
 
 class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
     def test_should_refuse_a_run_record_naming_the_file_and_the_problem(self):
+        # Arrange
         rows = [
             ("a record that is not JSON", "{", "is not a run record: not a JSON document"),
             (

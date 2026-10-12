@@ -117,6 +117,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
         )
 
     def test_should_map_each_reasoning_level_to_its_default_model_and_effort(self):
+        # Arrange
         rows = [
             ("deepest", ["--model", "fable", "--effort", "max"]),
             ("deep", ["--model", "fable", "--effort", "high"]),
@@ -145,6 +146,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
         self.assertEqual(launch["argv"][9:13], ["--model", "sonnet", "--effort", "low"])
 
     def test_should_grant_the_tools_of_each_capability(self):
+        # Arrange
         rows = [
             (
                 ["read"],
@@ -188,6 +190,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 self.assertEqual(launch["argv"][-2:], ["--allowedTools", expected_tools])
 
     def test_should_cap_the_turns_at_the_budget_plus_a_quarter_rounded_up(self):
+        # Arrange
         rows = [(75, "94"), (40, "50"), (1, "2")]
         for budget, expected_max_turns in rows:
             with self.subTest(budget=budget):
@@ -237,6 +240,7 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
         )
 
     def test_should_print_nothing_before_the_stop_at_and_the_stop_once_it_has_passed(self):
+        # Arrange
         rows = [
             ("before", "2100-01-01T00:00:00Z", ""),
             (
@@ -453,6 +457,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
         )
 
     def test_should_read_the_reset_hour_in_each_form_a_limit_message_names_it(self):
+        # Arrange
         rows = [
             ("You've hit your limit · resets 3pm", {"hour": "15:00", "timezone": None}),
             ("5-hour limit reached ∙ resets 10:30am (UTC)", {"hour": "10:30", "timezone": "UTC"}),
@@ -813,6 +818,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
 
 class ClaudeCodeEndDeclarationTest(unittest.TestCase):
     def test_should_answer_the_outcome_the_last_line_of_the_final_message_declares(self):
+        # Arrange
         rows = [
             ("done", "Pull request #96 is open.\\nbrigade-end: done", "done"),
             ("handed over", "Progress written.\\nbrigade-end: handed_over", "handed_over"),
@@ -860,6 +866,7 @@ def read_claude_actions(output: str) -> dict:
 
 class ClaudeCodeActionsTest(unittest.TestCase):
     def test_should_name_each_tool_call_by_the_argument_that_identifies_it(self):
+        # Arrange
         rows = [
             (
                 "a path",
@@ -920,6 +927,7 @@ class ClaudeCodeActionsTest(unittest.TestCase):
         )
 
     def test_should_give_the_outcome_of_the_segment_for_the_result_event(self):
+        # Arrange
         rows = [
             (
                 "done",

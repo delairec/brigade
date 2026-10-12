@@ -414,6 +414,7 @@ class BrigadeRolesLintTest(RolesTestCase):
         )
 
     def test_should_fail_naming_the_file_and_the_key_of_a_role_file_off_its_declaration(self):
+        # Arrange
         rows = [
             (
                 "a model named",

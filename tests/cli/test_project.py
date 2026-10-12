@@ -547,6 +547,7 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
         self.assertEqual(self.registry.read_text().splitlines()[-1], "\tSTATUS active")
 
     def test_should_leave_a_project_already_in_that_status_as_it_is(self):
+        # Arrange
         rows = [
             ("pause", "paused", "@PROJECT.app is already paused\n", "3\n"),
             ("resume", "active", "@PROJECT.app is already active\n", "4\n"),
@@ -685,6 +686,7 @@ class BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):
 
 class BrigadeProjectBeforeInitTest(unittest.TestCase):
     def test_should_exit_1_naming_brigade_init(self):
+        # Arrange
         rows = [
             ("add", ("add", "/srv/app")),
             ("list", ("list",)),

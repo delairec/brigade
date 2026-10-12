@@ -79,7 +79,10 @@ class FakeAwawaTestCase(unittest.TestCase):
 
         class CallingAwawaTest(unittest.TestCase):
             def test_call(self):
+                # Arrange
                 install_fake_awawa(self, recordings, NO_REAL_AWAWA)
+
+                # Act
                 run_awawa(*arguments)
 
         result = unittest.TestResult()

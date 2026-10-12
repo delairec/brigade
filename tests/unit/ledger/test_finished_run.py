@@ -49,6 +49,7 @@ class FinishedRunTest(unittest.TestCase):
         self.assertEqual(last, resumed_segment)
 
     def test_should_sum_the_steps_of_its_measured_segments_and_be_partial_when_one_is_not_measured(self):
+        # Arrange
         rows = [
             ((create_segment(main_steps=40),), RunMeasure(value=40, partial=False)),
             ((create_segment(),), RunMeasure(value=None, partial=False)),
@@ -68,6 +69,7 @@ class FinishedRunTest(unittest.TestCase):
                 self.assertEqual(measure, expected_measure)
 
     def test_should_sum_the_oversized_output_steps_of_the_segments_reporting_them(self):
+        # Arrange
         rows = [
             ((create_segment(oversized_output_steps=1),), RunMeasure(value=1, partial=False)),
             (
@@ -89,6 +91,7 @@ class FinishedRunTest(unittest.TestCase):
                 self.assertEqual(measure, expected_measure)
 
     def test_should_count_the_steps_to_first_edit_from_the_start_of_the_run(self):
+        # Arrange
         rows = [
             ((create_segment(main_steps=40, steps_to_first_edit=12),), RunMeasure(value=12, partial=False)),
             ((create_segment(main_steps=40),), RunMeasure(value=None, partial=False)),

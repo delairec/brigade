@@ -5,6 +5,7 @@ from brigade.runs.decide_run_exit_code import decide_run_exit_code
 
 class DecideRunExitCodeTest(unittest.TestCase):
     def test_should_give_each_outcome_its_code_ranged_by_severity(self):
+        # Arrange
         rows = [
             ("done", 0),
             ("failed", 1),

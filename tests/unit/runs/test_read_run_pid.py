@@ -29,6 +29,7 @@ class ReadRunPidTest(unittest.TestCase):
         self.assertIsNone(recorded)
 
     def test_should_read_no_pid_from_a_file_not_of_the_form_pid_start_time_boot_id(self):
+        # Arrange
         rows = [
             ("an empty file", "\n"),
             ("the pid alone, written before the identity", "4242\n"),

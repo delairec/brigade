@@ -6,6 +6,7 @@ from brigade.system.render_trace import render_trace
 
 class RenderTraceTest(unittest.TestCase):
     def test_should_render_the_command_and_how_it_ended(self):
+        # Arrange
         rows = [
             ("exited", ProcessTrace(("git", "--version"), "/", "exited", 0, 3), "ran git --version, exit 0 in 3 ms"),
             (

@@ -5,6 +5,7 @@ from brigade.system.read_start_time import read_start_time
 
 class ReadStartTimeTest(unittest.TestCase):
     def test_should_read_the_start_time_whatever_the_name_of_the_process(self):
+        # Arrange
         rows = [
             (
                 "a plain name",

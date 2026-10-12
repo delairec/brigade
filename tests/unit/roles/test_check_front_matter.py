@@ -22,6 +22,7 @@ class CheckFrontMatterTest(unittest.TestCase):
         self.assertEqual(problems, ())
 
     def test_should_name_the_key_of_each_problem(self):
+        # Arrange
         rows = [
             ("a model named", {**DECLARED, "model": "opus"}, RoleProblem(key="model", problem="names a model")),
             (

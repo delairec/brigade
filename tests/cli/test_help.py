@@ -24,6 +24,7 @@ class HelpTestCase(unittest.TestCase):
 
 class BrigadeHelpTest(HelpTestCase):
     def test_should_list_each_command_with_the_help_its_record_declares(self):
+        # Arrange
         rows = [
             ("adapter", "answer one operation of the configured client adapter, or print the matrix of every adapter"),
             (
@@ -53,6 +54,7 @@ class BrigadeHelpTest(HelpTestCase):
 
 class BrigadeGroupHelpTest(HelpTestCase):
     def test_should_list_each_action_with_the_help_its_record_declares(self):
+        # Arrange
         rows = [
             ("adapter", "actions", "answer actions, the request read on stdin"),
             ("adapter", "launch-argv", "answer launch-argv, the request read on stdin"),

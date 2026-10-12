@@ -20,6 +20,7 @@ def create_files(root: Path, files: dict) -> None:
 
 class GuessCommandsTest(unittest.TestCase):
     def test_should_guess_the_commands_of_a_package_json(self):
+        # Arrange
         rows = [
             (
                 "npm with a lockfile",
@@ -89,6 +90,7 @@ class GuessCommandsTest(unittest.TestCase):
                 self.assertEqual(guess, expected)
 
     def test_should_guess_the_commands_of_a_python_project(self):
+        # Arrange
         rows = [
             (
                 "pyproject.toml without pytest",
@@ -135,6 +137,7 @@ class GuessCommandsTest(unittest.TestCase):
                 self.assertEqual(guess, expected)
 
     def test_should_guess_the_commands_of_a_rust_project(self):
+        # Arrange
         rows = [
             ("with a Cargo.lock", {"Cargo.toml": "", "Cargo.lock": ""}, ("cargo fetch --locked",)),
             ("without a Cargo.lock", {"Cargo.toml": ""}, ()),
@@ -172,6 +175,7 @@ class GuessCommandsTest(unittest.TestCase):
         )
 
     def test_should_read_no_script_from_a_package_json_that_is_no_object(self):
+        # Arrange
         rows = [("not JSON", "{scripts"), ("a list", "[]")]
         for case, package_json in rows:
             with self.subTest(case=case):

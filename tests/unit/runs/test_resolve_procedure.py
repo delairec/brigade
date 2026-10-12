@@ -86,6 +86,7 @@ class ResolveProcedureGivenByPathTest(ResolveProcedureByNameTestCase):
         self.assertEqual(str(raised.exception), f"no procedure file {missing}")
 
     def test_should_refuse_a_front_matter_off_its_declaration(self):
+        # Arrange
         procedure = Path(self.root.name) / "deliver.md"
         rows = [
             (

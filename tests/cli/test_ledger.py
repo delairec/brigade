@@ -559,6 +559,7 @@ class BrigadeLedgerProjectWithNoEventTest(LedgerTestCase):
 
 class BrigadeLedgerProjectSinceADayCountTest(LedgerTestCase):
     def test_should_count_the_days_back_from_now(self):
+        # Arrange
         rows = [("1d", 0), ("36500d", 1)]
         for since, expected_waves_started in rows:
             with self.subTest(since=since):
@@ -748,6 +749,7 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
         )
 
     def test_should_exit_1_naming_the_empty_period(self):
+        # Arrange
         rows = [
             ("2026-09-01", "brigade ledger compare: no run finished before 2026-09-01\n"),
             ("2026-11-01", "brigade ledger compare: no run finished from 2026-11-01 on\n"),
@@ -796,6 +798,7 @@ class BrigadeLedgerRunOfTwoSegmentsTest(LedgerTestCase):
         )
 
     def test_should_measure_the_budget_of_the_run_by_the_sum_of_its_measured_segments(self):
+        # Arrange
         rows = [
             (
                 "20",
@@ -955,6 +958,7 @@ class BrigadeLedgerRunOfTwoSegmentsTest(LedgerTestCase):
 
 class BrigadeLedgerUsageTest(LedgerTestCase):
     def test_should_refuse_an_option_out_of_its_place_with_exit_2(self):
+        # Arrange
         rows = [
             (("--since", "7d"), "--since needs --project"),
             (("--wave", "tp/16", "--project", "tidepool"), "not allowed with argument"),

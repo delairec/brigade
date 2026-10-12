@@ -5,6 +5,7 @@ from brigade.registry.describe_remote import RemoteDescription, describe_remote
 
 class DescribeRemoteTest(unittest.TestCase):
     def test_should_name_the_owner_and_the_repository_and_tell_the_forge(self):
+        # Arrange
         rows = [
             ("https://github.com/acme/app.git", RemoteDescription(remote="acme/app", forge="github")),
             ("https://github.com/acme/app", RemoteDescription(remote="acme/app", forge="github")),

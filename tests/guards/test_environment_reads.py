@@ -18,6 +18,7 @@ class EnvironmentReadsOfThePackageTest(unittest.TestCase):
 
 class EnvironmentReadsGuardTest(unittest.TestCase):
     def test_should_flag_each_way_of_reading_the_environment(self):
+        # Arrange
         rows = [
             ("import os\nhome = os.environ['HOME']\n", "brigade/commands/doctor.py:2 reads os.environ"),
             ("import os\nhome = os.environ.get('HOME')\n", "brigade/commands/doctor.py:2 reads os.environ"),
@@ -45,6 +46,7 @@ class EnvironmentReadsGuardTest(unittest.TestCase):
                 self.assertEqual(violations, [expected_violation])
 
     def test_should_let_the_paths_and_the_process_runner_read_the_environment(self):
+        # Arrange
         rows = [
             "brigade/system/paths.py",
             "brigade/system/run_process.py",

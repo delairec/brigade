@@ -94,6 +94,7 @@ class ReadConfigurationWhenTheFileIsAbsentTest(ReadConfigurationTestCase):
 
 class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
     def test_should_refuse_naming_the_key_and_the_file(self):
+        # Arrange
         rows = [
             ("an unknown key", "frobnicate = 1\n", "unknown key frobnicate"),
             (
@@ -211,6 +212,7 @@ class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.seconds_per_step, 0.5)
 
     def test_should_refuse_a_value_that_is_no_positive_number_naming_the_key_and_the_file(self):
+        # Arrange
         rows = [
             ("a string", 'seconds_per_step = "30"\n', "seconds_per_step is a string, not a number,"),
             ("zero", "seconds_per_step = 0\n", "seconds_per_step is 0, not a positive number,"),
@@ -263,6 +265,7 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.journal_poll_s, 0.5)
 
     def test_should_keep_the_default_and_record_a_finding_naming_the_key_and_the_file(self):
+        # Arrange
         rows = [
             ("a string", 'journal_poll_s = "2"\n', "journal_poll_s is a string, not a positive number,"),
             ("zero", "journal_poll_s = 0\n", "journal_poll_s is 0, not a positive number,"),
@@ -305,6 +308,7 @@ class ReadConfigurationOfTheSoftLimitMarginTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.soft_limit_margin_s, 0.5)
 
     def test_should_refuse_a_value_that_is_no_positive_number_naming_the_key_and_the_file(self):
+        # Arrange
         rows = [
             ("a string", 'soft_limit_margin_s = "120"\n', "soft_limit_margin_s is a string, not a number,"),
             ("zero", "soft_limit_margin_s = 0\n", "soft_limit_margin_s is 0, not a positive number,"),

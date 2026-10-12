@@ -144,6 +144,7 @@ class ReadLedgerWhenTheLastLineWasNotEndedTest(ReadLedgerTestCase):
 
 class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
     def test_should_skip_the_line_naming_its_file_its_number_and_the_reason(self):
+        # Arrange
         rows = [
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41\n', "not JSON"),
             (b"\xff\xfe\n", "not JSON"),
