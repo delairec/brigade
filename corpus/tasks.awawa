@@ -1202,53 +1202,110 @@ TASK B13
 		+ "adapter, overridden by config.toml; the task is ratified"
 
 TASK B14
-	TITLE "Pull-request tracking in the tick"
-	STATUS draft
+	TITLE "The tick follows the pull request of each task and moves the task state from its forge"
+		+ "facts"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
-	SPEC "the tick finds the pull request of a task branch, reads its checks and review state"
-		+ "through the forge adapter, records ledger events and moves the task state"
-	SPEC "the worktree the scheduler cut for the task is removed once its pull request is merged or"
-		+ "closed, never while a run holds it"
-	SPEC "a ledger event forge_account.unavailable pauses the wave of its project, which the user"
-		+ "resumes"
+	SPEC "the snapshot of the tick carries, for each task in running or a later state, the pull"
+		+ "request whose head is the task branch task/<slug>/<task>, read through the forge adapter"
+		+ "as the login of the key cli: its number, its state open, merged or closed, the verdict"
+		+ "of each check run, its review state and whether its base moved past its head"
+	SPEC "the tick records task.state pr_open when it first sees the pull request of a running"
+		+ "task, merged when it sees it merged, and parked with the reason pull request closed when"
+		+ "it sees it closed unmerged"
+	SPEC "the worktree the scheduler cut for the task is removed under the lock of the project's"
+		+ "worktrees once its pull request is merged or closed, never while a run holds it"
 	AFTER @TASK.B12
+	AFTER @TASK.B142
 	AFTER @TASK.B75
-	RATIONALE "it follows @TASK.B75: the forge facts it reads and the ledger events it records run"
-		+ "as the login of the key cli, F5 of the foundations review; a login whose token gh no"
-		+ "longer prints stops the command and pauses the wave, as"
-		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets"
+	RATIONALE "it follows @TASK.B75: the forge facts it reads run as the login of the key cli, F5"
+		+ "of the foundations review, as"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets; the pause"
+		+ "of the wave on forge_account.unavailable moved to @TASK.B19, which owns the pause and"
+		+ "the resume of a wave"
 		REF @TASK.B75
 		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+		REF @TASK.B19
 	RATIONALE "the removal of the worktree sits here and not on @TASK.B12 because merged or closed"
 		+ "is a forge fact this task reads; the scheduler sees git alone, which shows no closed"
-		+ "pull request"
+		+ "pull request; the worktrees live under the root of brigade, .brigade/worktrees/, which"
+		+ "no weekly cleanup timer knows, so the line of the Blueprint keeping them for that timer"
+		+ "is outdated"
 		REF @TASK.B12
+	RATIONALE "it follows @TASK.B142, which adds the push and the pull request to the forge adapter"
+		+ "this task extends with its reads; the task states are those @TASK.B11 declares"
+		REF @TASK.B142
+		REF @TASK.B11
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
+		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
+		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default; B14 to B18"
+		+ "ratified"
+		REF @TASK.B19
+		REF @TASK.B143
 
 TASK B15
-	TITLE "brigade verify preflight"
-	STATUS draft
+	TITLE "brigade verify preflight runs the deterministic checks of a pull request before any"
+		+ "judgment"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
-	SPEC "the eight deterministic checks (ancestry, checks, corpus, promotion, untouched files,"
-		+ "privacy, body, size) with a findings JSON and exit 1 on failure"
+	SPEC "brigade verify preflight <pr> prints a findings JSON carrying schema_version, the pull"
+		+ "request and one entry per check, its name, its verdict pass, fail or info and its"
+		+ "findings; it exits 1 when a check fails and 0 otherwise"
+	SPEC "ancestry fails when the head of the pull request does not descend from the head of the"
+		+ "wave's BRANCH; checks fails when a check run of the pull request is not completed and"
+		+ "successful; corpus fails when awawa fmt --check or awawa lint --strict fails on the"
+		+ "head, read through the tree cache of brigade corpus without a checkout"
+	SPEC "promotion fails when the task is not STATUS implemented, when its DELIVERED_BY does not"
+		+ "name this pull request or when a SPEC has no IMPL whose anchor resolves at the head;"
+		+ "untouched files fails on a .awawa file the diff changes while none of its entities"
+		+ "changes in content"
+	SPEC "privacy fails on an added line matching a PROJECT.PRIVATE pattern or a built-in one, an"
+		+ "e-mail address or a home path, naming the file and the line; body fails when the title"
+		+ "is not the TITLE of the task or when the body keeps a placeholder of the template of"
+		+ "brigade task pr; size reports the files, lines, packages and layers touched with the"
+		+ "verdict info and never fails"
+	SPEC "the tick runs the preflight on a pull request in pr_open whose check runs are all"
+		+ "completed, records its findings in a ledger event and moves the task to verifying when"
+		+ "no check fails"
 	AFTER @TASK.B08
 	AFTER @TASK.B14
+	AFTER @TASK.B142
+	RATIONALE "the eight checks are those of the pass, section 7 of artifact/parts/plan.html; the"
+		+ "body and the promotion check what @TASK.B142 writes, its template and the promotion of"
+		+ "the task, so this task follows it"
+		REF @TASK.B142
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
+		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
+		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default; B14 to B18"
+		+ "ratified"
+		REF @TASK.B19
+		REF @TASK.B143
 
 TASK B16
 	TITLE "Procedure verify-pr.md and brigade verify context|verdict"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
 	ROLE lex
-	SPEC "the review slot receives the verification package and gives its verdict, pass or changes"
-		+ "requested, through verdict, recorded in the ledger event"
+	SPEC "brigade verify context <pr> prints in one read the task with its awawa context, the diff"
+		+ "of the pull request against its base, the findings of the preflight, the rules of the"
+		+ "path triggers of the files the diff touches and the grades of a finding, critical, high,"
+		+ "medium and low"
+	SPEC "brigade verify verdict <pr> --file <verdict> validates a verdict pass or changes whose"
+		+ "findings each carry a grade, a file, a line and the SPEC or rule broken, refuses changes"
+		+ "without a finding, and records the ledger event of the verdict"
+	SPEC "the tick starts a fresh run of the review slot on a task in verifying, with the procedure"
+		+ "verify-pr.md shipped in the package, and moves the task to verified on pass and to"
+		+ "changes_requested on changes"
 	SPEC "under POLICY.REVIEW approval the verdict is a GitHub review approving or requesting"
 		+ "changes under the login of the review slot; under verdict it is the ledger event alone"
 	SPEC "the ledger event of a review posted carries the login the review ran as"
+	AFTER @TASK.B13
 	AFTER @TASK.B15
 	AFTER @TASK.B75
 	AFTER @TASK.B99
@@ -1258,22 +1315,36 @@ TASK B16
 		REF @TASK.B75
 	RATIONALE "the verdict follows the review mode of the project,"
 		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode, declared by"
-		+ "@TASK.B99"
+		+ "@TASK.B99; the rules of the path triggers are gathered as @TASK.B13 gathers them for a"
+		+ "build run, and step 7 of the wave lifecycle of artifact/parts/plan.html sets what the"
+		+ "run judges"
 		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 		REF @TASK.B99
+		REF @TASK.B13
 	SOURCE "F5 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
+		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
+		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default; B14 to B18"
+		+ "ratified"
+		REF @TASK.B19
+		REF @TASK.B143
 
 TASK B17
 	TITLE "Auto-merge into integration and scheduling of dependents"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
-	SPEC "green checks and the verdict merge the pull request with PROJECT.MERGE: the approving"
-		+ "review under POLICY.REVIEW approval, the pass verdict of the ledger under verdict"
+	SPEC "green checks and the verdict merge the pull request with PROJECT.MERGE, rebase when the"
+		+ "project declares none: the approving review under POLICY.REVIEW approval, the pass"
+		+ "verdict of the ledger under verdict; the schema brigade init installs declares MERGE"
+		+ "rebase by default"
+	SPEC "under POLICY.AUTO_MERGE none the tick merges nothing and the task stays verified until it"
+		+ "sees the pull request merged"
+	SPEC "the tick merges no pull request whose base is not the wave's BRANCH; it parks the task"
+		+ "with that reason"
 	SPEC "the ledger event of a merge carries the login the merge ran as"
-	SPEC "the task becomes merged"
-	SPEC "its dependents become startable in the same tick"
+	SPEC "the task becomes merged and its dependents become startable in the same tick"
 	AFTER @TASK.B16
 	AFTER @TASK.B75
 	AFTER @TASK.B99
@@ -1284,22 +1355,47 @@ TASK B17
 		REF @TASK.B75
 		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 		REF @TASK.B99
+	RATIONALE "gh pr merge run without a terminal needs a method, and PROJECT.MERGE has no default"
+		+ "today; step 8 of the wave lifecycle of artifact/parts/plan.html merges into"
+		+ "integration/* only"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
+		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
+		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default; B14 to B18"
+		+ "ratified"
+		REF @TASK.B19
+		REF @TASK.B143
 
 TASK B18
-	TITLE "Repair paths"
-	STATUS draft
+	TITLE "Repair paths: changes requested and failing checks, within the rounds of the policy"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
-	SPEC "changes requested starts a run of the remediate slot through review context|reply"
-	SPEC "a failing check starts a fix by the build slot"
-	SPEC "a branch behind integration is rebased by git and the rebase slot runs only on a conflict"
-		+ "through rebase context|done"
-	SPEC "rounds are capped by POLICY.VERIFY_ROUNDS, then the task is parked with the reason"
+	SPEC "a task in changes_requested starts a run of the remediate slot through brigade review"
+		+ "context|reply: context prints the findings of the verdict under POLICY.REVIEW verdict"
+		+ "and the review threads under approval, reply records the answer to each, on GitHub under"
+		+ "approval as the login of the remediate slot"
+	SPEC "a failing check starts a run of the build slot whose brief carries the context of the"
+		+ "task and the bounded tail of the log of each failing check, the task in fixing"
+	SPEC "a preflight finding other than ancestry and checks moves the task to changes_requested"
+		+ "with its findings as the request"
+	SPEC "a push of a repair run moves the task back to pr_open"
+	SPEC "a round is one repair run of the remediate, build or rebase slot, a clean git rebase"
+		+ "counting none; past POLICY.VERIFY_ROUNDS rounds the task is parked with the reason and"
+		+ "the ledger event task.parked"
 	AFTER @TASK.B17
+	RATIONALE "step 7b of the wave lifecycle of artifact/parts/plan.html; the rebase path is"
+		+ "@TASK.B143, split from this task in its refinement"
+		REF @TASK.B143
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
+		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
+		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default; B14 to B18"
+		+ "ratified"
+		REF @TASK.B19
+		REF @TASK.B143
 
 TASK B19
-	TITLE "Quota pause and resume"
+	TITLE "Wave pause and resume: quota and forge account"
 	STATUS draft
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
@@ -1308,7 +1404,9 @@ TASK B19
 		+ "plus 30 minutes"
 	SPEC "the first tick after resume_at resumes each suspended run through the adapter's resume,"
 		+ "or relaunches it from its progress file when the adapter has none"
-	SPEC "ledger events wave.paused and wave.resumed"
+	SPEC "ledger events wave.paused, carrying the reason quota or forge_account, and wave.resumed"
+	SPEC "a ledger event forge_account.unavailable pauses the wave of its project until the user"
+		+ "resumes it with brigade wave resume"
 	AFTER @TASK.B14
 	AFTER @TASK.B71
 	AFTER @TASK.B106
@@ -1316,6 +1414,14 @@ TASK B19
 	RATIONALE "it follows @TASK.B71: the resume from a progress file rests on the client being able"
 		+ "to write it, F1 of the foundations review"
 		REF @TASK.B71
+	RATIONALE "the pause on forge_account.unavailable moved here from @TASK.B14, as"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets it: this"
+		+ "task owns the pause and the resume of a wave"
+		REF @TASK.B14
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
+		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
+		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default"
 
 TASK B20
 	TITLE "Built-in study wave-report"
@@ -1369,6 +1475,7 @@ TASK B21
 	AFTER @TASK.B13
 	AFTER @TASK.B142
 	AFTER @TASK.B18
+	AFTER @TASK.B143
 	AFTER @TASK.B19
 	AFTER @TASK.B20
 	AFTER @TASK.B71
@@ -7299,3 +7406,27 @@ TASK B142
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B13: check, pr and promote are a"
 		+ "task of their own; a missing milestone is created; promote reads the pull request from"
 		+ "the ledger"
+
+TASK B143
+	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
+		+ "conflict"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE ada
+	SPEC "a task whose pull request is behind the wave's BRANCH is rebased by git in its worktree"
+		+ "onto the head of BRANCH and pushed with --force-with-lease, without a run"
+	SPEC "on a conflict the tick aborts the rebase and starts a run of the rebase slot through"
+		+ "brigade rebase context|done: context prints the branch, its base and the conflicting"
+		+ "files, done refuses a branch that does not descend from the head of BRANCH and pushes it"
+	SPEC "a run of the rebase slot counts as one round of @TASK.B18"
+		REF @TASK.B18
+	AFTER @TASK.B17
+	AFTER @TASK.B18
+	RATIONALE "split from @TASK.B18 in its refinement; step 7b of the wave lifecycle of"
+		+ "artifact/parts/plan.html: a clean git rebase costs no step, the rebase slot runs only"
+		+ "when git reports a conflict"
+		REF @TASK.B18
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
+		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
+		+ "the rebase path split to @TASK.B143; PROJECT.MERGE rebase by default"
