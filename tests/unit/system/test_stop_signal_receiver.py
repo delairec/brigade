@@ -40,7 +40,10 @@ class StopSignalReceivedOutsideTheWaitTest(StopSignalReceiverTestCase):
             signal_itself(signal.SIGTERM)
 
             # Act
-            with self.assertRaises(StopRequested), receiver.raising():
+            entering_the_wait = receiver.raising()
+
+            # Assert
+            with self.assertRaises(StopRequested), entering_the_wait:
                 pass
 
 
