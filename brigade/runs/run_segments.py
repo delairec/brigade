@@ -13,6 +13,7 @@ from brigade.system.write_json_atomically import write_json_atomically
 
 BUDGET_REACHED = "budget_reached"
 WALL_LIMIT_REACHED = "wall_limit_reached"
+BUDGET_EXCEEDED = "budget_exceeded"
 RELAUNCH_SIGNALS = {
     TURN_LIMIT: BUDGET_REACHED,
     WALL_LIMIT_OUTCOME: WALL_LIMIT_REACHED,
@@ -42,6 +43,18 @@ def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
     )
 
 
+def _describe_budget_exceeded(plan: RunPlan, record: SegmentRecord, steps: int) -> SignalRecorded:
+    return SignalRecorded(
+        signal=BUDGET_EXCEEDED,
+        project=plan.project,
+        procedure=plan.procedure.name,
+        run=plan.run_id,
+        segment=record.number,
+        budget=plan.procedure.budget,
+        steps=steps,
+    )
+
+
 def _run_with_handovers(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
     records = []
     instant = runtime.now
@@ -49,7 +62,10 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime) -> list[SegmentRecord]:
         record = run_segment(plan, len(records) + 1, runtime)
         records.append(record)
         instant += timedelta(milliseconds=record.measured_ms)
-        append_event(runtime.paths, instant, describe_finished(plan, record))
+        finished = describe_finished(plan, record)
+        append_event(runtime.paths, instant, finished)
+        if finished.main_steps is not None and finished.main_steps > plan.procedure.budget:
+            append_event(runtime.paths, instant, _describe_budget_exceeded(plan, record, finished.main_steps))
         if record.result.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))
