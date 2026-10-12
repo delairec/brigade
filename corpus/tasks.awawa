@@ -6503,23 +6503,29 @@ TASK B122
 	SOURCE "found in the first review round of #92 on 2026-10-10"
 
 TASK B129
-	TITLE "The help the passthrough record of brigade corpus declares is printed by a --help, or"
-		+ "the passthrough record declares none"
-	STATUS draft
+	TITLE "The --help of a path prints the help its passthrough record declares, brigade corpus"
+		+ "--help included"
+	STATUS todo
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
 	ROLE ada
-	SPEC "the help of the record of brigade/commands/corpus_awawa.py, run awawa in a registered"
-		+ "project's tree and pass its stdout, stderr and exit code through, is either printed by"
-		+ "brigade corpus --help and asserted by tests/cli/test_help.py, or no longer declared, the"
-		+ "record type of brigade/command.py making help optional for a passthrough record"
+	SPEC "brigade corpus --help prints, under its options, the help the passthrough record of"
+		+ "brigade/commands/corpus_awawa.py declares, introduced by -- <awawa args>, and"
+		+ "tests/cli/test_help.py asserts it"
+	SPEC "the help of a passthrough record declared at any path is printed by the --help of that"
+		+ "path, as the epilog of its parser, with no change to cli.py for a new passthrough"
+		+ "record; a test of tests/unit/test_add_command_parsers.py proves it on a record of its"
+		+ "own"
 	AFTER @TASK.B89
-	RATIONALE "brigade/cli.py builds its parser from the records whose render_passed_stderr is"
-		+ "None, so the help of the passthrough record reaches no parser and no --help prints it: a"
-		+ "value declared and read by nothing; the help of the corpus record already names --"
-		+ "<awawa args> runs awawa there; the choice between printing it and dropping it is the"
-		+ "refinement's"
+	RATIONALE "brigade/cli.py:119-120 at 67812ad builds its parser from the records whose"
+		+ "render_passed_stderr is None, so the help of the passthrough record reaches no parser:"
+		+ "brigade corpus --help prints a usage without -- and no description, and only the help of"
+		+ "the corpus record, in the listing of brigade --help, names -- <awawa args>"
 		REF @TASK.B82
+	RATIONALE "ruled with the user on 2026-10-12: the help is printed as the epilog of the parser"
+		+ "of its path, under the options; rejected, dropping it by making the help of a"
+		+ "passthrough record optional, which leaves brigade corpus --help silent on --, and"
+		+ "printing it as the description, above the options"
 	SOURCE "finding 1 of the review of pull request #95 on 2026-10-10, by a brigade run of the role"
 		+ "prudence: \"No --help prints that help\""
 
