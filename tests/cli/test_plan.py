@@ -66,6 +66,17 @@ DECISIONS = (
     "\tSTATUS active\n"
     '\tIMPL "src/cart.py::CART = []"\n'
 )
+UNTITLED_TASK_SCHEMA = (
+    "SCHEMA TASK\n"
+    '\tDESC "a change delivered by one pull request"\n'
+    "\tFIELD STATUS draft|todo|implemented|archived\n"
+    "\t\tREQUIRED\n"
+)
+UNTITLED_DECISION_SCHEMA = (
+    'SCHEMA DECISION\n\tDESC "a ruling of the project"\n\tFIELD STATUS active|archived\n\t\tREQUIRED\n'
+)
+UNTITLED_TASKS = "TASK S3\n\tSTATUS todo\n"
+UNTITLED_DECISIONS = "DECISION CartLivesInMemory\n\tSTATUS active\n"
 CART = "CART = []\n\n\ndef add_item(item):\n    CART.append(item)\n"
 REQUEST_TEXT = "let the customer empty the cart in one click"
 
@@ -82,10 +93,10 @@ class PlanContextTestCase(unittest.TestCase):
     def tearDown(self):
         self.root.cleanup()
 
-    def register_project(self, schema: str) -> None:
+    def register_project(self, schema: str, tasks: str = TASKS, decisions: str = DECISIONS) -> None:
         self.project.write("corpus/_schema.awawa", schema)
-        self.project.write("corpus/tasks.awawa", TASKS)
-        self.project.write("corpus/decisions.awawa", DECISIONS)
+        self.project.write("corpus/tasks.awawa", tasks)
+        self.project.write("corpus/decisions.awawa", decisions)
         self.project.track("corpus")
         self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
 
@@ -241,3 +252,31 @@ class BrigadePlanContextOfAProjectWithoutACorpusTest(PlanContextTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stderr, "brigade plan context: @PROJECT.shop declares no corpus\n")
+
+
+class BrigadePlanContextOnACorpusWhoseEntityHoldsNoTitleTest(PlanContextTestCase):
+    def test_should_exit_1_naming_the_task_and_the_field(self):
+        # Arrange
+        self.register_project(f"{UNTITLED_TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}", tasks=UNTITLED_TASKS)
+        self.write_request("planning")
+
+        # Act
+        completed = self.run_plan_context("R1")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade plan context: @TASK.S3 holds no TITLE\n")
+
+    def test_should_exit_1_naming_the_decision_and_the_field(self):
+        # Arrange
+        self.register_project(
+            f"{TASK_SCHEMA}\n{UNTITLED_DECISION_SCHEMA}\n{MILESTONE_SCHEMA}", decisions=UNTITLED_DECISIONS
+        )
+        self.write_request("planning")
+
+        # Act
+        completed = self.run_plan_context("R1")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade plan context: @DECISION.CartLivesInMemory holds no TITLE\n")

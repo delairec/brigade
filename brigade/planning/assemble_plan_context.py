@@ -3,6 +3,7 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 AWAWA_TIMEOUT_S = 30.0
@@ -14,6 +15,7 @@ PLANNED_SCHEMAS = (TASK_TYPE, MILESTONE_TYPE)
 ACTIVE_STATUS = "active"
 OPEN_TASK_STATUSES = ("draft", "todo")
 ANCHOR_FIELD = "IMPL"
+TITLE_FIELD = "TITLE"
 ANCHOR_SEPARATOR = "::"
 TRAILING_NUMBER = re.compile(r"\d+$")
 SCHEMA_NOT_DEFINED = 1
@@ -46,8 +48,11 @@ def _decode_atom(atom: str) -> str:
     return json.loads(atom)
 
 
-def _read_value(fields: list, name: str) -> str:
-    return next("".join(map(_decode_atom, field["atoms"])) for field in fields if field["name"] == name)
+def _read_title(entity: dict) -> str:
+    titles = ["".join(map(_decode_atom, field["atoms"])) for field in entity["fields"] if field["name"] == TITLE_FIELD]
+    if not titles:
+        raise BrigadeError(f"@{entity['type']}.{entity['name']} holds no {TITLE_FIELD}")
+    return titles[0]
 
 
 def _collect_anchors(fields: list) -> list[str]:
@@ -95,12 +100,12 @@ def assemble_plan_context(run_process: Callable[[ProcessRequest], ProcessRecord]
     return {
         "status": _summarise_status(status["types"]),
         "decisions": [
-            {"name": entity["name"], "title": _read_value(entity["fields"], "TITLE")}
+            {"name": entity["name"], "title": _read_title(entity)}
             for entity in shown
             if entity["type"] == DECISION_TYPE and entity["status"] == ACTIVE_STATUS
         ],
         "tasks": [
-            {"name": entity["name"], "status": entity["status"], "title": _read_value(entity["fields"], "TITLE")}
+            {"name": entity["name"], "status": entity["status"], "title": _read_title(entity)}
             for entity in shown
             if entity["type"] == TASK_TYPE and entity["status"] in OPEN_TASK_STATUSES
         ],

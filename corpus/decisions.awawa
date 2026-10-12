@@ -2278,3 +2278,24 @@ DECISION BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
 	SOURCE "the user's ruling of 2026-10-13 on pull request #117: the decision is ratified, with"
 		+ "the reference to @TASK.B55"
 		REF @TASK.B55
+
+DECISION PlanContextRefusesAnEntityOfTheProjectCorpusThatHoldsNoTitle
+	TITLE "brigade plan context exits 1 naming the entity and the field when an active DECISION or"
+		+ "a draft or todo TASK of the project's corpus holds no TITLE"
+	STATUS active
+	DESC "the message reads brigade plan context: @<TYPE>.<name> holds no TITLE; no package is"
+		+ "printed"
+		REF @TASK.B10
+	REJECTED "listing the entity without a title: the planner would cut a request against an entity"
+		+ "it cannot place, and the other checks of the control mode already refuse, naming it,"
+		+ "what the schema of a project's corpus does not give brigade"
+	RATIONALE "a project corpus in control mode may declare TASK or DECISION without TITLE; read"
+		+ "unchecked, the missing field raised StopIteration and exited 70, the code"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable reserves for"
+		+ "brigade's own defect"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "the control mode of @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus refuses, naming"
+		+ "them, the types and fields the schema of the project's corpus does not declare"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository"
+		REF @TASK.B10
