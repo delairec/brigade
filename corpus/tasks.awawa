@@ -1488,7 +1488,7 @@ TASK B20
 	AFTER @TASK.B17
 	AFTER @TASK.B48
 	AFTER @TASK.B106
-	AFTER @TASK.B46
+	AFTER @TASK.B146
 	RATIONALE "designed as entities from the start, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
 		+ "sets: no code of the report exists yet, and a comparison of headings validates nothing"
@@ -1509,9 +1509,9 @@ TASK B20
 		+ "amending this task: \"ok pour le plan ci-dessus\""
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19, B20, B21 and B143: \"ok pour"
 		+ "une entité REPORT\""
-	SOURCE "the user's ruling of 2026-10-13 in the refinement of B47: the collector pr-list is"
-		+ "delivered by @TASK.B46, which this task follows"
-		REF @TASK.B46
+	SOURCE "the user's ruling of 2026-10-13 on pr-list: the collector is delivered by @TASK.B146, a"
+		+ "task of M1 this task follows"
+		REF @TASK.B146
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
@@ -2138,15 +2138,10 @@ TASK B46
 	SPEC "FORGE none runs a wave on local branches: the pass reads the acceptance results of task"
 		+ "check instead of check runs, the verdict is kept in the ledger and the merge into"
 		+ "integration is a git merge"
-	SPEC "the collectors pr-list, pr-threads and check-runs declare themselves absent under FORGE"
-		+ "none"
-	SPEC "the built-in collector pr-list, under the contract of B47, prints through the forge"
-		+ "adapter the open pull requests of the project, each with number, title, branch, base,"
-		+ "author login, draft state and review decision; summary counts them"
+	SPEC "the collectors pr-threads and check-runs declare themselves absent under FORGE none"
 	AFTER @TASK.B02
 	AFTER @TASK.B17
 	AFTER @TASK.B42
-	AFTER @TASK.B47
 	RATIONALE "the account it acts as and the field forge_account moved to @TASK.B75, F5 of the"
 		+ "foundations review, which brings the account back before M1; this task keeps the local"
 		+ "local mode; its doctor report of the active account was removed at the refinement of"
@@ -2232,13 +2227,14 @@ TASK B47
 		+ "draft said schema, which DESC 1 of that decision listed for alignment at this refinement"
 		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	RATIONALE "the scope is the user's: contract, runner, cache, resolution, collectors list and"
-		+ "the five built-ins that need git, awawa or the ledger alone; pr-list goes to @TASK.B46,"
-		+ "pr-threads to @TASK.B23 and check-runs to @TASK.B24, which already claim them, the"
-		+ "GitHub forge adapter holding describe_account and read_login_environment alone;"
-		+ "transcripts and its scrubber, DESC 1 of @DECISION.MinedConstraintsAreDeliveredAsWaves,"
-		+ "to @TASK.B35; shell and study, which read the STUDY entity, to @TASK.B48, which comes"
-		+ "after this task"
-		REF @TASK.B46
+		+ "the five built-ins that need git, awawa or the ledger alone; pr-list goes to @TASK.B146,"
+		+ "a task of M1 after this one and @TASK.B14, pr-threads to @TASK.B23 and check-runs to"
+		+ "@TASK.B24, which already claim them, the GitHub forge adapter holding describe_account"
+		+ "and read_login_environment alone; transcripts and its scrubber, DESC 1 of"
+		+ "@DECISION.MinedConstraintsAreDeliveredAsWaves, to @TASK.B35; shell and study, which read"
+		+ "the STUDY entity, to @TASK.B48, which comes after this task"
+		REF @TASK.B146
+		REF @TASK.B14
 		REF @TASK.B23
 		REF @TASK.B24
 		REF @DECISION.MinedConstraintsAreDeliveredAsWaves
@@ -6139,115 +6135,152 @@ TASK B105
 		+ "rentrer dans ADD0 je suppose, c'est du confort\", then \"oui ok\""
 
 TASK B106
-	TITLE "The progress of a run is written and read through a document plugin, Markdown without"
-		+ "awawa, a one-file awawa corpus of STEP and HANDOVER entities where awawa is declared,"
-		+ "and the brief frames what the agent writes in it"
-	STATUS draft
+	TITLE "The progress of a run is kept in a form chosen by configuration, Markdown or an awawa"
+		+ "corpus, and every segment's brief frames what the agent writes in it"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	DESC "to settle in the refinement: how a role whose capabilities carry no shell formats and"
-		+ "lints the file after each append, as the rule progress_corpus_where_awawa_declared asks,"
-		+ "or whether brigade formats the file at each read as"
-		+ "@DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote does for a project"
-		+ "corpus; what a corpus awawa cannot read does to the relaunch; what the progress setting"
-		+ "of the fake client appends in the awawa form; what @TASK.B94 prints in the awawa form"
-		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
-		REF @TASK.B94
-	SPEC "document is a plugin kind resolved by name through the resolver of"
-		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported, with two built-in"
-		+ "plugins, markdown and awawa; every operation takes the document it serves, its path, its"
-		+ "schema resource and the frame of its content, and nothing of the kind names the progress"
-		+ "of a run: create the document, the text the brief carries about it, what a resuming run"
-		+ "reads of it, and whether it holds an entry"
-		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
-	SPEC "the progress of a run is the first document served by that kind, one file in either form,"
-		+ "the one path the write grant of @TASK.B71 names, exported as BRIGADE_PROGRESS_FILE,"
-		+ "whose extension conveys the form: runs/<id>/progress.md for the markdown plugin,"
-		+ "runs/<id>/progress.awawa for the awawa plugin, a corpus holding its schema then one STEP"
-		+ "per step completed and one HANDOVER per handover, named s1, s2, h1 in order of writing,"
-		+ "as the rule progress_corpus_where_awawa_declared of the instructions corpus sets; no run"
-		+ "keeps both"
-		REF @TASK.B71
-	SPEC "the form is the document key of config.toml, awawa by default, markdown by configuration;"
-		+ "the presence of awawa chooses nothing, awawa staying a prerequisite as"
-		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites sets, and brigade doctor is"
+	SPEC "document is a plugin kind resolved by name through the one resolver of"
+		+ "brigade/system/resolve_plugin.py, with two built-in plugins, markdown and awawa; an"
+		+ "unknown document name raises the error naming the kind and the name"
+	SPEC "every operation of the kind takes the document it serves, its path, its schema resource"
+		+ "and the frame of its content, and nothing of the kind names the progress of a run:"
+		+ "create the document, the text the brief carries about it, what a resuming run reads of"
+		+ "it, whether it holds an entry, and render it for a person"
+	SPEC "render for a person prints, in the awawa form, each entity as readable text and, with"
+		+ "--json, the entities; the markdown form prints the file as it is"
+	SPEC "the progress of a run is one file in either form, the one path the write grant of B71"
+		+ "names, exported as BRIGADE_PROGRESS_FILE: runs/<id>/progress.md for the markdown plugin,"
+		+ "runs/<id>/progress.awawa for the awawa plugin; no run keeps both"
+	SPEC "progress.awawa is a corpus holding its schema then one STEP per step completed and one"
+		+ "HANDOVER per handover, named s1, s2, h1 in order of writing, as the rule"
+		+ "progress_corpus_where_awawa_declared of the instructions corpus sets"
+	SPEC "the document key of config.toml chooses the form of what brigade creates, awawa by"
+		+ "default, markdown by configuration; the extension of a file brigade reads back routes it"
+		+ "to its plugin, .md to markdown and .awawa to awawa"
+	SPEC "the presence of awawa chooses nothing: awawa stays a prerequisite and brigade doctor is"
 		+ "unchanged"
-		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	SPEC "the command run resolves the document plugin through the runtime's resolver, as it"
-		+ "resolves the client, and RunPlan carries it; no module outside the plugin package reads"
-		+ "or writes the progress of a run"
+		+ "resolves the client, and RunPlan carries it"
+	SPEC "no module outside the plugin package reads or writes the progress of a run"
 	SPEC "brigade run creates the progress of the run before the first segment through the plugin:"
-		+ "an empty progress.md in the markdown form; in the awawa form, progress.awawa holding the"
-		+ "schema alone, the STEP and HANDOVER schema the rule progress_corpus_where_awawa_declared"
-		+ "holds in its EXAMPLE lines, shipped by brigade as a resource of its package under a name"
-		+ "not ending in .awawa, as @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources"
-		+ "sets, and read from no instructions corpus"
-		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		+ "an empty progress.md in the markdown form, progress.awawa holding the schema alone in"
+		+ "the awawa form"
+	SPEC "the STEP and HANDOVER schema is a resource of the package, in a data/ folder of the"
+		+ "component that reads it, under a name not ending in .awawa, read from no instructions"
+		+ "corpus and equal to the EXAMPLE lines of the rule progress_corpus_where_awawa_declared"
+	SPEC "a gateway of brigade/corpus/ formats then lints one file, awawa fmt <file> and awawa lint"
+		+ "--strict <file>, naming the file and never its directory"
+	SPEC "between two segments, whatever the role, brigade runs that gateway on progress.awawa"
+		+ "before composing the next brief"
+	SPEC "when that lint fails, the run continues: the brief of the next segment opens on the lint"
+		+ "output, the instruction to rewrite the file, and the file whole in place of the"
+		+ "inventory; the number of relaunches is unchanged"
 	SPEC "the brief of every segment names the path and the form of the progress and the frame of"
 		+ "the rule progress_entry_holds_what_resume_needs: one entry per major step, what it did"
 		+ "in one line, the facts it established, one line each and five at most, a fact being what"
 		+ "the next segment needs and no command gives back, and the next step as the procedure"
 		+ "names it, complete at the end; never command output, a diff, the course of the step, a"
 		+ "restatement of the brief or a fact an earlier entry holds; in the awawa form, one STEP"
-		+ "per step, one HANDOVER per handover holding what remains, and awawa fmt then awawa lint"
-		+ "on the file after each append, never on its directory"
+		+ "per step and one HANDOVER per handover holding what remains"
+	SPEC "the brief asks the agent to run awawa fmt then awawa lint on the file after each append,"
+		+ "naming the file, only when the capabilities of its role carry shell"
 	SPEC "the brief of a relaunched segment opens on what the plugin reads: the file as it is in"
 		+ "the markdown form; in the awawa form, the output of awawa status STEP <file>, awawa"
 		+ "status HANDOVER <file> and awawa show of the last entity, each naming the file, never"
 		+ "the file whole"
-	SPEC "the awawa plugin calls awawa through the gateway brigade/corpus/ alone, as"
-		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa requires"
-		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	SPEC "a segment is relaunched on the plugin's answer that the document holds an entry, never on"
+		+ "a non-empty file; progress.awawa holding its schema alone holds none"
+	SPEC "the progress setting of the fake client appends its text as it is in either form, and the"
+		+ "fake picks its resumed recording on the same answer of the plugin"
 	SPEC "each built-in plugin has its unit test under tests/unit, the awawa one proven against a"
 		+ "real corpus in a temporary directory; the resolver test proves that an unknown document"
 		+ "name raises the error naming the kind and the name"
 	SPEC "tests/cli run brigade run as a subprocess with the fake client in each form: a segment"
 		+ "that hands over is relaunched with a brief opening on the file in the markdown form and"
-		+ "on the inventory and the last entity in the awawa form; without the key the run uses the"
-		+ "awawa form, with document = markdown the markdown form"
+		+ "on the inventory and the last entity in the awawa form, the awawa case appending a"
+		+ "literal STEP s1 entity; an entry that fails lint gives a next brief opening on the lint"
+		+ "output and the file whole; without the key the run uses the awawa form, with document ="
+		+ "markdown the markdown form"
 	SPEC "the README's Runs section states the two forms, the extension, the key and the frame"
 	AFTER @TASK.B73
 	AFTER @TASK.B102
-	RATIONALE "brigade/runs/run_segment.py:38-39 reads runs/<id>/progress.md whole into the"
-		+ "Progress so far section of every relaunched brief, brigade/runs/compose_brief.py:23-24,"
-		+ "and brigade/runs/run_segments.py:27-28 tests it non-empty: the file joins the context of"
-		+ "each segment after the first, so what the agent writes in it is paid at every relaunch;"
-		+ "the user asked for a form that awawa reads entity by entity as the file grows, and for a"
-		+ "frame so that the agents write no useless detail"
+	AFTER @TASK.B71
+	RATIONALE "brigade/runs/run_segment.py::PROGRESS_FILE, read with read_text, reads"
+		+ "runs/<id>/progress.md whole into the Progress so far section of every relaunched brief,"
+		+ "brigade/runs/compose_brief.py::\"Progress so far\", and"
+		+ "brigade/runs/run_segments.py::_holds_progress tests it non-empty before a relaunch: the"
+		+ "file joins the context of each segment after the first, so what the agent writes in it"
+		+ "is paid at every relaunch; the user asked for a form that awawa reads entity by entity"
+		+ "as the file grows, and for a frame so that the agents write no useless detail;"
+		+ "PROGRESS_FILE is progress.md in brigade/runs/run_locations.py, the empty file is created"
+		+ "by brigade/runs/create_run_directory.py, and BRIGADE_PROGRESS_FILE is already exported"
+		+ "by run_segment.py"
 	RATIONALE "the user ruled for a plugin: Markdown where awawa is absent, a corpus where awawa is"
 		+ "declared; a kind with two built-in modules follows DESC 1 of"
 		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported, whose list of kinds"
-		+ "gains document at the ratification of this task; the choice is read from config.toml so"
-		+ "that a machine with awawa may keep Markdown"
+		+ "gains document at this ratification; brigade/system/resolve_plugin.py knows the built-in"
+		+ "kinds forge and scheduler, BUILT_IN_ENTRY_POINTS and BUILT_IN_PLUGIN_PACKAGES, beside"
+		+ "client, and raises no plugin kind for any other, and STRING_KEYS of"
+		+ "brigade/system/read_configuration.py, client, scheduler and instructions, has no"
+		+ "document key; the choice is read from config.toml so that a machine with awawa may keep"
+		+ "Markdown"
 		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	RATIONALE "the kind serves documents, not the progress of a run alone, because the user ruled"
 		+ "that every .md brigade handles must be manageable through awawa instead: the operations"
 		+ "take the document they serve, which costs the progress nothing more than passing its"
-		+ "path, schema and frame, and a later document joins by naming its own; the inventory of"
-		+ "the .md files brigade reads and writes, the decision and the tasks of that"
-		+ "generalisation are planned apart, and this task changes the progress of a run alone"
+		+ "path, schema and frame, and a later document joins by naming its own; this task delivers"
+		+ "the kind and the operations of the progress, and @TASK.B20, @TASK.B48 and @TASK.B51 add"
+		+ "read and validate when they arrive, as the user confirmed on 2026-10-13"
+		REF @TASK.B20
+		REF @TASK.B48
+		REF @TASK.B51
 	RATIONALE "the forms, the file and the frame are those of three rules of the instructions"
 		+ "corpus, delivered by its pull request #88: procedure_progress_outside_repository, the"
 		+ "extension as the form chosen by the runner and the last entry naming complete at the"
 		+ "end; progress_corpus_where_awawa_declared, one .awawa file holding the schema then STEP"
-		+ "and HANDOVER entities, read by inventory and last entity;"
-		+ "progress_entry_holds_what_resume_needs, five facts at most and no output, diff, course"
-		+ "or restatement; one file rather than a directory because a directory of several progress"
-		+ "corpora fails awawa lint on duplicate schemas, L005, and one file keeps the per-path"
-		+ "write grant of @TASK.B71; brigade reads none of them at run time: the instructions"
-		+ "corpus is optional, DESC 2 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites,"
-		+ "and a tool installed elsewhere reads nothing of its author's machine, the rule"
+		+ "and HANDOVER entities, read by inventory and last entity, formatted and linted naming"
+		+ "the file and never its directory; progress_entry_holds_what_resume_needs, five facts at"
+		+ "most and no output, diff, course or restatement; one file rather than a directory"
+		+ "because a directory of several progress corpora fails awawa lint on duplicate schemas,"
+		+ "L005, and one file keeps the per-path write grant of @TASK.B71; brigade reads none of"
+		+ "them at run time: the instructions corpus is optional, DESC 2 of"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, and a tool installed"
+		+ "elsewhere reads nothing of its author's machine, the rule"
 		+ "distributed_tool_free_of_authors_machine, so brigade ships its own copy of the schema"
 		+ "and carries the frame in its own brief, the copy kept equal to the rule's by hand"
 		REF @TASK.B71
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "the format and lint between two segments are brigade's for every role, the brief"
+		+ "asking the agent for them only where its role has shell, as the user ruled on 2026-10-13"
+		+ "with @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote as the precedent:"
+		+ "all nine shipped roles of brigade/roles/data/ carry shell, so a role without it is a"
+		+ "user's role; brigade/corpus/lint_corpus.py lints a root alone and format_files takes"
+		+ "paths, where the rule progress_corpus_where_awawa_declared asks fmt and lint naming the"
+		+ "file, hence the gateway on one file"
+		REF @DECISION.ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
+	RATIONALE "a corpus awawa cannot read does not end the run, as the user ruled: the next brief"
+		+ "opens on the lint output, the instruction to rewrite the file and the file whole, since"
+		+ "the inventory cannot be read, and the count of relaunches does not change"
 	RATIONALE "brigade reads no completion marker from the file: the end of a segment is the"
 		+ "declaration of its last line, @TASK.B102, and a run that hands over leaves a HANDOVER"
 		+ "the next segment reads by type; the fresh-run test of the rule, a file holding no entry,"
 		+ "is the plugin's answer to whether the document holds one, which replaces the non-empty"
-		+ "test of run_segments.py"
+		+ "test of run_segments.py and the one of _choose_recording in"
+		+ "brigade/adapters/test_clients/fake.py, which picks the resumed recording when the"
+		+ "progress file stripped is non-empty and would pick it on a fresh run whose"
+		+ "progress.awawa holds the schema alone; the progress setting of the fake stays raw text,"
+		+ "the awawa case of tests/cli passing a literal STEP entity"
 		REF @TASK.B102
+	RATIONALE "render for a person is the user's ruling of 2026-10-13 for brigade runs show of"
+		+ "@TASK.B94 and the dashboard: each entity as readable text, the entities with --json, the"
+		+ "Markdown file as it is; B94 keeps its own text until its refinement"
+		REF @TASK.B94
+	RATIONALE "the document key chooses the form of what brigade creates and the extension routes"
+		+ "what brigade reads back, which reconciles SPEC 3 of @TASK.B107, routing a role or"
+		+ "procedure file by its extension, with the key this task reads"
+		REF @TASK.B107
 	RATIONALE "awawa stays a prerequisite, DESC 1 of"
 		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites, as the user ruled on"
 		+ "2026-10-07 between the three options put to them, awawa optional and awawa embedded in"
@@ -6267,14 +6300,16 @@ TASK B106
 		REF @TASK.B94
 		REF @TASK.B91
 	RATIONALE "after @TASK.B73, which puts the resolver on Runtime and has the command run resolve"
-		+ "the plugins the core receives, and after @TASK.B102, which relaunches on the declaration"
-		+ "of the last line and composes the brief this task changes; the Claude Code adapter"
-		+ "grants the path the launch request names, brigade/adapters/clients/claude_code.py:57, so"
-		+ "the awawa form costs it nothing; DESC 1 of"
-		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast names"
-		+ "progress.md and is amended at the ratification to name the file of each form"
+		+ "the plugins the core receives, after @TASK.B102, which relaunches on the declaration of"
+		+ "the last line and composes the brief this task changes, and after @TASK.B71, whose write"
+		+ "grant names the path; the Claude Code adapter grants the path the launch request names,"
+		+ "brigade/adapters/clients/claude_code.py::PROGRESS_FILE_TOOLS and progress_rules read"
+		+ "from the progress_file of the request, so the awawa form costs it nothing; DESC 1 and 3"
+		+ "of @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast, naming"
+		+ "progress.md and the brief opening on the progress file, are amended at this ratification"
 		REF @TASK.B73
 		REF @TASK.B102
+		REF @TASK.B71
 		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	SOURCE "the user's words of 2026-10-07: \"ce fichier progress.md, à terme j'aimerais bien qu'il"
 		+ "soit normalisé, probabelement en passant par awawa, comme ça quand le fichier de"
@@ -6296,6 +6331,16 @@ TASK B106
 	SOURCE "pull request #88 of the instructions corpus, the rules"
 		+ "procedure_progress_outside_repository, progress_corpus_where_awawa_declared and"
 		+ "progress_entry_holds_what_resume_needs at its head 021ae05"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B106: « Entre deux segments,"
+		+ "brigade lance fmt puis lint sur progress.awawa avant de composer le brief suivant, pour"
+		+ "tout rôle ; le brief ne demande à l'agent de linter après chaque ajout que si son rôle a"
+		+ "shell. »; « Le run continue : le brief s'ouvre sur la sortie de lint, la consigne de"
+		+ "réécrire le fichier, et le fichier entier à défaut de l'inventaire ; le nombre de"
+		+ "relances ne change pas. »; « Le plugin rend chaque entité en texte lisible, --json donne"
+		+ "les entités ; la forme Markdown imprime le fichier tel quel. B106 gagne une opération «"
+		+ "rendre pour une personne ». »; « B106 livre le kind et les opérations du progress ;"
+		+ "B20/B48/B51 ajoutent lire+valider quand elles arrivent »; the fake's progress setting"
+		+ "stays raw text; the task is ratified"
 
 TASK B107
 	TITLE "A role file and a procedure file are accepted in an awawa form through the document"
@@ -7787,3 +7832,44 @@ TASK B145
 		+ ": [slot_clients] review = \"vibe\" ; ordre : slot, sinon PROJECT.CLIENT, sinon client ;"
 		+ "même forme que [forge_accounts]. Le client est une propriété de la machine, le rôle"
 		+ "reste portable. »; the task is split from B44 and ratified"
+
+TASK B146
+	TITLE "The built-in collector pr-list prints the pull requests of a project through the forge"
+		+ "adapter"
+	STATUS todo
+	MILESTONE @MILESTONE.M1
+	COMPONENT "studies"
+	ROLE ada
+	SPEC "pr-list is a built-in collector under the contract of B47: its items are the pull"
+		+ "requests of the project, read through the forge adapter as the login of the key cli, the"
+		+ "read B14 adds, each with number, title, head branch, base, state open, merged or closed,"
+		+ "author login, draft state, review decision, the verdict of its check runs and the task"
+		+ "its head branch task/<slug>/<task> names; the parameter state narrows them, open by"
+		+ "default; summary counts them by state"
+	SPEC "under FORGE none, pr-list declares itself absent: brigade collectors list prints it"
+		+ "absent naming FORGE none, and brigade collect pr-list exits 1 naming it"
+	SPEC "tests prove the document from a recorded answer of the forge adapter, the absence under"
+		+ "FORGE none, and that no model is launched"
+	AFTER @TASK.B47
+	AFTER @TASK.B14
+	RATIONALE "split out of @TASK.B47 on 2026-10-13: commit 04e7293 of the brigade repository had"
+		+ "given pr-list to @TASK.B46, of @MILESTONE.M7, which made @TASK.B20, of @MILESTONE.M1,"
+		+ "follow a task of a later milestone; the user ruled a small task of M1 after @TASK.B47,"
+		+ "the contract, and @TASK.B14, which adds the reading of pull requests to the GitHub"
+		+ "adapter; @TASK.B46 keeps the absence of pr-threads and check-runs under FORGE none, and"
+		+ "B47 and B14 stay as ratified"
+		REF @TASK.B47
+		REF @TASK.B46
+		REF @MILESTONE.M7
+		REF @TASK.B20
+		REF @MILESTONE.M1
+		REF @TASK.B14
+	RATIONALE "its items carry what the task table of @TASK.B20 needs, the pull request of each"
+		+ "task of the wave with its state, and what @TASK.B14 reads for the tick, the verdict of"
+		+ "the check runs and the review state, so that one read serves both"
+		REF @TASK.B20
+		REF @TASK.B14
+	SOURCE "the user's ruling of 2026-10-13: « Une petite tâche M1, todo : le built-in pr-list sous"
+		+ "le contrat de B47, AFTER B47 et B14 (qui ajoute la lecture des PR à l'adaptateur"
+		+ "GitHub). B46 le retire, B20 passe AFTER cette tâche. B47 et B14 restent comme ratifiées."
+		+ "»"

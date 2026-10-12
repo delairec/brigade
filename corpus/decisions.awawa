@@ -515,16 +515,18 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		REF @TASK.B73
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
-	TITLE "client, forge, scheduler, collector, check and output are plugin kinds resolved by name"
-		+ "through one resolver; the core sees documents only and imports no plugin; Clean"
-		+ "Architecture's layering is not adopted"
+	TITLE "client, forge, scheduler, collector, check, output and document are plugin kinds"
+		+ "resolved by name through one resolver; the core sees documents only and imports no"
+		+ "plugin; Clean Architecture's layering is not adopted"
 	STATUS active
 	DESC "a built-in plugin is a module under its kind's package, an external one an executable"
 		+ "brigade-<kind>-<name> on PATH for the client kind; the forge and the scheduler kinds"
 		+ "resolve their built-in modules alone until @TASK.B76, post-MVP, delivers their"
 		+ "executables; one resolver turns a name into one object answering the kind's operations,"
-		+ "searched in the kind's declared order: project, machine, PATH, built-ins"
+		+ "searched in the kind's declared order: project, machine, PATH, built-ins; the document"
+		+ "kind resolves its two built-in modules, markdown and awawa, which @TASK.B106 delivers"
 		REF @TASK.B76
+		REF @TASK.B106
 	DESC "an operation takes a JSON-compatible dict and returns one, validated by the core on entry"
 		+ "as @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets; a module"
 		+ "plugin and an executable plugin are indistinguishable to the core; no plugin Python type"
@@ -548,7 +550,7 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		REF @TASK.B73
 	DESC "binds @TASK.B06, @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B23, @TASK.B24, @TASK.B42,"
-		+ "@TASK.B43, @TASK.B46, @TASK.B47 and @TASK.B48"
+		+ "@TASK.B43, @TASK.B46, @TASK.B47, @TASK.B48 and @TASK.B106"
 		REF @TASK.B06
 		REF @TASK.B07
 		REF @TASK.B12
@@ -560,6 +562,7 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		REF @TASK.B46
 		REF @TASK.B47
 		REF @TASK.B48
+		REF @TASK.B106
 	REJECTED "a typing.Protocol shared by core and adapters in a common module: an adapter needs no"
 		+ "brigade import to answer documents, and the graph stays one-directional"
 	REJECTED "calling brigade adapter as a subprocess for a built-in adapter: a process per"
@@ -598,6 +601,9 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	SOURCE "the spawner added to DESC 5 in pull request #65 of the brigade repository, delivering"
 		+ "@TASK.B73"
 		REF @TASK.B73
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106: the document kind"
+		+ "added to the TITLE and to DESC 1"
+		REF @TASK.B106
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
@@ -860,7 +866,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B50
 		REF @TASK.B52
 	DESC "binds @TASK.B03, @TASK.B07, @TASK.B09, @TASK.B10, @TASK.B12, @TASK.B13, @TASK.B16,"
-		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50, @TASK.B52 and @TASK.B142"
+		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50, @TASK.B52, @TASK.B106 and @TASK.B142"
 		REF @TASK.B03
 		REF @TASK.B07
 		REF @TASK.B09
@@ -874,6 +880,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B50
 		REF @TASK.B52
 		REF @TASK.B142
+		REF @TASK.B106
 	REJECTED "root-level roles/, recipes/, procedures/, schema/ and scheduler/, the Blueprint"
 		+ "plan's layout: build.py copies brigade/ alone, so a root-level file is absent from"
 		+ "dist/brigade.pyz"
@@ -884,6 +891,9 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		+ "reaches both"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106, whose schema resource"
+		+ "this decision binds"
+		REF @TASK.B106
 
 DECISION OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	TITLE "every subprocess goes through one runner of brigade/system, git and awawa through"
@@ -1339,18 +1349,20 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	TITLE "a run keeps one directory under runs/<id>/ for all its segments, one folder"
 		+ "segments/<n>/ per segment, and result.json written last marks it finished"
 	STATUS active
-	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md,"
-		+ "journal.jsonl, the journal of the actions of every segment, segments/<n>/ with brief.md,"
-		+ "stdout.log, stderr.log and result.json, the normalised result of that segment, and"
-		+ "result.json, the normalised result of the last segment"
+	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md or"
+		+ "progress.awawa by the form the document key chooses, journal.jsonl, the journal of the"
+		+ "actions of every segment, segments/<n>/ with brief.md, stdout.log, stderr.log and"
+		+ "result.json, the normalised result of that segment, and result.json, the normalised"
+		+ "result of the last segment"
 	DESC "result.json is written atomically after the ledger events of the run: a run with a result"
 		+ "is finished, one whose pid lives without it is running, any other is dead"
-	DESC "a hand-over keeps the run id and numbers the segment; the brief of segment n opens on the"
-		+ "progress file"
-	DESC "binds @TASK.B06, and every task that reads a run, @TASK.B07 and @TASK.B19"
+	DESC "a hand-over keeps the run id and numbers the segment; the brief of segment n opens on"
+		+ "what the document plugin reads of the progress"
+	DESC "binds @TASK.B06, and every task that reads a run, @TASK.B07, @TASK.B19 and @TASK.B106"
 		REF @TASK.B06
 		REF @TASK.B07
 		REF @TASK.B19
+		REF @TASK.B106
 	REJECTED "a new run id per segment: the ledger's segment field and runs list would split one"
 		+ "run into several, and the progress file would move at each hand-over"
 	REJECTED "one stdout.log and stderr.log appended across segments: no reader could tell which"
@@ -1364,6 +1376,9 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		REF @TASK.B06
 	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
 		REF @TASK.B79
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106: DESC 1 names the file"
+		+ "of each form, DESC 3 what the document plugin reads"
+		REF @TASK.B106
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture and coverage.py, each installed by pip from"
