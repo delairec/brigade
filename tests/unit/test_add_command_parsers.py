@@ -23,7 +23,9 @@ def _decide_done(document) -> int:
     return 0
 
 
-def _create_command(path: tuple[str, ...], help_text: str, group_help=None, arguments=()) -> Command:
+def _create_command(
+    path: tuple[str, ...], help_text: str, group_help=None, arguments=(), render_passed_stderr=None
+) -> Command:
     return Command(
         path=path,
         help=help_text,
@@ -33,7 +35,22 @@ def _create_command(path: tuple[str, ...], help_text: str, group_help=None, argu
         decide_exit_code=_decide_done,
         arguments=arguments,
         group_help=group_help,
+        render_passed_stderr=render_passed_stderr,
     )
+
+
+def _capture_refusal(parser: argparse.ArgumentParser, arguments: list[str]) -> tuple[int, str]:
+    errors = io.StringIO()
+    with unittest.TestCase().assertRaises(SystemExit) as raised, contextlib.redirect_stderr(errors):
+        parser.parse_args(arguments)
+    return raised.exception.code, errors.getvalue()
+
+
+def _print_help(parser: argparse.ArgumentParser, arguments: list[str]) -> str:
+    page = io.StringIO()
+    with contextlib.suppress(SystemExit), contextlib.redirect_stdout(page):
+        parser.parse_args(arguments)
+    return page.getvalue()
 
 
 def _create_common_options() -> argparse.ArgumentParser:
@@ -150,15 +167,13 @@ class AddCommandParsersOfAGroupWithNoCommandOfItsOwnTest(unittest.TestCase):
         show = _create_command(("project", "show"), "print a project", group_help="the projects")
         parser = argparse.ArgumentParser(prog="brigade")
         add_command_parsers(parser, (show,), _create_common_options())
-        errors = io.StringIO()
 
         # Act
-        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(errors):
-            parser.parse_args(["project"])
+        exit_code, errors = _capture_refusal(parser, ["project"])
 
         # Assert
-        self.assertEqual(raised.exception.code, 2)
-        self.assertIn("the following arguments are required: action", errors.getvalue())
+        self.assertEqual(exit_code, 2)
+        self.assertIn("the following arguments are required: action", errors)
 
     def test_should_parse_no_command_when_none_is_given(self):
         # Arrange
@@ -171,3 +186,63 @@ class AddCommandParsersOfAGroupWithNoCommandOfItsOwnTest(unittest.TestCase):
 
         # Assert
         self.assertIsNone(options.command)
+
+
+class AddCommandParsersOfAPassthroughRecordTest(unittest.TestCase):
+    def test_should_print_its_help_under_the_options_of_its_path(self):
+        # Arrange
+        tool = _create_command(("tool",), "read the tool's tree")
+        passthrough = _create_command(("tool",), "-- <tool args>: run the tool there", render_passed_stderr=_render)
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (tool, passthrough), _create_common_options())
+
+        # Act
+        page = _print_help(parser, ["tool", "--help"])
+
+        # Assert
+        self.assertRegex(page, r"\noptions:\n(?:.+\n)+\n-- <tool args>: run the tool there\n\Z")
+
+    def test_should_leave_the_command_record_of_its_path_parsing_that_path(self):
+        # Arrange
+        tool = _create_command(("tool",), "read the tool's tree")
+        passthrough = _create_command(("tool",), "-- <tool args>: run the tool there", render_passed_stderr=_render)
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (passthrough, tool), _create_common_options())
+
+        # Act
+        options = parser.parse_args(["tool"])
+
+        # Assert
+        self.assertIs(options.command, tool)
+
+
+class AddCommandParsersWhenAPassthroughRecordHasNoCommandRecordOnItsPathTest(unittest.TestCase):
+    def test_should_refuse_naming_the_command_line(self):
+        # Arrange
+        passthrough = _create_command(("tool",), "-- <tool args>: run the tool there", render_passed_stderr=_render)
+
+        # Act
+        with self.assertRaises(ValueError) as raised:
+            add_command_parsers(argparse.ArgumentParser(prog="brigade"), (passthrough,), _create_common_options())
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), "a passthrough record declares brigade tool, which no command record declares"
+        )
+
+
+class AddCommandParsersWhenTwoPassthroughRecordsDeclareOnePathTest(unittest.TestCase):
+    def test_should_refuse_naming_the_command_line(self):
+        # Arrange
+        commands = (
+            _create_command(("tool",), "read the tool's tree"),
+            _create_command(("tool",), "-- <tool args>: run the tool there", render_passed_stderr=_render),
+            _create_command(("tool",), "-- <tool args>: pass the tool", render_passed_stderr=_render),
+        )
+
+        # Act
+        with self.assertRaises(ValueError) as raised:
+            add_command_parsers(argparse.ArgumentParser(prog="brigade"), commands, _create_common_options())
+
+        # Assert
+        self.assertEqual(str(raised.exception), "two passthrough records declare brigade tool")

@@ -781,6 +781,18 @@ DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		+ "je valide la décision puisque c'est ce qu'on veut, sinon je ne vois pas comment suivre"
 		+ "le déroulé du run facilement pour un humain\""
 		REF @TASK.B113
+	DESC "the help of a passthrough record is printed by the --help of its path, as the epilog of"
+		+ "its parser, under the options, and opens on the arguments it passes, -- <awawa args>:"
+		+ "for brigade corpus; brigade/add_command_parsers.py takes every record and refuses a"
+		+ "passthrough record at a path no command record declares, from @TASK.B129"
+		REF @TASK.B129
+	REJECTED "a field of the record naming the arguments a passthrough passes, from which the"
+		+ "parser builder would write the -- <awawa args> introducer: one field for one string the"
+		+ "help already carries"
+	SOURCE "DESC 17 and its REJECTED in pull request #107 of the brigade repository, delivering"
+		+ "@TASK.B129, on the user's ruling of 2026-10-12 in its refinement: the help as the epilog"
+		+ "of the parser of its path, under the options"
+		REF @TASK.B129
 
 DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	TITLE "shared state is written atomically under fcntl locks kept in the state directory, one"

@@ -6521,17 +6521,24 @@ TASK B122
 TASK B129
 	TITLE "The --help of a path prints the help its passthrough record declares, brigade corpus"
 		+ "--help included"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.F0
 	COMPONENT "commands"
 	ROLE ada
 	SPEC "brigade corpus --help prints, under its options, the help the passthrough record of"
 		+ "brigade/commands/corpus_awawa.py declares, introduced by -- <awawa args>, and"
 		+ "tests/cli/test_help.py asserts it"
+		IMPL "brigade/commands/corpus_awawa.py::help=\"-- <awawa args>: run awawa in a registered"
+			+ "project's tree and pass its stdout, stderr and exit code through\","
+		IMPL "tests/cli/test_help.py::class BrigadeCorpusHelpTest(HelpTestCase):"
 	SPEC "the help of a passthrough record declared at any path is printed by the --help of that"
 		+ "path, as the epilog of its parser, with no change to cli.py for a new passthrough"
 		+ "record; a test of tests/unit/test_add_command_parsers.py proves it on a record of its"
 		+ "own"
+		IMPL "brigade/add_command_parsers.py::epilog=epilogs.get(node)"
+		IMPL "brigade/cli.py::parser = _create_parser(commands)"
+		IMPL "tests/unit/test_add_command_parsers.py::class"
+			+ "AddCommandParsersOfAPassthroughRecordTest(unittest.TestCase):"
 	AFTER @TASK.B89
 	RATIONALE "brigade/cli.py:119-120 at 67812ad builds its parser from the records whose"
 		+ "render_passed_stderr is None, so the help of the passthrough record reaches no parser:"
@@ -6544,6 +6551,7 @@ TASK B129
 		+ "printing it as the description, above the options"
 	SOURCE "finding 1 of the review of pull request #95 on 2026-10-10, by a brigade run of the role"
 		+ "prudence: \"No --help prints that help\""
+	DELIVERED_BY 107
 
 TASK B130
 	TITLE "the shutil import of tests/cli/test_run.py restored, dropped by the squash merge of pull"

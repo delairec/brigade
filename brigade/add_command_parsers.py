@@ -10,11 +10,11 @@ def _name(path: tuple[str, ...]) -> str:
     return " ".join(("brigade", *path))
 
 
-def _index_by_path(commands) -> dict[tuple[str, ...], Command]:
+def _index_by_path(commands, record_kind: str) -> dict[tuple[str, ...], Command]:
     by_path = {}
     for command in commands:
         if command.path in by_path:
-            raise ValueError(f"two command records declare {_name(command.path)}")
+            raise ValueError(f"two {record_kind} records declare {_name(command.path)}")
         by_path[command.path] = command
     return by_path
 
@@ -24,6 +24,16 @@ def _declare_help(helps: dict, path: tuple[str, ...], help_text) -> None:
         return
     if helps.setdefault(path, help_text) != help_text:
         raise ValueError(f"two command records declare different helps for {_name(path)}")
+
+
+def _collect_epilogs(commands, by_path: dict[tuple[str, ...], Command]) -> dict[tuple[str, ...], str]:
+    passthroughs = _index_by_path(
+        (command for command in commands if command.render_passed_stderr is not None), "passthrough"
+    )
+    for path in passthroughs:
+        if path not in by_path:
+            raise ValueError(f"a passthrough record declares {_name(path)}, which no command record declares")
+    return {path: passthrough.help for path, passthrough in passthroughs.items()}
 
 
 def _collect_helps(commands) -> dict[tuple[str, ...], str]:
@@ -47,16 +57,19 @@ def _add_arguments(container, arguments) -> None:
 
 
 def add_command_parsers(parser, commands, common_options) -> None:
-    by_path = _index_by_path(commands)
-    helps = _collect_helps(commands)
+    by_path = _index_by_path((command for command in commands if command.render_passed_stderr is None), "command")
+    epilogs = _collect_epilogs(commands, by_path)
+    helps = _collect_helps(by_path.values())
     parser.set_defaults(command=None)
     parsers = {ROOT: parser}
     actions = {ROOT: parser.add_subparsers(metavar=ROOT_METAVAR)}
-    for node in _list_nodes(commands):
+    for node in _list_nodes(by_path.values()):
         parent = node[:-1]
         if parent not in actions:
             actions[parent] = parsers[parent].add_subparsers(metavar=GROUP_METAVAR, required=parent not in by_path)
-        parsers[node] = actions[parent].add_parser(node[-1], parents=[common_options], help=helps.get(node))
+        parsers[node] = actions[parent].add_parser(
+            node[-1], parents=[common_options], help=helps.get(node), epilog=epilogs.get(node)
+        )
         if node in by_path:
             _add_arguments(parsers[node], by_path[node].arguments)
             parsers[node].set_defaults(command=by_path[node])

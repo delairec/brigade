@@ -84,3 +84,21 @@ class BrigadeGroupHelpTest(HelpTestCase):
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assert_listed(completed.stdout, action, expected_help)
+
+
+class BrigadeCorpusHelpTest(HelpTestCase):
+    def test_should_print_the_help_of_the_awawa_passthrough_under_its_options(self):
+        # Act
+        completed = self.run_help("corpus")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertRegex(
+            completed.stdout,
+            r"\noptions:\n(?:.+\n)+\n"
+            + re.escape(
+                "-- <awawa args>: run awawa in a registered project's tree"
+                " and pass its stdout, stderr and exit code through"
+            )
+            + r"\n\Z",
+        )
