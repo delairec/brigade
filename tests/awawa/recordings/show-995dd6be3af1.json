@@ -2,7 +2,7 @@
   "call": {
     "arguments": [
       "show",
-      "WAVE",
+      "MILESTONE",
       "<tmp:0>/projects/shop"
     ],
     "cwd": "<tmp:0>/projects/shop",
@@ -18,7 +18,7 @@
   "outcome": {
     "exit_code": 1,
     "rewritten": {},
-    "stderr": "awawa show: @SCHEMA.WAVE is not defined in the workspace\n",
+    "stderr": "awawa show: @SCHEMA.MILESTONE is not defined in the workspace\n",
     "stdout": ""
   },
   "version": "awawa 2.7.0"

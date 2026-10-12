@@ -4,9 +4,9 @@ budget: 30
 ---
 # Procedure — cut one request into a wave
 
-Cut one request of a project into a wave: one WAVE entity and its TASK entities, written against the project's own
-schema in one plan file, then handed to brigade to record. You plan; you deliver nothing, and the plan file is the
-only file you write.
+Cut one request of a project into a wave: one MILESTONE entity and the TASK entities whose MILESTONE names it,
+written against the project's own schema in one plan file, then handed to brigade to record. You plan; you deliver
+nothing, and the plan file is the only file you write.
 
 Argument, which the Arguments section names: `request`, the REQUEST entity of the operational corpus to plan.
 
@@ -20,7 +20,7 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 ## 1. Read the package
 
 1. `brigade plan context <request> --json`. It prints the request in the user's words, the inventory of the
-   project's corpus, its active decisions, its draft and todo tasks, its TASK and WAVE schemas, the next free task
+   project's corpus, its active decisions, its draft and todo tasks, its TASK and MILESTONE schemas, the next free task
    number, and every IMPL anchor indexed by the file it points at.
 2. A non-zero exit, or a `missing` list naming a type, means the plan cannot be written against this corpus: stop,
    report the message or the missing type verbatim, and end blocked.
@@ -42,8 +42,9 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 
 ## 3. Write the plan file
 
-1. Write `plan.awawa` in the directory that holds the progress file: one WAVE entity for the request, then its TASK
-   entities, every field the schemas of the package mark REQUIRED and no field they do not declare.
+1. Write `plan.awawa` in the directory that holds the progress file: one MILESTONE entity for the request, then
+   the TASK entities whose MILESTONE names it, every field the schemas of the package mark REQUIRED and no field
+   they do not declare.
 2. `awawa fmt <plan file>`, then `awawa lint --strict <corpus> <plan file>`: the project's schema validates the
    plan. Correct every error in the plan file and run both again until they exit 0.
 3. Write nothing else: no file of the repository, no branch, no entity of either corpus.

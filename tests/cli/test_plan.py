@@ -31,8 +31,8 @@ DECISION_SCHEMA = (
     "\tFIELD IMPL anchor\n"
     "\t\tREPEATABLE\n"
 )
-WAVE_SCHEMA = (
-    "SCHEMA WAVE\n"
+MILESTONE_SCHEMA = (
+    "SCHEMA MILESTONE\n"
     '\tDESC "the tasks planned for one request"\n'
     "\tFIELD TITLE string\n"
     "\t\tREQUIRED\n"
@@ -101,7 +101,7 @@ class PlanContextTestCase(unittest.TestCase):
 class BrigadePlanContextOfAPlanningRequestTest(PlanContextTestCase):
     def setUp(self):
         super().setUp()
-        self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}\n{WAVE_SCHEMA}")
+        self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}")
         self.write_request("planning")
 
     def test_should_print_the_planning_package_as_a_versioned_document(self):
@@ -118,16 +118,16 @@ class BrigadePlanContextOfAPlanningRequestTest(PlanContextTestCase):
                 "corpus": str(self.project.path),
                 "status": [
                     {"type": "DECISION", "total": 2, "counts": {"active": 1, "archived": 1}},
+                    {"type": "MILESTONE", "total": 0, "counts": {}},
                     {"type": "SCHEMA", "total": 3, "counts": {}},
                     {"type": "TASK", "total": 3, "counts": {"draft": 1, "implemented": 1, "todo": 1}},
-                    {"type": "WAVE", "total": 0, "counts": {}},
                 ],
                 "decisions": [{"name": "CartLivesInMemory", "title": "the cart lives in memory"}],
                 "tasks": [
                     {"name": "FIX7", "status": "draft", "title": "Round the total to the cent"},
                     {"name": "S2", "status": "todo", "title": "Remove an item from the cart"},
                 ],
-                "schemas": {"TASK": TASK_SCHEMA, "WAVE": WAVE_SCHEMA},
+                "schemas": {"TASK": TASK_SCHEMA, "MILESTONE": MILESTONE_SCHEMA},
                 "missing": [],
                 "next_task_number": 8,
                 "anchors": {
@@ -151,10 +151,10 @@ class BrigadePlanContextOfAPlanningRequestTest(PlanContextTestCase):
             f"{REQUEST_TEXT}\n"
             "\n"
             f"Corpus {self.project.path}\n"
-            "DECISION  2  active 1, archived 1\n"
-            "SCHEMA    3\n"
-            "TASK      3  draft 1, implemented 1, todo 1\n"
-            "WAVE      0\n"
+            "DECISION   2  active 1, archived 1\n"
+            "MILESTONE  0\n"
+            "SCHEMA     3\n"
+            "TASK       3  draft 1, implemented 1, todo 1\n"
             "\n"
             "Active decisions\n"
             "@DECISION.CartLivesInMemory  the cart lives in memory\n"
@@ -171,37 +171,37 @@ class BrigadePlanContextOfAPlanningRequestTest(PlanContextTestCase):
             "  @TASK.S1  src/cart.py::def add_item\n"
             "\n"
             f"{TASK_SCHEMA}\n"
-            f"{WAVE_SCHEMA}",
+            f"{MILESTONE_SCHEMA}",
         )
 
 
-class BrigadePlanContextOnACorpusWithoutAWaveTypeTest(PlanContextTestCase):
+class BrigadePlanContextOnACorpusWithoutAMilestoneTypeTest(PlanContextTestCase):
     def setUp(self):
         super().setUp()
         self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}")
         self.write_request("planning")
 
-    def test_should_name_the_wave_type_missing_in_the_document(self):
+    def test_should_name_the_milestone_type_missing_in_the_document(self):
         # Act
         completed = self.run_plan_context("R1", "--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["missing"], ["WAVE"])
+        self.assertEqual(json.loads(completed.stdout)["missing"], ["MILESTONE"])
 
-    def test_should_name_the_wave_type_missing_in_the_text(self):
+    def test_should_name_the_milestone_type_missing_in_the_text(self):
         # Act
         completed = self.run_plan_context("R1")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertIn("\nMissing schema WAVE\n", completed.stdout)
+        self.assertIn("\nMissing schema MILESTONE\n", completed.stdout)
 
 
 class BrigadePlanContextOfARequestNotPlanningTest(PlanContextTestCase):
     def test_should_exit_1_naming_the_request_and_its_status(self):
         # Arrange
-        self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}\n{WAVE_SCHEMA}")
+        self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}")
         self.write_request("planned")
 
         # Act

@@ -973,7 +973,7 @@ TASK B10
 		IMPL "tests/cli/test_plan.py::class"
 			+ "BrigadePlanContextOfARequestNotPlanningTest(PlanContextTestCase):"
 		IMPL "tests/cli/test_plan.py::class"
-			+ "BrigadePlanContextOnACorpusWithoutAWaveTypeTest(PlanContextTestCase):"
+			+ "BrigadePlanContextOnACorpusWithoutAMilestoneTypeTest(PlanContextTestCase):"
 	SPEC "brigade/runs/data/procedures/wave-plan.md is shipped and brigade run wave-plan --slot"
 		+ "plan request=<id> resolves it: the planner reads the package, writes one .awawa file"
 		+ "holding one MILESTONE entity and its TASK entities against the project's schema in its"
