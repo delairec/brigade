@@ -2,7 +2,13 @@ import dataclasses
 
 from brigade.ledger.run_finished import RunFinished
 from brigade.runs.plan_run import RunPlan
-from brigade.runs.run_segment import NO_SESSION_AT_LAUNCH, WALL_LIMIT_OUTCOME, SegmentRecord
+from brigade.runs.run_segment import (
+    NO_SESSION_AT_LAUNCH,
+    STOPPED_BY_A_SIGNAL,
+    STOPPED_OUTCOME,
+    WALL_LIMIT_OUTCOME,
+    SegmentRecord,
+)
 
 DONE_OUTCOME = "done"
 NO_FAILURE = "the run did not fail"
@@ -10,6 +16,7 @@ NO_ERROR_CLASS = "the client reported no error class"
 NOT_IN_A_WAVE = "not launched by a wave"
 WALL_LIMIT_CUT = "cut at the wall-time limit"
 NO_NULLS_EXPLAINED = {}
+ENDING_REASONS = {WALL_LIMIT_OUTCOME: WALL_LIMIT_CUT, STOPPED_OUTCOME: STOPPED_BY_A_SIGNAL}
 
 
 def _explain_missing_main_steps(plan: RunPlan, record: SegmentRecord) -> str:
@@ -28,14 +35,15 @@ def _explain_client_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFin
     return {field: reason for field, reason in reasons.items() if getattr(finished, field) is None}
 
 
-def _explain_cut_nulls(record: SegmentRecord, finished: RunFinished) -> dict:
+def _explain_ending_nulls(record: SegmentRecord, finished: RunFinished) -> dict:
+    ending_reason = ENDING_REASONS[finished.outcome]
     reasons = {
         "session": NO_SESSION_AT_LAUNCH,
         "main_steps": record.uncounted,
         "total_steps": record.uncounted,
         "usage": record.uncounted,
-        "error_class": WALL_LIMIT_CUT,
-        "exit": WALL_LIMIT_CUT,
+        "error_class": ending_reason,
+        "exit": ending_reason,
     }
     return {field: reason for field, reason in reasons.items() if getattr(finished, field) is None}
 
@@ -46,8 +54,8 @@ def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) 
         nulls["project"] = "no project given"
     nulls["wave"] = NOT_IN_A_WAVE
     nulls["task"] = NOT_IN_A_WAVE
-    if finished.outcome == WALL_LIMIT_OUTCOME:
-        return {**nulls, **_explain_cut_nulls(record, finished)}
+    if finished.outcome in ENDING_REASONS:
+        return {**nulls, **_explain_ending_nulls(record, finished)}
     return {**nulls, **_explain_client_nulls(plan, record, finished)}
 
 

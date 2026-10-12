@@ -1,7 +1,9 @@
+import os
 import signal
 import subprocess
 import unittest
 
+from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 
 NO_TIME = 0.0
@@ -15,6 +17,10 @@ LONG_LIMIT_S = 20.0
 
 def _poll_nothing() -> None:
     pass
+
+
+def _signal_itself() -> None:
+    os.kill(os.getpid(), signal.SIGTERM)
 
 
 class WaitWithinLimitTestCase(unittest.TestCase):
@@ -55,6 +61,21 @@ class WaitWithinLimitOfAProcessIgnoringTheStopSignalTest(WaitWithinLimitTestCase
 
         # Assert
         self.assertEqual((exit_code, process.returncode), (CUT, -signal.SIGKILL))
+
+    def test_should_kill_the_group_once_the_grace_is_over_when_the_run_is_stopped(self):
+        # Arrange
+        self.addCleanup(signal.signal, signal.SIGTERM, signal.getsignal(signal.SIGTERM))
+        self.addCleanup(signal.signal, signal.SIGINT, signal.getsignal(signal.SIGINT))
+        process = self.start(["sh", "-c", 'trap "" TERM; echo ready; exec sleep 5'], start_new_session=True)
+        process.stdout.readline()
+        limit = WallLimit(limit_s=LONG_LIMIT_S, grace_before_kill_s=SHORT_GRACE_S, poll_s=SHORT_POLL_S)
+
+        # Act
+        with StopSignalReceiver() as receiver, receiver.raising(), self.assertRaises(StopRequested):
+            wait_within_limit(process, limit, _signal_itself)
+
+        # Assert
+        self.assertEqual(process.returncode, -signal.SIGKILL)
 
 
 class WaitWithinLimitOfAProcessThatRunsForSeveralPollsTest(WaitWithinLimitTestCase):

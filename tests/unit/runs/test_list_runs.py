@@ -175,5 +175,5 @@ class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
         self.assertEqual(
             str(refusal.exception),
             f"{self.run_directory / 'result.json'} is not a run result: outcome is 'lost', not one of done, failed,"
-            " handed_over, blocked, undeclared, wall_limit, turn_limit",
+            " handed_over, blocked, undeclared, wall_limit, turn_limit, stopped",
         )

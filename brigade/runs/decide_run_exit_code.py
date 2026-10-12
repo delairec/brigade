@@ -6,6 +6,7 @@ RUN_EXIT_CODES = {
     "wall_limit": 11,
     "turn_limit": 12,
     "handed_over": 20,
+    "stopped": 21,
 }
 
 

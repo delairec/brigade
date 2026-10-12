@@ -13,6 +13,7 @@ from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import SLOTS, Configuration, read_configuration
 from brigade.system.require_login_environment import LoginDemand, require_login_environment
+from brigade.system.stop_signal_receiver import StopSignalReceiver
 
 DOCUMENT_SCHEMA_VERSION = 1
 SINGLE_SEGMENT = 1
@@ -83,7 +84,7 @@ def _describe_diagnostics(document: dict) -> list[str]:
     return document.get("warnings", [])
 
 
-def run(request, runtime: Runtime) -> dict:
+def _prepare_run(request, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
     configuration = read_configuration(runtime.paths.configuration_file)
     forge_environment = _read_forge_environment(configuration, run_request.slot, runtime)
@@ -94,10 +95,17 @@ def run(request, runtime: Runtime) -> dict:
     )
     create_run_directory(plan)
     runtime.trail.locate(plan.run_directory / PROCESSES_FILE)
+    return plan
+
+
+def run(request, runtime: Runtime) -> dict:
     if request.detach:
+        plan = _prepare_run(request, runtime)
         pid = detach_run(plan, runtime)
         return _attach_warnings({"schema_version": DOCUMENT_SCHEMA_VERSION, "run": plan.run_id, "pid": pid}, plan)
-    records = run_segments(plan, runtime)
+    with StopSignalReceiver() as stop:
+        plan = _prepare_run(request, runtime)
+        records = run_segments(plan, runtime, stop)
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "run": plan.run_id,

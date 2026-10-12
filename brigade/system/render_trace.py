@@ -6,6 +6,7 @@ from brigade.system.process_trace import (
     NO_WORKING_DIRECTORY,
     NOT_FOUND,
     SPAWNED,
+    STOPPED,
     TIMED_OUT,
     ProcessTrace,
 )
@@ -17,6 +18,7 @@ ENDINGS = {
     NO_WORKING_DIRECTORY: lambda trace: f"no working directory {trace.cwd}",
     CUT: lambda trace: f"cut after {trace.duration_ms} ms",
     SPAWNED: lambda trace: f"spawned pid {trace.pid}",
+    STOPPED: lambda trace: f"stopped after {trace.duration_ms} ms",
 }
 
 

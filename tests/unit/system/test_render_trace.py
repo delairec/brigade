@@ -21,6 +21,11 @@ class RenderTraceTest(unittest.TestCase):
             ),
             ("cut", ProcessTrace(("claude", "-p"), "/", "cut", None, 400), "ran claude -p, cut after 400 ms"),
             (
+                "stopped",
+                ProcessTrace(("claude", "-p"), "/", "stopped", None, 400),
+                "ran claude -p, stopped after 400 ms",
+            ),
+            (
                 "spawned",
                 ProcessTrace(("brigade", "run"), "/", "spawned", None, None, pid=4242),
                 "ran brigade run, spawned pid 4242",

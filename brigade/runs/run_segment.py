@@ -1,3 +1,4 @@
+import dataclasses
 import time
 import uuid
 from dataclasses import dataclass
@@ -27,8 +28,10 @@ from brigade.system.create_directory import create_directory
 from brigade.system.launch_argv_request import LaunchArgvRequest
 from brigade.system.parse_result_answer import ParseResultAnswer
 from brigade.system.parse_result_request import ParseResultRequest
-from brigade.system.process_trace import CUT, EXITED, ProcessTrace
+from brigade.system.process_trace import CUT, EXITED, STOPPED, ProcessTrace
 from brigade.system.spawn_process import SpawnRequest
+from brigade.system.stop_process_group import stop_process_group
+from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.transcripts_answer import TranscriptsAnswer
 from brigade.system.transcripts_request import TranscriptsRequest
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
@@ -38,6 +41,10 @@ from brigade.system.write_text_file import write_text_file
 FIRST_SEGMENT = 1
 PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
 WALL_LIMIT_OUTCOME = "wall_limit"
+STOPPED_OUTCOME = "stopped"
+STOPPED_BY_A_SIGNAL = "stopped by a signal"
+NOT_LAUNCHED = "the client was never launched"
+NOT_MEASURED_MS = 0
 TURN_LIMIT = "turn_limit"
 GRACE_BEFORE_KILL_S = 30.0
 NO_TRANSCRIPT_READ = "the client reads no transcript"
@@ -116,30 +123,57 @@ def _count_steps(transcripts: TranscriptsAnswer | None) -> SessionSteps | None:
     return None if transcripts is None else count_session_steps(transcripts)
 
 
-def _measure_cut(plan: RunPlan, runtime: Runtime, number: int, measured_ms: int, session_id: str | None):
-    transcripts, uncounted = _read_transcripts(plan, runtime, session_id, NO_SESSION_AT_LAUNCH)
-    cut = RunResult(
-        outcome=WALL_LIMIT_OUTCOME,
+def _describe_ending(outcome: str, message: str, session_id: str | None, measured_ms: int) -> RunResult:
+    return RunResult(
+        outcome=outcome,
         steps=None,
-        usage=None if transcripts is None else sum_session_usage(transcripts),
+        usage=None,
         session_id=session_id,
         duration_ms=measured_ms,
         error_class=None,
         reset=None,
-        message=f"cut at the wall-time limit of {plan.wall_limit_s:g} s",
+        message=message,
     )
+
+
+def _measure_ending(plan: RunPlan, runtime: Runtime, number: int, ending: RunResult) -> SegmentRecord:
+    transcripts, uncounted = _read_transcripts(plan, runtime, ending.session_id, NO_SESSION_AT_LAUNCH)
     return SegmentRecord(
         number=number,
-        result=cut,
+        result=dataclasses.replace(ending, usage=None if transcripts is None else sum_session_usage(transcripts)),
         exit_code=None,
-        measured_ms=measured_ms,
+        measured_ms=ending.duration_ms,
         cost_usd=None,
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
     )
 
 
-def _run_process(plan: RunPlan, number: int, runtime: Runtime, segment_directory: Path) -> SegmentRecord:
+def _record_stop_before_launch(number: int, session_id: str | None) -> SegmentRecord:
+    return SegmentRecord(
+        number=number,
+        result=_describe_ending(STOPPED_OUTCOME, STOPPED_BY_A_SIGNAL, session_id, NOT_MEASURED_MS),
+        exit_code=None,
+        measured_ms=NOT_MEASURED_MS,
+        cost_usd=None,
+        counted_steps=None,
+        uncounted=NOT_LAUNCHED,
+    )
+
+
+def _wait_for_client(process, limit: WallLimit, on_poll, stop: StopSignalReceiver) -> tuple[int | None, str]:
+    try:
+        with stop.raising():
+            exit_code = wait_within_limit(process, limit, on_poll)
+    except StopRequested:
+        stop_process_group(process, limit.grace_before_kill_s)
+        return None, STOPPED
+    return exit_code, CUT if exit_code is None else EXITED
+
+
+def _run_process(
+    plan: RunPlan, number: int, runtime: Runtime, segment_directory: Path, stop: StopSignalReceiver
+) -> SegmentRecord:
     brief = _compose_segment_brief(plan, number)
     write_text_file(segment_directory / BRIEF_FILE, brief)
     progress_file = str(plan.run_directory / PROGRESS_FILE)
@@ -162,19 +196,26 @@ def _run_process(plan: RunPlan, number: int, runtime: Runtime, segment_directory
         stdout=segment_directory / STDOUT_FILE,
         stderr=segment_directory / STDERR_FILE,
     )
+    if stop.requested:
+        return _record_stop_before_launch(number, launch.session_id)
     started = time.monotonic()
     process = runtime.spawn_process(request)
     journal = SegmentJournalWriter(plan, number, runtime, segment_directory / STDOUT_FILE)
     limit = WallLimit(
         limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S, poll_s=plan.configuration.journal_poll_s
     )
-    exit_code = wait_within_limit(process, limit, journal.write_complete_lines)
+    exit_code, outcome = _wait_for_client(process, limit, journal.write_complete_lines, stop)
     measured_ms = round((time.monotonic() - started) * 1000)
     journal.write_rest()
-    outcome = CUT if exit_code is None else EXITED
     runtime.trail.append(ProcessTrace(request.argv, request.cwd, outcome, exit_code=exit_code, duration_ms=measured_ms))
-    if exit_code is None:
-        return _measure_cut(plan, runtime, number, measured_ms, launch.session_id)
+    if outcome == STOPPED:
+        ending = _describe_ending(STOPPED_OUTCOME, STOPPED_BY_A_SIGNAL, launch.session_id, measured_ms)
+        return _measure_ending(plan, runtime, number, ending)
+    if outcome == CUT:
+        cut = f"cut at the wall-time limit of {plan.wall_limit_s:g} s"
+        return _measure_ending(
+            plan, runtime, number, _describe_ending(WALL_LIMIT_OUTCOME, cut, launch.session_id, measured_ms)
+        )
     answer = _ask_client(
         plan,
         runtime,
@@ -197,9 +238,9 @@ def _run_process(plan: RunPlan, number: int, runtime: Runtime, segment_directory
     )
 
 
-def run_segment(plan: RunPlan, number: int, runtime: Runtime) -> SegmentRecord:
+def run_segment(plan: RunPlan, number: int, runtime: Runtime, stop: StopSignalReceiver) -> SegmentRecord:
     segment_directory = plan.run_directory / SEGMENTS_DIRECTORY / str(number)
     create_directory(segment_directory)
-    record = _run_process(plan, number, runtime, segment_directory)
+    record = _run_process(plan, number, runtime, segment_directory, stop)
     write_json_atomically(segment_directory / RESULT_FILE, record.result.to_document())
     return record
