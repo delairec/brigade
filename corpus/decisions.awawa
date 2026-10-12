@@ -2107,3 +2107,34 @@ DECISION TheStepCapOfClaudeCodeBoundsAnswersAndTheBudgetIsWatchedInSteps
 		+ "answers carrying 3 parallel tool calls and ended success with num_turns 4"
 	SOURCE "pull request #104, delivering @TASK.B103"
 		REF @TASK.B103
+
+DECISION AProjectChoosesHowBrigadeUsesItsCorpus
+	TITLE "a project whose repository already holds a corpus chooses how brigade uses it: brigade"
+		+ "controls it, keeps to an area of it, or works without awawa; the mode is a field of the"
+		+ "PROJECT entity and control is delivered first"
+	STATUS active
+	CLOSES @OPEN_QUESTION.HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
+	DESC "control: brigade writes its WAVE and TASK entities in the project's corpus and refuses,"
+		+ "naming them, the types and fields its schema does not declare"
+	DESC "area: brigade keeps to an area of its own in the repository; none: the project's waves"
+		+ "and tasks do not go through awawa, brigade itself still requiring it"
+	DESC "brigade project add, finding a corpus in the repository, asks the user which mode to set;"
+		+ "a project without a corpus is in control, brigade creating its corpus"
+	DESC "the mode is a field of the PROJECT entity of projects.awawa, beside CORPUS"
+	DESC "control is delivered first, by @TASK.B10 and @TASK.B139; area and none by @TASK.B140"
+		REF @TASK.B10
+		REF @TASK.B139
+		REF @TASK.B140
+	REJECTED "a single answer for every project, shared or separate: the user wants the choice"
+	REJECTED "the mode in config.toml: the PROJECT entity already holds the corpus folder of the"
+		+ "project"
+	REJECTED "the three modes delivered together by the first planning task: the none mode is not"
+		+ "designed yet"
+	RATIONALE "awawa stays a prerequisite of brigade, by"
+		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites; the none mode concerns a"
+		+ "project's waves and tasks, not brigade's own corpus"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10: \"si on détecte un corpus"
+		+ "préexistant, on doit poser la question à l'utilisateur: soit il veut que brigade"
+		+ "contrôle le corpus, soit il veut que brigade se confine dans une aire, soit il ne veut"
+		+ "pas que brigade passer par awawa. Le tout rendu configurable dans le fichier de config\""

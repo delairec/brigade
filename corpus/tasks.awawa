@@ -947,17 +947,52 @@ TASK B09
 	AFTER @TASK.B43
 
 TASK B10
-	TITLE "Procedure wave-plan.md and brigade plan context|record"
-	STATUS draft
+	TITLE "Procedure wave-plan.md, brigade plan context, and a planner that writes its plan"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
 	ROLE ada
-	SPEC "plan context prints the planning package"
-	SPEC "plan record --file validates the plan JSON against the TASK and WAVE schema, writes the"
-		+ "entities, runs fmt and lint, creates the integration branch and commits"
-	SPEC "a lint failure comes back as one correction request"
+	SPEC "brigade plan context <request>, for a REQUEST of the operational corpus whose STATUS is"
+		+ "planning, prints one package: the text of the request, awawa status of the project's"
+		+ "corpus, the titles of its active DECISION entities, its draft and todo tasks, the TASK"
+		+ "and WAVE schemas of that corpus, the next free task number, and the IMPL anchors indexed"
+		+ "by file; text and --json, the document carrying schema_version"
+	SPEC "an unknown request, or one whose STATUS is not planning, exits 1 naming it; a project"
+		+ "corpus whose schema declares no WAVE type is reported in the package with that type"
+		+ "named missing"
+	SPEC "brigade/runs/data/procedures/wave-plan.md is shipped and brigade run wave-plan --slot"
+		+ "plan request=<id> resolves it: the planner reads the package, writes one .awawa file"
+		+ "holding one WAVE entity and its TASK entities against the project's schema in its run"
+		+ "directory, and hands that file to brigade plan record"
+	SPEC "the built-in planner role declares the capabilities read, write and shell, and its body"
+		+ "writes only the plan file it is told to and changes nothing in the repository; brigade"
+		+ "roles lint stays green"
+	SPEC "tests/cli proves plan context on a fixture project whose REQUEST is written in the"
+		+ "operational corpus of the fixture, awawa replayed from recorded outputs where it is not"
+		+ "on PATH"
 	AFTER @TASK.B04
-	AFTER @TASK.B09
+	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, rows 1 and 2: the CLI assembles"
+		+ "the planning context in one command, the agent of the plan slot cuts the request into"
+		+ "tasks; recording the plan is @TASK.B139"
+		REF @TASK.B139
+	RATIONALE "the plan is an awawa file of WAVE and TASK entities, not a JSON document: a document"
+		+ "whose code does not exist yet is designed as entities, by DESC 4 of"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole,"
+		+ "and lint against the project's schema is its validation"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+	RATIONALE "the procedure is a resource of the package under brigade/runs/data/procedures/,"
+		+ "where resolve_procedure looks first, as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets; the built-in"
+		+ "planner of @TASK.B43 declared read and shell and changed no file, so it could not write"
+		+ "its plan"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
+		REF @TASK.B43
+	RATIONALE "the project's corpus is the one brigade controls, the mode delivered first by"
+		+ "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus; the two other modes are @TASK.B140"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @TASK.B140
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10: the plan is recorded by a"
+		+ "task of its own, the awawa case is delivered first, and the task is ratified"
 
 TASK B11
 	TITLE "brigade wave new|show|list"
@@ -968,7 +1003,7 @@ TASK B11
 	SPEC "a request becomes a REQUEST entity and a planned wave"
 	SPEC "show prints the task table with states from the ledger"
 	SPEC "POLICY.PLAN_REVIEW ask|auto is honoured"
-	AFTER @TASK.B10
+	AFTER @TASK.B139
 
 TASK B12
 	TITLE "Scheduler: startable tasks, slots, worktrees, briefs, launches"
@@ -2099,7 +2134,7 @@ TASK B55
 		+ "and opens a pull request through the forge adapter"
 	SPEC "awawa lint --strict exits 0 on the installed corpus"
 	AFTER @TASK.B04
-	AFTER @TASK.B10
+	AFTER @TASK.B139
 	AFTER @TASK.B46
 	RATIONALE "split from @TASK.B04 in its refinement: awawa's binary ships no starter, the WAVE"
 		+ "schema comes with @TASK.B10, and the pull request needs the forge adapter of @TASK.B46"
@@ -7002,3 +7037,54 @@ TASK B138
 		+ "session fresh\", on the session's proposal of this task with @TASK.B136 and @TASK.B137"
 		REF @TASK.B136
 		REF @TASK.B137
+
+TASK B139
+	TITLE "brigade plan record writes a wave's plan into the project's corpus on its integration"
+		+ "branch"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "planning"
+	ROLE ada
+	DESC "to be refined with the user: the shape of the correction request, the slug of the branch,"
+		+ "the fields of SCHEMA WAVE"
+	SPEC "brigade plan record <request> --file <plan.awawa> accepts a file holding one WAVE entity"
+		+ "and TASK entities only, and refuses, naming them, the types and fields the schema of the"
+		+ "project's corpus does not declare"
+	SPEC "the entities are written in one corpus transaction, awawa fmt on the files written and"
+		+ "awawa lint --strict on the corpus root, every file written restored when lint fails"
+	SPEC "a lint failure comes back to the planner as one correction request carrying the lint"
+		+ "output, bounded to one round"
+	SPEC "integration/<slug> is created from PROJECT.MAIN, the entities are committed on it, and it"
+		+ "is pushed when FORGE is github; the REQUEST receives WAVE and BRANCH and goes planned"
+	SPEC "the corpus of the brigade repository declares SCHEMA WAVE"
+	AFTER @TASK.B10
+	RATIONALE "split from @TASK.B10 in its refinement: the Blueprint, plan section 5, row 3, has"
+		+ "the CLI record the plan; change_corpus_file writes one file per transaction and no"
+		+ "gateway of the git package creates or pushes a branch"
+		REF @TASK.B10
+	RATIONALE "the plan travels on the integration branch of the wave, as @TASK.B38 drafts it"
+		REF @TASK.B38
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10"
+
+TASK B140
+	TITLE "A project's corpus mode: brigade confined to an area of the corpus, or a project without"
+		+ "awawa"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "registry"
+	ROLE ada
+	DESC "to be refined with the user: the name of the field, the folder of the area mode and how"
+		+ "it stays a workspace of its own, where WAVE and TASK live without awawa, how project add"
+		+ "asks when it runs unattended"
+	SPEC "a field of the PROJECT entity carries the corpus mode, control, area or none; control"
+		+ "when absent"
+	SPEC "brigade project add, finding a corpus already in the repository, asks the user which mode"
+		+ "to set"
+	SPEC "plan context and plan record honour the area and none modes"
+	AFTER @TASK.B139
+	RATIONALE "the modes of @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus left after the control"
+		+ "mode @TASK.B10 and @TASK.B139 deliver"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @TASK.B10
+		REF @TASK.B139
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10"
