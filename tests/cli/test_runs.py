@@ -90,9 +90,9 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
         # Arrange
         run_id = self.run_deliver_to_its_end()
         gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
-        (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
 
         # Act
         completed = self.run_brigade("runs", "list", "--json")
@@ -310,11 +310,11 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
         # Arrange
         run_id = self.run_deliver_to_its_end()
         gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
         (self.runs / run_id / "journal.jsonl").unlink()
         shutil.rmtree(self.runs / run_id / "segments")
-        (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
 
         # Act
         completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
@@ -560,9 +560,9 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver_to_its_end()
         gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
-        (self.runs / run_id / "pid").write_text(f"{gone.pid}\n")
 
         # Act
         completed = self.run_brigade("runs", "show", run_id, "--follow")
