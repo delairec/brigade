@@ -2138,3 +2138,21 @@ DECISION AProjectChoosesHowBrigadeUsesItsCorpus
 		+ "préexistant, on doit poser la question à l'utilisateur: soit il veut que brigade"
 		+ "contrôle le corpus, soit il veut que brigade se confine dans une aire, soit il ne veut"
 		+ "pas que brigade passer par awawa. Le tout rendu configurable dans le fichier de config\""
+
+DECISION ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
+	TITLE "two tasks of a wave that touch the same files are ordered by an AFTER edge the planner"
+		+ "writes, and the tick reads no other order"
+	STATUS active
+	DESC "when the planner finds that two tasks of a wave touch the same files, it writes AFTER on"
+		+ "the one that goes second, naming the first"
+	DESC "the scheduler orders tasks by their AFTER edges alone"
+		REF @TASK.B12
+	REJECTED "a field of SCHEMA WAVE listing the overlapping pairs, launched apart with no merge"
+		+ "order: the second task still has to start from a base holding the first to avoid a"
+		+ "conflict, which an AFTER edge already gives"
+	RATIONALE "the Blueprint, plan section 5, rows 2 and 4, has the planner rule the overlaps and"
+		+ "the tick take its order from the plan; one mechanism the tick already reads keeps the"
+		+ "schema of a wave free of a second ordering"
+		REF @TASK.B10
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12"
+		REF @TASK.B12
