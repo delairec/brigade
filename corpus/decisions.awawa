@@ -815,13 +815,14 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	DESC "the refs cache of brigade corpus has its lock,"
 		+ "$XDG_STATE_HOME/brigade/locks/refs-cache.lock: every placing, mark and removal of a"
 		+ "cached tree runs under it"
-	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13 and @TASK.B22"
+	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13, @TASK.B22 and @TASK.B142"
 		REF @TASK.B04
 		REF @TASK.B05
 		REF @TASK.B07
 		REF @TASK.B08
 		REF @TASK.B13
 		REF @TASK.B22
+		REF @TASK.B142
 	REJECTED "locks under $XDG_CACHE_HOME, the Blueprint plan's place: a cache may be deleted at"
 		+ "any time, and a deleted lock file breaks the exclusion"
 	REJECTED "PID-liveness or mkdir locks: the kernel releases flock when the process dies; no"
@@ -830,10 +831,10 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 		+ "elsewhere; the lock costs microseconds"
 	RATIONALE "DESC 4 of @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites names only the"
 		+ "refs and the collector caches for $XDG_CACHE_HOME and puts state under $XDG_STATE_HOME,"
-		+ "so locks in the state directory contradict no decision; @TASK.B13 promotes the ledger"
+		+ "so locks in the state directory contradict no decision; @TASK.B142 promotes the ledger"
 		+ "from parallel runs"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
-		REF @TASK.B13
+		REF @TASK.B142
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "the user's ruling of 2026-10-06 during wave M0, pull request #23 of the brigade"
 		+ "repository"
@@ -859,7 +860,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B50
 		REF @TASK.B52
 	DESC "binds @TASK.B03, @TASK.B07, @TASK.B09, @TASK.B10, @TASK.B12, @TASK.B13, @TASK.B16,"
-		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50 and @TASK.B52"
+		+ "@TASK.B27, @TASK.B43, @TASK.B48, @TASK.B50, @TASK.B52 and @TASK.B142"
 		REF @TASK.B03
 		REF @TASK.B07
 		REF @TASK.B09
@@ -872,6 +873,7 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		REF @TASK.B48
 		REF @TASK.B50
 		REF @TASK.B52
+		REF @TASK.B142
 	REJECTED "root-level roles/, recipes/, procedures/, schema/ and scheduler/, the Blueprint"
 		+ "plan's layout: build.py copies brigade/ alone, so a root-level file is absent from"
 		+ "dist/brigade.pyz"
