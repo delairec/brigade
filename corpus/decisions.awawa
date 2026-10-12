@@ -2264,8 +2264,10 @@ DECISION BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
 		+ "runs there; CORPUS tells whether the project has a corpus, and awawa finds its files"
 		+ "under PATH"
 	DESC "brigade plan context on the request of a project with no CORPUS exits 1 naming the"
-		+ "project"
+		+ "project, until brigade project add --init-corpus of @TASK.B55 gives such a project its"
+		+ "corpus"
 		REF @TASK.B10
+		REF @TASK.B55
 	REJECTED "PATH joined to CORPUS as the workspace: the anchors of this repository resolve from"
 		+ "its root, not from corpus/, and a narrower workspace reports every anchor broken (L016)"
 	RATIONALE "awawa walks the workspace it is given and skips what git ignores, so PATH reads the"
@@ -2273,3 +2275,6 @@ DECISION BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
 		+ "anchors resolve from, never a narrower directory"
 	SOURCE "pull request #117 of the brigade repository, delivering @TASK.B10"
 		REF @TASK.B10
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117: the decision is ratified, with"
+		+ "the reference to @TASK.B55"
+		REF @TASK.B55
