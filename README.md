@@ -264,6 +264,10 @@ naming the same and `wall_limit_s`, the limit in seconds it was held to. A segme
 `undeclared` records a `signal.recorded` of that name, naming the procedure, the run and the segment. In each of these
 cases, when its progress file holds something, it is launched again as a fresh segment whose brief opens on that file,
 up to the `HANDOVERS` of the project's `POLICY`, 2 without one; a segment ending on `blocked` is never launched again.
+A segment whose main steps, as `run.finished` counts them, exceed the budget of its procedure records a
+`signal.recorded` `budget_exceeded` naming the procedure, the run, the segment, the budget and `steps`, the steps it
+took, whatever its outcome and beside its `budget_reached` when it also reached the step cap; a segment whose steps
+are null records none, and the signal launches nothing again.
 
 Two fallbacks follow the probe of the adapter. A client that counts no steps records null steps, the clock is the
 run's only bound, and `brigade run` and `brigade doctor` warn that the budget is held on the clock. A client that grants
