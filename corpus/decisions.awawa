@@ -54,8 +54,8 @@ DECISION HybridStorageCorpusAndLedger
 	TITLE "durable facts live in awawa corpora, high-volume events in an append-only JSONL ledger"
 	STATUS active
 	DESC "the brigade corpus holds PROJECT, POLICY, STUDY, ORDER, REQUEST, PATTERN and CONSTRAINT;"
-		+ "each project corpus keeps its WAVE and TASK entities; the ledger holds runs, states,"
-		+ "pauses and merges"
+		+ "each project corpus keeps its MILESTONE and TASK entities; the ledger holds runs,"
+		+ "states, pauses and merges"
 	REJECTED "everything in awawa: one entity per run means thousands of entities and git noise"
 	REJECTED "SQLite for everything: a second grammar without schema lint"
 	RATIONALE "the user's answer to the storage question; one home per fact, views rendered never"
@@ -1033,11 +1033,10 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	STATUS active
 	DESC "every document brigade writes or reads, command output, ledger line, result, collector"
 		+ "document, recipe, config and answer file, carries schema_version, an integer per"
-		+ "document kind starting at 1, the name @TASK.B01 and @TASK.B02 fix; @TASK.B47 and"
-		+ "@TASK.B50 say schema and are aligned at their refinement"
+		+ "document kind starting at 1, the name @TASK.B01 and @TASK.B02 fix; @TASK.B50 says schema"
+		+ "and is aligned at its refinement"
 		REF @TASK.B01
 		REF @TASK.B02
-		REF @TASK.B47
 		REF @TASK.B50
 	DESC "one validator module checks an inbound document, an adapter answer, a collector output, a"
 		+ "plan JSON or a study answer, against a shape declared next to its kind, required keys,"
@@ -1260,9 +1259,9 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 	DESC "it amends DESC 1 of @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction, which"
 		+ "places every built-in adapter in brigade/adapters/clients"
 		REF @DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction
-	DESC "binds @TASK.B49 and @TASK.B44"
+	DESC "binds @TASK.B49 and @TASK.B108, whose adapter gains its row through the generator"
 		REF @TASK.B49
-		REF @TASK.B44
+		REF @TASK.B108
 	REJECTED "one row per capability and a column per adapter: the task of the second client"
 		+ "already reads the table as gaining a row per client, and a column per client widens the"
 		+ "README with every adapter"
@@ -1285,6 +1284,9 @@ DECISION TheSupportedClientsTableIsGeneratedFromTheProbes
 	SOURCE "the user's rulings of 2026-10-06 in the refinement of B49"
 	SOURCE "pull request #76 of the brigade repository, delivering @TASK.B79"
 		REF @TASK.B79
+	SOURCE "the user's ruling of 2026-10-13 in the refinement of B44: the README row of vibe is"
+		+ "delivered by @TASK.B108, B44 keeping the rehearsal alone"
+		REF @TASK.B108
 
 DECISION TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
 	TITLE "the tests that need awawa replay recorded outputs of the real awawa where it is not on"
@@ -2116,8 +2118,8 @@ DECISION AProjectChoosesHowBrigadeUsesItsCorpus
 		+ "PROJECT entity and control is delivered first"
 	STATUS active
 	CLOSES @OPEN_QUESTION.HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
-	DESC "control: brigade writes its WAVE and TASK entities in the project's corpus and refuses,"
-		+ "naming them, the types and fields its schema does not declare"
+	DESC "control: brigade writes its MILESTONE and TASK entities in the project's corpus and"
+		+ "refuses, naming them, the types and fields its schema does not declare"
 	DESC "area: brigade keeps to an area of its own in the repository; none: the project's waves"
 		+ "and tasks do not go through awawa, brigade itself still requiring it"
 	DESC "brigade project add, finding a corpus in the repository, asks the user which mode to set;"
@@ -2177,3 +2179,63 @@ DECISION TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
 		REF @TASK.B12
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of @TASK.B142"
 		REF @TASK.B142
+
+DECISION AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
+	TITLE "a wave is a MILESTONE of the project's corpus, its plan one MILESTONE entity and its"
+		+ "TASK entities; the REQUEST names it in MILESTONE, and its integration branch is"
+		+ "integration/<NAME>-<TITLE as a slug>"
+	STATUS active
+	DESC "the plan of a wave is one MILESTONE entity and the TASK entities whose MILESTONE names"
+		+ "it, written in the project's corpus; brigade declares no WAVE type"
+	DESC "SCHEMA REQUEST of the shipped operational schema carries MILESTONE, the name of that"
+		+ "entity, in place of WAVE"
+	DESC "the integration branch of a wave is integration/<NAME>-<slug>, NAME the name of the"
+		+ "MILESTONE and slug its TITLE lowercased with every run of characters other than letters"
+		+ "and digits replaced by one hyphen, integration/M9-runs-list-as-json for M9 \"runs list"
+		+ "as JSON\"; a branch already existing at that name is a refusal of brigade plan record"
+		+ "naming it"
+	DESC "binds @TASK.B139, @TASK.B10, @TASK.B11, @TASK.B12, @TASK.B13 and @TASK.B55"
+		REF @TASK.B139
+		REF @TASK.B10
+		REF @TASK.B11
+		REF @TASK.B12
+		REF @TASK.B13
+		REF @TASK.B55
+	REJECTED "a WAVE type distinct from MILESTONE: for the user a wave and a milestone are one"
+		+ "thing, and brigade's own corpus groups its tasks by MILESTONE, TASK.MILESTONE being"
+		+ "required"
+	REJECTED "integration/<slug> cut from the text of the request or from its number alone: the"
+		+ "branch names the wave, and the user chose the name and the title of its milestone"
+	RATIONALE "the user's words: « si c'est une branche d'intégration, ça devrait être le nom de la"
+		+ "wave (ou milestone, pour moi wave=milestone) » and « Oui MILESTONE mais REQUEST.WAVE"
+		+ "doit être renommé REQUEST.MILESTONE je suppose »; no SCHEMA WAVE existed anywhere, and"
+		+ "brigade/corpus/data/schema.awawa.tpl:126 declared FIELD WAVE string on REQUEST"
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47"
+
+DECISION ASlotClientIsBoundByTheSlotClientsTableOfConfigToml
+	TITLE "the table [slot_clients] of config.toml binds a slot to a client adapter; a run's client"
+		+ "is the slot's, else PROJECT.CLIENT, else the client key"
+	STATUS active
+	DESC "[slot_clients] maps a slot among the nine to the name of a client adapter, in the shape"
+		+ "of [forge_accounts]; an unknown slot or a value that is no string is an error naming the"
+		+ "key and the file"
+	DESC "the client of a run is the one [slot_clients] binds to its slot, else the CLIENT of the"
+		+ "PROJECT entity, else the client key of config.toml"
+	DESC "the client is a property of the machine: a role file and an AGENT entity name no client,"
+		+ "and a role stays portable between machines"
+	DESC "binds @TASK.B145; it stands beside DESC 1 of"
+		+ "@DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares, [slots] binding the"
+		+ "role and [slot_clients] the client"
+		REF @TASK.B145
+		REF @DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares
+	REJECTED "a client key inside [slots]: a row of [slots] is one string, the name of an AGENT"
+		+ "entity, and [forge_accounts] already shows the form of a per-slot binding, a table of"
+		+ "its own"
+	REJECTED "a client field of the role file: the client is a property of the machine, and a role"
+		+ "file naming one would no longer be portable"
+	RATIONALE "the user's words: « config.toml : [slot_clients] review = \"vibe\" ; ordre : slot,"
+		+ "sinon PROJECT.CLIENT, sinon client ; même forme que [forge_accounts]. Le client est une"
+		+ "propriété de la machine, le rôle reste portable. »; the question is the user's of"
+		+ "2026-10-07, recorded in @TASK.B44, whether two AI providers can coexist"
+		REF @TASK.B44
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47"
