@@ -928,7 +928,13 @@ TASK B08
 
 TASK B09
 	TITLE "Built-in roles planner, reporter and triager"
-	STATUS draft
+	STATUS archived
+	DESC "archived on 2026-10-12: its three role files, planner, reporter and triager on the slots"
+		+ "plan, report and triage, and brigade roles lint green are delivered by @TASK.B43; the"
+		+ "import into the instructions corpus it was planned for gave way to the built-in roles of"
+		+ "@DECISION.RolesAreSlotsBoundToRoleFiles, on the user's ruling in the refinement of B09"
+		REF @TASK.B43
+		REF @DECISION.RolesAreSlotsBoundToRoleFiles
 	MILESTONE @MILESTONE.M1
 	COMPONENT "roles"
 	ROLE ada
@@ -1249,7 +1255,6 @@ TASK B25
 		+ "OUTPUT entity:PATTERN, which validates, writes, formats, lints and commits"
 	SPEC "brigade study run triage runs it on demand; the tick runs it daily by default"
 	AFTER @TASK.B22
-	AFTER @TASK.B09
 	AFTER @TASK.B48
 
 TASK B26
