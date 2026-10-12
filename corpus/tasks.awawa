@@ -6611,15 +6611,16 @@ TASK B111
 
 TASK B112
 	TITLE "the claude-code adapter classifies \"out of usage credits\" as a rate limit"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "adapters"
 	ROLE ada
 	SPEC "parse-result of brigade/adapters/clients/claude_code.py classifies a result whose message"
 		+ "names usage credits run out, \"You're out of usage credits\", error_class rate_limit,"
 		+ "reset null when the message names no hour"
-	SPEC "a unit test of tests/unit/adapters/clients/test_claude_code.py reads the result document"
-		+ "of run 20261009T114125Z-b7c554 and finds error_class rate_limit"
+	SPEC "a unit test of tests/unit/adapters/clients/test_claude_code.py reads a fixture of"
+		+ "tests/unit/adapters/clients/fixtures/ holding the result event of segment 1 of run"
+		+ "20261009T114125Z-b7c554, copied from it, and finds error_class rate_limit and reset null"
 	RATIONALE "run 20261009T114125Z-b7c554 failed on \"You're out of usage credits\" and brigade"
 		+ "classified it error_class execution, RATE_LIMIT_PHRASES of"
 		+ "brigade/adapters/clients/claude_code.py, \"limit reached\", \"hit your limit\", \"usage"
@@ -6629,9 +6630,12 @@ TASK B112
 	RATIONALE "in @MILESTONE.M1 with @TASK.B19, which it comes before; the fallback of @TASK.B111"
 		+ "reads the same classification"
 		REF @MILESTONE.M1
+		REF @TASK.B19
 		REF @TASK.B111
 	SOURCE "the user's words of 2026-10-09, \"oui pour le draft que tu proposes mais dans une"
 		+ "future milestone\""
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of B142: the fixture copied into the"
+		+ "tests; the task is ratified"
 
 TASK B113
 	TITLE "brigade runs show <id> --follow prints the journal of a run as it is written, until the"
@@ -7406,44 +7410,81 @@ TASK B140
 
 TASK B141
 	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	DESC "to be refined with the user: its name, its steps against the commands of @TASK.B13 and"
-		+ "@TASK.B142, and whether config.toml can name another procedure for the build slot"
-		REF @TASK.B13
-		REF @TASK.B142
-	SPEC "brigade/runs/data/procedures/ holds the procedure of the build slot and brigade run"
-		+ "resolves it by name without an instructions corpus"
+	SPEC "brigade/runs/data/procedures/build-task.md is the procedure of the build slot, budget 75,"
+		+ "and brigade run resolves it by name without an instructions corpus"
+	SPEC "build-task.md orders its steps: brigade task context, the failing tests of each SPEC"
+		+ "written first, the implementation, brigade task check until it passes, the commits,"
+		+ "brigade task pr, brigade task promote, and a report naming the pull request"
+	SPEC "the key build of the section [procedures] of config.toml names another procedure for the"
+		+ "build slot, resolved as the argument of brigade run is, and the tick launches it in"
+		+ "place of build-task"
+	SPEC "a unit test resolves build-task with no instructions corpus set; a test of the tick"
+		+ "proves that the key build of [procedures] replaces it"
+	AFTER @TASK.B12
+	AFTER @TASK.B13
+	AFTER @TASK.B142
 	RATIONALE "split from @TASK.B12 in its refinement: the tick launches a build run and brigade"
 		+ "ships no procedure, awawa-task.md living in the instructions corpus, which is optional"
 		REF @TASK.B12
+	RATIONALE "named build-task, not awawa-task: a shipped procedure resolves before the procedures"
+		+ "of the instructions corpus, _find_named of brigade/runs/resolve_procedure.py, and would"
+		+ "shadow the user's awawa-task; the budget of 75 is a declared estimate, that of"
+		+ "awawa-task, no run of build-task being recorded"
+	RATIONALE "its steps call the commands of @TASK.B13 and @TASK.B142, and the key replaces the"
+		+ "procedure the tick of @TASK.B12 launches"
+		REF @TASK.B12
+		REF @TASK.B13
+		REF @TASK.B142
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12: the build procedure is a task"
 		+ "of its own"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B142: the name build-task, the"
+		+ "key build of [procedures]; the task is ratified"
 
 TASK B142
 	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"
 		+ "pull request and the promotion of its task"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
 	ROLE ada
-	DESC "to be refined with the user: the bound of the check summary, the title and the body"
-		+ "template of the pull request, the ledger events of pr and promote, and the lock promote"
-		+ "takes on the repository"
 	SPEC "brigade task check runs the PROJECT.ACCEPTANCE commands, then awawa fmt --check . and"
-		+ "awawa lint --strict ., in the worktree of the task, and prints a bounded summary, one"
-		+ "line per command with its verdict; it exits 1 when one fails"
+		+ "awawa lint --strict ., in the worktree of the task, and prints one line per command, its"
+		+ "verdict, the command and its duration, followed for each failing command by the last 20"
+		+ "lines of its output; it exits 1 when one fails"
+	SPEC "brigade task check records its verdicts with the sha of HEAD in"
+		+ "$XDG_STATE_HOME/brigade/checks/<project>/<task>.json, written atomically; inside a run,"
+		+ "the whole output of each command is written under <run dir>/check/"
+	SPEC "brigade task pr refuses, naming the cause, a task whose last recorded check is not of"
+		+ "HEAD or has a failing command, and a task that carries no TYPE"
 	SPEC "brigade task pr pushes the task branch and opens its pull request on the wave's BRANCH"
-		+ "through the forge adapter, as the login of the build slot, with a body filled from a"
-		+ "template shipped in the package"
+		+ "through the forge adapter, as the login of the build slot, titled TYPE(COMPONENT): TITLE"
+		+ "(@TASK.<task>), the scope left out when the task has no COMPONENT, with a body filled"
+		+ "from a string.Template shipped in the package: the TITLE of the task, one line per SPEC,"
+		+ "the verdicts of the last check and the attribution lines"
 	SPEC "the pull request carries the GitHub milestone named after the TITLE of the task's"
-		+ "MILESTONE, created through the forge adapter when the repository has none of that name,"
-		+ "the creation recorded in the ledger"
-	SPEC "brigade task promote sets STATUS implemented and DELIVERED_BY on the task, runs awawa fmt"
-		+ "and awawa lint --strict, commits and pushes; the pull request number is the one brigade"
-		+ "task pr recorded in the ledger, --pr <n> naming another"
+		+ "MILESTONE, created through the forge adapter when the repository has none of that name"
+		+ "and recorded as the ledger event milestone.created carrying the project, the title and"
+		+ "the login"
+	SPEC "brigade task pr records the ledger event task.pr_opened carrying the project, the task,"
+		+ "the wave, the branch, the pull request number and the login"
+	SPEC "brigade task promote sets STATUS implemented and DELIVERED_BY on the task through"
+		+ "change_corpus_file of brigade/corpus/, which formats and lints under the lock of the"
+		+ "repository and restores the file when lint fails, then commits, pushes and records the"
+		+ "ledger event task.promoted carrying the project, the task, the pull request and the"
+		+ "commit; the pull request is the one of the last task.pr_opened of the task, --pr <n>"
+		+ "naming another"
+	SPEC "brigade task promote refuses before any write, naming it, STATUS implemented or"
+		+ "DELIVERED_BY when the TASK schema of the project's corpus does not declare it"
+	SPEC "the corpus of the brigade repository declares the field TYPE on TASK, one of build,"
+		+ "chore, ci, docs, feat, fix, perf, refactor, revert, style and test, and every task of"
+		+ "STATUS todo carries one"
+	SPEC "tests/cli prove check, promote and each refusal of pr and promote on a registered"
+		+ "repository in a temporary directory; unit tests prove the title, the body and the three"
+		+ "ledger events"
 	AFTER @TASK.B13
 	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
 		+ "lifecycle of the Blueprint, brigade task check, brigade task pr, brigade task promote"
@@ -7456,9 +7497,28 @@ TASK B142
 		+ "POLICY.REVIEW local no task pull request is opened, which @TASK.B100 delivers"
 		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 		REF @TASK.B100
+	RATIONALE "the title follows @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask:"
+		+ "the branch task/<slug>/<task> of @TASK.B12 names no type and the ids of brigade's tasks"
+		+ "carry none, so the task carries it"
+		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
+		REF @TASK.B12
+	RATIONALE "the check recorded against HEAD is what the body reports and what pr refuses to open"
+		+ "without, as the Blueprint has task pr fill the acceptance verdicts; every forge write"
+		+ "records its login, as"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode rules"
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+	RATIONALE "promote takes no lock of its own: change_corpus_file already holds the lock of the"
+		+ "repository's path and restores the file when lint fails, DESC 5 of"
+		+ "@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory;"
+		+ "brigade/corpus/data/schema.awawa.tpl declares no SCHEMA TASK, so STATUS implemented and"
+		+ "DELIVERED_BY rest on the project's own schema, which promote checks before writing"
+		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B13: check, pr and promote are a"
 		+ "task of their own; a missing milestone is created; promote reads the pull request from"
 		+ "the ledger"
+	SOURCE "the user's rulings of 2026-10-12 in the refinement of B142: one line per command and"
+		+ "the last 20 lines of a failure; three ledger events; the task carries a required TYPE;"
+		+ "the task is ratified"
 
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"

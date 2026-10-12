@@ -2158,3 +2158,22 @@ DECISION ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
 		REF @TASK.B10
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12"
 		REF @TASK.B12
+
+DECISION TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
+	TITLE "the pull request of a task is titled TYPE(COMPONENT): TITLE (@TASK.<task>), TYPE a"
+		+ "required field of the task"
+	STATUS active
+	DESC "a task brigade delivers carries TYPE, a Conventional Commits type, and brigade task pr"
+		+ "refuses a task without one"
+	DESC "the title is TYPE(COMPONENT): TITLE (@TASK.<task>), the scope left out when the task has"
+		+ "no COMPONENT"
+	REJECTED "the subject of the first commit of the branch, with or without TYPE as a fallback:"
+		+ "the user ruled that the task carries the type"
+	REJECTED "the type as the prefix of the task id, the convention of the instructions corpus:"
+		+ "every brigade task would be renamed and a project of untyped ids could deliver nothing"
+	REJECTED "a type derived from the task, feat by default: often wrong"
+	RATIONALE "the branch task/<slug>/<task> names no type, and the rule"
+		+ "conventional_commit_subject of the instructions corpus binds the title of a pull request"
+		REF @TASK.B12
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of @TASK.B142"
+		REF @TASK.B142
