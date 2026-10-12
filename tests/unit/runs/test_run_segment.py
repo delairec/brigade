@@ -1,4 +1,3 @@
-import contextlib
 import dataclasses
 import json
 import signal
@@ -607,10 +606,14 @@ class StopRequestedBeforeTheSpawnDouble:
 class StopArrivingAfterTheSpawnDouble:
     requested = False
 
-    @contextlib.contextmanager
     def raising(self):
+        return self
+
+    def __enter__(self):
         raise StopRequested
-        yield
+
+    def __exit__(self, *_exception):
+        return False
 
 
 class SpawnSleepingClientDouble:
