@@ -1476,17 +1476,24 @@ DECISION ThePidOfARunIsReplacedAtomically
 		+ "the process it re-executes with --run-id, goes through record_run_pid, which writes a"
 		+ "temporary file and renames it over pid"
 		REF @TASK.B69
-	DESC "runs list reports dead a run whose pid file is missing, empty or not digits; an in-place"
-		+ "rewrite truncates the file before writing it, and a listing between the two reported a"
-		+ "living detached run dead"
+	DESC "runs list reports dead a run whose pid file is missing, empty, not of the form <pid>"
+		+ "<start time> <boot id>, or naming a process of another identity; an in-place rewrite"
+		+ "truncates the file before writing it, and a listing between the two reported a living"
+		+ "detached run dead"
+		REF @TASK.B136
 	REJECTED "runs list reading an empty pid as running: a run that died before writing its pid"
 		+ "would then read running forever"
 	REJECTED "the process re-executed with --run-id skipping the write of pid: brigade run --run-id"
 		+ "without --detach has no earlier process to write it"
 	REJECTED "a longer delay of the fake client in the test: the race is in the product, and a"
 		+ "slower suite would only hide it"
+	REJECTED "the identity of the process in a file of its own beside pid: two writes, where one"
+		+ "atomic write keeps the pid and its identity together"
 	SOURCE "pull request #45 of the brigade repository, delivering @TASK.B69"
 		REF @TASK.B69
+	SOURCE "the user's ruling of 2026-10-12 in the refinement of @TASK.B136, delivered by pull"
+		+ "request #110 of the brigade repository"
+		REF @TASK.B136
 
 DECISION TheClaudeCodeAdapterRunsInDontAskModeAndGrantsOnlyItsAllowedTools
 	TITLE "the Claude Code adapter launches the client in the permission mode dontAsk, so"

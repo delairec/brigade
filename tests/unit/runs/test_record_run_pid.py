@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.runs.list_runs import list_runs
 from brigade.runs.record_run_pid import record_run_pid
 
@@ -27,6 +28,7 @@ RUN_RECORD = {
     "arguments": {},
 }
 WRITE_CALL = "write"
+PID_HELD_BY_NO_PROCESS = 2**31 - 1
 
 
 def list_state_at_the_first_write(state_root: Path, run_directory: Path, pid: int) -> list[str]:
@@ -53,12 +55,25 @@ class RecordRunPidTest(unittest.TestCase):
         self.run_directory.mkdir(parents=True)
         (self.run_directory / "run.json").write_text(json.dumps(RUN_RECORD))
 
-    def test_should_write_the_pid_of_the_run_on_one_line(self):
+    def test_should_write_the_pid_its_start_time_and_the_boot_id_on_one_line(self):
+        # Arrange
+        living_pid = os.getpid()
+        boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+
         # Act
-        record_run_pid(self.run_directory, 4242)
+        record_run_pid(self.run_directory, living_pid)
 
         # Assert
-        self.assertEqual((self.run_directory / "pid").read_text(encoding="utf-8"), "4242\n")
+        self.assertRegex((self.run_directory / "pid").read_text(encoding="utf-8"), rf"^{living_pid} \d+ {boot_id}\n$")
+
+    def test_should_refuse_a_pid_no_process_holds_and_write_no_pid_file(self):
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            record_run_pid(self.run_directory, PID_HELD_BY_NO_PROCESS)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "no process holds pid 2147483647")
+        self.assertFalse((self.run_directory / "pid").exists())
 
     def test_should_keep_a_living_run_listed_as_running_while_its_pid_is_written_again(self):
         # Arrange
