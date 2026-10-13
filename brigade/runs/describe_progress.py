@@ -5,6 +5,7 @@ from brigade.runs.plan_run import RunPlan
 PROGRESS_DOCUMENT = "progress"
 PROGRESS_SCHEMA = files("brigade.runs") / "data" / "progress.awawa.tpl"
 SHELL_CAPABILITY = "shell"
+SCHEMA_VERSION = 1
 PROGRESS_FRAME = (
     (
         "one entry per major step: what it did in one line, the facts it established, one line each and five at most,"
@@ -21,6 +22,7 @@ PROGRESS_FRAME = (
 
 def describe_progress(plan: RunPlan) -> dict:
     return {
+        "schema_version": SCHEMA_VERSION,
         "document": PROGRESS_DOCUMENT,
         "path": str(plan.progress_file),
         "schema": PROGRESS_SCHEMA.read_text(encoding="utf-8"),

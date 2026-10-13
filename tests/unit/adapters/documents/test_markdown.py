@@ -23,6 +23,7 @@ class MarkdownDocumentTestCase(unittest.TestCase):
 
     def describe_request(self, role_has_shell: bool = True) -> dict:
         return {
+            "schema_version": 1,
             "document": "progress",
             "path": str(self.path),
             "schema": NO_SCHEMA,
@@ -39,6 +40,13 @@ class MarkdownDocumentCreationTest(MarkdownDocumentTestCase):
         # Assert
         self.assertEqual(self.path.read_text(), "")
 
+    def test_should_answer_that_the_file_is_created(self):
+        # Act
+        answer = create_document(self.describe_request(), NO_RUNTIME_NEEDED)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1})
+
 
 class MarkdownDocumentDescriptionTest(MarkdownDocumentTestCase):
     def test_should_name_the_file_its_form_and_the_frame_of_its_content(self):
@@ -49,9 +57,10 @@ class MarkdownDocumentDescriptionTest(MarkdownDocumentTestCase):
         self.assertEqual(
             description,
             {
+                "schema_version": 1,
                 "text": f"The progress is the Markdown file {self.path}.\n\n"
                 "- one entry per major step\n"
-                "- never command output\n"
+                "- never command output\n",
             },
         )
 
@@ -67,7 +76,7 @@ class MarkdownDocumentEntryTest(MarkdownDocumentTestCase):
                 answer = detect_entry(self.describe_request(), NO_RUNTIME_NEEDED)
 
                 # Assert
-                self.assertEqual(answer, {"holds_entry": holds_entry})
+                self.assertEqual(answer, {"schema_version": 1, "holds_entry": holds_entry})
 
 
 class MarkdownDocumentReadingTest(MarkdownDocumentTestCase):
@@ -79,7 +88,7 @@ class MarkdownDocumentReadingTest(MarkdownDocumentTestCase):
         reading = read_document(self.describe_request(), NO_RUNTIME_NEEDED)
 
         # Assert
-        self.assertEqual(reading, {"text": "## step 1\n- branch feat/x\n"})
+        self.assertEqual(reading, {"schema_version": 1, "text": "## step 1\n- branch feat/x\n"})
 
     def test_should_render_the_file_as_it_is_for_a_person(self):
         # Arrange
@@ -89,4 +98,4 @@ class MarkdownDocumentReadingTest(MarkdownDocumentTestCase):
         rendering = render_document(self.describe_request(), NO_RUNTIME_NEEDED)
 
         # Assert
-        self.assertEqual(rendering, {"text": "## step 1\n- branch feat/x\n", "entities": None})
+        self.assertEqual(rendering, {"schema_version": 1, "text": "## step 1\n- branch feat/x\n", "entities": None})

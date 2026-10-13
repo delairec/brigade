@@ -4,8 +4,8 @@ from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.remove_worktree import remove_worktree
 from brigade.ledger.append_event import append_event
 from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.runs.ask_progress import ask_progress
 from brigade.runs.describe_finished import describe_finished
-from brigade.runs.describe_progress import describe_progress
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import RESULT_FILE
 from brigade.runs.run_segment import TURN_LIMIT, WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
@@ -32,7 +32,7 @@ def _ends_on_the_clock(record: SegmentRecord) -> bool:
 
 
 def _holds_progress(plan: RunPlan, runtime: Runtime) -> bool:
-    return plan.document.detect_entry(describe_progress(plan), runtime)["holds_entry"]
+    return ask_progress(plan, "detect_entry", runtime)["holds_entry"]
 
 
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:

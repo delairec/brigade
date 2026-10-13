@@ -11,6 +11,7 @@ SCHEMA_TYPE = "SCHEMA"
 SCHEMA_TYPE_PATTERN = re.compile(r'^SCHEMA (\S+)\n(?:\t.*\n)*?\tDESC (".*")$', re.MULTILINE)
 COMMENT = "//"
 SCHEMA_KEYWORD = "SCHEMA "
+SCHEMA_VERSION = 1
 
 
 def _read_schema_types(schema: str) -> list[tuple[str, str]]:
@@ -58,8 +59,9 @@ def _render_entity(entity: dict) -> str:
     return f"{entity['type']} {entity['name']}\n{fields}"
 
 
-def create_document(request: dict, runtime: Runtime) -> None:
+def create_document(request: dict, runtime: Runtime) -> dict:
     write_text_file(Path(request["path"]), request["schema"])
+    return {"schema_version": SCHEMA_VERSION}
 
 
 def describe_document(request: dict, runtime: Runtime) -> dict:
@@ -76,28 +78,32 @@ def describe_document(request: dict, runtime: Runtime) -> dict:
             f"\nAfter each append, run awawa fmt {path} then awawa lint --strict {path}, naming the file and never"
             " its directory.\n"
         )
-    return {"text": text}
+    return {"schema_version": SCHEMA_VERSION, "text": text}
 
 
 def read_document(request: dict, runtime: Runtime) -> dict:
     path = Path(request["path"])
     report = format_and_lint_file(runtime.run_process, path)
     if not report.clean:
-        return {"text": _describe_lint_failure(path, report.output)}
+        return {"schema_version": SCHEMA_VERSION, "text": _describe_lint_failure(path, report.output)}
     inventories = [
         _show_command(runtime, path, ("status", name, str(path))) for name, _ in _read_schema_types(request["schema"])
     ]
     last = _list_entities(runtime, path)[-1]
     shown = _show_command(runtime, path, ("show", f"@{last['type']}.{last['name']}", str(path)))
-    return {"text": "\n".join([*inventories, shown])}
+    return {"schema_version": SCHEMA_VERSION, "text": "\n".join([*inventories, shown])}
 
 
 def detect_entry(request: dict, runtime: Runtime) -> dict:
     lines = Path(request["path"]).read_text(encoding="utf-8").splitlines()
-    return {"holds_entry": any(_holds_entry_line(line) for line in lines)}
+    return {"schema_version": SCHEMA_VERSION, "holds_entry": any(_holds_entry_line(line) for line in lines)}
 
 
 def render_document(request: dict, runtime: Runtime) -> dict:
     path = Path(request["path"])
     entities = [_read_entity(runtime, path, entity) for entity in _list_entities(runtime, path)]
-    return {"text": "\n".join(_render_entity(entity) for entity in entities), "entities": entities}
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "text": "\n".join(_render_entity(entity) for entity in entities),
+        "entities": entities,
+    }

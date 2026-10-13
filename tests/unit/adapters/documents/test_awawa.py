@@ -44,6 +44,7 @@ class AwawaDocumentTestCase(unittest.TestCase):
 
     def describe_request(self, role_has_shell: bool = True) -> dict:
         return {
+            "schema_version": 1,
             "document": "progress",
             "path": str(self.path),
             "schema": SCHEMA,
@@ -60,6 +61,13 @@ class AwawaDocumentCreationTest(AwawaDocumentTestCase):
         # Assert
         self.assertEqual(self.path.read_text(), SCHEMA)
 
+    def test_should_answer_that_the_file_is_created(self):
+        # Act
+        answer = create_document(self.describe_request(), self.runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1})
+
 
 class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
     def test_should_name_the_file_the_types_of_its_schema_the_frame_and_the_checks_after_each_append(self):
@@ -70,6 +78,7 @@ class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
         self.assertEqual(
             description,
             {
+                "schema_version": 1,
                 "text": f"The progress is the awawa corpus {self.path}: after the schema it holds, append one entity"
                 " per entry, of a type the schema declares, named by the initial of its type in lower case and its"
                 " rank among the entities of that type in order of writing.\n\n"
@@ -78,7 +87,7 @@ class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
                 "- one entry per major step\n"
                 "- never command output\n\n"
                 f"After each append, run awawa fmt {self.path} then awawa lint --strict {self.path}, naming the file"
-                " and never its directory.\n"
+                " and never its directory.\n",
             },
         )
 
@@ -90,13 +99,14 @@ class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
         self.assertEqual(
             description,
             {
+                "schema_version": 1,
                 "text": f"The progress is the awawa corpus {self.path}: after the schema it holds, append one entity"
                 " per entry, of a type the schema declares, named by the initial of its type in lower case and its"
                 " rank among the entities of that type in order of writing.\n\n"
                 "- STEP: a step the run completed\n"
                 "- HANDOVER: the state of a run that hands over\n\n"
                 "- one entry per major step\n"
-                "- never command output\n"
+                "- never command output\n",
             },
         )
 
@@ -117,7 +127,7 @@ class AwawaDocumentEntryTest(AwawaDocumentTestCase):
                 answer = detect_entry(self.describe_request(), self.runtime)
 
                 # Assert
-                self.assertEqual(answer, {"holds_entry": holds_entry})
+                self.assertEqual(answer, {"schema_version": 1, "holds_entry": holds_entry})
 
 
 class AwawaDocumentReadingTest(AwawaDocumentTestCase):
@@ -136,6 +146,7 @@ class AwawaDocumentReadingTest(AwawaDocumentTestCase):
         self.assertEqual(
             reading,
             {
+                "schema_version": 1,
                 "text": f"$ awawa status STEP {self.path}\n"
                 "STEP (2):\n"
                 f"  @STEP.s1  (none)  {self.path}:13  incoming 0\n"
@@ -144,7 +155,7 @@ class AwawaDocumentReadingTest(AwawaDocumentTestCase):
                 "HANDOVER (0):\n\n"
                 f"$ awawa show @STEP.s2 {self.path}\n"
                 "STEP s2\n"
-                '\tDONE "wrote the tests"\n'
+                '\tDONE "wrote the tests"\n',
             },
         )
 
@@ -169,6 +180,7 @@ class AwawaDocumentReadingTest(AwawaDocumentTestCase):
         self.assertEqual(
             reading,
             {
+                "schema_version": 1,
                 "text": f"$ awawa lint --strict {self.path}\n"
                 f"{self.path} — 2 error(s), 0 warning(s)\n"
                 f"L003  error  {self.path}:14:2\n"
@@ -177,7 +189,7 @@ class AwawaDocumentReadingTest(AwawaDocumentTestCase):
                 "      required field DONE is absent from STEP\n\n"
                 f"Rewrite {self.path} so that awawa lint --strict {self.path} passes, keeping every entry."
                 " The file as it is:\n\n"
-                f'{SCHEMA}\nSTEP s1\n\tNEXT "section 3"\n'
+                f'{SCHEMA}\nSTEP s1\n\tNEXT "section 3"\n',
             },
         )
 
@@ -198,6 +210,7 @@ class AwawaDocumentRenderingTest(AwawaDocumentTestCase):
         self.assertEqual(
             rendering,
             {
+                "schema_version": 1,
                 "text": "STEP s1\n  DONE: read the task\n\nSTEP s2\n  DONE: wrote the tests\n",
                 "entities": [
                     {"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]},

@@ -241,8 +241,9 @@ The progress of a run is one file, in the form the key `document` of `config.tom
 `awawa` by default, `progress.awawa`, an awawa corpus holding the STEP and HANDOVER schema brigade ships, then one
 `STEP` per step completed and one `HANDOVER` per hand-over, named `s1`, `s2`, `h1` in order of writing; `markdown`,
 `progress.md`, created empty. The extension of a file brigade reads back routes it to its plugin, `.md` to markdown and
-`.awawa` to awawa; awawa stays a prerequisite whichever form is chosen. The brief of every segment names the path and
-the form of the progress and its frame: one entry per major step, what it did in one line, the facts it established,
+`.awawa` to awawa; awawa stays a prerequisite whichever form is chosen. Every request to the document plugin carries
+`schema_version` 1, and brigade checks every answer it reads against the shape of its operation, naming the plugin and
+the operation when one breaks it. The brief of every segment names the path and the form of the progress and its frame: one entry per major step, what it did in one line, the facts it established,
 one line each and five at most, a fact being what the next segment needs and no command gives back, and the next step
 as the procedure names it, `complete` at the end; never command output, a diff, the course of the step, a restatement of
 the brief or a fact an earlier entry holds. A run whose capabilities carry `shell` is also asked to run `awawa fmt` then

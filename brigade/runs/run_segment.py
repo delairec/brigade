@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.runs.ask_progress import ask_progress
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
 from brigade.runs.decide_stop_at import decide_stop_at
-from brigade.runs.describe_progress import describe_progress
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
     BRIEF_FILE,
@@ -67,8 +67,7 @@ class SegmentRecord:
 
 
 def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
-    request = describe_progress(plan)
-    progress = None if number == FIRST_SEGMENT else plan.document.read_document(request, runtime)["text"]
+    progress = None if number == FIRST_SEGMENT else ask_progress(plan, "read_document", runtime)["text"]
     return compose_brief(
         BriefParts(
             progress=progress,
@@ -76,7 +75,7 @@ def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
             procedure_body=plan.procedure.body,
             arguments=plan.arguments,
             brief=plan.brief,
-            progress_description=plan.document.describe_document(request, runtime)["text"],
+            progress_description=ask_progress(plan, "describe_document", runtime)["text"],
         )
     )
 
