@@ -948,7 +948,7 @@ TASK B09
 
 TASK B10
 	TITLE "Procedure wave-plan.md, brigade plan context, and a planner that writes its plan"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
 	ROLE ada
@@ -957,19 +957,48 @@ TASK B10
 		+ "corpus, the titles of its active DECISION entities, its draft and todo tasks, the TASK"
 		+ "and MILESTONE schemas of that corpus, the next free task number, and the IMPL anchors"
 		+ "indexed by file; text and --json, the document carrying schema_version"
-	SPEC "an unknown request, or one whose STATUS is not planning, exits 1 naming it; a project"
-		+ "corpus whose schema declares no MILESTONE type is reported in the package with that type"
-		+ "named missing"
+		IMPL "brigade/commands/plan_context.py::def plan_context(request, runtime: Runtime) ->"
+			+ "dict:"
+		IMPL "brigade/planning/assemble_plan_context.py::def assemble_plan_context("
+		IMPL "tests/cli/test_plan.py::def"
+			+ "test_should_print_the_planning_package_as_a_versioned_document(self):"
+		IMPL "tests/cli/test_plan.py::def test_should_print_the_planning_package_as_text(self):"
+	SPEC "an unknown request, or one whose STATUS is not planning, exits 1 naming it; missing lists"
+		+ "each of the TASK and MILESTONE schemas the project's corpus does not declare, an entry"
+		+ "holding its type alone and the text line Missing schema <TYPE>, then a TASK schema that"
+		+ "declares no MILESTONE field, an entry holding the type TASK and the field MILESTONE and"
+		+ "the text line Missing field MILESTONE of schema TASK"
+		IMPL "brigade/planning/assemble_plan_context.py::def _list_missing(run_process, root: Path,"
+			+ "schemas: dict) -> list[dict]:"
+		IMPL "brigade/planning/read_planning_request.py::def read_planning_request(runtime:"
+			+ "Runtime, name: str) -> PlanningRequest:"
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanContextOfAnUnknownRequestTest(PlanContextTestCase):"
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanContextOfARequestNotPlanningTest(PlanContextTestCase):"
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanContextOnACorpusWithoutAMilestoneTypeTest(PlanContextTestCase):"
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanContextOnACorpusWhoseTaskSchemaDeclaresNoMilestoneTest(PlanContextTestCase):"
 	SPEC "brigade/runs/data/procedures/wave-plan.md is shipped and brigade run wave-plan --slot"
 		+ "plan request=<id> resolves it: the planner reads the package, writes one .awawa file"
 		+ "holding one MILESTONE entity and its TASK entities against the project's schema in its"
 		+ "run directory, and hands that file to brigade plan record"
+		IMPL "brigade/runs/data/procedures/wave-plan.md::# Procedure — cut one request into a wave"
+		IMPL "tests/cli/test_run.py::class"
+			+ "BrigadeRunOfTheShippedWavePlanProcedureTest(RunTestCase):"
 	SPEC "the built-in planner role declares the capabilities read, write and shell, and its body"
 		+ "writes only the plan file it is told to and changes nothing in the repository; brigade"
 		+ "roles lint stays green"
+		IMPL "brigade/roles/data/planner.md::capabilities: read, write, shell"
+		IMPL "brigade/roles/data/planner.md::Write only the plan file you are told to write"
+		IMPL "tests/cli/test_roles.py::def test_should_find_the_built_in_role_files_clean(self):"
 	SPEC "tests/cli proves plan context on a fixture project whose REQUEST is written in the"
 		+ "operational corpus of the fixture, awawa replayed from recorded outputs where it is not"
 		+ "on PATH"
+		IMPL "tests/cli/test_plan.py::class PlanContextTestCase(unittest.TestCase):"
+		IMPL "tests/awawa/provide_awawa.py::def provide_awawa(test_case: unittest.TestCase) ->"
+			+ "None:"
 	AFTER @TASK.B04
 	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, rows 1 and 2: the CLI assembles"
 		+ "the planning context in one command, the agent of the plan slot cuts the request into"
@@ -996,6 +1025,11 @@ TASK B10
 	SOURCE "the user's ruling of 2026-10-13 in the refinement of B139: a wave is a MILESTONE of the"
 		+ "project's corpus, the plan one MILESTONE entity and its tasks, and brigade declares no"
 		+ "WAVE type"
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « je"
+		+ "suis d'accord avec tes recommendations, go », on the recommendation that plan context"
+		+ "names in missing a TASK schema that declares no MILESTONE field, so that step 1.2 of"
+		+ "wave-plan.md stops the run before any plan is written"
+	DELIVERED_BY 117
 
 TASK B11
 	TITLE "brigade wave new|show|start|list record a request, launch its planning, start its wave"
@@ -7596,8 +7630,8 @@ TASK B139
 	SPEC "on a failing lint, plan record restores every file it wrote, prints the lint output,"
 		+ "records the ledger event plan.lint_failed carrying the request and the run, and exits 1"
 	SPEC "a second plan record failing lint for the same REQUEST in the same run is refused before"
-		+ "any write, naming the round already spent; the planner run ends on the outcome failed"
-		+ "and the REQUEST stays planning"
+		+ "any write, naming the round already spent; the planner run ends blocked, declaring"
+		+ "brigade-end: blocked, and the REQUEST stays planning"
 	SPEC "the integration branch, integration/<NAME>-<slug>, NAME the name of the MILESTONE and"
 		+ "slug its TITLE lowercased with every run of characters other than letters and digits"
 		+ "replaced by one hyphen, is created from PROJECT.MAIN through a gateway of brigade/git/;"
@@ -7626,9 +7660,15 @@ TASK B139
 		+ "REQUEST carries MILESTONE in place of WAVE, brigade/corpus/data/schema.awawa.tpl:126"
 		REF @DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
 	RATIONALE "the correction round is the user's: exit 1 with the lint output, the planner"
-		+ "correcting and relaunching once in its session, the second failure ending the run failed"
-		+ "with the REQUEST left in planning, and no resumption mechanism to build; the ledger"
-		+ "event is where the spent round is read"
+		+ "correcting and relaunching once in its session, the second failure ending the run"
+		+ "blocked with the REQUEST left in planning, and no resumption mechanism to build; the"
+		+ "ledger event is where the spent round is read"
+	RATIONALE "blocked and not failed: a run declares only done, handed_over or blocked, failed"
+		+ "being an error of the client, and a run declaring nothing ends undeclared, which brigade"
+		+ "relaunches as a hand-over"
+		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+		REF @DECISION.ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked
 	RATIONALE "the transaction extends change_corpus_file of brigade/corpus/, whose CorpusChange"
 		+ "carries one file_name (brigade/corpus/change_corpus_file.py:17-23) and formats, lints,"
 		+ "restores and commits that file alone, to several files, under"
@@ -7652,6 +7692,9 @@ TASK B139
 		+ "une branche d'intégration, ça devrait être le nom de la wave (ou milestone, pour moi"
 		+ "wave=milestone) »; « Oui MILESTONE mais REQUEST.WAVE doit être renommé REQUEST.MILESTONE"
 		+ "je suppose »; the slug is the NAME and the TITLE of the milestone; the task is ratified"
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « ok »,"
+		+ "on « Le 2ᵉ échec, à l'étape 3.2 comme à l'étape 4, se déclare blocked. La décision"
+		+ "enregistrée et B139 SPEC 4 passent de failed à blocked. »"
 
 TASK B140
 	TITLE "A project's corpus mode: brigade confined to an area of the corpus, or a project without"

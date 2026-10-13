@@ -1,0 +1,23 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "MILESTONE",
+      "<tmp:0>/projects/shop"
+    ],
+    "cwd": "<tmp:0>/projects/shop",
+    "directories": [
+      "<tmp:0>/projects/shop"
+    ],
+    "inputs": {
+      "<tmp:0>/projects/shop/corpus/tasks.awawa": ""
+    }
+  },
+  "outcome": {
+    "exit_code": 1,
+    "rewritten": {},
+    "stderr": "awawa show: @SCHEMA.MILESTONE is not defined in the workspace\n",
+    "stdout": ""
+  },
+  "version": "awawa 2.7.0"
+}

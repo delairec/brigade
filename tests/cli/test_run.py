@@ -367,6 +367,42 @@ class BrigadeRunOfAProcedureGivenByNameTest(RunTestCase):
 PROCEDURE_OF_THE_CORPUS = "---\ncapabilities: read\nbudget: 30\n---\nReview the pull request.\n"
 
 
+class BrigadeRunOfTheShippedWavePlanProcedureTest(RunTestCase):
+    def test_should_resolve_it_for_the_planner_with_the_capability_to_write_its_plan(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("planner", DONE_RESULT)
+
+        # Act
+        completed = self.run_brigade(
+            "run", "wave-plan", "--slot", "plan", "--cwd", str(self.workspace), "request=R1", "--json"
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        run_id = json.loads(completed.stdout)["run"]
+        self.assertEqual(
+            self.read_run_record(run_id),
+            {
+                "schema_version": 1,
+                "run": run_id,
+                "procedure": "wave-plan",
+                "procedure_path": str(REPOSITORY_ROOT / "brigade" / "runs" / "data" / "procedures" / "wave-plan.md"),
+                "slot": "plan",
+                "role": "planner",
+                "role_source": "built-in",
+                "client": "fake",
+                "project": None,
+                "cwd": str(self.workspace),
+                "worktree": str(self.workspace),
+                "capabilities": ["read", "write", "shell"],
+                "budget": 30,
+                "wall_limit_s": 1140,
+                "arguments": {"request": "R1"},
+            },
+        )
+
+
 class BrigadeRunOfAProcedureOffItsDeclarationTest(RunTestCase):
     def test_should_exit_1_naming_the_procedure_and_what_it_lacks(self):
         # Arrange

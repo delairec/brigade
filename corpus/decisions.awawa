@@ -2254,3 +2254,76 @@ DECISION ASlotClientIsBoundByTheSlotClientsTableOfConfigToml
 		+ "2026-10-07, recorded in @TASK.B44, whether two AI providers can coexist"
 		REF @TASK.B44
 	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47"
+
+DECISION BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
+	TITLE "brigade reads a project's corpus with the project's PATH as the awawa workspace, the"
+		+ "root its anchors resolve from; a project whose PROJECT entity has no CORPUS has no"
+		+ "corpus to plan from"
+	STATUS active
+	DESC "every awawa command brigade runs on a project's corpus names PATH as the workspace and"
+		+ "runs there; CORPUS tells whether the project has a corpus, and awawa finds its files"
+		+ "under PATH"
+	DESC "brigade plan context on the request of a project with no CORPUS exits 1 naming the"
+		+ "project, until brigade project add --init-corpus of @TASK.B55 gives such a project its"
+		+ "corpus"
+		REF @TASK.B10
+		REF @TASK.B55
+	REJECTED "PATH joined to CORPUS as the workspace: the anchors of this repository resolve from"
+		+ "its root, not from corpus/, and a narrower workspace reports every anchor broken (L016)"
+	RATIONALE "awawa walks the workspace it is given and skips what git ignores, so PATH reads the"
+		+ "corpus alone, worktrees under .claude/ included; the help of awawa asks for the root the"
+		+ "anchors resolve from, never a narrower directory"
+	SOURCE "pull request #117 of the brigade repository, delivering @TASK.B10"
+		REF @TASK.B10
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117: the decision is ratified, with"
+		+ "the reference to @TASK.B55"
+		REF @TASK.B55
+
+DECISION PlanContextRefusesAnEntityOfTheProjectCorpusThatHoldsNoTitle
+	TITLE "brigade plan context exits 1 naming the entity and the field when an active DECISION or"
+		+ "a draft or todo TASK of the project's corpus holds no TITLE"
+	STATUS active
+	DESC "the message reads brigade plan context: @<TYPE>.<name> holds no TITLE; no package is"
+		+ "printed"
+		REF @TASK.B10
+	REJECTED "listing the entity without a title: the planner would cut a request against an entity"
+		+ "it cannot place, and the other checks of the control mode already refuse, naming it,"
+		+ "what the schema of a project's corpus does not give brigade"
+	RATIONALE "a project corpus in control mode may declare TASK or DECISION without TITLE; read"
+		+ "unchecked, the missing field raised StopIteration and exited 70, the code"
+		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable reserves for"
+		+ "brigade's own defect"
+		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
+	RATIONALE "the control mode of @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus refuses, naming"
+		+ "them, the types and fields the schema of the project's corpus does not declare"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository"
+		REF @TASK.B10
+
+DECISION ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked
+	TITLE "the planner lints its plan file against the project's corpus before brigade plan record,"
+		+ "with one correction round, and a second failure ends the run blocked"
+	STATUS active
+	DESC "step 3.2 of wave-plan.md runs awawa fmt on the plan file and awawa lint --strict on the"
+		+ "corpus and the plan file, writing nothing to the corpus; on a failure the planner"
+		+ "corrects the plan file and runs both once more"
+	DESC "a second failure ends the run blocked, the planner declaring brigade-end: blocked, the"
+		+ "lint output reported verbatim with the path of the plan file, nothing handed to brigade"
+		+ "plan record: brigade does not relaunch the run and the REQUEST stays planning"
+		REF @TASK.B10
+		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+	REJECTED "adding brigade-end: failed to the outcomes a run declares: it would change the"
+		+ "decision on how a run declares the end of each segment and the client adapter, and"
+		+ "failed would no longer mean an error of the client only"
+	REJECTED "dropping the check because brigade plan record lints the corpus: the one correction"
+		+ "round of plan record would be spent on errors the planner finds without writing"
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « je"
+		+ "suis d'accord avec tes recommendations, go », on « garder 3.2 comme pré-vérification"
+		+ "sans écriture, mais en failed »"
+		REF @TASK.B10
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « ok »,"
+		+ "on « Le 2ᵉ échec, à l'étape 3.2 comme à l'étape 4, se déclare blocked. La décision"
+		+ "enregistrée et B139 SPEC 4 passent de failed à blocked. »: a planner ending failed could"
+		+ "only end undeclared, which brigade relaunches as a hand-over"
+		REF @TASK.B10
