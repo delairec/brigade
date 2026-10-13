@@ -59,8 +59,10 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 
 ## 4. Hand the plan over
 
-`brigade plan record <request> --file <plan file>` records the plan. A failure is reported verbatim, with the path of
-the plan file, and never worked around.
+`brigade plan record <request> --file <plan file>` records the plan. When the corpus fails its lint, it exits 1
+printing the lint output: correct the plan file once and run `brigade plan record` once more. A second lint failure
+ends the run failed, the request staying planning: `brigade plan record` refuses it, naming the round already spent.
+Any other failure is reported verbatim, with the path of the plan file, and never worked around.
 
 ## 5. Report
 
