@@ -3,7 +3,7 @@ from pathlib import Path
 
 from brigade.corpus.format_and_lint_file import format_and_lint_file
 from brigade.corpus.lint_corpus import LintReport
-from brigade.system.run_process import ProcessRecord, ProcessRequest
+from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
 
 FILE = Path("/state/brigade/runs/r1/progress.awawa")
 
@@ -32,10 +32,20 @@ class FormatAndLintFileTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(request.argv, request.cwd) for request in awawa.requests],
+            awawa.requests,
             [
-                (("awawa", "fmt", "/state/brigade/runs/r1/progress.awawa"), "/state/brigade/runs/r1"),
-                (("awawa", "lint", "--strict", "/state/brigade/runs/r1/progress.awawa"), "/state/brigade/runs/r1"),
+                ProcessRequest(
+                    argv=("awawa", "fmt", "/state/brigade/runs/r1/progress.awawa"),
+                    cwd="/state/brigade/runs/r1",
+                    timeout_s=30.0,
+                    acceptable_exit_codes=EVERY_EXIT_CODE,
+                ),
+                ProcessRequest(
+                    argv=("awawa", "lint", "--strict", "/state/brigade/runs/r1/progress.awawa"),
+                    cwd="/state/brigade/runs/r1",
+                    timeout_s=30.0,
+                    acceptable_exit_codes=(0, 1),
+                ),
             ],
         )
 
