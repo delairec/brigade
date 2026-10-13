@@ -10,11 +10,11 @@ def _read_file(request: dict) -> str:
     return Path(request["path"]).read_text(encoding="utf-8")
 
 
-def create_document(request: dict) -> None:
+def create_document(request: dict, runtime: Runtime) -> None:
     write_text_file(Path(request["path"]), "")
 
 
-def describe_document(request: dict) -> dict:
+def describe_document(request: dict, runtime: Runtime) -> dict:
     frame = "".join(f"- {line}\n" for line in request["frame"])
     return {"text": f"The {request['document']} is the Markdown file {request['path']}.\n\n{frame}"}
 
@@ -23,7 +23,7 @@ def read_document(request: dict, runtime: Runtime) -> dict:
     return {"text": _read_file(request)}
 
 
-def detect_entry(request: dict) -> dict:
+def detect_entry(request: dict, runtime: Runtime) -> dict:
     return {"holds_entry": bool(_read_file(request).strip())}
 
 

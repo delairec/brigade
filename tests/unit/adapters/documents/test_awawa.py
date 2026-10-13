@@ -55,7 +55,7 @@ class AwawaDocumentTestCase(unittest.TestCase):
 class AwawaDocumentCreationTest(AwawaDocumentTestCase):
     def test_should_create_the_file_holding_its_schema_alone(self):
         # Act
-        create_document(self.describe_request())
+        create_document(self.describe_request(), self.runtime)
 
         # Assert
         self.assertEqual(self.path.read_text(), SCHEMA)
@@ -64,7 +64,7 @@ class AwawaDocumentCreationTest(AwawaDocumentTestCase):
 class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
     def test_should_name_the_file_the_types_of_its_schema_the_frame_and_the_checks_after_each_append(self):
         # Act
-        description = describe_document(self.describe_request(role_has_shell=True))
+        description = describe_document(self.describe_request(role_has_shell=True), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -84,7 +84,7 @@ class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
 
     def test_should_ask_for_no_check_of_a_role_without_shell(self):
         # Act
-        description = describe_document(self.describe_request(role_has_shell=False))
+        description = describe_document(self.describe_request(role_has_shell=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -114,7 +114,7 @@ class AwawaDocumentEntryTest(AwawaDocumentTestCase):
                 self.path.write_text(content)
 
                 # Act
-                answer = detect_entry(self.describe_request())
+                answer = detect_entry(self.describe_request(), self.runtime)
 
                 # Assert
                 self.assertEqual(answer, {"holds_entry": holds_entry})

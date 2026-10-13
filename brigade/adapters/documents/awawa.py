@@ -58,11 +58,11 @@ def _render_entity(entity: dict) -> str:
     return f"{entity['type']} {entity['name']}\n{fields}"
 
 
-def create_document(request: dict) -> None:
+def create_document(request: dict, runtime: Runtime) -> None:
     write_text_file(Path(request["path"]), request["schema"])
 
 
-def describe_document(request: dict) -> dict:
+def describe_document(request: dict, runtime: Runtime) -> dict:
     path = request["path"]
     types = "".join(f"- {name}: {description}\n" for name, description in _read_schema_types(request["schema"]))
     frame = "".join(f"- {line}\n" for line in request["frame"])
@@ -92,7 +92,7 @@ def read_document(request: dict, runtime: Runtime) -> dict:
     return {"text": "\n".join([*inventories, shown])}
 
 
-def detect_entry(request: dict) -> dict:
+def detect_entry(request: dict, runtime: Runtime) -> dict:
     lines = Path(request["path"]).read_text(encoding="utf-8").splitlines()
     return {"holds_entry": any(_holds_entry_line(line) for line in lines)}
 

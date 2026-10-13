@@ -76,7 +76,7 @@ def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
             procedure_body=plan.procedure.body,
             arguments=plan.arguments,
             brief=plan.brief,
-            progress_description=plan.document.describe_document(request)["text"],
+            progress_description=plan.document.describe_document(request, runtime)["text"],
         )
     )
 

@@ -31,8 +31,8 @@ def _ends_on_the_clock(record: SegmentRecord) -> bool:
     return record.result.outcome in CLOCK_OUTCOMES
 
 
-def _holds_progress(plan: RunPlan) -> bool:
-    return plan.document.detect_entry(describe_progress(plan))["holds_entry"]
+def _holds_progress(plan: RunPlan, runtime: Runtime) -> bool:
+    return plan.document.detect_entry(describe_progress(plan), runtime)["holds_entry"]
 
 
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
@@ -74,7 +74,7 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
         if record.result.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))
-        if record.number > plan.handovers or not _holds_progress(plan):
+        if record.number > plan.handovers or not _holds_progress(plan, runtime):
             return records
 
 

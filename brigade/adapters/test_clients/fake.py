@@ -26,6 +26,7 @@ SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
 TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 RESUMED_RECORDING_SUFFIX = ".resumed.json"
 DOCUMENT_PLUGINS = {"markdown": markdown, "awawa": awawa}
+NO_RUNTIME_NEEDED = None
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
@@ -68,7 +69,7 @@ def _build_argv(settings: dict, recording: str, soft_limit) -> list[str]:
 
 def _holds_entry(progress_file: Path) -> bool:
     plugin = DOCUMENT_PLUGINS[name_document_plugin(progress_file)]
-    return plugin.detect_entry({"path": str(progress_file)})["holds_entry"]
+    return plugin.detect_entry({"path": str(progress_file)}, NO_RUNTIME_NEEDED)["holds_entry"]
 
 
 def _choose_recording(recordings: str, request: dict) -> str:
