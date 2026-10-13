@@ -7630,8 +7630,8 @@ TASK B139
 	SPEC "on a failing lint, plan record restores every file it wrote, prints the lint output,"
 		+ "records the ledger event plan.lint_failed carrying the request and the run, and exits 1"
 	SPEC "a second plan record failing lint for the same REQUEST in the same run is refused before"
-		+ "any write, naming the round already spent; the planner run ends on the outcome failed"
-		+ "and the REQUEST stays planning"
+		+ "any write, naming the round already spent; the planner run ends blocked, declaring"
+		+ "brigade-end: blocked, and the REQUEST stays planning"
 	SPEC "the integration branch, integration/<NAME>-<slug>, NAME the name of the MILESTONE and"
 		+ "slug its TITLE lowercased with every run of characters other than letters and digits"
 		+ "replaced by one hyphen, is created from PROJECT.MAIN through a gateway of brigade/git/;"
@@ -7660,9 +7660,15 @@ TASK B139
 		+ "REQUEST carries MILESTONE in place of WAVE, brigade/corpus/data/schema.awawa.tpl:126"
 		REF @DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
 	RATIONALE "the correction round is the user's: exit 1 with the lint output, the planner"
-		+ "correcting and relaunching once in its session, the second failure ending the run failed"
-		+ "with the REQUEST left in planning, and no resumption mechanism to build; the ledger"
-		+ "event is where the spent round is read"
+		+ "correcting and relaunching once in its session, the second failure ending the run"
+		+ "blocked with the REQUEST left in planning, and no resumption mechanism to build; the"
+		+ "ledger event is where the spent round is read"
+	RATIONALE "blocked and not failed: a run declares only done, handed_over or blocked, failed"
+		+ "being an error of the client, and a run declaring nothing ends undeclared, which brigade"
+		+ "relaunches as a hand-over"
+		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+		REF @DECISION.ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked
 	RATIONALE "the transaction extends change_corpus_file of brigade/corpus/, whose CorpusChange"
 		+ "carries one file_name (brigade/corpus/change_corpus_file.py:17-23) and formats, lints,"
 		+ "restores and commits that file alone, to several files, under"
@@ -7686,6 +7692,9 @@ TASK B139
 		+ "une branche d'intégration, ça devrait être le nom de la wave (ou milestone, pour moi"
 		+ "wave=milestone) »; « Oui MILESTONE mais REQUEST.WAVE doit être renommé REQUEST.MILESTONE"
 		+ "je suppose »; the slug is the NAME and the TITLE of the milestone; the task is ratified"
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « ok »,"
+		+ "on « Le 2ᵉ échec, à l'étape 3.2 comme à l'étape 4, se déclare blocked. La décision"
+		+ "enregistrée et B139 SPEC 4 passent de failed à blocked. »"
 
 TASK B140
 	TITLE "A project's corpus mode: brigade confined to an area of the corpus, or a project without"

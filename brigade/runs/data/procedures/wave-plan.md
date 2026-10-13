@@ -53,7 +53,7 @@ step needs and no command gives back (the path of the plan file, the ids you cho
    they do not declare.
 2. `awawa fmt <plan file>`, then `awawa lint --strict <corpus> <plan file>`: the project's schema validates the
    plan before anything is written to the corpus. Correct every error in the plan file and run both once more. A
-   second failure ends the run failed: report the lint output verbatim, with the path of the plan file, and hand
+   second failure ends the run blocked: report the lint output verbatim, with the path of the plan file, and hand
    nothing over.
 3. Write nothing else: no file of the repository, no branch, no entity of either corpus.
 
@@ -61,7 +61,7 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 
 `brigade plan record <request> --file <plan file>` records the plan. When the corpus fails its lint, it exits 1
 printing the lint output: correct the plan file once and run `brigade plan record` once more. A second lint failure
-ends the run failed, the request staying planning: `brigade plan record` refuses it, naming the round already spent.
+ends the run blocked, the request staying planning: `brigade plan record` refuses it, naming the round already spent.
 Any other failure is reported verbatim, with the path of the plan file, and never worked around.
 
 ## 5. Report

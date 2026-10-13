@@ -2300,22 +2300,30 @@ DECISION PlanContextRefusesAnEntityOfTheProjectCorpusThatHoldsNoTitle
 	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository"
 		REF @TASK.B10
 
-DECISION ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunFailed
+DECISION ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked
 	TITLE "the planner lints its plan file against the project's corpus before brigade plan record,"
-		+ "with one correction round, and a second failure ends the run failed"
+		+ "with one correction round, and a second failure ends the run blocked"
 	STATUS active
 	DESC "step 3.2 of wave-plan.md runs awawa fmt on the plan file and awawa lint --strict on the"
 		+ "corpus and the plan file, writing nothing to the corpus; on a failure the planner"
 		+ "corrects the plan file and runs both once more"
-	DESC "a second failure ends the run on the outcome failed, the lint output reported verbatim"
-		+ "with the path of the plan file, nothing handed to brigade plan record"
+	DESC "a second failure ends the run blocked, the planner declaring brigade-end: blocked, the"
+		+ "lint output reported verbatim with the path of the plan file, nothing handed to brigade"
+		+ "plan record: brigade does not relaunch the run and the REQUEST stays planning"
 		REF @TASK.B10
-	REJECTED "the second failure ending the run blocked: blocked waits for a ruling, and a plan the"
-		+ "planner cannot make lint is its own failure, the bound the user ruled for brigade plan"
-		+ "record in the refinement of B139"
+		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
+		REF @DECISION.EveryEndOfARunHasItsOwnExitCodeRangedBySeverity
+	REJECTED "adding brigade-end: failed to the outcomes a run declares: it would change the"
+		+ "decision on how a run declares the end of each segment and the client adapter, and"
+		+ "failed would no longer mean an error of the client only"
 	REJECTED "dropping the check because brigade plan record lints the corpus: the one correction"
 		+ "round of plan record would be spent on errors the planner finds without writing"
 	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « je"
 		+ "suis d'accord avec tes recommendations, go », on « garder 3.2 comme pré-vérification"
 		+ "sans écriture, mais en failed »"
+		REF @TASK.B10
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « ok »,"
+		+ "on « Le 2ᵉ échec, à l'étape 3.2 comme à l'étape 4, se déclare blocked. La décision"
+		+ "enregistrée et B139 SPEC 4 passent de failed à blocked. »: a planner ending failed could"
+		+ "only end undeclared, which brigade relaunches as a hand-over"
 		REF @TASK.B10
