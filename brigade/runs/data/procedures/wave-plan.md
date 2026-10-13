@@ -46,7 +46,8 @@ step needs and no command gives back (the path of the plan file, the ids you cho
    the TASK entities whose MILESTONE names it, every field the schemas of the package mark REQUIRED and no field
    they do not declare.
 2. `awawa fmt <plan file>`, then `awawa lint --strict <corpus> <plan file>`: the project's schema validates the
-   plan. Correct every error in the plan file and run both again until they exit 0.
+   plan. Correct every error in the plan file and run both once more. A second failure ends the run blocked: report
+   the lint output verbatim, with the path of the plan file, and hand nothing over.
 3. Write nothing else: no file of the repository, no branch, no entity of either corpus.
 
 ## 4. Hand the plan over
