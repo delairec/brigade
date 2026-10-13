@@ -67,7 +67,7 @@ class SegmentRecord:
 
 
 def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
-    progress = None if number == FIRST_SEGMENT else ask_progress(plan, "read_document", runtime)["text"]
+    progress = None if number == FIRST_SEGMENT else ask_progress(plan, "read_document", runtime).text
     return compose_brief(
         BriefParts(
             progress=progress,
@@ -75,7 +75,7 @@ def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
             procedure_body=plan.procedure.body,
             arguments=plan.arguments,
             brief=plan.brief,
-            progress_description=ask_progress(plan, "describe_document", runtime)["text"],
+            progress_description=ask_progress(plan, "describe_document", runtime).text,
         )
     )
 

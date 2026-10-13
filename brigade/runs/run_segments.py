@@ -32,7 +32,7 @@ def _ends_on_the_clock(record: SegmentRecord) -> bool:
 
 
 def _holds_progress(plan: RunPlan, runtime: Runtime) -> bool:
-    return ask_progress(plan, "detect_entry", runtime)["holds_entry"]
+    return ask_progress(plan, "detect_entry", runtime).holds_entry
 
 
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:

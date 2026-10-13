@@ -5,6 +5,7 @@ from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.describe_progress import describe_progress
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
+from brigade.system.document_request import DocumentRequest
 from brigade.system.read_configuration import Configuration
 
 NO_ARGUMENTS = {}
@@ -83,12 +84,11 @@ class DescribeProgressTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             request,
-            {
-                "schema_version": 1,
-                "document": "progress",
-                "path": "/state/brigade/runs/20261013T194621Z-3077b0/progress.awawa",
-                "schema": PROGRESS_SCHEMA,
-                "frame": [
+            DocumentRequest(
+                document="progress",
+                path="/state/brigade/runs/20261013T194621Z-3077b0/progress.awawa",
+                schema=PROGRESS_SCHEMA,
+                frame=(
                     (
                         "one entry per major step: what it did in one line, the facts it established, one line each"
                         " and five at most, and the next step as the procedure names it, complete at the end"
@@ -99,9 +99,9 @@ class DescribeProgressTest(unittest.TestCase):
                         " an earlier entry holds"
                     ),
                     "a handover entry holds what remains, one line per step not done, and the next step",
-                ],
-                "shell": True,
-            },
+                ),
+                role_has_shell=True,
+            ),
         )
 
     def test_should_tell_the_plugin_that_a_role_without_shell_cannot_run_awawa(self):
@@ -112,4 +112,4 @@ class DescribeProgressTest(unittest.TestCase):
         request = describe_progress(plan)
 
         # Assert
-        self.assertIs(request["shell"], False)
+        self.assertIs(request.role_has_shell, False)

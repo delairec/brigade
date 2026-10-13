@@ -6,6 +6,7 @@ from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
+from brigade.system.entry_detection import EntryDetection
 from brigade.system.read_configuration import Configuration
 
 NO_ARGUMENTS = {}
@@ -74,7 +75,7 @@ class AskProgressTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document.paths, ["/state/brigade/runs/20261013T194621Z-3077b0/progress.md"])
-        self.assertEqual(answer, {"schema_version": 1, "holds_entry": False})
+        self.assertEqual(answer, EntryDetection(holds_entry=False))
 
     def test_should_refuse_an_answer_breaking_its_shape_naming_the_plugin_the_configuration_chose(self):
         # Arrange
