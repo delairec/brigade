@@ -7639,6 +7639,8 @@ TASK B139
 			+ "Callable[[ProcessRequest], ProcessRecord], change: CorpusChange) -> bool:"
 		IMPL "brigade/planning/locate_entity_files.py::def locate_entity_files("
 		IMPL "brigade/corpus/locate_corpus_lock.py::def locate_corpus_lock("
+		IMPL "tests/cli/test_plan.py::class"
+			+ "BrigadePlanRecordOfAProjectWithoutACorpusTest(PlanContextTestCase):"
 		IMPL "tests/cli/test_plan.py::class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):"
 	SPEC "on a failing lint, plan record restores every file it wrote, prints the lint output,"
 		+ "records the ledger event plan.lint_failed carrying the request and the run, and exits 1"

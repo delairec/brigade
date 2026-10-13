@@ -144,9 +144,8 @@ def _locate_request_file(runtime: Runtime, name: str) -> str:
 def _mark_planned(runtime: Runtime, name: str, milestone: str, branch: str) -> None:
     root = runtime.paths.config_root
 
-    def rewrite(texts: tuple[str, ...]) -> tuple[str, ...] | None:
-        text = mark_request_planned(texts[0], name, milestone, branch)
-        return None if text is None else (text,)
+    def rewrite(texts: tuple[str, ...]) -> tuple[str, ...]:
+        return (mark_request_planned(texts[0], name, milestone, branch),)
 
     change_corpus_file(
         runtime.run_process,

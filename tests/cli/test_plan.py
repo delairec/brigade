@@ -607,6 +607,24 @@ class BrigadePlanRecordOfARequestNotPlanningTest(PlanRecordTestCase):
         self.assertEqual(completed.stderr, "brigade plan record: @REQUEST.R1 is planned, not planning\n")
 
 
+class BrigadePlanRecordOfAProjectWithoutACorpusTest(PlanContextTestCase):
+    def test_should_exit_1_naming_the_project(self):
+        # Arrange
+        self.project.write("src/cart.py", CART)
+        self.project.track("src")
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
+        self.write_request("planning")
+        plan_file = Path(self.root.name).resolve() / "plan.awawa"
+        plan_file.write_text(PLAN)
+
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "plan", "record", "R1", "--file", str(plan_file))
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade plan record: @PROJECT.shop declares no corpus\n")
+
+
 class BrigadePlanRecordOfAPlanFailingLintTest(PlanRecordTestCase):
     def test_should_exit_1_printing_the_lint_output(self):
         # Act
