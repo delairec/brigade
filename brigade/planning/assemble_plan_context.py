@@ -16,6 +16,8 @@ ACTIVE_STATUS = "active"
 OPEN_TASK_STATUSES = ("draft", "todo")
 ANCHOR_FIELD = "IMPL"
 TITLE_FIELD = "TITLE"
+MILESTONE_FIELD = "MILESTONE"
+FIELD_DECLARATION = "FIELD"
 ANCHOR_SEPARATOR = "::"
 TRAILING_NUMBER = re.compile(r"\d+$")
 SCHEMA_NOT_DEFINED = 1
@@ -42,6 +44,18 @@ def _run_awawa(
 def _read_schema(run_process, root: Path, entity_type: str) -> str | None:
     record = _run_awawa(run_process, root, ("show", entity_type), SHOWN_OR_NOT_DEFINED)
     return None if record.exit_code == SCHEMA_NOT_DEFINED else record.stdout
+
+
+def _read_declared_fields(run_process, root: Path, entity_type: str) -> list[str]:
+    schema = json.loads(_run_awawa(run_process, root, ("show", entity_type, "--json")).stdout)
+    return [field["atoms"][0] for field in schema["fields"] if field["name"] == FIELD_DECLARATION]
+
+
+def _list_missing(run_process, root: Path, schemas: dict) -> list[dict]:
+    missing_types = [{"type": entity_type} for entity_type, text in schemas.items() if text is None]
+    if schemas[TASK_TYPE] is None or MILESTONE_FIELD in _read_declared_fields(run_process, root, TASK_TYPE):
+        return missing_types
+    return [*missing_types, {"type": TASK_TYPE, "field": MILESTONE_FIELD}]
 
 
 def _decode_atom(atom: str) -> str:
@@ -110,7 +124,7 @@ def assemble_plan_context(run_process: Callable[[ProcessRequest], ProcessRecord]
             if entity["type"] == TASK_TYPE and entity["status"] in OPEN_TASK_STATUSES
         ],
         "schemas": {entity_type: text for entity_type, text in schemas.items() if text is not None},
-        "missing": [entity_type for entity_type, text in schemas.items() if text is None],
+        "missing": _list_missing(run_process, root, schemas),
         "next_task_number": _count_next_task_number(entities),
         "anchors": _index_anchors(shown),
     }

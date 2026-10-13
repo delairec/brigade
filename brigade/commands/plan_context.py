@@ -35,6 +35,12 @@ def _render_section(lines: list[str]) -> str:
     return "".join(f"{line}\n" for line in lines)
 
 
+def _render_missing(entry: dict) -> str:
+    if "field" in entry:
+        return f"Missing field {entry['field']} of schema {entry['type']}"
+    return f"Missing schema {entry['type']}"
+
+
 def _render_text(document: dict) -> str:
     request = document["request"]
     sections = [
@@ -57,7 +63,7 @@ def _render_text(document: dict) -> str:
         ),
         _render_section([f"Next free task number {document['next_task_number']}"]),
         _render_section(["Anchors by file", *_render_anchors(document["anchors"])]),
-        *(_render_section([f"Missing schema {entity_type}"]) for entity_type in document["missing"]),
+        *(_render_section([_render_missing(entry)]) for entry in document["missing"]),
         *document["schemas"].values(),
     ]
     return "\n".join(sections).removesuffix("\n")

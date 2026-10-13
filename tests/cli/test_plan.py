@@ -18,8 +18,17 @@ TASK_SCHEMA = (
     "\t\tREPEATABLE\n"
     "\t\tFIELD IMPL anchor\n"
     "\t\t\tREPEATABLE\n"
+    "\tFIELD MILESTONE @MILESTONE\n"
     "\tFIELD AFTER @TASK\n"
     "\t\tREPEATABLE\n"
+)
+TASK_SCHEMA_WITHOUT_MILESTONE = (
+    "SCHEMA TASK\n"
+    '\tDESC "a change delivered by one pull request"\n'
+    "\tFIELD TITLE string\n"
+    "\t\tREQUIRED\n"
+    "\tFIELD STATUS draft|todo|implemented|archived\n"
+    "\t\tREQUIRED\n"
 )
 DECISION_SCHEMA = (
     "SCHEMA DECISION\n"
@@ -201,7 +210,7 @@ class BrigadePlanContextOnACorpusWithoutAMilestoneTypeTest(PlanContextTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["missing"], ["MILESTONE"])
+        self.assertEqual(json.loads(completed.stdout)["missing"], [{"type": "MILESTONE"}])
 
     def test_should_name_the_milestone_type_missing_in_the_text(self):
         # Act
@@ -210,6 +219,29 @@ class BrigadePlanContextOnACorpusWithoutAMilestoneTypeTest(PlanContextTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("\nMissing schema MILESTONE\n", completed.stdout)
+
+
+class BrigadePlanContextOnACorpusWhoseTaskSchemaDeclaresNoMilestoneTest(PlanContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.register_project(f"{TASK_SCHEMA_WITHOUT_MILESTONE}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}")
+        self.write_request("planning")
+
+    def test_should_name_the_milestone_field_of_the_task_schema_missing_in_the_document(self):
+        # Act
+        completed = self.run_plan_context("R1", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["missing"], [{"type": "TASK", "field": "MILESTONE"}])
+
+    def test_should_name_the_milestone_field_of_the_task_schema_missing_in_the_text(self):
+        # Act
+        completed = self.run_plan_context("R1")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("\nMissing field MILESTONE of schema TASK\n", completed.stdout)
 
 
 class BrigadePlanContextOnACorpusListingNoTypeTest(PlanContextTestCase):

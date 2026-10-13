@@ -22,8 +22,10 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 1. `brigade plan context <request> --json`. It prints the request in the user's words, the inventory of the
    project's corpus, its active decisions, its draft and todo tasks, its TASK and MILESTONE schemas, the next free task
    number, and every IMPL anchor indexed by the file it points at.
-2. A non-zero exit, or a `missing` list naming a type, means the plan cannot be written against this corpus: stop,
-   report the message or the missing type verbatim, and end blocked.
+2. A non-zero exit, or a non-empty `missing` list, means the plan cannot be written against this corpus: an entry
+   `{"type": "<TYPE>"}` is a schema the corpus does not declare, and `{"type": "TASK", "field": "MILESTONE"}` a TASK
+   schema that declares no MILESTONE field. Stop before writing any plan, report the message or each entry verbatim,
+   and end blocked.
 3. Read an entity the package names with `awawa show @TYPE.Name <corpus>` when its title is not enough to place the
    request; `<corpus>` is the `corpus` path of the package.
 
