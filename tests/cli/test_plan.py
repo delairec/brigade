@@ -209,6 +209,41 @@ class BrigadePlanContextOnACorpusWithoutAMilestoneTypeTest(PlanContextTestCase):
         self.assertIn("\nMissing schema MILESTONE\n", completed.stdout)
 
 
+class BrigadePlanContextOnACorpusListingNoTypeTest(PlanContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.write("corpus/tasks.awawa")
+        self.project.track("corpus")
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
+        self.write_request("planning")
+
+    def test_should_print_an_empty_inventory_and_name_both_schemas_missing(self):
+        # Act
+        completed = self.run_plan_context("R1")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout,
+            "@REQUEST.R1 of @PROJECT.shop\n"
+            f"{REQUEST_TEXT}\n"
+            "\n"
+            f"Corpus {self.project.path}\n"
+            "\n"
+            "Active decisions\n"
+            "\n"
+            "Draft and todo tasks\n"
+            "\n"
+            "Next free task number 1\n"
+            "\n"
+            "Anchors by file\n"
+            "\n"
+            "Missing schema TASK\n"
+            "\n"
+            "Missing schema MILESTONE\n",
+        )
+
+
 class BrigadePlanContextOfARequestNotPlanningTest(PlanContextTestCase):
     def test_should_exit_1_naming_the_request_and_its_status(self):
         # Arrange

@@ -14,8 +14,8 @@ COLUMN_GAP = "  "
 
 
 def _render_status(document: dict) -> list[str]:
-    type_width = max(len(row["type"]) for row in document["status"])
-    total_width = max(len(str(row["total"])) for row in document["status"])
+    type_width = max((len(row["type"]) for row in document["status"]), default=0)
+    total_width = max((len(str(row["total"])) for row in document["status"]), default=0)
     return [
         f"{row['type']:<{type_width}}{COLUMN_GAP}{row['total']:<{total_width}}{COLUMN_GAP}"
         f"{', '.join(f'{status} {count}' for status, count in row['counts'].items())}".rstrip()
@@ -58,7 +58,7 @@ def _render_text(document: dict) -> str:
         _render_section([f"Next free task number {document['next_task_number']}"]),
         _render_section(["Anchors by file", *_render_anchors(document["anchors"])]),
         *(_render_section([f"Missing schema {entity_type}"]) for entity_type in document["missing"]),
-        "\n".join(document["schemas"].values()),
+        *document["schemas"].values(),
     ]
     return "\n".join(sections).removesuffix("\n")
 
