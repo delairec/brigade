@@ -1613,6 +1613,7 @@ TASK B25
 	SPEC "brigade study run triage runs it on demand; the tick runs it daily by default"
 	AFTER @TASK.B22
 	AFTER @TASK.B48
+	AFTER @TASK.B147
 
 TASK B26
 	TITLE "Ratification into a wave"
@@ -1736,6 +1737,7 @@ TASK B33
 		+ "and worktrees, one per registered project"
 	AFTER @TASK.B22
 	AFTER @TASK.B48
+	AFTER @TASK.B147
 
 TASK B34
 	TITLE "Scan results in the dashboard and the inbox"
@@ -2262,57 +2264,88 @@ TASK B47
 		+ "--refresh l'ignore ; sous $XDG_CACHE_HOME/brigade/collectors/. »; the task is ratified"
 
 TASK B48
-	TITLE "STUDY entity, brigade study commands, study.md, scheduling by the tick"
-	STATUS draft
+	TITLE "STUDY entity and its answer entity, brigade study new, run, context and answer, study.md"
+		+ "and the collectors shell and study"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
+	SPEC "the STUDY schema of brigade/corpus/data/schema.awawa.tpl replaces TEMPLATE by ANSWER, the"
+		+ "name of an entity type of the same schema, ANSWER by default; SCHEMA ANSWER declares"
+		+ "STUDY, RUN, COLLECTED, one per collector holding its name, its summary and the path of"
+		+ "its full document, which the CLI fills, and NARRATIVE and FINDING, repeatable, which the"
+		+ "slot fills; brigade init installs it as it upgrades the installed schema"
 	SPEC "study new records a STUDY entity through fmt, lint and a commit, with the question"
 		+ "verbatim, the project when there is one, the collectors, the slot or none, the schedule"
-		+ "or none, the output and the schema of the answer, and runs it once unless --every is"
-		+ "given"
+		+ "or none, the output and the type of the answer, and runs it once unless --every is given"
 	SPEC "study run runs the ordered steps collect, judge and output: the collectors, then the"
 		+ "slot's role through brigade run with the procedure study.md, then the output; a study"
-		+ "with SLOT none writes the collected output to its destination and launches nothing"
-	SPEC "each step's result is a file under runs/<id>/steps/, and a resumed study restarts at its"
-		+ "first undone step; this layout and the event names below are the recipe engine's"
-		+ "contract, which replaces this orchestration in M8 without a command changing"
+		+ "with SLOT none writes the answer entity holding the fields the CLI filled to its output"
+		+ "and launches nothing"
+	SPEC "each step's result is a file under runs/<id>/steps/; study run records order.started,"
+		+ "step.done, step.failed, order.parked and order.done with kind study; a failed step parks"
+		+ "the study with the step's reason, and the next study run of it resumes that run at its"
+		+ "first undone step; this layout and these events are the recipe engine's contract, which"
+		+ "replaces this orchestration in M8 without a command changing"
+	SPEC "the retention of runs/ spares a study run whose last order event is order.parked"
 	SPEC "study context prints the question, each collector's summary with the path of its full"
-		+ "document, the answer entity with the fields the collectors filled and the prose fields"
-		+ "left to the slot, and the schema of the answer; the full package is written to the run"
-		+ "directory"
-	SPEC "study answer --file validates the answer by awawa lint against the schema of the answer,"
+		+ "document, the answer entity with the fields the CLI filled and the prose fields left to"
+		+ "the slot, and the schema of its type; the full package is written to the run directory"
+	SPEC "study answer --file validates the answer by awawa lint against the schema of its type,"
 		+ "never by a comparison of headings, refuses an answer that changed a field the CLI"
 		+ "filled, writes it to the output, file on a branch of the project with a pull request"
 		+ "where the project has a forge, corpus entity through fmt, lint and a commit, inbox"
 		+ "signal, forge issue or brigade-output-<name> on PATH; the answer is written and read"
-		+ "through the document kind of @TASK.B106, and the Markdown an output hands to a person is"
-		+ "rendered from the entity"
-		REF @TASK.B106
-	SPEC "the tick runs each due study under the slot cap and records order.started, step.done,"
-		+ "step.failed, order.parked and order.done with kind study"
-	SPEC "study list, show, pause and resume; list prints every study with its schedule, last run"
-		+ "and last outcome, text and --json"
+		+ "through the document kind, and the Markdown an output hands to a person is rendered from"
+		+ "the entity"
 	SPEC "the built-in collectors shell, whose items are the stdout lines of the command line the"
 		+ "STUDY declares, and study, whose items are the last answer of the STUDY it names, run"
 		+ "under the contract of B47"
 	AFTER @TASK.B06
-	AFTER @TASK.B07
 	AFTER @TASK.B43
 	AFTER @TASK.B47
 	AFTER @TASK.B106
+	AFTER @TASK.B11
+	AFTER @TASK.B60
 	RATIONALE "the answer is designed as an entity from the start, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
-		+ "sets: no code of the studies exists yet; the template of"
-		+ "@DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun, DESC 1, 4 and 5, becomes the"
-		+ "schema of the answer at the ratification; after @TASK.B106, which introduces the"
-		+ "document kind"
+		+ "sets: no code of the studies exists yet, and SCHEMA STUDY of"
+		+ "brigade/corpus/data/schema.awawa.tpl declares TEMPLATE, a Markdown skeleton, which the"
+		+ "type of the answer replaces; DESC 1, 4, 5 and 9 of"
+		+ "@DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun are amended at this"
+		+ "ratification; after @TASK.B106, which introduces the document kind, and @TASK.B11, which"
+		+ "upgrades the installed schema"
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 		REF @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun
 		REF @TASK.B106
+		REF @TASK.B11
+	RATIONALE "a generic type ANSWER, as the user ruled on 2026-10-13: COLLECTED gives every study"
+		+ "fields the CLI fills and the judging run may not change, and a built-in study names its"
+		+ "own type and fills its fields by its own code, REPORT of @TASK.B20, PATTERN of"
+		+ "@TASK.B25; a mapping of fields to collectors declared in the STUDY was refused, a second"
+		+ "language to validate"
+		REF @TASK.B20
+		REF @TASK.B25
+	RATIONALE "the scheduling by the tick, its cap and study list, show, pause and resume are"
+		+ "@TASK.B147, split from this task as the user ruled on 2026-10-13: the planner of the"
+		+ "tick is the code @TASK.B12 writes, and no cap existed for a study, PROJECT.SLOTS of B12"
+		+ "bounding the build runs of a project alone"
+		REF @TASK.B147
+		REF @TASK.B12
+	RATIONALE "a parked study resumes on its next study run, as a parked order resumes once the"
+		+ "user acted, DESC 3 and 4 of @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder; after"
+		+ "@TASK.B60, whose retention reads the ledger and would otherwise remove the run directory"
+		+ "a parked study resumes from"
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+		REF @TASK.B60
 	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
 		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
 		+ "amending this task: \"ok pour le plan ci-dessus\""
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B48: « Scinder B48 »; « ANSWER"
+		+ "générique », on the proposal « STUDY.ANSWER nomme un type du schéma opérationnel, ANSWER"
+		+ "par défaut : STUDY, COLLECTED (une ligne par collecteur, résumé + chemin, remplie par le"
+		+ "CLI), NARRATIVE et FINDING remplis par le slot ; une étude intégrée nomme son propre"
+		+ "type (REPORT de B20) et en remplit les champs par son code ; AFTER B11 »"
 
 TASK B49
 	TITLE "brigade adapter matrix and the supported-clients table of the README, generated from the"
@@ -2774,29 +2807,30 @@ TASK B57
 	DELIVERED_BY 34
 
 TASK B60
-	TITLE "retention of runs/: after each result written, the finished and dead runs beyond"
-		+ "runs_kept are removed, a running run never"
-	STATUS draft
+	TITLE "retention of runs/: after each result written, the runs beyond runs_kept that nothing"
+		+ "will resume are removed, and brigade runs prune removes them on demand"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	DESC "draft: the key runs_kept, its default of 100 and the lock name are proposals for the"
-		+ "refinement"
-	DESC "for the refinement: a run @TASK.B19 resumes from its progress file and a study @TASK.B48"
-		+ "restarts at its first undone step hold no live pid; whether the retention spares them"
-		REF @TASK.B19
-		REF @TASK.B48
 	SPEC "after brigade run writes result.json, the finished and dead runs of"
 		+ "$XDG_STATE_HOME/brigade/runs/ beyond runs_kept of config.toml, 100 by default, are"
 		+ "removed, oldest first by the time of result.json or, dead, of run.json; finished and"
-		+ "dead are those of brigade runs list"
-	SPEC "a running run, its pid alive without result.json, is never removed; runs_kept below 1 is"
-		+ "an error naming the key and the file"
+		+ "dead are those of brigade runs list; a spared run is neither removed nor counted;"
+		+ "runs_kept below 1 is an error naming the key and the file"
+	SPEC "a running run, its pid alive without result.json, is never removed; a run to resume is"
+		+ "spared, read from the ledger: a run whose last run.finished carries error_class"
+		+ "rate_limit, which the resume after a rate limit takes up"
+	SPEC "brigade runs prune [--keep <n>] [--before <date>] [--resumable] [--dry-run] runs the same"
+		+ "removal on demand: --keep replaces runs_kept for the call, --before removes every"
+		+ "finished or dead run older than the date whatever their number, --resumable removes the"
+		+ "runs to resume as well, --dry-run prints what would go and removes nothing; a running"
+		+ "run is never removed; it prints each run removed, text and --json"
 	SPEC "a removal runs under $XDG_STATE_HOME/brigade/locks/runs.lock and renames the directory"
 		+ "out of runs/ before deleting it: brigade runs list meets a whole run or none"
-	SPEC "tests/cli prove the removal beyond the bound, the running run kept, the dead run removed"
-		+ "and the bound read from config.toml, through the fake adapter in a temporary state"
-		+ "directory"
+	SPEC "tests/cli prove the removal beyond the bound, the running run kept, the dead run removed,"
+		+ "the rate-limited run kept, the bound read from config.toml and each option of brigade"
+		+ "runs prune, through the fake adapter in a temporary state directory"
 	AFTER @TASK.B06
 	RATIONALE "the refs cache is the one bounded store, refs_cache_mb of @TASK.B08; nothing bounds"
 		+ "runs/, which @TASK.B06 fills with the brief, the role package, stdout, stderr and"
@@ -2814,11 +2848,20 @@ TASK B60
 	RATIONALE "the writer prunes after each write, the pattern of @TASK.B08 for the refs cache:"
 		+ "brigade run bounds runs/ with or without a scheduler, where the tick of @TASK.B07 would"
 		+ "record a prune action in the ledger at each tick and plans nothing before @TASK.B12 adds"
-		+ "its facts; a brigade runs prune command is a second entry to the same function, left to"
-		+ "the refinement"
+		+ "its facts; brigade runs prune is a second entry to the same function, its options ruled"
+		+ "by the user on 2026-10-13; whether it becomes a kind of brigade clean is left to"
+		+ "@TASK.B104"
 		REF @TASK.B08
 		REF @TASK.B07
 		REF @TASK.B12
+		REF @TASK.B104
+	RATIONALE "the runs to resume are read from the ledger, as the user ruled: a rate-limited run"
+		+ "holds its result.json and is finished for brigade runs list, yet @TASK.B19 resumes it as"
+		+ "a next segment of the same run; run.finished already carries the error class,"
+		+ "brigade/runs/describe_finished.py; the parked study run is spared by @TASK.B48, which"
+		+ "declares order.parked"
+		REF @TASK.B19
+		REF @TASK.B48
 	RATIONALE "a count rather than a size: a run is worth the same for a diagnosis whatever its"
 		+ "logs weigh, and a count walks no directory; the time of result.json orders the finished"
 		+ "runs, a dead run having none"
@@ -2833,6 +2876,12 @@ TASK B60
 	SOURCE "the user's ruling of 2026-10-06 after wave M0: a draft task for the retention of runs/,"
 		+ "placed in its milestone, and one line for the worktrees the scheduler of @TASK.B12 cuts"
 		REF @TASK.B12
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B60: « par défaut on lit le"
+		+ "ledger, mais on peut autoriser de passer un flag (par exemple --soft, --hard et en"
+		+ "fonction du flag on va plus ou moins loin dans la suppression; peut être aussi un"
+		+ "--before si on veut passer une date; les noms ne sont pas définitifs, il y a peut être"
+		+ "mieux à faire?) »; « runs prune », on the proposal « brigade runs prune [--keep N]"
+		+ "[--before <date>] [--resumable] [--dry-run] »"
 
 TASK B61
 	TITLE "the foundations of M0 reviewed read-only by the role of the deepest reasoning against"
@@ -5714,18 +5763,21 @@ TASK B98
 TASK B99
 	TITLE "POLICY.REVIEW chooses approval or verdict, and doctor warns when a project under"
 		+ "approval has no distinct logins for its build and review slots"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
 	SPEC "the POLICY schema brigade init installs, brigade/corpus/data/schema.awawa.tpl, declares"
-		+ "REVIEW approval|verdict, verdict by default"
+		+ "REVIEW approval|verdict, verdict by default; brigade init installs it as it upgrades the"
+		+ "installed schema"
 	SPEC "brigade doctor reports a warning naming the project for each project whose POLICY sets"
-		+ "REVIEW approval while the build and review slots of [forge_accounts] are unbound or"
-		+ "bound to one login"
-	SPEC "tests/cli prove the default, the field read from a policy, and the warning with one login"
-		+ "and with two"
+		+ "REVIEW approval while the build or the review slot of [forge_accounts] is unbound, or"
+		+ "both are bound to one login"
+	SPEC "tests/cli prove no warning for a policy without REVIEW, the warning under approval with"
+		+ "build and review bound to one login and with one of them unbound, and none with two"
+		+ "distinct logins"
 	AFTER @TASK.B75
+	AFTER @TASK.B11
 	RATIONALE "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets three"
 		+ "review modes; approval and verdict are needed by the verdict and the merge of M1,"
 		+ "@TASK.B16 and @TASK.B17, which follow this task; local is delivered by @TASK.B100"
@@ -5735,8 +5787,19 @@ TASK B99
 		REF @TASK.B100
 	RATIONALE "GitHub refuses an approval by the author of a pull request: under approval the build"
 		+ "slot that opens it and the review slot that approves it need two logins"
+	RATIONALE "an unbound slot acts as gh's active account, which may be the login of the other"
+		+ "slot: doctor cannot tell them apart and warns, as the user ruled on 2026-10-13; brigade"
+		+ "doctor reads no POLICY today, the POLICY entities being read from the operational corpus"
+		+ "as brigade/runs/read_handovers.py reads HANDOVERS"
+	RATIONALE "after @TASK.B11, which replaces an installed _schema.awawa that differs from the"
+		+ "shipped one: without it a POLICY carrying REVIEW fails lint on a machine whose installed"
+		+ "schema predates the field"
+		REF @TASK.B11
 	SOURCE "the user's rulings of 2026-10-07 at the refinement of B75: a task of M1 for approval"
 		+ "and verdict, before B16 and B17; POLICY.REVIEW, verdict by default"
+	SOURCE "the user's ruling of 2026-10-13 in the refinement of B99: « Non lié ou même login », on"
+		+ "the proposal « avertit si build ou review n'est pas lié dans [forge_accounts], ou si les"
+		+ "deux sont liés au même login ; + AFTER B11 »"
 
 TASK B100
 	TITLE "POLICY.REVIEW local: the tasks of a wave merged into integration on the machine, and one"
@@ -7873,3 +7936,44 @@ TASK B146
 		+ "le contrat de B47, AFTER B47 et B14 (qui ajoute la lecture des PR à l'adaptateur"
 		+ "GitHub). B46 le retire, B20 passe AFTER cette tâche. B47 et B14 restent comme ratifiées."
 		+ "»"
+
+TASK B147
+	TITLE "The tick runs each due study within study_runs, and brigade study list, show, pause and"
+		+ "resume"
+	STATUS todo
+	MILESTONE @MILESTONE.M1
+	COMPONENT "studies"
+	ROLE ada
+	SPEC "EVERY of a STUDY is 5m, 1h, daily@HH:MM or a day of the week at an hour, mon@HH:MM, in"
+		+ "the machine's timezone; study new --every refuses another form, exit 1 naming the value"
+	SPEC "a study is due when it never ran, or when its schedule has passed since its last"
+		+ "order.started read from the ledger; a paused or archived study is never due"
+	SPEC "the tick runs each due study through study run, launching a judging run only while fewer"
+		+ "than study_runs of config.toml, 2 by default, judging runs of studies are live on the"
+		+ "machine and no run of the same study is live; a scan, SLOT none, launches no run and"
+		+ "counts in no cap; study_runs below 1 is an error naming the key and the file"
+	SPEC "study list, show, pause and resume; list prints every study with its schedule, last run"
+		+ "and last outcome, text and --json; pause and resume move STATUS between active and"
+		+ "paused through fmt, lint and a commit"
+	SPEC "tests/cli prove the due study launched, the cap of study_runs, the study not launched"
+		+ "while a run of it is live, the scan launched beyond the cap, the paused study skipped"
+		+ "and each of study list, show, pause and resume, through the fake adapter"
+	AFTER @TASK.B48
+	AFTER @TASK.B12
+	RATIONALE "split from @TASK.B48 as the user ruled on 2026-10-13: the planner of the tick is the"
+		+ "code @TASK.B12 writes, whose PROJECT.SLOTS bounds the build runs of a project alone, and"
+		+ "a machine-wide study has no project; the cap is a key of the machine, study_runs, and"
+		+ "two runs of one study never overlap, as the user ruled"
+		REF @TASK.B48
+		REF @TASK.B12
+	RATIONALE "a study the tick launches is a study run, its ledger events those @TASK.B48 records"
+		+ "with kind study; the tick plans it from its snapshot, as"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction sets, and study_runs"
+		+ "joins the frozen record of"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables and its template"
+		REF @TASK.B48
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	SOURCE "the user's rulings of 2026-10-13 in the refinement of B48: « Scinder B48 »; « Régler le"
+		+ "plafond maintenant », on the proposal « clé study_runs de config.toml, 2 par défaut,"
+		+ "jamais deux runs d'une même étude »"
