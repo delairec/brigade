@@ -1157,14 +1157,16 @@ DECISION ACorpusWriteFormatsAndRestoresOnlyTheFileBrigadeWrote
 	TITLE "a corpus write formats, and on a failing lint restores, only the file brigade wrote; the"
 		+ "lint runs on the whole corpus"
 	STATUS active
-	DESC "brigade runs awawa fmt on the file it wrote, never on the corpus root; awawa lint"
+	DESC "brigade runs awawa fmt on each file it wrote, never on the corpus root; awawa lint"
 		+ "--strict runs on the corpus root"
-	DESC "a failing lint restores that file from HEAD, or removes it when HEAD does not hold it,"
-		+ "and nothing else"
-	DESC "the transaction is brigade/corpus/change_corpus_file, under the lock of the corpus"
-		+ "repository; binds @TASK.B04 and @TASK.B43"
+	DESC "a failing lint restores each file it wrote from HEAD, or removes it when HEAD does not"
+		+ "hold it, and nothing else"
+	DESC "the transaction is brigade/corpus/change_corpus_file, one transaction for every file of a"
+		+ "change, under the lock of the corpus repository the caller passes in the change; binds"
+		+ "@TASK.B04, @TASK.B43 and @TASK.B139"
 		REF @TASK.B04
 		REF @TASK.B43
+		REF @TASK.B139
 	REJECTED "awawa fmt over the corpus root: it rewrites the files the user edited by hand, which"
 		+ "the restore of one file then leaves rewritten and uncommitted"
 	REJECTED "a checkout of the whole corpus on a failing lint: it discards the user's uncommitted"
@@ -2327,3 +2329,63 @@ DECISION ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunB
 		+ "enregistrée et B139 SPEC 4 passent de failed à blocked. »: a planner ending failed could"
 		+ "only end undeclared, which brigade relaunches as a hand-over"
 		REF @TASK.B10
+
+DECISION ThePlanOfAWaveIsWrittenInADetachedWorktreeAndItsBranchCreatedAfterTheCommit
+	TITLE "brigade plan record writes the plan in a detached worktree of PROJECT.MAIN and creates"
+		+ "the integration branch after the commit, so a failing lint leaves no branch"
+	STATUS active
+	DESC "the worktree is <cache>/brigade/plans/<request>, added detached at PROJECT.MAIN and"
+		+ "removed whatever the outcome; the corpus transaction commits there, then git switch -c"
+		+ "names the integration branch on that commit, then the branch is pushed when"
+		+ "PROJECT.FORGE is github"
+	DESC "binds @TASK.B139"
+		REF @TASK.B139
+	REJECTED "creating the branch first and deleting it on a failing lint: a second write to undo,"
+		+ "and a branch left behind when the run dies between the two"
+	REJECTED "writing in the project's own checkout: it holds the user's work and its current"
+		+ "branch, which plan record must neither move nor touch"
+	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
+		REF @TASK.B139
+
+DECISION EachEntityOfAPlanGoesToTheCorpusFileAlreadyHoldingItsType
+	TITLE "each entity of a plan goes to the file of the project's corpus already holding its type,"
+		+ "else to <CORPUS>/<type in lower case>s.awawa"
+	STATUS active
+	DESC "brigade plan record appends each MILESTONE and TASK block at the end of the file where"
+		+ "awawa status of the project's corpus finds the first entity of that type; a type the"
+		+ "corpus holds no entity of goes to milestones.awawa or tasks.awawa under the folder"
+		+ "PROJECT.CORPUS names"
+	DESC "binds @TASK.B139"
+		REF @TASK.B139
+	REJECTED "one new file per plan: it scatters a type across files the user did not choose, where"
+		+ "a corpus split by domain keeps one home per type"
+	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
+		REF @TASK.B139
+
+DECISION TheRunOfAPlanRecordIsTheDirectoryOfItsProgressFile
+	TITLE "the run a plan record belongs to is the name of the directory of BRIGADE_PROGRESS_FILE;"
+		+ "outside a run no lint round is counted"
+	STATUS active
+	DESC "plan.lint_failed carries the name of the parent directory of the file"
+		+ "BRIGADE_PROGRESS_FILE names, read in brigade/system/paths.py; with no such variable the"
+		+ "event carries run null and a second plan record is not refused"
+	DESC "binds @TASK.B139"
+		REF @TASK.B139
+	REJECTED "a --run option of plan record: the planner would have to copy an identifier it is"
+		+ "never given, while every segment of a run already receives its progress file"
+	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
+		REF @TASK.B139
+
+DECISION ThePlanIsCheckedAgainstTheFieldsAwawaNewPrintsForEachType
+	TITLE "the types and fields a plan may use are those awawa new TYPE prints on the project's"
+		+ "corpus, the fields of SCHEMA * included"
+	STATUS active
+	DESC "brigade plan record runs awawa new <TYPE> <NAME> on the corpus root for each entity of"
+		+ "the plan: a non-zero exit names the type undeclared, and every field of the entity the"
+		+ "template does not list is named undeclared"
+	DESC "binds @TASK.B139"
+		REF @TASK.B139
+	REJECTED "awawa show <TYPE> --json alone: it lists the fields of the type and not those SCHEMA"
+		+ "* adds to every type"
+	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
+		REF @TASK.B139
