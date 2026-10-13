@@ -33,8 +33,12 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 
 - One task is one pull request: a change a reviewer reads in one sitting, with acceptance criteria observable once
   it is delivered.
-- Number the tasks from the next free task number, one each, in order; the id of a task is the Conventional
-  Commits type of its change in upper case, then its number (`FEAT12`, `FIX13`).
+- Number the tasks from the next free task number, one each, in order; the id of a task is the prefix the
+  project's existing TASK names share, then its number (`B129` next to `B128`). Read the names from the draft and
+  todo tasks of the package, or from `awawa status TASK <corpus>` when it lists none. No TASK name, or names that
+  share no prefix, is a question for your report, not a prefix you choose.
+- The Conventional Commits type of a task's change goes in its `TYPE` field when the TASK schema of the package
+  declares one, never in its id.
 - A draft or todo task that already covers part of the request is named, not written again: the new tasks that
   depend on it carry `AFTER` on it.
 - Two tasks that touch the same files, by the anchor index and the files their criteria name, are ordered: the one
