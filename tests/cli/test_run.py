@@ -2006,7 +2006,9 @@ class BrigadeRunProgressFormTest(RunTestCase):
         # Arrange
         self.record("builder", DONE_RESULT)
         self.configure_fake(COUNTING_CLIENT, document=None)
-        self.procedure.write_text("---\ncapabilities: read, write\nbudget: 75\n---\nDeliver the task the brief names.\n")
+        self.procedure.write_text(
+            "---\ncapabilities: read, write\nbudget: 75\n---\nDeliver the task the brief names.\n"
+        )
 
         # Act
         completed = self.run_deliver()

@@ -21,8 +21,14 @@ class MarkdownDocumentTestCase(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.path = Path(directory.name) / "progress.md"
 
-    def describe_request(self, shell: bool = True) -> dict:
-        return {"document": "progress", "path": str(self.path), "schema": NO_SCHEMA, "frame": FRAME, "shell": shell}
+    def describe_request(self, role_has_shell: bool = True) -> dict:
+        return {
+            "document": "progress",
+            "path": str(self.path),
+            "schema": NO_SCHEMA,
+            "frame": FRAME,
+            "shell": role_has_shell,
+        }
 
 
 class MarkdownDocumentCreationTest(MarkdownDocumentTestCase):

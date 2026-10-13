@@ -42,8 +42,14 @@ class AwawaDocumentTestCase(unittest.TestCase):
         self.path = Path(directory.name) / "progress.awawa"
         self.runtime = types.SimpleNamespace(run_process=functools.partial(run_process, record_trace=_record_nothing))
 
-    def describe_request(self, shell: bool = True) -> dict:
-        return {"document": "progress", "path": str(self.path), "schema": SCHEMA, "frame": FRAME, "shell": shell}
+    def describe_request(self, role_has_shell: bool = True) -> dict:
+        return {
+            "document": "progress",
+            "path": str(self.path),
+            "schema": SCHEMA,
+            "frame": FRAME,
+            "shell": role_has_shell,
+        }
 
 
 class AwawaDocumentCreationTest(AwawaDocumentTestCase):
@@ -58,7 +64,7 @@ class AwawaDocumentCreationTest(AwawaDocumentTestCase):
 class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
     def test_should_name_the_file_the_types_of_its_schema_the_frame_and_the_checks_after_each_append(self):
         # Act
-        description = describe_document(self.describe_request(shell=True))
+        description = describe_document(self.describe_request(role_has_shell=True))
 
         # Assert
         self.assertEqual(
@@ -78,7 +84,7 @@ class AwawaDocumentDescriptionTest(AwawaDocumentTestCase):
 
     def test_should_ask_for_no_check_of_a_role_without_shell(self):
         # Act
-        description = describe_document(self.describe_request(shell=False))
+        description = describe_document(self.describe_request(role_has_shell=False))
 
         # Assert
         self.assertEqual(

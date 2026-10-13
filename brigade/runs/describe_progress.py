@@ -6,11 +6,15 @@ PROGRESS_DOCUMENT = "progress"
 PROGRESS_SCHEMA = files("brigade.runs") / "data" / "progress.awawa.tpl"
 SHELL_CAPABILITY = "shell"
 PROGRESS_FRAME = (
-    "one entry per major step: what it did in one line, the facts it established, one line each and five at most,"
-    " and the next step as the procedure names it, complete at the end",
+    (
+        "one entry per major step: what it did in one line, the facts it established, one line each and five at most,"
+        " and the next step as the procedure names it, complete at the end"
+    ),
     "a fact is what the next segment needs and no command gives back",
-    "never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier entry"
-    " holds",
+    (
+        "never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier entry"
+        " holds"
+    ),
     "a handover entry holds what remains, one line per step not done, and the next step",
 )
 

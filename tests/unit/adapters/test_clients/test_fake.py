@@ -126,7 +126,6 @@ class FakeLaunchOfASegmentResumedFromItsProgressTest(unittest.TestCase):
         self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])
 
 
-
 class FakeLaunchOfASegmentResumedFromAnAwawaProgressTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -162,6 +161,7 @@ class FakeLaunchOfASegmentResumedFromAnAwawaProgressTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.resumed.json"])
+
 
 class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
     def test_should_declare_the_features_its_settings_name(self):
