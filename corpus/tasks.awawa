@@ -1120,9 +1120,13 @@ TASK B12
 		+ "it on the wave's BRANCH before it cuts the first worktree of the wave, once"
 	SPEC "the brief of a build run is filled from a template shipped in the package and names the"
 		+ "project, the wave, the task, BRANCH as its base and the worktree"
-	SPEC "the build run is launched detached through brigade run with the build procedure brigade"
-		+ "ships, --slot build, --project, --cwd the worktree and --brief the filled brief, and the"
-		+ "tick records task.state running for the task"
+	SPEC "the build run is launched detached through brigade run with the procedure build-task"
+		+ "named as its argument and resolved by name as any argument of brigade run is, --slot"
+		+ "build, --project, --cwd the worktree and --brief the filled brief, and the tick records"
+		+ "task.state running for the task"
+	SPEC "the tests of the tick resolve a fixture build-task.md from the procedures directory of a"
+		+ "test instructions corpus, brigade shipping none at this task: the tick reads the name of"
+		+ "the procedure and nothing of its content"
 	SPEC "under POLICY.PLAN_REVIEW auto, the default when no POLICY names the project, the tick"
 		+ "starts a planned request as brigade wave start does"
 	SPEC "the lock of each project's worktrees under $XDG_STATE_HOME/brigade/locks/ is taken by the"
@@ -1133,7 +1137,6 @@ TASK B12
 	AFTER @TASK.B11
 	AFTER @TASK.B74
 	AFTER @TASK.B77
-	AFTER @TASK.B141
 	RATIONALE "F16 of the foundations review: run_segments.py:101-109 adds and removes the"
 		+ "disposable worktree of a reading slot without a lock on the project's worktrees,"
 		+ "harmless until this task cuts worktrees from the tick; DESC 1 of"
@@ -1152,15 +1155,25 @@ TASK B12
 	RATIONALE "the overlap order of the Blueprint is carried by AFTER edges, as"
 		+ "@DECISION.ThePlannerWritesEveryOverlapRulingAsAnAfterEdge rules, so the tick reads no"
 		+ "other order; the build procedure is @TASK.B141, brigade shipping none and awawa-task.md"
-		+ "living in an optional instructions corpus; the tick records running alone, each later"
-		+ "task recording the states it moves a task to"
+		+ "living in an optional instructions corpus, delivered after this task, @TASK.B13 and"
+		+ "@TASK.B142, whose commands its steps call: this task needs the name build-task alone, so"
+		+ "the edge AFTER @TASK.B141 it carried closed the cycle B12, B141, B13, B12 and was"
+		+ "removed, the order being B12, B13, B142, B141; the tick records running alone, each"
+		+ "later task recording the states it moves a task to"
 		REF @DECISION.ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
 		REF @TASK.B141
+		REF @TASK.B13
+		REF @TASK.B142
 	SOURCE "F16 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B12: the build procedure is a"
 		+ "task of its own, worktrees under <repo>/.brigade/worktrees/<task> by default,"
 		+ "configurable in config.toml, ignored by the project's .gitignore, the branch"
 		+ "task/<slug>/<task>, the overlap order an AFTER edge, and the task is ratified"
+	SOURCE "the user's ruling of 2026-10-13 on the AFTER cycle B12, B141, B13, B12: « A : B12 sans"
+		+ "B141 (Recommandé) — Retirer AFTER @TASK.B141 de B12. Le tick lance la procédure"
+		+ "build-task par son nom, et ses tests utilisent une procédure factice. Ordre : B12 → B13"
+		+ "→ B142 → B141. »"
+		REF @TASK.B141
 
 TASK B13
 	TITLE "brigade task context prints in one read the starting package of a build run in the"
@@ -1197,6 +1210,9 @@ TASK B13
 		+ "the section reserved prints <run dir>/tmp, created, as the run's temporary directory,"
 		+ "and the whole package is also written to <run dir>/context.md; outside a run, neither is"
 		+ "printed nor written"
+	SPEC "brigade plan record reads the run it belongs to from BRIGADE_RUN_DIR once brigade run"
+		+ "exports it, in place of the parent directory of BRIGADE_PROGRESS_FILE, and the decision"
+		+ "TheRunOfAPlanRecordIsTheDirectoryOfItsProgressFile is rewritten in the same pull request"
 	SPEC "the section reserved prints the attribution lines of the run's commits: those of the key"
 		+ "attribution of config.toml when set, else those the probe of the client adapter answers,"
 		+ "else none"
@@ -1233,12 +1249,23 @@ TASK B13
 		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 		REF @TASK.B141
 		REF @TASK.B142
+	RATIONALE "pull request #121, delivering @TASK.B139, records the decision"
+		+ "TheRunOfAPlanRecordIsTheDirectoryOfItsProgressFile: plan.lint_failed carries the name of"
+		+ "the parent directory of BRIGADE_PROGRESS_FILE, read in brigade/system/paths.py, and"
+		+ "without that variable the event carries run null and a second plan record is not"
+		+ "refused; the user kept the decision as it works today and ruled its migration to"
+		+ "BRIGADE_RUN_DIR this task's, the decision rewritten at that delivery"
+		REF @TASK.B139
 	SOURCE "F6 of docs/2026-10-07-foundations-review.md at d768170, pull request #50"
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B13: check, pr and promote split"
 		+ "to a task of their own; every item of the Blueprint's package implemented as planned"
 		+ "unless a reason is given; the setup output kept by the tick; the rules of the path"
 		+ "triggers of the IMPL and SPEC paths; AGENTS.md printed alone; the attribution from the"
 		+ "adapter, overridden by config.toml; the task is ratified"
+	SOURCE "the user's ruling of 2026-10-13 on the run of a plan record: « Garder, migrer avec B13"
+		+ "(Recommandé) — Garder la décision telle quelle, car elle fonctionne aujourd'hui. Ajouter"
+		+ "une ligne à B13 : plan record lira BRIGADE_RUN_DIR une fois exporté, et la décision sera"
+		+ "réécrite à ce moment-là. »"
 
 TASK B14
 	TITLE "The tick follows the pull request of each task and moves the task state from its forge"
@@ -8020,3 +8047,111 @@ TASK B147
 	SOURCE "the user's rulings of 2026-10-13 in the refinement of B48: « Scinder B48 »; « Régler le"
 		+ "plafond maintenant », on the proposal « clé study_runs de config.toml, 2 par défaut,"
 		+ "jamais deux runs d'une même étude »"
+
+TASK B151
+	TITLE "result.json of a segment and of a run is the run.finished document of the segment, the"
+		+ "one the ledger appends, and brigade runs show prints steps and duration per segment"
+	STATUS todo
+	MILESTONE @MILESTONE.M1
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "segments/<n>/result.json is the run.finished document of that segment, the same document"
+		+ "the ledger appends, same fields, same values, nulls included, written atomically after"
+		+ "the ledger event; runs/<id>/result.json is that of the last segment; on segment 2 of run"
+		+ "20261013T174800Z-cb856f it reads main_steps 58, total_steps 58, duration_ms 1951531 and"
+		+ "nulls {}, where today it reads steps null and duration_ms 700183"
+	SPEC "the kind RunResult of brigade/runs/run_result.py is retired, the module deleted: the"
+		+ "record of a segment carries the RunFinished describe_finished builds, and every reader"
+		+ "of result.json, brigade/runs/show_run.py and brigade/runs/describe_run.py, which brigade"
+		+ "runs show and brigade runs list call, reads RunFinished"
+	SPEC "message and reset, the two fields of result.json that run.finished does not declare, join"
+		+ "run.finished as optional fields, absent when the client reports none and the ending"
+		+ "brigade decided carries none, so that brigade runs show keeps printing the message of a"
+		+ "run and result.json loses no field"
+	SPEC "the answer of parse-result is unchanged, steps null after a task notification as SPEC 3"
+		+ "of B83 says, and the client's raw answer is kept in stdout.log alone"
+	SPEC "a result.json written before this task, a document without the key run, is still read,"
+		+ "never rewritten: runs show and runs list print its outcome and message, and - for its"
+		+ "steps and duration"
+	SPEC "brigade runs show <id> prints one row per segment, segment, outcome, steps, main_steps of"
+		+ "the segment, and duration, minutes and seconds, 1951531 ms printed 32m31s, and with"
+		+ "--json each segment carries steps and duration_ms"
+	SPEC "a test on a fixture whose last result follows a task notification proves that result.json"
+		+ "equals, field by field, the run.finished line of the same segment; tests/cli prove the"
+		+ "columns of runs show on a run of the fake client, text and --json, and the reading of a"
+		+ "result.json written before this task"
+	AFTER @TASK.B106
+	RATIONALE "found by the session on 2026-10-13 on run 20261013T174800Z-cb856f, the delivery of"
+		+ "@TASK.B139: segments/2/result.json and runs/<id>/result.json say steps null and"
+		+ "duration_ms 700183 where run.finished of the same segment says main_steps 58,"
+		+ "total_steps 58, duration_ms 1951531 and carries a nulls map explaining every null,"
+		+ "segment 1 agreeing at 56; the session read the null as an anomaly and reported it to the"
+		+ "user, and nothing in the corpus addresses it, brigade runs show printing per segment the"
+		+ "outcome alone and @TASK.B94, which prints the progress file, a draft of M3"
+		REF @TASK.B139
+		REF @TASK.B94
+	RATIONALE "cause: brigade/runs/run_segment.py:261 writes record.result.to_document(), the"
+		+ "client's normalised answer of brigade/runs/run_result.py whose shape derives from the"
+		+ "parse-result shape, into result.json before brigade/runs/run_segments.py:69 builds"
+		+ "describe_finished(plan, record), and run_segments.py:88 copies the last client answer"
+		+ "into runs/<id>/result.json: two compositions, nothing deriving one from the other; the"
+		+ "steps counted from the transcript, record.counted_steps of"
+		+ "brigade/runs/count_session_steps.py chosen by _choose_main_steps of"
+		+ "brigade/runs/describe_finished.py, and the measured duration, record.measured_ms, reach"
+		+ "the ledger alone; the client's null is by design, SPEC 3 of @TASK.B83, confirmed by the"
+		+ "RATIONALE of @TASK.B138"
+		REF @TASK.B83
+		REF @TASK.B138
+	RATIONALE "the user asked why two separate things are produced, neither resting on the other,"
+		+ "and then whether one central thing could carry both: two files stay, for two readers,"
+		+ "the ledger being the machine-wide history the studies and the budgets read and the"
+		+ "directory of the run answering runs show alone, REJECTED 4 of"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast; the user"
+		+ "chose one document, result.json being the run.finished document itself, so a field added"
+		+ "to the event reaches the file by construction"
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+	RATIONALE "rejected: result.json kept as the client's answer beside the ledger, two figures for"
+		+ "one measure, the error the session itself made on run cb856f; result.json read back from"
+		+ "the ledger, the monthly machine-wide files REJECTED 4 of that decision refuses; one"
+		+ "composition in memory, RunFinished, with result.json a projection in a RunResult shape"
+		+ "of its own, two shapes to keep in step where a field added to one may miss the other; a"
+		+ "central store both would rely on, SQLite of the standard library or an index of the"
+		+ "runs, a change to the architecture recorded for the monthly JSONL ledger and the run"
+		+ "directory, a migration and locks, too large for M1 and a duplicate of the ledger while"
+		+ "it exists"
+	RATIONALE "REJECTED 5 of"
+		+ "@DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent"
+		+ "refuses one kind for result.json and the parse-result answer, the client answer never"
+		+ "carrying wall_limit: unifying result.json with run.finished does not contradict it,"
+		+ "run.finished taking its outcome from the record of the segment,"
+		+ "brigade/runs/describe_finished.py:91, the one _describe_ending of run_segment.py sets to"
+		+ "wall_limit when brigade cuts the segment, so its outcome set already holds wall_limit,"
+		+ "and the parse-result answer stays a kind apart; message and reset join the event as"
+		+ "optional fields under DESC 2 of that decision, absent rather than null"
+		REF @DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
+	RATIONALE "amended at delivery, in the same pull request: DESC 1 of"
+		+ "@DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast, which calls"
+		+ "result.json the normalised result of that segment, and, in"
+		+ "@DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent,"
+		+ "DESC 1 counting the fields of run.finished, DESC 2 listing its optional fields and"
+		+ "REJECTED 5 keeping RunResult a kind of its own; a result.json without the key run is"
+		+ "read as the previous document under DESC 3 of"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry"
+		REF @DECISION.ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
+		REF @DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "after @TASK.B106, pull request #122, open, which edits brigade/runs/run_segments.py"
+		+ "and the directory of the run; this task edits run_segment.py, run_segments.py,"
+		+ "describe_finished.py, show_run.py and describe_run.py and deletes run_result.py"
+		REF @TASK.B106
+	SOURCE "the user's ruling of 2026-10-13 on run 20261013T174800Z-cb856f: « A : une seule vérité"
+		+ "(Recommandé) — result.json reprend les chiffres et les raisons de run.finished (steps"
+		+ "comptés dans le transcript, total_steps, durée mesurée, nulls). runs show ajoute les"
+		+ "colonnes steps et durée par segment. La réponse brute du client reste dans stdout.log."
+		+ "»; « Ratifier maintenant (Recommandé) — lex l'écrit en todo dans M1, avec ses SPEC"
+		+ "tirées de l'option choisie. »"
+	SOURCE "the user's questions of 2026-10-13, « pourquoi on produit 2 trucs séparés, pourquoi il"
+		+ "n'y a pas l'un qui s'appuie sur l'autre? » and « ou un truc centralisé sur lequel les"
+		+ "deux pourraient s'appuyer », and the ruling: « 2 : un seul document (Recommandé) —"
+		+ "result.json est le document run.finished du segment, et le ledger ajoute ce même"
+		+ "document. La forme RunResult disparaît ; runs list et runs show lisent RunFinished. »"
