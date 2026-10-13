@@ -2299,3 +2299,23 @@ DECISION PlanContextRefusesAnEntityOfTheProjectCorpusThatHoldsNoTitle
 		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
 	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository"
 		REF @TASK.B10
+
+DECISION ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunFailed
+	TITLE "the planner lints its plan file against the project's corpus before brigade plan record,"
+		+ "with one correction round, and a second failure ends the run failed"
+	STATUS active
+	DESC "step 3.2 of wave-plan.md runs awawa fmt on the plan file and awawa lint --strict on the"
+		+ "corpus and the plan file, writing nothing to the corpus; on a failure the planner"
+		+ "corrects the plan file and runs both once more"
+	DESC "a second failure ends the run on the outcome failed, the lint output reported verbatim"
+		+ "with the path of the plan file, nothing handed to brigade plan record"
+		REF @TASK.B10
+	REJECTED "the second failure ending the run blocked: blocked waits for a ruling, and a plan the"
+		+ "planner cannot make lint is its own failure, the bound the user ruled for brigade plan"
+		+ "record in the refinement of B139"
+	REJECTED "dropping the check because brigade plan record lints the corpus: the one correction"
+		+ "round of plan record would be spent on errors the planner finds without writing"
+	SOURCE "the user's ruling of 2026-10-13 on pull request #117 of the brigade repository, « je"
+		+ "suis d'accord avec tes recommendations, go », on « garder 3.2 comme pré-vérification"
+		+ "sans écriture, mais en failed »"
+		REF @TASK.B10
