@@ -436,6 +436,7 @@ RECORDED_TASKS = (
 RECORDED_MILESTONES = 'MILESTONE W1\n\tTITLE "Empty the cart in one click"\n\tSTATUS planned\n'
 BRANCH = "integration/W1-empty-the-cart-in-one-click"
 RUN = "20261013T174800Z-cb856f"
+ANOTHER_RUN = "20261013T181500Z-4d9e21"
 
 
 class PlanRecordTestCase(PlanContextTestCase):
@@ -452,8 +453,8 @@ class PlanRecordTestCase(PlanContextTestCase):
             CLONE_ENTRY_POINT, "plan", "record", "R1", "--file", str(self.plan_file), *options, environment=environment
         )
 
-    def describe_run_environment(self) -> dict:
-        progress_file = self.machine.state_home / "brigade" / "runs" / RUN / "progress.md"
+    def describe_run_environment(self, run: str) -> dict:
+        progress_file = self.machine.state_home / "brigade" / "runs" / run / "progress.md"
         return {**self.machine.describe_environment(), "BRIGADE_PROGRESS_FILE": str(progress_file)}
 
     def read_ledger_events(self) -> list[dict]:
@@ -496,6 +497,10 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
         self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/milestones.awawa"), RECORDED_MILESTONES)
 
     def test_should_cut_the_integration_branch_from_the_main_branch(self):
+        # Arrange
+        self.project.run_git("switch", "--quiet", "--create", "feat/s3")
+        self.project.run_git("commit", "--quiet", "--allow-empty", "--message", "work ahead of main")
+
         # Act
         self.run_plan_record(PLAN)
 
@@ -508,6 +513,17 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
 
         # Assert
         self.assertEqual(self.project.run_git("status", "--porcelain", "--branch"), "## main\n")
+
+    def test_should_commit_the_tasks_in_the_file_of_the_corpus_already_holding_tasks(self):
+        # Arrange
+        self.project.run_git("mv", "corpus/tasks.awawa", "corpus/backlog.awawa")
+        self.project.run_git("commit", "--quiet", "--message", "backlog")
+
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/backlog.awawa"), RECORDED_TASKS)
 
     def test_should_mark_the_request_planned_with_its_milestone_and_its_branch(self):
         # Act
@@ -657,7 +673,7 @@ class BrigadePlanRecordOfAPlanFailingLintTest(PlanRecordTestCase):
 
     def test_should_record_the_lint_failure_of_the_request_in_the_run(self):
         # Act
-        self.run_plan_record(PLAN_FAILING_LINT, environment=self.describe_run_environment())
+        self.run_plan_record(PLAN_FAILING_LINT, environment=self.describe_run_environment(RUN))
 
         # Assert
         self.assertEqual(
@@ -679,11 +695,11 @@ class BrigadePlanRecordOfAPlanFailingLintTest(PlanRecordTestCase):
 class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
     def setUp(self):
         super().setUp()
-        self.run_plan_record(PLAN_FAILING_LINT, environment=self.describe_run_environment())
+        self.run_plan_record(PLAN_FAILING_LINT, environment=self.describe_run_environment(RUN))
 
     def test_should_exit_1_naming_the_round_already_spent_before_any_write(self):
         # Act
-        completed = self.run_plan_record(PLAN, environment=self.describe_run_environment())
+        completed = self.run_plan_record(PLAN, environment=self.describe_run_environment(RUN))
 
         # Assert
         self.assertEqual(completed.returncode, 1)
@@ -694,6 +710,13 @@ class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
         self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
 
     def test_should_record_the_corrected_plan_in_another_run(self):
+        # Act
+        completed = self.run_plan_record(PLAN, environment=self.describe_run_environment(ANOTHER_RUN))
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_should_record_the_corrected_plan_outside_a_run(self):
         # Act
         completed = self.run_plan_record(PLAN)
 
