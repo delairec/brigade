@@ -12,6 +12,9 @@
 # the attempts exhausted, the command stops and no other account is used in its place.
 # forge_attempts = 3
 
+# The form of the progress of a run: awawa, a corpus of STEP and HANDOVER entities, or markdown.
+# document = "awawa"
+
 # The root of an instructions corpus the roles are read from.
 # instructions = ""
 

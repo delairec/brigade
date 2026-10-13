@@ -36,6 +36,8 @@ class RunPlanOfASlotBoundToALoginTest(unittest.TestCase):
             ),
             client="double-client",
             client_adapter=object(),
+            document=object(),
+            progress_file=Path("/state/runs/20261009T120000Z-b75a01/progress.awawa"),
             configuration=Configuration(),
             project=None,
             cwd=Path("/project"),

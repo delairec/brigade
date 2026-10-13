@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import ANY
 
+from brigade.adapters.documents import markdown
 from brigade.errors import BrigadeError
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
@@ -349,6 +350,8 @@ def _create_plan(
         ),
         client="double-client",
         client_adapter=client_type(),
+        document=markdown,
+        progress_file=root / "state" / "runs" / "20261007T090000Z-b73a01" / "progress.md",
         configuration=Configuration(),
         project=None,
         cwd=root / "project",

@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "lint",
+      "--strict",
+      "<tmp:0>/progress.awawa"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/progress.awawa": "SCHEMA STEP\n\tDESC \"a step the run completed\"\n\tFIELD DONE string\n\t\tREQUIRED\n\t\tDESC \"what the step did, one line\"\n\nSCHEMA HANDOVER\n\tDESC \"the state of a run that hands over\"\n\tFIELD NEXT string\n\t\tREQUIRED\n\t\tDESC \"the step to resume at\"\n\nSTEP s1\n\tDONE \"read the task\"\n\nSTEP s2\n\tDONE \"wrote the tests\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "version": "awawa 2.7.0"
+}

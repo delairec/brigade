@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from pathlib import Path
 
 ARGUMENT_SEPARATOR = "="
 END_OF_SEGMENT = (
@@ -16,7 +15,7 @@ class BriefParts:
     procedure_body: str
     arguments: dict
     brief: str | None
-    progress_file: Path
+    progress_description: str
 
 
 def _render_section(title: str, text: str) -> str:
@@ -33,6 +32,6 @@ def compose_brief(parts: BriefParts) -> str:
         sections.append(("Arguments", lines))
     if parts.brief is not None:
         sections.append(("Brief", parts.brief))
-    sections.append(("Progress file", str(parts.progress_file)))
+    sections.append(("Progress file", parts.progress_description))
     sections.append(("End of segment", END_OF_SEGMENT))
     return "\n".join(_render_section(title, text) for title, text in sections)

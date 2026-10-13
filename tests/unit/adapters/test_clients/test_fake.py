@@ -126,6 +126,43 @@ class FakeLaunchOfASegmentResumedFromItsProgressTest(unittest.TestCase):
         self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])
 
 
+
+class FakeLaunchOfASegmentResumedFromAnAwawaProgressTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.recordings = Path(self.root.name) / "recordings"
+        self.recordings.mkdir()
+        (self.recordings / "builder.json").write_text("{}")
+        (self.recordings / "builder.resumed.json").write_text("{}")
+        self.progress_file = Path(self.root.name) / "progress.awawa"
+
+    def tearDown(self):
+        self.root.cleanup()
+
+    def launch(self) -> dict:
+        settings = {"recordings": str(self.recordings)}
+        return answer("launch-argv", {**LAUNCH_REQUEST, "progress_file": str(self.progress_file), "settings": settings})
+
+    def test_should_print_the_recording_of_the_role_on_a_progress_holding_its_schema_alone(self):
+        # Arrange
+        self.progress_file.write_text('SCHEMA STEP\n\tDESC "a step the run completed"\n')
+
+        # Act
+        launch = self.launch()
+
+        # Assert
+        self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])
+
+    def test_should_print_the_resumed_recording_of_the_role_on_a_progress_holding_a_step(self):
+        # Arrange
+        self.progress_file.write_text('SCHEMA STEP\n\tDESC "a step the run completed"\n\nSTEP s1\n\tDONE "read"\n')
+
+        # Act
+        launch = self.launch()
+
+        # Assert
+        self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.resumed.json"])
+
 class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
     def test_should_declare_the_features_its_settings_name(self):
         # Arrange

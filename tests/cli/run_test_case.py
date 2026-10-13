@@ -61,9 +61,10 @@ class RunTestCase(unittest.TestCase):
     def tearDown(self):
         self.root.cleanup()
 
-    def configure_fake(self, settings: str = "", keys: str = "") -> None:
+    def configure_fake(self, settings: str = "", keys: str = "", document: str | None = "markdown") -> None:
+        document_key = "" if document is None else f'document = "{document}"\n'
         self.machine.write_configuration(
-            f'client = "fake"\n{keys}[clients.fake]\nrecordings = "{self.recordings}"\n{settings}'
+            f'client = "fake"\n{document_key}{keys}[clients.fake]\nrecordings = "{self.recordings}"\n{settings}'
         )
 
     def record(self, role: str, result: dict) -> None:
