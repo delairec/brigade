@@ -480,6 +480,16 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 # Assert
                 self.assertEqual((result["error_class"], result["reset"]), ("rate_limit", expected_reset))
 
+    def test_should_classify_run_b7c554_out_of_usage_credits_as_a_rate_limit_with_no_reset(self):
+        # Arrange
+        stdout = (FIXTURES / "result-out-of-usage-credits.json").read_text()
+
+        # Act
+        result = parse_claude_output(stdout, exit_code=1)
+
+        # Assert
+        self.assertEqual((result["error_class"], result["reset"]), ("rate_limit", None))
+
     def test_should_classify_any_other_error_as_an_execution_failure(self):
         # Arrange
         stdout = (

@@ -33,7 +33,7 @@ MODEL_USAGE_COUNTERS = {
     "cache_read_input_tokens": "cacheReadInputTokens",
 }
 TASK_NOTIFICATION_ORIGIN = "task-notification"
-RATE_LIMIT_PHRASES = ("limit reached", "hit your limit", "usage limit", "rate limit")
+RATE_LIMIT_PHRASES = ("limit reached", "hit your limit", "usage limit", "rate limit", "out of usage credits")
 RESET_PATTERN = re.compile(r"resets (?:at )?(\d{1,2})(?::(\d{2}))?(am|pm)?(?: \(([^)]+)\))?", re.IGNORECASE)
 ERROR_SUBTYPE_PREFIX = "error"
 TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
