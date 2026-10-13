@@ -3487,7 +3487,7 @@ TASK B70
 		IMPL "brigade/tick/apply_actions.py::if actions:"
 		IMPL "brigade/system/resolve_plugin.py::if importlib.util.find_spec(module_name) is None:"
 		IMPL "brigade/system/poll_until_signalled.py::with contextlib.suppress(BlockingIOError):"
-		IMPL "brigade/registry/locate_project_block.py::start = next("
+		IMPL "brigade/corpus/locate_entity_block.py::start = next("
 	SPEC "brigade/ holds no # pragma: no cover, and .coveragerc sets no exclude_lines, no"
 		+ "partial_branches and no omit: every line and every branch of brigade/ counts"
 		IMPL ".coveragerc::[report]"

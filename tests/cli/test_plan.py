@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
@@ -355,3 +356,328 @@ class BrigadePlanContextOnACorpusWhoseEntityHoldsNoTitleTest(PlanContextTestCase
                 # Assert
                 self.assertEqual(completed.returncode, 1)
                 self.assertEqual(completed.stderr, expected_stderr)
+
+
+PLAN = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "TASK S4\n"
+    '\tTITLE "Empty the cart"\n'
+    "\tSTATUS todo\n"
+    '\tSPEC "one click leaves the cart empty"\n'
+    "\tMILESTONE @MILESTONE.W1\n"
+    "\tAFTER @TASK.S2\n"
+)
+PLAN_FAILING_LINT = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "TASK S4\n"
+    '\tTITLE "Empty the cart"\n'
+    "\tSTATUS doing\n"
+    "\tMILESTONE @MILESTONE.W1\n"
+)
+PLAN_WITH_AN_UNDECLARED_TYPE_AND_FIELD = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "TASK S4\n"
+    '\tTITLE "Empty the cart"\n'
+    "\tSTATUS todo\n"
+    "\tMILESTONE @MILESTONE.W1\n"
+    '\tCOLOUR "red"\n'
+    "\n"
+    "EPIC E1\n"
+    '\tTITLE "Checkout"\n'
+)
+PLAN_WITH_TWO_MILESTONES = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "MILESTONE W2\n"
+    '\tTITLE "Pay in one click"\n'
+    "\tSTATUS planned\n"
+)
+PLAN_WITH_A_TASK_OF_ANOTHER_MILESTONE = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "TASK S4\n"
+    '\tTITLE "Empty the cart"\n'
+    "\tSTATUS todo\n"
+)
+PLAN_WITH_A_DECISION = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "DECISION CartEmptiesInOneClick\n"
+    '\tTITLE "the cart empties in one click"\n'
+    "\tSTATUS active\n"
+)
+OPEN_TASKS = 'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS todo\n\tSPEC "a removed item leaves the cart"\n'
+OPEN_DECISIONS = 'DECISION CartLivesInMemory\n\tTITLE "the cart lives in memory"\n\tSTATUS active\n'
+RECORDED_TASKS = (
+    f"{OPEN_TASKS}"
+    "\n"
+    "TASK S4\n"
+    '\tTITLE "Empty the cart"\n'
+    "\tSTATUS todo\n"
+    '\tSPEC "one click leaves the cart empty"\n'
+    "\tMILESTONE @MILESTONE.W1\n"
+    "\tAFTER @TASK.S2\n"
+)
+RECORDED_MILESTONES = 'MILESTONE W1\n\tTITLE "Empty the cart in one click"\n\tSTATUS planned\n'
+BRANCH = "integration/W1-empty-the-cart-in-one-click"
+RUN = "20261013T174800Z-cb856f"
+
+
+class PlanRecordTestCase(PlanContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}", OPEN_TASKS, OPEN_DECISIONS)
+        self.project.run_git("commit", "--quiet", "--message", "corpus")
+        self.write_request("planning")
+        self.plan_file = Path(self.root.name).resolve() / "plan.awawa"
+
+    def run_plan_record(self, plan: str, *options: str, environment: dict | None = None):
+        self.plan_file.write_text(plan)
+        return self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "plan", "record", "R1", "--file", str(self.plan_file), *options, environment=environment
+        )
+
+    def describe_run_environment(self) -> dict:
+        progress_file = self.machine.state_home / "brigade" / "runs" / RUN / "progress.md"
+        return {**self.machine.describe_environment(), "BRIGADE_PROGRESS_FILE": str(progress_file)}
+
+    def read_ledger_events(self) -> list[dict]:
+        ledger_files = list((self.machine.state_home / "brigade" / "ledger").glob("*.jsonl"))
+        return [json.loads(line) for line in ledger_files[0].read_text().splitlines()]
+
+
+class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
+    def test_should_print_the_request_the_milestone_and_the_branch_as_a_versioned_document(self):
+        # Act
+        completed = self.run_plan_record(PLAN, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {"schema_version": 1, "request": "R1", "milestone": "W1", "branch": BRANCH},
+        )
+
+    def test_should_print_the_request_the_milestone_and_the_branch_as_text(self):
+        # Act
+        completed = self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, f"recorded @REQUEST.R1 as @MILESTONE.W1 on {BRANCH}\n")
+
+    def test_should_commit_the_tasks_beside_the_tasks_of_the_corpus_on_the_integration_branch(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/tasks.awawa"), RECORDED_TASKS)
+
+    def test_should_commit_the_milestone_in_a_file_of_its_type_on_the_integration_branch(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/milestones.awawa"), RECORDED_MILESTONES)
+
+    def test_should_cut_the_integration_branch_from_the_main_branch(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("rev-parse", f"{BRANCH}~1"), self.project.run_git("rev-parse", "main"))
+
+    def test_should_leave_the_checkout_of_the_project_on_its_branch_and_clean(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("status", "--porcelain", "--branch"), "## main\n")
+
+    def test_should_mark_the_request_planned_with_its_milestone_and_its_branch(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(
+            (self.machine.corpus / "requests.awawa").read_text(),
+            "REQUEST R1\n"
+            "\tPROJECT @PROJECT.shop\n"
+            f'\tTEXT "{REQUEST_TEXT}"\n'
+            "\tSTATUS planned\n"
+            '\tMILESTONE "W1"\n'
+            f'\tBRANCH "{BRANCH}"\n',
+        )
+
+
+class BrigadePlanRecordOnAProjectOfTheGithubForgeTest(PlanRecordTestCase):
+    def test_should_push_the_integration_branch(self):
+        # Arrange
+        remote = Path(self.root.name).resolve() / "remote.git"
+        self.project.run_git("init", "--quiet", "--bare", str(remote))
+        projects = self.machine.corpus / "projects.awawa"
+        projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n'))
+        self.project.run_git("remote", "add", "origin", str(remote))
+
+        # Act
+        completed = self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.project.run_git("ls-remote", "--heads", "origin").split()[1], f"refs/heads/{BRANCH}")
+
+
+class BrigadePlanRecordOfAPlanTheSchemaDoesNotDeclareTest(PlanRecordTestCase):
+    def test_should_exit_1_naming_the_types_and_the_fields_the_schema_does_not_declare(self):
+        # Act
+        completed = self.run_plan_record(PLAN_WITH_AN_UNDECLARED_TYPE_AND_FIELD)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(
+            completed.stderr,
+            "brigade plan record: the schema of the corpus of @PROJECT.shop does not declare"
+            " the field COLOUR of TASK, the type EPIC\n",
+        )
+
+
+class BrigadePlanRecordOfAPlanThatIsNotOneMilestoneAndItsTasksTest(PlanRecordTestCase):
+    def test_should_exit_1_naming_what_the_plan_holds_beyond_one_milestone_and_its_tasks(self):
+        for plan, expected_stderr in [
+            (PLAN_WITH_TWO_MILESTONES, "brigade plan record: the plan holds 2 MILESTONE entities, not one\n"),
+            (
+                PLAN_WITH_A_DECISION,
+                (
+                    "brigade plan record: the plan holds @DECISION.CartEmptiesInOneClick,"
+                    " which is neither a MILESTONE nor a TASK\n"
+                ),
+            ),
+            (
+                PLAN_WITH_A_TASK_OF_ANOTHER_MILESTONE,
+                "brigade plan record: the plan holds @TASK.S4, whose MILESTONE is not @MILESTONE.W1\n",
+            ),
+        ]:
+            with self.subTest(expected_stderr=expected_stderr):
+                # Act
+                completed = self.run_plan_record(plan)
+
+                # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, expected_stderr)
+
+
+class BrigadePlanRecordOnAnExistingIntegrationBranchTest(PlanRecordTestCase):
+    def test_should_exit_1_naming_the_branch_before_any_write(self):
+        # Arrange
+        self.project.run_git("branch", BRANCH)
+
+        # Act
+        completed = self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade plan record: the branch {BRANCH} already exists\n")
+
+
+class BrigadePlanRecordOfARequestNotPlanningTest(PlanRecordTestCase):
+    def test_should_exit_1_naming_the_request_and_its_status(self):
+        # Arrange
+        self.write_request("planned")
+
+        # Act
+        completed = self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade plan record: @REQUEST.R1 is planned, not planning\n")
+
+
+class BrigadePlanRecordOfAPlanFailingLintTest(PlanRecordTestCase):
+    def test_should_exit_1_printing_the_lint_output(self):
+        # Act
+        completed = self.run_plan_record(PLAN_FAILING_LINT)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertRegex(
+            completed.stderr,
+            r"(?s)\Abrigade plan record: awawa lint --strict refused the change; the corpus is restored\n.*doing",
+        )
+
+    def test_should_leave_neither_branch_nor_worktree(self):
+        # Act
+        self.run_plan_record(PLAN_FAILING_LINT)
+
+        # Assert
+        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+        self.assertEqual(len(self.project.run_git("worktree", "list").splitlines()), 1)
+
+    def test_should_leave_the_request_planning(self):
+        # Act
+        self.run_plan_record(PLAN_FAILING_LINT)
+
+        # Assert
+        self.assertEqual(
+            (self.machine.corpus / "requests.awawa").read_text(),
+            f'REQUEST R1\n\tPROJECT @PROJECT.shop\n\tTEXT "{REQUEST_TEXT}"\n\tSTATUS planning\n',
+        )
+
+    def test_should_record_the_lint_failure_of_the_request_in_the_run(self):
+        # Act
+        self.run_plan_record(PLAN_FAILING_LINT, environment=self.describe_run_environment())
+
+        # Assert
+        self.assertEqual(
+            self.read_ledger_events(),
+            [{"schema_version": 1, "ts": mock.ANY, "event": "plan.lint_failed", "request": "R1", "run": RUN}],
+        )
+
+    def test_should_record_the_lint_failure_outside_a_run_without_a_run(self):
+        # Act
+        self.run_plan_record(PLAN_FAILING_LINT)
+
+        # Assert
+        self.assertEqual(
+            self.read_ledger_events(),
+            [{"schema_version": 1, "ts": mock.ANY, "event": "plan.lint_failed", "request": "R1", "run": None}],
+        )
+
+
+class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
+    def setUp(self):
+        super().setUp()
+        self.run_plan_record(PLAN_FAILING_LINT, environment=self.describe_run_environment())
+
+    def test_should_exit_1_naming_the_round_already_spent_before_any_write(self):
+        # Act
+        completed = self.run_plan_record(PLAN, environment=self.describe_run_environment())
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(
+            completed.stderr,
+            f"brigade plan record: @REQUEST.R1 spent its lint round in run {RUN}; the run ends blocked\n",
+        )
+        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+
+    def test_should_record_the_corrected_plan_in_another_run(self):
+        # Act
+        completed = self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)

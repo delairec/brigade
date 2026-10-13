@@ -7,11 +7,11 @@ WORKTREE_TIMEOUT_S = 60.0
 
 
 def add_detached_worktree(
-    run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, worktree: Path
+    run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, worktree: Path, start: str
 ) -> None:
     run_process(
         ProcessRequest(
-            argv=("git", "worktree", "add", "--quiet", "--detach", str(worktree), "HEAD"),
+            argv=("git", "worktree", "add", "--quiet", "--detach", str(worktree), start),
             cwd=str(repository),
             timeout_s=WORKTREE_TIMEOUT_S,
         )
