@@ -93,10 +93,13 @@ class PlanContextTestCase(unittest.TestCase):
     def tearDown(self):
         self.root.cleanup()
 
-    def register_project(self, schema: str, tasks: str = TASKS, decisions: str = DECISIONS) -> None:
+    def write_corpus(self, schema: str, tasks: str, decisions: str) -> None:
         self.project.write("corpus/_schema.awawa", schema)
         self.project.write("corpus/tasks.awawa", tasks)
         self.project.write("corpus/decisions.awawa", decisions)
+
+    def register_project(self, schema: str, tasks: str = TASKS, decisions: str = DECISIONS) -> None:
+        self.write_corpus(schema, tasks, decisions)
         self.project.track("corpus")
         self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
 
@@ -290,28 +293,33 @@ class BrigadePlanContextOfAProjectWithoutACorpusTest(PlanContextTestCase):
 
 
 class BrigadePlanContextOnACorpusWhoseEntityHoldsNoTitleTest(PlanContextTestCase):
-    def test_should_exit_1_naming_the_task_and_the_field(self):
-        # Arrange
-        self.register_project(f"{UNTITLED_TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}", tasks=UNTITLED_TASKS)
+    def setUp(self):
+        super().setUp()
+        self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}")
         self.write_request("planning")
 
-        # Act
-        completed = self.run_plan_context("R1")
+    def test_should_exit_1_naming_the_entity_and_the_field(self):
+        for schema, tasks, decisions, expected_stderr in [
+            (
+                f"{UNTITLED_TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}",
+                UNTITLED_TASKS,
+                DECISIONS,
+                "brigade plan context: @TASK.S3 holds no TITLE\n",
+            ),
+            (
+                f"{TASK_SCHEMA}\n{UNTITLED_DECISION_SCHEMA}\n{MILESTONE_SCHEMA}",
+                TASKS,
+                UNTITLED_DECISIONS,
+                "brigade plan context: @DECISION.CartLivesInMemory holds no TITLE\n",
+            ),
+        ]:
+            with self.subTest(expected_stderr=expected_stderr):
+                # Arrange
+                self.write_corpus(schema, tasks, decisions)
 
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stderr, "brigade plan context: @TASK.S3 holds no TITLE\n")
+                # Act
+                completed = self.run_plan_context("R1")
 
-    def test_should_exit_1_naming_the_decision_and_the_field(self):
-        # Arrange
-        self.register_project(
-            f"{TASK_SCHEMA}\n{UNTITLED_DECISION_SCHEMA}\n{MILESTONE_SCHEMA}", decisions=UNTITLED_DECISIONS
-        )
-        self.write_request("planning")
-
-        # Act
-        completed = self.run_plan_context("R1")
-
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stderr, "brigade plan context: @DECISION.CartLivesInMemory holds no TITLE\n")
+                # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, expected_stderr)
