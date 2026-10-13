@@ -534,11 +534,14 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	DESC "a client adapter translates: launch answers argv, environment and stdin, result parses"
 		+ "the client's output into the normalised document; the core spawns and owns the process"
-	DESC "no module outside a plugin package imports a plugin package statically; the resolver"
-		+ "imports by name at run time; a plugin may import the core; the guard of tests/guards"
-		+ "parses every module with ast and fails on a static import of brigade.adapters,"
-		+ "brigade.collectors, brigade.checks or brigade.outputs from outside their own package,"
-		+ "the guard @TASK.B42 asks for, widened"
+	DESC "no module outside a plugin package imports a plugin package statically; a plugin is"
+		+ "autonomous and imports no other plugin, of its kind or of another; the resolver imports"
+		+ "by name at run time; a plugin may import the core and the modules of its kind that"
+		+ "answer no operation; the guard of tests/guards parses every module with ast and fails on"
+		+ "a static import of brigade.adapters, brigade.collectors, brigade.checks or"
+		+ "brigade.outputs from outside their own package, on an import of the package of another"
+		+ "kind from a plugin, and on an import of a module defining its kind's entry point from"
+		+ "another module of that kind, the guard @TASK.B42 asks for, widened"
 		REF @TASK.B42
 	DESC "cli.py builds the runtime, once per command and once per round of tick --loop through a"
 		+ "factory it hands that command: paths, clock, process runner, spawner, resolver; the"
@@ -603,6 +606,13 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		REF @TASK.B73
 	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106: the document kind"
 		+ "added to the TITLE and to DESC 1"
+		REF @TASK.B106
+	REJECTED "the fake client importing the markdown and awawa document modules and keeping its own"
+		+ "table of them to read the progress: a plugin depending on another plugin, reached"
+		+ "outside the resolver"
+	SOURCE "the user's ruling of 2026-10-14 in the second review round of pull request #122 of the"
+		+ "brigade repository, « un plugin doit être autonome et ne pas dépendre d'un autre plugin"
+		+ "»: DESC 4 amended"
 		REF @TASK.B106
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction

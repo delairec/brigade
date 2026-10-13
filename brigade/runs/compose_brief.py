@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 ARGUMENT_SEPARATOR = "="
+PROGRESS_SECTION = "Progress so far"
 END_OF_SEGMENT = (
     "End your final message on one of these lines: brigade-end: done once the work is delivered,"
     " brigade-end: handed_over when a next segment resumes it from the progress file,"
@@ -25,7 +26,7 @@ def _render_section(title: str, text: str) -> str:
 def compose_brief(parts: BriefParts) -> str:
     sections = []
     if parts.progress is not None:
-        sections.append(("Progress so far", parts.progress))
+        sections.append((PROGRESS_SECTION, parts.progress))
     sections.append((f"Procedure {parts.procedure}", parts.procedure_body))
     if parts.arguments:
         lines = "\n".join(f"{key}{ARGUMENT_SEPARATOR}{value}" for key, value in parts.arguments.items())
