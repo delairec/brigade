@@ -19,6 +19,9 @@ RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
 BUILT_IN_BUILDER = REPOSITORY_ROOT / "brigade" / "roles" / "data" / "builder.md"
 RECORDING_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-recording"
+CLAUDE_AFTER_TASK_NOTIFICATION = (
+    Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-after-task-notification"
+)
 NOT_IN_A_WAVE = "not launched by a wave"
 CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
@@ -203,31 +206,20 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         self.assertEqual((run_directory / "role.md").read_text(), BUILT_IN_BUILDER.read_text())
 
-    def test_should_keep_the_normalised_result(self):
+    def test_should_keep_as_result_of_the_segment_and_of_the_run_the_line_the_ledger_appended(self):
         # Act
         completed = self.run_deliver("--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
+        [finished] = self.read_events("run.finished")
         self.assertEqual(
-            json.loads((run_directory / "result.json").read_text()),
-            {
-                "schema_version": 1,
-                "outcome": "done",
-                "steps": 12,
-                "usage": {
-                    "input_tokens": 120,
-                    "output_tokens": 3400,
-                    "cache_creation_input_tokens": 16778,
-                    "cache_read_input_tokens": 98000,
-                },
-                "session_id": "fake-session",
-                "duration_ms": 61000,
-                "error_class": None,
-                "reset": None,
-                "message": None,
-            },
+            (
+                json.loads((run_directory / "segments" / "1" / "result.json").read_text()),
+                json.loads((run_directory / "result.json").read_text()),
+            ),
+            (finished, finished),
         )
 
 
@@ -338,6 +330,33 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
                 "--settings",
             ],
         )
+
+    def test_should_keep_as_result_of_a_segment_ended_after_a_task_notification_the_line_the_ledger_appended(self):
+        # Arrange
+        environment = {
+            **self.machine.describe_environment(),
+            "PATH": os.pathsep.join([str(CLAUDE_AFTER_TASK_NOTIFICATION), os.environ["PATH"]]),
+        }
+
+        # Act
+        completed = self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "run",
+            str(self.procedure),
+            "--slot",
+            "build",
+            "--cwd",
+            str(self.workspace),
+            "--brief",
+            str(self.brief),
+            "--json",
+            environment=environment,
+        )
+
+        # Assert
+        run_directory = self.runs / json.loads(completed.stdout)["run"]
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(json.loads((run_directory / "segments" / "1" / "result.json").read_text()), finished)
 
 
 class BrigadeRunOfAProcedureGivenByNameTest(RunTestCase):
@@ -957,6 +976,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "error_class": CUT,
                     "exit": CUT,
                 },
+                "message": "cut at the wall-time limit of 0.4 s",
             },
         )
 

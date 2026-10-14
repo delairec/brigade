@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
 
 
@@ -17,7 +18,7 @@ class RunFinished:
     session: str | None
     main_steps: int | None
     total_steps: int | None
-    duration_ms: int
+    duration_ms: int | None
     usage: TokenUsage | None
     outcome: str
     error_class: str | None
@@ -28,10 +29,13 @@ class RunFinished:
     steps_to_first_edit: int | None = None
     oversized_output_steps: int | None = None
     cost_usd: float | None = None
+    message: str | None = None
+    reset: ResetHour | None = None
 
     @classmethod
     def from_document(cls, document: dict) -> "RunFinished":
         usage = document["usage"]
+        reset = document.get("reset")
         return cls(
             run=document["run"],
             segment=document["segment"],
@@ -54,13 +58,17 @@ class RunFinished:
             steps_to_first_edit=document.get("steps_to_first_edit"),
             oversized_output_steps=document.get("oversized_output_steps"),
             cost_usd=document.get("cost_usd"),
+            message=document.get("message"),
+            reset=None if reset is None else ResetHour.from_document(reset),
         )
 
     def to_document(self) -> dict:
-        reported_measures = {
+        fields_absent_when_unset = {
             "steps_to_first_edit": self.steps_to_first_edit,
             "oversized_output_steps": self.oversized_output_steps,
             "cost_usd": self.cost_usd,
+            "message": self.message,
+            "reset": None if self.reset is None else self.reset.to_document(),
         }
         return {
             "run": self.run,
@@ -81,5 +89,5 @@ class RunFinished:
             "wave": self.wave,
             "task": self.task,
             "nulls": self.nulls,
-            **{measure: value for measure, value in reported_measures.items() if value is not None},
+            **{field: value for field, value in fields_absent_when_unset.items() if value is not None},
         }

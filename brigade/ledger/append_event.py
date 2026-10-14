@@ -21,25 +21,24 @@ class LedgerEventRefused(BrigadeError):
 
 def append_event(
     paths: Paths, instant: datetime, event: RunFinished | SignalRecorded | ForgeAccountUnavailable | PlanLintFailed
-) -> None:
+) -> dict:
     if instant.utcoffset() is None:
         raise LedgerEventRefused(f"the instant of the event {event.name} carries no time zone")
     utc_instant = instant.astimezone(UTC)
-    line = json.dumps(
-        {
-            "schema_version": WRITTEN_SCHEMA_VERSIONS.get(event.name, LEDGER_SCHEMA_VERSION),
-            "ts": format_instant(utc_instant),
-            "event": event.name,
-            **event.to_document(),
-        }
-    )
+    line = {
+        "schema_version": WRITTEN_SCHEMA_VERSIONS.get(event.name, LEDGER_SCHEMA_VERSION),
+        "ts": format_instant(utc_instant),
+        "event": event.name,
+        **event.to_document(),
+    }
     ledger_directory = paths.state_root / LEDGER_DIRECTORY
     month_file = ledger_directory / utc_instant.strftime(MONTH_FILE_FORMAT)
     with hold_lock(paths.lock_directory / LOCK_FILE):
         try:
             ledger_directory.mkdir(parents=True, exist_ok=True)
             with month_file.open("a", encoding="utf-8") as ledger_file:
-                ledger_file.write(line + "\n")
+                ledger_file.write(json.dumps(line) + "\n")
                 ledger_file.flush()
         except OSError as error:
             raise CannotWrite(error.filename or month_file, error) from error
+    return line

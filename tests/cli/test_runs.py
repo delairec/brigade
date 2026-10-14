@@ -25,6 +25,10 @@ LONGER_THAN_THE_DEFAULT_POLL_S = 3
 BLANK_LINE = "\n"
 END_OF_OUTPUT = ""
 ANOTHER_START_TIME = 1
+RESULT_OF_SCHEMA_1 = (
+    '{"schema_version": 1, "outcome": "done", "steps": null, "usage": null, "session_id": "fake-session",'
+    ' "duration_ms": 700183, "error_class": null, "reset": null, "message": "the client finished the task"}'
+)
 
 
 class RunsTestCase(RunTestCase):
@@ -150,7 +154,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                     "outcome": "done",
                     "message": None,
                 },
-                "segments": [{"segment": 1, "outcome": "done"}],
+                "segments": [{"segment": 1, "outcome": "done", "steps": 12, "duration_ms": ANY}],
                 "journal": None,
             },
         )
@@ -164,8 +168,10 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        lines = completed.stdout.splitlines()
+        self.assertRegex(lines.pop(), r"^1        done     12     \d+m\d\ds$")
         self.assertEqual(
-            completed.stdout.splitlines(),
+            lines,
             [
                 f"run        {run_id}",
                 "procedure  deliver",
@@ -176,8 +182,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                 "outcome    done",
                 "message    -",
                 "",
-                "segment  outcome",
-                "1        done",
+                "segment  outcome  steps  duration",
             ],
         )
 
@@ -224,7 +229,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertRegex(
             completed.stdout,
-            r"\n1        done\n\n"
+            r"\n1        done     12     \d+m\d\ds\n\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Reading the task\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Writing the test\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n$",
@@ -419,9 +424,9 @@ class BrigadeRunsShowOfARunHandedOverTest(RunsTestCase):
         self.assertEqual(
             json.loads(completed.stdout)["segments"],
             [
-                {"segment": 1, "outcome": "turn_limit"},
-                {"segment": 2, "outcome": "turn_limit"},
-                {"segment": 3, "outcome": "turn_limit"},
+                {"segment": 1, "outcome": "turn_limit", "steps": 94, "duration_ms": ANY},
+                {"segment": 2, "outcome": "turn_limit", "steps": 94, "duration_ms": ANY},
+                {"segment": 3, "outcome": "turn_limit", "steps": 94, "duration_ms": ANY},
             ],
         )
 
@@ -443,7 +448,7 @@ class BrigadeRunsShowOfARunningRunTest(RunsTestCase):
         document = json.loads(completed.stdout)
         self.assertEqual(
             (document["run"]["state"], document["segments"], document["journal"]),
-            ("running", [{"segment": 1, "outcome": None}], []),
+            ("running", [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}], []),
         )
 
 
@@ -574,7 +579,7 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
             rf"^run        {run_id}\n"
             r"procedure  deliver\nslot       build\nrole       builder\nproject    -\n"
             r"state      finished\noutcome    done\nmessage    -\n\n"
-            r"segment  outcome\n1        done\n\n"
+            r"segment  outcome  steps  duration\n1        done     12     \d+m\d\ds\n\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Reading the task\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Writing the test\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n"
@@ -763,3 +768,42 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
             (completed.returncode, completed.stdout, completed.stderr),
             (1, "", f"brigade runs stop: run {run_id} ended dead, not stopped\n"),
         )
+
+
+class BrigadeRunsOfARunWhoseResultPrecedesRunFinishedTest(RunsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        self.run_id = self.run_deliver_to_its_end()
+        for result in (
+            self.runs / self.run_id / "result.json",
+            self.runs / self.run_id / "segments" / "1" / "result.json",
+        ):
+            result.write_text(RESULT_OF_SCHEMA_1)
+
+    def test_should_show_its_outcome_its_message_and_no_steps_nor_duration(self):
+        # Act
+        completed = self.run_brigade("runs", "show", self.run_id)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout.splitlines()[6:],
+            [
+                "outcome    done",
+                "message    the client finished the task",
+                "",
+                "segment  outcome  steps  duration",
+                "1        done     -      -",
+            ],
+        )
+
+    def test_should_list_it_with_its_outcome(self):
+        # Act
+        completed = self.run_brigade("runs", "list", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [listed] = json.loads(completed.stdout)["runs"]
+        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "done"))

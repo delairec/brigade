@@ -70,11 +70,10 @@ def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) 
 def _choose_main_steps(plan: RunPlan, record: SegmentRecord) -> int | None:
     if record.counted_steps is not None:
         return record.counted_steps.main_steps
-    return record.result.steps if plan.counts_steps else None
+    return record.client_steps if plan.counts_steps else None
 
 
 def describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
-    result = record.result
     finished = RunFinished(
         run=plan.run_id,
         segment=record.number,
@@ -83,17 +82,19 @@ def describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
         role=plan.role.role,
         client=plan.client,
         project=plan.project,
-        session=result.session_id,
+        session=record.session_id,
         main_steps=_choose_main_steps(plan, record),
         total_steps=None if record.counted_steps is None else record.counted_steps.total_steps,
         duration_ms=record.measured_ms,
-        usage=result.usage,
-        outcome=result.outcome,
-        error_class=result.error_class,
+        usage=record.usage,
+        outcome=record.outcome,
+        error_class=record.error_class,
         exit=record.exit_code,
         wave=None,
         task=None,
         nulls=NO_NULLS_EXPLAINED,
         cost_usd=record.cost_usd,
+        message=record.message,
+        reset=record.reset,
     )
     return dataclasses.replace(finished, nulls=_explain_nulls(plan, record, finished))

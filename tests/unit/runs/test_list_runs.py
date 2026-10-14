@@ -142,6 +142,7 @@ class ListRunsOfAFinishedRunTest(ListRunsTestCase):
     def test_should_list_the_run_finished_with_the_outcome_of_its_result(self):
         # Arrange
         self.start_run()
+        (self.run_directory / "segments" / "1").mkdir(parents=True)
         (self.run_directory / "result.json").write_text(json.dumps(RUN_RESULT))
 
         # Act
@@ -178,6 +179,7 @@ class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
     def test_should_refuse_a_run_result_naming_the_file_and_the_problem(self):
         # Arrange
         self.start_run()
+        (self.run_directory / "segments" / "1").mkdir(parents=True)
         (self.run_directory / "result.json").write_text(json.dumps({**RUN_RESULT, "outcome": "lost"}))
 
         # Act
