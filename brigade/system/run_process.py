@@ -56,7 +56,8 @@ def run_process(request: ProcessRequest, record_trace: Callable[[ProcessTrace], 
     try:
         # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
         # subprocess-injection: a Django rule whose taint source is any parameter named request, the S603 case
-        # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection
+        # ERA001: the nosemgrep line below is the directive semgrep reads, not commented-out code
+        # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection  # noqa: ERA001
         completed = subprocess.run(  # noqa: S603
             list(request.argv),
             cwd=request.cwd,

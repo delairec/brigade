@@ -642,8 +642,17 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
 
     def start_in_the_foreground(self) -> subprocess.Popen:
         brigade = ProcessLauncher.start(
-            [sys.executable, str(CLONE_ENTRY_POINT), "run", str(self.procedure), "--slot", "build"]
-            + ["--cwd", str(self.workspace), "--json"],
+            [
+                sys.executable,
+                str(CLONE_ENTRY_POINT),
+                "run",
+                str(self.procedure),
+                "--slot",
+                "build",
+                "--cwd",
+                str(self.workspace),
+                "--json",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

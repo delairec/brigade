@@ -224,10 +224,7 @@ PLANNER_PACKAGE = 'AGENT planner\n\tWORK "the plan of a wave"\n'
 
 
 def _answer_awawa(request: ProcessRequest) -> ProcessRecord:
-    if request.argv[1] == "show":
-        stdout = json.dumps({"fields": PLANNER_FIELDS})
-    else:
-        stdout = PLANNER_PACKAGE
+    stdout = json.dumps({"fields": PLANNER_FIELDS}) if request.argv[1] == "show" else PLANNER_PACKAGE
     return ProcessRecord(argv=request.argv, cwd=request.cwd, exit_code=0, stdout=stdout, stderr="", duration_ms=1)
 
 

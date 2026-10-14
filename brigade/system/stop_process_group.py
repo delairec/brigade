@@ -1,13 +1,12 @@
+import contextlib
 import os
 import signal
 import subprocess
 
 
 def _signal_group(process: subprocess.Popen, signal_number: int) -> None:
-    try:
+    with contextlib.suppress(ProcessLookupError):
         os.killpg(process.pid, signal_number)
-    except ProcessLookupError:
-        pass
 
 
 def stop_process_group(process: subprocess.Popen, grace_before_kill_s: float) -> None:

@@ -98,11 +98,11 @@ def _run_command(command, options: argparse.Namespace) -> int:
         sys.stdout.write(command.render_text(document))
         sys.stderr.write(command.render_passed_stderr(document))
     elif getattr(options, "json", False):
-        print(json.dumps(document))
+        print(json.dumps(document))  # noqa: T201 - the module that prints the result of every command
     elif getattr(options, "markdown", False):
-        print(command.render_markdown(document))
+        print(command.render_markdown(document))  # noqa: T201 - the module that prints the result of every command
     else:
-        print(command.render_text(document))
+        print(command.render_text(document))  # noqa: T201 - the module that prints the result of every command
     return command.decide_exit_code(document)
 
 
@@ -126,7 +126,7 @@ def main(arguments: list[str]) -> int:
     if options.command is None:
         if not options.version:
             parser.error("no option given")
-        print(_describe_version(options.json))
+        print(_describe_version(options.json))  # noqa: T201 - the module that prints the result of every command
         return 0
     command = options.command if passthrough is None else passthrough
     options.extra_arguments = extras
