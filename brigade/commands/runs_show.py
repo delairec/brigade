@@ -96,7 +96,7 @@ def _follow_run(run_id: str, runtime: Runtime) -> dict:
 def runs_show(request, runtime: Runtime) -> dict:
     if request.follow:
         return _follow_run(request.run, runtime)
-    return show_run(runtime.paths.state_root, request.run, request.log)
+    return show_run(runtime.paths.state_root, request.run, with_journal=request.log)
 
 
 COMMAND = Command(

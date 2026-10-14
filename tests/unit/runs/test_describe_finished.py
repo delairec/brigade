@@ -20,7 +20,7 @@ CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
 
 
-def _create_plan(counts_steps: bool = True) -> RunPlan:
+def _create_plan(*, counts_steps: bool = True) -> RunPlan:
     return RunPlan(
         run_id="20261007T101817Z-2ee96f",
         run_directory=ROOT / "runs" / "20261007T101817Z-2ee96f",

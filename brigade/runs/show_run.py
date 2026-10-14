@@ -36,7 +36,7 @@ def _read_message(run_directory: Path) -> str | None:
     return RunResult.from_document(read_run_document(result_path, "run result", RUN_RESULT_SHAPE)).message
 
 
-def show_run(state_root: Path, run_id: str, with_journal: bool) -> dict:
+def show_run(state_root: Path, run_id: str, *, with_journal: bool) -> dict:
     run_directory = state_root / RUNS_DIRECTORY / run_id
     if Path(run_id).name != run_id or not (run_directory / RUN_RECORD_FILE).is_file():
         raise BrigadeError(f"no run {run_id}")

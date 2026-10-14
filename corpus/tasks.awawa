@@ -603,8 +603,8 @@ TASK B06
 		+ "runs show <id> [--log] prints its summary, its segments and with --log its journal; text"
 		+ "and --json; an unknown id exits 1"
 		IMPL "brigade/runs/list_runs.py::def list_runs(state_root: Path) -> list[dict]:"
-		IMPL "brigade/runs/show_run.py::def show_run(state_root: Path, run_id: str, with_journal:"
-			+ "bool) -> dict:"
+		IMPL "brigade/runs/show_run.py::def show_run(state_root: Path, run_id: str, *,"
+			+ "with_journal: bool) -> dict:"
 		IMPL "tests/cli/test_runs.py::class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):"
 		IMPL "tests/cli/test_runs.py::class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):"
 	AFTER @TASK.B04
@@ -5732,7 +5732,7 @@ TASK B97
 		IMPL "brigade/commands/processes_show.py::def processes_show(request, runtime: Runtime) ->"
 			+ "dict:"
 		IMPL "brigade/processes/show_invocation.py::def show_invocation(state_root: Path,"
-			+ "invocation_id: str, failed_only: bool) -> dict:"
+			+ "invocation_id: str, *, failed_only: bool) -> dict:"
 		IMPL "brigade/processes/is_failed_record.py::def is_failed_record(record: dict) -> bool:"
 	SPEC "the text rendering of show prints one line per record, its outcome, its exit code or its"
 		+ "duration, and its argv joined by shlex.join; --json prints the document"
@@ -8775,17 +8775,26 @@ TASK B155
 TASK B156
 	TITLE "the 18 FBT findings fall, each boolean parameter of a signature becoming keyword-only"
 		+ "and each boolean argument passed by name, and ruff.toml adds FBT to extend-select"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ci"
 	ROLE ada
 	SPEC "extend-select of ruff.toml names FBT; ruff check . and ruff format --check . exit 0 under"
 		+ "the ruff requirements-ci.txt pins, in the CI and locally"
+		IMPL "ruff.toml::\"FBT\","
+		IMPL ".github/workflows/ci.yml::run: ruff check ."
+		IMPL ".github/workflows/ci.yml::run: ruff format --check ."
 	SPEC "the 18 findings of main at c3fcbbd, 12 FBT001, 5 FBT002 and 1 FBT003, 3 in brigade/ and"
 		+ "15 in tests/, are answered in the code, a boolean parameter made keyword-only and its"
 		+ "call sites passing it by name; no noqa added: grep -rn 'noqa: FBT' brigade build.py"
 		+ "tests prints nothing, and ruff.toml gains no ignore and no per-file-ignores entry"
+		IMPL "brigade/runs/show_run.py::def show_run(state_root: Path, run_id: str, *,"
+			+ "with_journal: bool)"
+		IMPL "brigade/processes/show_invocation.py::invocation_id: str, *, failed_only: bool)"
+		IMPL "brigade/commands/project_add.py::entity: Entity, *, force: bool):"
+		IMPL "tests/unit/runs/test_describe_progress.py::self.assertFalse(request.role_has_shell)"
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd"
+		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
 	AFTER @TASK.B154
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; measured on main"
 		+ "at c3fcbbd on 2026-10-14 by uvx ruff@0.17.0 check . --select FBT --statistics, the files"
@@ -8799,3 +8808,4 @@ TASK B156
 	SOURCE "the user's ruling of 2026-10-14, « oui en todo direct, en m1 », on the proposal"
 		+ "@DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses quotes"
 		REF @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses
+	DELIVERED_BY 132

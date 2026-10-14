@@ -33,7 +33,7 @@ class _DocumentField:
 
 
 class _Registration:
-    def __init__(self, runtime: Runtime, entity: Entity, force: bool):
+    def __init__(self, runtime: Runtime, entity: Entity, *, force: bool):
         self.runtime = runtime
         self.entity = entity
         self.force = force
@@ -126,7 +126,7 @@ def project_add(request, runtime: Runtime) -> dict:
     registration = _Registration(
         runtime,
         Entity(name=name, fields=tuple(EntityField(name=field.name, value=field.value) for field in fields)),
-        request.force,
+        force=request.force,
     )
     change_registry(runtime, f"brigade project add: {name}", registration.rewrite)
     return {

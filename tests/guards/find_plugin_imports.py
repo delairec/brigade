@@ -20,7 +20,7 @@ def _name_module(package_root: Path, module_path: Path) -> list[str]:
     return parts
 
 
-def _resolve_base(node: ast.ImportFrom, module_parts: list[str], is_package: bool) -> str:
+def _resolve_base(node: ast.ImportFrom, module_parts: list[str], *, is_package: bool) -> str:
     if node.level == 0:
         return node.module
     package_parts = module_parts if is_package else module_parts[:-1]
@@ -28,11 +28,11 @@ def _resolve_base(node: ast.ImportFrom, module_parts: list[str], is_package: boo
     return ".".join([*anchor, *([node.module] if node.module else [])])
 
 
-def _imported_names(node: ast.AST, module_parts: list[str], is_package: bool) -> list[str]:
+def _imported_names(node: ast.AST, module_parts: list[str], *, is_package: bool) -> list[str]:
     if isinstance(node, ast.Import):
         return [alias.name for alias in node.names]
     if isinstance(node, ast.ImportFrom):
-        base = _resolve_base(node, module_parts, is_package)
+        base = _resolve_base(node, module_parts, is_package=is_package)
         return [base, *(f"{base}.{alias.name}" for alias in node.names)]
     return []
 
@@ -80,7 +80,7 @@ def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
     location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
     violations = []
     for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8"))):
-        for name in _imported_names(node, module_parts, is_package):
+        for name in _imported_names(node, module_parts, is_package=is_package):
             if _breaks_autonomy(package_root, module_name, name, plugin_packages):
                 violations.append((node.lineno, f"{location}:{node.lineno} imports {name}"))
                 break

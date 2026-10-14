@@ -10,7 +10,7 @@ ANY_GRACE_S = 30.0
 
 
 class StopProcessGroupTestCase(unittest.TestCase):
-    def start(self, argv: list, start_new_session: bool) -> subprocess.Popen:
+    def start(self, argv: list, *, start_new_session: bool) -> subprocess.Popen:
         process = ProcessLauncher.start(argv, stdout=subprocess.PIPE, start_new_session=start_new_session)
         self.addCleanup(process.stdout.close)
         self.addCleanup(process.wait)
