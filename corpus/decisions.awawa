@@ -842,7 +842,9 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 		+ "cached tree runs under it"
 	DESC "the runs of brigade run have their lock, $XDG_STATE_HOME/brigade/locks/runs.lock: every"
 		+ "removal of a run runs under it, its directory renamed out of runs/ before it is deleted,"
-		+ "so a reader of runs/ meets a whole run or none"
+		+ "so a reader of runs/ meets a whole run or none; under the same lock, a removal first"
+		+ "empties $XDG_STATE_HOME/brigade/runs-removed/, so a directory an interruption left"
+		+ "between the rename and the deletion goes with the next removal"
 	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13, @TASK.B22, @TASK.B60 and"
 		+ "@TASK.B142"
 		REF @TASK.B04
@@ -870,6 +872,9 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 		+ "repository"
 	SOURCE "pull request #134 of the brigade repository, delivering @TASK.B60"
 		REF @TASK.B60
+	SOURCE "the user's ruling of 2026-10-15 on question 1 of the review of pull request #134: «"
+		+ "Vider au prochain passage (Recommandé) — La suppression suivante vide d'abord"
+		+ "runs-removed/, sous le même runs.lock. »"
 
 DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 	TITLE "every file brigade ships lives in a data/ folder of the component that reads it, under"
@@ -2614,5 +2619,7 @@ DECISION RunsPruneRemovesTheRunsBeyondTheBoundAndThoseSettledBeforeTheDay
 	REJECTED "the intersection, a run removed only when beyond the bound and before the day:"
 		+ "--before would spare the old runs under the bound, where it removes them whatever their"
 		+ "number"
+	RATIONALE "a call of brigade runs prune bounds runs/ at once, whatever the day it is given, and"
+		+ "--before reaches the old runs the bound would keep"
 	SOURCE "pull request #134 of the brigade repository, delivering @TASK.B60"
 		REF @TASK.B60
