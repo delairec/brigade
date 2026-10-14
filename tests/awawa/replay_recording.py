@@ -1,12 +1,12 @@
 import json
 import shutil
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from tests.awawa.list_temporary_roots import list_temporary_roots
 from tests.awawa.volatile_value_masker import PLACEHOLDER, VolatileValueMasker
+from tests.process_launcher import ProcessLauncher
 
 UNREADABLE = 0
 
@@ -43,8 +43,8 @@ def replay_recording(test_case: unittest.TestCase, call: dict) -> dict:
     cwd = Path(masker.unmask(call["cwd"]))
     cwd.mkdir(parents=True, exist_ok=True)
     before = {file: _read_input(file) for file in inputs}
-    completed = subprocess.run(  # noqa: S603 - the recorded call
-        ["awawa", *(masker.unmask(argument) for argument in call["arguments"])],  # noqa: S607 - the awawa on the PATH
+    completed = ProcessLauncher.run(
+        ["awawa", *(masker.unmask(argument) for argument in call["arguments"])],
         cwd=cwd,
         capture_output=True,
         text=True,

@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from tests.awawa.install_fake_awawa import install_fake_awawa
+from tests.process_launcher import ProcessLauncher
 
 SCRIPTED_AWAWA = Path(__file__).resolve().parent / "fixtures" / "scripted-awawa" / "awawa"
 NO_REAL_AWAWA = None
@@ -65,8 +66,8 @@ class FakeAwawaTestCase(unittest.TestCase):
         (self.recordings / "recording.json").write_text(json.dumps(recording))
 
     def run_awawa(self, *arguments: str) -> subprocess.CompletedProcess:
-        return subprocess.run(  # noqa: S603 - the test's own command line
-            ["awawa", *arguments],  # noqa: S607 - the fake awawa put on the PATH of the test
+        return ProcessLauncher.run(
+            ["awawa", *arguments],
             cwd=self.root.name,
             capture_output=True,
             text=True,

@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -9,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from tests.awawa.list_temporary_roots import list_temporary_roots
+from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
@@ -16,9 +16,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 def _read_version(real_awawa: str | None) -> str | None:
     if real_awawa is None:
         return None
-    completed = subprocess.run(  # noqa: S603 - the awawa the recording is made from
-        [real_awawa, "--version"], capture_output=True, text=True, check=True
-    )
+    completed = ProcessLauncher.run([real_awawa, "--version"], capture_output=True, text=True, check=True)
     return completed.stdout.strip()
 
 

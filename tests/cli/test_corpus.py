@@ -10,6 +10,7 @@ from pathlib import Path
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
+from tests.process_launcher import ProcessLauncher
 
 RELAY_EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables" / "awawa-relay"
 LOCK_WAIT_S = 5
@@ -190,7 +191,7 @@ class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
 
     def detect_waiting(self, arguments: list) -> bool:
         try:
-            subprocess.run(  # noqa: S603 - the test's own command line
+            ProcessLauncher.run(
                 [sys.executable, str(CLONE_ENTRY_POINT), "corpus", *arguments],
                 capture_output=True,
                 env=self.machine.describe_environment(),

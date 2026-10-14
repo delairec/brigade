@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from tests.cli.temporary_machine import TemporaryMachine
+from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
@@ -19,14 +20,14 @@ class BrigadeZipappTest(unittest.TestCase):
             REPOSITORY_ROOT / "brigade", clone_root / "brigade", ignore=shutil.ignore_patterns("__pycache__")
         )
         shutil.copy(REPOSITORY_ROOT / "build.py", clone_root / "build.py")
-        subprocess.run([sys.executable, "build.py"], cwd=clone_root, check=True, stdout=subprocess.DEVNULL)
+        ProcessLauncher.run([sys.executable, "build.py"], cwd=clone_root, check=True, stdout=subprocess.DEVNULL)
 
     def tearDown(self):
         self.clone.cleanup()
 
     def test_should_print_the_version_from_the_built_archive(self):
         # Act
-        completed = subprocess.run(
+        completed = ProcessLauncher.run(
             [sys.executable, "dist/brigade.pyz", "--version"],
             capture_output=True,
             text=True,

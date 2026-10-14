@@ -6,6 +6,7 @@ from pathlib import Path
 
 from brigade.adapters.clients.claude_code import answer
 from brigade.errors import BrigadeError
+from tests.process_launcher import ProcessLauncher
 
 FIXTURES = Path(__file__).parent / "fixtures" / "claude-code"
 CLI_FIXTURES = Path(__file__).parents[3] / "cli" / "fixtures" / "claude-code"
@@ -208,8 +209,8 @@ def run_stop_hook(stop_at: str) -> subprocess.CompletedProcess:
     argv = answer("launch-argv", {**LAUNCH_REQUEST, "stop_at": stop_at})["argv"]
     settings = json.loads(argv[argv.index("--settings") + 1])
     command = settings["hooks"]["PostToolUse"][0]["hooks"][0]["command"]
-    return subprocess.run(  # noqa: S603 - the hook command the adapter under test built
-        ["sh", "-c", command],  # noqa: S607 - sh found on the PATH of the test
+    return ProcessLauncher.run(
+        ["sh", "-c", command],
         input="{}",
         capture_output=True,
         text=True,

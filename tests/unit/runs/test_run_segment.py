@@ -27,6 +27,7 @@ from brigade.system.read_configuration import Configuration
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.token_usage import TokenUsage
 from brigade.system.trail_writer import TrailWriter
+from tests.process_launcher import ProcessLauncher
 
 FIRST_SEGMENT = 1
 NO_PATH_NEEDED = ""
@@ -810,7 +811,7 @@ class SpawnSleepingClientDouble:
     def spawn(self, request):
         request.stdout.write_text("Reading the task\n", encoding="utf-8")
         request.stderr.write_text("", encoding="utf-8")
-        self.process = subprocess.Popen(["sleep", "5"], start_new_session=True)  # noqa: S607 - sleep found on the PATH
+        self.process = ProcessLauncher.start(["sleep", "5"], start_new_session=True)
         self.test.addCleanup(self.process.wait)
         self.test.addCleanup(self.process.kill)
         return self.process

@@ -1,11 +1,11 @@
 import os
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from tests.awawa.provide_awawa import provide_awawa
+from tests.process_launcher import ProcessLauncher
 
 SCRIPTED_AWAWA_DIRECTORY = Path(__file__).resolve().parent / "fixtures" / "scripted-awawa"
 RECORDING_ASKED = "1"
@@ -37,8 +37,8 @@ class ProvideAwawaWhileRecordingTest(unittest.TestCase):
         (self.corpus / "tasks.awawa").write_text("TASK  B1\n")
 
         # Act
-        completed = subprocess.run(  # noqa: S603 - the test's own command line
-            ["awawa", "fmt", str(self.corpus / "tasks.awawa")],  # noqa: S607 - the awawa provide_awawa put on PATH
+        completed = ProcessLauncher.run(
+            ["awawa", "fmt", str(self.corpus / "tasks.awawa")],
             cwd=self.root,
             capture_output=True,
             text=True,

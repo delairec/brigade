@@ -10,6 +10,7 @@ from pathlib import Path
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
+from tests.process_launcher import ProcessLauncher
 
 PACKAGE_JSON = '{"scripts": {"build": "tsc", "test": "vitest", "lint": "eslint ."}}'
 INVALID_ENTITY = 'PROJECT bad-name\n\tPATH "/srv/bad"\n\tMAIN "main"\n\tSTATUS active\n'
@@ -114,8 +115,8 @@ class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
         self.run_project("add", str(self.project.path))
 
         # Act
-        completed = subprocess.run(  # noqa: S603 - the test's own command line
-            ["awawa", "lint", "--strict", str(self.machine.corpus)],  # noqa: S607 - awawa found on the PATH of the test
+        completed = ProcessLauncher.run(
+            ["awawa", "lint", "--strict", str(self.machine.corpus)],
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,
@@ -618,7 +619,7 @@ class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
 
     def detect_waiting(self, arguments: list) -> bool:
         try:
-            subprocess.run(  # noqa: S603 - the test's own command line
+            ProcessLauncher.run(
                 [sys.executable, str(CLONE_ENTRY_POINT), *arguments],
                 capture_output=True,
                 env=self.machine.describe_environment(),
