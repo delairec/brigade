@@ -8738,18 +8738,26 @@ TASK B154
 TASK B155
 	TITLE "the 35 PTH findings migrate to pathlib, 9 in brigade/, 7 in build.py and 19 in tests/,"
 		+ "and ruff.toml adds PTH to extend-select"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ci"
 	ROLE ada
 	SPEC "extend-select of ruff.toml names PTH; ruff check . and ruff format --check . exit 0 under"
 		+ "the ruff requirements-ci.txt pins, in the CI and locally"
+		IMPL "ruff.toml::\"PTH\","
+		IMPL ".github/workflows/ci.yml::run: ruff check ."
+		IMPL ".github/workflows/ci.yml::run: ruff format --check ."
 	SPEC "the 35 findings of main at c3fcbbd, 12 PTH123, 9 PTH208, 5 PTH118, 2 PTH109, 2 PTH120, 2"
 		+ "PTH104, 1 PTH103, 1 PTH100 and 1 PTH105, are migrated in the code, no noqa added: grep"
 		+ "-rn 'noqa: PTH' brigade build.py tests prints nothing, and ruff.toml gains no ignore and"
 		+ "no per-file-ignores entry"
+		IMPL "brigade/corpus/prepare_tree.py::staged_tree.rename(root)"
+		IMPL "build.py::ROOT = Path(__file__).resolve().parent"
+		IMPL "tests/integration/corpus/test_prepare_tree.py::list((self.cache / \"app\").iterdir())"
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd, and python3 build.py builds"
 		+ "dist/brigade.pyz"
+		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL "build.py::zipapp.create_archive("
 	AFTER @TASK.B154
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; measured on main"
 		+ "at c3fcbbd on 2026-10-14 by uvx ruff@0.17.0 check . --select PTH --statistics, the files"
@@ -8762,6 +8770,7 @@ TASK B155
 	SOURCE "the user's ruling of 2026-10-14, « oui en todo direct, en m1 », on the proposal"
 		+ "@DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses quotes"
 		REF @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses
+	DELIVERED_BY 131
 
 TASK B156
 	TITLE "the 18 FBT findings fall, each boolean parameter of a signature becoming keyword-only"
