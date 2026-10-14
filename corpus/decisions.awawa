@@ -2348,19 +2348,25 @@ DECISION ThePlanOfAWaveIsWrittenInADetachedWorktreeAndItsBranchCreatedAfterTheCo
 		REF @TASK.B139
 
 DECISION EachEntityOfAPlanGoesToTheCorpusFileAlreadyHoldingItsType
-	TITLE "each entity of a plan goes to the file of the project's corpus already holding its type,"
-		+ "else to <CORPUS>/<type in lower case>s.awawa"
+	TITLE "each entity of a plan goes to the first file of its type lying under the folder"
+		+ "PROJECT.CORPUS names, else to <CORPUS>/<type in lower case>s.awawa"
 	STATUS active
-	DESC "brigade plan record appends each MILESTONE and TASK block at the end of the file where"
-		+ "awawa status of the project's corpus finds the first entity of that type; a type the"
-		+ "corpus holds no entity of goes to milestones.awawa or tasks.awawa under the folder"
-		+ "PROJECT.CORPUS names"
+	DESC "brigade plan record appends each MILESTONE and TASK block at the end of the first file"
+		+ "lying under the folder PROJECT.CORPUS names where awawa status of the project's corpus"
+		+ "finds an entity of that type; a type that folder holds no entity of goes to"
+		+ "milestones.awawa or tasks.awawa under it"
 	DESC "binds @TASK.B139"
 		REF @TASK.B139
 	REJECTED "one new file per plan: it scatters a type across files the user did not choose, where"
 		+ "a corpus split by domain keeps one home per type"
+	REJECTED "the first file of the type wherever it sits: a corpus whose first entity of a type"
+		+ "lies outside the folder PROJECT.CORPUS names would take the plan out of the folder the"
+		+ "task writes under"
 	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
 		REF @TASK.B139
+	SOURCE "the user's ruling of 2026-10-14 on pull request #121 of the brigade repository, «"
+		+ "option A pour le finding 1 (refuser la collision avant toute écriture), ok pour ta"
+		+ "variante de l'option 2 pour le finding 7 »"
 
 DECISION TheRunOfAPlanRecordIsTheDirectoryOfItsProgressFile
 	TITLE "the run a plan record belongs to is the name of the directory of BRIGADE_PROGRESS_FILE;"
@@ -2381,11 +2387,33 @@ DECISION ThePlanIsCheckedAgainstTheFieldsAwawaNewPrintsForEachType
 		+ "corpus, the fields of SCHEMA * included"
 	STATUS active
 	DESC "brigade plan record runs awawa new <TYPE> <NAME> on the corpus root for each entity of"
-		+ "the plan: a non-zero exit names the type undeclared, and every field of the entity the"
-		+ "template does not list is named undeclared"
+		+ "the plan, once the names the corpus already holds are refused: awawa new exits 1 on a"
+		+ "type the schema does not declare and on a name already in the corpus alike, so its"
+		+ "non-zero exit names the type undeclared only after that refusal; every field of the"
+		+ "entity the template does not list is named undeclared"
+		REF @DECISION.APlanReusingANameOfTheCorpusIsRefusedBeforeAnyWrite
 	DESC "binds @TASK.B139"
 		REF @TASK.B139
 	REJECTED "awawa show <TYPE> --json alone: it lists the fields of the type and not those SCHEMA"
 		+ "* adds to every type"
 	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
 		REF @TASK.B139
+
+DECISION APlanReusingANameOfTheCorpusIsRefusedBeforeAnyWrite
+	TITLE "a plan entity whose name the project's corpus already holds is refused before any write"
+	STATUS active
+	DESC "brigade plan record reads awawa status of the project's corpus before any other check of"
+		+ "the plan and exits 1 naming each entity of the plan whose type and name the corpus"
+		+ "already holds, with the file and the line where it sits: @TASK.S2 already exists at"
+		+ "corpus/tasks.awawa:812; nothing is written"
+	DESC "binds @TASK.B139"
+		REF @TASK.B139
+	REJECTED "leaving the collision to the lint round: awawa new exits 1 on the name before lint"
+		+ "runs, so the planner reads that the schema does not declare the type, and a collision"
+		+ "lint caught would spend the one lint round of the run on a mistake a read finds before"
+		+ "any write"
+	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
+		REF @TASK.B139
+	SOURCE "the user's ruling of 2026-10-14 on pull request #121 of the brigade repository, «"
+		+ "option A pour le finding 1 (refuser la collision avant toute écriture), ok pour ta"
+		+ "variante de l'option 2 pour le finding 7 »"
