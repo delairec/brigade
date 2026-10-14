@@ -34,6 +34,14 @@ class ResolvePluginRefusalTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), "no forge plugin gitlab")
 
+    def test_should_refuse_a_document_plugin_brigade_does_not_ship(self):
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            resolve_plugin("document", "yaml", NO_SOURCES_NEEDED)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "no document plugin yaml")
+
     def test_should_refuse_a_kind_of_plugin_brigade_does_not_know(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:

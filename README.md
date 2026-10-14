@@ -128,11 +128,11 @@ brigade runs its agents through a client adapter, selected by the `client` key o
 Claude Code, `fake` for the adapter that replays recorded result documents, or any name `<name>` for which an
 executable `brigade-client-<name>` is on your `PATH`. The table `[clients.<name>]` of `config.toml` holds the settings
 of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays, or `<role>.resumed.json`
-when that file exists and the progress file of the run holds something, `features`, the
+when that file exists and its brief opens on the `Progress so far` section, `features`, the
 comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by
 default), and, for
-tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, `progress`, a line it
-appends to the progress file of the run, and `interval`, the seconds it waits after each line of its recording;
+tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, `progress`, a text it
+appends as it is to the progress file of the run, in either form, and `interval`, the seconds it waits after each line of its recording;
 `operations`, comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result
 document is a result and any other line a text; with `transcripts`, it answers the document
 `<session_id>.transcripts.json` of `recordings`.
@@ -233,12 +233,27 @@ the built-in roles only, `ROLESET corpus` the AGENT entity the table `[slots]` b
 other `ROLESET` is a directory of role files, relative to the project's `PATH`, whose file declaring the slot comes
 before the built-in role; the machine's `roles/` is skipped whenever a `ROLESET` is given. The project's `CLIENT`
 replaces the client of `config.toml`. The client receives the role, the capabilities the procedure declares that the
-role allows, and a brief made of the procedure, the `key=value` arguments, the text of `--brief` and the path of the
-progress file, exported to it as `BRIGADE_PROGRESS_FILE`. It runs in `--cwd`, else the project's `PATH`, else the
+role allows, and a brief made of the procedure, the `key=value` arguments, the text of `--brief` and the progress
+of the run, its path exported to it as `BRIGADE_PROGRESS_FILE`. It runs in `--cwd`, else the project's `PATH`, else the
 current directory.
 
+The progress of a run is one file, in the form the key `document` of `config.toml` chooses for what brigade creates:
+`awawa` by default, `progress.awawa`, an awawa corpus holding the STEP and HANDOVER schema brigade ships, then one
+`STEP` per step completed and one `HANDOVER` per hand-over, named `s1`, `s2`, `h1` in order of writing; `markdown`,
+`progress.md`, created empty. The extension of a file brigade reads back routes it to its plugin, `.md` to markdown and
+`.awawa` to awawa; awawa stays a prerequisite whichever form is chosen. Every request to the document plugin carries
+`schema_version` 1, and brigade checks every answer it reads against the shape of its operation, naming the plugin and
+the operation when one breaks it. The brief of every segment names the path and the form of the progress and its frame: one entry per major step, what it did in one line, the facts it established,
+one line each and five at most, a fact being what the next segment needs and no command gives back, and the next step
+as the procedure names it, `complete` at the end; never command output, a diff, the course of the step, a restatement of
+the brief or a fact an earlier entry holds. A run whose capabilities carry `shell` is also asked to run `awawa fmt` then
+`awawa lint --strict` on the file after each append. Between two segments brigade formats then lints `progress.awawa`,
+naming the file, and the next brief opens on `awawa status STEP`, `awawa status HANDOVER` and `awawa show` of the last
+entity; when the lint fails, it opens on the lint output, the instruction to rewrite the file and the file whole, and
+the run goes on with the same count of relaunches. In the markdown form the next brief opens on the file as it is.
+
 Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.json` (what was resolved), `pid`,
-`role.md` (the role file passed), `progress.md`, `processes.jsonl` (its trail), `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`,
+`role.md` (the role file passed), `progress.awawa` or `progress.md`, `processes.jsonl` (its trail), `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`,
 `result.json`, the normalised result of the segment), `journal.jsonl` and, written last, `result.json`, the normalised
 result of the last segment. Each segment appends one `run.finished` to the
 ledger, every null field named in `nulls` with its reason. The command prints the run, text or `--json`, and exits
@@ -276,7 +291,8 @@ step cap records a `signal.recorded`
 `wall_limit_reached`
 naming the same and `wall_limit_s`, the limit in seconds it was held to. A segment ending on `handed_over` or
 `undeclared` records a `signal.recorded` of that name, naming the procedure, the run and the segment. In each of these
-cases, when its progress file holds something, it is launched again as a fresh segment whose brief opens on that file,
+cases, when the document plugin answers that its progress holds an entry, it is launched again as a fresh segment whose
+brief opens on what the plugin reads of it,
 up to the `HANDOVERS` of the project's `POLICY`, 2 without one; a segment ending on `blocked` is never launched again.
 A segment whose main steps, as `run.finished` counts them, exceed the budget of its procedure records a
 `signal.recorded` `budget_exceeded` naming the procedure, the run, the segment, the budget and `steps`, the steps it

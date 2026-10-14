@@ -36,6 +36,8 @@ def _create_plan(counts_steps: bool = True) -> RunPlan:
         role=ResolvedRole(slot="build", role="ada", source="machine", front_matter={"reasoning": "standard"}, body=""),
         client="claude-code",
         client_adapter=None,
+        document=None,
+        progress_file=Path("/state/runs/r1/progress.md"),
         configuration=Configuration(),
         project="brigade",
         cwd=Path("/srv/brigade"),

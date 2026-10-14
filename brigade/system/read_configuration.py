@@ -7,7 +7,8 @@ from brigade.system.name_toml_type import name_toml_type
 from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
-STRING_KEYS = ("client", "scheduler", "instructions")
+STRING_KEYS = ("client", "scheduler", "instructions", "document")
+DOCUMENT_BY_DEFAULT = "awawa"
 UNREAD_STRING_KEYS = ("ide_link",)
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
@@ -40,6 +41,7 @@ class Configuration:
     client: str | None = None
     scheduler: str | None = None
     instructions: str | None = None
+    document: str = DOCUMENT_BY_DEFAULT
     refs_cache_mb: int = 1024
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)

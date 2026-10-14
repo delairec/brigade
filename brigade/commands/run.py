@@ -90,10 +90,11 @@ def _prepare_run(request, runtime: Runtime) -> RunPlan:
     forge_environment = _read_forge_environment(configuration, run_request.slot, runtime)
     setting = read_run_setting(run_request.project, configuration, runtime)
     client_adapter = runtime.resolve_plugin("client", setting.client)
+    document = runtime.resolve_plugin("document", configuration.document)
     plan = dataclasses.replace(
-        plan_run(run_request, setting, client_adapter, runtime), forge_environment=forge_environment
+        plan_run(run_request, setting, client_adapter, document, runtime), forge_environment=forge_environment
     )
-    create_run_directory(plan)
+    create_run_directory(plan, runtime)
     runtime.trail.locate(plan.run_directory / PROCESSES_FILE)
     return plan
 

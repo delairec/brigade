@@ -4,9 +4,10 @@ from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.remove_worktree import remove_worktree
 from brigade.ledger.append_event import append_event
 from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.runs.ask_progress import ask_progress
 from brigade.runs.describe_finished import describe_finished
 from brigade.runs.plan_run import RunPlan
-from brigade.runs.run_locations import PROGRESS_FILE, RESULT_FILE
+from brigade.runs.run_locations import RESULT_FILE
 from brigade.runs.run_segment import TURN_LIMIT, WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
 from brigade.runtime import Runtime
 from brigade.system.stop_signal_receiver import StopSignalReceiver
@@ -30,8 +31,8 @@ def _ends_on_the_clock(record: SegmentRecord) -> bool:
     return record.result.outcome in CLOCK_OUTCOMES
 
 
-def _holds_progress(plan: RunPlan) -> bool:
-    return bool((plan.run_directory / PROGRESS_FILE).read_text(encoding="utf-8").strip())
+def _holds_progress(plan: RunPlan, runtime: Runtime) -> bool:
+    return ask_progress(plan, "detect_entry", runtime).holds_entry
 
 
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
@@ -73,7 +74,7 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
         if record.result.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))
-        if record.number > plan.handovers or not _holds_progress(plan):
+        if record.number > plan.handovers or not _holds_progress(plan, runtime):
             return records
 
 

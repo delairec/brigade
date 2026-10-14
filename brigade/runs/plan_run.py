@@ -12,10 +12,11 @@ from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_handovers import read_handovers
 from brigade.runs.read_run_setting import RunSetting
 from brigade.runs.resolve_procedure import Procedure, ProcedureDirectories, resolve_procedure
-from brigade.runs.run_locations import DISPOSABLE_WORKTREE_DIRECTORY, RUNS_DIRECTORY
+from brigade.runs.run_locations import DISPOSABLE_WORKTREE_DIRECTORY, PROGRESS_STEM, RUNS_DIRECTORY
 from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
+from brigade.system.name_document_plugin import EXTENSIONS_BY_DOCUMENT_PLUGIN
 from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import Configuration
 
@@ -52,6 +53,8 @@ class RunPlan:
     role: ResolvedRole
     client: str
     client_adapter: object
+    document: object
+    progress_file: Path
     configuration: Configuration
     project: str | None
     cwd: Path
@@ -141,7 +144,7 @@ def _describe_clock_warning(client: str, budget: int, wall_limit_s: float) -> st
     )
 
 
-def plan_run(request: RunRequest, setting: RunSetting, client_adapter, runtime: Runtime) -> RunPlan:
+def plan_run(request: RunRequest, setting: RunSetting, client_adapter, document, runtime: Runtime) -> RunPlan:
     configuration = setting.configuration
     project = setting.project
     client = setting.client
@@ -169,6 +172,8 @@ def plan_run(request: RunRequest, setting: RunSetting, client_adapter, runtime: 
         role=role,
         client=client,
         client_adapter=client_adapter,
+        document=document,
+        progress_file=run_directory / f"{PROGRESS_STEM}{EXTENSIONS_BY_DOCUMENT_PLUGIN[configuration.document]}",
         configuration=configuration,
         project=request.project,
         cwd=cwd,

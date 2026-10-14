@@ -1,10 +1,12 @@
 import os
 
 from brigade.roles.render_role_file import render_role_file
+from brigade.runs.ask_progress import ask_progress
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.record_run_pid import record_run_pid
-from brigade.runs.run_locations import PROGRESS_FILE, ROLE_FILE, RUN_RECORD_FILE
+from brigade.runs.run_locations import ROLE_FILE, RUN_RECORD_FILE
 from brigade.runs.run_record import RunRecord
+from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.system.write_text_file import write_text_file
@@ -29,9 +31,9 @@ def _describe_run(plan: RunPlan) -> RunRecord:
     )
 
 
-def create_run_directory(plan: RunPlan) -> None:
+def create_run_directory(plan: RunPlan, runtime: Runtime) -> None:
     create_directory(plan.run_directory)
     write_json_atomically(plan.run_directory / RUN_RECORD_FILE, _describe_run(plan).to_document())
     record_run_pid(plan.run_directory, os.getpid())
     write_text_file(plan.run_directory / ROLE_FILE, render_role_file(plan.role.front_matter, plan.role.body))
-    write_text_file(plan.run_directory / PROGRESS_FILE, "")
+    ask_progress(plan, "create_document", runtime)

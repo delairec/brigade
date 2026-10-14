@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import ANY
 
+from brigade.adapters.documents import markdown
 from brigade.errors import BrigadeError
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
@@ -192,6 +193,11 @@ class ClientAnsweringItsSessionAndParseResultWithoutOutcomeDouble(
     pass
 
 
+class DocumentDescribingWithoutTextDouble:
+    def describe_document(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1}
+
+
 class ClockDouble:
     def __init__(self):
         self.now_s = 1000.0
@@ -349,6 +355,8 @@ def _create_plan(
         ),
         client="double-client",
         client_adapter=client_type(),
+        document=markdown,
+        progress_file=root / "state" / "runs" / "20261007T090000Z-b73a01" / "progress.md",
         configuration=Configuration(),
         project=None,
         cwd=root / "project",
@@ -390,6 +398,17 @@ class RunSegmentTest(unittest.TestCase):
             request.environment, {"DOUBLE_CLIENT_MODE": "unattended", "BRIGADE_PROGRESS_FILE": progress_file}
         )
         self.assertEqual(request.stdin, "the brief of the run")
+
+    def test_should_refuse_a_description_of_the_progress_breaking_its_shape(self):
+        # Arrange
+        plan = dataclasses.replace(_create_plan(self.root), document=DocumentDescribingWithoutTextDouble())
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "document plugin awawa answered describe_document: lacks the key text")
 
     def test_should_return_the_result_the_client_parses_from_what_the_process_wrote(self):
         # Arrange

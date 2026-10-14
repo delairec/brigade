@@ -180,7 +180,13 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
             "# Brief\n\n"
             "Deliver B06.\n\n"
             "# Progress file\n\n"
-            f"{run_directory / 'progress.md'}\n\n"
+            f"The progress is the Markdown file {run_directory / 'progress.md'}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"
@@ -273,7 +279,7 @@ class BrigadeRunOfAClientReadingTranscriptsTest(RunTestCase):
 class BrigadeRunOnClaudeCodeTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        self.machine.write_configuration('client = "claude-code"\n')
+        self.machine.write_configuration('client = "claude-code"\ndocument = "markdown"\n')
         self.brief = self.workspace / "brief.md"
         self.brief.write_text("Deliver B71.\n")
 
@@ -778,7 +784,13 @@ class BrigadeRunHandOverTest(RunTestCase):
             "# Procedure deliver\n\n"
             "Deliver the task the brief names.\n\n"
             "# Progress file\n\n"
-            f"{run_directory / 'progress.md'}\n\n"
+            f"The progress is the Markdown file {run_directory / 'progress.md'}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"
@@ -1807,7 +1819,7 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
 class BrigadeRunOfASlotBoundToNoLoginTest(ForgeAccountRunTestCase):
     def test_should_hand_the_client_segment_no_token(self):
         # Arrange
-        self.machine.write_configuration('client = "claude-code"\n')
+        self.machine.write_configuration('client = "claude-code"\ndocument = "markdown"\n')
 
         # Act
         completed = self.run_slot("build")
@@ -1816,3 +1828,192 @@ class BrigadeRunOfASlotBoundToNoLoginTest(ForgeAccountRunTestCase):
         self.assertEqual(
             (completed.returncode, self.environment_record.read_text()), (3, "no GH_TOKEN\n"), completed.stderr
         )
+
+
+PROGRESS_SCHEMA = (
+    "SCHEMA STEP\n"
+    '\tDESC "a step the run completed"\n'
+    "\tFIELD DONE string\n"
+    "\t\tREQUIRED\n"
+    '\t\tDESC "what the step did, one line"\n'
+    "\tFIELD FACT string\n"
+    "\t\tREPEATABLE\n"
+    '\t\tDESC "a fact the next run needs and no command gives back, five at most"\n'
+    "\tFIELD NEXT string\n"
+    "\t\tREQUIRED\n"
+    '\t\tDESC "the step to resume at, as the procedure names it, or complete"\n'
+    "\n"
+    "SCHEMA HANDOVER\n"
+    '\tDESC "the state of a run that hands over"\n'
+    "\tFIELD FACT string\n"
+    "\t\tREPEATABLE\n"
+    '\t\tDESC "a fact no step holds, five at most"\n'
+    "\tFIELD REMAINING string\n"
+    "\t\tREQUIRED\n"
+    "\t\tREPEATABLE\n"
+    '\t\tDESC "a step not done, one per line"\n'
+    "\tFIELD NEXT string\n"
+    "\t\tREQUIRED\n"
+    '\t\tDESC "the step to resume at, as the procedure names it"\n'
+)
+HANDED_OVER_RESULT = {**DONE_RESULT, "outcome": "handed_over"}
+RUN_ID = "20261013T000000Z-b106a1"
+STEP_ENTRY = 'progress = "STEP s1\\n\\tDONE \\"read the task\\"\\n\\tNEXT \\"section 3\\""\n'
+
+
+class BrigadeRunProgressFormTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        provide_awawa(self)
+
+    def run_deliver(self):
+        return self.run_brigade(
+            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--run-id", RUN_ID, "--json"
+        )
+
+    def test_should_keep_the_progress_as_an_awawa_corpus_holding_its_schema_alone_without_the_document_key(self):
+        # Arrange
+        self.record("builder", DONE_RESULT)
+        self.configure_fake(COUNTING_CLIENT, document=None)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        run_directory = self.runs / json.loads(completed.stdout)["run"]
+        self.assertEqual((run_directory / "progress.awawa").read_text(), PROGRESS_SCHEMA)
+        self.assertFalse((run_directory / "progress.md").exists())
+
+    def test_should_keep_the_progress_as_an_empty_markdown_file_with_the_markdown_document(self):
+        # Arrange
+        self.record("builder", DONE_RESULT)
+        self.configure_fake(COUNTING_CLIENT, document="markdown")
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        run_directory = self.runs / json.loads(completed.stdout)["run"]
+        self.assertEqual((run_directory / "progress.md").read_text(), "")
+        self.assertFalse((run_directory / "progress.awawa").exists())
+
+    def test_should_relaunch_a_segment_that_hands_over_on_a_brief_opening_on_the_inventory_and_the_last_entity(self):
+        # Arrange
+        self.record("builder", HANDED_OVER_RESULT)
+        self.configure_fake(COUNTING_CLIENT + STEP_ENTRY, document=None)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 20, completed.stderr)
+        progress = self.runs / json.loads(completed.stdout)["run"] / "progress.awawa"
+        opening, _, _ = (progress.parent / "segments" / "2" / "brief.md").read_text().partition("# Procedure deliver")
+        self.assertEqual(
+            opening,
+            "# Progress so far\n\n"
+            f"$ awawa status STEP {progress}\n"
+            "STEP (1):\n"
+            f"  @STEP.s1  (none)  {progress}:26  incoming 0\n\n"
+            f"$ awawa status HANDOVER {progress}\n"
+            "HANDOVER (0):\n\n"
+            f"$ awawa show @STEP.s1 {progress}\n"
+            "STEP s1\n"
+            '\tDONE "read the task"\n'
+            '\tNEXT "section 3"\n\n',
+        )
+
+    def test_should_open_the_next_brief_on_the_lint_output_and_the_file_whole_when_an_entry_fails_lint(self):
+        # Arrange
+        self.record("builder", HANDED_OVER_RESULT)
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n', document=None)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 20, completed.stderr)
+        progress = self.runs / json.loads(completed.stdout)["run"] / "progress.awawa"
+        opening, _, _ = (progress.parent / "segments" / "2" / "brief.md").read_text().partition("# Procedure deliver")
+        self.assertEqual(
+            opening,
+            "# Progress so far\n\n"
+            f"$ awawa lint --strict {progress}\n"
+            f"{progress} — 1 error(s), 0 warning(s)\n"
+            f"L014  error  {progress}:26:1\n"
+            "      line does not start with a keyword ([A-Z][A-Z0-9_]*)\n\n"
+            f"Rewrite {progress} so that awawa lint --strict {progress} passes, keeping every entry."
+            " The file as it is:\n\n"
+            f"{PROGRESS_SCHEMA}\nstep 1 done\n\n",
+        )
+
+    def test_should_relaunch_as_many_times_when_an_entry_fails_lint(self):
+        # Arrange
+        self.record("builder", HANDED_OVER_RESULT)
+        self.configure_fake(COUNTING_CLIENT + 'progress = "step 1 done"\n', document=None)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 20, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["segments"], 3)
+
+    def test_should_not_relaunch_a_segment_on_a_progress_holding_its_schema_alone(self):
+        # Arrange
+        self.record("builder", HANDED_OVER_RESULT)
+        self.configure_fake(COUNTING_CLIENT, document=None)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 20, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["segments"], 1)
+
+    def test_should_ask_a_role_with_shell_to_format_and_lint_the_progress_after_each_append(self):
+        # Arrange
+        self.record("builder", DONE_RESULT)
+        self.configure_fake(COUNTING_CLIENT, document=None)
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        progress = self.runs / RUN_ID / "progress.awawa"
+        _, _, section = (self.runs / RUN_ID / "segments" / "1" / "brief.md").read_text().partition("# Progress file")
+        self.assertEqual(
+            section.partition("# End of segment")[0],
+            f"\n\nThe progress is the awawa corpus {progress}: after the schema it holds, append one entity per"
+            " entry, of a type the schema declares, named by the initial of its type in lower case and its rank"
+            " among the entities of that type in order of writing.\n\n"
+            "- STEP: a step the run completed\n"
+            "- HANDOVER: the state of a run that hands over\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            f"After each append, run awawa fmt {progress} then awawa lint --strict {progress}, naming the file and"
+            " never its directory.\n\n",
+        )
+
+    def test_should_ask_no_format_nor_lint_of_a_run_without_shell(self):
+        # Arrange
+        self.record("builder", DONE_RESULT)
+        self.configure_fake(COUNTING_CLIENT, document=None)
+        self.procedure.write_text(
+            "---\ncapabilities: read, write\nbudget: 75\n---\nDeliver the task the brief names.\n"
+        )
+
+        # Act
+        completed = self.run_deliver()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        brief = (self.runs / RUN_ID / "segments" / "1" / "brief.md").read_text()
+        self.assertNotIn("After each append", brief)

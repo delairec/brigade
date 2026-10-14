@@ -1,7 +1,16 @@
 import ast
 from pathlib import Path
 
+from brigade.system.resolve_plugin import (
+    BUILT_IN_ENTRY_POINTS,
+    BUILT_IN_PLUGIN_PACKAGES,
+    CLIENT_ENTRY_POINT,
+    CLIENT_PACKAGES,
+)
+
 PLUGIN_PACKAGES = ("adapters", "collectors", "checks", "outputs")
+KIND_PACKAGES = {"client": CLIENT_PACKAGES, **{kind: (package,) for kind, package in BUILT_IN_PLUGIN_PACKAGES.items()}}
+ENTRY_POINTS = {"client": CLIENT_ENTRY_POINT, **BUILT_IN_ENTRY_POINTS}
 
 
 def _name_module(package_root: Path, module_path: Path) -> list[str]:
@@ -28,21 +37,51 @@ def _imported_names(node: ast.AST, module_parts: list[str], is_package: bool) ->
     return []
 
 
+def _is_within(name: str, package: str) -> bool:
+    return name == package or name.startswith(f"{package}.")
+
+
 def _find_plugin_package(name: str, plugin_packages: list[str]):
-    return next((package for package in plugin_packages if name == package or name.startswith(f"{package}.")), None)
+    return next((package for package in plugin_packages if _is_within(name, package)), None)
+
+
+def _find_kind(name: str):
+    return next(
+        (kind for kind, packages in KIND_PACKAGES.items() if any(_is_within(name, package) for package in packages)),
+        None,
+    )
+
+
+def _answers_entry_point(package_root: Path, name: str, kind: str) -> bool:
+    module_path = package_root.joinpath(*name.split(".")[1:]).with_suffix(".py")
+    if not module_path.is_file():
+        return False
+    tree = ast.parse(module_path.read_text(encoding="utf-8"))
+    return any(isinstance(node, ast.FunctionDef) and node.name == ENTRY_POINTS[kind] for node in tree.body)
+
+
+def _breaks_autonomy(package_root: Path, module_name: str, name: str, plugin_packages: list[str]) -> bool:
+    plugin_package = _find_plugin_package(name, plugin_packages)
+    if plugin_package is None:
+        return False
+    kind = _find_kind(module_name)
+    if kind is None:
+        return plugin_package != _find_plugin_package(module_name, plugin_packages)
+    if _find_kind(name) != kind:
+        return True
+    return name != module_name and _answers_entry_point(package_root, name, kind)
 
 
 def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
     module_parts = _name_module(package_root, module_path)
     is_package = module_path.name == "__init__.py"
     plugin_packages = [f"{package_root.name}.{package}" for package in PLUGIN_PACKAGES]
-    own_package = _find_plugin_package(".".join(module_parts), plugin_packages)
+    module_name = ".".join(module_parts)
     location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
     violations = []
     for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8"))):
         for name in _imported_names(node, module_parts, is_package):
-            plugin_package = _find_plugin_package(name, plugin_packages)
-            if plugin_package is not None and plugin_package != own_package:
+            if _breaks_autonomy(package_root, module_name, name, plugin_packages):
                 violations.append((node.lineno, f"{location}:{node.lineno} imports {name}"))
                 break
     return [violation for _, violation in sorted(violations)]

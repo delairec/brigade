@@ -78,49 +78,48 @@ class FakeLaunchTest(unittest.TestCase):
         )
 
 
-class FakeLaunchOfASegmentResumedFromItsProgressTest(unittest.TestCase):
+class FakeLaunchOfASegmentResumedFromItsBriefTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.recordings = Path(self.root.name) / "recordings"
         self.recordings.mkdir()
         (self.recordings / "builder.json").write_text("{}")
-        self.progress_file = Path(self.root.name) / "progress.md"
 
     def tearDown(self):
         self.root.cleanup()
 
-    def launch(self) -> dict:
+    def launch(self, brief: str) -> dict:
         settings = {"recordings": str(self.recordings)}
-        return answer("launch-argv", {**LAUNCH_REQUEST, "progress_file": str(self.progress_file), "settings": settings})
+        return answer("launch-argv", {**LAUNCH_REQUEST, "brief": brief, "settings": settings})
 
-    def test_should_print_the_resumed_recording_of_the_role_when_the_progress_file_holds_something(self):
+    def test_should_print_the_resumed_recording_of_the_role_on_a_brief_opening_on_the_progress_so_far(self):
         # Arrange
         (self.recordings / "builder.resumed.json").write_text("{}")
-        self.progress_file.write_text("step 1 done\n")
+        brief = "# Progress so far\n\nstep 1 done\n\n# Procedure deliver\n\nDeliver the task B42.\n"
 
         # Act
-        launch = self.launch()
+        launch = self.launch(brief)
 
         # Assert
         self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.resumed.json"])
 
-    def test_should_print_the_recording_of_the_role_on_an_empty_progress_file(self):
+    def test_should_print_the_recording_of_the_role_on_a_brief_carrying_no_progress(self):
         # Arrange
         (self.recordings / "builder.resumed.json").write_text("{}")
-        self.progress_file.write_text("")
+        brief = "# Procedure deliver\n\nDeliver the task B42.\n\n# Brief\n\nQuote # Progress so far as it stands.\n"
 
         # Act
-        launch = self.launch()
+        launch = self.launch(brief)
 
         # Assert
         self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])
 
     def test_should_print_the_recording_of_the_role_when_it_has_no_resumed_recording(self):
         # Arrange
-        self.progress_file.write_text("step 1 done\n")
+        brief = "# Progress so far\n\nstep 1 done\n\n# Procedure deliver\n\nDeliver the task B42.\n"
 
         # Act
-        launch = self.launch()
+        launch = self.launch(brief)
 
         # Assert
         self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])

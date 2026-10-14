@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
 from brigade.errors import BrigadeError
+from brigade.runs.compose_brief import PROGRESS_SECTION
 
 SCHEMA_VERSION = 1
 CLIENT_NAME = "fake"
@@ -23,6 +24,7 @@ STOP_AT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
 TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 RESUMED_RECORDING_SUFFIX = ".resumed.json"
+RESUMED_BRIEF_OPENING = f"# {PROGRESS_SECTION}\n"
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
@@ -66,7 +68,7 @@ def _build_argv(settings: dict, recording: str, soft_limit) -> list[str]:
 def _choose_recording(recordings: str, request: dict) -> str:
     role = request["role"]["name"]
     resumed = Path(recordings) / f"{role}{RESUMED_RECORDING_SUFFIX}"
-    if resumed.exists() and Path(request["progress_file"]).read_text(encoding="utf-8").strip():
+    if resumed.exists() and request["brief"].startswith(RESUMED_BRIEF_OPENING):
         return str(resumed)
     return f"{recordings}/{role}.json"
 

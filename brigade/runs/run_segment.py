@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.runs.ask_progress import ask_progress
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
 from brigade.runs.decide_stop_at import decide_stop_at
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
     BRIEF_FILE,
-    PROGRESS_FILE,
     RESULT_FILE,
     ROLE_FILE,
     SEGMENTS_DIRECTORY,
@@ -66,9 +66,8 @@ class SegmentRecord:
     adapter_failure: str | None
 
 
-def _compose_segment_brief(plan: RunPlan, number: int) -> str:
-    progress_file = plan.run_directory / PROGRESS_FILE
-    progress = None if number == FIRST_SEGMENT else progress_file.read_text(encoding="utf-8")
+def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
+    progress = None if number == FIRST_SEGMENT else ask_progress(plan, "read_document", runtime).text
     return compose_brief(
         BriefParts(
             progress=progress,
@@ -76,7 +75,7 @@ def _compose_segment_brief(plan: RunPlan, number: int) -> str:
             procedure_body=plan.procedure.body,
             arguments=plan.arguments,
             brief=plan.brief,
-            progress_file=progress_file,
+            progress_description=ask_progress(plan, "describe_document", runtime).text,
         )
     )
 
@@ -179,9 +178,9 @@ def _wait_for_client(process, limit: WallLimit, on_poll, stop: StopSignalReceive
 def _run_process(
     plan: RunPlan, number: int, runtime: Runtime, segment_directory: Path, stop: StopSignalReceiver
 ) -> SegmentRecord:
-    brief = _compose_segment_brief(plan, number)
+    brief = _compose_segment_brief(plan, number, runtime)
     write_text_file(segment_directory / BRIEF_FILE, brief)
-    progress_file = str(plan.run_directory / PROGRESS_FILE)
+    progress_file = str(plan.progress_file)
     try:
         launch = _ask_client(
             plan,
