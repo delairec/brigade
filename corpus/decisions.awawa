@@ -2265,6 +2265,10 @@ DECISION BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
 	DESC "every awawa command brigade runs on a project's corpus names PATH as the workspace and"
 		+ "runs there; CORPUS tells whether the project has a corpus, and awawa finds its files"
 		+ "under PATH"
+	DESC "brigade plan record names the root of its detached worktree of PROJECT.MAIN, the same"
+		+ "repository root at the commit the plan is written on, for every check of the plan and"
+		+ "for the write"
+		REF @DECISION.APlanReusingANameOfTheCorpusIsRefusedBeforeAnyWrite
 	DESC "brigade plan context on the request of a project with no CORPUS exits 1 naming the"
 		+ "project, until brigade project add --init-corpus of @TASK.B55 gives such a project its"
 		+ "corpus"
@@ -2348,13 +2352,13 @@ DECISION ThePlanOfAWaveIsWrittenInADetachedWorktreeAndItsBranchCreatedAfterTheCo
 		REF @TASK.B139
 
 DECISION EachEntityOfAPlanGoesToTheCorpusFileAlreadyHoldingItsType
-	TITLE "each entity of a plan goes to the first file of its type lying under the folder"
-		+ "PROJECT.CORPUS names, else to <CORPUS>/<type in lower case>s.awawa"
+	TITLE "each entity of a plan goes to the first file, in path order, of its type lying under the"
+		+ "folder PROJECT.CORPUS names, else to <CORPUS>/<type in lower case>s.awawa"
 	STATUS active
-	DESC "brigade plan record appends each MILESTONE and TASK block at the end of the first file"
-		+ "lying under the folder PROJECT.CORPUS names where awawa status of the project's corpus"
-		+ "finds an entity of that type; a type that folder holds no entity of goes to"
-		+ "milestones.awawa or tasks.awawa under it"
+	DESC "brigade plan record appends each MILESTONE and TASK block at the end of the first file,"
+		+ "in path order, lying under the folder PROJECT.CORPUS names where awawa status of the"
+		+ "corpus PROJECT.MAIN holds finds an entity of that type; a type that folder holds no"
+		+ "entity of goes to milestones.awawa or tasks.awawa under it"
 	DESC "binds @TASK.B139"
 		REF @TASK.B139
 	REJECTED "one new file per plan: it scatters a type across files the user did not choose, where"
@@ -2383,8 +2387,8 @@ DECISION TheRunOfAPlanRecordIsTheDirectoryOfItsProgressFile
 		REF @TASK.B139
 
 DECISION ThePlanIsCheckedAgainstTheFieldsAwawaNewPrintsForEachType
-	TITLE "the types and fields a plan may use are those awawa new TYPE prints on the project's"
-		+ "corpus, the fields of SCHEMA * included"
+	TITLE "the types and fields a plan may use are those awawa new TYPE prints on the corpus"
+		+ "PROJECT.MAIN holds, the fields of SCHEMA * included"
 	STATUS active
 	DESC "brigade plan record runs awawa new <TYPE> <NAME> on the corpus root for each entity of"
 		+ "the plan, once the names the corpus already holds are refused: awawa new exits 1 on a"
@@ -2402,18 +2406,26 @@ DECISION ThePlanIsCheckedAgainstTheFieldsAwawaNewPrintsForEachType
 DECISION APlanReusingANameOfTheCorpusIsRefusedBeforeAnyWrite
 	TITLE "a plan entity whose name the project's corpus already holds is refused before any write"
 	STATUS active
-	DESC "brigade plan record reads awawa status of the project's corpus before any other check of"
-		+ "the plan and exits 1 naming each entity of the plan whose type and name the corpus"
-		+ "already holds, with the file and the line where it sits: @TASK.S2 already exists at"
-		+ "corpus/tasks.awawa:812; nothing is written"
+	DESC "brigade plan record reads awawa status of the corpus PROJECT.MAIN holds, in the detached"
+		+ "worktree the plan is written in, before any other check of the plan and exits 1 naming"
+		+ "each entity of the plan whose type and name the corpus already holds, with the file and"
+		+ "the line where it sits: @TASK.S2 already exists at corpus/tasks.awawa:812; nothing is"
+		+ "written"
 	DESC "binds @TASK.B139"
 		REF @TASK.B139
 	REJECTED "leaving the collision to the lint round: awawa new exits 1 on the name before lint"
 		+ "runs, so the planner reads that the schema does not declare the type, and a collision"
 		+ "lint caught would spend the one lint round of the run on a mistake a read finds before"
 		+ "any write"
+	REJECTED "reading the checkout at PROJECT.PATH: a checkout on a branch behind PROJECT.MAIN"
+		+ "misses a name PROJECT.MAIN holds, and the write fails awawa lint --strict on a duplicate"
+		+ "identity, spending the one lint round of the run; the check of the schema reads the same"
+		+ "corpus for the same reason"
 	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
 		REF @TASK.B139
 	SOURCE "the user's ruling of 2026-10-14 on pull request #121 of the brigade repository, «"
 		+ "option A pour le finding 1 (refuser la collision avant toute écriture), ok pour ta"
 		+ "variante de l'option 2 pour le finding 7 »"
+	SOURCE "the user's ruling of 2026-10-14 on pull request #121 of the brigade repository, « 2:A"
+		+ "», on « lire le corpus de PROJECT.MAIN, là où le plan s'écrit : les collisions sont"
+		+ "toujours vues avant écriture ; list_undeclared, qui a le même défaut, est aligné »"
