@@ -8,6 +8,7 @@ LOCK_DIRECTORY = "locks"
 HEARTBEAT_FILE = "tick.json"
 SCHEMA_FILE = "_schema.awawa"
 PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
+RUN_DIRECTORY_VARIABLE = "BRIGADE_RUN_DIR"
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,7 @@ class Paths:
     home: Path
     executable_search_path: str
     run_progress_file: Path | None = None
+    run_directory: Path | None = None
 
     @property
     def configuration_file(self) -> Path:
@@ -43,10 +45,10 @@ def _resolve_base(variable: str, home_relative_default: str) -> Path:
     return Path.home() / home_relative_default
 
 
-def _resolve_run_progress_file() -> Path | None:
-    progress_file = Path(os.environ.get(PROGRESS_FILE_VARIABLE, ""))
-    if progress_file.is_absolute():
-        return progress_file
+def _resolve_absolute_path(variable: str) -> Path | None:
+    path = Path(os.environ.get(variable, ""))
+    if path.is_absolute():
+        return path
     return None
 
 
@@ -57,5 +59,6 @@ def build_paths() -> Paths:
         cache_root=_resolve_base("XDG_CACHE_HOME", ".cache") / APPLICATION_DIRECTORY,
         home=Path.home(),
         executable_search_path=os.environ.get("PATH", os.defpath),
-        run_progress_file=_resolve_run_progress_file(),
+        run_progress_file=_resolve_absolute_path(PROGRESS_FILE_VARIABLE),
+        run_directory=_resolve_absolute_path(RUN_DIRECTORY_VARIABLE),
     )

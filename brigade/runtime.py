@@ -29,7 +29,7 @@ class Runtime:
     read_clock: Callable[[], datetime]
     entry_point: Path
     trail: TrailWriter
-    resolve_plugin: Callable[[str, str], object]
+    resolve_plugin: Callable[..., object]
 
 
 def _report_nothing(trace: ProcessTrace) -> None:

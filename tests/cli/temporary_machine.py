@@ -38,7 +38,12 @@ class TemporaryMachine:
         return configuration
 
     def run_brigade(
-        self, entry_point: Path, *arguments: str, environment: dict | None = None, request: str | None = None
+        self,
+        entry_point: Path,
+        *arguments: str,
+        environment: dict | None = None,
+        request: str | None = None,
+        cwd: Path | None = None,
     ):
         return ProcessLauncher.run(
             [sys.executable, str(entry_point), *arguments],
@@ -46,6 +51,7 @@ class TemporaryMachine:
             text=True,
             env=environment or self.describe_environment(),
             input=request,
+            cwd=cwd,
             check=False,
         )
 
