@@ -16,6 +16,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.planning.list_name_collisions import list_name_collisions
 from brigade.planning.list_undeclared import list_undeclared
 from brigade.planning.locate_entity_files import locate_entity_files
+from brigade.planning.locate_request_file import locate_request_file
 from brigade.planning.mark_request_planned import ENTITY_TYPE as REQUEST_TYPE
 from brigade.planning.mark_request_planned import mark_request_planned
 from brigade.planning.name_integration_branch import name_integration_branch
@@ -109,7 +110,7 @@ def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, pl
         repository=worktree,
         lock=locate_corpus_lock(runtime.paths.lock_directory, root),
         file_names=file_names,
-        message=message,
+        describe_message=lambda: message,
         rewrite=rewrite,
     )
 
@@ -142,11 +143,6 @@ def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: 
     return milestone, branch
 
 
-def _locate_request_file(runtime: Runtime, name: str) -> str:
-    sites = read_entity_sites(runtime.run_process, runtime.paths.config_root)
-    return next(site.file for site in sites if (site.type, site.name) == (REQUEST_TYPE, name))
-
-
 def _mark_planned(runtime: Runtime, name: str, milestone: str, branch: str) -> None:
     root = runtime.paths.config_root
 
@@ -158,8 +154,8 @@ def _mark_planned(runtime: Runtime, name: str, milestone: str, branch: str) -> N
         CorpusChange(
             repository=root,
             lock=locate_corpus_lock(runtime.paths.lock_directory, root),
-            file_names=(_locate_request_file(runtime, name),),
-            message=f"brigade plan record: @{REQUEST_TYPE}.{name} planned on {branch}",
+            file_names=(locate_request_file(runtime, name),),
+            describe_message=lambda: f"brigade plan record: @{REQUEST_TYPE}.{name} planned on {branch}",
             rewrite=rewrite,
         ),
     )

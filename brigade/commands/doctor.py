@@ -5,6 +5,7 @@ import brigade
 from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
+from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.read_git_version import read_git_version
 from brigade.git.read_upstream_lag import read_upstream_lag
@@ -37,6 +38,7 @@ NO_INSTRUCTIONS = "none configured"
 STEPS_FALLBACK = "the wall-time limit of each run"
 STEP_COUNT_FEATURE = "step_count"
 CHECKOUT_FALLBACK = "git pull in the checkout"
+SCHEMA_FALLBACK = "brigade init replaces it"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
 DETAIL_WIDTH = 36
@@ -254,6 +256,13 @@ def _check_checkout(runtime: Runtime) -> list[dict]:
     return [_create_optional("checkout", "warning", detail, CHECKOUT_FALLBACK)]
 
 
+def _check_schema(runtime: Runtime) -> list[dict]:
+    schema = runtime.paths.schema_file
+    if not schema.exists() or schema.read_bytes() == SHIPPED_SCHEMA.read_bytes():
+        return []
+    return [_create_optional("schema", "warning", f"{schema} differs from the shipped schema", SCHEMA_FALLBACK)]
+
+
 def _check_configuration(reading: Configuration | BrigadeError) -> list[dict]:
     if isinstance(reading, BrigadeError):
         return []
@@ -317,6 +326,7 @@ def doctor(request, runtime: Runtime) -> dict:
             *_check_steps(reading, runtime),
             *_check_configuration(reading),
             *_check_checkout(runtime),
+            *_check_schema(runtime),
         ],
     }
 

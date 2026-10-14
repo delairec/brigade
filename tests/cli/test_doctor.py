@@ -968,3 +968,40 @@ class BrigadeDoctorWithoutGitTest(DoctorTestCase):
                 "fallback": CHECKOUT_FALLBACK,
             },
         )
+
+
+class BrigadeDoctorReportsAnInstalledSchemaDifferingFromTheShippedOneTest(DoctorTestCase):
+    def test_should_report_a_warning_naming_the_installed_schema(self):
+        # Arrange
+        self.write_configuration('client = "fake"\n')
+        schema = self.configuration.parent / "_schema.awawa"
+        schema.write_text("# an older schema\n")
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_BUT_THE_CLIENT, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            {
+                "name": "schema",
+                "kind": "optional",
+                "state": "warning",
+                "detail": f"{schema} differs from the shipped schema",
+                "fallback": "brigade init replaces it",
+            },
+            json.loads(completed.stdout)["items"],
+        )
+
+    def test_should_report_nothing_of_an_installed_schema_equal_to_the_shipped_one(self):
+        # Arrange
+        self.write_configuration('client = "fake"\n')
+        schema = self.configuration.parent / "_schema.awawa"
+        schema.write_bytes((REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl").read_bytes())
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_BUT_THE_CLIENT, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn("schema", [item["name"] for item in json.loads(completed.stdout)["items"]])

@@ -11,3 +11,6 @@ class WaveStarted:
     @classmethod
     def from_document(cls, document: dict) -> "WaveStarted":
         return cls(wave=document["wave"], project=document["project"])
+
+    def to_document(self) -> dict:
+        return {"wave": self.wave, "project": self.project}

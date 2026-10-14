@@ -1,8 +1,8 @@
-from importlib.resources import files
 from pathlib import Path
 from string import Template
 
 from brigade.command import Command
+from brigade.corpus.shipped_data import SHIPPED_DATA, SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
@@ -10,13 +10,13 @@ from brigade.git.read_git_identity import read_git_identity
 from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
-SHIPPED_DATA = files("brigade.corpus") / "data"
 GITIGNORE_FILE = ".gitignore"
 GITIGNORE_CONTENT = "config.toml\n"
 COMMIT_MESSAGE = "brigade init: the operational corpus"
+SCHEMA_COMMIT_MESSAGE = "brigade init: the shipped schema"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
-STATES = ("created", "present", "differs")
+STATES = ("created", "present", "replaced", "differs")
 
 
 def _require_identity(runtime: Runtime) -> None:
@@ -44,17 +44,32 @@ def _render_configuration(runtime: Runtime) -> str:
     return template.substitute(state_root=runtime.paths.state_root, cache_root=runtime.paths.cache_root)
 
 
-def _ensure_file(name: str, path: Path, content: bytes) -> dict:
+def _write_file(path: Path, content: bytes) -> None:
+    try:
+        path.write_bytes(content)
+    except OSError as error:
+        raise CannotWrite(error.filename or path, error) from error
+
+
+def _ensure_file(name: str, path: Path, content: bytes, *, replace_differing: bool) -> dict:
     item = {"name": name, "path": str(path)}
     if not path.exists():
-        try:
-            path.write_bytes(content)
-        except OSError as error:
-            raise CannotWrite(error.filename or path, error) from error
+        _write_file(path, content)
         return {**item, "state": "created"}
     if path.read_bytes() == content:
         return {**item, "state": "present"}
+    if replace_differing:
+        _write_file(path, content)
+        return {**item, "state": "replaced"}
     return {**item, "state": "differs"}
+
+
+def _commit(runtime: Runtime, file_names: tuple[str, ...], message: str) -> None:
+    if file_names:
+        commit_files(
+            runtime.run_process,
+            CommitRequest(repository=runtime.paths.config_root, files=file_names, message=message),
+        )
 
 
 def _render_item(item: dict) -> str:
@@ -94,22 +109,22 @@ def init(request, runtime: Runtime) -> dict:
     repository = _ensure_repository(runtime)
     gitignore = runtime.paths.config_root / GITIGNORE_FILE
     shipped_files = [
-        ("schema", runtime.paths.schema_file, (SHIPPED_DATA / "schema.awawa.tpl").read_bytes()),
+        ("schema", runtime.paths.schema_file, SHIPPED_SCHEMA.read_bytes()),
         (".gitignore", gitignore, GITIGNORE_CONTENT.encode("utf-8")),
         ("config.toml", runtime.paths.configuration_file, _render_configuration(runtime).encode("utf-8")),
     ]
     committed_files = (runtime.paths.schema_file, gitignore)
-    file_items = [_ensure_file(name, path, content) for name, path, content in shipped_files]
-    created_to_commit = tuple(
-        path.name
-        for (_, path, _), item in zip(shipped_files, file_items, strict=True)
-        if path in committed_files and item["state"] == "created"
+    file_items = [
+        _ensure_file(name, path, content, replace_differing=path == runtime.paths.schema_file)
+        for name, path, content in shipped_files
+    ]
+    states = {path: item["state"] for (_, path, _), item in zip(shipped_files, file_items, strict=True)}
+    _commit(runtime, tuple(path.name for path in committed_files if states[path] == "created"), COMMIT_MESSAGE)
+    _commit(
+        runtime,
+        tuple(path.name for path in committed_files if states[path] == "replaced"),
+        SCHEMA_COMMIT_MESSAGE,
     )
-    if created_to_commit:
-        commit_files(
-            runtime.run_process,
-            CommitRequest(repository=runtime.paths.config_root, files=created_to_commit, message=COMMIT_MESSAGE),
-        )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "items": [repository, *file_items]}
 
 

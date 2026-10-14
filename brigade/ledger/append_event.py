@@ -9,6 +9,8 @@ from brigade.ledger.ledger_locations import LEDGER_DIRECTORY, LOCK_FILE
 from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_started import WaveStarted
 from brigade.system.hold_lock import hold_lock
 from brigade.system.paths import Paths
 
@@ -20,7 +22,9 @@ class LedgerEventRefused(BrigadeError):
 
 
 def append_event(
-    paths: Paths, instant: datetime, event: RunFinished | SignalRecorded | ForgeAccountUnavailable | PlanLintFailed
+    paths: Paths,
+    instant: datetime,
+    event: RunFinished | SignalRecorded | ForgeAccountUnavailable | PlanLintFailed | WaveStarted | TaskState,
 ) -> dict:
     if instant.utcoffset() is None:
         raise LedgerEventRefused(f"the instant of the event {event.name} carries no time zone")
