@@ -453,14 +453,17 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC "a subpackage of brigade/ per COMPONENT of the tasks (ledger, registry, corpus, runs,"
 		+ "tick, waves, verify for the pass, studies, intake, recipes, dashboard, roles), created"
 		+ "by the first task of that component, never ahead of it"
-	DESC "brigade/commands/ one module per command line and nothing else, its renderers, request"
-		+ "reader and exit decision underscored in it; brigade/command.py the record type every"
-		+ "command module declares; brigade/cli.py discovers the command modules, builds the parser"
-		+ "from their records through brigade/add_command_parsers.py and keeps the exit mapping;"
-		+ "brigade/launcher.py the floor check; brigade/adapters/clients, forges and schedulers,"
-		+ "brigade/collectors/, brigade/checks/ and brigade/outputs/ the plugins; brigade/system/"
-		+ "the primitives: paths, clock, processes, locks, atomic files, ids, documents;"
-		+ "brigade/git/ the git gateway, as brigade/corpus/ is the awawa one"
+	DESC "brigade/commands/ one module per command line and nothing else; brigade/command.py the"
+		+ "record type every command module declares, which carries the defaults, the request is"
+		+ "the options and the exit code is 0; the shared JSON rendering in"
+		+ "brigade/system/render_json.py; a command module declares only what differs from the"
+		+ "default, its renderers, request reader and exit decision underscored in it;"
+		+ "brigade/cli.py discovers the command modules, builds the parser from their records"
+		+ "through brigade/add_command_parsers.py and keeps the exit mapping; brigade/launcher.py"
+		+ "the floor check; brigade/adapters/clients, forges and schedulers, brigade/collectors/,"
+		+ "brigade/checks/ and brigade/outputs/ the plugins; brigade/system/ the primitives: paths,"
+		+ "clock, processes, locks, atomic files, ids, documents, the JSON rendering; brigade/git/"
+		+ "the git gateway, as brigade/corpus/ is the awawa one"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	DESC "a module exposes one public function named after a verb, no leading underscore, its"
 		+ "helpers underscored, with the constants and frozen dataclasses it declares; its unit"
@@ -513,6 +516,12 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		+ "the user's ruling at its refinement: every function, private ones included, proven by a"
 		+ "guard"
 		REF @TASK.B73
+	SOURCE "DESC 3 amended on the user's ruling of 2026-10-14, « Amender (Recommandé) », to the"
+		+ "question put at the audit @TASK.B153 answers: « Le record Command porte des défauts"
+		+ "(requête = options, sortie 0), un rendu JSON partagé va dans"
+		+ "brigade/system/render_json.py ; un module de commande ne déclare que ce qui diffère du"
+		+ "défaut. DESC 3 réécrit, la décision prend un SOURCE daté d'aujourd'hui. »"
+		REF @TASK.B153
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	TITLE "client, forge, scheduler, collector, check, output and document are plugin kinds"
