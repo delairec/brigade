@@ -124,7 +124,7 @@ class AppendEventOfAnInstantWithATimeZoneTest(AppendEventTestCase):
 class AppendEventOfAnInstantWithNoTimeZoneTest(AppendEventTestCase):
     def test_should_refuse_an_instant_with_no_time_zone_and_write_nothing(self):
         # Arrange
-        naive_instant = datetime(2026, 10, 6, 9, 30)  # noqa: DTZ001 - the naive instant is the input refused
+        naive_instant = datetime(2026, 10, 6, 9, 30)
 
         # Act
         with self.assertRaises(LedgerEventRefused) as refusal:
