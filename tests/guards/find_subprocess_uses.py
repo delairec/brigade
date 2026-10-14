@@ -34,14 +34,14 @@ def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
     for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8"))):
         if not may_import and _imports_subprocess(node):
             findings.append((node.lineno, node.col_offset, f"{location}:{node.lineno} imports subprocess"))
-        for keyword in _shell_keywords(node):
-            findings.append(
-                (
-                    keyword.lineno,
-                    keyword.col_offset,
-                    f"{location}:{keyword.lineno} passes shell={ast.unparse(keyword.value)}",
-                )
+        findings.extend(
+            (
+                keyword.lineno,
+                keyword.col_offset,
+                f"{location}:{keyword.lineno} passes shell={ast.unparse(keyword.value)}",
             )
+            for keyword in _shell_keywords(node)
+        )
     return [violation for _, _, violation in sorted(findings)]
 
 

@@ -19,7 +19,7 @@ MINUTES_PER_HOUR = 60
 STEPS_INDENT = "    "
 
 
-def _resolve_since(since: None | timedelta | date, now: datetime) -> datetime | None:
+def _resolve_since(since: timedelta | date | None, now: datetime) -> datetime | None:
     if since is None:
         return None
     if isinstance(since, timedelta):

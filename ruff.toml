@@ -8,4 +8,8 @@ line-length = 120
 "brigade/python_floor.py" = "py37"
 
 [lint]
-extend-select = ["S", "B", "UP", "C901"]
+extend-select = [
+    "S", "B", "UP", "C901",
+    "I", "C4", "PIE", "RET", "FURB", "RSE", "BLE", "A", "SLF", "TID", "INP", "EXE", "ISC", "PGH", "G", "LOG", "W",
+    "DTZ", "SIM", "PERF", "RUF", "ERA", "T20",
+]

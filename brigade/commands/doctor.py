@@ -141,14 +141,14 @@ def _read_forge_accounts(reading: Configuration | BrigadeError) -> dict:
     return reading.forge_accounts
 
 
-def _read_login_environment(forge, login: str, runtime: Runtime) -> dict | None | ToolNotFound:
+def _read_login_environment(forge, login: str, runtime: Runtime) -> dict | ToolNotFound | None:
     try:
         return ask_login_environment(forge, FORGE_NAME, login, runtime)
     except ToolNotFound as error:
         return error
 
 
-def _check_forge(forge, login: str | None, environment: dict | None | ToolNotFound, runtime: Runtime) -> dict:
+def _check_forge(forge, login: str | None, environment: dict | ToolNotFound | None, runtime: Runtime) -> dict:
     if isinstance(environment, ToolNotFound):
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
     if environment is None:
@@ -173,7 +173,7 @@ def _describe_forge_login(state: str, detail: str) -> dict:
     return _create_optional("forge login", state, detail, FORGE_LOGIN_FALLBACK)
 
 
-def _check_forge_login(login: str, keys: list[str], environment: dict | None | ToolNotFound) -> dict:
+def _check_forge_login(login: str, keys: list[str], environment: dict | ToolNotFound | None) -> dict:
     bound = ", ".join(keys)
     if isinstance(environment, ToolNotFound):
         return _describe_forge_login("warning", f"gh not on PATH for {login}, bound to {bound}")
