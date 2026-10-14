@@ -441,6 +441,33 @@ class BrigadeCollectorsListTest(CollectTestCase):
         )
 
 
+class BrigadeCollectorsListWithoutCollectorDirectoriesTest(CollectTestCase):
+    def test_should_list_the_built_ins_alone(self):
+        # Arrange
+        missing_directory = self.root_path / "missing"
+
+        # Act
+        completed = self.run_brigade(
+            "collectors", "list", "--json", environment=self.describe_environment_with(PATH=str(missing_directory))
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "collectors": [
+                    {"name": "corpus", "source": "built-in"},
+                    {"name": "git-diff-stat", "source": "built-in"},
+                    {"name": "git-log", "source": "built-in"},
+                    {"name": "ledger", "source": "built-in"},
+                    {"name": "worktrees", "source": "built-in"},
+                ],
+            },
+        )
+
+
 class BrigadeCollectGitLogTest(CollectTestCase):
     def setUp(self):
         super().setUp()
