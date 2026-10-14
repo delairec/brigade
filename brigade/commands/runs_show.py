@@ -102,7 +102,7 @@ def runs_show(request, runtime: Runtime) -> dict:
 COMMAND = Command(
     path=("runs", "show"),
     help="print the summary of a run and its segments, and with --log its journal",
-    group_help="list the runs, show one and stop one",
+    group_help="list the runs, show one, stop one and prune them",
     arguments=(
         Argument(("run",)),
         Argument(("--log",), {"action": "store_true", "help": "add the journal of the run, one line per record"}),
