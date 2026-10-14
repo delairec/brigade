@@ -33,7 +33,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def processes_show(request, runtime: Runtime) -> dict:
-    return show_invocation(runtime.paths.state_root, request.id, request.failed)
+    return show_invocation(runtime.paths.state_root, request.id, failed_only=request.failed)
 
 
 COMMAND = Command(

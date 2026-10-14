@@ -112,4 +112,4 @@ class DescribeProgressTest(unittest.TestCase):
         request = describe_progress(plan)
 
         # Assert
-        self.assertIs(request.role_has_shell, False)
+        self.assertFalse(request.role_has_shell)

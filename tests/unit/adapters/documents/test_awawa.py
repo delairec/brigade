@@ -42,7 +42,7 @@ class AwawaDocumentTestCase(unittest.TestCase):
         self.path = Path(directory.name) / "progress.awawa"
         self.runtime = types.SimpleNamespace(run_process=functools.partial(run_process, record_trace=_record_nothing))
 
-    def describe_request(self, role_has_shell: bool = True) -> dict:
+    def describe_request(self, *, role_has_shell: bool = True) -> dict:
         return {
             "schema_version": 1,
             "document": "progress",

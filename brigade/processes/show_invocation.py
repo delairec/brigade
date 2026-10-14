@@ -8,7 +8,7 @@ from brigade.processes.read_trail_records import read_trail_records
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def show_invocation(state_root: Path, invocation_id: str, failed_only: bool) -> dict:
+def show_invocation(state_root: Path, invocation_id: str, *, failed_only: bool) -> dict:
     trail = next((trail for trail in locate_trails(state_root) if trail.id == invocation_id), None)
     if trail is None:
         raise BrigadeError(f"no run, tick or command {invocation_id}")

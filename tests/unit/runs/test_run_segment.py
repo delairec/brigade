@@ -330,6 +330,7 @@ def _create_runtime(root: Path, spawn) -> Runtime:
 
 def _create_plan(
     root: Path,
+    *,
     reads_actions: bool = False,
     client_type: type = ClientDouble,
     reads_transcripts: bool = False,

@@ -21,7 +21,7 @@ class MarkdownDocumentTestCase(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.path = Path(directory.name) / "progress.md"
 
-    def describe_request(self, role_has_shell: bool = True) -> dict:
+    def describe_request(self, *, role_has_shell: bool = True) -> dict:
         return {
             "schema_version": 1,
             "document": "progress",
