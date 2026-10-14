@@ -1,0 +1,22 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@MILESTONE.W2",
+      "--json",
+      "<tmp:0>/plan.awawa"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/plan.awawa": "MILESTONE W1\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS planned\n\nMILESTONE W2\n\tTITLE \"Pay in one click\"\n\tSTATUS planned\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"MILESTONE\", \"name\": \"W2\", \"file\": \"<tmp:0>/plan.awawa\", \"line\": 5, \"status\": \"planned\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Pay in one click\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"planned\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "version": "awawa 2.7.0"
+}

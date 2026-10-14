@@ -2,6 +2,7 @@ from brigade.ledger.constraint_delivered import ConstraintDelivered
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.pattern_ratified import PatternRatified
+from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
@@ -29,6 +30,7 @@ DECLARED_EVENTS = {
         PatternRatified,
         ConstraintDelivered,
         ForgeAccountUnavailable,
+        PlanLintFailed,
     )
 }
 LedgerEvent = (
@@ -43,5 +45,6 @@ LedgerEvent = (
     | PatternRatified
     | ConstraintDelivered
     | ForgeAccountUnavailable
+    | PlanLintFailed
     | UndeclaredEvent
 )

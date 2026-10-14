@@ -79,7 +79,7 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
 
 def run_segments(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
     if plan.disposable_worktree:
-        add_detached_worktree(runtime.run_process, plan.cwd, plan.worktree)
+        add_detached_worktree(runtime.run_process, plan.cwd, plan.worktree, "HEAD")
     try:
         records = _run_with_handovers(plan, runtime, stop)
     finally:
