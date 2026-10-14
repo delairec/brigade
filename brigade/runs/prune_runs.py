@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from pathlib import Path
 
+from brigade.errors import BrigadeError, CannotWrite
 from brigade.ledger.group_runs import group_runs
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runs.describe_run import describe_run
@@ -39,6 +40,21 @@ class _SettledRun:
     directory: Path
 
 
+@dataclass(frozen=True)
+class PruneOutcome:
+    removed: list[dict]
+    skipped: list[dict]
+
+
+@dataclass(frozen=True)
+class _ListedRuns:
+    newest_first: list[_SettledRun]
+    skipped: list[dict]
+
+
+NO_RUN_LISTED = _ListedRuns(newest_first=[], skipped=[])
+
+
 def _list_resumable_runs(state_root: Path) -> frozenset[str]:
     finished_runs = group_runs(read_ledger(state_root).entries)
     return frozenset(run.run for run in finished_runs if run.last.error_class == RESUMED_ERROR_CLASS)
@@ -50,18 +66,23 @@ def _settle(directory: Path, state: str) -> _SettledRun:
     return _SettledRun(run=directory.name, state=state, settled_at=settled_at, directory=directory)
 
 
-def _list_removable_runs(request: PruneRequest) -> list[_SettledRun]:
+def _list_removable_runs(request: PruneRequest) -> _ListedRuns:
     runs_directory = request.paths.state_root / RUNS_DIRECTORY
     if not runs_directory.is_dir():
-        return []
+        return NO_RUN_LISTED
     spared = NO_RESUMABLE_RUN_SPARED if request.resumable else _list_resumable_runs(request.paths.state_root)
-    states = {
-        directory: describe_run(directory)["state"]
-        for directory in runs_directory.iterdir()
-        if (directory / RUN_RECORD_FILE).is_file() and directory.name not in spared
-    }
+    states = {}
+    skipped = []
+    for directory in sorted(runs_directory.iterdir()):
+        if not (directory / RUN_RECORD_FILE).is_file() or directory.name in spared:
+            continue
+        try:
+            states[directory] = describe_run(directory)["state"]
+        except BrigadeError as error:
+            skipped.append({"run": directory.name, "reason": str(error)})
     settled = [_settle(directory, state) for directory, state in states.items() if state != RUNNING]
-    return sorted(settled, key=lambda run: (run.settled_at, run.run), reverse=True)
+    newest_first = sorted(settled, key=lambda run: (run.settled_at, run.run), reverse=True)
+    return _ListedRuns(newest_first=newest_first, skipped=skipped)
 
 
 def _select_removed_runs(request: PruneRequest, newest_first: list[_SettledRun]) -> list[_SettledRun]:
@@ -74,16 +95,40 @@ def _select_removed_runs(request: PruneRequest, newest_first: list[_SettledRun])
     return removed[::-1]
 
 
+def _empty_removed_runs(removed_runs_directory: Path) -> None:
+    if not removed_runs_directory.is_dir():
+        return
+    for entry in removed_runs_directory.iterdir():
+        _delete(entry)
+
+
+def _delete(entry: Path) -> None:
+    try:
+        if entry.is_dir():
+            shutil.rmtree(entry)
+        else:
+            entry.unlink()
+    except OSError as error:
+        raise CannotWrite(entry, error) from error
+
+
 def _remove(run: _SettledRun, removed_runs_directory: Path) -> None:
-    removed_runs_directory.mkdir(parents=True, exist_ok=True)
-    removed_directory = run.directory.rename(removed_runs_directory / run.run)
+    try:
+        removed_runs_directory.mkdir(parents=True, exist_ok=True)
+        removed_directory = run.directory.rename(removed_runs_directory / run.run)
+    except OSError as error:
+        raise CannotWrite(removed_runs_directory, error) from error
     shutil.rmtree(removed_directory)
 
 
-def prune_runs(request: PruneRequest) -> list[dict]:
+def prune_runs(request: PruneRequest) -> PruneOutcome:
+    removed_runs_directory = request.paths.state_root / REMOVED_RUNS_DIRECTORY
     with hold_lock(request.paths.lock_directory / RUNS_LOCK_FILE):
-        removed = _select_removed_runs(request, _list_removable_runs(request))
+        if not request.dry_run:
+            _empty_removed_runs(removed_runs_directory)
+        listed = _list_removable_runs(request)
+        removed = _select_removed_runs(request, listed.newest_first)
         if not request.dry_run:
             for run in removed:
-                _remove(run, request.paths.state_root / REMOVED_RUNS_DIRECTORY)
-    return [{"run": run.run, "state": run.state} for run in removed]
+                _remove(run, removed_runs_directory)
+    return PruneOutcome(removed=[{"run": run.run, "state": run.state} for run in removed], skipped=listed.skipped)

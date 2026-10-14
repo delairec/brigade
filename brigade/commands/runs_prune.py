@@ -1,4 +1,5 @@
 from brigade.command import Argument, Command
+from brigade.runs.describe_skipped_runs import describe_skipped_runs
 from brigade.runs.prune_runs import PruneRequest, prune_runs
 from brigade.runtime import Runtime
 from brigade.system.read_day import read_day
@@ -44,7 +45,17 @@ def runs_prune(request, runtime: Runtime) -> dict:
         resumable=request.resumable,
         dry_run=request.dry_run,
     )
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "dry_run": request.dry_run, "runs": prune_runs(prune)}
+    outcome = prune_runs(prune)
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "dry_run": request.dry_run,
+        "runs": outcome.removed,
+        "skipped": outcome.skipped,
+    }
+
+
+def _describe_diagnostics(document: dict) -> list[str]:
+    return describe_skipped_runs(document["skipped"])
 
 
 COMMAND = Command(
@@ -69,4 +80,5 @@ COMMAND = Command(
     read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
+    describe_diagnostics=_describe_diagnostics,
 )
