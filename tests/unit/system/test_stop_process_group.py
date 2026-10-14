@@ -3,6 +3,7 @@ import subprocess
 import unittest
 
 from brigade.system.stop_process_group import stop_process_group
+from tests.process_launcher import ProcessLauncher
 
 SHORT_GRACE_S = 0.2
 ANY_GRACE_S = 30.0
@@ -10,9 +11,7 @@ ANY_GRACE_S = 30.0
 
 class StopProcessGroupTestCase(unittest.TestCase):
     def start(self, argv: list, start_new_session: bool) -> subprocess.Popen:
-        process = subprocess.Popen(  # noqa: S603 - the test's own command line
-            argv, stdout=subprocess.PIPE, start_new_session=start_new_session
-        )
+        process = ProcessLauncher.start(argv, stdout=subprocess.PIPE, start_new_session=start_new_session)
         self.addCleanup(process.stdout.close)
         self.addCleanup(process.wait)
         self.addCleanup(process.kill)

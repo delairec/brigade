@@ -1,8 +1,9 @@
 import os
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+
+from tests.process_launcher import ProcessLauncher
 
 CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
 
@@ -22,8 +23,8 @@ class BrigadeInstallWhenLinkedIntoADirectoryOnPathTest(unittest.TestCase):
         environment = dict(os.environ, PATH=self.path_directory.name + os.pathsep + os.environ["PATH"])
 
         # Act
-        completed = subprocess.run(
-            ["brigade", "--version"],  # noqa: S607 - the PATH lookup is the behaviour under test
+        completed = ProcessLauncher.run(
+            ["brigade", "--version"],
             capture_output=True,
             text=True,
             cwd=self.unrelated_working_directory.name,

@@ -1,11 +1,11 @@
 import os
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from brigade.git.read_upstream_lag import UpstreamLag, read_upstream_lag
 from tests.integration.run_process_without_trail import run_process_without_trail
+from tests.process_launcher import ProcessLauncher
 
 GIT_ENVIRONMENT = {
     "GIT_AUTHOR_NAME": "brigade tests",
@@ -20,8 +20,8 @@ GIT_ENVIRONMENT = {
 
 
 def run_git(directory: Path, *arguments: str) -> None:
-    subprocess.run(  # noqa: S603 - the test's own command line
-        ["git", *arguments],  # noqa: S607 - git found on the PATH of the test
+    ProcessLauncher.run(
+        ["git", *arguments],
         cwd=directory,
         env={**os.environ, **GIT_ENVIRONMENT},
         capture_output=True,

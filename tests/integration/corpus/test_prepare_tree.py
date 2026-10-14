@@ -1,5 +1,4 @@
 import os
-import subprocess
 import tempfile
 import unittest
 from dataclasses import replace
@@ -9,6 +8,7 @@ from pathlib import Path
 from brigade.corpus.prepare_tree import Tree, TreeRequest, prepare_tree
 from brigade.errors import BrigadeError, CannotWrite
 from tests.integration.run_process_without_trail import run_process_without_trail
+from tests.process_launcher import ProcessLauncher
 
 IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 FIRST_READ = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
@@ -20,8 +20,8 @@ A_DIRECTORY_OF_ANOTHER_OWNER = Path("/")
 
 
 def run_git(repository: Path, *arguments: str) -> str:
-    completed = subprocess.run(  # noqa: S603 - the test's own command line
-        ["git", "-C", str(repository), *arguments],  # noqa: S607 - git found on the PATH of the test
+    completed = ProcessLauncher.run(
+        ["git", "-C", str(repository), *arguments],
         capture_output=True,
         text=True,
         check=True,

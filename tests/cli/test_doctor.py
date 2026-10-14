@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -9,6 +8,7 @@ from pathlib import Path
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.forward_coverage_environment import forward_coverage_environment
+from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
@@ -73,7 +73,7 @@ class DoctorTestCase(unittest.TestCase):
             "BRIGADE_GH_RECORD": str(self.gh_record),
             **forward_coverage_environment(),
         }
-        return subprocess.run(  # noqa: S603 - the test's own command line
+        return ProcessLauncher.run(
             [sys.executable, entry_point, "doctor", *options],
             capture_output=True,
             text=True,
@@ -846,7 +846,7 @@ LAST_ITEM_BEFORE_THE_CHECKOUT = "instructions"
 
 
 def run_git(directory: Path, *arguments: str) -> None:
-    subprocess.run(  # noqa: S603 - the test's own command line
+    ProcessLauncher.run(
         [REAL_GIT, *arguments],
         cwd=directory,
         env={**os.environ, **GIT_ENVIRONMENT},
@@ -918,7 +918,7 @@ class BrigadeDoctorRunFromACloneTest(DoctorTestCase):
     def test_should_report_no_checkout_from_the_zipapp_built_in_the_clone(self):
         # Arrange
         run_git(self.clone, "fetch", "--quiet")
-        subprocess.run([sys.executable, self.clone / "build.py"], check=True)  # noqa: S603 - the test's own command line
+        ProcessLauncher.run([sys.executable, self.clone / "build.py"], check=True)
         zipapp = self.clone / "dist" / "brigade.pyz"
 
         # Act

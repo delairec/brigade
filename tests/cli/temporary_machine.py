@@ -1,9 +1,9 @@
 import os
-import subprocess
 import sys
 from pathlib import Path
 
 from tests.cli.forward_coverage_environment import forward_coverage_environment
+from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
@@ -40,7 +40,7 @@ class TemporaryMachine:
     def run_brigade(
         self, entry_point: Path, *arguments: str, environment: dict | None = None, request: str | None = None
     ):
-        return subprocess.run(  # noqa: S603 - the test's own command line
+        return ProcessLauncher.run(
             [sys.executable, str(entry_point), *arguments],
             capture_output=True,
             text=True,
@@ -53,8 +53,8 @@ class TemporaryMachine:
         return self.run_brigade(CLONE_ENTRY_POINT, "init", *options)
 
     def read_git(self, *arguments: str) -> str:
-        completed = subprocess.run(  # noqa: S603 - the test's own command line
-            ["git", "-C", str(self.corpus), *arguments],  # noqa: S607 - git found on the PATH of the test
+        completed = ProcessLauncher.run(
+            ["git", "-C", str(self.corpus), *arguments],
             capture_output=True,
             text=True,
             check=True,

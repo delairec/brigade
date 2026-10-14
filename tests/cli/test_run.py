@@ -13,6 +13,7 @@ from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RES
 from tests.cli.temporary_instructions import TemporaryInstructions
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT
 from tests.cli.temporary_project import TemporaryProject
+from tests.process_launcher import ProcessLauncher
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
@@ -640,7 +641,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         return started.stdout.strip()
 
     def start_in_the_foreground(self) -> subprocess.Popen:
-        brigade = subprocess.Popen(  # noqa: S603 - the test's own command line
+        brigade = ProcessLauncher.start(
             [sys.executable, str(CLONE_ENTRY_POINT), "run", str(self.procedure), "--slot", "build"]
             + ["--cwd", str(self.workspace), "--json"],
             stdout=subprocess.PIPE,

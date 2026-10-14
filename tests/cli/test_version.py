@@ -1,7 +1,8 @@
 import json
-import subprocess
 import unittest
 from pathlib import Path
+
+from tests.process_launcher import ProcessLauncher
 
 CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
 
@@ -9,9 +10,7 @@ CLONE_ENTRY_POINT = Path(__file__).resolve().parents[2] / "bin" / "brigade"
 class BrigadeVersionTest(unittest.TestCase):
     def test_should_print_the_version(self):
         # Act
-        completed = subprocess.run(  # noqa: S603 - the test's own command line
-            [CLONE_ENTRY_POINT, "--version"], capture_output=True, text=True, check=False
-        )
+        completed = ProcessLauncher.run([CLONE_ENTRY_POINT, "--version"], capture_output=True, text=True, check=False)
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -21,7 +20,7 @@ class BrigadeVersionTest(unittest.TestCase):
 class BrigadeVersionWhenAJsonDocumentIsAskedTest(unittest.TestCase):
     def test_should_print_the_versioned_document(self):
         # Act
-        completed = subprocess.run(  # noqa: S603 - the test's own command line
+        completed = ProcessLauncher.run(
             [CLONE_ENTRY_POINT, "--version", "--json"], capture_output=True, text=True, check=False
         )
 

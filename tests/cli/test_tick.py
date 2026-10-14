@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
+from tests.process_launcher import ProcessLauncher
 
 INSTANT = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
 STOP_WAIT_S = 10
@@ -35,7 +36,7 @@ class TickTestCase(unittest.TestCase):
         fcntl.flock(holder, fcntl.LOCK_EX)
 
     def start_loop(self, *options: str) -> subprocess.Popen:
-        loop = subprocess.Popen(  # noqa: S603 - the test's own command line
+        loop = ProcessLauncher.start(
             [sys.executable, str(CLONE_ENTRY_POINT), "tick", "--loop", *options],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

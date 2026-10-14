@@ -5,6 +5,7 @@ import unittest
 
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
+from tests.process_launcher import ProcessLauncher
 
 NO_TIME = 0.0
 ANY_GRACE_S = 30.0
@@ -25,9 +26,7 @@ def _signal_itself() -> None:
 
 class WaitWithinLimitTestCase(unittest.TestCase):
     def start(self, argv: list, start_new_session: bool) -> subprocess.Popen:
-        process = subprocess.Popen(  # noqa: S603 - the test's own command line
-            argv, stdout=subprocess.PIPE, start_new_session=start_new_session
-        )
+        process = ProcessLauncher.start(argv, stdout=subprocess.PIPE, start_new_session=start_new_session)
         self.addCleanup(process.stdout.close)
         self.addCleanup(process.wait)
         self.addCleanup(process.kill)

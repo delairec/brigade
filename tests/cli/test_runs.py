@@ -10,6 +10,7 @@ from unittest.mock import ANY
 from brigade.runs.record_run_pid import record_run_pid
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
+from tests.process_launcher import ProcessLauncher
 
 UNKNOWN_RUN = "20990101T000000Z-abcdef"
 ACTIONS_RECORDING = (
@@ -89,7 +90,7 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
     def test_should_list_a_run_whose_process_is_gone_without_a_result_as_dead(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
-        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        gone = ProcessLauncher.start(["true"])
         record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
@@ -313,7 +314,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
     def test_should_show_a_dead_run_with_no_segment_and_an_empty_journal(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
-        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        gone = ProcessLauncher.start(["true"])
         record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
@@ -464,7 +465,7 @@ class BrigadeRunJournalOfADetachedRunTest(RunsTestCase):
 
 class RunsFollowTestCase(RunsTestCase):
     def start_follow(self, run_id: str) -> subprocess.Popen:
-        follow = subprocess.Popen(  # noqa: S603 - the test's own command line
+        follow = ProcessLauncher.start(
             [sys.executable, str(CLONE_ENTRY_POINT), "runs", "show", run_id, "--follow"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -609,7 +610,7 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
         self.configure_fake(COUNTING_CLIENT)
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver_to_its_end()
-        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        gone = ProcessLauncher.start(["true"])
         record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
@@ -694,7 +695,7 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
     def test_should_refuse_a_dead_run_naming_the_pid_no_process_holds(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
-        gone = subprocess.Popen(["true"])  # noqa: S607 - true found on the PATH of the test
+        gone = ProcessLauncher.start(["true"])
         record_run_pid(self.runs / run_id, gone.pid)
         gone.wait()
         (self.runs / run_id / "result.json").unlink()
@@ -711,7 +712,7 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
     def test_should_refuse_a_run_whose_pid_holds_a_process_of_another_start_time_and_signal_none(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
-        stranger = subprocess.Popen(["sleep", "120"])  # noqa: S607 - sleep found on the PATH of the test
+        stranger = ProcessLauncher.start(["sleep", "120"])
         self.addCleanup(stranger.wait)
         self.addCleanup(stranger.kill)
         boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
@@ -745,8 +746,8 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
     def test_should_report_a_run_its_signal_left_dead_and_exit_1(self):
         # Arrange
         run_id = self.run_deliver_to_its_end()
-        orphan = subprocess.run(
-            ["sh", "-c", "sleep 120 >/dev/null 2>&1 & echo $!"],  # noqa: S607 - sh found on the PATH of the test
+        orphan = ProcessLauncher.run(
+            ["sh", "-c", "sleep 120 >/dev/null 2>&1 & echo $!"],
             capture_output=True,
             text=True,
             check=True,

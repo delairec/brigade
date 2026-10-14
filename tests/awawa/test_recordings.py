@@ -1,16 +1,16 @@
 import json
-import subprocess
 import unittest
 
 from tests.awawa.provide_awawa import RECORDINGS, provide_awawa
 from tests.awawa.replay_recording import replay_recording
+from tests.process_launcher import ProcessLauncher
 
 
 class TheRecordingsMatchTheAwawaOnThePathTest(unittest.TestCase):
     def setUp(self):
         provide_awawa(self)
-        self.version = subprocess.run(
-            ["awawa", "--version"],  # noqa: S607 - the awawa on the PATH of the test, real or fake
+        self.version = ProcessLauncher.run(
+            ["awawa", "--version"],
             cwd="/",
             capture_output=True,
             text=True,

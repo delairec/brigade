@@ -1,11 +1,11 @@
 import hashlib
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
 from tests.awawa.volatile_value_masker import VolatileValueMasker
+from tests.process_launcher import ProcessLauncher
 
 MISSING_RECORDING_EXIT_CODE = 70
 
@@ -58,7 +58,7 @@ def _name_recording(call: dict) -> str:
 
 def _record(configuration: dict, arguments: list[str], call: dict, files: list[Path], masker) -> dict:
     before = {file: _read_input(file) for file in files}
-    completed = subprocess.run(  # noqa: S603 - the real awawa the recording is made from
+    completed = ProcessLauncher.run(
         [configuration["real_awawa"], *arguments], capture_output=True, text=True, check=False
     )
     recording = {

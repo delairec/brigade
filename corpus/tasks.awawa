@@ -8341,7 +8341,7 @@ TASK B152
 	TITLE "One module of tests/ launches every subprocess of the tests, as brigade/system does for"
 		+ "the code, and the S603 and S607 exemptions of tests/ fall from 57 to one per call of"
 		+ "that module"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tests"
 	ROLE ada
@@ -8350,16 +8350,24 @@ TASK B152
 		+ "tests/ calls subprocess: grep -rln 'subprocess\.\(run\|Popen\)(' tests names that module"
 		+ "alone, tests/guards/test_subprocess_uses.py apart, whose rows quote the call as text;"
 		+ "origin/main at ed63f4a names 30 files"
+		IMPL "tests/guards/test_subprocess_launches.py::def"
+			+ "test_should_find_no_launch_of_a_subprocess_outside_the_process_launcher"
 	SPEC "the S603 and S607 exemptions of tests/ sit in that module alone, one per call of"
 		+ "subprocess it makes, each commented with its cause: grep -rn 'noqa: S60[37]' tests"
 		+ "prints those lines and no other, where origin/main at ed63f4a prints 57 lines in 29"
 		+ "files"
+		IMPL "tests/process_launcher.py::return subprocess.run(argv, check=check, **options)  #"
+			+ "noqa: S603"
 	SPEC "every noqa left in tests/ is one ruff would report without it, its cause in its comment:"
 		+ "ruff check --select RUF100 tests reports no unused noqa"
+		IMPL "tests/process_launcher.py::return subprocess.Popen(argv, **options)  # noqa: S603"
 	SPEC "ruff.toml gains no ignore and no per-file-ignores entry; ruff check . and ruff format"
 		+ "--check . pass in the CI"
+		IMPL "ruff.toml::extend-select = [\"S\", \"B\", \"UP\", \"C901\"]"
 	SPEC "python3 -m unittest passes, 1005 tests on origin/main at ed63f4a, every launch of a test"
 		+ "going through that module"
+		IMPL "tests/process_launcher.py::class ProcessLauncher:"
+	DELIVERED_BY 127
 	RATIONALE "measured on origin/main at ed63f4a on 2026-10-14, grep -rn noqa --include='*.py': 62"
 		+ "exemptions, 57 S603 or S607 in 29 files of tests/, tests/cli 29, tests/integration 14,"
 		+ "tests/awawa 9, tests/unit 5, one DTZ001 in tests/unit, two BLE001 and two S603 in"
