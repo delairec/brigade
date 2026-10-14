@@ -2,7 +2,6 @@
   "call": {
     "arguments": [
       "status",
-      "REQUEST",
       "--json",
       "<tmp:0>/config/brigade"
     ],

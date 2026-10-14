@@ -421,6 +421,16 @@ PLAN_WITH_A_DECISION = (
     '\tTITLE "the cart empties in one click"\n'
     "\tSTATUS active\n"
 )
+PLAN_REUSING_NAMES_OF_THE_CORPUS = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "TASK S2\n"
+    '\tTITLE "Empty the cart"\n'
+    "\tSTATUS todo\n"
+    "\tMILESTONE @MILESTONE.W1\n"
+)
 OPEN_TASKS = 'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS todo\n\tSPEC "a removed item leaves the cart"\n'
 OPEN_DECISIONS = 'DECISION CartLivesInMemory\n\tTITLE "the cart lives in memory"\n\tSTATUS active\n'
 RECORDED_TASKS = (
@@ -525,6 +535,25 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
         # Assert
         self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/backlog.awawa"), RECORDED_TASKS)
 
+    def test_should_commit_the_tasks_under_the_corpus_folder_when_the_file_holding_tasks_lies_outside_it(self):
+        # Arrange
+        self.project.run_git("mv", "corpus/tasks.awawa", "tasks.awawa")
+        self.project.run_git("commit", "--quiet", "--message", "tasks outside the corpus folder")
+
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(
+            self.project.run_git("show", f"{BRANCH}:corpus/tasks.awawa"),
+            "TASK S4\n"
+            '\tTITLE "Empty the cart"\n'
+            "\tSTATUS todo\n"
+            '\tSPEC "one click leaves the cart empty"\n'
+            "\tMILESTONE @MILESTONE.W1\n"
+            "\tAFTER @TASK.S2\n",
+        )
+
     def test_should_mark_the_request_planned_with_its_milestone_and_its_branch(self):
         # Act
         self.run_plan_record(PLAN)
@@ -570,6 +599,27 @@ class BrigadePlanRecordOfAPlanTheSchemaDoesNotDeclareTest(PlanRecordTestCase):
             "brigade plan record: the schema of the corpus of @PROJECT.shop does not declare"
             " the field COLOUR of TASK, the type EPIC\n",
         )
+
+
+class BrigadePlanRecordOfAPlanReusingNamesOfTheCorpusTest(PlanRecordTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.write("corpus/milestones.awawa", RECORDED_MILESTONES)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "--message", "milestone W1")
+
+    def test_should_exit_1_naming_each_entity_and_where_it_sits_before_any_write(self):
+        # Act
+        completed = self.run_plan_record(PLAN_REUSING_NAMES_OF_THE_CORPUS)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(
+            completed.stderr,
+            "brigade plan record: @MILESTONE.W1 already exists at corpus/milestones.awawa:1,"
+            " @TASK.S2 already exists at corpus/tasks.awawa:1\n",
+        )
+        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
 
 
 class BrigadePlanRecordOfAPlanThatIsNotOneMilestoneAndItsTasksTest(PlanRecordTestCase):

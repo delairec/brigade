@@ -1,4 +1,3 @@
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,23 +13,23 @@ from brigade.git.remove_worktree import remove_worktree
 from brigade.ledger.append_event import append_event
 from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.read_ledger import read_ledger
+from brigade.planning.list_name_collisions import list_name_collisions
 from brigade.planning.list_undeclared import list_undeclared
 from brigade.planning.locate_entity_files import locate_entity_files
 from brigade.planning.mark_request_planned import ENTITY_TYPE as REQUEST_TYPE
 from brigade.planning.mark_request_planned import mark_request_planned
 from brigade.planning.name_integration_branch import name_integration_branch
+from brigade.planning.read_entity_sites import read_entity_sites
 from brigade.planning.read_plan import PlanEntity, read_plan
 from brigade.planning.read_planning_request import PlanningRequest
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
-from brigade.system.run_process import ProcessRequest
 
 MILESTONE_TYPE = "MILESTONE"
 TASK_TYPE = "TASK"
 GITHUB_FORGE = "github"
 WORKTREES_DIRECTORY = "plans"
 FILE_SUFFIX = "s.awawa"
-AWAWA_TIMEOUT_S = 30.0
 
 
 @dataclass(frozen=True)
@@ -88,8 +87,8 @@ def _append_blocks(text: str, blocks: list[str]) -> str:
 
 
 def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, plan, message: str) -> CorpusChange:
-    files = locate_entity_files(runtime.run_process, worktree)
     corpus = read_project_field(recording.project, "CORPUS")
+    files = locate_entity_files(read_entity_sites(runtime.run_process, worktree), corpus)
     destinations = [
         files.get(plan_entity.type, f"{corpus}/{plan_entity.type.lower()}{FILE_SUFFIX}") for plan_entity in plan
     ]
@@ -131,14 +130,8 @@ def _write_on_branch(runtime: Runtime, recording: PlanRecording, plan, branch: s
 
 
 def _locate_request_file(runtime: Runtime, name: str) -> str:
-    root = runtime.paths.config_root
-    record = runtime.run_process(
-        ProcessRequest(
-            argv=("awawa", "status", REQUEST_TYPE, "--json", str(root)), cwd=str(root), timeout_s=AWAWA_TIMEOUT_S
-        )
-    )
-    entity = next(entity for entity in json.loads(record.stdout)["entities"] if entity["name"] == name)
-    return (root / entity["file"]).resolve().relative_to(root.resolve()).as_posix()
+    sites = read_entity_sites(runtime.run_process, runtime.paths.config_root)
+    return next(site.file for site in sites if (site.type, site.name) == (REQUEST_TYPE, name))
 
 
 def _mark_planned(runtime: Runtime, name: str, milestone: str, branch: str) -> None:
@@ -165,6 +158,9 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
     _refuse_a_second_round(runtime, name, run)
     root = Path(read_project_field(recording.project, "PATH"))
     plan = read_plan(runtime.run_process, recording.plan_file)
+    collisions = list_name_collisions(read_entity_sites(runtime.run_process, root), plan)
+    if collisions:
+        raise BrigadeError(", ".join(collisions))
     undeclared = list_undeclared(runtime.run_process, root, plan)
     if undeclared:
         raise BrigadeError(
