@@ -2734,6 +2734,6 @@ DECISION WaveShowReadsThePullRequestOfATaskFromItsDeliveredByAtTheBranch
 	RATIONALE "a task's pull request promotes the task in the pull request itself, so the corpus at"
 		+ "the integration branch carries DELIVERED_BY as soon as the pull request merges into it;"
 		+ "one read serves the rows and their pull requests"
-	SOURCE "the run of @TASK.B11 of 2026-10-15, the SPEC naming a pull request column and no source"
-		+ "for it"
+	SOURCE "pull request #137, the run of @TASK.B11 of 2026-10-15, the SPEC naming a pull request"
+		+ "column and no source for it"
 		REF @TASK.B11
