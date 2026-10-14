@@ -8147,6 +8147,13 @@ TASK B151
 		+ "and the directory of the run; this task edits run_segment.py, run_segments.py,"
 		+ "describe_finished.py, show_run.py and describe_run.py and deletes run_result.py"
 		REF @TASK.B106
+	RATIONALE "reset is kept in run.finished, and so in result.json, on the user's ruling in the"
+		+ "review of pull request #123: the first tick after the reset hour reads it to resume a"
+		+ "run a usage limit stopped, SPEC 1 of @TASK.B19, and run 20261013T200635Z-ea3fca failed"
+		+ "on « You've hit your session limit · resets 11:30pm » with nothing to relaunch it;"
+		+ "rejected: dropping reset from result.json because no module of brigade/ reads it today,"
+		+ "which would leave B19 no reset hour to read"
+		REF @TASK.B19
 	SOURCE "the user's ruling of 2026-10-13 on run 20261013T174800Z-cb856f: « A : une seule vérité"
 		+ "(Recommandé) — result.json reprend les chiffres et les raisons de run.finished (steps"
 		+ "comptés dans le transcript, total_steps, durée mesurée, nulls). runs show ajoute les"
@@ -8158,3 +8165,5 @@ TASK B151
 		+ "deux pourraient s'appuyer », and the ruling: « 2 : un seul document (Recommandé) —"
 		+ "result.json est le document run.finished du segment, et le ledger ajoute ce même"
 		+ "document. La forme RunResult disparaît ; runs list et runs show lisent RunFinished. »"
+	SOURCE "the user's ruling on SPEC 3 in the review of pull request #123, thread r4263219476, «"
+		+ "on garde reset »"
