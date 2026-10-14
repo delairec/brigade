@@ -218,6 +218,7 @@ brigade runs list [--json]                       # every run: id, procedure, slo
 brigade runs show <id> [--log] [--json]          # the summary of a run and its segments; --log adds its journal
 brigade runs show <id> --follow                  # the same with --log, then each record as it is written
 brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
+brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
 ```
 
 `brigade run` runs a procedure as a slot through the client adapter. A procedure is a Markdown file whose front matter
@@ -314,6 +315,16 @@ run's only bound, and `brigade run` and `brigade doctor` warn that the budget is
 no tool one by one runs in its unattended mode, and a slot whose capabilities lack `write` then runs in a disposable
 git worktree of the directory's `HEAD`, `runs/<run id>/worktree`, removed after the run.
 
+After `brigade run` writes its result, the finished and dead runs beyond `runs_kept` of `config.toml`, 100 by default,
+are removed, oldest first; a running run and a run the resume after a rate limit takes up are neither removed nor
+counted, and a `runs_kept` that is no integer of 1 or more exits 1 naming the key and the file. `brigade runs prune`
+runs the same removal on demand and prints each run removed: `--keep` replaces `runs_kept` for the call, `--before`
+removes as well every run settled before that day in UTC, `--resumable` removes the runs to resume too, and
+`--dry-run` prints what would go and removes nothing. A removal holds `locks/runs.lock`, first empties
+`runs-removed/` of what an interrupted removal left there, and renames a run out of `runs/` before deleting it, so
+`runs list` meets a whole run or none. A run whose `run.json` or `result.json` cannot be read is skipped, neither
+removed nor counted, and named on stderr; `brigade run` keeps its exit code.
+
 ## Trails
 
 Every subprocess brigade starts appends one JSON line to the trail of the invocation that started it, whatever its
@@ -332,7 +343,7 @@ The `spawned` line of a detached run and the lines of the process it re-executes
 `<instant>` is the UTC compact form, `20261007T120000Z`, of the instant the command or the tick read. At each tick and
 each command, the trails of `ticks/` and `commands/` older than `trail_days` of `config.toml`, 7 by default, are
 removed; a `trail_days` that is no integer of 1 or more keeps every trail, and `brigade doctor` names it. The trail of
-a run goes with its run. A detached run's records are written by the process it re-executes.
+a run goes with its run, removed beyond `runs_kept` as the Runs section says. A detached run's records are written by the process it re-executes.
 
 The trails are read through `brigade processes`, never searched by hand:
 
