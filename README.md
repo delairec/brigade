@@ -128,7 +128,7 @@ brigade runs its agents through a client adapter, selected by the `client` key o
 Claude Code, `fake` for the adapter that replays recorded result documents, or any name `<name>` for which an
 executable `brigade-client-<name>` is on your `PATH`. The table `[clients.<name>]` of `config.toml` holds the settings
 of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays, or `<role>.resumed.json`
-when that file exists and the document plugin answers that the progress of the run holds an entry, `features`, the
+when that file exists and its brief opens on the `Progress so far` section, `features`, the
 comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by
 default), and, for
 tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, `progress`, a text it
