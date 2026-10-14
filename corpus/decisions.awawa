@@ -2461,3 +2461,32 @@ DECISION ATestDoubleIsNamedAfterTheSubjectItImitates
 		+ "brigade repository, « 1:A », option A: « <Sujet>Double accepté pour les doublures : une"
 		+ "DECISION du projet déroge à class_named_after_its_work en la nommant, avec la raison »"
 		REF @TASK.B106
+
+DECISION EveryLaunchOfASubprocessOfTheTestsGoesThroughTheProcessLauncher
+	TITLE "every subprocess of tests/ is launched by tests/process_launcher.py, whose two calls are"
+		+ "the only S603 exemptions of tests/, and a guard refuses a launch anywhere else"
+	STATUS active
+	DESC "ProcessLauncher.run and ProcessLauncher.start of tests/process_launcher.py hold the only"
+		+ "calls of subprocess.run and subprocess.Popen of tests/, each with one noqa S603"
+		+ "commented with its cause; argv, cwd, environment, input and limits come from the caller,"
+		+ "and run takes check as a required keyword"
+	DESC "tests/guards/find_subprocess_launches.py refuses a call of subprocess.run or"
+		+ "subprocess.Popen, through an aliased import too, and a from subprocess import of either,"
+		+ "anywhere in tests/ but that module; the constants, exceptions and types of subprocess"
+		+ "stay free to read"
+	DESC "the guard is the check of SPEC 1 of @TASK.B152: its spec quotes the call as text in its"
+		+ "rows, as tests/guards/test_subprocess_uses.py does, so the grep of that SPEC names both"
+		+ "beside the launcher"
+		REF @TASK.B152
+	DESC "the unused-noqa check of tests/ is ruff check --extend-select RUF100 tests: --select"
+		+ "RUF100 alone enables no other rule and reports every exemption, the two S603 and the"
+		+ "DTZ001 of tests/unit, as unused and non-enabled"
+	REJECTED "brigade/system/run_process.py as the launcher of the tests: it is the code under"
+		+ "test, and its whitelisted environment and its ToolFailure would stand between a test and"
+		+ "the fake awawa or the hook command it launches"
+	RATIONALE "S603 and S607 do not hold the convention alone: S603 spares an argv of literals and"
+		+ "S607 an argv whose first literal is an absolute path, as the two launches of"
+		+ "tests/cli/test_zipapp.py with no exemption showed on ed63f4a; a guard holds it, rule"
+		+ "repository_rule_has_a_guard of the instructions corpus"
+	SOURCE "pull request #127 of the brigade repository, which delivers @TASK.B152 on 2026-10-14"
+		REF @TASK.B152
