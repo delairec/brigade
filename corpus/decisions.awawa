@@ -840,13 +840,18 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	DESC "the refs cache of brigade corpus has its lock,"
 		+ "$XDG_STATE_HOME/brigade/locks/refs-cache.lock: every placing, mark and removal of a"
 		+ "cached tree runs under it"
-	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13, @TASK.B22 and @TASK.B142"
+	DESC "the runs of brigade run have their lock, $XDG_STATE_HOME/brigade/locks/runs.lock: every"
+		+ "removal of a run runs under it, its directory renamed out of runs/ before it is deleted,"
+		+ "so a reader of runs/ meets a whole run or none"
+	DESC "binds @TASK.B04, @TASK.B05, @TASK.B07, @TASK.B08, @TASK.B13, @TASK.B22, @TASK.B60 and"
+		+ "@TASK.B142"
 		REF @TASK.B04
 		REF @TASK.B05
 		REF @TASK.B07
 		REF @TASK.B08
 		REF @TASK.B13
 		REF @TASK.B22
+		REF @TASK.B60
 		REF @TASK.B142
 	REJECTED "locks under $XDG_CACHE_HOME, the Blueprint plan's place: a cache may be deleted at"
 		+ "any time, and a deleted lock file breaks the exclusion"
@@ -863,6 +868,8 @@ DECISION StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "the user's ruling of 2026-10-06 during wave M0, pull request #23 of the brigade"
 		+ "repository"
+	SOURCE "pull request #134 of the brigade repository, delivering @TASK.B60"
+		REF @TASK.B60
 
 DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 	TITLE "every file brigade ships lives in a data/ folder of the component that reads it, under"
@@ -1012,13 +1019,14 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites rules; roles/, collectors/,"
 		+ "checks/ and recipes/ are versioned with it"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
-	DESC "binds @TASK.B02, @TASK.B03, @TASK.B04, @TASK.B06, @TASK.B42 and @TASK.B43"
+	DESC "binds @TASK.B02, @TASK.B03, @TASK.B04, @TASK.B06, @TASK.B42, @TASK.B43 and @TASK.B60"
 		REF @TASK.B02
 		REF @TASK.B03
 		REF @TASK.B04
 		REF @TASK.B06
 		REF @TASK.B42
 		REF @TASK.B43
+		REF @TASK.B60
 	DESC "brigade init creates the operational corpus repository and config.toml only; every writer"
 		+ "creates its directory under $XDG_STATE_HOME/brigade/ or $XDG_CACHE_HOME/brigade/ when it"
 		+ "writes"
@@ -1054,6 +1062,8 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 	SOURCE "the user's rulings of 2026-10-09 at the refinement of B77: the shared names as derived"
 		+ "paths of Paths; config.toml read in the command modules alone, under a guard"
 		REF @TASK.B77
+	SOURCE "pull request #134 of the brigade repository, delivering @TASK.B60"
+		REF @TASK.B60
 
 DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	TITLE "every document brigade writes or reads carries an integer schema_version per kind, an"
@@ -2590,3 +2600,19 @@ DECISION APullRequestOfBrigadesOwnWaveIsReviewedAndItsReviewAnsweredByBrigadeRun
 		+ "« chaque pr devra être relue par une revue via brigade, puis s'il y a des feedbacks, ils"
 		+ "devront être traités ou challengés via un run brigade également »; asked whether it"
 		+ "holds for this project or for every project: « projet »"
+
+DECISION RunsPruneRemovesTheRunsBeyondTheBoundAndThoseSettledBeforeTheDay
+	TITLE "brigade runs prune removes a finished or dead run that lies beyond the bound or was"
+		+ "settled before the day of --before: the union of both"
+	STATUS active
+	DESC "the bound is --keep, else runs_kept of config.toml, its default when the file is absent;"
+		+ "--before adds every run settled before midnight UTC of its day, whatever its rank"
+	DESC "binds @TASK.B60"
+		REF @TASK.B60
+	REJECTED "--before in place of the bound: the call would leave runs/ above runs_kept until the"
+		+ "next run removes the rest"
+	REJECTED "the intersection, a run removed only when beyond the bound and before the day:"
+		+ "--before would spare the old runs under the bound, where it removes them whatever their"
+		+ "number"
+	SOURCE "pull request #134 of the brigade repository, delivering @TASK.B60"
+		REF @TASK.B60

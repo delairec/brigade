@@ -2868,7 +2868,7 @@ TASK B57
 TASK B60
 	TITLE "retention of runs/: after each result written, the runs beyond runs_kept that nothing"
 		+ "will resume are removed, and brigade runs prune removes them on demand"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -2877,19 +2877,33 @@ TASK B60
 		+ "removed, oldest first by the time of result.json or, dead, of run.json; finished and"
 		+ "dead are those of brigade runs list; a spared run is neither removed nor counted;"
 		+ "runs_kept below 1 is an error naming the key and the file"
+		IMPL "brigade/commands/run.py::prune_runs(PruneRequest(paths=runtime.paths,"
+			+ "keep=configuration.runs_kept))"
+		IMPL "brigade/system/read_runs_kept.py::def read_runs_kept("
+		IMPL "brigade/runs/prune_runs.py::def _settle("
 	SPEC "a running run, its pid alive without result.json, is never removed; a run to resume is"
 		+ "spared, read from the ledger: a run whose last run.finished carries error_class"
 		+ "rate_limit, which the resume after a rate limit takes up"
+		IMPL "brigade/runs/prune_runs.py::def _list_resumable_runs("
+		IMPL "brigade/runs/prune_runs.py::if state != RUNNING"
 	SPEC "brigade runs prune [--keep <n>] [--before <date>] [--resumable] [--dry-run] runs the same"
 		+ "removal on demand: --keep replaces runs_kept for the call, --before removes every"
 		+ "finished or dead run older than the date whatever their number, --resumable removes the"
 		+ "runs to resume as well, --dry-run prints what would go and removes nothing; a running"
 		+ "run is never removed; it prints each run removed, text and --json"
+		IMPL "brigade/commands/runs_prune.py::def runs_prune("
+		IMPL "brigade/runs/prune_runs.py::def _select_removed_runs("
 	SPEC "a removal runs under $XDG_STATE_HOME/brigade/locks/runs.lock and renames the directory"
 		+ "out of runs/ before deleting it: brigade runs list meets a whole run or none"
+		IMPL "brigade/runs/prune_runs.py::with hold_lock(request.paths.lock_directory /"
+			+ "RUNS_LOCK_FILE):"
+		IMPL "brigade/runs/prune_runs.py::def _remove("
 	SPEC "tests/cli prove the removal beyond the bound, the running run kept, the dead run removed,"
 		+ "the rate-limited run kept, the bound read from config.toml and each option of brigade"
 		+ "runs prune, through the fake adapter in a temporary state directory"
+		IMPL "tests/cli/test_runs_prune.py::class BrigadeRunBoundsTheRunsTest(RunsPruneTestCase):"
+		IMPL "tests/cli/test_runs_prune.py::class BrigadeRunsPruneTest(RunsPruneTestCase):"
+	DELIVERED_BY 134
 	AFTER @TASK.B06
 	RATIONALE "the refs cache is the one bounded store, refs_cache_mb of @TASK.B08; nothing bounds"
 		+ "runs/, which @TASK.B06 fills with the brief, the role package, stdout, stderr and"
