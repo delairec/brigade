@@ -1,6 +1,5 @@
 import hashlib
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -93,7 +92,7 @@ def main(argv: list[str]) -> int:
     configuration = json.loads(Path(argv[0]).read_text())
     arguments = argv[1:]
     masker = VolatileValueMasker(configuration["temporary_roots"])
-    call, files = _describe_call(arguments, Path(os.getcwd()), masker)
+    call, files = _describe_call(arguments, Path.cwd(), masker)
     if configuration["real_awawa"] is not None:
         recording = _record(configuration, arguments, call, files, masker)
     else:

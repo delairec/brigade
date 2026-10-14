@@ -107,7 +107,7 @@ class PrepareTreeAtABranchOrAShaTest(PrepareTreeTestCase):
         prepare_tree(run_process_without_trail, self.create_request(ref="main"))
 
         # Assert
-        self.assertEqual(os.listdir(self.cache / "app"), [self.sha])
+        self.assertEqual(list((self.cache / "app").iterdir()), [self.cache / "app" / self.sha])
 
     def test_should_read_a_tree_already_in_the_cache_without_extracting_it_again(self):
         # Arrange
@@ -169,7 +169,7 @@ class PrepareTreeOfACommitHoldingALinkOutsideItsTreeTest(PrepareTreeTestCase):
             prepare_tree(run_process_without_trail, self.create_request(ref="main"))
 
         # Assert
-        self.assertEqual(os.listdir(self.cache / "app"), [])
+        self.assertEqual(list((self.cache / "app").iterdir()), [])
 
 
 class PrepareTreeWhenAnotherExtractionWinsTheRaceTest(PrepareTreeTestCase):
@@ -191,8 +191,8 @@ class PrepareTreeWhenAnotherExtractionWinsTheRaceTest(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(
-            ((tree.root / "corpus" / "tasks.awawa").read_text(), os.listdir(self.cache / "app")),
-            ("extracted by the winner\n", [self.sha]),
+            ((tree.root / "corpus" / "tasks.awawa").read_text(), list((self.cache / "app").iterdir())),
+            ("extracted by the winner\n", [self.cache / "app" / self.sha]),
         )
 
 
@@ -284,7 +284,9 @@ class PrepareTreeOverTheCacheBoundTest(PrepareTreeTestCase):
         )
 
         # Assert
-        self.assertEqual(set(os.listdir(self.cache / "app")), {self.sha_a, self.sha_c})
+        self.assertEqual(
+            set((self.cache / "app").iterdir()), {self.cache / "app" / self.sha_a, self.cache / "app" / self.sha_c}
+        )
 
     def test_should_keep_the_tree_being_read_whatever_the_bound(self):
         # Arrange
@@ -299,7 +301,7 @@ class PrepareTreeOverTheCacheBoundTest(PrepareTreeTestCase):
         )
 
         # Assert
-        self.assertEqual(os.listdir(self.cache / "app"), [self.sha_b])
+        self.assertEqual(list((self.cache / "app").iterdir()), [self.cache / "app" / self.sha_b])
 
 
 @unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")

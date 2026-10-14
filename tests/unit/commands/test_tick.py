@@ -94,7 +94,11 @@ class TickLoopTest(unittest.TestCase):
 
         # Assert
         self.assertCountEqual(
-            os.listdir(self.root / "state" / "ticks"), ["20261007T090000Z.jsonl", "20261007T090500Z.jsonl"]
+            (self.root / "state" / "ticks").iterdir(),
+            [
+                self.root / "state" / "ticks" / "20261007T090000Z.jsonl",
+                self.root / "state" / "ticks" / "20261007T090500Z.jsonl",
+            ],
         )
 
 

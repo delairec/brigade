@@ -36,7 +36,7 @@ def _open_input(stdin: str | None) -> Iterator[BinaryIO | int]:
 
 def _open_output(path: Path) -> BinaryIO:
     try:
-        return open(path, "ab")
+        return path.open("ab")
     except OSError as error:
         raise CannotWrite(error.filename or path, error) from error
 

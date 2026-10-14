@@ -11,7 +11,7 @@ def _fill_and_replace(descriptor: int, temporary_name: str, path: Path, content:
             temporary_file.write(content)
             temporary_file.flush()
             os.fsync(temporary_file.fileno())
-        os.replace(temporary_name, path)
+        Path(temporary_name).replace(path)
     except OSError as error:
         raise CannotWrite(path, error) from error
 

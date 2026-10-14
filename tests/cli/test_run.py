@@ -525,7 +525,7 @@ class BrigadeRunWithNoDirectoryGivenTest(RunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["worktree"], os.getcwd())
+        self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["worktree"], str(Path.cwd()))
 
 
 class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):

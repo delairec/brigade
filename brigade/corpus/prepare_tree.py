@@ -111,7 +111,7 @@ def _place_tree(staged_tree: Path, root: Path) -> None:
     if root.is_dir():
         return
     try:
-        os.rename(staged_tree, root)
+        staged_tree.rename(root)
     except OSError as error:
         raise CannotWrite(root, error) from error
 
@@ -124,13 +124,13 @@ def _mark_read(root: Path, now: datetime) -> None:
         raise CannotWrite(root, error) from error
 
 
-def _measure_file(path: str) -> int:
-    status = os.lstat(path)
+def _measure_file(path: Path) -> int:
+    status = path.lstat()
     return status.st_size if stat.S_ISREG(status.st_mode) else NOTHING_MEASURED
 
 
 def _measure_tree(root: Path) -> int:
-    return sum(_measure_file(os.path.join(directory, name)) for directory, _, names in os.walk(root) for name in names)
+    return sum(_measure_file(Path(directory) / name) for directory, _, names in os.walk(root) for name in names)
 
 
 def _list_visible_directories(parent: Path) -> list[Path]:
@@ -151,7 +151,7 @@ def _list_cached_trees(cache: Path) -> list[_CachedTree]:
 def _remove_tree(root: Path) -> None:
     doomed = root.parent / f"{HIDDEN_PREFIX}{root.name}.{uuid.uuid4().hex}"
     try:
-        os.rename(root, doomed)
+        root.rename(doomed)
     except OSError as error:
         raise CannotWrite(root, error) from error
     shutil.rmtree(doomed, ignore_errors=True)

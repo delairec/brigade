@@ -38,7 +38,7 @@ def append_event(
     with hold_lock(paths.lock_directory / LOCK_FILE):
         try:
             ledger_directory.mkdir(parents=True, exist_ok=True)
-            with open(month_file, "a", encoding="utf-8") as ledger_file:
+            with month_file.open("a", encoding="utf-8") as ledger_file:
                 ledger_file.write(line + "\n")
                 ledger_file.flush()
         except OSError as error:

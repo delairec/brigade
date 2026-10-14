@@ -105,8 +105,8 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [sorted(os.listdir(self.machine.state_home / "brigade")), (self.machine.cache_home / "brigade").exists()],
-            [["commands"], False],
+            [list((self.machine.state_home / "brigade").iterdir()), (self.machine.cache_home / "brigade").exists()],
+            [[self.machine.state_home / "brigade" / "commands"], False],
         )
 
     def test_should_create_a_corpus_that_lints_clean(self):
