@@ -11,7 +11,7 @@ from brigade.errors import CannotWrite
 def _open_lock_file(path: Path) -> TextIO:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        return open(path, "a", encoding="utf-8")
+        return path.open("a", encoding="utf-8")
     except OSError as error:
         raise CannotWrite(error.filename or path, error) from error
 

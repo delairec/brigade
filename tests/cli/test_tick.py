@@ -32,7 +32,7 @@ class TickTestCase(unittest.TestCase):
 
     def hold_tick_lock(self) -> None:
         self.lock.parent.mkdir(parents=True)
-        holder = self.enterContext(open(self.lock, "a"))
+        holder = self.enterContext(self.lock.open("a"))
         fcntl.flock(holder, fcntl.LOCK_EX)
 
     def start_loop(self, *options: str) -> subprocess.Popen:
@@ -113,7 +113,7 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
             (completed.returncode, completed.stdout, completed.stderr),
             (0, "", f"brigade tick: another tick holds {self.lock}\n"),
         )
-        self.assertEqual(sorted(os.listdir(self.state)), ["locks"])
+        self.assertEqual(list(self.state.iterdir()), [self.state / "locks"])
 
 
 class BrigadeTickDryRunTest(TickTestCase):

@@ -159,7 +159,9 @@ class BrigadeCorpusUnderACacheBoundTest(CorpusTestCase):
         self.run_corpus("app", "--ref", "main")
 
         # Assert
-        self.assertEqual(os.listdir(self.refs / "app"), [self.project.run_git("rev-parse", "HEAD").strip()])
+        self.assertEqual(
+            list((self.refs / "app").iterdir()), [self.refs / "app" / self.project.run_git("rev-parse", "HEAD").strip()]
+        )
 
 
 class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
@@ -167,7 +169,7 @@ class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
         # Arrange
         lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
         lock_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(lock_file, "a") as held_lock:
+        with lock_file.open("a") as held_lock:
             fcntl.flock(held_lock, fcntl.LOCK_EX)
 
             # Act
@@ -180,7 +182,7 @@ class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
         # Arrange
         self.run_corpus("app", "--ref", "main")
         lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
-        with open(lock_file, "a") as held_lock:
+        with lock_file.open("a") as held_lock:
             fcntl.flock(held_lock, fcntl.LOCK_EX)
 
             # Act

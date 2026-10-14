@@ -606,7 +606,7 @@ class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
         project = self.create_project("app")
         self.run_project("add", str(project.path))
         lock_files = list((self.machine.state_home / "brigade" / "locks").iterdir())
-        with open(lock_files[0], "a") as held_lock:
+        with lock_files[0].open("a") as held_lock:
             fcntl.flock(held_lock, fcntl.LOCK_EX)
 
             # Act

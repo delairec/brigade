@@ -633,7 +633,7 @@ class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
         self.instructions = Path(self.config_home.name) / "instructions"
         self.instructions.mkdir()
         (self.instructions / "_schema.awawa").write_text(INSTRUCTIONS_SCHEMA)
-        self.machine_with_awawa = [GIT, os.path.dirname(shutil.which("awawa")), SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+        self.machine_with_awawa = [GIT, str(Path(shutil.which("awawa")).parent), SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 
     def test_should_report_a_warning_with_its_fallback_when_none_is_configured(self):
         # Arrange

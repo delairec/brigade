@@ -1,23 +1,23 @@
-import os
 import shutil
 import tempfile
 import zipapp
+from pathlib import Path
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = Path(__file__).resolve().parent
 
 
 def build_archive():
-    distribution = os.path.join(ROOT, "dist")
-    os.makedirs(distribution, exist_ok=True)
+    distribution = ROOT / "dist"
+    distribution.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as staging:
         shutil.copytree(
-            os.path.join(ROOT, "brigade"),
-            os.path.join(staging, "brigade"),
+            ROOT / "brigade",
+            Path(staging) / "brigade",
             ignore=shutil.ignore_patterns("__pycache__"),
         )
         zipapp.create_archive(
             staging,
-            target=os.path.join(distribution, "brigade.pyz"),
+            target=distribution / "brigade.pyz",
             interpreter="/usr/bin/env python3",
             main="brigade.launcher:launch",
             compressed=True,

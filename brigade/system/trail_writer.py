@@ -9,7 +9,7 @@ from brigade.system.process_trace import ProcessTrace
 
 def _append_lines(destination: Path, traces: list[ProcessTrace]) -> None:
     try:
-        with open(destination, "a", encoding="utf-8") as trail:
+        with destination.open("a", encoding="utf-8") as trail:
             trail.writelines(f"{json.dumps(trace.to_document())}\n" for trace in traces)
     except OSError as error:
         raise CannotWrite(error.filename or destination, error) from error

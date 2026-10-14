@@ -9,7 +9,7 @@ from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 
 
 def try_lock(path: Path) -> bool:
-    with open(path, "a") as other_holder:
+    with path.open("a") as other_holder:
         try:
             fcntl.flock(other_holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -36,7 +36,7 @@ class HoldLockWithoutWaitingTest(unittest.TestCase):
     def test_should_give_up_at_once_when_another_holds_the_lock(self):
         # Arrange
         self.lock_path.parent.mkdir()
-        other_holder = self.enterContext(open(self.lock_path, "a"))
+        other_holder = self.enterContext(self.lock_path.open("a"))
         fcntl.flock(other_holder, fcntl.LOCK_EX)
 
         # Act

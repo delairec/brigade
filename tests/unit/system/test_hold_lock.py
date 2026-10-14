@@ -9,7 +9,7 @@ from brigade.system.hold_lock import hold_lock
 
 
 def try_lock(path: Path) -> bool:
-    with open(path, "a") as other_holder:
+    with path.open("a") as other_holder:
         try:
             fcntl.flock(other_holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
