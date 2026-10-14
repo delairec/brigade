@@ -6894,16 +6894,21 @@ TASK B111
 
 TASK B112
 	TITLE "the claude-code adapter classifies \"out of usage credits\" as a rate limit"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "adapters"
 	ROLE ada
 	SPEC "parse-result of brigade/adapters/clients/claude_code.py classifies a result whose message"
 		+ "names usage credits run out, \"You're out of usage credits\", error_class rate_limit,"
 		+ "reset null when the message names no hour"
+		IMPL "brigade/adapters/clients/claude_code.py::RATE_LIMIT_PHRASES = (\"limit reached\","
+			+ "\"hit your limit\", \"usage limit\", \"rate limit\", \"out of usage credits\")"
 	SPEC "a unit test of tests/unit/adapters/clients/test_claude_code.py reads a fixture of"
 		+ "tests/unit/adapters/clients/fixtures/ holding the result event of segment 1 of run"
 		+ "20261009T114125Z-b7c554, copied from it, and finds error_class rate_limit and reset null"
+		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
+			+ "test_should_classify_run_b7c554_out_of_usage_credits_as_a_rate_limit_with_no_reset(self):"
+	DELIVERED_BY 120
 	RATIONALE "run 20261009T114125Z-b7c554 failed on \"You're out of usage credits\" and brigade"
 		+ "classified it error_class execution, RATE_LIMIT_PHRASES of"
 		+ "brigade/adapters/clients/claude_code.py, \"limit reached\", \"hit your limit\", \"usage"

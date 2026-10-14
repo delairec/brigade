@@ -255,7 +255,8 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
                 completed = run_stop_hook(stop_at)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout), (0, expected_stdout))
+                self.assertEqual(completed.returncode, 0)
+                self.assertEqual(completed.stdout, expected_stdout)
 
     def test_should_add_no_settings_without_a_stop_at(self):
         # Act
@@ -478,7 +479,19 @@ class ClaudeCodeResultTest(unittest.TestCase):
                 result = parse_claude_output(stdout, exit_code=1)
 
                 # Assert
-                self.assertEqual((result["error_class"], result["reset"]), ("rate_limit", expected_reset))
+                self.assertEqual(result["error_class"], "rate_limit")
+                self.assertEqual(result["reset"], expected_reset)
+
+    def test_should_classify_run_b7c554_out_of_usage_credits_as_a_rate_limit_with_no_reset(self):
+        # Arrange
+        stdout = (FIXTURES / "result-out-of-usage-credits.json").read_text()
+
+        # Act
+        result = parse_claude_output(stdout, exit_code=1)
+
+        # Assert
+        self.assertEqual(result["error_class"], "rate_limit")
+        self.assertIsNone(result["reset"])
 
     def test_should_classify_any_other_error_as_an_execution_failure(self):
         # Arrange
@@ -609,7 +622,8 @@ class ClaudeCodeResultTest(unittest.TestCase):
         result = parse_claude_output(stream)
 
         # Assert
-        self.assertEqual((result["outcome"], result["steps"]), ("done", 5))
+        self.assertEqual(result["outcome"], "done")
+        self.assertEqual(result["steps"], 5)
 
     def test_should_report_a_stream_that_holds_no_result_event(self):
         # Arrange
@@ -854,7 +868,8 @@ class ClaudeCodeEndDeclarationTest(unittest.TestCase):
         result = parse_claude_output(stdout, exit_code=1)
 
         # Assert
-        self.assertEqual((result["outcome"], result["error_class"]), ("failed", "execution"))
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(result["error_class"], "execution")
 
 
 def read_claude_actions(output: str) -> dict:
