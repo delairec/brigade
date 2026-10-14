@@ -444,6 +444,21 @@ RECORDED_TASKS = (
     "\tAFTER @TASK.S2\n"
 )
 RECORDED_MILESTONES = 'MILESTONE W1\n\tTITLE "Empty the cart in one click"\n\tSTATUS planned\n'
+DONE_TASKS = (
+    'TASK S1\n\tTITLE "Add an item to the cart"\n\tSTATUS implemented\n\tSPEC "an item added appears in the cart"\n'
+)
+TASK_SCHEMA_WITH_COLOUR = f"{TASK_SCHEMA}\tFIELD COLOUR string\n"
+PLAN_WITH_A_COLOUR = (
+    "MILESTONE W1\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS planned\n"
+    "\n"
+    "TASK S4\n"
+    '\tTITLE "Empty the cart"\n'
+    "\tSTATUS todo\n"
+    "\tMILESTONE @MILESTONE.W1\n"
+    '\tCOLOUR "red"\n'
+)
 BRANCH = "integration/W1-empty-the-cart-in-one-click"
 RUN = "20261013T174800Z-cb856f"
 ANOTHER_RUN = "20261013T181500Z-4d9e21"
@@ -535,6 +550,20 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
         # Assert
         self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/backlog.awawa"), RECORDED_TASKS)
 
+    def test_should_commit_the_tasks_in_the_first_file_of_the_corpus_folder_holding_tasks(self):
+        # Arrange
+        self.project.run_git("mv", "corpus/tasks.awawa", "corpus/backlog.awawa")
+        self.project.write("corpus/done.awawa", DONE_TASKS)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "--message", "backlog and done")
+
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/backlog.awawa"), RECORDED_TASKS)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/done.awawa"), DONE_TASKS)
+
     def test_should_commit_the_tasks_under_the_corpus_folder_when_the_file_holding_tasks_lies_outside_it(self):
         # Arrange
         self.project.run_git("mv", "corpus/tasks.awawa", "tasks.awawa")
@@ -620,6 +649,50 @@ class BrigadePlanRecordOfAPlanReusingNamesOfTheCorpusTest(PlanRecordTestCase):
             " @TASK.S2 already exists at corpus/tasks.awawa:1\n",
         )
         self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+
+
+class BrigadePlanRecordFromACheckoutBehindTheMainBranchTest(PlanRecordTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.run_git("branch", "feat/s3")
+        self.project.write("corpus/tasks.awawa", f'{OPEN_TASKS}\nTASK S4\n\tTITLE "Empty the cart"\n\tSTATUS todo\n')
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "--message", "task S4")
+        self.project.run_git("switch", "--quiet", "feat/s3")
+
+    def test_should_exit_1_naming_the_entity_the_main_branch_holds_before_any_write(self):
+        # Act
+        completed = self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade plan record: @TASK.S4 already exists at corpus/tasks.awawa:6\n")
+        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+
+    def test_should_spend_no_lint_round(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(list((self.machine.state_home / "brigade" / "ledger").glob("*.jsonl")), [])
+
+
+class BrigadePlanRecordFromACheckoutAheadOfTheMainBranchTest(PlanRecordTestCase):
+    def test_should_exit_1_naming_the_field_the_schema_of_the_main_branch_does_not_declare(self):
+        # Arrange
+        self.project.run_git("switch", "--quiet", "--create", "feat/colour")
+        self.project.write("corpus/_schema.awawa", f"{TASK_SCHEMA_WITH_COLOUR}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}")
+        self.project.run_git("commit", "--quiet", "--all", "--message", "colour of a task")
+
+        # Act
+        completed = self.run_plan_record(PLAN_WITH_A_COLOUR)
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(
+            completed.stderr,
+            "brigade plan record: the schema of the corpus of @PROJECT.shop does not declare the field COLOUR of TASK\n",
+        )
 
 
 class BrigadePlanRecordOfAPlanThatIsNotOneMilestoneAndItsTasksTest(PlanRecordTestCase):

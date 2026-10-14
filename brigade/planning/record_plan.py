@@ -114,10 +114,9 @@ def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, pl
     )
 
 
-def _write_on_branch(runtime: Runtime, recording: PlanRecording, plan, branch: str, run: str | None) -> None:
-    root = Path(read_project_field(recording.project, "PATH"))
-    worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / recording.request.name
-    add_detached_worktree(runtime.run_process, root, worktree, read_project_field(recording.project, "MAIN"))
+def _write_on_branch(
+    runtime: Runtime, recording: PlanRecording, worktree: Path, plan, branch: str, run: str | None
+) -> None:
     try:
         message = f"brigade plan record: {branch}"
         change_corpus_file(runtime.run_process, _build_change(runtime, recording, worktree, plan, message))
@@ -125,8 +124,22 @@ def _write_on_branch(runtime: Runtime, recording: PlanRecording, plan, branch: s
     except CorpusLintFailed:
         append_event(runtime.paths, runtime.now, PlanLintFailed(request=recording.request.name, run=run))
         raise
-    finally:
-        remove_worktree(runtime.run_process, root, worktree)
+
+
+def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: Path, plan) -> tuple[PlanEntity, str]:
+    collisions = list_name_collisions(read_entity_sites(runtime.run_process, worktree), plan)
+    if collisions:
+        raise BrigadeError(", ".join(collisions))
+    undeclared = list_undeclared(runtime.run_process, worktree, plan)
+    if undeclared:
+        raise BrigadeError(
+            f"the schema of the corpus of @PROJECT.{recording.project.name} does not declare {', '.join(undeclared)}"
+        )
+    milestone = _check_plan(plan)
+    branch = name_integration_branch(milestone.entity.name, read_project_field(milestone.entity, "TITLE"))
+    if find_branch(runtime.run_process, worktree, branch):
+        raise BrigadeError(f"the branch {branch} already exists")
+    return milestone, branch
 
 
 def _locate_request_file(runtime: Runtime, name: str) -> str:
@@ -158,19 +171,13 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
     _refuse_a_second_round(runtime, name, run)
     root = Path(read_project_field(recording.project, "PATH"))
     plan = read_plan(runtime.run_process, recording.plan_file)
-    collisions = list_name_collisions(read_entity_sites(runtime.run_process, root), plan)
-    if collisions:
-        raise BrigadeError(", ".join(collisions))
-    undeclared = list_undeclared(runtime.run_process, root, plan)
-    if undeclared:
-        raise BrigadeError(
-            f"the schema of the corpus of @PROJECT.{recording.project.name} does not declare {', '.join(undeclared)}"
-        )
-    milestone = _check_plan(plan)
-    branch = name_integration_branch(milestone.entity.name, read_project_field(milestone.entity, "TITLE"))
-    if find_branch(runtime.run_process, root, branch):
-        raise BrigadeError(f"the branch {branch} already exists")
-    _write_on_branch(runtime, recording, plan, branch, run)
+    worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / name
+    add_detached_worktree(runtime.run_process, root, worktree, read_project_field(recording.project, "MAIN"))
+    try:
+        milestone, branch = _check_against_corpus(runtime, recording, worktree, plan)
+        _write_on_branch(runtime, recording, worktree, plan, branch, run)
+    finally:
+        remove_worktree(runtime.run_process, root, worktree)
     if read_project_field(recording.project, "FORGE") == GITHUB_FORGE:
         push_branch(runtime.run_process, root, branch)
     _mark_planned(runtime, name, milestone.entity.name, branch)
