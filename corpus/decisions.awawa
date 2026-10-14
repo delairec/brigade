@@ -2561,3 +2561,32 @@ DECISION TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses
 	SOURCE "the user's ruling of 2026-10-14 on the T20 exemption of brigade/cli.py, choosing « 4"
 		+ "noqa T201 — conforme à B63 : lex réécrit B154 SPEC 2 en quatre noqa commentés et retire"
 		+ "la dérogation de la DECISION »"
+
+DECISION APullRequestOfBrigadesOwnWaveIsReviewedAndItsReviewAnsweredByBrigadeRuns
+	TITLE "a pull request of a wave of brigade's own tasks is reviewed by a brigade run of the"
+		+ "review slot, and the findings of that review are addressed or challenged by a brigade"
+		+ "run awawa-pr-review-round"
+	STATUS active
+	DESC "every pull request of a wave of brigade's own tasks, the waves of the Bootstrap section"
+		+ "of AGENTS.md, is reviewed by a brigade run of the slot review, pr=<n> its argument,"
+		+ "which posts one COMMENT review with one inline comment per finding"
+	DESC "a review that leaves findings is answered by a brigade run awawa-pr-review-round --slot"
+		+ "build pr=<n>, which addresses or challenges every thread"
+	DESC "neither the review nor the answer to it is done by the session itself or by an Agent call"
+	REJECTED "the session reviewing the pull request, or answering its threads, itself or through"
+		+ "an Agent call: the user ruled that both are brigade runs"
+	REJECTED "the ruling extended to every project, as a POLICY or as a rule of the instructions"
+		+ "corpus: asked whether it holds for this project or for every project, the user answered"
+		+ "« projet »"
+	RATIONALE "@DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate and"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode rule the waves"
+		+ "brigade runs for its users, on an integration branch under POLICY.REVIEW; brigade's own"
+		+ "waves run today as one pull request per task on main, launched by hand from the"
+		+ "Bootstrap section, and this decision carries the same principle, delivered work never"
+		+ "verified by the run that produced it, to those pull requests"
+		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
+	SOURCE "the user's ruling of 2026-10-15, during the wave M1 launched by /awawa-plan-wave-start:"
+		+ "« chaque pr devra être relue par une revue via brigade, puis s'il y a des feedbacks, ils"
+		+ "devront être traités ou challengés via un run brigade également »; asked whether it"
+		+ "holds for this project or for every project: « projet »"
