@@ -2590,3 +2590,19 @@ DECISION APullRequestOfBrigadesOwnWaveIsReviewedAndItsReviewAnsweredByBrigadeRun
 		+ "« chaque pr devra être relue par une revue via brigade, puis s'il y a des feedbacks, ils"
 		+ "devront être traités ou challengés via un run brigade également »; asked whether it"
 		+ "holds for this project or for every project: « projet »"
+
+DECISION CollectWithoutSinceCollectsFromTheBeginning
+	TITLE "brigade collect without --since hands its collector BRIGADE_SINCE 1970-01-01: the"
+		+ "collection runs from the beginning"
+	STATUS active
+	DESC "--since <n>d or <date> narrows a collection; without it BRIGADE_SINCE is 1970-01-01, a"
+		+ "date as the contract of @TASK.B47 requires, and the cache keys that date like any other"
+		REF @TASK.B47
+	REJECTED "a default window such as 7d: a default counted from the clock keys a new cache entry"
+		+ "every day and cuts history a caller never asked to cut"
+	REJECTED "an empty BRIGADE_SINCE: the contract names a date, and every collector would have to"
+		+ "tell the empty value apart"
+	RATIONALE "the task left the default open, writing --since between brackets; the beginning is"
+		+ "the one default that drops nothing and is the same on every day"
+	SOURCE "pull request #136 of the brigade repository, delivering @TASK.B47"
+		REF @TASK.B47
