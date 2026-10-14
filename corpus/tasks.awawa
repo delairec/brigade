@@ -8673,7 +8673,8 @@ TASK B153
 
 TASK B154
 	TITLE "ruff.toml selects the 17 families the code already satisfies and DTZ, SIM, PERF, RUF,"
-		+ "ERA and T20, T20 ignored for brigade/cli.py, and the 14 findings they raise are answered"
+		+ "ERA and T20, T20 exempted on the four prints of brigade/cli.py, and the 14 findings they"
+		+ "raise are answered"
 	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ci"
@@ -8682,9 +8683,10 @@ TASK B154
 		+ "TID, INP, EXE, ISC, PGH, G, LOG, W, DTZ, SIM, PERF, RUF, ERA and T20; ruff check . and"
 		+ "ruff format --check . exit 0 under the ruff requirements-ci.txt pins, in the CI and"
 		+ "locally"
-	SPEC "per-file-ignores of ruff.toml holds one entry, T20 for brigade/cli.py, a comment beside"
-		+ "it naming its cause, the module printing the result of every command; ruff.toml holds no"
-		+ "other ignore"
+	SPEC "the four print calls of brigade/cli.py, lines 101, 103, 105 and 129 on main at c3fcbbd,"
+		+ "each carry a noqa T201 commented with its cause, the module printing the result of every"
+		+ "command, the four T20 exemptions: grep -rn 'noqa: T20' brigade build.py tests prints"
+		+ "those four lines alone, and ruff.toml holds no ignore and no per-file-ignores entry"
 	SPEC "the SIM105, SIM108, PERF401, RUF005 and four RUF036 of main at c3fcbbd are fixed in the"
 		+ "code, no noqa added for them: grep -rn 'noqa: \(SIM\|PERF\|RUF\)' brigade build.py tests"
 		+ "prints nothing"
@@ -8713,6 +8715,9 @@ TASK B154
 	SOURCE "the user's ruling of 2026-10-14, « oui en todo direct, en m1 », on the proposal"
 		+ "@DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses quotes"
 		REF @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses
+	SOURCE "the user's ruling of 2026-10-14 on the T20 exemption of brigade/cli.py, choosing « 4"
+		+ "noqa T201 — conforme à B63 : lex réécrit B154 SPEC 2 en quatre noqa commentés et retire"
+		+ "la dérogation de la DECISION »"
 
 TASK B155
 	TITLE "the 35 PTH findings migrate to pathlib, 9 in brigade/, 7 in build.py and 19 in tests/,"
