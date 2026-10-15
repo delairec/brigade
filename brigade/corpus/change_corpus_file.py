@@ -16,7 +16,7 @@ class CorpusChange:
     repository: Path
     lock: Path
     file_names: tuple[str, ...]
-    message: str
+    describe_message: Callable[[], str]
     rewrite: Callable[[tuple[str, ...]], tuple[str, ...] | None]
 
 
@@ -46,7 +46,8 @@ def _write_checked(
         restore_files(run_process, change.repository, change.file_names)
         raise CorpusLintFailed(f"awawa lint --strict refused the change; the corpus is restored\n{report.output}")
     commit_files(
-        run_process, CommitRequest(repository=change.repository, files=change.file_names, message=change.message)
+        run_process,
+        CommitRequest(repository=change.repository, files=change.file_names, message=change.describe_message()),
     )
 
 

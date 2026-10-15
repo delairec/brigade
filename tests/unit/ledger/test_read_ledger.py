@@ -182,6 +182,16 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                 b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "steps": 40}\n',
                 "lacks the key nulls",
             ),
+            (
+                (
+                    b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "task.state", "wave": "M1",'
+                    b' "task": "S3", "state": "abandoned"}\n'
+                ),
+                (
+                    "the task state abandoned is none of queued, running, pr_open, verifying, verified, merged,"
+                    " changes_requested, fixing, parked, paused:quota"
+                ),
+            ),
         ]
         for content, expected_reason in rows:
             with self.subTest(content=content):

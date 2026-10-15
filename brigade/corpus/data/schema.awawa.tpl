@@ -121,6 +121,8 @@ SCHEMA REQUEST
 		REQUIRED
 	FIELD TEXT string
 		REQUIRED
+	FIELD CREATED_AT string
+		DESC "the UTC instant the request was recorded, YYYY-MM-DDTHH:MM:SSZ"
 	FIELD STATUS planning|planned|running|paused|reporting|delivered|closed|cancelled
 		REQUIRED
 	FIELD MILESTONE string

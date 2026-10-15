@@ -2718,3 +2718,24 @@ DECISION RunsPruneRemovesTheRunsBeyondTheBoundAndThoseSettledBeforeTheDay
 		+ "--before reaches the old runs the bound would keep"
 	SOURCE "pull request #134 of the brigade repository, delivering @TASK.B60"
 		REF @TASK.B60
+
+DECISION WaveShowReadsThePullRequestOfATaskFromItsDeliveredByAtTheBranch
+	TITLE "brigade wave show reads the pull request of a task from its DELIVERED_BY in the corpus"
+		+ "at the wave's BRANCH, and from no ledger event"
+	STATUS active
+	DESC "the pull request column of wave show is the DELIVERED_BY of the TASK as the project's"
+		+ "corpus holds it at BRANCH, through the tree cache of brigade corpus; a task without"
+		+ "DELIVERED_BY shows none"
+	DESC "binds @TASK.B11"
+		REF @TASK.B11
+	REJECTED "a pr field on task.state: the task declares the event with wave, task and state alone"
+	REJECTED "the pr of the last pr.merged event of the task: it names only merged pull requests,"
+		+ "and wave show already reads the corpus at BRANCH for the tasks and their TITLE"
+	RATIONALE "a task's pull request promotes the task in the pull request itself, so the corpus at"
+		+ "the integration branch carries DELIVERED_BY as soon as the pull request merges into it;"
+		+ "one read serves the rows and their pull requests"
+	SOURCE "pull request #137, the run of @TASK.B11 of 2026-10-15, the SPEC naming a pull request"
+		+ "column and no source for it"
+		REF @TASK.B11
+	SOURCE "the user's ratification of 2026-10-15 in the review of pull request #137: DELIVERED_BY"
+		+ "at BRANCH is the one source the corpus carries, with no call to the forge"

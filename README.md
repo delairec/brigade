@@ -3,9 +3,10 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with thirteen commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
-`brigade adapter`, `brigade project`, `brigade ledger`, `brigade roles`, `brigade tick`, `brigade scheduler`,
-`brigade corpus`, `brigade run`, `brigade runs` and `brigade processes`; every other one is a task of the corpus.
+The entry point exists with fifteen commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter`, `brigade project`, `brigade wave`, `brigade plan`, `brigade ledger`, `brigade roles`,
+`brigade tick`, `brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs` and `brigade processes`; every
+other one is a task of the corpus.
 
 ## Install
 
@@ -33,7 +34,9 @@ Below Python 3.11.4, brigade exits non-zero and names the version it needs and t
 awawa 2.7 or later and the probe of the client adapter `config.toml` names are checked, a missing one is a finding and
 the exit code is 1; a user systemd instance, gh
 and the account it is logged in as, awawa-web and the instructions corpus `config.toml` names, `awawa lint --strict`
-clean or not, are optional, each reported with its fallback, a missing one a warning.
+clean or not, are optional, each reported with its fallback, a missing one a warning; so is an installed
+`_schema.awawa` that differs from the shipped one: brigade supports no operational corpus of an older schema,
+throw it away and run `brigade init` again, then register the projects anew.
 
 `brigade init` (or `brigade init --json`) creates the operational corpus in `$XDG_CONFIG_HOME/brigade/`,
 `~/.config/brigade/` by default: a git repository holding `_schema.awawa` and a `.gitignore`, committed with your git
@@ -66,6 +69,29 @@ replaces it. `pause` and `resume` set the status of a project.
 Every write takes the lock of the corpus repository in `$XDG_STATE_HOME/brigade/locks/`, runs `awawa fmt` on
 `projects.awawa` and `awawa lint --strict` on the corpus, then commits; a failing lint restores the file and exits 1.
 These commands need awawa on `PATH`.
+
+## Waves
+
+A wave starts as a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one
+project, in their words. Every command below exits 1 naming `brigade init` until the corpus exists, and prints text
+or, with `--json`, a JSON document.
+
+```
+brigade wave new <project> <text>
+brigade wave start <request>
+brigade wave show <request>
+brigade wave list [--project P]
+```
+
+`wave new` records the request as `<project>_<n>`, `n` one above the highest its project holds, with the UTC instant
+of its creation and the status `planning`, then launches the planner on it detached, `brigade run wave-plan --slot
+plan --project <project> --detach request=<name>`, and prints the request and the run. A project that is not
+registered or is paused exits 1. `wave start` moves a `planned` request to `running` and records `wave.started` in the
+ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
+`brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of
+its milestone read from its branch, each with the last `task.state` of the ledger, `queued` when none, and the pull
+request that delivered it; a request of a project that declares no corpus exits 1. `wave list` prints one row per request, those of one project with `--project`. Every write
+goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
 
 ## Tick and scheduler
 

@@ -10,3 +10,13 @@ class WaveStartedTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(event, WaveStarted(wave="tp/16", project="tidepool"))
+
+    def test_should_write_the_wave_and_its_project(self):
+        # Arrange
+        event = WaveStarted(wave="M1", project="shop")
+
+        # Act
+        document = event.to_document()
+
+        # Assert
+        self.assertEqual(document, {"wave": "M1", "project": "shop"})

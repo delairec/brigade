@@ -1,8 +1,8 @@
-from importlib.resources import files
 from pathlib import Path
 from string import Template
 
 from brigade.command import Command
+from brigade.corpus.shipped_data import SHIPPED_DATA, SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
@@ -10,7 +10,6 @@ from brigade.git.read_git_identity import read_git_identity
 from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
-SHIPPED_DATA = files("brigade.corpus") / "data"
 GITIGNORE_FILE = ".gitignore"
 GITIGNORE_CONTENT = "config.toml\n"
 COMMIT_MESSAGE = "brigade init: the operational corpus"
@@ -94,7 +93,7 @@ def init(request, runtime: Runtime) -> dict:
     repository = _ensure_repository(runtime)
     gitignore = runtime.paths.config_root / GITIGNORE_FILE
     shipped_files = [
-        ("schema", runtime.paths.schema_file, (SHIPPED_DATA / "schema.awawa.tpl").read_bytes()),
+        ("schema", runtime.paths.schema_file, SHIPPED_SCHEMA.read_bytes()),
         (".gitignore", gitignore, GITIGNORE_CONTENT.encode("utf-8")),
         ("config.toml", runtime.paths.configuration_file, _render_configuration(runtime).encode("utf-8")),
     ]

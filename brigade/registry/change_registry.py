@@ -18,7 +18,7 @@ def change_registry(runtime: Runtime, message: str, rewrite: Callable[[str], str
             repository=runtime.paths.config_root,
             lock=locate_corpus_lock(runtime.paths.lock_directory, runtime.paths.config_root),
             file_names=(REGISTRY_FILE,),
-            message=message,
+            describe_message=lambda: message,
             rewrite=rewrite_registry,
         ),
     )

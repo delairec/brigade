@@ -67,6 +67,28 @@ class ReadEntitiesTest(unittest.TestCase):
             ),
         )
 
+    def test_should_read_only_the_entities_meeting_the_condition(self):
+        # Arrange
+        (self.corpus / "projects.awawa").write_text(PROJECTS)
+
+        # Act
+        entities = read_entities(run_process_without_trail, self.corpus, "PROJECT", "MAIN==trunk")
+
+        # Assert
+        self.assertEqual(
+            entities,
+            (
+                Entity(
+                    name="alpha",
+                    fields=(
+                        EntityField(name="PATH", value="/srv/alpha"),
+                        EntityField(name="MAIN", value="trunk"),
+                        EntityField(name="STATUS", value="active"),
+                    ),
+                ),
+            ),
+        )
+
     def test_should_read_none_when_no_entity_has_the_type(self):
         # Act
         entities = read_entities(run_process_without_trail, self.corpus, "PROJECT")
