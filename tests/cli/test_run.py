@@ -354,6 +354,7 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
         )
 
         # Assert
+        self.assertEqual(completed.returncode, 3, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         [finished] = self.read_events("run.finished")
         self.assertEqual(json.loads((run_directory / "segments" / "1" / "result.json").read_text()), finished)

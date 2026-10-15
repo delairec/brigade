@@ -23,6 +23,10 @@ def _render_text(document: dict) -> str:
     )
 
 
+def _describe_skipped_runs(document: dict) -> list[str]:
+    return [f"skipped run {skipped['run']}: {skipped['reason']}" for skipped in document["skipped"]]
+
+
 def _read_request(options):
     return options
 
@@ -32,7 +36,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def runs_list(request, runtime: Runtime) -> dict:
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "runs": list_runs(runtime.paths.state_root)}
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **list_runs(runtime.paths.state_root)}
 
 
 COMMAND = Command(
@@ -43,4 +47,5 @@ COMMAND = Command(
     read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
+    describe_diagnostics=_describe_skipped_runs,
 )

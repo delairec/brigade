@@ -1,16 +1,17 @@
 import json
 import re
-from dataclasses import MISSING, dataclass, fields
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from brigade.ledger.declare_event_shape import declare_event_shape
 from brigade.ledger.declared_events import DECLARED_EVENTS, LEDGER_SCHEMA_VERSION, READABLE_SCHEMA_VERSIONS
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.ledger_locations import LEDGER_DIRECTORY
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.undeclared_event import UndeclaredEvent
 from brigade.ledger.upgrade_run_finished import upgrade_run_finished
-from brigade.system.validate_document import KIND_NAMES, DocumentInvalid, Field, validate_document
+from brigade.system.validate_document import DocumentInvalid, Field, validate_document
 
 MONTH_FILE_NAME = re.compile(r"\d{4}-\d{2}\.jsonl")
 UTC_SUFFIX = "Z"
@@ -20,7 +21,6 @@ ENVELOPE_SHAPE = {
     "ts": Field((str,)),
     "event": Field((str,)),
 }
-DECLARED_FIELD = Field(tuple(KIND_NAMES), nullable=True)
 UPGRADES = {(RunFinished.name, LEDGER_SCHEMA_VERSION): upgrade_run_finished}
 
 
@@ -64,7 +64,7 @@ def _read_event(record: dict):
     upgrade = UPGRADES.get((record["event"], record["schema_version"]))
     if upgrade is not None:
         record = upgrade(record)
-    validate_document(record, {field.name: DECLARED_FIELD for field in fields(kind) if field.default is MISSING})
+    validate_document(record, declare_event_shape(kind))
     return kind.from_document(record)
 
 

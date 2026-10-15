@@ -71,6 +71,7 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
                         "outcome": "done",
                     }
                 ],
+                "skipped": [],
             },
         )
 
@@ -770,40 +771,110 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         )
 
 
-class BrigadeRunsOfARunWhoseResultPrecedesRunFinishedTest(RunsTestCase):
+class BrigadeRunsOfARunWhoseResultIsOfAnOlderShapeTest(RunsTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT)
         self.record("builder", DONE_RESULT)
         self.run_id = self.run_deliver_to_its_end()
-        for result in (
-            self.runs / self.run_id / "result.json",
-            self.runs / self.run_id / "segments" / "1" / "result.json",
-        ):
-            result.write_text(RESULT_OF_SCHEMA_1)
+        self.run_result = self.runs / self.run_id / "result.json"
+        self.segment_result = self.runs / self.run_id / "segments" / "1" / "result.json"
+        self.run_result.write_text(RESULT_OF_SCHEMA_1)
+        self.segment_result.write_text(RESULT_OF_SCHEMA_1)
 
-    def test_should_show_its_outcome_its_message_and_no_steps_nor_duration(self):
+    def test_should_leave_it_out_of_the_list_and_name_it_on_stderr(self):
         # Act
-        completed = self.run_brigade("runs", "show", self.run_id)
+        completed = self.run_brigade("runs", "list")
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            completed.stdout.splitlines()[6:],
-            [
-                "outcome    done",
-                "message    the client finished the task",
-                "",
-                "segment  outcome  steps  duration",
-                "1        done     -      -",
-            ],
+            (completed.returncode, completed.stdout, completed.stderr),
+            (
+                0,
+                "no runs\n",
+                (
+                    f"brigade runs list: skipped run {self.run_id}: {self.run_result} is not a run result:"
+                    " schema_version is 1, not one of 2\n"
+                ),
+            ),
         )
 
-    def test_should_list_it_with_its_outcome(self):
+    def test_should_give_the_run_left_out_and_its_reason_in_the_document(self):
         # Act
         completed = self.run_brigade("runs", "list", "--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        [listed] = json.loads(completed.stdout)["runs"]
-        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "done"))
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "runs": [],
+                "skipped": [
+                    {
+                        "run": self.run_id,
+                        "reason": f"{self.run_result} is not a run result: schema_version is 1, not one of 2",
+                    }
+                ],
+            },
+        )
+
+    def test_should_refuse_to_show_it_naming_the_file_and_its_version(self):
+        # Act
+        completed = self.run_brigade("runs", "show", self.run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (
+                1,
+                "",
+                (
+                    f"brigade runs show: {self.segment_result} is not a segment result:"
+                    " schema_version is 1, not one of 2\n"
+                ),
+            ),
+        )
+
+
+class BrigadeRunsOfAFinishedRunWithoutSegmentsTest(RunsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        self.run_id = self.run_deliver_to_its_end()
+        self.segments = self.runs / self.run_id / "segments"
+        self.rows = [
+            ("segments missing", lambda: None),
+            ("segments empty", self.segments.mkdir),
+        ]
+
+    def test_should_list_it_finished_with_its_outcome(self):
+        for case, leave_segments in self.rows:
+            with self.subTest(case=case):
+                # Arrange
+                shutil.rmtree(self.segments, ignore_errors=True)
+                leave_segments()
+
+                # Act
+                completed = self.run_brigade("runs", "list", "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                [listed] = json.loads(completed.stdout)["runs"]
+                self.assertEqual((listed["state"], listed["outcome"]), ("finished", "done"))
+
+    def test_should_show_its_outcome_and_no_segment(self):
+        for case, leave_segments in self.rows:
+            with self.subTest(case=case):
+                # Arrange
+                shutil.rmtree(self.segments, ignore_errors=True)
+                leave_segments()
+
+                # Act
+                completed = self.run_brigade("runs", "show", self.run_id, "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                document = json.loads(completed.stdout)
+                self.assertEqual((document["run"]["outcome"], document["segments"]), ("done", []))
