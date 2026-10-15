@@ -18,6 +18,10 @@ def _describe_no_diagnostics(document) -> list[str]:
     return []
 
 
+def _select_whole_result(result):
+    return result
+
+
 @dataclass(frozen=True)
 class Command:
     path: tuple[str, ...]
@@ -32,3 +36,4 @@ class Command:
     render_markdown: Callable[[dict], str] | None = None
     accept_extra_argument: Callable[[str], bool] | None = None
     render_passed_stderr: Callable[[object], str] | None = None
+    select_document: Callable[[object], object] = _select_whole_result

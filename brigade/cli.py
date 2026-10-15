@@ -91,9 +91,10 @@ def _run_and_settle_trail(command, options: argparse.Namespace):
 
 
 def _run_command(command, options: argparse.Namespace) -> int:
-    document = _run_and_settle_trail(command, options)
-    for diagnostic in command.describe_diagnostics(document):
+    result = _run_and_settle_trail(command, options)
+    for diagnostic in command.describe_diagnostics(result):
         sys.stderr.write(f"brigade {_name(command)}: {diagnostic}\n")
+    document = command.select_document(result)
     if command.render_passed_stderr is not None:
         sys.stdout.write(command.render_text(document))
         sys.stderr.write(command.render_passed_stderr(document))

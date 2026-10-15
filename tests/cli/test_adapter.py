@@ -12,6 +12,8 @@ CLAUDE_CODE_RESULT = FIXTURES / "claude-code" / "result-success.json"
 CLAUDE_CODE_RESULT_AFTER_NOTIFICATION = FIXTURES / "claude-code" / "result-after-task-notification.json"
 SCRIPTED_CLIENT = str(FIXTURES / "executables" / "client-scripted")
 BROKEN_CLIENT = str(FIXTURES / "executables" / "client-broken")
+TRANSCRIPTS_REQUEST = '{"schema_version": 1, "session_id": "s1", "worktree": "/srv/b42"}'
+ACTIONS_REQUEST = '{"schema_version": 1, "output": ""}'
 
 LAUNCH_REQUEST = (
     '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42.", "session_id": "s1", "stop_at": null,'
@@ -394,6 +396,46 @@ class BrigadeAdapterActionsTest(AdapterTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stderr, "brigade adapter actions: the request on stdin: lacks the key output\n")
+
+
+class BrigadeAdapterOnAMachineBindingASlotToAnotherClientTest(AdapterTestCase):
+    def test_should_state_the_client_it_answers_for_and_the_slot_bound_to_another_client(self):
+        # Arrange
+        self.machine.write_configuration(
+            'client = "claude-code"\n[slot_clients]\nbuild = "claude-code"\nreview = "finishing"\n'
+        )
+        parse_result_request = json.dumps(
+            {"schema_version": 1, "exit_code": 0, "stdout": CLAUDE_CODE_RESULT.read_text(), "stderr": ""}
+        )
+        session_directory = self.machine.home / ".claude" / "projects" / "-srv-b42"
+        session_directory.mkdir(parents=True)
+        (session_directory / "s1.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:00.000Z","message":{"role":"user","content":"Deliver the task B42."}}\n'
+        )
+        rows = [
+            ("probe", None),
+            ("launch-argv", LAUNCH_REQUEST),
+            ("resume-argv", RESUME_REQUEST),
+            ("parse-result", parse_result_request),
+            ("transcripts", TRANSCRIPTS_REQUEST),
+            ("actions", ACTIONS_REQUEST),
+        ]
+        for operation, request in rows:
+            with self.subTest(operation=operation):
+                # Act
+                completed = self.run_adapter(operation, "--json", request=request)
+
+                # Assert
+                self.assertEqual(
+                    (completed.returncode, completed.stderr),
+                    (
+                        0,
+                        (
+                            f"brigade adapter {operation}: answers for claude-code\n"
+                            f"brigade adapter {operation}: slot review runs on finishing\n"
+                        ),
+                    ),
+                )
 
 
 class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):

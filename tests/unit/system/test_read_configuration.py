@@ -37,6 +37,7 @@ class ReadConfigurationWhenEveryKeyIsCommentedOutTest(ReadConfigurationTestCase)
                 slots={},
                 forge_accounts={},
                 forge_attempts=3,
+                slot_clients={},
             ),
         )
 
@@ -62,6 +63,8 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             "[forge_accounts]\n"
             'cli = "octo-bot"\n'
             'build = "octo-builder"\n'
+            "[slot_clients]\n"
+            'review = "vibe"\n'
         )
 
         # Act
@@ -81,6 +84,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
                 slots={"plan": "charlie"},
                 forge_accounts={"cli": "octo-bot", "build": "octo-builder"},
                 forge_attempts=5,
+                slot_clients={"review": "vibe"},
             ),
         )
 
@@ -131,6 +135,17 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
                 "a forge login of the wrong type",
                 "[forge_accounts]\ncli = 1\n",
                 "forge_accounts.cli is an integer, not a string,",
+            ),
+            (
+                "a slot clients table of the wrong type",
+                'slot_clients = "vibe"\n',
+                "slot_clients is a string, not a table,",
+            ),
+            ("an unknown slot clients key", '[slot_clients]\ncook = "vibe"\n', "unknown key slot_clients.cook"),
+            (
+                "a slot client of the wrong type",
+                "[slot_clients]\nreview = 1\n",
+                "slot_clients.review is an integer, not a string,",
             ),
             (
                 "forge attempts of the wrong type",

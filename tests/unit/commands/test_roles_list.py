@@ -8,6 +8,8 @@ class RolesListTextTest(unittest.TestCase):
         # Arrange
         document = {
             "schema_version": 1,
+            "client": None,
+            "slot_clients": {},
             "roles": [{"slot": "plan", "role": "planner", "source": "built-in", "model": None}],
         }
 
@@ -15,4 +17,4 @@ class RolesListTextTest(unittest.TestCase):
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "slot  role     source    model\nplan  planner  built-in  -")
+        self.assertEqual(text, "slot  role     source    model\nplan  planner  built-in  -\nanswers for no client")

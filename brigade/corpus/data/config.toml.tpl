@@ -57,6 +57,11 @@
 # [slots]
 # plan = ""
 
+# The client adapter a slot runs on, in place of the CLIENT of the project and of the client key, one key per slot
+# bound; slots plan, build, review, remediate, rebase, report, triage, rules, explore.
+# [slot_clients]
+# review = ""
+
 # The gh login a slot acts as, or the key cli for the gh calls brigade makes itself: a process of a bound key
 # carries the token gh auth token --user <login> prints, an unbound one acts as gh's active account;
 # keys plan, build, review, remediate, rebase, report, triage, rules, explore and cli.

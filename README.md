@@ -163,6 +163,14 @@ appends as it is to the progress file of the run, in either form, and `interval`
 document is a result and any other line a text; with `transcripts`, it answers the document
 `<session_id>.transcripts.json` of `recordings`.
 
+The table `[slot_clients]` of `config.toml` binds a slot to another client adapter, `review = "vibe"`, one key per
+slot among the nine; a slot it binds runs on that client, any other on the `CLIENT` of its project, else on the
+`client` key. `brigade roles list`, `brigade doctor` and `brigade adapter <operation>` answer for the `client` key and
+name every slot the table binds to another client, `slot <slot> runs on <client>`. `brigade roles list` and `brigade
+adapter` state that key as `answers for <client>`, `brigade adapter` on stderr, its stdout holding the adapter's answer
+alone; `brigade doctor` names it on its `client` line. `brigade roles list` probes the client of each such slot too,
+its model column showing the model that client binds, and exits 1 naming an adapter it finds nowhere.
+
 `brigade adapter <operation>` (or with `--json`) answers one operation of the configured adapter, the request read as
 a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv`, `transcripts` and `actions`. An external adapter
 answers the same operations as `brigade-client-<name> <operation>`, the request on stdin and its answer, a JSON
@@ -258,8 +266,8 @@ The slot resolves to its role as `brigade roles` shows, unless the project given
 `ROLE "slot=name"` binds the slot to the role of that name, sought in the order of resolution; `ROLESET builtin` keeps
 the built-in roles only, `ROLESET corpus` the AGENT entity the table `[slots]` binds then the built-in role, and any
 other `ROLESET` is a directory of role files, relative to the project's `PATH`, whose file declaring the slot comes
-before the built-in role; the machine's `roles/` is skipped whenever a `ROLESET` is given. The project's `CLIENT`
-replaces the client of `config.toml`. The client receives the role, the capabilities the procedure declares that the
+before the built-in role; the machine's `roles/` is skipped whenever a `ROLESET` is given. The client of the run is the
+one `[slot_clients]` binds to its slot, else the project's `CLIENT`, else the `client` key of `config.toml`. The client receives the role, the capabilities the procedure declares that the
 role allows, and a brief made of the procedure, the `key=value` arguments, the text of `--brief` and the progress
 of the run, its path exported to it as `BRIGADE_PROGRESS_FILE`. It runs in `--cwd`, else the project's `PATH`, else the
 current directory.

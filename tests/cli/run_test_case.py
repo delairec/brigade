@@ -38,6 +38,7 @@ TURN_LIMIT_RESULT = {
     "message": "Reached the maximum number of turns",
 }
 COUNTING_CLIENT = 'features = "step_count,tool_grants"\n'
+FINISHING_CLIENT = str(Path(__file__).resolve().parent / "fixtures" / "executables" / "client-finishing")
 FILE_WAIT_S = 20.0
 FILE_POLL_S = 0.05
 NO_SIGNAL = 0
@@ -79,8 +80,12 @@ class RunTestCase(FileWaitingTestCase):
     def record(self, role: str, result: dict) -> None:
         (self.recordings / f"{role}.json").write_text(json.dumps(result))
 
-    def run_brigade(self, *arguments: str):
-        return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments)
+    def run_brigade(self, *arguments: str, path_directories: tuple = ()):
+        environment = {
+            **self.machine.describe_environment(),
+            "PATH": os.pathsep.join([*path_directories, os.environ["PATH"]]),
+        }
+        return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments, environment=environment)
 
     def record_lines(self, role: str, recording: str) -> None:
         (self.recordings / f"{role}.json").write_text(recording)
