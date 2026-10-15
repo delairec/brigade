@@ -5,13 +5,13 @@
       "--json",
       "."
     ],
-    "cwd": "<tmp:0>/cache/brigade/refs/app/7962e20057907bbcd1e0753928594cad30dfcc6d",
+    "cwd": "<tmp:0>/cache/brigade/refs/app/<commit:1>",
     "directories": [
-      "<tmp:0>/cache/brigade/refs/app/7962e20057907bbcd1e0753928594cad30dfcc6d"
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
     ],
     "inputs": {
-      "<tmp:0>/cache/brigade/refs/app/7962e20057907bbcd1e0753928594cad30dfcc6d/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a task\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n",
-      "<tmp:0>/cache/brigade/refs/app/7962e20057907bbcd1e0753928594cad30dfcc6d/corpus/tasks.awawa": "TASK T1\n\tTITLE \"write the app\"\n\tSTATUS todo\n"
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a task\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa": "TASK T1\n\tTITLE \"write the app\"\n\tSTATUS todo\n"
     }
   },
   "outcome": {

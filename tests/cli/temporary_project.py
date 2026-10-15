@@ -2,6 +2,8 @@ from pathlib import Path
 
 from tests.process_launcher import ProcessLauncher
 
+PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
+
 
 class TemporaryProject:
     def __init__(self, path: Path, environment: dict):

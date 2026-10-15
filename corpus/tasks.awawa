@@ -2445,7 +2445,7 @@ TASK B47
 		+ "sources, and each built-in on a fixture repository, awawa replayed from recorded outputs"
 		+ "where it is not on PATH"
 		IMPL "tests/cli/test_collect.py::class CollectTestCase(unittest.TestCase):"
-		IMPL "tests/awawa/recordings/status-8133c699ee6d.json::\"status\","
+		IMPL "tests/awawa/recordings/status-45a565ee88fb.json::\"status\","
 	AFTER @TASK.B05
 	AFTER @TASK.B06
 	AFTER @TASK.B08

@@ -12,7 +12,7 @@ from unittest.mock import ANY
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
-from tests.cli.temporary_project import TemporaryProject
+from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 from tests.process_launcher import ProcessLauncher
 
 INSTANT = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
@@ -182,12 +182,21 @@ TASK_BRANCH = "task/M1-empty-cart/S3"
 class WaveTickTestCase(TickTestCase):
     setup_command = "touch setup-ran"
 
+    def run_tick(self, *options: str):
+        return self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "tick",
+            *options,
+            environment={**self.machine.describe_environment(), **PINNED_COMMIT_DATES},
+        )
+
     def setUp(self):
         super().setUp()
         provide_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
-            Path(self.root.name).resolve() / "projects" / "shop", self.machine.describe_environment()
+            Path(self.root.name).resolve() / "projects" / "shop",
+            {**self.machine.describe_environment(), **PINNED_COMMIT_DATES},
         )
         self.project.write("corpus/_schema.awawa", PROJECT_SCHEMA)
         self.project.write("corpus/tasks.awawa", MAIN_TASKS)

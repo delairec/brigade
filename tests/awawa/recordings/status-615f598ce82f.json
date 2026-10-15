@@ -1,0 +1,29 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "TASK",
+      "--where",
+      "MILESTONE==@MILESTONE.M1",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running\n\t\tREQUIRED\n\nSCHEMA OPEN_QUESTION\n\tDESC \"a fact left undecided\"\n\tFIELD STATUS open|closed\n\t\tREQUIRED\n\tFIELD BLOCKS @TASK\n\t\tREPEATABLE\n\t\tCONVERSE BLOCKED_BY\n\tWHEN STATUS closed\n\t\tGATE suppressed\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/milestones.awawa": "MILESTONE M1\n\tTITLE \"Empty cart\"\n\tSTATUS running\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/questions.awawa": "OPEN_QUESTION Undecided\n\tSTATUS open\n\tBLOCKS @TASK.S5\n\nOPEN_QUESTION Ruled\n\tSTATUS closed\n\tBLOCKS @TASK.S6\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": "TASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS implemented\n\nTASK S3\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\tAFTER @TASK.S2\n\nTASK S4\n\tTITLE \"Confirm before emptying the cart\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\tAFTER @TASK.S3\n\nTASK S5\n\tTITLE \"Undo the emptying\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\nTASK S6\n\tTITLE \"Count the emptied carts\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"closed\", \"implemented\", \"open\", \"running\", \"todo\"], \"types\": [{\"type\": \"MILESTONE\", \"counts\": {\"closed\": 0, \"implemented\": 0, \"open\": 0, \"running\": 1, \"todo\": 0}, \"unset\": 0, \"total\": 1}, {\"type\": \"OPEN_QUESTION\", \"counts\": {\"closed\": 1, \"implemented\": 0, \"open\": 1, \"running\": 0, \"todo\": 0}, \"unset\": 0, \"total\": 2}, {\"type\": \"SCHEMA\", \"counts\": {\"closed\": 0, \"implemented\": 0, \"open\": 0, \"running\": 0, \"todo\": 0}, \"unset\": 3, \"total\": 3}, {\"type\": \"TASK\", \"counts\": {\"closed\": 0, \"implemented\": 1, \"open\": 0, \"running\": 0, \"todo\": 4}, \"unset\": 0, \"total\": 5}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"TASK\", \"name\": \"S3\", \"target\": \"@TASK.S3\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 5, \"status\": \"todo\", \"incoming\": 1, \"incoming_by\": []}, {\"type\": \"TASK\", \"name\": \"S4\", \"target\": \"@TASK.S4\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 11, \"status\": \"todo\", \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"TASK\", \"name\": \"S5\", \"target\": \"@TASK.S5\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 17, \"status\": \"todo\", \"incoming\": 1, \"incoming_by\": [{\"converse\": \"BLOCKED_BY\", \"count\": 1}]}, {\"type\": \"TASK\", \"name\": \"S6\", \"target\": \"@TASK.S6\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 22, \"status\": \"todo\", \"incoming\": 1, \"incoming_by\": [{\"converse\": \"BLOCKED_BY\", \"count\": 1}]}], \"references\": {\"sites\": 8, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 4, \"entities\": 11}}\n"
+  },
+  "version": "awawa 2.7.0"
+}
