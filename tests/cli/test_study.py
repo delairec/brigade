@@ -703,6 +703,12 @@ class StudyOutputTestCase(StudyRunTestCase):
             output,
         )
 
+    def replace_pushed_commit(self, remote: TemporaryProject, branch: str) -> None:
+        commit_of_an_earlier_second = remote.run_git(
+            "commit-tree", f"{branch}^{{tree}}", "-p", f"{branch}^", "-m", "the answer of an earlier second"
+        ).strip()
+        remote.run_git("update-ref", f"refs/heads/{branch}", commit_of_an_earlier_second)
+
     def run_output(self) -> dict:
         completed = self.machine.run_brigade(
             CLONE_ENTRY_POINT, "study", "run", "trees", "--json", environment=self.environment
@@ -778,13 +784,14 @@ class BrigadeStudyFileOutputTest(StudyOutputTestCase):
             f"# ANSWER trees_{run_id.replace('-', '_')}\n\n- STUDY: trees\n- RUN: {run_id}\n- COLLECTED: shell\n",
         )
 
-    def test_should_resume_a_study_parked_once_its_branch_was_created(self):
+    def test_should_resume_a_study_parked_once_its_branch_was_pushed(self):
         # Arrange
         flag = Path(self.root.name) / "forge-reachable"
         install_executable(self.tools / "gh", REFUSING_GH.format(flag=flag))
-        self.add_forge_project()
+        remote = self.add_forge_project()
         self.record_study("file:studies/{run}.md", "--project", "atelier")
-        self.run_output()
+        parked_run = self.run_output()["run"]
+        self.replace_pushed_commit(remote, f"brigade/study-trees-{parked_run}")
         flag.write_text("")
 
         # Act

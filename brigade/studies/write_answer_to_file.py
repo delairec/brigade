@@ -1,6 +1,6 @@
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
-from brigade.git.push_branch import push_branch
+from brigade.git.force_push_branch import force_push_branch
 from brigade.git.read_main_branch import read_main_branch
 from brigade.git.remove_worktree import remove_worktree
 from brigade.git.reset_branch import reset_branch
@@ -23,7 +23,7 @@ def _open_pull_request(
     if project.forge is None:
         return NO_PULL_REQUEST
     checkout = context.run_directory / CHECKOUT_DIRECTORY
-    push_branch(context.runtime.run_process, checkout, branch)
+    force_push_branch(context.runtime.run_process, checkout, branch)
     forge = context.equipment.resolve_forge(project.forge)
     pull_request = forge.open_pull_request(
         {
