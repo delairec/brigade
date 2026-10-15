@@ -21,6 +21,8 @@ SIDECAR_SCHEMA_VERSION = 1
 COMPLETE_EXIT_CODE = 0
 STDERR_TAIL_LINES = 20
 NO_REASON = ""
+CACHE_DECLARATION = "cache"
+NOT_CACHED = False
 
 
 @dataclass(frozen=True)
@@ -66,14 +68,12 @@ def _compute_cache_key(collector, inputs: CollectorInputs, cache_input) -> str:
     return hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest()
 
 
-def _collect_afresh(collector, request: CollectionRequest, key: str, entry: Path, runtime: Runtime) -> None:
+def _collect_afresh(collector, request: CollectionRequest, key: str, runtime: Runtime) -> dict:
     inputs = request.inputs
     answer = collector.collect(create_collector_environment(inputs), runtime, request.configuration)
-    document = _read_answer(collector.name, answer)
-    write_json_atomically(entry / DOCUMENT_FILE, document)
-    write_json_atomically(
-        entry / SIDECAR_FILE,
-        {
+    return {
+        DOCUMENT_FILE: _read_answer(collector.name, answer),
+        SIDECAR_FILE: {
             "schema_version": SIDECAR_SCHEMA_VERSION,
             "collector": collector.name,
             "command": collector.command,
@@ -83,7 +83,12 @@ def _collect_afresh(collector, request: CollectionRequest, key: str, entry: Path
             "exit_code": answer.exit_code,
             "cache_key": key,
         },
-    )
+    }
+
+
+def _write_files(place: Path, files: dict) -> None:
+    for file_name, content in files.items():
+        write_json_atomically(place / file_name, content)
 
 
 def _place(entry: Path, name: str, run_directory: Path | None) -> Path:
@@ -101,7 +106,12 @@ def collect_document(collector, request: CollectionRequest, runtime: Runtime) ->
     entry = runtime.paths.cache_root / CACHE_DIRECTORY / collector.name / key
     cached = not request.refresh and (entry / DOCUMENT_FILE).is_file()
     if not cached:
-        _collect_afresh(collector, request, key, entry, runtime)
+        files = _collect_afresh(collector, request, key, runtime)
+        if not files[DOCUMENT_FILE].get(CACHE_DECLARATION, NOT_CACHED):
+            place = (runtime.paths.run_directory or runtime.paths.state_root) / RUN_DIRECTORY / collector.name
+            _write_files(place, files)
+            return Collection(document_path=place / DOCUMENT_FILE, document=files[DOCUMENT_FILE], cached=False)
+        _write_files(entry, files)
     place = _place(entry, collector.name, runtime.paths.run_directory)
     document = json.loads((place / DOCUMENT_FILE).read_text(encoding="utf-8"))
     return Collection(document_path=place / DOCUMENT_FILE, document=document, cached=cached)

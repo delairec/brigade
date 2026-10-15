@@ -9,6 +9,7 @@ SHAPE = {
     "argv": Field(kinds=(list,), items=Field(kinds=(str,)), non_empty=True),
     "usage": Field(kinds=(dict,), nullable=True, fields={"input_tokens": Field(kinds=(int,))}),
     "content": Field(kinds=(str, list)),
+    "retried": Field(kinds=(bool,), optional=True),
 }
 
 
@@ -106,6 +107,19 @@ class ValidateDocumentWhenTheDocumentDepartsFromItsShapeTest(unittest.TestCase):
                 "a value of none of its kinds",
                 {"schema_version": 1, "outcome": "done", "steps": 1, "argv": ["claude"], "usage": None, "content": 7},
                 "content is an integer, not a string or a list",
+            ),
+            (
+                "a wrong value for an optional key",
+                {
+                    "schema_version": 1,
+                    "outcome": "done",
+                    "steps": 1,
+                    "argv": ["claude"],
+                    "usage": None,
+                    "content": "",
+                    "retried": "yes",
+                },
+                "retried is a string, not a boolean",
             ),
         ]
         for case, document, expected_message in rows:

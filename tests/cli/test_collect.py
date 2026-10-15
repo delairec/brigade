@@ -16,9 +16,20 @@ SECOND_DAY = "2026-10-02T09:00:00Z"
 ECHO_COLLECTOR = (
     "#!/bin/sh\n"
     'echo ran >> "$BRIGADE_PROJECT_PATH/.brigade/echo-runs"\n'
-    'printf \'{"schema_version": 1, "collector": "echo", "collected_at": "2026-10-15T08:00:00Z",'
+    'printf \'{"schema_version": 1, "collector": "echo", "collected_at": "2026-10-15T08:00:00Z", "cache": true,'
     ' "summary": {"project": "%s", "since": "%s", "parameters": %s}, "items": []}\\n\''
     ' "$BRIGADE_PROJECT_PATH" "$BRIGADE_SINCE" "$BRIGADE_PARAMS"\n'
+)
+FRESH_COLLECTOR = (
+    "#!/bin/sh\n"
+    'echo ran >> "$BRIGADE_PROJECT_PATH/.brigade/fresh-runs"\n'
+    'echo \'{"schema_version": 1, "collector": "fresh", "collected_at": "2026-10-15T08:00:00Z",'
+    ' "summary": {"origin": "project"}, "items": []}\'\n'
+)
+MISDECLARED_COLLECTOR = (
+    "#!/bin/sh\n"
+    'echo \'{"schema_version": 1, "collector": "misdeclared", "collected_at": "2026-10-15T08:00:00Z",'
+    ' "cache": "yes", "summary": {}, "items": []}\'\n'
 )
 MACHINE_COLLECTOR = (
     "#!/bin/sh\n"
@@ -170,6 +181,7 @@ class BrigadeCollectOfAProjectCollectorTest(CollectTestCase):
                 "schema_version": 1,
                 "collector": "echo",
                 "collected_at": "2026-10-15T08:00:00Z",
+                "cache": True,
                 "summary": {"project": str(self.project.path), "since": "2026-10-01", "parameters": {"window": "week"}},
                 "items": [],
             },
@@ -273,6 +285,79 @@ class BrigadeCollectFromTheCacheTest(CollectTestCase):
 
         # Assert
         self.assertEqual(json.loads(completed.stdout)["cached"], False)
+
+
+class BrigadeCollectOfACollectorDeclaringNoCacheTest(CollectTestCase):
+    def setUp(self):
+        super().setUp()
+        install_executable(self.project_collectors / "fresh", FRESH_COLLECTOR)
+        self.run_directory = self.root_path / "runs" / "20261015T080000Z-a00001"
+        self.run_directory.mkdir(parents=True)
+
+    def test_should_collect_afresh_on_every_call(self):
+        # Arrange
+        self.run_collect("fresh")
+
+        # Act
+        completed = self.run_collect("fresh", "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["cached"], False)
+        self.assertEqual((self.project.path / ".brigade" / "fresh-runs").read_text(), "ran\nran\n")
+
+    def test_should_collect_afresh_on_every_call_inside_a_run(self):
+        # Arrange
+        inside_the_run = self.describe_environment_with(BRIGADE_RUN_DIR=str(self.run_directory))
+        self.run_collect("fresh", environment=inside_the_run)
+
+        # Act
+        completed = self.run_collect("fresh", "--json", environment=inside_the_run)
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["cached"], False)
+        self.assertEqual((self.project.path / ".brigade" / "fresh-runs").read_text(), "ran\nran\n")
+
+    def test_should_leave_nothing_in_the_cache(self):
+        # Act
+        self.run_collect("fresh")
+
+        # Assert
+        self.assertEqual(self.cache.exists(), False)
+
+    def test_should_write_the_document_under_the_state_directory_outside_a_run(self):
+        # Act
+        completed = self.run_collect("fresh", "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["document"],
+            str(self.machine.state_home / "brigade" / "collect" / "fresh" / "document.json"),
+        )
+
+    def test_should_write_the_document_under_the_run_directory_inside_a_run(self):
+        # Act
+        completed = self.run_collect(
+            "fresh", "--json", environment=self.describe_environment_with(BRIGADE_RUN_DIR=str(self.run_directory))
+        )
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["document"], str(self.run_directory / "collect" / "fresh" / "document.json")
+        )
+
+    def test_should_refuse_a_cache_declaration_that_is_no_boolean(self):
+        # Arrange
+        install_executable(self.project_collectors / "misdeclared", MISDECLARED_COLLECTOR)
+
+        # Act
+        completed = self.run_collect("misdeclared")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(
+            completed.stderr,
+            "brigade collect: collector misdeclared exited 0: its document cache is a string, not a boolean\n",
+        )
 
 
 class BrigadeCollectOfAFailingCollectorTest(CollectTestCase):
@@ -710,7 +795,7 @@ class BrigadeCollectLedgerTest(CollectTestCase):
         self.assertEqual(json.loads(completed.stdout)["summary"]["events"], {"custom.signal": 2, "run.finished": 2})
 
 
-class BuiltInCollectorsLaunchNoModelTest(CollectTestCase):
+class BuiltInCollectorsTestCase(CollectTestCase):
     def setUp(self):
         super().setUp()
         self.project.write("corpus/_schema.awawa", SCHEMA)
@@ -720,6 +805,25 @@ class BuiltInCollectorsLaunchNoModelTest(CollectTestCase):
         self.register_project()
         self.ledger.parent.mkdir(parents=True)
         self.ledger.write_text(LEDGER_LINES)
+
+
+class BuiltInCollectorsDeclareTheCacheTest(BuiltInCollectorsTestCase):
+    def test_should_answer_a_second_call_from_the_cache(self):
+        for collector in ["git-log", "git-diff-stat", "worktrees", "corpus", "ledger"]:
+            with self.subTest(collector=collector):
+                # Arrange
+                self.run_collect(collector)
+
+                # Act
+                completed = self.run_collect(collector, "--json")
+
+                # Assert
+                self.assertEqual(json.loads(completed.stdout)["cached"], True)
+
+
+class BuiltInCollectorsLaunchNoModelTest(BuiltInCollectorsTestCase):
+    def setUp(self):
+        super().setUp()
         self.tools = self.root_path / "tools"
         self.tools.mkdir()
         (self.tools / "git").symlink_to(shutil.which("git"))
