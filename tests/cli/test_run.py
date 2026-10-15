@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 from tests.awawa.provide_awawa import provide_awawa
-from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
+from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FINISHING_CLIENT, TURN_LIMIT_RESULT, RunTestCase
 from tests.cli.temporary_instructions import TemporaryInstructions
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT
 from tests.cli.temporary_project import TemporaryProject
@@ -1380,7 +1380,16 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         )
 
     def run_slot(self, slot: str = "build"):
-        return self.run_brigade("run", str(self.procedure), "--slot", slot, "--project", "shop", "--json")
+        return self.run_brigade(
+            "run",
+            str(self.procedure),
+            "--slot",
+            slot,
+            "--project",
+            "shop",
+            "--json",
+            path_directories=(FINISHING_CLIENT,),
+        )
 
     def test_should_record_the_project_of_the_run(self):
         # Arrange
@@ -1418,6 +1427,18 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["client"], "fake")
+
+    def test_should_run_with_the_client_the_slot_clients_table_binds_over_the_client_the_project_names(self):
+        # Arrange
+        self.configure_fake(f'{COUNTING_CLIENT}[slot_clients]\nbuild = "finishing"\n')
+        self.register('CLIENT "fake"')
+
+        # Act
+        completed = self.run_slot()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["client"], "finishing")
 
     def test_should_bind_the_slot_to_the_role_the_project_names(self):
         # Arrange
@@ -2048,3 +2069,97 @@ class BrigadeRunProgressFormTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         brief = (self.runs / RUN_ID / "segments" / "1" / "brief.md").read_text()
         self.assertNotIn("After each append", brief)
+
+
+class BrigadeRunOfASlotTheSlotClientsTableBindsTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.record("reviewer", DONE_RESULT)
+
+    def run_slot(self, slot: str):
+        return self.run_brigade(
+            "run",
+            str(self.procedure),
+            "--slot",
+            slot,
+            "--cwd",
+            str(self.workspace),
+            "--json",
+            path_directories=(FINISHING_CLIENT,),
+        )
+
+    def test_should_run_the_bound_slot_on_its_client(self):
+        # Arrange
+        self.configure_fake(f'{COUNTING_CLIENT}[slot_clients]\nbuild = "finishing"\n')
+
+        # Act
+        completed = self.run_slot("build")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["client"], "finishing")
+
+    def test_should_run_a_slot_the_table_leaves_unbound_on_the_client_key(self):
+        # Arrange
+        self.configure_fake(f'{COUNTING_CLIENT}[slot_clients]\nbuild = "finishing"\n')
+
+        # Act
+        completed = self.run_slot("review")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["client"], "fake")
+
+    def test_should_name_the_client_of_the_slot_in_the_record_of_the_run(self):
+        # Arrange
+        self.configure_fake(f'{COUNTING_CLIENT}[slot_clients]\nbuild = "finishing"\n')
+
+        # Act
+        completed = self.run_slot("build")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["client"], "finishing")
+
+    def test_should_name_the_client_of_the_slot_in_the_finished_run_of_the_ledger(self):
+        # Arrange
+        self.configure_fake(f'{COUNTING_CLIENT}[slot_clients]\nbuild = "finishing"\n')
+
+        # Act
+        completed = self.run_slot("build")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["client"], "finishing")
+
+    def test_should_exit_1_naming_the_key_and_the_file_of_a_table_off_its_shape(self):
+        # Arrange
+        rows = [
+            (
+                "a slot outside the nine",
+                "",
+                '[slot_clients]\ndeploy = "finishing"\n',
+                "unknown key slot_clients.deploy",
+            ),
+            (
+                "a value that is no string",
+                "",
+                "[slot_clients]\nbuild = 1\n",
+                "slot_clients.build is an integer, not a string,",
+            ),
+            ("a key that is no table", 'slot_clients = "finishing"\n', "", "slot_clients is a string, not a table,"),
+        ]
+        for case, keys, table, expected_error in rows:
+            with self.subTest(case=case):
+                configuration = self.machine.corpus / "config.toml"
+                self.configure_fake(f"{COUNTING_CLIENT}{table}", keys=keys)
+
+                # Act
+                completed = self.run_slot("build")
+
+                # Assert
+                self.assertEqual(
+                    (completed.returncode, completed.stderr),
+                    (1, f"brigade run: {expected_error} in {configuration}\n"),
+                )

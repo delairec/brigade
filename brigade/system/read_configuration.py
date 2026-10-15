@@ -22,6 +22,7 @@ SLOTS = ("plan", "build", "review", "remediate", "rebase", "report", "triage", "
 CLI_KEY = "cli"
 FORGE_ACCOUNTS_KEY = "forge_accounts"
 FORGE_ACCOUNT_KEYS = (*SLOTS, CLI_KEY)
+SLOT_CLIENTS_KEY = "slot_clients"
 FORGE_ATTEMPTS_KEY = "forge_attempts"
 FORGE_ATTEMPTS_BY_DEFAULT = 3
 FEWEST_FORGE_ATTEMPTS = 1
@@ -47,6 +48,7 @@ class Configuration:
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)
     slots: dict = field(default_factory=dict)
+    slot_clients: dict = field(default_factory=dict)
     seconds_per_step: int | float = SECONDS_PER_STEP_BY_DEFAULT
     soft_limit_margin_s: int | float = SOFT_LIMIT_MARGIN_BY_DEFAULT_S
     trail_days: int = TRAIL_DAYS_BY_DEFAULT
@@ -111,6 +113,14 @@ def _read_forge_accounts(table, path: Path) -> dict:
     return {key: _require(login, str, "a string", f"{FORGE_ACCOUNTS_KEY}.{key}", path) for key, login in table.items()}
 
 
+def _read_slot_clients(table, path: Path) -> dict:
+    _require(table, dict, "a table", SLOT_CLIENTS_KEY, path)
+    _refuse_unknown_keys(table, SLOTS, f"{SLOT_CLIENTS_KEY}.", path)
+    return {
+        slot: _require(client, str, "a string", f"{SLOT_CLIENTS_KEY}.{slot}", path) for slot, client in table.items()
+    }
+
+
 def _read_forge_attempts(document: dict, path: Path) -> int:
     value = document.get(FORGE_ATTEMPTS_KEY, FORGE_ATTEMPTS_BY_DEFAULT)
     if isinstance(value, bool) or not isinstance(value, int):
@@ -160,6 +170,7 @@ def read_configuration(path: Path) -> Configuration:
             "reasoning",
             "clients",
             "slots",
+            SLOT_CLIENTS_KEY,
             SECONDS_PER_STEP_KEY,
             SOFT_LIMIT_MARGIN_KEY,
             TRAIL_DAYS_KEY,
@@ -182,6 +193,7 @@ def read_configuration(path: Path) -> Configuration:
         reasoning=_read_reasoning(document.get("reasoning", {}), path),
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),
+        slot_clients=_read_slot_clients(document.get(SLOT_CLIENTS_KEY, {}), path),
         seconds_per_step=_read_positive_number(document, SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT, path),
         soft_limit_margin_s=_read_positive_number(
             document, SOFT_LIMIT_MARGIN_KEY, SOFT_LIMIT_MARGIN_BY_DEFAULT_S, path

@@ -89,7 +89,7 @@ def _describe_diagnostics(document: dict) -> list[str]:
 def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
     forge_environment = _read_forge_environment(configuration, run_request.slot, runtime)
-    setting = read_run_setting(run_request.project, configuration, runtime)
+    setting = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
     client_adapter = runtime.resolve_plugin("client", setting.client)
     document = runtime.resolve_plugin("document", configuration.document)
     plan = dataclasses.replace(

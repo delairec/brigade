@@ -104,6 +104,8 @@ class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
             document,
             {
                 "schema_version": 1,
+                "client": "claude-code",
+                "slot_clients": {},
                 "items": [
                     {
                         "name": "python",
@@ -194,6 +196,58 @@ class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
                 "doctor: 4 of 4 prerequisites ok · 0 optional items on their fallback",
             ],
         )
+
+
+class BrigadeDoctorOnAMachineBindingASlotToAnotherClientTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_configuration(
+            'client = "claude-code"\n[slot_clients]\nbuild = "claude-code"\nreview = "finishing"\n'
+        )
+
+    def test_should_state_the_client_it_answers_for(self):
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["client"], "claude-code")
+
+    def test_should_name_the_slot_bound_to_another_client_with_that_client(self):
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["slot_clients"], {"review": "finishing"})
+
+    def test_should_print_the_slot_bound_to_another_client_above_the_summary(self):
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB])
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout.splitlines()[-3:],
+            [
+                "slot review runs on finishing",
+                "",
+                "doctor: 4 of 4 prerequisites ok · 1 optional item on its fallback",
+            ],
+        )
+
+
+class BrigadeDoctorWithNoConfigurationTest(DoctorTestCase):
+    def test_should_state_that_it_answers_for_no_client_and_no_slot(self):
+        # Arrange
+        no_slot_bound = {}
+
+        # Act
+        completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
+
+        # Assert
+        document = json.loads(completed.stdout)
+        self.assertEqual((document["client"], document["slot_clients"]), (None, no_slot_bound))
 
 
 class BrigadeDoctorWhenAPrerequisiteFailsTest(DoctorTestCase):

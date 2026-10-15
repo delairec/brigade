@@ -26,9 +26,9 @@ def _read_project(name: str | None, runtime: Runtime) -> Entity | None:
     return find_project(read_projects(runtime), name)
 
 
-def read_run_setting(project_name: str | None, configuration: Configuration, runtime: Runtime) -> RunSetting:
+def read_run_setting(project_name: str | None, slot: str, configuration: Configuration, runtime: Runtime) -> RunSetting:
     project = _read_project(project_name, runtime)
-    client = read_project_field(project, CLIENT_FIELD) or configuration.client
+    client = configuration.slot_clients.get(slot) or read_project_field(project, CLIENT_FIELD) or configuration.client
     if client is None:
         raise BrigadeError(f"config.toml names no client: set the client key in {runtime.paths.configuration_file}")
     return RunSetting(configuration=configuration, project=project, client=client)

@@ -98,7 +98,12 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "roles": describe_built_in_roles(no_model_bound, no_model_bound, no_model_bound)},
+            {
+                "schema_version": 1,
+                "client": None,
+                "slot_clients": {},
+                "roles": describe_built_in_roles(no_model_bound, no_model_bound, no_model_bound),
+            },
         )
 
     def test_should_show_the_model_the_configured_client_adapter_binds(self):
@@ -112,7 +117,12 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "roles": describe_built_in_roles("fable", "opus", "haiku")},
+            {
+                "schema_version": 1,
+                "client": "claude-code",
+                "slot_clients": {},
+                "roles": describe_built_in_roles("fable", "opus", "haiku"),
+            },
         )
 
     def test_should_print_the_slots_as_a_table_under_its_header(self):
@@ -137,8 +147,63 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
                 "triage     triager     built-in  opus",
                 "rules      rulewriter  built-in  fable",
                 "explore    explorer    built-in  sonnet",
+                "answers for claude-code",
             ],
         )
+
+
+class BrigadeRolesListOnAMachineBindingASlotToAnotherClientTest(RolesTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.write_configuration(
+            'client = "claude-code"\n[slot_clients]\nbuild = "claude-code"\nreview = "finishing"\n'
+        )
+
+    def test_should_name_the_slot_bound_to_another_client_with_that_client_and_no_model(self):
+        # Act
+        completed = self.run_roles("list", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "client": "claude-code",
+                "slot_clients": {"review": "finishing"},
+                "roles": [
+                    {"slot": "plan", "role": "planner", "source": "built-in", "model": "fable"},
+                    {"slot": "build", "role": "builder", "source": "built-in", "model": "opus"},
+                    {"slot": "review", "role": "reviewer", "source": "built-in", "model": None},
+                    {"slot": "remediate", "role": "remediator", "source": "built-in", "model": "opus"},
+                    {"slot": "rebase", "role": "rebaser", "source": "built-in", "model": "sonnet"},
+                    {"slot": "report", "role": "reporter", "source": "built-in", "model": "opus"},
+                    {"slot": "triage", "role": "triager", "source": "built-in", "model": "opus"},
+                    {"slot": "rules", "role": "rulewriter", "source": "built-in", "model": "fable"},
+                    {"slot": "explore", "role": "explorer", "source": "built-in", "model": "sonnet"},
+                ],
+            },
+        )
+
+    def test_should_print_under_the_table_the_client_it_answers_for_and_the_slot_bound_to_another_client(self):
+        # Act
+        completed = self.run_roles("list")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout.splitlines()[-2:], ["answers for claude-code", "slot review runs on finishing"]
+        )
+
+
+class BrigadeRolesListOnAMachineWithNoConfigurationTest(RolesTestCase):
+    def test_should_print_under_the_table_that_it_answers_for_no_client(self):
+        # Act
+        completed = self.run_roles("list")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.splitlines()[-1], "answers for no client")
 
 
 class BrigadeRolesShowOfABuiltInRoleTest(RolesTestCase):

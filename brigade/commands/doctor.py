@@ -15,6 +15,8 @@ from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_login_environment import ask_login_environment
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
+from brigade.system.describe_slot_clients import describe_slot_clients
+from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import CLI_KEY, Configuration, ConfigurationMissing, read_configuration
@@ -32,6 +34,7 @@ FORGE_NAME = "github"
 FORGE_LOGIN_FALLBACK = "the commands acting as it stop"
 UNBOUND_ENVIRONMENT = {}
 NO_FORGE_ACCOUNTS = {}
+NO_SLOT_CLIENTS = {}
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 NO_INSTRUCTIONS = "none configured"
@@ -294,6 +297,7 @@ def _render_text(document: dict) -> str:
         *(_render_prerequisite(item) for item in prerequisites),
         "optional",
         *(_render_optional(item) for item in optional_items),
+        *describe_slot_clients(document["slot_clients"]),
         "",
         _summarise(prerequisites, optional_items),
     ]
@@ -310,10 +314,22 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
+def _read_client(reading: Configuration | BrigadeError) -> str | None:
+    return None if isinstance(reading, BrigadeError) else reading.client
+
+
+def _read_slot_clients(reading: Configuration | BrigadeError) -> dict:
+    return (
+        NO_SLOT_CLIENTS if isinstance(reading, BrigadeError) else list_slot_clients_elsewhere(reading, reading.client)
+    )
+
+
 def doctor(request, runtime: Runtime) -> dict:
     reading = _read_configuration(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "client": _read_client(reading),
+        "slot_clients": _read_slot_clients(reading),
         "items": [
             _check_python(),
             _check_git(runtime),

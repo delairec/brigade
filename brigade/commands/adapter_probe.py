@@ -1,9 +1,10 @@
 import json
+from operator import attrgetter
 
 from brigade.command import Command
 from brigade.runtime import Runtime
-from brigade.system.ask_named_client import ask_named_client
-from brigade.system.client_question import ClientQuestion
+from brigade.system.ask_configured_client import ConfiguredClientAnswer, ask_configured_client
+from brigade.system.describe_configured_client_answer import describe_configured_client_answer
 from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configured_client import read_configured_client
 
@@ -23,11 +24,10 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def adapter_probe(request, runtime: Runtime) -> dict:
+def adapter_probe(request, runtime: Runtime) -> ConfiguredClientAnswer:
     configured = read_configured_client(runtime)
     client = runtime.resolve_plugin("client", configured.name)
-    question = ClientQuestion(configured.name, ProbeRequest())
-    return ask_named_client(client, question, configured.configuration, runtime).to_document()
+    return ask_configured_client(client, configured, ProbeRequest(), runtime)
 
 
 COMMAND = Command(
@@ -38,4 +38,6 @@ COMMAND = Command(
     read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
+    describe_diagnostics=describe_configured_client_answer,
+    select_document=attrgetter("document"),
 )
