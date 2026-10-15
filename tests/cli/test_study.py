@@ -173,7 +173,7 @@ class BrigadeStudyNewTest(StudyTestCase):
         )
 
 
-class BrigadeStudyRunTest(StudyTestCase):
+class StudyRunTestCase(StudyTestCase):
     def setUp(self):
         super().setUp()
         self.runs = self.machine.state_home / "brigade" / "runs"
@@ -209,6 +209,8 @@ class BrigadeStudyRunTest(StudyTestCase):
             if event["event"].startswith(("order.", "step."))
         ]
 
+
+class BrigadeStudyRunTest(StudyRunTestCase):
     def test_should_write_the_result_of_each_step_under_the_run_directory(self):
         # Arrange
         self.record_scan("shell: printf 'oak\\nelm\\n'")
@@ -365,3 +367,30 @@ class BrigadeStudyRunTest(StudyTestCase):
             (completed.returncode, completed.stderr),
             (1, "brigade study run: @STUDY.absent is not defined in the operational corpus\n"),
         )
+
+
+class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
+    def test_should_remove_a_done_study_run_settled_before_the_day(self):
+        # Arrange
+        self.record_scan("shell: true")
+        done = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
+
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "prune", "--before", "2099-01-01")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout), (0, f"removed {done} (finished)\n"), completed.stderr
+        )
+
+    def test_should_spare_a_parked_study_run_the_next_study_run_resumes(self):
+        # Arrange
+        self.record_scan("shell: cat flag")
+        parked = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
+
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "prune", "--before", "2099-01-01")
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"), completed.stderr)
+        self.assertEqual([path.name for path in self.runs.iterdir()], [parked])

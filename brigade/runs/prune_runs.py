@@ -5,6 +5,8 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.ledger.group_runs import group_runs
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.order_done import OrderDone
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runs.describe_run import describe_run
 from brigade.runs.run_locations import (
@@ -55,9 +57,20 @@ class _ListedRuns:
 NO_RUN_LISTED = _ListedRuns(newest_first=[], skipped=[])
 
 
-def _list_resumable_runs(state_root: Path) -> frozenset[str]:
-    finished_runs = group_runs(read_ledger(state_root).entries)
+def _list_resumable_runs(entries: tuple[LedgerEntry, ...]) -> frozenset[str]:
+    finished_runs = group_runs(entries)
     return frozenset(run.run for run in finished_runs if run.last.error_class == RESUMED_ERROR_CLASS)
+
+
+def _list_done_study_runs(runs_directory: Path, entries: tuple[LedgerEntry, ...]) -> list[_SettledRun]:
+    done_entries = {entry.event.run: entry for entry in entries if isinstance(entry.event, OrderDone)}
+    return [
+        _SettledRun(
+            run=directory.name, state=FINISHED, settled_at=done_entries[directory.name].instant, directory=directory
+        )
+        for directory in sorted(runs_directory.iterdir())
+        if directory.name in done_entries
+    ]
 
 
 def _settle(directory: Path, state: str) -> _SettledRun:
@@ -70,7 +83,8 @@ def _list_removable_runs(request: PruneRequest) -> _ListedRuns:
     runs_directory = request.paths.state_root / RUNS_DIRECTORY
     if not runs_directory.is_dir():
         return NO_RUN_LISTED
-    spared = NO_RESUMABLE_RUN_SPARED if request.resumable else _list_resumable_runs(request.paths.state_root)
+    entries = read_ledger(request.paths.state_root).entries
+    spared = NO_RESUMABLE_RUN_SPARED if request.resumable else _list_resumable_runs(entries)
     states = {}
     skipped = []
     for directory in sorted(runs_directory.iterdir()):
@@ -81,6 +95,7 @@ def _list_removable_runs(request: PruneRequest) -> _ListedRuns:
         except BrigadeError as error:
             skipped.append({"run": directory.name, "reason": str(error)})
     settled = [_settle(directory, state) for directory, state in states.items() if state != RUNNING]
+    settled += _list_done_study_runs(runs_directory, entries)
     newest_first = sorted(settled, key=lambda run: (run.settled_at, run.run), reverse=True)
     return _ListedRuns(newest_first=newest_first, skipped=skipped)
 
