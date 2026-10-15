@@ -11,6 +11,9 @@ PATH_PREFIX = "worktree "
 HEAD_PREFIX = "HEAD "
 BRANCH_PREFIX = "branch refs/heads/"
 BARE_LINE = "bare"
+DETACHED_LINE = "detached"
+LOCKED_WORD = "locked"
+WORD_SEPARATOR = " "
 
 
 @dataclass(frozen=True)
@@ -18,6 +21,8 @@ class Worktree:
     path: Path
     head: str
     branch: str | None
+    detached: bool
+    locked: bool
 
 
 def _read_line(lines: list[str], prefix: str) -> str | None:
@@ -32,6 +37,8 @@ def _parse_record(record: str) -> Worktree | None:
         path=Path(_read_line(lines, PATH_PREFIX)),
         head=_read_line(lines, HEAD_PREFIX),
         branch=_read_line(lines, BRANCH_PREFIX),
+        detached=DETACHED_LINE in lines,
+        locked=any(line.split(WORD_SEPARATOR, 1)[0] == LOCKED_WORD for line in lines),
     )
 
 

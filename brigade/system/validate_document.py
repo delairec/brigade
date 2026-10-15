@@ -20,6 +20,7 @@ class Field:
     fields: dict | None = None
     items: Optional["Field"] = None
     non_empty: bool = False
+    optional: bool = False
 
 
 def _name_value_kind(value) -> str:
@@ -44,9 +45,10 @@ def _fits_kind(value, kinds: tuple) -> bool:
 def _check_object(document: dict, fields: dict, prefix: str) -> None:
     for key, field in fields.items():
         location = f"{prefix}{key}"
-        if key not in document:
+        if key in document:
+            _check_value(document[key], field, location)
+        elif not field.optional:
             raise DocumentInvalid(f"lacks the key {location}")
-        _check_value(document[key], field, location)
 
 
 def _check_value(value, field: Field, location: str) -> None:

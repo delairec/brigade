@@ -2635,6 +2635,60 @@ DECISION APullRequestOfBrigadesOwnWaveIsReviewedAndItsReviewAnsweredByBrigadeRun
 		+ "devront être traités ou challengés via un run brigade également »; asked whether it"
 		+ "holds for this project or for every project: « projet »"
 
+DECISION CollectWithoutSinceCollectsFromTheBeginning
+	TITLE "brigade collect without --since hands its collector BRIGADE_SINCE 1970-01-01: the"
+		+ "collection runs from the beginning"
+	STATUS active
+	DESC "--since <n>d or <date> narrows a collection; without it BRIGADE_SINCE is 1970-01-01, a"
+		+ "date as the contract of @TASK.B47 requires, and the cache keys that date like any other"
+		REF @TASK.B47
+	REJECTED "a default window such as 7d: a default counted from the clock keys a new cache entry"
+		+ "every day and cuts history a caller never asked to cut"
+	REJECTED "an empty BRIGADE_SINCE: the contract names a date, and every collector would have to"
+		+ "tell the empty value apart"
+	RATIONALE "the task left the default open, writing --since between brackets; the beginning is"
+		+ "the one default that drops nothing and is the same on every day"
+	SOURCE "pull request #136 of the brigade repository, delivering @TASK.B47"
+		REF @TASK.B47
+	SOURCE "the user's ratification of 2026-10-15 on review 5525912035 of pull request #136 of the"
+		+ "brigade repository: « Ratifier telle quelle (Recommandé) — Sans --since, la collecte"
+		+ "part du début, comme brigade ledger : une seule convention dans l'outil. La décision"
+		+ "reçoit votre ratification comme source. »"
+
+DECISION ACollectorDeclaresInItsDocumentWhetherItIsCached
+	TITLE "a collector declares that its document is cached by the key cache, true, of the document"
+		+ "it prints; a collector that declares nothing is never cached"
+	STATUS active
+	DESC "the document a collector prints may carry cache, a boolean validated with the rest of its"
+		+ "shape; brigade writes the document to the cache when it is true, and collects afresh on"
+		+ "every call, inside a run or outside, a collector whose document carries false or no"
+		+ "cache key"
+		REF @TASK.B47
+	DESC "outside a run the two files of a document not cached go under"
+		+ "$XDG_STATE_HOME/brigade/collect/<name>/, the layout of the run directory, never under"
+		+ "the cache"
+	DESC "the five built-ins declare true, through describe_collection"
+	REJECTED "a declaration file beside the executable, or an operation asked before the"
+		+ "collection: a second thing every collector carries and a second read per call, where the"
+		+ "document is already read and validated"
+	REJECTED "a constant of the module for a built-in alone: a module and an executable would"
+		+ "declare it in two ways, where the core tells no module plugin from an executable one"
+	REJECTED "the files of a document not cached written under the cache directory and ignored by"
+		+ "the next call: the user ruled that such a document is not put in the cache"
+	RATIONALE "the user ruled that each collector declares whether its document is cached, false"
+		+ "when it declares nothing, and left open how an executable declares it; this decision is"
+		+ "the reading of that ruling by the session of the review round: the document is the one"
+		+ "answer the contract already validates, and a declaration in it reads the same from a"
+		+ "module and from an executable, as"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported requires"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	SOURCE "the user's rulings of 2026-10-15 on review 5525912035 of pull request #136 of the"
+		+ "brigade repository: « je pense que ça doit être géré par un boolean, car potentiellement"
+		+ "tous les documents n'ont pas les mêmes besoins en terme de cache, certains peut être ne"
+		+ "doivent pas être mis en cache? »; « Hors cache par défaut — Un collecteur n'est mis en"
+		+ "cache que s'il le déclare : chaque intégré déclare cache = true. »"
+		REF @TASK.B47
+
 DECISION RunsPruneRemovesTheRunsBeyondTheBoundAndThoseSettledBeforeTheDay
 	TITLE "brigade runs prune removes a finished or dead run that lies beyond the bound or was"
 		+ "settled before the day of --before: the union of both"

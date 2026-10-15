@@ -45,7 +45,7 @@ class ResolvePluginRefusalTest(unittest.TestCase):
     def test_should_refuse_a_kind_of_plugin_brigade_does_not_know(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            resolve_plugin("collector", "github", NO_SOURCES_NEEDED)
+            resolve_plugin("check", "github", NO_SOURCES_NEEDED)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "no plugin kind collector")
+        self.assertEqual(str(refusal.exception), "no plugin kind check")
