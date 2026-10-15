@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +8,7 @@ from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
+from tests.cli.test_collect import install_executable
 
 PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
 QUESTION = "what changed in the shop this week?"
@@ -649,3 +651,213 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
             (completed.returncode, completed.stderr),
             (1, f"brigade study answer: the answer holds no @ANSWER.weekly_{self.run_id.replace('-', '_')}\n"),
         )
+
+
+FAKE_GH = '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "{calls}"\ncat >> "{calls}"\necho https://github.com/acme/atelier/7\n'
+REFUSING_GH = '#!/bin/sh\n[ -f "{flag}" ] || exit 1\necho https://github.com/acme/atelier/7\n'
+RECEIVING_OUTPUT = '#!/bin/sh\ncat > "{received}"\n'
+FORGE_URL = "https://github.com/acme/atelier.git"
+
+
+class StudyOutputTestCase(StudyRunTestCase):
+    def setUp(self):
+        super().setUp()
+        root = Path(self.root.name).resolve()
+        self.gh_calls = root / "gh-calls"
+        self.received = root / "received.json"
+        self.tools = root / "tools"
+        install_executable(self.tools / "gh", FAKE_GH.format(calls=self.gh_calls))
+        self.environment = {
+            **self.machine.describe_environment(),
+            "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
+        }
+
+    def add_forge_project(self) -> TemporaryProject:
+        root = Path(self.root.name).resolve()
+        environment = {**self.machine.describe_environment(), **PINNED_COMMIT_DATES}
+        remote = TemporaryProject(root / "remotes" / "atelier", environment)
+        with (self.machine.home / ".gitconfig").open("a") as configuration:
+            configuration.write(f'[url "{remote.path}"]\n\tpushInsteadOf = {FORGE_URL}\n')
+        atelier = TemporaryProject(root / "projects" / "atelier", environment)
+        atelier.write("README.md", "atelier\n")
+        atelier.track("README.md")
+        atelier.run_git("commit", "--quiet", "-m", "start the atelier")
+        atelier.run_git("remote", "add", "origin", FORGE_URL)
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(atelier.path))
+        return remote
+
+    def record_study(self, output: str, *project: str) -> None:
+        self.run_study(
+            "new",
+            "trees",
+            "--title",
+            "the trees",
+            *project,
+            "--collector",
+            "shell: printf 'oak\\n'",
+            "--slot",
+            "none",
+            "--every",
+            "1h",
+            "--output",
+            output,
+        )
+
+    def run_output(self) -> dict:
+        completed = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "study", "run", "trees", "--json", environment=self.environment
+        )
+        return json.loads(completed.stdout)
+
+
+class BrigadeStudyInboxOutputTest(StudyOutputTestCase):
+    def test_should_leave_the_markdown_of_the_answer_in_the_inbox(self):
+        # Arrange
+        self.record_study("inbox", "--project", "shop")
+
+        # Act
+        run_id = self.run_output()["run"]
+
+        # Assert
+        self.assertEqual(
+            (self.machine.state_home / "brigade" / "inbox" / f"{run_id}.md").read_text(),
+            f"# ANSWER trees_{run_id.replace('-', '_')}\n\n- STUDY: trees\n- RUN: {run_id}\n- COLLECTED: shell\n",
+        )
+
+
+class BrigadeStudyFileOutputTest(StudyOutputTestCase):
+    def test_should_commit_the_markdown_of_the_answer_on_a_branch_of_the_project(self):
+        # Arrange
+        self.record_study("file:studies/{run}.md", "--project", "shop")
+
+        # Act
+        run_id = self.run_output()["run"]
+
+        # Assert
+        self.assertEqual(
+            self.project.run_git("show", f"brigade/study-trees-{run_id}:studies/{run_id}.md"),
+            f"# ANSWER trees_{run_id.replace('-', '_')}\n\n- STUDY: trees\n- RUN: {run_id}\n- COLLECTED: shell\n",
+        )
+
+    def test_should_leave_the_checkout_of_the_project_on_its_branch(self):
+        # Arrange
+        self.record_study("file:studies/{run}.md", "--project", "shop")
+
+        # Act
+        self.run_output()
+
+        # Assert
+        self.assertEqual(self.project.run_git("status", "--short", "--branch"), "## main\n")
+
+    def test_should_push_the_branch_where_the_project_has_a_forge(self):
+        # Arrange
+        remote = self.add_forge_project()
+        self.record_study("file:studies/{run}.md", "--project", "atelier")
+
+        # Act
+        run_id = self.run_output()["run"]
+
+        # Assert
+        self.assertEqual(
+            remote.run_git("branch", "--list", f"brigade/study-trees-{run_id}"), f"  brigade/study-trees-{run_id}\n"
+        )
+
+    def test_should_open_a_pull_request_holding_the_markdown_where_the_project_has_a_forge(self):
+        # Arrange
+        self.add_forge_project()
+        self.record_study("file:studies/{run}.md", "--project", "atelier")
+
+        # Act
+        run_id = self.run_output()["run"]
+
+        # Assert
+        self.assertEqual(
+            self.gh_calls.read_text(),
+            f"pr create --base main --head brigade/study-trees-{run_id} --title Study trees, run {run_id}"
+            " --body-file -\n"
+            f"# ANSWER trees_{run_id.replace('-', '_')}\n\n- STUDY: trees\n- RUN: {run_id}\n- COLLECTED: shell\n",
+        )
+
+    def test_should_resume_a_study_parked_once_its_branch_was_created(self):
+        # Arrange
+        flag = Path(self.root.name) / "forge-reachable"
+        install_executable(self.tools / "gh", REFUSING_GH.format(flag=flag))
+        self.add_forge_project()
+        self.record_study("file:studies/{run}.md", "--project", "atelier")
+        self.run_output()
+        flag.write_text("")
+
+        # Act
+        resumed = self.run_output()
+
+        # Assert
+        self.assertEqual(resumed["state"], "done")
+
+    def test_should_park_a_study_with_no_project(self):
+        # Arrange
+        self.record_study("file:studies/{run}.md")
+
+        # Act
+        parked = self.run_output()
+
+        # Assert
+        self.assertEqual(parked["reason"], "the output file:studies/{run}.md needs a project")
+
+
+class BrigadeStudyIssueOutputTest(StudyOutputTestCase):
+    def test_should_open_an_issue_holding_the_markdown_of_the_answer(self):
+        # Arrange
+        self.add_forge_project()
+        self.record_study("issue", "--project", "atelier")
+
+        # Act
+        run_id = self.run_output()["run"]
+
+        # Assert
+        self.assertEqual(
+            self.gh_calls.read_text(),
+            f"issue create --title Study trees, run {run_id} --body-file -\n"
+            f"# ANSWER trees_{run_id.replace('-', '_')}\n\n- STUDY: trees\n- RUN: {run_id}\n- COLLECTED: shell\n",
+        )
+
+    def test_should_park_a_study_whose_project_has_no_forge(self):
+        # Arrange
+        self.record_study("issue", "--project", "shop")
+
+        # Act
+        parked = self.run_output()
+
+        # Assert
+        self.assertEqual(parked["reason"], "the output issue needs a project with a forge")
+
+
+class BrigadeStudyOutputOnPathTest(StudyOutputTestCase):
+    def test_should_hand_the_answer_to_the_output_on_path(self):
+        # Arrange
+        install_executable(self.tools / "brigade-output-notes", RECEIVING_OUTPUT.format(received=self.received))
+        self.record_study("notes", "--project", "shop")
+
+        # Act
+        run_id = self.run_output()["run"]
+
+        # Assert
+        self.assertEqual(
+            json.loads(self.received.read_text()),
+            {
+                "schema_version": 1,
+                "study": "trees",
+                "run": run_id,
+                "markdown": f"# ANSWER trees_{run_id.replace('-', '_')}\n\n- STUDY: trees\n- RUN: {run_id}\n"
+                "- COLLECTED: shell\n",
+            },
+        )
+
+    def test_should_park_a_study_whose_output_is_found_nowhere(self):
+        # Arrange
+        self.record_study("notes", "--project", "shop")
+
+        # Act
+        parked = self.run_output()
+
+        # Assert
+        self.assertEqual(parked["reason"], "no output notes: no brigade-output-notes on PATH")

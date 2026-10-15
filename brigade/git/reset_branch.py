@@ -1,0 +1,14 @@
+from collections.abc import Callable
+from pathlib import Path
+
+from brigade.system.run_process import ProcessRecord, ProcessRequest
+
+GIT_TIMEOUT_S = 10.0
+
+
+def reset_branch(run_process: Callable[[ProcessRequest], ProcessRecord], worktree: Path, branch: str) -> None:
+    run_process(
+        ProcessRequest(
+            argv=("git", "switch", "--quiet", "--force-create", branch), cwd=str(worktree), timeout_s=GIT_TIMEOUT_S
+        )
+    )

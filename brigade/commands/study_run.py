@@ -9,6 +9,9 @@ from brigade.system.read_optional_configuration import read_optional_configurati
 DOCUMENT_SCHEMA_VERSION = 1
 PARKED_EXIT_CODE = 1
 COLLECTOR_KIND = "collector"
+DOCUMENT_KIND = "document"
+FORGE_KIND = "forge"
+ANSWER_DOCUMENT = "awawa"
 
 
 def _read_request(options):
@@ -33,6 +36,8 @@ def study_run(request, runtime: Runtime) -> dict:
         resolve_collector=lambda name, project: runtime.resolve_plugin(
             COLLECTOR_KIND, name, places=locate_collectors(project, runtime.paths)
         ),
+        document=runtime.resolve_plugin(DOCUMENT_KIND, ANSWER_DOCUMENT),
+        resolve_forge=lambda name: runtime.resolve_plugin(FORGE_KIND, name),
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

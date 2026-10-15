@@ -19,6 +19,8 @@ FIELDS_THE_CLI_FILLS = ("STUDY", "RUN", "COLLECTED")
 class StudyEquipment:
     configuration: Configuration
     resolve_collector: Callable[[str, Path], object]
+    document: object
+    resolve_forge: Callable[[str], object]
 
 
 @dataclass(frozen=True)
