@@ -149,6 +149,10 @@ def _check_scheduler(runtime: Runtime) -> dict:
     return _create_optional("scheduler", "warning", f"no user systemd instance ({systemd_state})", SCHEDULER_FALLBACK)
 
 
+def _is_unreadable(reading: Configuration | BrigadeError) -> bool:
+    return isinstance(reading, BrigadeError) and not isinstance(reading, ConfigurationMissing)
+
+
 def _read_forge_accounts(reading: Configuration | BrigadeError) -> dict:
     if isinstance(reading, BrigadeError):
         return NO_FORGE_ACCOUNTS
@@ -197,6 +201,11 @@ def _check_forge_login(login: str, keys: list[str], environment: dict | ToolNotF
 
 
 def _check_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+    if _is_unreadable(reading):
+        return [
+            _create_optional("forge", "warning", str(reading), FORGE_FALLBACK),
+            _describe_forge_login("warning", str(reading)),
+        ]
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     forge_accounts = _read_forge_accounts(reading)
     keys_by_login = _group_keys_by_login(forge_accounts)
@@ -222,7 +231,11 @@ def _warn_of_review_by_approval(policy) -> dict:
 
 
 def _check_review_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
-    if not runtime.paths.schema_file.exists() or _has_distinct_build_and_review_logins(_read_forge_accounts(reading)):
+    if not runtime.paths.schema_file.exists():
+        return []
+    if _is_unreadable(reading):
+        return [_create_optional("review", "warning", str(reading), POLICIES_FALLBACK)]
+    if _has_distinct_build_and_review_logins(_read_forge_accounts(reading)):
         return []
     try:
         policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)

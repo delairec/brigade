@@ -6011,6 +6011,20 @@ TASK B99
 			+ "test_should_warn_naming_the_project_whose_build_and_review_slots_share_no_two_logins(self):"
 		IMPL "tests/cli/test_doctor.py::def"
 			+ "test_should_not_warn_of_a_policy_reviewing_by_verdict_or_by_approval_with_two_logins(self):"
+	SPEC "on a config.toml that is not TOML, brigade doctor reports the error of its one read on"
+		+ "the forge line, on one forge login line and, the schema installed, on the review line,"
+		+ "and runs no gh command; a missing config.toml still binds no slot, and the review line"
+		+ "still warns of the logins"
+		IMPL "brigade/commands/doctor.py::def _is_unreadable(reading: Configuration | BrigadeError)"
+			+ "-> bool:"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_report_the_error_of_the_one_read_in_each_check_that_needs_the_configuration(self):"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_run_no_gh_command_since_no_forge_login_could_be_read(self):"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_report_the_error_of_the_one_read_of_a_config_toml_that_is_not_toml(self):"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_warn_naming_the_project_when_no_config_toml_binds_build_and_review(self):"
 	AFTER @TASK.B75
 	AFTER @TASK.B11
 	RATIONALE "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets three"
@@ -6031,6 +6045,14 @@ TASK B99
 		+ "needs an operational corpus created again on a machine whose installed schema predates"
 		+ "the field"
 		REF @TASK.B11
+	RATIONALE "SPEC 3 of @TASK.B77 binds every check of brigade doctor that needs config.toml to"
+		+ "report the record or the error of its one read; the review check, and the forge and"
+		+ "forge login checks since @TASK.B75, read a config.toml that is not TOML as no binding:"
+		+ "the review line warned of logins the file binds distinctly, the forge line probed gh's"
+		+ "active account in place of the login of cli, and the forge login lines vanished; a"
+		+ "missing config.toml binds no slot, as the instructions check reads it"
+		REF @TASK.B77
+		REF @TASK.B75
 	SOURCE "the user's rulings of 2026-10-07 at the refinement of B75: a task of M1 for approval"
 		+ "and verdict, before B16 and B17; POLICY.REVIEW, verdict by default"
 	SOURCE "the user's ruling of 2026-10-13 in the refinement of B99: « Non lié ou même login », on"
@@ -6040,6 +6062,9 @@ TASK B99
 		+ "installed schema from SPEC 1: « on ne fait pas de legacy [...] Les anciens fichiers ne"
 		+ "sont plus compatibles, ils sont jetés, ils ne sont pas supportés. Car pour le moment on"
 		+ "est en phase de build et on a aucun utilisateur. »"
+	SOURCE "the user's ruling of 2026-10-15 on thread 4285327959 of the review of #141, once shown"
+		+ "that the review, forge and forge login checks read a config.toml that is not TOML as no"
+		+ "binding: « je préfère qu'on corrige les 3 dans la pr actuelle »"
 	DELIVERED_BY 141
 
 TASK B100

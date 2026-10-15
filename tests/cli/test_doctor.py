@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.forward_coverage_environment import forward_coverage_environment
@@ -39,6 +40,9 @@ FORGE_ENTRY = 5
 AWAWA_WEB_ENTRY = 6
 INSTRUCTIONS_ENTRY = 7
 STEPS_ENTRY = 8
+FORGE_LOGIN_ENTRY = 6
+REVIEW_ENTRY_BELOW_ONE_FORGE_LOGIN = 7
+INSTRUCTIONS_ENTRY_BELOW_ONE_FORGE_LOGIN = 8
 CONFIGURATION_ENTRY_AFTER_THE_CLIENT_ITEMS = 8
 EVERY_TOOL_BUT_THE_CLIENT = [GIT, AWAWA, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
@@ -633,7 +637,12 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
 class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
     def test_should_report_the_error_of_the_one_read_in_each_check_that_needs_the_configuration(self):
         # Arrange
-        rows = [("client", CLIENT_ENTRY, "finding"), ("instructions", INSTRUCTIONS_ENTRY, "warning")]
+        rows = [
+            ("client", CLIENT_ENTRY, "finding"),
+            ("forge", FORGE_ENTRY, "warning"),
+            ("forge login", FORGE_LOGIN_ENTRY, "warning"),
+            ("instructions", INSTRUCTIONS_ENTRY_BELOW_ONE_FORGE_LOGIN, "warning"),
+        ]
         self.write_configuration('client = "claude-code\n')
         for check, entry, expected_state in rows:
             with self.subTest(check=check):
@@ -642,8 +651,19 @@ class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
 
                 # Assert
                 item = json.loads(completed.stdout)["items"][entry]
+                self.assertEqual(item["name"], check)
                 self.assertEqual(item["state"], expected_state)
                 self.assertIn(f"{self.configuration} is not valid TOML: ", item["detail"])
+
+    def test_should_run_no_gh_command_since_no_forge_login_could_be_read(self):
+        # Arrange
+        self.write_configuration('client = "claude-code\n[forge_accounts]\ncli = "octo-bot"\n')
+
+        # Act
+        self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACCOUNTS, AWAWA_WEB], "--json")
+
+        # Assert
+        self.assertFalse(self.gh_record.exists())
 
     def test_should_report_no_steps_item_since_no_client_could_be_probed(self):
         # Arrange
@@ -653,7 +673,7 @@ class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
         completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
 
         # Assert
-        self.assertEqual(len(json.loads(completed.stdout)["items"]), STEPS_ENTRY)
+        self.assertNotIn("steps", [item["name"] for item in json.loads(completed.stdout)["items"]])
 
     def test_should_report_no_instructions_configured_when_no_configuration_exists(self):
         # Act
@@ -1136,6 +1156,48 @@ class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestC
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assertNotIn("review", [item["name"] for item in json.loads(completed.stdout)["items"]])
+
+    def test_should_report_the_error_of_the_one_read_of_a_config_toml_that_is_not_toml(self):
+        # Arrange
+        self.policies.write_text(POLICY_UNDER_APPROVAL)
+        self.write_configuration('client = "fake\n[forge_accounts]\nbuild = "octo-bot"\nreview = "review-bot"\n')
+
+        # Act
+        completed = self.run_doctor(self.machine_with_awawa, "--json")
+
+        # Assert
+        item = json.loads(completed.stdout)["items"][REVIEW_ENTRY_BELOW_ONE_FORGE_LOGIN]
+        self.assertEqual(
+            item,
+            {
+                "name": "review",
+                "kind": "optional",
+                "state": "warning",
+                "detail": ANY,
+                "fallback": "the review mode of each project unchecked",
+            },
+        )
+        self.assertIn(f"{self.configuration} is not valid TOML: ", item["detail"])
+
+    def test_should_warn_naming_the_project_when_no_config_toml_binds_build_and_review(self):
+        # Arrange
+        self.policies.write_text(POLICY_UNDER_APPROVAL)
+        self.configuration.unlink()
+
+        # Act
+        completed = self.run_doctor(self.machine_with_awawa, "--json")
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "review",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "shop reviews by approval without distinct logins for build and review",
+                "fallback": REVIEW_FALLBACK,
+            },
+            json.loads(completed.stdout)["items"],
+        )
 
     def test_should_warn_that_the_policies_are_unreadable_when_awawa_fails_on_them(self):
         # Arrange
