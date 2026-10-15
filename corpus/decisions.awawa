@@ -1074,7 +1074,8 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	DESC "during the build phase, brigade having no user, a reader supports the current version of"
 		+ "each kind alone: a document of an older version is refused like an unknown one, by name,"
 		+ "never upgraded and never rewritten; a file of an older version left on a machine is"
-		+ "thrown away, not supported"
+		+ "thrown away, not supported; this ruling expires when brigade leaves the build phase, and"
+		+ "the decision is then revisited"
 	DESC "inside the core a document becomes a frozen dataclass; the module of its kind declares"
 		+ "from_document when brigade reads the kind and to_document when brigade writes it, no"
 		+ "function for a direction no code crosses; dicts stay at the edges"
@@ -1116,6 +1117,14 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		+ "compatibles, ils sont jetés, ils ne sont pas supportés. Car pour le moment on est en"
 		+ "phase de build et on a aucun utilisateur. »; TITLE and DESC 3 amended"
 		REF @TASK.B151
+		REF @TASK.B162
+	REJECTED "a guard of tests/guards refusing an upgrade module or a second readable"
+		+ "schema_version, so that no later pull request brings an upgrade path back: the decision"
+		+ "carries the ruling, which expires with the build phase and is revisited then"
+	SOURCE "the user's ruling of 2026-10-15 on pull request #135 of the brigade repository, asked"
+		+ "whether a test guard should forbid an upgrade path from coming back: « On fait porter"
+		+ "par la décision, en précisant que celle-ci se périme dès qu'on sort de la phase de"
+		+ "build. A ce moment, il faudra revenir sur la décision »; DESC 3 and REJECTED 5 amended"
 		REF @TASK.B162
 
 DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
