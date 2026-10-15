@@ -8264,6 +8264,7 @@ TASK B145
 			+ "dict:"
 		IMPL "tests/cli/test_run.py::def"
 			+ "test_should_exit_1_naming_the_key_and_the_file_of_a_table_off_its_shape(self):"
+		IMPL "tests/unit/system/test_read_configuration.py::(\"an unknown slot clients key\","
 	SPEC "the client of a run is the one [slot_clients] binds to its slot, else the CLIENT of the"
 		+ "PROJECT entity, else the client key of config.toml"
 		IMPL "brigade/runs/read_run_setting.py::client = configuration.slot_clients.get(slot) or"
