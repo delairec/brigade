@@ -47,3 +47,24 @@ class VolatileValueMaskerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(unmasked, "518a458e7c6d240131397c4a5003709cdb92b474\n")
+
+    def test_should_mask_a_run_id_in_either_of_its_forms_as_a_volatile_value(self):
+        # Arrange
+        masker = VolatileValueMasker(TEMPORARY_ROOTS)
+
+        # Act
+        masked = masker.mask('ANSWER trees_20261015T124950Z_05a3de\n\tRUN "20261015T124950Z-05a3de"\n')
+
+        # Assert
+        self.assertEqual(masked, 'ANSWER trees_<run_name:0>\n\tRUN "<run:1>"\n')
+
+    def test_should_unmask_a_run_id_to_the_value_it_masked(self):
+        # Arrange
+        masker = VolatileValueMasker(TEMPORARY_ROOTS)
+        masker.mask('ANSWER trees_20261015T124950Z_05a3de\n\tRUN "20261015T124950Z-05a3de"\n')
+
+        # Act
+        unmasked = masker.unmask('ANSWER trees_<run_name:0>\n\tRUN "<run:1>"\n')
+
+        # Assert
+        self.assertEqual(unmasked, 'ANSWER trees_20261015T124950Z_05a3de\n\tRUN "20261015T124950Z-05a3de"\n')

@@ -1,0 +1,20 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/studies.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/studies.awawa": "STUDY weekly\n\tTITLE \"what moved\"\n\tPROJECT @PROJECT.shop\n\tCOLLECTOR \"shell: true\"\n\tSLOT report\n\tEVERY \"1d\"\n\tOUTPUT \"entity:ANSWER\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "version": "awawa 2.7.0"
+}

@@ -1,4 +1,7 @@
+import argparse
+
 from brigade.command import Argument, Command
+from brigade.commands.study_run import study_run
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
@@ -18,6 +21,8 @@ def _read_request(options):
 
 
 def _render_text(document: dict) -> str:
+    if document["every"] is None:
+        return f"@STUDY.{document['study']} recorded, run {document['run']} {document['state']}"
     return f"@STUDY.{document['study']} recorded, every {document['every']}"
 
 
@@ -44,7 +49,11 @@ def study_new(request, runtime: Runtime) -> dict:
             answer_type=request.answer,
         ),
     )
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "study": request.name, "every": request.every}
+    document = {"schema_version": DOCUMENT_SCHEMA_VERSION, "study": request.name, "every": request.every}
+    if request.every is not None:
+        return document
+    ran = study_run(argparse.Namespace(name=request.name), runtime)
+    return {**document, "run": ran["run"], "state": ran["state"]}
 
 
 COMMAND = Command(

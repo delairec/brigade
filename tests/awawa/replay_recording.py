@@ -10,6 +10,7 @@ from tests.awawa.volatile_value_masker import (
     COMMIT_PLACEHOLDER,
     INSTANT_PLACEHOLDER,
     PLACEHOLDER,
+    RUN_PLACEHOLDER,
     VolatileValueMasker,
 )
 from tests.process_launcher import ProcessLauncher
@@ -18,6 +19,8 @@ UNREADABLE = 0
 REPLAYED_INSTANT = datetime(2026, 1, 1, tzinfo=UTC)
 INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 COMMIT_NAME_FORMAT = "040x"
+RUN_INSTANT_FORMAT = "%Y%m%dT%H%M%SZ"
+RUN_ID_SEPARATORS = {"run": "-", "run_name": "_"}
 
 
 def _create_temporary_directory(test_case: unittest.TestCase) -> str:
@@ -48,12 +51,20 @@ def _replay_commit_name(number: str) -> str:
     return format(int(number), COMMIT_NAME_FORMAT)
 
 
+def _replay_run_id(kind: str, number: str) -> str:
+    separator = RUN_ID_SEPARATORS[kind]
+    return f"{REPLAYED_INSTANT.strftime(RUN_INSTANT_FORMAT)}{separator}{int(number):06x}"
+
+
 def replay_recording(test_case: unittest.TestCase, call: dict) -> dict:
     recorded = json.dumps(call)
     placeholders = sorted(set(PLACEHOLDER.findall(recorded)), key=int)
     known = {f"<tmp:{number}>": _create_temporary_directory(test_case) for number in placeholders}
     known.update({f"<instant:{number}>": _replay_instant(number) for number in INSTANT_PLACEHOLDER.findall(recorded)})
     known.update({f"<commit:{number}>": _replay_commit_name(number) for number in COMMIT_PLACEHOLDER.findall(recorded)})
+    known.update(
+        {f"<{kind}:{number}>": _replay_run_id(kind, number) for kind, number in RUN_PLACEHOLDER.findall(recorded)}
+    )
     masker = VolatileValueMasker(list_temporary_roots(), known)
     for directory in call["directories"]:
         Path(masker.unmask(directory)).mkdir(parents=True, exist_ok=True)
