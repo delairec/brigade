@@ -12,13 +12,11 @@ from brigade.runs.decide_stop_at import decide_stop_at
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
     BRIEF_FILE,
-    RESULT_FILE,
     ROLE_FILE,
     SEGMENTS_DIRECTORY,
     STDERR_FILE,
     STDOUT_FILE,
 )
-from brigade.runs.run_result import RunResult
 from brigade.runs.segment_journal_writer import SegmentJournalWriter
 from brigade.runs.sum_session_usage import sum_session_usage
 from brigade.runtime import Runtime
@@ -27,16 +25,16 @@ from brigade.system.client_question import ClientQuestion
 from brigade.system.client_role import ClientRole
 from brigade.system.create_directory import create_directory
 from brigade.system.launch_argv_request import LaunchArgvRequest
-from brigade.system.parse_result_answer import ParseResultAnswer
 from brigade.system.parse_result_request import ParseResultRequest
 from brigade.system.process_trace import CUT, EXITED, STOPPED, ProcessTrace
+from brigade.system.reset_hour import ResetHour
 from brigade.system.spawn_process import SpawnRequest
 from brigade.system.stop_process_group import stop_process_group
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
+from brigade.system.token_usage import TokenUsage
 from brigade.system.transcripts_answer import TranscriptsAnswer
 from brigade.system.transcripts_request import TranscriptsRequest
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
-from brigade.system.write_json_atomically import write_json_atomically
 from brigade.system.write_text_file import write_text_file
 
 FIRST_SEGMENT = 1
@@ -57,7 +55,13 @@ NO_SESSION_AT_LAUNCH = "the client names no session at launch"
 @dataclass(frozen=True)
 class SegmentRecord:
     number: int
-    result: RunResult
+    outcome: str
+    session_id: str | None
+    client_steps: int | None
+    usage: TokenUsage | None
+    error_class: str | None
+    reset: ResetHour | None
+    message: str | None
     exit_code: int | None
     measured_ms: int
     cost_usd: float | None
@@ -95,19 +99,6 @@ def _ask_client(plan: RunPlan, runtime: Runtime, request: LaunchArgvRequest | Pa
     return ask_named_client(plan.client_adapter, ClientQuestion(plan.client, request), plan.configuration, runtime)
 
 
-def _adopt_answer(answer: ParseResultAnswer, session_id: str | None) -> RunResult:
-    return RunResult(
-        outcome=TURN_LIMIT if answer.error_class == TURN_LIMIT else answer.outcome,
-        steps=answer.steps,
-        usage=answer.usage,
-        session_id=session_id,
-        duration_ms=answer.duration_ms,
-        error_class=answer.error_class,
-        reset=answer.reset,
-        message=answer.message,
-    )
-
-
 def _read_transcripts(
     plan: RunPlan, runtime: Runtime, session_id: str | None, no_session: str
 ) -> tuple[TranscriptsAnswer | None, str | None]:
@@ -125,44 +116,39 @@ def _count_steps(transcripts: TranscriptsAnswer | None) -> SessionSteps | None:
     return None if transcripts is None else count_session_steps(transcripts)
 
 
-def _describe_ending(outcome: str, message: str, session_id: str | None, measured_ms: int) -> RunResult:
-    return RunResult(
+def _describe_ending(
+    number: int, outcome: str, message: str, session_id: str | None, measured_ms: int
+) -> SegmentRecord:
+    return SegmentRecord(
+        number=number,
         outcome=outcome,
-        steps=None,
-        usage=None,
         session_id=session_id,
-        duration_ms=measured_ms,
+        client_steps=None,
+        usage=None,
         error_class=None,
         reset=None,
         message=message,
-    )
-
-
-def _measure_ending(plan: RunPlan, runtime: Runtime, number: int, ending: RunResult) -> SegmentRecord:
-    transcripts, uncounted = _read_transcripts(plan, runtime, ending.session_id, NO_SESSION_AT_LAUNCH)
-    return SegmentRecord(
-        number=number,
-        result=dataclasses.replace(ending, usage=None if transcripts is None else sum_session_usage(transcripts)),
         exit_code=None,
-        measured_ms=ending.duration_ms,
-        cost_usd=None,
-        counted_steps=_count_steps(transcripts),
-        uncounted=uncounted,
-        adapter_failure=None,
-    )
-
-
-def _record_ending_before_launch(number: int, outcome: str, message: str, session_id: str | None) -> SegmentRecord:
-    return SegmentRecord(
-        number=number,
-        result=_describe_ending(outcome, message, session_id, NOT_MEASURED_MS),
-        exit_code=None,
-        measured_ms=NOT_MEASURED_MS,
+        measured_ms=measured_ms,
         cost_usd=None,
         counted_steps=None,
         uncounted=NOT_LAUNCHED,
         adapter_failure=None,
     )
+
+
+def _measure_ending(plan: RunPlan, runtime: Runtime, ending: SegmentRecord) -> SegmentRecord:
+    transcripts, uncounted = _read_transcripts(plan, runtime, ending.session_id, NO_SESSION_AT_LAUNCH)
+    return dataclasses.replace(
+        ending,
+        usage=None if transcripts is None else sum_session_usage(transcripts),
+        counted_steps=_count_steps(transcripts),
+        uncounted=uncounted,
+    )
+
+
+def _record_ending_before_launch(number: int, outcome: str, message: str, session_id: str | None) -> SegmentRecord:
+    return _describe_ending(number, outcome, message, session_id, NOT_MEASURED_MS)
 
 
 def _wait_for_client(process, limit: WallLimit, on_poll, stop: StopSignalReceiver) -> tuple[int | None, str]:
@@ -218,12 +204,12 @@ def _run_process(
     journal.write_rest()
     runtime.trail.append(ProcessTrace(request.argv, request.cwd, outcome, exit_code=exit_code, duration_ms=measured_ms))
     if outcome == STOPPED:
-        ending = _describe_ending(STOPPED_OUTCOME, STOPPED_BY_A_SIGNAL, launch.session_id, measured_ms)
-        return _measure_ending(plan, runtime, number, ending)
+        ending = _describe_ending(number, STOPPED_OUTCOME, STOPPED_BY_A_SIGNAL, launch.session_id, measured_ms)
+        return _measure_ending(plan, runtime, ending)
     if outcome == CUT:
         cut = f"cut at the wall-time limit of {plan.wall_limit_s:g} s"
         return _measure_ending(
-            plan, runtime, number, _describe_ending(WALL_LIMIT_OUTCOME, cut, launch.session_id, measured_ms)
+            plan, runtime, _describe_ending(number, WALL_LIMIT_OUTCOME, cut, launch.session_id, measured_ms)
         )
     try:
         answer = _ask_client(
@@ -236,14 +222,20 @@ def _run_process(
             ),
         )
     except BrigadeError as error:
-        ending = _describe_ending(FAILED_OUTCOME, str(error), launch.session_id, measured_ms)
-        record = _measure_ending(plan, runtime, number, ending)
+        ending = _describe_ending(number, FAILED_OUTCOME, str(error), launch.session_id, measured_ms)
+        record = _measure_ending(plan, runtime, ending)
         return dataclasses.replace(record, exit_code=exit_code, adapter_failure=str(error))
     session_id = launch.session_id if answer.session_id is None else answer.session_id
     transcripts, uncounted = _read_transcripts(plan, runtime, session_id, NO_SESSION_REPORTED)
     return SegmentRecord(
         number=number,
-        result=_adopt_answer(answer, session_id),
+        outcome=TURN_LIMIT if answer.error_class == TURN_LIMIT else answer.outcome,
+        session_id=session_id,
+        client_steps=answer.steps,
+        usage=answer.usage,
+        error_class=answer.error_class,
+        reset=answer.reset,
+        message=answer.message,
         exit_code=exit_code,
         measured_ms=measured_ms,
         cost_usd=answer.cost_usd,
@@ -256,6 +248,4 @@ def _run_process(
 def run_segment(plan: RunPlan, number: int, runtime: Runtime, stop: StopSignalReceiver) -> SegmentRecord:
     segment_directory = plan.run_directory / SEGMENTS_DIRECTORY / str(number)
     create_directory(segment_directory)
-    record = _run_process(plan, number, runtime, segment_directory, stop)
-    write_json_atomically(segment_directory / RESULT_FILE, record.result.to_document())
-    return record
+    return _run_process(plan, number, runtime, segment_directory, stop)

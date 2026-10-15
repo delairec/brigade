@@ -1,4 +1,6 @@
+import json
 from datetime import timedelta
+from pathlib import Path
 
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.remove_worktree import remove_worktree
@@ -7,7 +9,7 @@ from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.describe_finished import describe_finished
 from brigade.runs.plan_run import RunPlan
-from brigade.runs.run_locations import RESULT_FILE
+from brigade.runs.run_locations import RESULT_FILE, SEGMENTS_DIRECTORY
 from brigade.runs.run_segment import TURN_LIMIT, WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
 from brigade.runtime import Runtime
 from brigade.system.stop_signal_receiver import StopSignalReceiver
@@ -28,7 +30,7 @@ RELAUNCH_SIGNALS = {
 
 
 def _ends_on_the_clock(record: SegmentRecord) -> bool:
-    return record.result.outcome in CLOCK_OUTCOMES
+    return record.outcome in CLOCK_OUTCOMES
 
 
 def _holds_progress(plan: RunPlan, runtime: Runtime) -> bool:
@@ -38,7 +40,7 @@ def _holds_progress(plan: RunPlan, runtime: Runtime) -> bool:
 def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
     ended_on_the_clock = _ends_on_the_clock(record)
     return SignalRecorded(
-        signal=RELAUNCH_SIGNALS[record.result.outcome],
+        signal=RELAUNCH_SIGNALS[record.outcome],
         project=plan.project,
         procedure=plan.procedure.name,
         run=plan.run_id,
@@ -60,6 +62,10 @@ def _describe_budget_exceeded(plan: RunPlan, record: SegmentRecord, steps: int) 
     )
 
 
+def _locate_segment_result(plan: RunPlan, number: int) -> Path:
+    return plan.run_directory / SEGMENTS_DIRECTORY / str(number) / RESULT_FILE
+
+
 def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
     records = []
     instant = runtime.now
@@ -68,10 +74,12 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
         records.append(record)
         instant += timedelta(milliseconds=record.measured_ms)
         finished = describe_finished(plan, record)
-        append_event(runtime.paths, instant, finished)
+        write_json_atomically(
+            _locate_segment_result(plan, record.number), append_event(runtime.paths, instant, finished)
+        )
         if finished.main_steps is not None and finished.main_steps > plan.procedure.budget:
             append_event(runtime.paths, instant, _describe_budget_exceeded(plan, record, finished.main_steps))
-        if record.result.outcome not in RELAUNCH_SIGNALS:
+        if record.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))
         if record.number > plan.handovers or not _holds_progress(plan, runtime):
@@ -86,5 +94,6 @@ def run_segments(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> l
     finally:
         if plan.disposable_worktree:
             remove_worktree(runtime.run_process, plan.cwd, plan.worktree)
-    write_json_atomically(plan.run_directory / RESULT_FILE, records[-1].result.to_document())
+    last_result = _locate_segment_result(plan, records[-1].number)
+    write_json_atomically(plan.run_directory / RESULT_FILE, json.loads(last_result.read_text(encoding="utf-8")))
     return records

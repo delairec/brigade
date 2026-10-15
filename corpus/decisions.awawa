@@ -1073,7 +1073,7 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	TITLE "every document brigade writes or reads carries an integer schema_version per kind, an"
 		+ "inbound document is validated against its declared shape before the core reads it, and a"
-		+ "reader upgrades every version ever written"
+		+ "reader supports the current version of a kind alone, refusing an older one"
 	STATUS active
 	DESC "every document brigade writes or reads, command output, ledger line, result, collector"
 		+ "document, recipe, config and answer file, carries schema_version, an integer per"
@@ -1086,9 +1086,11 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		+ "plan JSON or a study answer, against a shape declared next to its kind, required keys,"
 		+ "types and enumerations, before the core reads it; an unknown schema_version is refused"
 		+ "by name"
-	DESC "a reader keeps an upgrade function per kind from every version ever written to the"
-		+ "current one; a ledger line is upgraded on read and never rewritten; a state file is"
-		+ "upgraded on read and written back current"
+	DESC "during the build phase, brigade having no user, a reader supports the current version of"
+		+ "each kind alone: a document of an older version is refused like an unknown one, by name,"
+		+ "never upgraded and never rewritten; a file of an older version left on a machine is"
+		+ "thrown away, not supported; this ruling expires when brigade leaves the build phase, and"
+		+ "the decision is then revisited"
 	DESC "inside the core a document becomes a frozen dataclass; the module of its kind declares"
 		+ "from_document when brigade reads the kind and to_document when brigade writes it, no"
 		+ "function for a direction no code crosses; dicts stay at the edges"
@@ -1118,6 +1120,27 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	SOURCE "the user's ruling of 2026-10-07 at the refinement of @TASK.B74: a kind carries only the"
 		+ "directions it crosses, DESC 4 amended"
 		REF @TASK.B74
+	REJECTED "a reader keeping an upgrade function per kind from every version ever written to the"
+		+ "current one, a ledger line upgraded on read and never rewritten, a state file upgraded"
+		+ "on read and written back current, the form of DESC 3 until 2026-10-15: code kept for"
+		+ "documents no user holds, brigade having none during its build phase"
+	SOURCE "the user's ruling of 2026-10-15, in answer to thread r4277193096 of pull request #135"
+		+ "of the brigade repository, which asked whether result.json should share the upgrade"
+		+ "table of the ledger: « Je ne suis pas sûre de piger, mais en tous cas on ne fait pas de"
+		+ "legacy. Si on change le format et que les anciens logs ne sont plus compatibles, on s'en"
+		+ "fout ça fait partie de la phase de développement. Les anciens fichiers ne sont plus"
+		+ "compatibles, ils sont jetés, ils ne sont pas supportés. Car pour le moment on est en"
+		+ "phase de build et on a aucun utilisateur. »; TITLE and DESC 3 amended"
+		REF @TASK.B151
+		REF @TASK.B162
+	REJECTED "a guard of tests/guards refusing an upgrade module or a second readable"
+		+ "schema_version, so that no later pull request brings an upgrade path back: the decision"
+		+ "carries the ruling, which expires with the build phase and is revisited then"
+	SOURCE "the user's ruling of 2026-10-15 on pull request #135 of the brigade repository, asked"
+		+ "whether a test guard should forbid an upgrade path from coming back: « On fait porter"
+		+ "par la décision, en précisant que celle-ci se périme dès qu'on sort de la phase de"
+		+ "build. A ce moment, il faudra revenir sur la décision »; DESC 3 and REJECTED 5 amended"
+		REF @TASK.B162
 
 DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 	TITLE "the pull request of a task carries the GitHub milestone named after the TITLE of the"
@@ -1388,8 +1411,8 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md or"
 		+ "progress.awawa by the form the document key chooses, journal.jsonl, the journal of the"
 		+ "actions of every segment, segments/<n>/ with brief.md, stdout.log, stderr.log and"
-		+ "result.json, the normalised result of that segment, and result.json, the normalised"
-		+ "result of the last segment"
+		+ "result.json, the run.finished document of that segment, the line the ledger appends, and"
+		+ "result.json, that of the last segment"
 	DESC "result.json is written atomically after the ledger events of the run: a run with a result"
 		+ "is finished, one whose pid lives without it is running, any other is dead"
 	DESC "a hand-over keeps the run id and numbers the segment; the brief of segment n opens on"
@@ -1415,6 +1438,8 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	SOURCE "the user's rulings of 2026-10-13 in the refinement of @TASK.B106: DESC 1 names the file"
 		+ "of each form, DESC 3 what the document plugin reads"
 		REF @TASK.B106
+	SOURCE "DESC 1 amended in pull request #135 of the brigade repository, delivering @TASK.B151"
+		REF @TASK.B151
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture and coverage.py, each installed by pip from"
@@ -1916,17 +1941,17 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 	TITLE "the dataclass of a ledger event declares every field brigade writes and a line must"
 		+ "carry them all; a measure no collector reported is absent, never null"
 	STATUS active
-	DESC "a run.finished line carries the 18 fields describe_finished writes and a signal.recorded"
-		+ "line its 6; the reader refuses a line lacking one, as it refuses any line lacking a"
-		+ "field of its event; wall_limit_s is optional on signal.recorded, written on the signal"
-		+ "wall_limit_reached alone and absent from every other; steps is optional on"
+	DESC "a run.finished line carries the 18 fields describe_finished always writes and a"
+		+ "signal.recorded line its 6; the reader refuses a line lacking one, as it refuses any"
+		+ "line lacking a field of its event; wall_limit_s is optional on signal.recorded, written"
+		+ "on the signal wall_limit_reached alone and absent from every other; steps is optional on"
 		+ "signal.recorded, written on the signal budget_exceeded alone"
 		REF @TASK.B74
 		REF @TASK.B85
 		REF @TASK.B103
-	DESC "steps_to_first_edit, oversized_output_steps and cost_usd are optional on RunFinished:"
-		+ "absent from the line until a collector or the client reports them, and never written"
-		+ "null"
+	DESC "steps_to_first_edit, oversized_output_steps, cost_usd, message and reset are optional on"
+		+ "RunFinished: absent from the line until a collector or the client reports them, message"
+		+ "also written when the ending brigade decides carries one, and never written null"
 		REF @TASK.B83
 	DESC "an event the ledger does not declare is read as UndeclaredEvent, its name alone: the"
 		+ "overview counts it, and no wave or project view reads a key of its own"
@@ -1942,7 +1967,8 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 		+ "of one shape"
 	REJECTED "one kind for result.json and the parse-result answer: the outcome of result.json"
 		+ "admits wall_limit, the cut brigade decides when the wall limit expires, and the client"
-		+ "answer never carries it; the two shapes differ, and RunResult stays a kind of its own"
+		+ "answer never carries it; result.json is the run.finished document of its segment, and"
+		+ "the parse-result answer stays a kind of its own"
 	SOURCE "pull request #68 of the brigade repository, delivering @TASK.B74"
 		REF @TASK.B74
 	SOURCE "DESC 1 and DESC 2 amended in pull request #81 of the brigade repository, delivering"
@@ -1950,6 +1976,9 @@ DECISION ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbse
 		REF @TASK.B83
 	SOURCE "DESC 1 amended on 2026-10-10 by the user's ruling in the refinement of @TASK.B85"
 		REF @TASK.B85
+	SOURCE "DESC 1, DESC 2 and REJECTED 5 amended in pull request #135 of the brigade repository,"
+		+ "delivering @TASK.B151"
+		REF @TASK.B151
 
 DECISION ARunKeepsAJournalOfOneShortTimestampedRecordPerActionThatTheReaderTails
 	TITLE "a run keeps a journal, one short timestamped JSON record per action of its client,"

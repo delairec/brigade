@@ -18,7 +18,6 @@ from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
-from brigade.runs.run_result import RunResult
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
@@ -423,17 +422,16 @@ class RunSegmentTest(unittest.TestCase):
         self.assertEqual(record.number, 1)
         self.assertEqual(record.exit_code, 0)
         self.assertEqual(
-            record.result,
-            RunResult(
-                outcome="done",
-                steps=12,
-                usage=None,
-                session_id="session-b73",
-                duration_ms=4200,
-                error_class=None,
-                reset=None,
-                message="the client finished the task",
+            (
+                record.outcome,
+                record.client_steps,
+                record.usage,
+                record.session_id,
+                record.error_class,
+                record.reset,
+                record.message,
             ),
+            ("done", 12, None, "session-b73", None, None, "the client finished the task"),
         )
 
 
@@ -524,21 +522,8 @@ class RunSegmentSoftLimitTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (record.result, record.exit_code, record.cost_usd),
-            (
-                RunResult(
-                    outcome="soft_limit",
-                    steps=12,
-                    usage=None,
-                    session_id="session-b73",
-                    duration_ms=4200,
-                    error_class=None,
-                    reset=None,
-                    message=None,
-                ),
-                0,
-                0.42,
-            ),
+            (record.outcome, record.client_steps, record.session_id, record.message, record.exit_code, record.cost_usd),
+            ("soft_limit", 12, "session-b73", None, 0, 0.42),
         )
 
 
@@ -566,7 +551,7 @@ class RunSegmentSessionTest(unittest.TestCase):
         record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(record.result.session_id, "session-b73")
+        self.assertEqual(record.session_id, "session-b73")
 
     def test_should_take_the_session_named_at_launch_when_the_result_reports_none(self):
         # Arrange
@@ -579,7 +564,7 @@ class RunSegmentSessionTest(unittest.TestCase):
 
         # Assert
         launched_session = plan.client_adapter.requests["launch-argv"]["session_id"]
-        self.assertEqual(record.result.session_id, launched_session)
+        self.assertEqual(record.session_id, launched_session)
         self.assertEqual(plan.client_adapter.requests["transcripts"]["session_id"], launched_session)
 
 
@@ -605,10 +590,10 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         # Assert
         launched_session = plan.client_adapter.requests["launch-argv"]["session_id"]
         self.assertEqual(plan.client_adapter.requests["transcripts"]["session_id"], launched_session)
-        self.assertEqual(record.result.outcome, "wall_limit")
-        self.assertEqual(record.result.session_id, launched_session)
+        self.assertEqual(record.outcome, "wall_limit")
+        self.assertEqual(record.session_id, launched_session)
         self.assertEqual(
-            record.result.usage,
+            record.usage,
             TokenUsage(input_tokens=3, output_tokens=30, cache_creation_input_tokens=300, cache_read_input_tokens=3000),
         )
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
@@ -641,7 +626,7 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
 
                 # Assert
                 self.assertIsNone(record.counted_steps)
-                self.assertIsNone(record.result.usage)
+                self.assertIsNone(record.usage)
                 self.assertEqual(record.uncounted, expected_reason)
 
 
@@ -838,7 +823,7 @@ class RunSegmentStoppedBeforeItsClientIsSpawnedTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (spawn.requests, record.result.outcome, record.exit_code, record.uncounted),
+            (spawn.requests, record.outcome, record.exit_code, record.uncounted),
             ([], "stopped", None, "the client was never launched"),
         )
 
@@ -861,9 +846,7 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.spawn.process.returncode, -signal.SIGTERM)
-        self.assertEqual(
-            (record.result.outcome, record.exit_code, record.result.message), ("stopped", None, "stopped by a signal")
-        )
+        self.assertEqual((record.outcome, record.exit_code, record.message), ("stopped", None, "stopped by a signal"))
 
     def test_should_record_the_client_stopped_in_the_trail(self):
         # Arrange
@@ -889,7 +872,7 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(record.result.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
+        self.assertEqual(record.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
 
 
@@ -929,8 +912,6 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        run_directory = self.root / "state" / "runs" / "20261007T090000Z-b73a01"
-        self.segment_result = run_directory / "segments" / "1" / "result.json"
 
     def test_should_end_the_segment_failed_naming_the_adapter_the_operation_and_the_problem(self):
         # Arrange
@@ -956,17 +937,16 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(
-                    record.result,
-                    RunResult(
-                        outcome="failed",
-                        steps=None,
-                        usage=None,
-                        session_id=None,
-                        duration_ms=ANY,
-                        error_class=None,
-                        reset=None,
-                        message=expected_message,
+                    (
+                        record.outcome,
+                        record.client_steps,
+                        record.usage,
+                        record.session_id,
+                        record.error_class,
+                        record.reset,
+                        record.message,
                     ),
+                    ("failed", None, None, None, None, None, expected_message),
                 )
 
     def test_should_record_the_failure_of_the_adapter_apart_from_the_result_of_the_client(self):
@@ -1014,7 +994,7 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (spawn.requests, record.result.outcome, record.exit_code, record.uncounted),
+            (spawn.requests, record.outcome, record.exit_code, record.uncounted),
             ([], "failed", None, "the client was never launched"),
         )
 
@@ -1028,7 +1008,7 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
         record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(record.result.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
+        self.assertEqual(record.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
 
     def test_should_keep_the_time_measured_until_the_client_exited(self):
@@ -1042,28 +1022,4 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
             record = run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual((record.measured_ms, record.result.duration_ms), (4200, 4200))
-
-    def test_should_write_the_failed_result_of_the_segment(self):
-        # Arrange
-        rows = [
-            (
-                ClientAnsweringLaunchArgvWithoutSessionDouble,
-                "client adapter double-client answered launch-argv: lacks the key session_id",
-            ),
-            (
-                ClientAnsweringParseResultWithoutOutcomeDouble,
-                "client adapter double-client answered parse-result: lacks the key outcome",
-            ),
-        ]
-        for client_type, expected_message in rows:
-            with self.subTest(client=client_type.__name__):
-                # Arrange
-                plan = _create_plan(self.root, client_type=client_type)
-
-                # Act
-                run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
-
-                # Assert
-                document = json.loads(self.segment_result.read_text(encoding="utf-8"))
-                self.assertEqual((document["outcome"], document["message"]), ("failed", expected_message))
+        self.assertEqual(record.measured_ms, 4200)

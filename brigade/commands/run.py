@@ -121,7 +121,7 @@ def run(request, runtime: Runtime) -> dict:
         "client": plan.client,
         "project": plan.project,
         "segments": len(records),
-        "outcome": records[-1].result.outcome,
+        "outcome": records[-1].outcome,
     }
     return _attach_warnings(document, [*plan.warnings, *describe_skipped_runs(pruned.skipped)])
 

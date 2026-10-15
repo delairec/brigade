@@ -4,7 +4,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.errors import BrigadeError
 from brigade.runs.list_runs import list_runs
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.read_start_time import read_start_time
@@ -46,6 +45,51 @@ RUN_RECORD_WITHOUT_CLIENT = {
 ANOTHER_START_TIME = 1
 ANOTHER_BOOT_ID = "0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f"
 RUN_RESULT = {
+    "schema_version": 2,
+    "ts": "2026-10-07T09:12:00Z",
+    "event": "run.finished",
+    "run": RUN_ID,
+    "segment": 1,
+    "procedure": "deliver",
+    "slot": "build",
+    "role": "builder",
+    "client": "fake",
+    "project": None,
+    "session": "session-b74",
+    "main_steps": 12,
+    "total_steps": 12,
+    "duration_ms": 4200,
+    "usage": None,
+    "outcome": "done",
+    "error_class": None,
+    "exit": 0,
+    "wave": None,
+    "task": None,
+    "nulls": {},
+}
+RUN_RESULT_LACKING_ITS_OUTCOME = {
+    "schema_version": 2,
+    "ts": "2026-10-07T09:12:00Z",
+    "event": "run.finished",
+    "run": RUN_ID,
+    "segment": 1,
+    "procedure": "deliver",
+    "slot": "build",
+    "role": "builder",
+    "client": "fake",
+    "project": None,
+    "session": "session-b74",
+    "main_steps": 12,
+    "total_steps": 12,
+    "duration_ms": 4200,
+    "usage": None,
+    "error_class": None,
+    "exit": 0,
+    "wave": None,
+    "task": None,
+    "nulls": {},
+}
+RUN_RESULT_OF_SCHEMA_1 = {
     "schema_version": 1,
     "outcome": "done",
     "steps": 12,
@@ -78,7 +122,7 @@ class ListRunsBeforeAnyRunTest(ListRunsTestCase):
         runs = list_runs(self.state_root)
 
         # Assert
-        self.assertEqual(runs, [])
+        self.assertEqual(runs, {"runs": [], "skipped": []})
 
 
 class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
@@ -92,17 +136,20 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
         # Assert
         self.assertEqual(
             runs,
-            [
-                {
-                    "run": "20261007T090000Z-b70a01",
-                    "procedure": "deliver",
-                    "slot": "build",
-                    "role": "builder",
-                    "project": None,
-                    "state": "dead",
-                    "outcome": None,
-                }
-            ],
+            {
+                "runs": [
+                    {
+                        "run": "20261007T090000Z-b70a01",
+                        "procedure": "deliver",
+                        "slot": "build",
+                        "role": "builder",
+                        "project": None,
+                        "state": "dead",
+                        "outcome": None,
+                    }
+                ],
+                "skipped": [],
+            },
         )
 
     def test_should_list_a_run_whose_process_is_alive_as_running(self):
@@ -111,7 +158,7 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
         record_run_pid(self.run_directory, os.getpid())
 
         # Act
-        [listed] = list_runs(self.state_root)
+        [listed] = list_runs(self.state_root)["runs"]
 
         # Assert
         self.assertEqual(listed["state"], "running")
@@ -132,7 +179,7 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
                 (self.run_directory / "pid").write_text(written)
 
                 # Act
-                [listed] = list_runs(self.state_root)
+                [listed] = list_runs(self.state_root)["runs"]
 
                 # Assert
                 self.assertEqual(listed["state"], "dead")
@@ -145,14 +192,14 @@ class ListRunsOfAFinishedRunTest(ListRunsTestCase):
         (self.run_directory / "result.json").write_text(json.dumps(RUN_RESULT))
 
         # Act
-        [listed] = list_runs(self.state_root)
+        [listed] = list_runs(self.state_root)["runs"]
 
         # Assert
         self.assertEqual((listed["state"], listed["outcome"]), ("finished", "done"))
 
 
 class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
-    def test_should_refuse_a_run_record_naming_the_file_and_the_problem(self):
+    def test_should_leave_out_a_run_whose_record_is_refused_naming_the_file_and_the_problem(self):
         # Arrange
         rows = [
             ("a record that is not JSON", "{", "is not a run record: not a JSON document"),
@@ -169,24 +216,43 @@ class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
                 (self.run_directory / "run.json").write_text(content)
 
                 # Act
-                with self.assertRaises(BrigadeError) as refusal:
-                    list_runs(self.state_root)
+                runs = list_runs(self.state_root)
 
                 # Assert
-                self.assertEqual(str(refusal.exception), f"{self.run_directory / 'run.json'} {expected_problem}")
+                self.assertEqual(
+                    runs,
+                    {
+                        "runs": [],
+                        "skipped": [{"run": RUN_ID, "reason": f"{self.run_directory / 'run.json'} {expected_problem}"}],
+                    },
+                )
 
-    def test_should_refuse_a_run_result_naming_the_file_and_the_problem(self):
+    def test_should_leave_out_a_run_whose_result_is_refused_naming_the_file_and_the_problem(self):
         # Arrange
+        rows = [
+            ("a result of an older shape", json.dumps(RUN_RESULT_OF_SCHEMA_1), "schema_version is 1, not one of 2"),
+            ("a result that is not JSON", "{", "not a JSON document"),
+            ("a result lacking its outcome", json.dumps(RUN_RESULT_LACKING_ITS_OUTCOME), "lacks the key outcome"),
+        ]
         self.start_run()
-        (self.run_directory / "result.json").write_text(json.dumps({**RUN_RESULT, "outcome": "lost"}))
+        for case, content, expected_problem in rows:
+            with self.subTest(case=case):
+                # Arrange
+                (self.run_directory / "result.json").write_text(content)
 
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            list_runs(self.state_root)
+                # Act
+                runs = list_runs(self.state_root)
 
-        # Assert
-        self.assertEqual(
-            str(refusal.exception),
-            f"{self.run_directory / 'result.json'} is not a run result: outcome is 'lost', not one of done, failed,"
-            " handed_over, blocked, undeclared, wall_limit, turn_limit, soft_limit, stopped",
-        )
+                # Assert
+                self.assertEqual(
+                    runs,
+                    {
+                        "runs": [],
+                        "skipped": [
+                            {
+                                "run": RUN_ID,
+                                "reason": f"{self.run_directory / 'result.json'} is not a run result: {expected_problem}",
+                            }
+                        ],
+                    },
+                )

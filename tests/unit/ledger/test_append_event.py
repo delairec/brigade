@@ -89,6 +89,16 @@ class AppendEventOfAnInstantWithATimeZoneTest(AppendEventTestCase):
             ],
         )
 
+    def test_should_return_the_line_it_appended(self):
+        # Arrange
+        instant = datetime(2026, 10, 6, 9, 30, tzinfo=UTC)
+
+        # Act
+        line = append_event(self.paths, instant, BUDGET_SIGNAL)
+
+        # Assert
+        self.assertEqual(line, json.loads((self.ledger / "2026-10.jsonl").read_text()))
+
     def test_should_write_the_instant_in_utc_into_the_file_of_its_utc_month(self):
         # Arrange
         instant = datetime(2026, 10, 1, 1, 30, tzinfo=PARIS_SUMMER_TIME)
