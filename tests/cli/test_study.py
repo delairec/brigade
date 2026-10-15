@@ -549,3 +549,103 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             (completed.returncode, completed.stderr),
             (1, f"brigade study context: the run {parked} has collected no evidence yet\n"),
         )
+
+
+class BrigadeStudyAnswerTest(StudyRunTestCase):
+    def setUp(self):
+        super().setUp()
+        recordings = Path(self.root.name) / "recordings"
+        recordings.mkdir()
+        (recordings / "reporter.json").write_text(json.dumps(DONE_RESULT))
+        self.machine.write_configuration(
+            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+        )
+        self.run_study(
+            "new",
+            "weekly",
+            "--title",
+            "what moved",
+            "--project",
+            "shop",
+            "--collector",
+            "shell: true",
+            "--every",
+            "1d",
+            "--output",
+            "entity:ANSWER",
+        )
+        self.run_id = json.loads(self.run_study("run", "weekly", "--json").stdout)["run"]
+        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "document.json"
+        self.answer_file = Path(self.root.name) / "answer.awawa"
+
+    def write_answer(self, summary: str, prose: str) -> None:
+        self.answer_file.write_text(
+            f"ANSWER weekly_{self.run_id.replace('-', '_')}\n"
+            '\tSTUDY "weekly"\n'
+            f'\tRUN "{self.run_id}"\n'
+            '\tCOLLECTED "shell"\n'
+            f"\t\tSUMMARY {summary}\n"
+            f'\t\tDOCUMENT "{self.document}"\n'
+            f"{prose}"
+        )
+
+    def test_should_record_an_answer_the_schema_of_its_type_accepts(self):
+        # Arrange
+        self.write_answer('"{\\"lines\\": 0}"', '\tNARRATIVE "nothing moved"\n')
+
+        # Act
+        completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, (self.runs / self.run_id / "answer.awawa").read_text()),
+            (0, self.answer_file.read_text()),
+            completed.stderr,
+        )
+
+    def test_should_refuse_an_answer_the_schema_of_its_type_rejects(self):
+        # Arrange
+        self.write_answer('"{\\"lines\\": 0}"', '\tVERDICT "nothing moved"\n')
+
+        # Act
+        completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertRegex(completed.stderr, r"^brigade study answer: the schema of ANSWER rejects the answer\n")
+
+    def test_should_refuse_an_answer_that_changed_a_field_the_cli_filled(self):
+        # Arrange
+        self.write_answer('"{\\"lines\\": 3}"', '\tNARRATIVE "three lines moved"\n')
+
+        # Act
+        completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade study answer: the answer changed COLLECTED, a field brigade filled\n"),
+        )
+
+    def test_should_keep_no_answer_it_refused(self):
+        # Arrange
+        self.write_answer('"{\\"lines\\": 3}"', '\tNARRATIVE "three lines moved"\n')
+
+        # Act
+        self.run_study("answer", self.run_id, "--file", str(self.answer_file))
+
+        # Assert
+        self.assertEqual(sorted(path.name for path in (self.runs / self.run_id).glob("*.awawa")), [])
+
+    def test_should_refuse_an_answer_that_names_another_entity(self):
+        # Arrange
+        self.answer_file.write_text('ANSWER elsewhere\n\tSTUDY "weekly"\n\tRUN "elsewhere"\n')
+
+        # Act
+        completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, f"brigade study answer: the answer holds no @ANSWER.weekly_{self.run_id.replace('-', '_')}\n"),
+        )

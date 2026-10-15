@@ -12,6 +12,7 @@ COLLECTORS_DIRECTORY = "collectors"
 ANSWER_FILE = "answer.awawa"
 STUDY_RECORD_FILE = "study.json"
 CONTEXT_FILE = "context.json"
+FIELDS_THE_CLI_FILLS = ("STUDY", "RUN", "COLLECTED")
 
 
 @dataclass(frozen=True)

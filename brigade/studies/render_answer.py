@@ -7,13 +7,13 @@ RUN_ID_SEPARATOR = "-"
 NAME_SEPARATOR = "_"
 
 
-def _name_answer(study: Study, run_id: str) -> str:
+def name_answer(study: Study, run_id: str) -> str:
     return f"{study.name}{NAME_SEPARATOR}{run_id.replace(RUN_ID_SEPARATOR, NAME_SEPARATOR)}"
 
 
 def render_answer(study: Study, run_id: str, collected: list[dict]) -> str:
     lines = [
-        f"{study.answer_type} {_name_answer(study, run_id)}",
+        f"{study.answer_type} {name_answer(study, run_id)}",
         f"\tSTUDY {quote_awawa_string(study.name)}",
         f"\tRUN {quote_awawa_string(run_id)}",
     ]
