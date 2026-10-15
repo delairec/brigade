@@ -2544,7 +2544,8 @@ TASK B48
 		+ "name of an entity type of the same schema, ANSWER by default; SCHEMA ANSWER declares"
 		+ "STUDY, RUN, COLLECTED, one per collector holding its name, its summary and the path of"
 		+ "its full document, which the CLI fills, and NARRATIVE and FINDING, repeatable, which the"
-		+ "slot fills; brigade init installs it as it upgrades the installed schema"
+		+ "slot fills; brigade init installs it in a new operational corpus and upgrades no"
+		+ "installed schema, an operational corpus of an older schema being thrown away"
 	SPEC "study new records a STUDY entity through fmt, lint and a commit, with the question"
 		+ "verbatim, the project when there is one, the collectors, the slot or none, the schedule"
 		+ "or none, the output and the type of the answer, and runs it once unless --every is given"
@@ -2584,7 +2585,7 @@ TASK B48
 		+ "type of the answer replaces; DESC 1, 4, 5 and 9 of"
 		+ "@DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun are amended at this"
 		+ "ratification; after @TASK.B106, which introduces the document kind, and @TASK.B11, which"
-		+ "upgrades the installed schema"
+		+ "settles that init upgrades no installed schema"
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 		REF @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun
 		REF @TASK.B106
