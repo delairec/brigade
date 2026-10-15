@@ -861,3 +861,71 @@ class BrigadeStudyOutputOnPathTest(StudyOutputTestCase):
 
         # Assert
         self.assertEqual(parked["reason"], "no output notes: no brigade-output-notes on PATH")
+
+
+class BrigadeStudyCollectorTest(StudyRunTestCase):
+    def record_digest(self, collector: str = "study name=trees") -> None:
+        self.run_study(
+            "new",
+            "digest",
+            "--title",
+            "the digest",
+            "--project",
+            "shop",
+            "--collector",
+            collector,
+            "--slot",
+            "none",
+            "--every",
+            "1d",
+            "--output",
+            "entity:ANSWER",
+        )
+
+    def test_should_collect_the_last_answer_of_the_study_it_names(self):
+        # Arrange
+        self.record_scan("shell: printf 'oak\\n'")
+        self.run_study("run", "trees")
+        trees_run = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
+        self.record_digest()
+
+        # Act
+        digest_run = json.loads(self.run_study("run", "digest", "--json").stdout)["run"]
+
+        # Assert
+        document = self.runs / digest_run / "collectors" / "1" / "collect" / "study" / "document.json"
+        self.assertEqual(
+            json.loads(document.read_text())["items"],
+            [
+                {
+                    "type": "ANSWER",
+                    "name": f"trees_{trees_run.replace('-', '_')}",
+                    "fields": [
+                        {"name": "STUDY", "value": "trees"},
+                        {"name": "RUN", "value": trees_run},
+                        {"name": "COLLECTED", "value": "shell"},
+                    ],
+                }
+            ],
+        )
+
+    def test_should_park_on_a_study_that_has_no_answer_yet(self):
+        # Arrange
+        self.record_scan("shell: printf 'oak\\n'")
+        self.record_digest()
+
+        # Act
+        parked = json.loads(self.run_study("run", "digest", "--json").stdout)
+
+        # Assert
+        self.assertEqual(parked["reason"], "collector study exited 1\n@STUDY.trees has no answer yet")
+
+    def test_should_park_on_a_study_collector_naming_no_study(self):
+        # Arrange
+        self.record_digest("study")
+
+        # Act
+        parked = json.loads(self.run_study("run", "digest", "--json").stdout)
+
+        # Assert
+        self.assertEqual(parked["reason"], "collector study exited 1\nthe study collector takes name=<study>")

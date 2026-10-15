@@ -499,6 +499,7 @@ class BrigadeCollectorsListTest(CollectTestCase):
                     {"name": "git-log", "source": "built-in"},
                     {"name": "ledger", "source": "built-in"},
                     {"name": "shell", "source": "built-in"},
+                    {"name": "study", "source": "built-in"},
                     {"name": "worktrees", "source": "built-in"},
                 ],
             },
@@ -523,6 +524,7 @@ class BrigadeCollectorsListTest(CollectTestCase):
                 "git-log        built-in",
                 "ledger         built-in",
                 "shell          built-in",
+                "study          built-in",
                 "worktrees      built-in",
             ],
         )
@@ -550,6 +552,7 @@ class BrigadeCollectorsListWithoutCollectorDirectoriesTest(CollectTestCase):
                     {"name": "git-log", "source": "built-in"},
                     {"name": "ledger", "source": "built-in"},
                     {"name": "shell", "source": "built-in"},
+                    {"name": "study", "source": "built-in"},
                     {"name": "worktrees", "source": "built-in"},
                 ],
             },
