@@ -8253,21 +8253,51 @@ TASK B144
 TASK B145
 	TITLE "config.toml binds a client per slot in [slot_clients], so that two clients serve one"
 		+ "project"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
 	SPEC "config.toml accepts a table [slot_clients] mapping a slot among the nine to the name of a"
 		+ "client adapter, in the shape of [forge_accounts]; an unknown slot or a value that is no"
 		+ "string is an error naming the key and the file"
+		IMPL "brigade/system/read_configuration.py::def _read_slot_clients(table, path: Path) ->"
+			+ "dict:"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_exit_1_naming_the_key_and_the_file_of_a_table_off_its_shape(self):"
 	SPEC "the client of a run is the one [slot_clients] binds to its slot, else the CLIENT of the"
 		+ "PROJECT entity, else the client key of config.toml"
+		IMPL "brigade/runs/read_run_setting.py::client = configuration.slot_clients.get(slot) or"
+			+ "read_project_field(project, CLIENT_FIELD) or configuration.client"
+		IMPL "tests/cli/test_run.py::def test_should_run_the_bound_slot_on_its_client(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_run_with_the_client_the_slot_clients_table_binds_over_the_client_the_project_names(self):"
 	SPEC "the record of a run and its ledger event run.finished name the client the run used"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_name_the_client_of_the_slot_in_the_record_of_the_run(self):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_name_the_client_of_the_slot_in_the_finished_run_of_the_ledger(self):"
 	SPEC "brigade roles list, brigade doctor and the brigade adapter commands state the client they"
 		+ "answer for and name each slot [slot_clients] binds to another client, with that client"
+		IMPL "brigade/system/describe_client_answered.py::def describe_client_answered(client: str"
+			+ "| None) -> str:"
+		IMPL "brigade/system/list_slot_clients_elsewhere.py::def"
+			+ "list_slot_clients_elsewhere(configuration: Configuration, client: str | None) ->"
+			+ "dict:"
+		IMPL "brigade/system/describe_slot_clients.py::def describe_slot_clients(slot_clients:"
+			+ "dict) -> list[str]:"
+		IMPL "tests/cli/test_roles.py::class"
+			+ "BrigadeRolesListOnAMachineBindingASlotToAnotherClientTest(RolesTestCase):"
+		IMPL "tests/cli/test_doctor.py::class"
+			+ "BrigadeDoctorOnAMachineBindingASlotToAnotherClientTest(DoctorTestCase):"
+		IMPL "tests/cli/test_adapter.py::class"
+			+ "BrigadeAdapterOnAMachineBindingASlotToAnotherClientTest(AdapterTestCase):"
 	SPEC "tests/cli prove, with two adapters of the test suite, that a slot bound in [slot_clients]"
 		+ "runs on its client while another slot runs on the client key, that PROJECT.CLIENT yields"
 		+ "to the slot's client, and each refusal of the table"
+		IMPL "tests/cli/test_run.py::class"
+			+ "BrigadeRunOfASlotTheSlotClientsTableBindsTest(RunTestCase):"
+		IMPL "tests/cli/test_run.py::def"
+			+ "test_should_run_a_slot_the_table_leaves_unbound_on_the_client_key(self):"
 	AFTER @TASK.B42
 	AFTER @TASK.B06
 	RATIONALE "the user asked on 2026-10-07 whether two AI providers can coexist; the session found"
@@ -8303,6 +8333,7 @@ TASK B145
 		+ ": [slot_clients] review = \"vibe\" ; ordre : slot, sinon PROJECT.CLIENT, sinon client ;"
 		+ "même forme que [forge_accounts]. Le client est une propriété de la machine, le rôle"
 		+ "reste portable. »; the task is split from B44 and ratified"
+	DELIVERED_BY 140
 
 TASK B146
 	TITLE "The built-in collector pr-list prints the pull requests of a project through the forge"
