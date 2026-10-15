@@ -277,6 +277,16 @@ class BrigadeStudyRunTest(StudyRunTestCase):
             self.read_order_events(), [("order.started", None), ("step.failed", "collect"), ("order.parked", "collect")]
         )
 
+    def test_should_print_the_step_a_study_parked_at(self):
+        # Arrange
+        self.record_scan("shell: cat flag")
+
+        # Act
+        completed = self.run_study("run", "trees")
+
+        # Assert
+        self.assertRegex(completed.stdout, r"^@STUDY\.trees run \d{8}T\d{6}Z-[0-9a-f]{6} parked at collect: ")
+
     def test_should_resume_a_parked_run_at_its_first_undone_step(self):
         # Arrange
         self.record_scan("shell: cat flag")
@@ -651,6 +661,27 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
             (completed.returncode, completed.stderr),
             (1, f"brigade study answer: the answer holds no @ANSWER.weekly_{self.run_id.replace('-', '_')}\n"),
         )
+
+    def test_should_exit_1_naming_an_answer_file_it_cannot_read(self):
+        # Act
+        completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, f"brigade study answer: cannot read {self.answer_file}: No such file or directory\n"),
+        )
+
+    def test_should_finish_a_study_parked_at_its_judging_run_once_its_answer_is_recorded(self):
+        # Arrange
+        self.write_answer('"{\\"lines\\": 0}"', '\tNARRATIVE "nothing moved"\n')
+        self.run_study("answer", self.run_id, "--file", str(self.answer_file))
+
+        # Act
+        completed = self.run_study("run", "weekly", "--json")
+
+        # Assert
+        self.assertEqual((completed.returncode, json.loads(completed.stdout)["state"]), (0, "done"), completed.stderr)
 
 
 FAKE_GH = '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "{calls}"\ncat >> "{calls}"\necho https://github.com/acme/atelier/7\n'
