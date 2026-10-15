@@ -155,11 +155,9 @@ class BrigadeRolesListOnAMachineThatConfiguresNoRoleTest(RolesTestCase):
 class BrigadeRolesListOnAMachineBindingASlotToAnotherClientTest(RolesTestCase):
     def setUp(self):
         super().setUp()
-        self.machine.write_configuration(
-            'client = "claude-code"\n[slot_clients]\nbuild = "claude-code"\nreview = "finishing"\n'
-        )
+        self.machine.write_configuration('client = "fake"\n[slot_clients]\nbuild = "fake"\nreview = "claude-code"\n')
 
-    def test_should_name_the_slot_bound_to_another_client_with_that_client_and_no_model(self):
+    def test_should_name_the_slot_bound_to_another_client_with_that_client_and_the_model_it_binds(self):
         # Act
         completed = self.run_roles("list", "--json")
 
@@ -169,18 +167,18 @@ class BrigadeRolesListOnAMachineBindingASlotToAnotherClientTest(RolesTestCase):
             json.loads(completed.stdout),
             {
                 "schema_version": 1,
-                "client": "claude-code",
-                "slot_clients": {"review": "finishing"},
+                "client": "fake",
+                "slot_clients": {"review": "claude-code"},
                 "roles": [
-                    {"slot": "plan", "role": "planner", "source": "built-in", "model": "fable"},
-                    {"slot": "build", "role": "builder", "source": "built-in", "model": "opus"},
-                    {"slot": "review", "role": "reviewer", "source": "built-in", "model": None},
-                    {"slot": "remediate", "role": "remediator", "source": "built-in", "model": "opus"},
-                    {"slot": "rebase", "role": "rebaser", "source": "built-in", "model": "sonnet"},
-                    {"slot": "report", "role": "reporter", "source": "built-in", "model": "opus"},
-                    {"slot": "triage", "role": "triager", "source": "built-in", "model": "opus"},
-                    {"slot": "rules", "role": "rulewriter", "source": "built-in", "model": "fable"},
-                    {"slot": "explore", "role": "explorer", "source": "built-in", "model": "sonnet"},
+                    {"slot": "plan", "role": "planner", "source": "built-in", "model": None},
+                    {"slot": "build", "role": "builder", "source": "built-in", "model": None},
+                    {"slot": "review", "role": "reviewer", "source": "built-in", "model": "fable"},
+                    {"slot": "remediate", "role": "remediator", "source": "built-in", "model": None},
+                    {"slot": "rebase", "role": "rebaser", "source": "built-in", "model": None},
+                    {"slot": "report", "role": "reporter", "source": "built-in", "model": None},
+                    {"slot": "triage", "role": "triager", "source": "built-in", "model": None},
+                    {"slot": "rules", "role": "rulewriter", "source": "built-in", "model": None},
+                    {"slot": "explore", "role": "explorer", "source": "built-in", "model": None},
                 ],
             },
         )
@@ -191,8 +189,23 @@ class BrigadeRolesListOnAMachineBindingASlotToAnotherClientTest(RolesTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.splitlines()[-2:], ["answers for fake", "slot review runs on claude-code"])
+
+
+class BrigadeRolesListOnAMachineBindingASlotToAClientNotInstalledTest(RolesTestCase):
+    def test_should_exit_1_naming_the_adapter_found_nowhere(self):
+        # Arrange
+        self.machine.write_configuration('client = "claude-code"\n[slot_clients]\nreview = "frobnicate"\n')
+
+        # Act
+        completed = self.run_roles("list")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1, completed.stdout)
         self.assertEqual(
-            completed.stdout.splitlines()[-2:], ["answers for claude-code", "slot review runs on finishing"]
+            completed.stderr,
+            "brigade roles list: no client adapter frobnicate: no built-in module and no brigade-client-frobnicate"
+            " on PATH\n",
         )
 
 

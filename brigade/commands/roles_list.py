@@ -17,11 +17,11 @@ COLUMNS = ("slot", "role", "source", "model")
 NO_MODEL = "-"
 
 
-def _read_bound_models(configuration: Configuration, runtime: Runtime) -> dict:
-    if configuration.client is None:
+def _read_bound_models(client_name: str | None, configuration: Configuration, runtime: Runtime) -> dict:
+    if client_name is None:
         return NO_MODEL_BOUND
-    client = runtime.resolve_plugin("client", configuration.client)
-    question = ClientQuestion(configuration.client, ProbeRequest())
+    client = runtime.resolve_plugin("client", client_name)
+    question = ClientQuestion(client_name, ProbeRequest())
     return ask_named_client(client, question, configuration, runtime).models
 
 
@@ -51,8 +51,11 @@ def _decide_exit_code(document: dict) -> int:
 def roles_list(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS, configuration) for slot in SLOTS]
-    models = _read_bound_models(configuration, runtime)
     slot_clients = list_slot_clients_elsewhere(configuration, configuration.client)
+    models_by_client = {
+        client_name: _read_bound_models(client_name, configuration, runtime)
+        for client_name in dict.fromkeys([configuration.client, *slot_clients.values()])
+    }
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "client": configuration.client,
@@ -62,7 +65,9 @@ def roles_list(request, runtime: Runtime) -> dict:
                 "slot": resolved.slot,
                 "role": resolved.role,
                 "source": resolved.source,
-                "model": None if resolved.slot in slot_clients else models.get(resolved.front_matter["reasoning"]),
+                "model": models_by_client[slot_clients.get(resolved.slot, configuration.client)].get(
+                    resolved.front_matter["reasoning"]
+                ),
             }
             for resolved in resolved_roles
         ],
