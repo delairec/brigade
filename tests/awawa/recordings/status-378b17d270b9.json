@@ -6,11 +6,11 @@
       "--where",
       "MILESTONE==@MILESTONE.M1",
       "--json",
-      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus"
+      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f"
     ],
-    "cwd": "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus",
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f",
     "directories": [
-      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus"
+      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f"
     ],
     "inputs": {
       "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running|delivered\n\t\tREQUIRED\n",

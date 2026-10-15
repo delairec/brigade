@@ -1,11 +1,10 @@
 import json
 import tempfile
-import time
 import unittest
 from pathlib import Path
 
 from tests.awawa.provide_awawa import provide_awawa
-from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FILE_POLL_S, FILE_WAIT_S
+from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 
@@ -82,7 +81,7 @@ PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER
 ASKING_POLICY = "POLICY shop_review\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
 
 
-class WaveTestCase(unittest.TestCase):
+class WaveTestCase(FileWaitingTestCase):
     def setUp(self):
         provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
@@ -125,12 +124,7 @@ class WaveTestCase(unittest.TestCase):
         self.project.run_git("checkout", "--quiet", "main")
 
     def wait_for_result(self, run_id: str) -> None:
-        result = self.runs / run_id / "result.json"
-        deadline = time.monotonic() + FILE_WAIT_S
-        while not result.exists():
-            if time.monotonic() > deadline:
-                self.fail(f"{result} never appeared")
-            time.sleep(FILE_POLL_S)
+        self.wait_for_file(self.runs / run_id / "result.json")
 
 
 class BrigadeWaveNewTest(WaveTestCase):
@@ -195,6 +189,15 @@ class BrigadeWaveNewTest(WaveTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertRegex(completed.stdout, r"^@REQUEST\.shop_1 planning, run \d{8}T\d{6}Z-[0-9a-f]{6}\n$")
         self.wait_for_result(completed.stdout.split()[-1])
+
+    def test_should_write_a_quote_of_the_text_escaped(self):
+        # Act
+        completed = self.run_wave("new", "shop", 'let the customer "empty" the cart', "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.wait_for_result(json.loads(completed.stdout)["run"])
+        self.assertIn('\tTEXT "let the customer \\"empty\\" the cart"\n', self.read_requests())
 
     def test_should_exit_1_naming_a_project_that_is_not_registered(self):
         # Act
@@ -381,6 +384,21 @@ class BrigadeWaveShowTest(WaveTestCase):
             "S4    queued   12            Confirm before emptying the cart\n",
         )
 
+    def test_should_read_the_tasks_with_the_root_of_the_project_tree_as_the_awawa_workspace(self):
+        # Arrange
+        sha = self.project.run_git("rev-parse", WAVE_BRANCH).strip()
+        tree = self.machine.cache_home / "brigade" / "refs" / "shop" / sha
+
+        # Act
+        completed = self.run_wave("show", "shop_1", "--verbose")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            f"brigade wave show: ran awawa status TASK --where MILESTONE==@MILESTONE.M1 --json {tree},",
+            completed.stderr,
+        )
+
     def test_should_exit_1_naming_a_request_the_operational_corpus_does_not_define(self):
         # Act
         completed = self.run_wave("show", "shop_9")
@@ -389,6 +407,35 @@ class BrigadeWaveShowTest(WaveTestCase):
         self.assertEqual(
             (completed.returncode, completed.stderr),
             (1, "brigade wave show: @REQUEST.shop_9 is not defined in the operational corpus\n"),
+        )
+
+
+class BrigadeWaveShowOfAProjectWithoutACorpusTest(WaveTestCase):
+    def test_should_exit_1_naming_the_project(self):
+        # Arrange
+        cafe = TemporaryProject(
+            Path(self.root.name).resolve() / "projects" / "cafe", self.machine.describe_environment()
+        )
+        cafe.write("README.md", "# cafe\n")
+        cafe.track("README.md")
+        cafe.run_git("commit", "--quiet", "-m", "the readme")
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(cafe.path))
+        self.write_requests(
+            "REQUEST cafe_1\n"
+            "\tPROJECT @PROJECT.cafe\n"
+            '\tTEXT "print the receipt"\n'
+            '\tCREATED_AT "2026-10-14T07:15:00Z"\n'
+            "\tSTATUS planned\n"
+            '\tMILESTONE "M1"\n'
+            f'\tBRANCH "{WAVE_BRANCH}"\n'
+        )
+
+        # Act
+        completed = self.run_wave("show", "cafe_1")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr), (1, "brigade wave show: @PROJECT.cafe declares no corpus\n")
         )
 
 
@@ -482,3 +529,40 @@ class BrigadeWaveListTest(WaveTestCase):
             f"shop_1   shop     planned   M1         {WAVE_BRANCH}  2026-10-12T09:30:00Z\n"
             "shop_2   shop     planning  -          -                          2026-10-13T14:00:00Z\n",
         )
+
+
+class BrigadeWaveListWithoutRequestsTest(WaveTestCase):
+    def test_should_print_no_row(self):
+        # Act
+        completed = self.run_wave("list", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout), {"schema_version": 1, "requests": []})
+
+
+class BrigadeWaveBeforeInitTest(unittest.TestCase):
+    def setUp(self):
+        provide_awawa(self)
+        self.root = tempfile.TemporaryDirectory()
+        self.machine = TemporaryMachine(Path(self.root.name).resolve())
+
+    def tearDown(self):
+        self.root.cleanup()
+
+    def test_should_exit_1_naming_brigade_init(self):
+        for arguments, expected_stderr in [
+            (
+                ("new", "shop", REQUEST_TEXT),
+                "brigade wave new: the operational corpus is missing; run brigade init first\n",
+            ),
+            (("start", "shop_1"), "brigade wave start: the operational corpus is missing; run brigade init first\n"),
+            (("show", "shop_1"), "brigade wave show: the operational corpus is missing; run brigade init first\n"),
+            (("list",), "brigade wave list: the operational corpus is missing; run brigade init first\n"),
+        ]:
+            with self.subTest(arguments=arguments):
+                # Act
+                completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", *arguments)
+
+                # Assert
+                self.assertEqual((completed.returncode, completed.stderr), (1, expected_stderr))

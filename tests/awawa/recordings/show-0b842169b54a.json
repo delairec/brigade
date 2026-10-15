@@ -2,13 +2,13 @@
   "call": {
     "arguments": [
       "show",
-      "@TASK.S4",
+      "@TASK.S3",
       "--json",
-      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus"
+      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f"
     ],
-    "cwd": "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus",
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f",
     "directories": [
-      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus"
+      "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f"
     ],
     "inputs": {
       "<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running|delivered\n\t\tREQUIRED\n",
@@ -20,7 +20,7 @@
     "exit_code": 0,
     "rewritten": {},
     "stderr": "",
-    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S4\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus/tasks.awawa\", \"line\": 10, \"status\": \"implemented\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Confirm before emptying the cart\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"implemented\"], \"fields\": []}, {\"name\": \"MILESTONE\", \"atoms\": [\"@MILESTONE.M1\"], \"fields\": []}, {\"name\": \"DELIVERED_BY\", \"atoms\": [\"12\"], \"fields\": []}], \"duplicates\": []}\n"
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S3\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/f373bdf046db7a2bc9cb69826ccc9a7517292d5f/corpus/tasks.awawa\", \"line\": 5, \"status\": \"todo\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Empty the cart in one click\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"todo\"], \"fields\": []}, {\"name\": \"MILESTONE\", \"atoms\": [\"@MILESTONE.M1\"], \"fields\": []}], \"duplicates\": []}\n"
   },
   "version": "awawa 2.7.0"
 }

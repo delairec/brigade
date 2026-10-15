@@ -90,7 +90,7 @@ registered or is paused exits 1. `wave start` moves a `planned` request to `runn
 ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
 `brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of
 its milestone read from its branch, each with the last `task.state` of the ledger, `queued` when none, and the pull
-request that delivered it. `wave list` prints one row per request, those of one project with `--project`. Every write
+request that delivered it; a request of a project that declares no corpus exits 1. `wave list` prints one row per request, those of one project with `--project`. Every write
 goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
 
 ## Tick and scheduler

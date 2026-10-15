@@ -1098,7 +1098,7 @@ TASK B11
 		IMPL "tests/cli/test_wave.py::class BrigadeWaveListTest(WaveTestCase):"
 	SPEC "tests/cli proves new, start, show and list on a fixture project, the planner launched on"
 		+ "the fake adapter, awawa replayed from recorded outputs where it is not on PATH"
-		IMPL "tests/cli/test_wave.py::class WaveTestCase(unittest.TestCase):"
+		IMPL "tests/cli/test_wave.py::class WaveTestCase(FileWaitingTestCase):"
 		IMPL "tests/awawa/volatile_value_masker.py::UTC_INSTANT = "
 	AFTER @TASK.B139
 	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, row 1, records the request with"

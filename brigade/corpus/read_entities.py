@@ -12,11 +12,14 @@ __all__ = ("Entity", "EntityField", "read_entities")
 
 
 def read_entities(
-    run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, entity_type: str
+    run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, entity_type: str, *conditions: str
 ) -> tuple[Entity, ...]:
+    filters = tuple(argument for condition in conditions for argument in ("--where", condition))
     record = run_process(
         ProcessRequest(
-            argv=("awawa", "status", entity_type, "--json", str(root)), cwd=str(root), timeout_s=AWAWA_TIMEOUT_S
+            argv=("awawa", "status", entity_type, *filters, "--json", str(root)),
+            cwd=str(root),
+            timeout_s=AWAWA_TIMEOUT_S,
         )
     )
     status = json.loads(record.stdout)

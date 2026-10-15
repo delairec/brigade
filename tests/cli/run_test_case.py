@@ -43,7 +43,16 @@ FILE_POLL_S = 0.05
 NO_SIGNAL = 0
 
 
-class RunTestCase(unittest.TestCase):
+class FileWaitingTestCase(unittest.TestCase):
+    def wait_for_file(self, path: Path) -> None:
+        deadline = time.monotonic() + FILE_WAIT_S
+        while not path.exists():
+            if time.monotonic() > deadline:
+                self.fail(f"{path} never appeared")
+            time.sleep(FILE_POLL_S)
+
+
+class RunTestCase(FileWaitingTestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name)
@@ -82,13 +91,6 @@ class RunTestCase(unittest.TestCase):
 
     def read_run_record(self, run_id: str) -> dict:
         return json.loads((self.runs / run_id / "run.json").read_text())
-
-    def wait_for_file(self, path: Path) -> None:
-        deadline = time.monotonic() + FILE_WAIT_S
-        while not path.exists():
-            if time.monotonic() > deadline:
-                self.fail(f"{path} never appeared")
-            time.sleep(FILE_POLL_S)
 
     def wait_for_line(self, path: Path) -> None:
         deadline = time.monotonic() + FILE_WAIT_S
