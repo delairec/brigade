@@ -505,6 +505,31 @@ class BrigadeCollectGitLogTest(CollectTestCase):
             ],
         )
 
+    def test_should_list_no_file_for_a_merge_commit(self):
+        # Arrange
+        self.project.run_git("checkout", "--quiet", "-b", "feat/shop")
+        self.project.write("src/shop.py", "")
+        self.project.track("src/shop.py")
+        self.commit_on(SECOND_DAY, "open the shop")
+        self.project.run_git("checkout", "--quiet", "main")
+        self.project.run_git("merge", "--quiet", "--no-ff", "-m", "merge the shop", "feat/shop")
+        sha = self.project.run_git("rev-parse", "HEAD").strip()
+
+        # Act
+        completed = self.run_collect("git-log", "--since", "2026-10-01", "--json")
+
+        # Assert
+        self.assertEqual(
+            self.read_document(completed)["items"][0],
+            {
+                "sha": sha,
+                "author": "Ada Lovelace",
+                "date": "2026-10-02T09:00:00Z",
+                "subject": "merge the shop",
+                "files": [],
+            },
+        )
+
     def test_should_collect_again_once_head_moved(self):
         # Arrange
         self.run_collect("git-log", "--since", "2026-10-01")
