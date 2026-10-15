@@ -2197,14 +2197,19 @@ DECISION ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B12"
 		REF @TASK.B12
 
-DECISION TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
-	TITLE "the pull request of a task is titled TYPE(COMPONENT): TITLE (@TASK.<task>), TYPE a"
-		+ "required field of the task"
+DECISION TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
+	TITLE "the pull request of a task is titled TYPE(COMPONENT): <subject> (@TASK.<task>), TYPE a"
+		+ "required field of the task and the subject short, opening on a verb in the imperative"
 	STATUS active
 	DESC "a task brigade delivers carries TYPE, a Conventional Commits type, and brigade task pr"
 		+ "refuses a task without one"
-	DESC "the title is TYPE(COMPONENT): TITLE (@TASK.<task>), the scope left out when the task has"
-		+ "no COMPONENT"
+	DESC "the title is TYPE(COMPONENT): <subject> (@TASK.<task>), the scope left out when the task"
+		+ "has no COMPONENT"
+	DESC "the subject is short and opens on a verb in the imperative; the author of the pull"
+		+ "request writes it, from no field of the task"
+	REJECTED "the TITLE of the task as the subject, the form ruled on 2026-10-12: a TITLE is a noun"
+		+ "phrase stating the task whole, so the title opened on no verb and ran the length of the"
+		+ "task"
 	REJECTED "the subject of the first commit of the branch, with or without TYPE as a fallback:"
 		+ "the user ruled that the task carries the type"
 	REJECTED "the type as the prefix of the task id, the convention of the instructions corpus:"
@@ -2213,8 +2218,15 @@ DECISION TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
 	RATIONALE "the branch task/<slug>/<task> names no type, and the rule"
 		+ "conventional_commit_subject of the instructions corpus binds the title of a pull request"
 		REF @TASK.B12
+	RATIONALE "that rule checks the form type(scope): subject only, no subject length and no mood:"
+		+ "the length and the mood of the subject are brigade's own ruling"
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of @TASK.B142"
 		REF @TASK.B142
+	SOURCE "the user's words of 2026-10-15 on PR #134, titled from the TITLE of @TASK.B60: « le nom"
+		+ "de la pr 134 est trop long et ne commence pas par un verbe à l'impératif »; the"
+		+ "amendment chosen: « le titre d'une PR de tâche est type(scope): un verbe à l'impératif,"
+		+ "court, puis (@TASK.X) »"
+		REF @TASK.B60
 
 DECISION AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
 	TITLE "a wave is a MILESTONE of the project's corpus, its plan one MILESTONE entity and its"

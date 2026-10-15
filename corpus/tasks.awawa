@@ -8004,10 +8004,11 @@ TASK B142
 		+ "POLICY.REVIEW local no task pull request is opened, which @TASK.B100 delivers"
 		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 		REF @TASK.B100
-	RATIONALE "the title follows @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask:"
-		+ "the branch task/<slug>/<task> of @TASK.B12 names no type and the ids of brigade's tasks"
-		+ "carry none, so the task carries it"
-		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
+	RATIONALE "the title follows"
+		+ "@DECISION.TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject: the branch"
+		+ "task/<slug>/<task> of @TASK.B12 names no type and the ids of brigade's tasks carry none,"
+		+ "so the task carries it"
+		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
 		REF @TASK.B12
 	RATIONALE "the check recorded against HEAD is what the body reports and what pr refuses to open"
 		+ "without, as the Blueprint has task pr fill the acceptance verdicts; every forge write"
