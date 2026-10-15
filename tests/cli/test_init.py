@@ -13,6 +13,7 @@ from tests.process_launcher import ProcessLauncher
 SCHEMA_ENTRY = 1
 GITIGNORE_ENTRY = 2
 CONFIGURATION_ENTRY = 3
+SHOP_PROJECT = 'PROJECT shop\n\tPATH "/srv/shop"\n\tMAIN "main"\n\tSTATUS active\n'
 
 
 class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
@@ -125,6 +126,33 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_should_install_a_schema_whose_policy_reviews_by_approval_or_verdict_only(self):
+        # Arrange
+        provide_awawa(self)
+        self.machine.run_init()
+        (self.machine.corpus / "projects.awawa").write_text(SHOP_PROJECT)
+        rows = [
+            ("approval", "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tREVIEW approval\n", 0),
+            ("verdict", "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tREVIEW verdict\n", 0),
+            ("local", "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tREVIEW local\n", 1),
+        ]
+        for review, policy, expected_exit_code in rows:
+            with self.subTest(review=review):
+                # Arrange
+                (self.machine.corpus / "policies.awawa").write_text(policy)
+
+                # Act
+                completed = ProcessLauncher.run(
+                    ["awawa", "lint", "--strict", str(self.machine.corpus)],
+                    cwd=self.machine.corpus,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+                # Assert
+                self.assertEqual(completed.returncode, expected_exit_code, completed.stdout + completed.stderr)
 
 
 class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
