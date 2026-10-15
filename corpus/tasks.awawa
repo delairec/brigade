@@ -5987,7 +5987,7 @@ TASK B98
 TASK B99
 	TITLE "POLICY.REVIEW chooses approval or verdict, and doctor warns when a project under"
 		+ "approval has no distinct logins for its build and review slots"
-	STATUS todo
+	STATUS implemented
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
@@ -5995,12 +5995,22 @@ TASK B99
 		+ "REVIEW approval|verdict, verdict by default; brigade init upgrades no installed schema:"
 		+ "an operational corpus of an older schema is thrown away and created again by brigade"
 		+ "init"
+		IMPL "brigade/corpus/data/schema.awawa.tpl::FIELD REVIEW approval|verdict"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_install_a_schema_whose_policy_reviews_by_approval_or_verdict_only(self):"
 	SPEC "brigade doctor reports a warning naming the project for each project whose POLICY sets"
 		+ "REVIEW approval while the build or the review slot of [forge_accounts] is unbound, or"
 		+ "both are bound to one login"
+		IMPL "brigade/commands/doctor.py::def _check_review_logins(reading: Configuration |"
+			+ "BrigadeError, runtime: Runtime) -> list[dict]:"
+		IMPL "brigade/commands/doctor.py::def _warn_of_review_by_approval(policy) -> dict:"
 	SPEC "tests/cli prove no warning for a policy without REVIEW, the warning under approval with"
 		+ "build and review bound to one login and with one of them unbound, and none with two"
 		+ "distinct logins"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_warn_naming_the_project_whose_build_and_review_slots_share_no_two_logins(self):"
+		IMPL "tests/cli/test_doctor.py::def"
+			+ "test_should_not_warn_of_a_policy_reviewing_by_verdict_or_by_approval_with_two_logins(self):"
 	AFTER @TASK.B75
 	AFTER @TASK.B11
 	RATIONALE "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets three"
@@ -6030,6 +6040,7 @@ TASK B99
 		+ "installed schema from SPEC 1: « on ne fait pas de legacy [...] Les anciens fichiers ne"
 		+ "sont plus compatibles, ils sont jetés, ils ne sont pas supportés. Car pour le moment on"
 		+ "est en phase de build et on a aucun utilisateur. »"
+	DELIVERED_BY 141
 
 TASK B100
 	TITLE "POLICY.REVIEW local: the tasks of a wave merged into integration on the machine, and one"
