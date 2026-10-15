@@ -4962,7 +4962,11 @@ TASK B83
 	TITLE "A Claude Code session whose result follows a task notification is recorded whole: its"
 		+ "usage, its cost, its duration and its steps, not those of the turns after its last"
 		+ "notification"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-15: @TASK.B162 removed the upgrade on read of a run.finished line of"
+		+ "schema_version 1 that its SPEC 5 delivers, and such a line is now skipped as one of an"
+		+ "unknown schema_version"
+		REF @TASK.B162
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
