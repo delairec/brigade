@@ -498,6 +498,7 @@ class BrigadeCollectorsListTest(CollectTestCase):
                     {"name": "git-diff-stat", "source": "built-in"},
                     {"name": "git-log", "source": "built-in"},
                     {"name": "ledger", "source": "built-in"},
+                    {"name": "shell", "source": "built-in"},
                     {"name": "worktrees", "source": "built-in"},
                 ],
             },
@@ -521,6 +522,7 @@ class BrigadeCollectorsListTest(CollectTestCase):
                 "git-diff-stat  built-in",
                 "git-log        built-in",
                 "ledger         built-in",
+                "shell          built-in",
                 "worktrees      built-in",
             ],
         )
@@ -547,6 +549,7 @@ class BrigadeCollectorsListWithoutCollectorDirectoriesTest(CollectTestCase):
                     {"name": "git-diff-stat", "source": "built-in"},
                     {"name": "git-log", "source": "built-in"},
                     {"name": "ledger", "source": "built-in"},
+                    {"name": "shell", "source": "built-in"},
                     {"name": "worktrees", "source": "built-in"},
                 ],
             },
@@ -793,6 +796,61 @@ class BrigadeCollectLedgerTest(CollectTestCase):
 
         # Assert
         self.assertEqual(json.loads(completed.stdout)["summary"]["events"], {"custom.signal": 2, "run.finished": 2})
+
+
+class BrigadeCollectShellTest(CollectTestCase):
+    def test_should_make_each_line_the_command_prints_an_item(self):
+        # Act
+        completed = self.run_collect("shell", "command=printf 'alpha\\nbeta\\n'", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_document(completed)["items"], ["alpha", "beta"])
+
+    def test_should_count_the_lines_the_command_prints(self):
+        # Act
+        completed = self.run_collect("shell", "command=printf 'alpha\\nbeta\\n'", "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["summary"], {"lines": 2})
+
+    def test_should_run_the_command_in_the_project(self):
+        # Act
+        completed = self.run_collect("shell", "command=ls", "--json")
+
+        # Assert
+        self.assertEqual(self.read_document(completed)["items"], ["README.md"])
+
+    def test_should_run_the_command_again_at_each_call(self):
+        # Arrange
+        self.run_collect("shell", "command=ls")
+
+        # Act
+        completed = self.run_collect("shell", "command=ls", "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["cached"], False)
+
+    def test_should_name_the_exit_code_and_the_stderr_of_a_failing_command(self):
+        # Act
+        completed = self.run_collect("shell", "command=echo broken >&2; exit 4")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(
+            completed.stderr,
+            "brigade collect: collector shell exited 1\nthe command exited 4\nbroken\n",
+        )
+
+    def test_should_refuse_a_call_without_a_command(self):
+        # Act
+        completed = self.run_collect("shell")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(
+            completed.stderr, "brigade collect: collector shell exited 1\nthe shell collector takes command=<line>\n"
+        )
 
 
 class BuiltInCollectorsTestCase(CollectTestCase):
