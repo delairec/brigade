@@ -2249,6 +2249,8 @@ DECISION TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
 		+ "refuses a task without one"
 	DESC "the title is TYPE(COMPONENT): <subject> (@TASK.<task>), the scope left out when the task"
 		+ "has no COMPONENT"
+	DESC "the scope is the COMPONENT with its spaces replaced by hyphens: the pass is written"
+		+ "the-pass"
 	DESC "the subject is short and opens on a verb in the imperative; the author of the pull"
 		+ "request writes it, from no field of the task"
 	REJECTED "the TITLE of the task as the subject, the form ruled on 2026-10-12: a TITLE is a noun"
@@ -2264,6 +2266,9 @@ DECISION TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
 		REF @TASK.B12
 	RATIONALE "that rule checks the form type(scope): subject only, no subject length and no mood:"
 		+ "the length and the mood of the subject are brigade's own ruling"
+	RATIONALE "the commit-msg hook of the instructions corpus accepts a scope matching"
+		+ "[a-zA-Z0-9._/-]+ only, so a COMPONENT holding a space cannot be the scope as it is"
+		+ "written"
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of @TASK.B142"
 		REF @TASK.B142
 	SOURCE "the user's words of 2026-10-15 on PR #134, titled from the TITLE of @TASK.B60: « le nom"
@@ -2271,6 +2276,10 @@ DECISION TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
 		+ "amendment chosen: « le titre d'une PR de tâche est type(scope): un verbe à l'impératif,"
 		+ "court, puis (@TASK.X) »"
 		REF @TASK.B60
+	SOURCE "the user's ruling of 2026-10-15 on the question of the review of #141, whether the-pass"
+		+ "is the written form of the COMPONENT the pass in a title: « Espaces en tirets — La"
+		+ "portée est le COMPONENT, ses espaces remplacés par des tirets. »"
+		REF @TASK.B99
 
 DECISION AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
 	TITLE "a wave is a MILESTONE of the project's corpus, its plan one MILESTONE entity and its"
