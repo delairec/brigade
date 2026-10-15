@@ -5,6 +5,7 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.system.name_toml_type import name_toml_type
 from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
+from brigade.system.read_runs_kept import RUNS_KEPT_BY_DEFAULT, RUNS_KEPT_KEY, read_runs_kept
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
 STRING_KEYS = ("client", "scheduler", "instructions", "document")
@@ -49,6 +50,7 @@ class Configuration:
     seconds_per_step: int | float = SECONDS_PER_STEP_BY_DEFAULT
     soft_limit_margin_s: int | float = SOFT_LIMIT_MARGIN_BY_DEFAULT_S
     trail_days: int = TRAIL_DAYS_BY_DEFAULT
+    runs_kept: int = RUNS_KEPT_BY_DEFAULT
     journal_poll_s: int | float = JOURNAL_POLL_BY_DEFAULT_S
     findings: tuple[str, ...] = ()
     forge_accounts: dict = field(default_factory=dict)
@@ -161,6 +163,7 @@ def read_configuration(path: Path) -> Configuration:
             SECONDS_PER_STEP_KEY,
             SOFT_LIMIT_MARGIN_KEY,
             TRAIL_DAYS_KEY,
+            RUNS_KEPT_KEY,
             JOURNAL_POLL_KEY,
             FORGE_ACCOUNTS_KEY,
             FORGE_ATTEMPTS_KEY,
@@ -184,6 +187,7 @@ def read_configuration(path: Path) -> Configuration:
             document, SOFT_LIMIT_MARGIN_KEY, SOFT_LIMIT_MARGIN_BY_DEFAULT_S, path
         ),
         trail_days=read_trail_days(document, path),
+        runs_kept=read_runs_kept(document, path),
         journal_poll_s=journal_poll_s,
         findings=findings,
         forge_accounts=_read_forge_accounts(document.get(FORGE_ACCOUNTS_KEY, {}), path),

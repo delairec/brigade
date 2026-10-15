@@ -247,6 +247,18 @@ class ReadConfigurationOfTheTrailDaysTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.trail_days, 30)
 
 
+class ReadConfigurationOfTheRunsKeptTest(ReadConfigurationTestCase):
+    def test_should_answer_the_count_the_key_sets(self):
+        # Arrange
+        self.path.write_text("runs_kept = 20\n")
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.runs_kept, 20)
+
+
 class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
     def test_should_answer_2_and_no_finding_when_the_key_is_absent(self):
         # Arrange

@@ -134,3 +134,42 @@ class RunFinishedTest(unittest.TestCase):
                 cache_read_input_tokens=9000,
             ),
         )
+
+    def test_should_write_back_the_message_and_the_reset_hour_of_a_run_stopped_by_a_usage_limit(self):
+        # Arrange
+        stopped_by_a_usage_limit = {
+            **RUN_REPORTING_NOTHING,
+            "outcome": "failed",
+            "message": "You've hit your session limit · resets 11:30pm",
+            "reset": {"hour": "23:30", "timezone": "Europe/Paris"},
+        }
+
+        # Act
+        document = RunFinished.from_document(stopped_by_a_usage_limit).to_document()
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "run": "20261008T090000Z-b74a02",
+                "segment": 1,
+                "procedure": "deliver",
+                "slot": "build",
+                "role": "builder",
+                "client": "fake",
+                "project": None,
+                "session": None,
+                "main_steps": None,
+                "total_steps": None,
+                "duration_ms": 1500000,
+                "usage": None,
+                "outcome": "failed",
+                "error_class": None,
+                "exit": None,
+                "wave": None,
+                "task": None,
+                "nulls": {"project": "no project given"},
+                "message": "You've hit your session limit · resets 11:30pm",
+                "reset": {"hour": "23:30", "timezone": "Europe/Paris"},
+            },
+        )

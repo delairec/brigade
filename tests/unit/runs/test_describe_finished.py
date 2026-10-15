@@ -7,9 +7,9 @@ from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.describe_finished import describe_finished
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
-from brigade.runs.run_result import RunResult
 from brigade.runs.run_segment import SegmentRecord
 from brigade.system.read_configuration import Configuration
+from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
 
 ROOT = Path("/state/brigade")
@@ -56,17 +56,16 @@ def _create_plan(*, counts_steps: bool = True) -> RunPlan:
     )
 
 
-def _create_result(steps: int | None) -> RunResult:
-    return RunResult(
-        outcome="done",
-        steps=steps,
-        usage=None,
-        session_id="857d4221",
-        duration_ms=19091,
-        error_class=None,
-        reset=None,
-        message=None,
-    )
+def _create_result(steps: int | None) -> dict:
+    return {
+        "outcome": "done",
+        "client_steps": steps,
+        "usage": None,
+        "session_id": "857d4221",
+        "error_class": None,
+        "reset": None,
+        "message": None,
+    }
 
 
 class DescribeFinishedTest(unittest.TestCase):
@@ -74,7 +73,7 @@ class DescribeFinishedTest(unittest.TestCase):
         # Arrange
         record = SegmentRecord(
             number=1,
-            result=_create_result(steps=None),
+            **_create_result(steps=None),
             exit_code=0,
             measured_ms=900000,
             cost_usd=3.63,
@@ -121,7 +120,7 @@ class DescribeFinishedTest(unittest.TestCase):
         # Arrange
         record = SegmentRecord(
             number=1,
-            result=_create_result(steps=52),
+            **_create_result(steps=52),
             exit_code=0,
             measured_ms=900000,
             cost_usd=None,
@@ -159,7 +158,7 @@ class DescribeFinishedTest(unittest.TestCase):
                 # Arrange
                 record = SegmentRecord(
                     number=1,
-                    result=_create_result(steps=None),
+                    **_create_result(steps=None),
                     exit_code=0,
                     measured_ms=900000,
                     cost_usd=None,
@@ -175,17 +174,16 @@ class DescribeFinishedTest(unittest.TestCase):
                 self.assertEqual(finished.nulls["main_steps"], reason)
 
 
-def _create_cut(session_id: str | None, usage: TokenUsage | None) -> RunResult:
-    return RunResult(
-        outcome="wall_limit",
-        steps=None,
-        usage=usage,
-        session_id=session_id,
-        duration_ms=2820000,
-        error_class=None,
-        reset=None,
-        message="cut at the wall-time limit of 2820 s",
-    )
+def _create_cut(session_id: str | None, usage: TokenUsage | None) -> dict:
+    return {
+        "outcome": "wall_limit",
+        "client_steps": None,
+        "usage": usage,
+        "session_id": session_id,
+        "error_class": None,
+        "reset": None,
+        "message": "cut at the wall-time limit of 2820 s",
+    }
 
 
 class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
@@ -196,7 +194,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
         )
         record = SegmentRecord(
             number=1,
-            result=_create_cut(session_id="a47607d0-5a3d-4910-8978-9aad5d0e7796", usage=usage),
+            **_create_cut(session_id="a47607d0-5a3d-4910-8978-9aad5d0e7796", usage=usage),
             exit_code=None,
             measured_ms=2820000,
             cost_usd=None,
@@ -236,6 +234,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 task=None,
                 nulls={"wave": NOT_IN_A_WAVE, "task": NOT_IN_A_WAVE, "error_class": CUT, "exit": CUT},
                 cost_usd=None,
+                message="cut at the wall-time limit of 2820 s",
             ),
         )
 
@@ -292,7 +291,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 # Arrange
                 record = SegmentRecord(
                     number=1,
-                    result=_create_cut(session_id=session_id, usage=None),
+                    **_create_cut(session_id=session_id, usage=None),
                     exit_code=None,
                     measured_ms=2820000,
                     cost_usd=None,
@@ -347,16 +346,13 @@ class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
                 # Arrange
                 record = SegmentRecord(
                     number=1,
-                    result=RunResult(
-                        outcome="stopped",
-                        steps=None,
-                        usage=None,
-                        session_id=session_id,
-                        duration_ms=4000,
-                        error_class=None,
-                        reset=None,
-                        message="stopped by a signal",
-                    ),
+                    outcome="stopped",
+                    client_steps=None,
+                    usage=None,
+                    session_id=session_id,
+                    error_class=None,
+                    reset=None,
+                    message="stopped by a signal",
                     exit_code=None,
                     measured_ms=4000,
                     cost_usd=None,
@@ -377,16 +373,13 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToLaunchItsClientTest(unittest
         # Arrange
         record = SegmentRecord(
             number=1,
-            result=RunResult(
-                outcome="failed",
-                steps=None,
-                usage=None,
-                session_id=None,
-                duration_ms=0,
-                error_class=None,
-                reset=None,
-                message="client adapter claude-code answered launch-argv: lacks the key argv",
-            ),
+            outcome="failed",
+            client_steps=None,
+            usage=None,
+            session_id=None,
+            error_class=None,
+            reset=None,
+            message="client adapter claude-code answered launch-argv: lacks the key argv",
             exit_code=None,
             measured_ms=0,
             cost_usd=None,
@@ -414,17 +407,16 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToLaunchItsClientTest(unittest
         )
 
 
-def _create_failure(session_id: str | None, usage: TokenUsage | None, message: str) -> RunResult:
-    return RunResult(
-        outcome="failed",
-        steps=None,
-        usage=usage,
-        session_id=session_id,
-        duration_ms=4200,
-        error_class=None,
-        reset=None,
-        message=message,
-    )
+def _create_failure(session_id: str | None, usage: TokenUsage | None, message: str) -> dict:
+    return {
+        "outcome": "failed",
+        "client_steps": None,
+        "usage": usage,
+        "session_id": session_id,
+        "error_class": None,
+        "reset": None,
+        "message": message,
+    }
 
 
 class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTest(unittest.TestCase):
@@ -478,7 +470,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 # Arrange
                 record = SegmentRecord(
                     number=1,
-                    result=_create_failure(session_id=session_id, usage=measured_usage, message=parse_failure),
+                    **_create_failure(session_id=session_id, usage=measured_usage, message=parse_failure),
                     exit_code=0,
                     measured_ms=4200,
                     cost_usd=None,
@@ -497,7 +489,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
         # Arrange
         record = SegmentRecord(
             number=1,
-            result=_create_failure(session_id="a47607d0-5a3d-4910-8978-9aad5d0e7796", usage=None, message="API error"),
+            **_create_failure(session_id="a47607d0-5a3d-4910-8978-9aad5d0e7796", usage=None, message="API error"),
             exit_code=1,
             measured_ms=4200,
             cost_usd=None,
@@ -520,4 +512,34 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 "usage": "the client reported no usage",
                 "error_class": "the client reported no error class",
             },
+        )
+
+
+class DescribeFinishedOfASegmentStoppedByAUsageLimitTest(unittest.TestCase):
+    def test_should_keep_the_message_and_the_reset_hour_the_client_reported(self):
+        # Arrange
+        record = SegmentRecord(
+            number=1,
+            outcome="failed",
+            session_id="ea3fca",
+            client_steps=None,
+            usage=None,
+            error_class="rate_limit",
+            reset=ResetHour(hour="23:30", timezone="Europe/Paris"),
+            message="You've hit your session limit · resets 11:30pm",
+            exit_code=1,
+            measured_ms=4000,
+            cost_usd=None,
+            counted_steps=None,
+            uncounted="the client reads no transcript",
+            adapter_failure=None,
+        )
+
+        # Act
+        finished = describe_finished(_create_plan(), record)
+
+        # Assert
+        self.assertEqual(
+            (finished.message, finished.reset),
+            ("You've hit your session limit · resets 11:30pm", ResetHour(hour="23:30", timezone="Europe/Paris")),
         )

@@ -5,6 +5,7 @@ from brigade.command import Argument, Command
 from brigade.errors import UsageError
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.describe_run import describe_run
+from brigade.runs.format_duration import format_duration
 from brigade.runs.run_follower import RunFollower
 from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runs.show_run import show_run
@@ -18,7 +19,7 @@ ABSENT = "-"
 SUMMARY_FIELDS = ("run", "procedure", "slot", "role", "project", "state", "outcome", "message")
 SUMMARY_WIDTH = max(len(field) for field in SUMMARY_FIELDS)
 ENDING_FIELDS = ("state", "outcome")
-SEGMENT_COLUMNS = ("segment", "outcome")
+SEGMENT_COLUMNS = ("segment", "outcome", "steps", "duration")
 RECORD_SEPARATOR = "  "
 LINE_END = "\n"
 RUNNING = "running"
@@ -35,6 +36,17 @@ def _render_field(run: dict, field: str) -> str:
     return f"{field:<{SUMMARY_WIDTH}}{RECORD_SEPARATOR}{_render_value(run[field])}"
 
 
+def _render_segment(segment: dict) -> tuple[str, ...]:
+    steps = segment["steps"]
+    duration_ms = segment["duration_ms"]
+    return (
+        str(segment["segment"]),
+        _render_value(segment["outcome"]),
+        ABSENT if steps is None else str(steps),
+        ABSENT if duration_ms is None else format_duration(duration_ms),
+    )
+
+
 def _render_record(record: dict) -> str:
     return RECORD_SEPARATOR.join((record["at"], str(record["segment"]), record["kind"], record["summary"]))
 
@@ -43,10 +55,7 @@ def _render_text(document: dict) -> str:
     if "interrupted" in document:
         return "\n".join(["", *(_render_field(document["run"], field) for field in ENDING_FIELDS)])
     summary = [_render_field(document["run"], field) for field in SUMMARY_FIELDS]
-    segments = render_table(
-        SEGMENT_COLUMNS,
-        [(str(segment["segment"]), _render_value(segment["outcome"])) for segment in document["segments"]],
-    )
+    segments = render_table(SEGMENT_COLUMNS, [_render_segment(segment) for segment in document["segments"]])
     lines = [*summary, "", segments]
     if document["journal"] is not None:
         lines += ["", *(_render_record(record) for record in document["journal"])]
@@ -102,7 +111,7 @@ def runs_show(request, runtime: Runtime) -> dict:
 COMMAND = Command(
     path=("runs", "show"),
     help="print the summary of a run and its segments, and with --log its journal",
-    group_help="list the runs, show one and stop one",
+    group_help="list the runs, show one, stop one and prune them",
     arguments=(
         Argument(("run",)),
         Argument(("--log",), {"action": "store_true", "help": "add the journal of the run, one line per record"}),
