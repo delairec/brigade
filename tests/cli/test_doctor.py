@@ -1059,3 +1059,100 @@ class BrigadeDoctorReportsAnInstalledSchemaDifferingFromTheShippedOneTest(Doctor
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertNotIn("schema", [item["name"] for item in json.loads(completed.stdout)["items"]])
+
+
+REVIEW_FALLBACK = "GitHub refuses the approval of the review slot"
+POLICY_UNDER_APPROVAL = "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tREVIEW approval\n"
+
+
+class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        provide_awawa(self)
+        self.write_configuration('client = "fake"\n')
+        corpus = self.configuration.parent
+        shutil.copyfile(REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl", corpus / "_schema.awawa")
+        self.policies = corpus / "policies.awawa"
+        self.machine_with_awawa = [
+            GIT,
+            SYSTEMD_RUNNING,
+            GH_ACCOUNTS,
+            AWAWA_WEB,
+            str(Path(shutil.which("awawa")).parent),
+        ]
+
+    def test_should_warn_naming_the_project_whose_build_and_review_slots_share_no_two_logins(self):
+        # Arrange
+        rows = [
+            ("both bound to one login", '[forge_accounts]\nbuild = "octo-bot"\nreview = "octo-bot"\n'),
+            ("the review slot unbound", '[forge_accounts]\nbuild = "octo-bot"\n'),
+            ("the build slot unbound", '[forge_accounts]\nreview = "octo-bot"\n'),
+        ]
+        self.policies.write_text(POLICY_UNDER_APPROVAL)
+        for case, forge_accounts in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.write_configuration('client = "fake"\n' + forge_accounts)
+
+                # Act
+                completed = self.run_doctor(self.machine_with_awawa, "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertIn(
+                    {
+                        "name": "review",
+                        "kind": "optional",
+                        "state": "warning",
+                        "detail": "shop reviews by approval without distinct logins for build and review",
+                        "fallback": REVIEW_FALLBACK,
+                    },
+                    json.loads(completed.stdout)["items"],
+                )
+
+    def test_should_not_warn_of_a_policy_reviewing_by_verdict_or_by_approval_with_two_logins(self):
+        # Arrange
+        rows = [
+            (
+                "a policy without REVIEW",
+                "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n",
+                '[forge_accounts]\nbuild = "octo-bot"\nreview = "octo-bot"\n',
+            ),
+            (
+                "approval with two distinct logins",
+                POLICY_UNDER_APPROVAL,
+                '[forge_accounts]\nbuild = "octo-bot"\nreview = "review-bot"\n',
+            ),
+        ]
+        for case, policy, forge_accounts in rows:
+            with self.subTest(case=case):
+                # Arrange
+                self.policies.write_text(policy)
+                self.write_configuration('client = "fake"\n' + forge_accounts)
+
+                # Act
+                completed = self.run_doctor(self.machine_with_awawa, "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertNotIn("review", [item["name"] for item in json.loads(completed.stdout)["items"]])
+
+    def test_should_warn_that_the_policies_are_unreadable_when_awawa_fails_on_them(self):
+        # Arrange
+        self.policies.write_text(POLICY_UNDER_APPROVAL)
+
+        # Act
+        completed = self.run_doctor(EVERY_TOOL_BUT_THE_CLIENT, "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            {
+                "name": "review",
+                "kind": "optional",
+                "state": "warning",
+                "detail": f"POLICY unreadable: awawa status POLICY --json {self.configuration.parent} exited 2: ",
+                "fallback": "the review mode of each project unchecked",
+            },
+            json.loads(completed.stdout)["items"],
+        )

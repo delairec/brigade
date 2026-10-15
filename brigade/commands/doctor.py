@@ -5,11 +5,13 @@ import brigade
 from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
+from brigade.corpus.read_entities import read_entities
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.read_git_version import read_git_version
 from brigade.git.read_upstream_lag import read_upstream_lag
 from brigade.python_floor import PYTHON_FLOOR
+from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_login_environment import ask_login_environment
@@ -42,6 +44,13 @@ STEPS_FALLBACK = "the wall-time limit of each run"
 STEP_COUNT_FEATURE = "step_count"
 CHECKOUT_FALLBACK = "git pull in the checkout"
 SCHEMA_FALLBACK = "throw the operational corpus away, then run brigade init"
+POLICY_TYPE = "POLICY"
+PROJECT_PREFIX = "@PROJECT."
+APPROVAL_REVIEW = "approval"
+BUILD_SLOT = "build"
+REVIEW_SLOT = "review"
+REVIEW_FALLBACK = "GitHub refuses the approval of the review slot"
+POLICIES_FALLBACK = "the review mode of each project unchecked"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
 DETAIL_WIDTH = 36
@@ -200,6 +209,32 @@ def _check_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: 
     ]
 
 
+def _has_distinct_build_and_review_logins(forge_accounts: dict) -> bool:
+    build_login = forge_accounts.get(BUILD_SLOT)
+    review_login = forge_accounts.get(REVIEW_SLOT)
+    return build_login is not None and review_login is not None and build_login != review_login
+
+
+def _warn_of_review_by_approval(policy) -> dict:
+    project = read_project_field(policy, "PROJECT").removeprefix(PROJECT_PREFIX)
+    detail = f"{project} reviews by approval without distinct logins for build and review"
+    return _create_optional("review", "warning", detail, REVIEW_FALLBACK)
+
+
+def _check_review_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+    if not runtime.paths.schema_file.exists() or _has_distinct_build_and_review_logins(_read_forge_accounts(reading)):
+        return []
+    try:
+        policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
+    except ToolFailure as error:
+        return [_create_optional("review", "warning", f"POLICY unreadable: {error}", POLICIES_FALLBACK)]
+    return [
+        _warn_of_review_by_approval(policy)
+        for policy in policies
+        if read_project_field(policy, "REVIEW") == APPROVAL_REVIEW
+    ]
+
+
 def _check_awawa_web(runtime: Runtime) -> dict:
     try:
         runtime.run_process(
@@ -337,6 +372,7 @@ def doctor(request, runtime: Runtime) -> dict:
             _check_client(reading, runtime),
             _check_scheduler(runtime),
             *_check_forge_and_its_logins(reading, runtime),
+            *_check_review_logins(reading, runtime),
             _check_awawa_web(runtime),
             _check_instructions(reading, runtime),
             *_check_steps(reading, runtime),

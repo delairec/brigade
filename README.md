@@ -36,7 +36,9 @@ the exit code is 1; a user systemd instance, gh
 and the account it is logged in as, awawa-web and the instructions corpus `config.toml` names, `awawa lint --strict`
 clean or not, are optional, each reported with its fallback, a missing one a warning; so is an installed
 `_schema.awawa` that differs from the shipped one: brigade supports no operational corpus of an older schema,
-throw it away and run `brigade init` again, then register the projects anew.
+throw it away and run `brigade init` again, then register the projects anew. A `POLICY` that sets `REVIEW approval`,
+`verdict` by default, is a warning naming its project while the `build` and `review` slots of `[forge_accounts]` are not
+bound to two distinct logins: GitHub refuses an approval by the author of a pull request.
 
 `brigade init` (or `brigade init --json`) creates the operational corpus in `$XDG_CONFIG_HOME/brigade/`,
 `~/.config/brigade/` by default: a git repository holding `_schema.awawa` and a `.gitignore`, committed with your git
