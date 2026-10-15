@@ -988,7 +988,7 @@ class BrigadeDoctorReportsAnInstalledSchemaDifferingFromTheShippedOneTest(Doctor
                 "kind": "optional",
                 "state": "warning",
                 "detail": f"{schema} differs from the shipped schema",
-                "fallback": "brigade init replaces it",
+                "fallback": "throw the operational corpus away, then run brigade init",
             },
             json.loads(completed.stdout)["items"],
         )

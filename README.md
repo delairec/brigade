@@ -35,14 +35,14 @@ awawa 2.7 or later and the probe of the client adapter `config.toml` names are c
 the exit code is 1; a user systemd instance, gh
 and the account it is logged in as, awawa-web and the instructions corpus `config.toml` names, `awawa lint --strict`
 clean or not, are optional, each reported with its fallback, a missing one a warning; so is an installed
-`_schema.awawa` that differs from the shipped one, which `brigade init` replaces.
+`_schema.awawa` that differs from the shipped one: brigade supports no operational corpus of an older schema,
+throw it away and run `brigade init` again, then register the projects anew.
 
 `brigade init` (or `brigade init --json`) creates the operational corpus in `$XDG_CONFIG_HOME/brigade/`,
 `~/.config/brigade/` by default: a git repository holding `_schema.awawa` and a `.gitignore`, committed with your git
 identity, and `config.toml`, the machine configuration, every key commented out and never committed. It needs
-`user.name` and `user.email` set in git. Run again, it replaces an installed `_schema.awawa` that differs from the
-shipped one and commits it alone; it rewrites nothing else: a `.gitignore` or a `config.toml` that differs from the
-shipped one is left as it is and reported as a warning.
+`user.name` and `user.email` set in git. Run again, it rewrites nothing: a file that differs from the shipped one is
+left as it is and reported as a warning.
 
 ## Projects
 

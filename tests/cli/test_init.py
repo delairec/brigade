@@ -58,7 +58,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
                 f"created  .gitignore   {corpus / '.gitignore'}",
                 f"created  config.toml  {corpus / 'config.toml'}",
                 "",
-                "init: created 4 · present 0 · replaced 0 · differs 0",
+                "init: created 4 · present 0 · differs 0",
             ],
         )
 
@@ -200,6 +200,7 @@ class BrigadeInitWhenAFileDiffersFromTheShippedOneTest(unittest.TestCase):
     def test_should_leave_the_file_as_it_is_and_report_it_differing(self):
         # Arrange
         rows = [
+            ("schema", "_schema.awawa", SCHEMA_ENTRY),
             (".gitignore", ".gitignore", GITIGNORE_ENTRY),
             ("config.toml", "config.toml", CONFIGURATION_ENTRY),
         ]
@@ -253,53 +254,10 @@ class BrigadeInitWhenAFileDiffersFromTheShippedOneTest(unittest.TestCase):
                 f"present  .gitignore   {corpus / '.gitignore'}",
                 f"differs  config.toml  {corpus / 'config.toml'}",
                 "",
-                "init: created 0 · present 3 · replaced 0 · differs 1",
+                "init: created 0 · present 3 · differs 1",
                 "warning: config.toml differs from the shipped file and is left as it is",
             ],
         )
-
-
-class BrigadeInitWhenTheInstalledSchemaDiffersFromTheShippedOneTest(unittest.TestCase):
-    def setUp(self):
-        self.root = tempfile.TemporaryDirectory()
-        self.machine = TemporaryMachine(Path(self.root.name))
-        self.machine.run_init()
-        self.schema = self.machine.corpus / "_schema.awawa"
-        self.schema.write_text("# an older schema\n")
-        self.machine.read_git("commit", "--quiet", "--all", "--message", "an older schema")
-
-    def tearDown(self):
-        self.root.cleanup()
-
-    def test_should_replace_it_with_the_shipped_schema_and_report_it_replaced(self):
-        # Act
-        completed = self.machine.run_init("--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["items"][SCHEMA_ENTRY],
-            {"name": "schema", "path": str(self.schema), "state": "replaced"},
-        )
-        self.assertEqual(self.schema.read_bytes(), SHIPPED_SCHEMA.read_bytes())
-
-    def test_should_commit_the_replaced_schema(self):
-        # Act
-        self.machine.run_init()
-
-        # Assert
-        self.assertEqual(
-            self.machine.read_git("log", "-1", "--format=%s", "--name-only"),
-            "brigade init: the shipped schema\n\n_schema.awawa\n",
-        )
-
-    def test_should_count_the_replaced_schema_in_the_text_report(self):
-        # Act
-        completed = self.machine.run_init()
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout.splitlines()[-1], "init: created 0 · present 3 · replaced 1 · differs 0")
 
 
 class BrigadeInitWhenTheSchemaIsMissingFromAnExistingRepositoryTest(unittest.TestCase):
