@@ -2737,3 +2737,5 @@ DECISION WaveShowReadsThePullRequestOfATaskFromItsDeliveredByAtTheBranch
 	SOURCE "pull request #137, the run of @TASK.B11 of 2026-10-15, the SPEC naming a pull request"
 		+ "column and no source for it"
 		REF @TASK.B11
+	SOURCE "the user's ratification of 2026-10-15 in the review of pull request #137: DELIVERED_BY"
+		+ "at BRANCH is the one source the corpus carries, with no call to the forge"
