@@ -1058,7 +1058,7 @@ DECISION PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	TITLE "every document brigade writes or reads carries an integer schema_version per kind, an"
 		+ "inbound document is validated against its declared shape before the core reads it, and a"
-		+ "reader upgrades every version ever written"
+		+ "reader supports the current version of a kind alone, refusing an older one"
 	STATUS active
 	DESC "every document brigade writes or reads, command output, ledger line, result, collector"
 		+ "document, recipe, config and answer file, carries schema_version, an integer per"
@@ -1071,9 +1071,10 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		+ "plan JSON or a study answer, against a shape declared next to its kind, required keys,"
 		+ "types and enumerations, before the core reads it; an unknown schema_version is refused"
 		+ "by name"
-	DESC "a reader keeps an upgrade function per kind from every version ever written to the"
-		+ "current one; a ledger line is upgraded on read and never rewritten; a state file is"
-		+ "upgraded on read and written back current"
+	DESC "during the build phase, brigade having no user, a reader supports the current version of"
+		+ "each kind alone: a document of an older version is refused like an unknown one, by name,"
+		+ "never upgraded and never rewritten; a file of an older version left on a machine is"
+		+ "thrown away, not supported"
 	DESC "inside the core a document becomes a frozen dataclass; the module of its kind declares"
 		+ "from_document when brigade reads the kind and to_document when brigade writes it, no"
 		+ "function for a direction no code crosses; dicts stay at the edges"
@@ -1103,6 +1104,19 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	SOURCE "the user's ruling of 2026-10-07 at the refinement of @TASK.B74: a kind carries only the"
 		+ "directions it crosses, DESC 4 amended"
 		REF @TASK.B74
+	REJECTED "a reader keeping an upgrade function per kind from every version ever written to the"
+		+ "current one, a ledger line upgraded on read and never rewritten, a state file upgraded"
+		+ "on read and written back current, the form of DESC 3 until 2026-10-15: code kept for"
+		+ "documents no user holds, brigade having none during its build phase"
+	SOURCE "the user's ruling of 2026-10-15, in answer to thread r4277193096 of pull request #135"
+		+ "of the brigade repository, which asked whether result.json should share the upgrade"
+		+ "table of the ledger: « Je ne suis pas sûre de piger, mais en tous cas on ne fait pas de"
+		+ "legacy. Si on change le format et que les anciens logs ne sont plus compatibles, on s'en"
+		+ "fout ça fait partie de la phase de développement. Les anciens fichiers ne sont plus"
+		+ "compatibles, ils sont jetés, ils ne sont pas supportés. Car pour le moment on est en"
+		+ "phase de build et on a aucun utilisateur. »; TITLE and DESC 3 amended"
+		REF @TASK.B151
+		REF @TASK.B162
 
 DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 	TITLE "the pull request of a task carries the GitHub milestone named after the TITLE of the"
