@@ -5,8 +5,10 @@ import time
 from brigade.command import Argument, Command
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
+from brigade.runs.describe_skipped_runs import describe_skipped_runs
 from brigade.runs.detach_run import detach_run
 from brigade.runs.plan_run import RunPlan, RunRequest, plan_run
+from brigade.runs.prune_runs import PruneRequest, prune_runs
 from brigade.runs.read_run_setting import read_run_setting
 from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
@@ -47,10 +49,10 @@ def _read_run_request(request) -> RunRequest:
     )
 
 
-def _attach_warnings(document: dict, plan: RunPlan) -> dict:
-    if not plan.warnings:
+def _attach_warnings(document: dict, warnings: list[str]) -> dict:
+    if not warnings:
         return document
-    return {**document, "warnings": list(plan.warnings)}
+    return {**document, "warnings": warnings}
 
 
 def _name_segments(count: int) -> str:
@@ -84,9 +86,8 @@ def _describe_diagnostics(document: dict) -> list[str]:
     return document.get("warnings", [])
 
 
-def _prepare_run(request, runtime: Runtime) -> RunPlan:
+def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
-    configuration = read_configuration(runtime.paths.configuration_file)
     forge_environment = _read_forge_environment(configuration, run_request.slot, runtime)
     setting = read_run_setting(run_request.project, configuration, runtime)
     client_adapter = runtime.resolve_plugin("client", setting.client)
@@ -100,13 +101,17 @@ def _prepare_run(request, runtime: Runtime) -> RunPlan:
 
 
 def run(request, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime.paths.configuration_file)
     if request.detach:
-        plan = _prepare_run(request, runtime)
+        plan = _prepare_run(request, configuration, runtime)
         pid = detach_run(plan, runtime)
-        return _attach_warnings({"schema_version": DOCUMENT_SCHEMA_VERSION, "run": plan.run_id, "pid": pid}, plan)
+        return _attach_warnings(
+            {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": plan.run_id, "pid": pid}, list(plan.warnings)
+        )
     with StopSignalReceiver() as stop:
-        plan = _prepare_run(request, runtime)
+        plan = _prepare_run(request, configuration, runtime)
         records = run_segments(plan, runtime, stop)
+    pruned = prune_runs(PruneRequest(paths=runtime.paths, keep=configuration.runs_kept))
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "run": plan.run_id,
@@ -118,7 +123,7 @@ def run(request, runtime: Runtime) -> dict:
         "segments": len(records),
         "outcome": records[-1].result.outcome,
     }
-    return _attach_warnings(document, plan)
+    return _attach_warnings(document, [*plan.warnings, *describe_skipped_runs(pruned.skipped)])
 
 
 COMMAND = Command(

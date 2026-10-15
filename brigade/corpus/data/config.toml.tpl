@@ -34,6 +34,10 @@
 # The days a trail of ticks/ and commands/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
 # trail_days = 7
 
+# The finished and dead runs kept in $state_root/runs, 1 or more; past it, each run removes the oldest at its end,
+# a running run and a run a resume after a rate limit takes up spared and not counted.
+# runs_kept = 100
+
 # The seconds between two reads of a running segment's output into the journal of its run, a positive number.
 # journal_poll_s = 2
 

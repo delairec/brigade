@@ -38,7 +38,7 @@ def runs_list(request, runtime: Runtime) -> dict:
 COMMAND = Command(
     path=("runs", "list"),
     help="list every run with its state and outcome",
-    group_help="list the runs, show one and stop one",
+    group_help="list the runs, show one, stop one and prune them",
     run=runs_list,
     read_request=_read_request,
     render_text=_render_text,
