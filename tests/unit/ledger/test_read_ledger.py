@@ -6,7 +6,6 @@ from pathlib import Path
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import LedgerReading, SkippedLine, read_ledger
-from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.undeclared_event import UndeclaredEvent
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_started import WaveStarted
@@ -22,12 +21,6 @@ RUN_FINISHED_OF_SCHEMA_1 = (
     ' "project": "brigade", "session": "857d4221", "steps": 40, "duration_ms": 19091, "usage": null,'
     ' "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
     ' "nulls": {"usage": "the client reported no usage"}}\n'
-)
-RUN_FINISHED_OF_SCHEMA_1_WITHOUT_STEPS = (
-    b'{"schema_version": 1, "ts": "2026-10-07T10:33:00Z", "event": "run.finished", "run": "20261007T101817Z-2ee96f",'
-    b' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
-    b' "project": "brigade", "session": "857d4221", "duration_ms": 19091, "usage": null,'
-    b' "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null, "nulls": {}}\n'
 )
 RUN_FINISHED_OF_SCHEMA_1_COUNTING_NO_STEPS = (
     '{"schema_version": 1, "ts": "2026-10-07T10:33:00Z", "event": "run.finished", "run": "20261007T101817Z-2ee96f",'
@@ -175,12 +168,7 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused"}\n', "lacks the key wave"),
             (
                 b'{"schema_version": 3, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "run": "r1"}\n',
-                "schema_version is 3, not one of 1, 2",
-            ),
-            (RUN_FINISHED_OF_SCHEMA_1_WITHOUT_STEPS, "lacks the key steps"),
-            (
-                b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "steps": 40}\n',
-                "lacks the key nulls",
+                "schema_version is 3, not one of 2",
             ),
             (
                 (
@@ -209,69 +197,24 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
 
 
 class ReadLedgerOfRunsFinishedTest(ReadLedgerTestCase):
-    def test_should_read_the_steps_of_a_line_of_schema_1_as_main_steps_and_its_total_steps_as_unknown(self):
-        # Arrange
-        self.write_ledger("2026-10.jsonl", RUN_FINISHED_OF_SCHEMA_1.encode())
+    def test_should_skip_a_line_of_schema_1_naming_its_version(self):
+        for line in [RUN_FINISHED_OF_SCHEMA_1, RUN_FINISHED_OF_SCHEMA_1_COUNTING_NO_STEPS]:
+            with self.subTest(line=line):
+                # Arrange
+                october = self.write_ledger("2026-10.jsonl", line.encode())
 
-        # Act
-        reading = read_ledger(self.state_root)
+                # Act
+                reading = read_ledger(self.state_root)
 
-        # Assert
-        [entry] = reading.entries
-        self.assertEqual(
-            entry.event,
-            RunFinished(
-                run="20261007T101817Z-2ee96f",
-                segment=1,
-                procedure="awawa-task",
-                slot="build",
-                role="ada",
-                client="claude-code",
-                project="brigade",
-                session="857d4221",
-                main_steps=40,
-                total_steps=None,
-                duration_ms=19091,
-                usage=None,
-                outcome="done",
-                error_class=None,
-                exit=0,
-                wave=None,
-                task=None,
-                nulls={
-                    "usage": "the client reported no usage",
-                    "total_steps": "recorded under schema 1, which counts no sub-agent",
-                },
-            ),
-        )
-
-    def test_should_never_rewrite_a_line_of_schema_1(self):
-        # Arrange
-        october = self.write_ledger("2026-10.jsonl", RUN_FINISHED_OF_SCHEMA_1.encode())
-
-        # Act
-        read_ledger(self.state_root)
-
-        # Assert
-        self.assertEqual(october.read_text(), RUN_FINISHED_OF_SCHEMA_1)
-
-    def test_should_read_the_reason_a_line_of_schema_1_gives_for_its_steps_as_that_of_its_main_steps(self):
-        # Arrange
-        self.write_ledger("2026-10.jsonl", RUN_FINISHED_OF_SCHEMA_1_COUNTING_NO_STEPS.encode())
-
-        # Act
-        reading = read_ledger(self.state_root)
-
-        # Assert
-        [entry] = reading.entries
-        self.assertEqual(
-            entry.event.nulls,
-            {
-                "main_steps": "the client counts no steps",
-                "usage": "the client reported no usage",
-                "total_steps": "recorded under schema 1, which counts no sub-agent",
-            },
-        )
+                # Assert
+                self.assertEqual(
+                    reading,
+                    LedgerReading(
+                        entries=(),
+                        files=(str(october),),
+                        skipped=(SkippedLine(file=str(october), line=1, reason="schema_version is 1, not one of 2"),),
+                    ),
+                )
 
     def test_should_read_a_line_of_schema_2_with_its_cost(self):
         # Arrange

@@ -5,12 +5,10 @@ from datetime import datetime
 from pathlib import Path
 
 from brigade.ledger.declare_event_shape import declare_event_shape
-from brigade.ledger.declared_events import DECLARED_EVENTS, LEDGER_SCHEMA_VERSION, READABLE_SCHEMA_VERSIONS
+from brigade.ledger.declared_events import DECLARED_EVENTS, LEDGER_SCHEMA_VERSION, WRITTEN_SCHEMA_VERSIONS
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.ledger_locations import LEDGER_DIRECTORY
-from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.undeclared_event import UndeclaredEvent
-from brigade.ledger.upgrade_run_finished import upgrade_run_finished
 from brigade.system.validate_document import DocumentInvalid, Field, validate_document
 
 MONTH_FILE_NAME = re.compile(r"\d{4}-\d{2}\.jsonl")
@@ -21,7 +19,6 @@ ENVELOPE_SHAPE = {
     "ts": Field((str,)),
     "event": Field((str,)),
 }
-UPGRADES = {(RunFinished.name, LEDGER_SCHEMA_VERSION): upgrade_run_finished}
 
 
 @dataclass(frozen=True)
@@ -53,17 +50,14 @@ def _read_instant(timestamp: str) -> datetime:
 
 
 def _check_schema_version(record: dict) -> None:
-    versions = READABLE_SCHEMA_VERSIONS.get(record["event"], (LEDGER_SCHEMA_VERSION,))
-    validate_document(record, {"schema_version": Field((int,), values=versions)})
+    version = WRITTEN_SCHEMA_VERSIONS.get(record["event"], LEDGER_SCHEMA_VERSION)
+    validate_document(record, {"schema_version": Field((int,), values=(version,))})
 
 
 def _read_event(record: dict):
     kind = DECLARED_EVENTS.get(record["event"])
     if kind is None:
         return UndeclaredEvent.from_document(record)
-    upgrade = UPGRADES.get((record["event"], record["schema_version"]))
-    if upgrade is not None:
-        record = upgrade(record)
     validate_document(record, declare_event_shape(kind))
     return kind.from_document(record)
 

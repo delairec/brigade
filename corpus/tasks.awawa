@@ -5007,7 +5007,11 @@ TASK B83
 	TITLE "A Claude Code session whose result follows a task notification is recorded whole: its"
 		+ "usage, its cost, its duration and its steps, not those of the turns after its last"
 		+ "notification"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-15: @TASK.B162 removed the upgrade on read of a run.finished line of"
+		+ "schema_version 1 that its SPEC 5 delivers, and such a line is now skipped as one of an"
+		+ "unknown schema_version"
+		REF @TASK.B162
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
@@ -9041,26 +9045,36 @@ TASK B156
 TASK B162
 	TITLE "a reader supports the current schema_version of each kind alone: every upgrade of a"
 		+ "document of an older version is removed, brigade/ledger/upgrade_run_finished.py first"
-	STATUS todo
+	STATUS implemented
 	SPEC "brigade/ledger/upgrade_run_finished.py is deleted, with UPGRADES of"
 		+ "brigade/ledger/read_ledger.py, its import and its call in _read_event: a run.finished"
 		+ "line of schema_version 1 is skipped by read_ledger as a line of an unknown"
 		+ "schema_version, its reason naming the version, tests/unit/ledger/test_read_ledger.py"
 		+ "proving it on the lines of schema_version 1 it reads upgraded today"
+		IMPL "brigade/ledger/read_ledger.py::def _read_event(record: dict):"
+		IMPL "tests/unit/ledger/test_read_ledger.py::def"
+			+ "test_should_skip_a_line_of_schema_1_naming_its_version(self):"
 	SPEC "READABLE_SCHEMA_VERSIONS of brigade/ledger/declared_events.py is deleted:"
 		+ "_check_schema_version of read_ledger.py accepts for an event the one version"
 		+ "append_event writes, WRITTEN_SCHEMA_VERSIONS or LEDGER_SCHEMA_VERSION, so that a"
 		+ "run.finished line of schema_version 3 is refused as « schema_version is 3, not one of 2"
 		+ "»"
+		IMPL "brigade/ledger/read_ledger.py::version ="
+			+ "WRITTEN_SCHEMA_VERSIONS.get(record[\"event\"], LEDGER_SCHEMA_VERSION)"
+		IMPL "tests/unit/ledger/test_read_ledger.py::\"schema_version is 3, not one of 2\","
 	SPEC "no other reader of brigade/ upgrades a document of an older version or accepts more than"
 		+ "one schema_version for one kind: at 97cbc49 the sites of SPEC 1 and SPEC 2 are the only"
 		+ "ones, every other schema_version field of brigade/ being validated against one value,"
 		+ "and once delivered grep -rn -i 'upgrade\|READABLE_SCHEMA_VERSIONS' brigade/ prints"
 		+ "nothing"
+		IMPL "brigade/ledger/read_ledger.py::def _check_schema_version(record: dict) -> None:"
+		IMPL "brigade/runs/read_run_finished.py::\"schema_version\": Field((int,),"
+			+ "values=(RUN_FINISHED_SCHEMA_VERSION,)),"
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ledger"
 	ROLE ada
 	AFTER @TASK.B151
+	DELIVERED_BY 139
 	DESC "after the merge, on the author's machine and by hand, the run.finished lines of"
 		+ "schema_version 1 are removed from the month files of ~/.local/state/brigade/ledger/ and"
 		+ "the result.json files of the RunResult shape deleted under ~/.local/state/brigade/runs/;"
