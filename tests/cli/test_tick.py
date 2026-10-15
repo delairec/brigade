@@ -17,6 +17,7 @@ from tests.process_launcher import ProcessLauncher
 
 INSTANT = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
 STOP_WAIT_S = 10
+CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
 PROJECT_SCHEMA = (
     "SCHEMA TASK\n"
     '\tDESC "a change delivered by one pull request"\n'
@@ -481,14 +482,23 @@ class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
 
 
 class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LaunchingTickTestCase):
-    def test_should_count_the_live_build_runs_of_the_project(self):
-        # Arrange
+    def tearDown(self):
+        for record in self.read_run_records():
+            self.wait_for_file(self.state / "runs" / record["run"] / "pid")
+            self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "stop", record["run"])
+        super().tearDown()
+
+    def configure_client_outliving_the_test(self) -> None:
         recordings = Path(self.root.name) / "recordings"
         instructions = Path(self.root.name) / "instructions"
         self.machine.write_configuration(
             f'client = "fake"\ndocument = "markdown"\ninstructions = "{instructions}"\n'
-            f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}delay = "3"\n'
+            f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}{CLIENT_OUTLIVING_THE_TEST}'
         )
+
+    def test_should_count_the_live_build_runs_of_the_project(self):
+        # Arrange
+        self.configure_client_outliving_the_test()
         self.run_tick("--once")
 
         # Act
@@ -509,12 +519,6 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LaunchingTickTestCase):
 
     def test_should_leave_out_the_finished_runs_and_the_runs_of_no_project(self):
         # Arrange
-        recordings = Path(self.root.name) / "recordings"
-        instructions = Path(self.root.name) / "instructions"
-        self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\ninstructions = "{instructions}"\n'
-            f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}delay = "3"\n'
-        )
         self.machine.run_brigade(
             CLONE_ENTRY_POINT,
             "run",
@@ -526,6 +530,7 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LaunchingTickTestCase):
             "--cwd",
             str(self.project.path),
         )
+        self.configure_client_outliving_the_test()
         self.machine.run_brigade(
             CLONE_ENTRY_POINT, "run", "build-task", "--slot", "build", "--cwd", str(self.project.path), "--detach"
         )
