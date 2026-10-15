@@ -53,6 +53,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             'ide_link = "idea://open?file={path}&line={line}"\n'
             "refs_cache_mb = 2048\n"
             "forge_attempts = 5\n"
+            'worktree_root = "../worktrees"\n'
             "[reasoning.deep]\n"
             'model = "opus"\n'
             'effort = "max"\n'
@@ -85,6 +86,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
                 forge_accounts={"cli": "octo-bot", "build": "octo-builder"},
                 forge_attempts=5,
                 slot_clients={"review": "vibe"},
+                worktree_root="../worktrees",
             ),
         )
 

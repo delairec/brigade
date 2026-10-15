@@ -1,18 +1,172 @@
-from dataclasses import dataclass
+import argparse
+from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
+from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_entities import Entity, read_entities
 from brigade.ledger.format_instant import format_instant
+from brigade.registry.find_project import find_project
+from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_projects import read_projects
+from brigade.runs.list_runs import list_runs
+from brigade.runtime import Runtime
+from brigade.system.read_configuration import Configuration
+from brigade.tick.read_implemented_tasks import read_implemented_tasks
+from brigade.tick.read_live_blockers import read_live_blockers
+from brigade.waves.describe_request import describe_request
+from brigade.waves.read_plan_review import read_plan_review
+from brigade.waves.read_task_states import read_task_states
 
 DOCUMENT_SCHEMA_VERSION = 1
+REQUEST_TYPE = "REQUEST"
+TASK_TYPE = "TASK"
+RUNNING_STATUS = "running"
+PLANNED_STATUS = "planned"
+LIVE_RUN_STATE = "running"
+SLOTS_FIELD = "SLOTS"
+AFTER_FIELD = "AFTER"
+TASK_PREFIX = "@TASK."
+PROJECT_SLOTS = 4
+
+
+@dataclass(frozen=True)
+class TaskFacts:
+    name: str
+    after: tuple[str, ...] = ()
+    blocked_by: tuple[str, ...] = ()
+
+    def to_document(self) -> dict:
+        return {"task": self.name, "after": list(self.after), "blocked_by": list(self.blocked_by)}
+
+
+@dataclass(frozen=True)
+class WaveFacts:
+    request: str
+    project: str
+    milestone: str
+    branch: str
+    tasks: tuple[TaskFacts, ...] = ()
+    states: dict = field(default_factory=dict)
+    implemented: tuple[str, ...] = ()
+
+    def to_document(self) -> dict:
+        return {
+            "request": self.request,
+            "project": self.project,
+            "milestone": self.milestone,
+            "branch": self.branch,
+            "tasks": [task.to_document() for task in self.tasks],
+            "states": dict(self.states),
+            "implemented": list(self.implemented),
+        }
+
+
+@dataclass(frozen=True)
+class LiveRun:
+    run: str
+    slot: str
+
+
+@dataclass(frozen=True)
+class ProjectFacts:
+    name: str
+    slots: int
+    live_runs: tuple[LiveRun, ...] = ()
+
+    def to_document(self) -> dict:
+        return {
+            "project": self.name,
+            "slots": self.slots,
+            "live_runs": [{"run": live.run, "slot": live.slot} for live in self.live_runs],
+        }
+
+
+@dataclass(frozen=True)
+class PlannedRequest:
+    request: str
+    project: str
+    plan_review: str
+
+    def to_document(self) -> dict:
+        return {"request": self.request, "project": self.project, "plan_review": self.plan_review}
 
 
 @dataclass(frozen=True)
 class Snapshot:
     now: datetime
+    waves: tuple[WaveFacts, ...] = ()
+    projects: tuple[ProjectFacts, ...] = ()
+    planned: tuple[PlannedRequest, ...] = ()
 
     def to_document(self) -> dict:
-        return {"schema_version": DOCUMENT_SCHEMA_VERSION, "now": format_instant(self.now)}
+        return {
+            "schema_version": DOCUMENT_SCHEMA_VERSION,
+            "now": format_instant(self.now),
+            "waves": [wave.to_document() for wave in self.waves],
+            "projects": [project.to_document() for project in self.projects],
+            "planned": [planned.to_document() for planned in self.planned],
+        }
 
 
-def build_snapshot(now: datetime) -> Snapshot:
-    return Snapshot(now=now)
+def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
+    return TaskFacts(
+        name=task.name,
+        after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
+        blocked_by=read_live_blockers(runtime.run_process, root, task.name),
+    )
+
+
+def _read_wave_facts(runtime: Runtime, configuration: Configuration, request: dict) -> WaveFacts:
+    query = argparse.Namespace(project=request["project"], ref=request["branch"], worktree=None)
+    tree = prepare_project_tree(query, configuration, runtime)
+    tasks = read_entities(runtime.run_process, tree.root, TASK_TYPE, f"MILESTONE==@MILESTONE.{request['milestone']}")
+    return WaveFacts(
+        request=request["name"],
+        project=request["project"],
+        milestone=request["milestone"],
+        branch=request["branch"],
+        tasks=tuple(_read_task_facts(runtime, tree.root, task) for task in tasks),
+        states=read_task_states(runtime.paths.state_root, request["milestone"]),
+        implemented=read_implemented_tasks(runtime.run_process, tree.root),
+    )
+
+
+def _read_project_facts(name: str, projects: tuple[Entity, ...], runs: list[dict]) -> ProjectFacts:
+    slots = read_project_field(find_project(projects, name), SLOTS_FIELD)
+    return ProjectFacts(
+        name=name,
+        slots=PROJECT_SLOTS if slots is None else int(slots),
+        live_runs=tuple(
+            LiveRun(run=run["run"], slot=run["slot"])
+            for run in runs
+            if run["project"] == name and run["state"] == LIVE_RUN_STATE
+        ),
+    )
+
+
+def build_snapshot(runtime: Runtime, configuration: Configuration) -> Snapshot:
+    if not runtime.paths.schema_file.exists():
+        return Snapshot(now=runtime.now)
+    requests = tuple(
+        describe_request(request)
+        for request in read_entities(runtime.run_process, runtime.paths.config_root, REQUEST_TYPE)
+    )
+    waves = tuple(
+        _read_wave_facts(runtime, configuration, request) for request in requests if request["status"] == RUNNING_STATUS
+    )
+    registered = read_projects(runtime)
+    runs = list_runs(runtime.paths.state_root)["runs"]
+    projects = tuple(
+        _read_project_facts(project, registered, runs) for project in dict.fromkeys(wave.project for wave in waves)
+    )
+    planned = tuple(
+        PlannedRequest(
+            request=request["name"],
+            project=request["project"],
+            plan_review=read_plan_review(runtime, request["project"]),
+        )
+        for request in requests
+        if request["status"] == PLANNED_STATUS
+    )
+    return Snapshot(now=runtime.now, waves=waves, projects=projects, planned=planned)

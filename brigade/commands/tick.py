@@ -1,25 +1,39 @@
+import argparse
 import dataclasses
+import functools
 import sys
 import time
 from collections.abc import Callable
 
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
+from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.task_state import TaskState
 from brigade.runtime import Runtime
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
+from brigade.system.read_configuration import Configuration
+from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
+from brigade.tick.actions import LaunchTask, StartWave
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
+from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.run_rounds import Rounds, run_rounds
+from brigade.tick.write_build_brief import write_build_brief
+from brigade.waves.start_wave import start_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
+BUILD_PROCEDURE = "build-task"
+BUILD_SLOT = "build"
+RUNNING_STATE = "running"
 TICK_INTERVAL_S = 300
 ROUND_CAP = 10
 LOCK_NAME = "tick.lock"
@@ -38,17 +52,41 @@ def _locate_trail(runtime: Runtime):
     return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(TRAIL_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
 
 
+def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
+    worktree = prepare_task_worktree(runtime, configuration, action)
+    building = argparse.Namespace(
+        procedure=BUILD_PROCEDURE,
+        slot=BUILD_SLOT,
+        project=action.project,
+        cwd=str(worktree.path),
+        brief=str(write_build_brief(runtime.paths.state_root, action, worktree)),
+        arguments=(f"task=@TASK.{action.task}", f"base={action.branch}"),
+        run_id=None,
+        detach=True,
+    )
+    run(building, runtime)
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.milestone, task=action.task, state=RUNNING_STATE))
+
+
+def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
+    return {
+        StartWave: lambda action: start_wave(runtime, action.request),
+        LaunchTask: lambda action: _launch_task(runtime, configuration, action),
+    }
+
+
 def _tick(runtime: Runtime) -> Heartbeat | None:
     started = time.monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
             return None
         runtime.trail.locate(_locate_trail(runtime))
+        configuration = read_optional_configuration(runtime.paths.configuration_file)
         outcome = run_rounds(
             Rounds(
-                build_snapshot=lambda: build_snapshot(runtime.now),
+                build_snapshot=lambda: build_snapshot(runtime, configuration),
                 plan=plan,
-                apply=apply_actions,
+                apply=functools.partial(apply_actions, executors=_list_executors(runtime, configuration)),
                 cap=ROUND_CAP,
             )
         )
@@ -76,7 +114,7 @@ def _tick_once(runtime: Runtime) -> dict:
 
 
 def _plan_dry(runtime: Runtime) -> dict:
-    snapshot = build_snapshot(runtime.now)
+    snapshot = build_snapshot(runtime, read_optional_configuration(runtime.paths.configuration_file))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",

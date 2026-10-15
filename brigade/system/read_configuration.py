@@ -8,7 +8,7 @@ from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_
 from brigade.system.read_runs_kept import RUNS_KEPT_BY_DEFAULT, RUNS_KEPT_KEY, read_runs_kept
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
-STRING_KEYS = ("client", "scheduler", "instructions", "document")
+STRING_KEYS = ("client", "scheduler", "instructions", "document", "worktree_root")
 DOCUMENT_BY_DEFAULT = "awawa"
 UNREAD_STRING_KEYS = ("ide_link",)
 REFS_CACHE_MB_KEY = "refs_cache_mb"
@@ -57,6 +57,7 @@ class Configuration:
     findings: tuple[str, ...] = ()
     forge_accounts: dict = field(default_factory=dict)
     forge_attempts: int = FORGE_ATTEMPTS_BY_DEFAULT
+    worktree_root: str | None = None
 
 
 def _require(value, kind: type, expected: str, location: str, path: Path):

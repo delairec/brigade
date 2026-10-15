@@ -18,6 +18,10 @@
 # The root of an instructions corpus the roles are read from.
 # instructions = ""
 
+# The directory the tick cuts the worktree of each task under, absolute or relative to the repository of the project;
+# by default .brigade/worktrees of the repository, which the tick adds to the .gitignore of the wave's branch.
+# worktree_root = ""
+
 # The link the dashboard opens a file with, {path} and {line} replaced.
 # ide_link = ""
 

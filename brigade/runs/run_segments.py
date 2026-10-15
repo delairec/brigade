@@ -1,4 +1,5 @@
 import json
+from contextlib import AbstractContextManager, nullcontext
 from datetime import timedelta
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import RESULT_FILE, SEGMENTS_DIRECTORY
 from brigade.runs.run_segment import TURN_LIMIT, WALL_LIMIT_OUTCOME, SegmentRecord, run_segment
 from brigade.runtime import Runtime
+from brigade.system.hold_lock import hold_lock
+from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.stop_signal_receiver import StopSignalReceiver
 from brigade.system.write_json_atomically import write_json_atomically
 
@@ -86,14 +89,22 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
             return records
 
 
+def _hold_worktrees_lock(plan: RunPlan, runtime: Runtime) -> AbstractContextManager:
+    if plan.project is None:
+        return nullcontext()
+    return hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, plan.project))
+
+
 def run_segments(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
     if plan.disposable_worktree:
-        add_detached_worktree(runtime.run_process, plan.cwd, plan.worktree, "HEAD")
+        with _hold_worktrees_lock(plan, runtime):
+            add_detached_worktree(runtime.run_process, plan.cwd, plan.worktree, "HEAD")
     try:
         records = _run_with_handovers(plan, runtime, stop)
     finally:
         if plan.disposable_worktree:
-            remove_worktree(runtime.run_process, plan.cwd, plan.worktree)
+            with _hold_worktrees_lock(plan, runtime):
+                remove_worktree(runtime.run_process, plan.cwd, plan.worktree)
     last_result = _locate_segment_result(plan, records[-1].number)
     write_json_atomically(plan.run_directory / RESULT_FILE, json.loads(last_result.read_text(encoding="utf-8")))
     return records
