@@ -11,6 +11,7 @@ STEPS_DIRECTORY = "steps"
 COLLECTORS_DIRECTORY = "collectors"
 ANSWER_FILE = "answer.awawa"
 STUDY_RECORD_FILE = "study.json"
+CONTEXT_FILE = "context.json"
 
 
 @dataclass(frozen=True)

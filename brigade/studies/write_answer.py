@@ -1,14 +1,12 @@
-import json
-
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.errors import BrigadeError
+from brigade.studies.read_collected import read_collected
 from brigade.studies.render_answer import render_answer
-from brigade.studies.study_run_context import ANSWER_FILE, STEPS_DIRECTORY, StudyRunContext
+from brigade.studies.study_run_context import ANSWER_FILE, StudyRunContext
 from brigade.system.write_text_atomically import write_text_atomically
 
 ENTITY_OUTPUT_PREFIX = "entity:"
-COLLECT_STEP_FILE = "collect.json"
 
 
 def _append_block(text: str, block: str) -> str:
@@ -21,8 +19,7 @@ def _read_answer(context: StudyRunContext) -> str:
     answer_path = context.run_directory / ANSWER_FILE
     if answer_path.is_file():
         return answer_path.read_text(encoding="utf-8")
-    collected = json.loads((context.run_directory / STEPS_DIRECTORY / COLLECT_STEP_FILE).read_text(encoding="utf-8"))
-    answer = render_answer(context, collected["collected"])
+    answer = render_answer(context.study, context.run_id, read_collected(context.run_directory))
     write_text_atomically(answer_path, answer)
     return answer
 

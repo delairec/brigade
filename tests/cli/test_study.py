@@ -394,3 +394,158 @@ class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
         # Assert
         self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"), completed.stderr)
         self.assertEqual([path.name for path in self.runs.iterdir()], [parked])
+
+
+class BrigadeStudyContextTest(StudyRunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.run_study(
+            "new",
+            "trees",
+            "--title",
+            "the trees",
+            "--question",
+            QUESTION,
+            "--project",
+            "shop",
+            "--collector",
+            "shell: printf 'oak\\nelm\\n'",
+            "--slot",
+            "none",
+            "--every",
+            "1h",
+            "--output",
+            "entity:ANSWER",
+        )
+        self.run_id = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
+        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "document.json"
+
+    def test_should_present_the_question_and_the_evidence_of_each_collector(self):
+        # Act
+        completed = self.run_study("context", self.run_id, "--json")
+
+        # Assert
+        package = json.loads(completed.stdout)
+        self.assertEqual(
+            (package["question"], package["collected"]),
+            (QUESTION, [{"collector": "shell", "summary": {"lines": 2}, "document": str(self.document)}]),
+            completed.stderr,
+        )
+
+    def test_should_present_the_answer_holding_the_fields_the_cli_filled(self):
+        # Act
+        completed = self.run_study("context", self.run_id, "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["answer"],
+            f"ANSWER trees_{self.run_id.replace('-', '_')}\n"
+            '\tSTUDY "trees"\n'
+            f'\tRUN "{self.run_id}"\n'
+            '\tCOLLECTED "shell"\n'
+            '\t\tSUMMARY "{\\"lines\\": 2}"\n'
+            f'\t\tDOCUMENT "{self.document}"\n',
+            completed.stderr,
+        )
+
+    def test_should_name_the_prose_fields_left_to_the_slot(self):
+        # Act
+        completed = self.run_study("context", self.run_id, "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["prose_fields"], ["NARRATIVE", "FINDING"], completed.stderr)
+
+    def test_should_present_the_schema_of_the_answer_type(self):
+        # Act
+        completed = self.run_study("context", self.run_id, "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads(completed.stdout)["schema"],
+            "SCHEMA ANSWER\n"
+            '\tDESC "the answer of one run of a study: the CLI fills what the collectors gave, the judging"\n'
+            '\t\t+ "slot the prose"\n'
+            "\tFIELD STUDY string\n"
+            "\t\tREQUIRED\n"
+            '\t\tDESC "the name of the STUDY answered"\n'
+            "\tFIELD RUN string\n"
+            "\t\tREQUIRED\n"
+            '\t\tDESC "the run of the study"\n'
+            "\tFIELD COLLECTED string\n"
+            "\t\tREPEATABLE\n"
+            '\t\tDESC "one per collector, its name, filled by the CLI"\n'
+            "\t\tFIELD SUMMARY string\n"
+            "\t\t\tREQUIRED\n"
+            '\t\t\tDESC "the summary of its document, as JSON"\n'
+            "\t\tFIELD DOCUMENT string\n"
+            "\t\t\tREQUIRED\n"
+            '\t\t\tDESC "the path of its full document"\n'
+            "\tFIELD NARRATIVE string\n"
+            "\t\tREPEATABLE\n"
+            '\t\tDESC "filled by the judging slot"\n'
+            "\tFIELD FINDING string\n"
+            "\t\tREPEATABLE\n"
+            '\t\tDESC "one finding with its evidence, filled by the judging slot"\n',
+            completed.stderr,
+        )
+
+    def test_should_write_the_package_to_the_run_directory(self):
+        # Act
+        completed = self.run_study("context", self.run_id, "--json")
+
+        # Assert
+        self.assertEqual(
+            json.loads((self.runs / self.run_id / "context.json").read_text()),
+            json.loads(completed.stdout),
+            completed.stderr,
+        )
+
+    def test_should_print_the_question_the_evidence_and_the_prose_fields(self):
+        # Act
+        completed = self.run_study("context", self.run_id)
+
+        # Assert
+        self.assertEqual(
+            completed.stdout.split("\n\n")[0],
+            f"question: {QUESTION}\n"
+            f'shell: {{"lines": 2}}, {self.document}\n'
+            "prose fields left to the slot: NARRATIVE, FINDING",
+            completed.stderr,
+        )
+
+    def test_should_exit_1_naming_a_run_that_is_not_a_study_run(self):
+        # Act
+        completed = self.run_study("context", "20261015T000000Z-000000")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade study context: 20261015T000000Z-000000 is not a run of a study\n"),
+        )
+
+    def test_should_exit_1_naming_a_run_parked_before_its_evidence_was_collected(self):
+        # Arrange
+        self.run_study(
+            "new",
+            "flags",
+            "--title",
+            "the flags",
+            "--project",
+            "shop",
+            "--collector",
+            "shell: cat flag",
+            "--slot",
+            "none",
+            "--output",
+            "entity:ANSWER",
+        )
+        [parked] = [path.name for path in self.runs.iterdir() if path.name != self.run_id]
+
+        # Act
+        completed = self.run_study("context", parked)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, f"brigade study context: the run {parked} has collected no evidence yet\n"),
+        )

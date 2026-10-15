@@ -13,6 +13,7 @@ PROJECT_REFERENCE_PREFIX = "@PROJECT."
 class Study:
     name: str
     project: str | None
+    question: str | None
     collectors: tuple[str, ...]
     slot: str
     output: str
@@ -21,6 +22,13 @@ class Study:
 
 def _read_values(entity: Entity, field_name: str) -> tuple[str, ...]:
     return tuple(field.value for field in entity.fields if field.name == field_name)
+
+
+def _read_question(entity: Entity) -> str | None:
+    questions = _read_values(entity, "QUESTION")
+    if not questions:
+        return None
+    return questions[0]
 
 
 def _read_project(entity: Entity) -> str | None:
@@ -39,6 +47,7 @@ def read_study(runtime: Runtime, name: str) -> Study:
     return Study(
         name=name,
         project=_read_project(entity),
+        question=_read_question(entity),
         collectors=_read_values(entity, "COLLECTOR"),
         slot=_read_values(entity, "SLOT")[0],
         output=_read_values(entity, "OUTPUT")[0],

@@ -1,21 +1,21 @@
 import json
 
 from brigade.corpus.quote_awawa_string import quote_awawa_string
-from brigade.studies.study_run_context import StudyRunContext
+from brigade.studies.read_study import Study
 
 RUN_ID_SEPARATOR = "-"
 NAME_SEPARATOR = "_"
 
 
-def _name_answer(context: StudyRunContext) -> str:
-    return f"{context.study.name}{NAME_SEPARATOR}{context.run_id.replace(RUN_ID_SEPARATOR, NAME_SEPARATOR)}"
+def _name_answer(study: Study, run_id: str) -> str:
+    return f"{study.name}{NAME_SEPARATOR}{run_id.replace(RUN_ID_SEPARATOR, NAME_SEPARATOR)}"
 
 
-def render_answer(context: StudyRunContext, collected: list[dict]) -> str:
+def render_answer(study: Study, run_id: str, collected: list[dict]) -> str:
     lines = [
-        f"{context.study.answer_type} {_name_answer(context)}",
-        f"\tSTUDY {quote_awawa_string(context.study.name)}",
-        f"\tRUN {quote_awawa_string(context.run_id)}",
+        f"{study.answer_type} {_name_answer(study, run_id)}",
+        f"\tSTUDY {quote_awawa_string(study.name)}",
+        f"\tRUN {quote_awawa_string(run_id)}",
     ]
     for entry in collected:
         lines.append(f"\tCOLLECTED {quote_awawa_string(entry['collector'])}")
