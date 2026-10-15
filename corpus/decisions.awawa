@@ -2606,6 +2606,10 @@ DECISION CollectWithoutSinceCollectsFromTheBeginning
 		+ "the one default that drops nothing and is the same on every day"
 	SOURCE "pull request #136 of the brigade repository, delivering @TASK.B47"
 		REF @TASK.B47
+	SOURCE "the user's ratification of 2026-10-15 on review 5525912035 of pull request #136 of the"
+		+ "brigade repository: « Ratifier telle quelle (Recommandé) — Sans --since, la collecte"
+		+ "part du début, comme brigade ledger : une seule convention dans l'outil. La décision"
+		+ "reçoit votre ratification comme source. »"
 
 DECISION ACollectorDeclaresInItsDocumentWhetherItIsCached
 	TITLE "a collector declares that its document is cached by the key cache, true, of the document"
