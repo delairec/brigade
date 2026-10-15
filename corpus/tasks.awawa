@@ -8081,8 +8081,10 @@ TASK B142
 		+ "the whole output of each command is written under <run dir>/check/"
 	SPEC "brigade task pr refuses, naming the cause, a task whose last recorded check is not of"
 		+ "HEAD or has a failing command, and a task that carries no TYPE"
-	SPEC "brigade task pr pushes the task branch and opens its pull request on the wave's BRANCH"
-		+ "through the forge adapter, as the login of the build slot, titled TYPE(COMPONENT): TITLE"
+	SPEC "brigade task pr takes the subject of the pull request as an argument, written in the"
+		+ "imperative by the run that delivers the task, and refuses a missing subject, naming the"
+		+ "cause; it pushes the task branch and opens its pull request on the wave's BRANCH through"
+		+ "the forge adapter, as the login of the build slot, titled TYPE(COMPONENT): <subject>"
 		+ "(@TASK.<task>), the scope left out when the task has no COMPONENT, with a body filled"
 		+ "from a string.Template shipped in the package: the TITLE of the task, one line per SPEC,"
 		+ "the verdicts of the last check and the attribution lines"
@@ -8104,8 +8106,9 @@ TASK B142
 		+ "chore, ci, docs, feat, fix, perf, refactor, revert, style and test, and every task of"
 		+ "STATUS todo carries one"
 	SPEC "tests/cli prove check, promote and each refusal of pr and promote on a registered"
-		+ "repository in a temporary directory; unit tests prove the title, the body and the three"
-		+ "ledger events"
+		+ "repository in a temporary directory; unit tests prove the composition of the title from"
+		+ "TYPE, COMPONENT, the subject and the task id, the refusal of a missing subject, the body"
+		+ "and the three ledger events"
 	AFTER @TASK.B13
 	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
 		+ "lifecycle of the Blueprint, brigade task check, brigade task pr, brigade task promote"
@@ -8118,10 +8121,11 @@ TASK B142
 		+ "POLICY.REVIEW local no task pull request is opened, which @TASK.B100 delivers"
 		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 		REF @TASK.B100
-	RATIONALE "the title follows @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask:"
-		+ "the branch task/<slug>/<task> of @TASK.B12 names no type and the ids of brigade's tasks"
-		+ "carry none, so the task carries it"
-		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndTitleOfItsTask
+	RATIONALE "the title follows"
+		+ "@DECISION.TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject: the branch"
+		+ "task/<slug>/<task> of @TASK.B12 names no type and the ids of brigade's tasks carry none,"
+		+ "so the task carries it"
+		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
 		REF @TASK.B12
 	RATIONALE "the check recorded against HEAD is what the body reports and what pr refuses to open"
 		+ "without, as the Blueprint has task pr fill the acceptance verdicts; every forge write"
@@ -8140,6 +8144,12 @@ TASK B142
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B142: one line per command and"
 		+ "the last 20 lines of a failure; three ledger events; the task carries a required TYPE;"
 		+ "the task is ratified"
+	SOURCE "the user's ruling of 2026-10-15 on the title of a task's pull request, after"
+		+ "@DECISION.TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject: « Sujet en"
+		+ "argument (Recommandé) — brigade task pr reçoit le sujet à l'impératif, écrit par le run"
+		+ "qui livre la tâche, et compose TYPE(COMPONENT): <sujet> (@TASK.X) ; il refuse un sujet"
+		+ "absent. Les SPEC 4 et 10 sont réécrites ainsi. »"
+		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
 
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
