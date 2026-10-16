@@ -1,0 +1,4032 @@
+{
+ "family": "A",
+ "title": "Mise en place et configuration",
+ "use_cases": [
+  {
+   "id": "installer-brigade",
+   "title": "Installer brigade sur la machine",
+   "intent": "je veux installer brigade sur ma machine et vérifier qu'il démarre",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M0",
+    "M7"
+   ],
+   "tasks": [
+    "@TASK.B01",
+    "@TASK.B93",
+    "@TASK.B45"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "sh",
+     "label": "Shell",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "bin",
+     "label": "bin/brigade",
+     "kind": "cli",
+     "code": "bin/brigade"
+    },
+    {
+     "id": "launch",
+     "label": "launcher.launch",
+     "kind": "module",
+     "code": "brigade/launcher.py:6"
+    },
+    {
+     "id": "floor",
+     "label": "python_floor",
+     "kind": "module",
+     "code": "brigade/python_floor.py"
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "build",
+     "label": "build.py (zipapp)",
+     "kind": "module",
+     "code": "build.py:11"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "sh",
+     "label": "git clone … && ln -s bin/brigade ~/.local/bin/brigade",
+     "status": "implemented",
+     "code": "README.md#Install",
+     "task": null,
+     "frame": "alt: depuis un clone",
+     "note": "deux commandes à la main, aucune ne vérifie PATH",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "build",
+     "label": "python3 build.py",
+     "status": "implemented",
+     "code": "build.py:11",
+     "task": null,
+     "frame": "alt: zipapp",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "build",
+     "to": "sh",
+     "label": "dist/brigade.pyz (interpréteur /usr/bin/env python3)",
+     "status": "implemented",
+     "code": "build.py:18",
+     "task": null,
+     "frame": "alt: zipapp",
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "bin",
+     "label": "brigade --version",
+     "status": "implemented",
+     "code": "bin/brigade:1",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "bin",
+     "to": "launch",
+     "label": "launch()",
+     "status": "implemented",
+     "code": "brigade/launcher.py:6",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "launch",
+     "to": "floor",
+     "label": "vérifie Python >= 3.11.4",
+     "status": "implemented",
+     "code": "brigade/python_floor.py:6",
+     "task": null,
+     "frame": null,
+     "note": "sinon exit non nul avec la version trouvée",
+     "reply": false
+    },
+    {
+     "from": "launch",
+     "to": "cli",
+     "label": "main(argv)",
+     "status": "implemented",
+     "code": "brigade/cli.py:118",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "brigade X.Y.Z",
+     "status": "implemented",
+     "code": "brigade/cli.py:130",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "sh",
+     "label": "mise à jour : git pull à la main puis re-lien éventuel",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B93",
+     "frame": null,
+     "note": "doctor ne fait que prévenir d'un checkout en retard (doctor.py:296)",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "sh",
+     "label": "répétition sur un compte vierge",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B45",
+     "frame": null,
+     "note": "aucune preuve automatisée aujourd'hui",
+     "reply": false
+    }
+   ],
+   "outcome": "brigade --version répond ; la machine n'est pas encore configurée (voir init et doctor).",
+   "steps_human": [
+    "je clone le dépôt",
+    "je crée ~/.local/bin et fais le ln -s",
+    "je lance python3 build.py si je veux le zipapp",
+    "je mets à jour par git pull à la main"
+   ]
+  },
+  {
+   "id": "initialiser-corpus-operationnel",
+   "title": "Initialiser brigade sur une machine",
+   "intent": "je veux initialiser brigade pour qu'il ait son dépôt de configuration",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B03"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "init",
+     "label": "commands/init.py::init",
+     "kind": "module",
+     "code": "brigade/commands/init.py:91"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "shipped",
+     "label": "corpus/shipped_data",
+     "kind": "module",
+     "code": "brigade/corpus/shipped_data.py"
+    },
+    {
+     "id": "opc",
+     "label": "Corpus opérationnel (~/.config/brigade)",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade init",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:115",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "init",
+     "label": "init(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:91",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "git",
+     "label": "git config user.name / user.email",
+     "status": "implemented",
+     "code": "brigade/git/read_git_identity.py:33",
+     "task": null,
+     "frame": null,
+     "note": "refuse si l'identité manque (init.py:21)",
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "git",
+     "label": "git init ~/.config/brigade (si absent)",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:28",
+     "task": null,
+     "frame": "alt: dépôt absent",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "shipped",
+     "label": "lit schema.awawa.tpl et config.toml.tpl",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:41",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "opc",
+     "label": "écrit _schema.awawa (si absent)",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:46",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "opc",
+     "label": "écrit .gitignore (config.toml)",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:46",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "cfg",
+     "label": "écrit config.toml, toutes clés commentées",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:46",
+     "task": null,
+     "frame": null,
+     "note": "aucune clé n'est posée : ni client ni scheduler",
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "git",
+     "label": "git add + commit du schéma et du .gitignore",
+     "status": "implemented",
+     "code": "brigade/git/commit_files.py:20",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "init",
+     "to": "cli",
+     "label": "3 lignes created/present/differs + résumé",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:72",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "init",
+     "to": "op",
+     "label": "un fichier 'differs' est laissé tel quel (avertissement, exit 0)",
+     "status": "implemented",
+     "code": "brigade/commands/init.py:54",
+     "task": null,
+     "frame": null,
+     "note": "pas de migration de schéma",
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "choisir rôles intégrés ou personnalisés à l'init",
+     "status": "draft",
+     "code": null,
+     "task": "@OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles",
+     "frame": null,
+     "note": "question ouverte : init (ou un installeur) pose-t-il la question ?",
+     "reply": false
+    }
+   ],
+   "outcome": "Un dépôt git ~/.config/brigade avec _schema.awawa et .gitignore commités, et un config.toml entièrement commenté.",
+   "steps_human": [
+    "je lance brigade init",
+    "j'ouvre config.toml et je décommente client = … à la main",
+    "je lance brigade doctor pour savoir si c'est bon"
+   ]
+  },
+  {
+   "id": "configurer-la-machine",
+   "title": "Configurer client, scheduler, comptes forge et rôles",
+   "intent": "je veux dire à brigade quel client IA, quel scheduler et quels comptes gh utiliser sur cette machine",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M0",
+    "M7"
+   ],
+   "tasks": [
+    "@TASK.B03",
+    "@TASK.B42",
+    "@TASK.B65",
+    "@TASK.B145"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "ed",
+     "label": "Éditeur de texte",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "rc",
+     "label": "read_configuration",
+     "kind": "module",
+     "code": "brigade/system/read_configuration.py:163"
+    },
+    {
+     "id": "rs",
+     "label": "read_run_setting",
+     "kind": "module",
+     "code": "brigade/runs/read_run_setting.py:29"
+    },
+    {
+     "id": "doc",
+     "label": "doctor",
+     "kind": "cli",
+     "code": "brigade/commands/doctor.py:375"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "ed",
+     "label": "ouvre ~/.config/brigade/config.toml (14 clés possibles)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "aucune commande brigade config get/set",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cfg",
+     "label": "client = \"claude-code\"",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "loop: chaque clé à poser",
+     "note": "le client n'a aucune valeur par défaut",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cfg",
+     "label": "[slot_clients] / [slots] / [forge_accounts] / [reasoning]",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "loop: chaque clé à poser",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade doctor",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:375",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "rc",
+     "label": "read_configuration(config.toml)",
+     "status": "implemented",
+     "code": "brigade/system/read_configuration.py:163",
+     "task": null,
+     "frame": null,
+     "note": "clé inconnue ou mauvais type = erreur nommant la clé",
+     "reply": false
+    },
+    {
+     "from": "rc",
+     "to": "doc",
+     "label": "Configuration (ou BrigadeError)",
+     "status": "implemented",
+     "code": "brigade/system/read_configuration.py:41",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "doc",
+     "to": "cli",
+     "label": "vérifie le client principal seulement",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:122",
+     "task": null,
+     "frame": null,
+     "note": "slot_clients, slots et CLIENT de projet ne sont pas vérifiés",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "exit 0 même avec slot_clients.review = nom inexistant",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:359",
+     "task": null,
+     "frame": null,
+     "note": "observé : seul roles list échoue",
+     "reply": true
+    },
+    {
+     "from": "rs",
+     "to": "cfg",
+     "label": "au run : slot_clients > CLIENT du projet > client",
+     "status": "implemented",
+     "code": "brigade/runs/read_run_setting.py:31",
+     "task": "@TASK.B145",
+     "frame": null,
+     "note": "priorité testée seulement à l'exécution",
+     "reply": false
+    },
+    {
+     "from": "rs",
+     "to": "op",
+     "label": "erreur 'no client adapter X' au premier run non surveillé",
+     "status": "implemented",
+     "code": "brigade/runs/read_run_setting.py:33",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    }
+   ],
+   "outcome": "Les clés sont posées à la main ; leur validité n'est prouvée que partiellement par doctor, le reste au premier run.",
+   "steps_human": [
+    "j'ouvre config.toml et je connais les noms de clés",
+    "je recopie les noms de slots (9) pour [slot_clients] et [slots]",
+    "je lance doctor puis roles list pour vérifier ce que doctor ne couvre pas"
+   ]
+  },
+  {
+   "id": "verifier-les-prerequis",
+   "title": "Vérifier que la machine est prête",
+   "intent": "je veux savoir si ma machine peut faire tourner brigade, et ce qui manque",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B02",
+    "@TASK.B75"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "doc",
+     "label": "doctor",
+     "kind": "module",
+     "code": "brigade/commands/doctor.py:375"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "awawa",
+     "label": "awawa",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "client",
+     "label": "Client IA (claude…)",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "gh",
+     "label": "gh",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "sysd",
+     "label": "systemctl --user",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "lint",
+     "label": "lint_corpus (instructions)",
+     "kind": "module",
+     "code": "brigade/corpus/lint_corpus.py:18"
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade doctor [--json]",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:399",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "doc",
+     "label": "doctor(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:375",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "cfg",
+     "label": "lit config.toml (erreur gardée, pas levée)",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:102",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "doc",
+     "label": "python >= 3.11.4",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:71",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "git",
+     "label": "git --version",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:76",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "awawa",
+     "label": "awawa --version (>= 2.7)",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:91",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "client",
+     "label": "probe puis <client> --version",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:122",
+     "task": null,
+     "frame": null,
+     "note": "finding si aucun client nommé : exit 1",
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "sysd",
+     "label": "systemctl --user is-system-running",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:140",
+     "task": null,
+     "frame": null,
+     "note": "dit si systemd est utilisable, pas si le timer est installé",
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "gh",
+     "label": "gh auth token --user <login> / gh api user",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:203",
+     "task": "@TASK.B75",
+     "frame": "loop: chaque login de [forge_accounts]",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "lint",
+     "label": "awawa lint --strict de l'instructions corpus",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:265",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "git",
+     "label": "retard du checkout sur son upstream",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:296",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "op",
+     "label": "tableau prerequisites / optional + résumé",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:340",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "doc",
+     "to": "op",
+     "label": "vérifier projets enregistrés, timer installé, dernier tick",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "doctor ne lit jamais le registre ni le heartbeat",
+     "reply": false
+    }
+   ],
+   "outcome": "Un tableau : prérequis (exit 1 si un manque) et éléments optionnels avec leur repli ; le registre et le scheduler ne sont pas couverts.",
+   "steps_human": [
+    "je lance brigade doctor",
+    "je lance scheduler status à part pour savoir si le tick tourne",
+    "je lance project list à part pour voir les projets"
+   ]
+  },
+  {
+   "id": "enregistrer-un-projet",
+   "title": "Enregistrer un nouveau projet",
+   "intent": "je veux enregistrer un nouveau projet dans brigade",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B04",
+    "@TASK.B12"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "pa",
+     "label": "project_add",
+     "kind": "module",
+     "code": "brigade/commands/project_add.py:118"
+    },
+    {
+     "id": "req",
+     "label": "require_operational_corpus",
+     "kind": "module",
+     "code": "brigade/registry/require_operational_corpus.py:5"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "disc",
+     "label": "discover_project",
+     "kind": "module",
+     "code": "brigade/registry/discover_project.py:32"
+    },
+    {
+     "id": "guess",
+     "label": "guess_commands",
+     "kind": "module",
+     "code": "brigade/registry/guess_commands.py:99"
+    },
+    {
+     "id": "reg",
+     "label": "change_registry",
+     "kind": "module",
+     "code": "brigade/registry/change_registry.py:10"
+    },
+    {
+     "id": "awawa",
+     "label": "awawa",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "opc",
+     "label": "Corpus opérationnel (~/.config/brigade)",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project add <path> [--acceptance …] [--setup …]",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:143",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "pa",
+     "label": "project_add(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:118",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "req",
+     "label": "_schema.awawa existe ?",
+     "status": "implemented",
+     "code": "brigade/registry/require_operational_corpus.py:5",
+     "task": null,
+     "frame": null,
+     "note": "sinon : run brigade init first",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "git",
+     "label": "git rev-parse --git-dir",
+     "status": "implemented",
+     "code": "brigade/git/detect_repository.py:11",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "disc",
+     "label": "branche principale, origin, corpus .awawa, forge",
+     "status": "implemented",
+     "code": "brigade/registry/discover_project.py:32",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "disc",
+     "to": "git",
+     "label": "origin/HEAD, remote get-url, ls-files *.awawa",
+     "status": "implemented",
+     "code": "brigade/git/read_main_branch.py:30",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "guess",
+     "label": "devine ACCEPTANCE/SETUP (package.json, Python, Cargo)",
+     "status": "implemented",
+     "code": "brigade/registry/guess_commands.py:99",
+     "task": null,
+     "frame": null,
+     "note": "valeurs marquées (guessed)",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "reg",
+     "label": "réécrit projects.awawa (verrou)",
+     "status": "implemented",
+     "code": "brigade/registry/change_registry.py:10",
+     "task": null,
+     "frame": null,
+     "note": "--force remplace l'entité entière (project_add.py:53)",
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "awawa",
+     "label": "awawa fmt puis awawa lint --strict",
+     "status": "implemented",
+     "code": "brigade/corpus/change_corpus_file.py:45",
+     "task": null,
+     "frame": null,
+     "note": "lint refusé : fichier restauré, exit 1",
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "opc",
+     "label": "git commit 'brigade project add: <nom>'",
+     "status": "implemented",
+     "code": "brigade/git/commit_files.py:20",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "op",
+     "label": "entité @PROJECT.<nom> avec champs devinés",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:99",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "fixer CLIENT, ROLESET, ROLE, SLOTS, MERGE, PRIVATE, POLICY",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "aucune option ni commande : édition manuelle du dépôt de config",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "pa",
+     "label": "valider que SETUP/ACCEPTANCE se découpent en argv",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "refus seulement au lancement (prepare_task_worktree.py:30)",
+     "reply": false
+    }
+   ],
+   "outcome": "Un PROJECT actif dans projects.awawa, commité ; les champs décidés par brigade sont affichés, les autres restent à la main.",
+   "steps_human": [
+    "je lance brigade project add <chemin> avec mes commandes",
+    "j'édite projects.awawa pour CLIENT/ROLESET/ROLE/SLOTS/MERGE/PRIVATE",
+    "j'écris un POLICY à la main si je veux REVIEW approval ou PLAN_REVIEW ask"
+   ]
+  },
+  {
+   "id": "consulter-les-projets",
+   "title": "Voir les projets enregistrés",
+   "intent": "je veux voir quels projets brigade gère et comment ils sont configurés",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B04"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "pl",
+     "label": "project_list",
+     "kind": "module",
+     "code": "brigade/commands/project_list.py:33"
+    },
+    {
+     "id": "ps",
+     "label": "project_show",
+     "kind": "module",
+     "code": "brigade/commands/project_show.py:28"
+    },
+    {
+     "id": "rp",
+     "label": "read_projects",
+     "kind": "module",
+     "code": "brigade/registry/read_projects.py:7"
+    },
+    {
+     "id": "re",
+     "label": "read_entities",
+     "kind": "module",
+     "code": "brigade/corpus/read_entities.py:14"
+    },
+    {
+     "id": "awawa",
+     "label": "awawa",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project list",
+     "status": "implemented",
+     "code": "brigade/commands/project_list.py:44",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "pl",
+     "label": "project_list(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/project_list.py:33",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pl",
+     "to": "rp",
+     "label": "read_projects(runtime)",
+     "status": "implemented",
+     "code": "brigade/registry/read_projects.py:7",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rp",
+     "to": "re",
+     "label": "read_entities(config_root, PROJECT)",
+     "status": "implemented",
+     "code": "brigade/corpus/read_entities.py:14",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "re",
+     "to": "awawa",
+     "label": "awawa status/show --json sur le dépôt de config",
+     "status": "implemented",
+     "code": "brigade/corpus/read_entities.py:14",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pl",
+     "to": "op",
+     "label": "tableau name | status | path",
+     "status": "implemented",
+     "code": "brigade/commands/project_list.py:18",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project show <nom>",
+     "status": "implemented",
+     "code": "brigade/commands/project_show.py:40",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "ps",
+     "label": "project_show(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/project_show.py:28",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ps",
+     "to": "op",
+     "label": "tous les champs de l'entité",
+     "status": "implemented",
+     "code": "brigade/commands/project_show.py:11",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "voir en un coup vagues actives, dernier tick, politique du projet",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "show ne lit ni POLICY, ni vagues, ni ledger",
+     "reply": false
+    }
+   ],
+   "outcome": "La liste (nom, statut, chemin) puis les champs bruts d'un projet.",
+   "steps_human": [
+    "je lance project show puis wave list puis ledger pour avoir la vue complète d'un projet"
+   ]
+  },
+  {
+   "id": "pause-reprise-projet",
+   "title": "Mettre un projet en pause ou le reprendre",
+   "intent": "je veux que brigade arrête de toucher à un projet un moment, puis qu'il reprenne",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B04"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "pp",
+     "label": "project_pause / project_resume",
+     "kind": "module",
+     "code": "brigade/commands/project_pause.py:23"
+    },
+    {
+     "id": "cps",
+     "label": "change_project_status",
+     "kind": "module",
+     "code": "brigade/registry/change_project_status.py:26"
+    },
+    {
+     "id": "reg",
+     "label": "change_registry",
+     "kind": "module",
+     "code": "brigade/registry/change_registry.py:10"
+    },
+    {
+     "id": "sps",
+     "label": "set_project_status",
+     "kind": "module",
+     "code": "brigade/registry/set_project_status.py:7"
+    },
+    {
+     "id": "awawa",
+     "label": "awawa",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "opc",
+     "label": "Corpus opérationnel (~/.config/brigade)",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project pause <nom>",
+     "status": "implemented",
+     "code": "brigade/commands/project_pause.py:27",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "pp",
+     "label": "project_pause(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/project_pause.py:23",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pp",
+     "to": "cps",
+     "label": "change_project_status(name, 'paused')",
+     "status": "implemented",
+     "code": "brigade/registry/change_project_status.py:26",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cps",
+     "to": "reg",
+     "label": "change_registry(rewrite)",
+     "status": "implemented",
+     "code": "brigade/registry/change_registry.py:10",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "sps",
+     "label": "remplace la ligne STATUS de l'entité",
+     "status": "implemented",
+     "code": "brigade/registry/set_project_status.py:7",
+     "task": null,
+     "frame": null,
+     "note": "rien à faire si déjà paused : changed=false",
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "awawa",
+     "label": "fmt + lint --strict",
+     "status": "implemented",
+     "code": "brigade/corpus/change_corpus_file.py:45",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "opc",
+     "label": "git commit 'brigade project pause: <nom>'",
+     "status": "implemented",
+     "code": "brigade/git/commit_files.py:20",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pp",
+     "to": "op",
+     "label": "paused @PROJECT.<nom>",
+     "status": "implemented",
+     "code": "brigade/commands/project_pause.py:12",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project resume <nom>",
+     "status": "implemented",
+     "code": "brigade/commands/project_resume.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "pause avec raison et date, reprise planifiée",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "STATUS est un simple active|paused, sans motif",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "effet du statut paused sur le tick et les runs en cours",
+     "status": "implemented",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "famille B : tick/vagues, non relu ici",
+     "reply": false
+    }
+   ],
+   "outcome": "STATUS du projet basculé et commité ; idempotent.",
+   "steps_human": [
+    "je note ailleurs pourquoi j'ai mis le projet en pause"
+   ]
+  },
+  {
+   "id": "modifier-un-projet",
+   "title": "Changer les réglages d'un projet enregistré",
+   "intent": "je veux changer la commande d'acceptation, le client ou la branche principale d'un projet sans le perdre",
+   "actor": "operator",
+   "status": "unplanned",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "pa",
+     "label": "project_add --force",
+     "kind": "module",
+     "code": "brigade/commands/project_add.py:118"
+    },
+    {
+     "id": "reg",
+     "label": "_Registration.rewrite",
+     "kind": "module",
+     "code": "brigade/commands/project_add.py:53"
+    },
+    {
+     "id": "opc",
+     "label": "Corpus opérationnel (~/.config/brigade)",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project set <nom> --acceptance … --client …",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "commande absente",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project add <path> --force --acceptance …",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:153",
+     "task": null,
+     "frame": null,
+     "note": "contournement actuel",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "pa",
+     "label": "project_add(force=True)",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:118",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "reg",
+     "label": "_find_registered : même PATH ou même nom",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:42",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "reg",
+     "label": "remove_project_entity puis ré-écrit l'entité redécouverte",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:55",
+     "task": null,
+     "frame": null,
+     "note": "CLIENT, ROLESET, ROLE, SLOTS, MERGE, PRIVATE posés à la main sont perdus",
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "opc",
+     "label": "git commit",
+     "status": "implemented",
+     "code": "brigade/git/commit_files.py:20",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "op",
+     "label": "'replaced @PROJECT.<nom>' sans avertir des champs perdus",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:102",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "opc",
+     "label": "édition manuelle de projects.awawa",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "seul moyen sûr aujourd'hui",
+     "reply": false
+    }
+   ],
+   "outcome": "Aujourd'hui : un remplacement complet qui perd les réglages manuels, ou une édition à la main du dépôt de config.",
+   "steps_human": [
+    "je relis project show avant --force pour recopier les champs manuels",
+    "je ré-écris CLIENT/ROLE/… après le --force"
+   ]
+  },
+  {
+   "id": "retirer-un-projet",
+   "title": "Retirer un projet de brigade",
+   "intent": "je veux que brigade oublie un projet que je n'utilise plus",
+   "actor": "operator",
+   "status": "unplanned",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "reg",
+     "label": "change_registry",
+     "kind": "module",
+     "code": "brigade/registry/change_registry.py:10"
+    },
+    {
+     "id": "rpe",
+     "label": "remove_project_entity",
+     "kind": "module",
+     "code": "brigade/registry/remove_project_entity.py"
+    },
+    {
+     "id": "opc",
+     "label": "Corpus opérationnel (~/.config/brigade)",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project remove <nom>",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "commande absente, aucune tâche",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "reg",
+     "label": "change_registry(rewrite)",
+     "status": "implemented",
+     "code": "brigade/registry/change_registry.py:10",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "rpe",
+     "label": "remove_project_entity(text, name)",
+     "status": "implemented",
+     "code": "brigade/registry/remove_project_entity.py",
+     "task": null,
+     "frame": null,
+     "note": "existe, appelé seulement par project add --force (project_add.py:56)",
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "opc",
+     "label": "vérifie qu'aucune vague/REQUEST/POLICY ne cite le projet",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "les entités qui pointent @PROJECT resteraient orphelines",
+     "reply": false
+    },
+    {
+     "from": "reg",
+     "to": "opc",
+     "label": "commit 'brigade project remove'",
+     "status": "implemented",
+     "code": "brigade/git/commit_files.py:20",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "pause comme substitut",
+     "status": "implemented",
+     "code": "brigade/commands/project_pause.py:23",
+     "task": null,
+     "frame": null,
+     "note": "le projet reste dans list, show et le registre",
+     "reply": false
+    }
+   ],
+   "outcome": "Aujourd'hui impossible sans éditer projects.awawa ; le statut du schéma n'a que active|paused (schema.awawa.tpl).",
+   "steps_human": [
+    "je supprime l'entité PROJECT à la main dans ~/.config/brigade/projects.awawa puis je commite"
+   ]
+  },
+  {
+   "id": "installer-le-scheduler",
+   "title": "Faire tourner le tick tout seul",
+   "intent": "je veux que brigade travaille sans que je lance rien, toutes les cinq minutes",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B07",
+    "@TASK.B57"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "si",
+     "label": "scheduler_install",
+     "kind": "module",
+     "code": "brigade/commands/scheduler_install.py:61"
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    },
+    {
+     "id": "rp",
+     "label": "resolve_plugin",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py:173"
+    },
+    {
+     "id": "sysd",
+     "label": "systemctl --user",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "sd",
+     "label": "adapters/schedulers/systemd.py",
+     "kind": "module",
+     "code": "brigade/adapters/schedulers/systemd.py:48"
+    },
+    {
+     "id": "cr",
+     "label": "adapters/schedulers/cron.py",
+     "kind": "module",
+     "code": "brigade/adapters/schedulers/cron.py:51"
+    },
+    {
+     "id": "units",
+     "label": "unités / crontab",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade scheduler install",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_install.py:82",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "si",
+     "label": "scheduler_install(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_install.py:61",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "si",
+     "to": "cfg",
+     "label": "scheduler = … dans config.toml ?",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_install.py:62",
+     "task": null,
+     "frame": "alt: scheduler nommé",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "si",
+     "to": "sysd",
+     "label": "systemctl --user is-system-running (sonde)",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_install.py:17",
+     "task": null,
+     "frame": "alt: pas de clé scheduler",
+     "note": "systemd si utilisable, sinon cron",
+     "reply": false
+    },
+    {
+     "from": "si",
+     "to": "rp",
+     "label": "resolve_plugin('scheduler', name)",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:173",
+     "task": null,
+     "frame": null,
+     "note": "forge/scheduler non résolus par exécutable : B76",
+     "reply": false
+    },
+    {
+     "from": "si",
+     "to": "sd",
+     "label": "install(request) : argv[0] absolu, PATH et XDG_* figés",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_install.py:25",
+     "task": null,
+     "frame": "alt: systemd",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sd",
+     "to": "units",
+     "label": "écrit brigade.service et brigade.timer (*:0/5)",
+     "status": "implemented",
+     "code": "brigade/adapters/schedulers/systemd.py:54",
+     "task": null,
+     "frame": "alt: systemd",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sd",
+     "to": "sysd",
+     "label": "daemon-reload ; enable --now brigade.timer",
+     "status": "implemented",
+     "code": "brigade/adapters/schedulers/systemd.py:59",
+     "task": null,
+     "frame": "alt: systemd",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "si",
+     "to": "cr",
+     "label": "install(request) : ligne crontab marquée",
+     "status": "implemented",
+     "code": "brigade/adapters/schedulers/cron.py:51",
+     "task": null,
+     "frame": "alt: cron",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cr",
+     "to": "units",
+     "label": "crontab -l puis crontab - (ancienne ligne retirée)",
+     "status": "implemented",
+     "code": "brigade/adapters/schedulers/cron.py:53",
+     "task": null,
+     "frame": "alt: cron",
+     "note": "ligne = chaîne shell 'mkdir -p … && …' (crontab-line.tpl)",
+     "reply": false
+    },
+    {
+     "from": "si",
+     "to": "op",
+     "label": "loop : rien installé, 'gardez brigade tick --loop'",
+     "status": "implemented",
+     "code": "brigade/adapters/schedulers/loop.py:8",
+     "task": null,
+     "frame": "alt: loop",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "si",
+     "to": "op",
+     "label": "scheduler, unités, ligne cron, choisi par config|sonde",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_install.py:41",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "régler l'intervalle, tester un tick, désinstaller",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "intervalle codé en dur dans les gabarits",
+     "reply": false
+    }
+   ],
+   "outcome": "Un timer systemd utilisateur (ou une ligne cron) lance brigade tick --once toutes les 5 minutes.",
+   "steps_human": [
+    "je lance brigade scheduler install",
+    "je vérifie à part avec scheduler status et doctor",
+    "je relance install à la main si je déplace brigade ou change mon PATH"
+   ]
+  },
+  {
+   "id": "surveiller-le-scheduler",
+   "title": "Vérifier que le tick tourne",
+   "intent": "je veux savoir si le scheduler est installé et quand le dernier tick a eu lieu",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B07"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "ss",
+     "label": "scheduler_status",
+     "kind": "module",
+     "code": "brigade/commands/scheduler_status.py:63"
+    },
+    {
+     "id": "sd",
+     "label": "schedulers/systemd.read_status",
+     "kind": "module",
+     "code": "brigade/adapters/schedulers/systemd.py:88"
+    },
+    {
+     "id": "cr",
+     "label": "schedulers/cron.read_status",
+     "kind": "module",
+     "code": "brigade/adapters/schedulers/cron.py:79"
+    },
+    {
+     "id": "hb",
+     "label": "read_heartbeat",
+     "kind": "module",
+     "code": "brigade/tick/read_heartbeat.py:9"
+    },
+    {
+     "id": "hbf",
+     "label": "state/tick.json",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade scheduler status",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:75",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "ss",
+     "label": "scheduler_status(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:63",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ss",
+     "to": "sd",
+     "label": "read_status (unités présentes, prochaine activation)",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:15",
+     "task": null,
+     "frame": "loop: systemd puis cron",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ss",
+     "to": "cr",
+     "label": "read_status (ligne crontab marquée)",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:15",
+     "task": null,
+     "frame": "loop: systemd puis cron",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ss",
+     "to": "hb",
+     "label": "read_heartbeat(tick.json)",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:32",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "hb",
+     "to": "hbf",
+     "label": "lit ts, durée, actions appliquées",
+     "status": "implemented",
+     "code": "brigade/tick/read_heartbeat.py:9",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ss",
+     "to": "op",
+     "label": "scheduler, unités, next, last tick",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:45",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "ss",
+     "to": "op",
+     "label": "exit 0 même avec 'scheduler none' ou 'last tick never'",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:59",
+     "task": null,
+     "frame": null,
+     "note": "aucun signal machine-lisible d'un tick mort",
+     "reply": true
+    },
+    {
+     "from": "ss",
+     "to": "op",
+     "label": "le mode loop n'est pas détectable",
+     "status": "implemented",
+     "code": "brigade/commands/scheduler_status.py:10",
+     "task": null,
+     "frame": null,
+     "note": "SCHEDULERS_ASKED = systemd, cron",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "alerte quand le dernier tick est trop ancien",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "ni doctor ni status ne comparent le heartbeat à l'horloge",
+     "reply": false
+    }
+   ],
+   "outcome": "Le scheduler trouvé, ses unités, la prochaine activation et l'instant du dernier tick.",
+   "steps_human": [
+    "je lis last tick et je compare à l'heure moi-même"
+   ]
+  },
+  {
+   "id": "desinstaller-le-scheduler",
+   "title": "Arrêter ou désinstaller le tick automatique",
+   "intent": "je veux arrêter brigade proprement, ou changer la fréquence du tick",
+   "actor": "operator",
+   "status": "unplanned",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "sd",
+     "label": "schedulers/systemd",
+     "kind": "module",
+     "code": "brigade/adapters/schedulers/systemd.py:48"
+    },
+    {
+     "id": "cr",
+     "label": "schedulers/cron",
+     "kind": "module",
+     "code": "brigade/adapters/schedulers/cron.py:51"
+    },
+    {
+     "id": "units",
+     "label": "unités / crontab",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade scheduler uninstall",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "aucune commande, aucune tâche dans le corpus",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "sd",
+     "label": "systemctl --user disable --now brigade.timer ; rm unités",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: systemd",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "cr",
+     "label": "retirer la ligne marquée '# brigade scheduler install'",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: cron",
+     "note": "le marqueur existe déjà (cron.py:13)",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade scheduler install --every 15m",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "OnCalendar=*:0/5 et */5 codés dans les gabarits",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project pause <nom> pour tout geler",
+     "status": "implemented",
+     "code": "brigade/commands/project_pause.py:23",
+     "task": null,
+     "frame": null,
+     "note": "un projet à la fois, le timer continue de tourner",
+     "reply": false
+    }
+   ],
+   "outcome": "Aujourd'hui : supprimer les unités ou la ligne cron à la main.",
+   "steps_human": [
+    "systemctl --user disable --now brigade.timer",
+    "rm ~/.config/systemd/user/brigade.{service,timer}",
+    "crontab -e pour retirer la ligne"
+   ]
+  },
+  {
+   "id": "lire-les-roles",
+   "title": "Voir quel rôle tourne dans chaque slot",
+   "intent": "je veux savoir quel rôle, de quelle source et sur quel modèle chaque slot s'exécute",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B43",
+    "@TASK.B145"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "rl",
+     "label": "roles_list",
+     "kind": "module",
+     "code": "brigade/commands/roles_list.py:51"
+    },
+    {
+     "id": "rr",
+     "label": "resolve_role",
+     "kind": "module",
+     "code": "brigade/roles/resolve_role.py:208"
+    },
+    {
+     "id": "mach",
+     "label": "~/.config/brigade/roles/*.md",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "instr",
+     "label": "instructions corpus (AGENT)",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "built",
+     "label": "roles/data/*.md",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "client",
+     "label": "adapter client (probe)",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade roles list",
+     "status": "implemented",
+     "code": "brigade/commands/roles_list.py:77",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rl",
+     "label": "roles_list(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/roles_list.py:51",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "cfg",
+     "label": "read_optional_configuration",
+     "status": "implemented",
+     "code": "brigade/system/read_optional_configuration.py:7",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "rr",
+     "label": "resolve_role(slot, NO_PROJECT_BINDINGS)",
+     "status": "implemented",
+     "code": "brigade/roles/resolve_role.py:208",
+     "task": null,
+     "frame": "loop: 9 slots",
+     "note": "ROLESET et ROLE d'un projet ignorés",
+     "reply": false
+    },
+    {
+     "from": "rr",
+     "to": "mach",
+     "label": "1. rôles machine (roles/*.md)",
+     "status": "implemented",
+     "code": "brigade/roles/resolve_role.py:183",
+     "task": null,
+     "frame": "loop: ordre de résolution",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rr",
+     "to": "instr",
+     "label": "2. AGENT lié par [slots] (awawa show)",
+     "status": "implemented",
+     "code": "brigade/roles/resolve_role.py:118",
+     "task": null,
+     "frame": "loop: ordre de résolution",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rr",
+     "to": "built",
+     "label": "3. rôles intégrés",
+     "status": "implemented",
+     "code": "brigade/roles/resolve_role.py:157",
+     "task": null,
+     "frame": "loop: ordre de résolution",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "client",
+     "label": "probe → modèle de chaque niveau de raisonnement",
+     "status": "implemented",
+     "code": "brigade/commands/roles_list.py:20",
+     "task": null,
+     "frame": null,
+     "note": "un client par slot via [slot_clients]",
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "op",
+     "label": "tableau slot | role | source | model",
+     "status": "implemented",
+     "code": "brigade/commands/roles_list.py:33",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade roles show <slot> [--short]",
+     "status": "implemented",
+     "code": "brigade/commands/roles_show.py:50",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade roles lint",
+     "status": "implemented",
+     "code": "brigade/commands/roles_lint.py:78",
+     "task": null,
+     "frame": null,
+     "note": "vérifie fichiers intégrés et machine, pas [slots] ni l'instructions corpus",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "roles list --project <nom> (résolution réelle d'un projet)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "NO_PROJECT_BINDINGS codé en dur (roles_list.py:53)",
+     "reply": false
+    }
+   ],
+   "outcome": "Un tableau de 9 slots avec rôle, source (machine, instructions, built-in) et modèle ; le texte d'un rôle via roles show.",
+   "steps_human": [
+    "je dois deviner la résolution d'un projet qui a ROLESET ou ROLE",
+    "je lance roles lint ET doctor ET roles list pour couvrir toutes les erreurs de liaison"
+   ]
+  },
+  {
+   "id": "personnaliser-les-roles",
+   "title": "Utiliser mes propres rôles",
+   "intent": "je veux que brigade utilise mes rôles à moi plutôt que ceux fournis",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M0",
+    "M7"
+   ],
+   "tasks": [
+    "@TASK.B43",
+    "@TASK.B107"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "ed",
+     "label": "Éditeur",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "mach",
+     "label": "~/.config/brigade/roles/",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    },
+    {
+     "id": "instr",
+     "label": "instructions corpus",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "rl",
+     "label": "roles_lint",
+     "kind": "module",
+     "code": "brigade/commands/roles_lint.py:58"
+    },
+    {
+     "id": "rr",
+     "label": "resolve_role",
+     "kind": "module",
+     "code": "brigade/roles/resolve_role.py:208"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade roles show build > …/roles/builder.md",
+     "status": "implemented",
+     "code": "brigade/commands/roles_show.py:31",
+     "task": null,
+     "frame": "alt: fichiers machine",
+     "note": "gabarit de départ : aucune commande roles init/copy dédiée",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "ed",
+     "label": "édite front matter slot/name/reasoning/budget et corps",
+     "status": "implemented",
+     "code": "brigade/roles/check_front_matter.py:42",
+     "task": null,
+     "frame": "alt: fichiers machine",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cfg",
+     "label": "instructions = \"/chemin/corpus\" ; [slots] build = \"AgentName\"",
+     "status": "implemented",
+     "code": "brigade/system/read_configuration.py:11",
+     "task": null,
+     "frame": "alt: corpus d'instructions",
+     "note": "'~' n'est pas développé (resolve_role.py:136)",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade roles lint",
+     "status": "implemented",
+     "code": "brigade/commands/roles_lint.py:78",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rl",
+     "label": "roles_lint(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/roles_lint.py:58",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "mach",
+     "label": "check_front_matter + slot déclaré deux fois",
+     "status": "implemented",
+     "code": "brigade/commands/roles_lint.py:16",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "op",
+     "label": "N fichiers, M findings",
+     "status": "implemented",
+     "code": "brigade/commands/roles_lint.py:36",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade roles list",
+     "status": "implemented",
+     "code": "brigade/commands/roles_list.py:51",
+     "task": null,
+     "frame": null,
+     "note": "seule commande qui échoue sur [slots] vers un AGENT inconnu",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rr",
+     "label": "résolution machine > instructions > intégré",
+     "status": "implemented",
+     "code": "brigade/roles/resolve_role.py:175",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "init demande 'rôles intégrés ou les miens ?' et écrit config.toml",
+     "status": "draft",
+     "code": null,
+     "task": "@OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles",
+     "frame": null,
+     "note": "question ouverte, pas de tâche",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "rôle/procédure au format awawa via le kind document",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B107",
+     "frame": null,
+     "note": "le parseur de front matter reste pour Markdown",
+     "reply": false
+    }
+   ],
+   "outcome": "Les rôles personnalisés sont pris selon l'ordre machine > instructions > intégré ; la mise en place est entièrement manuelle.",
+   "steps_human": [
+    "je crée le dossier roles/ et copie un rôle intégré par redirection",
+    "je recopie les noms de slot dans le front matter",
+    "je pose instructions et [slots] dans config.toml sans validation par doctor"
+   ]
+  },
+  {
+   "id": "un-client-par-slot",
+   "title": "Faire tourner un slot sur un autre client",
+   "intent": "je veux que la revue tourne sur un autre client IA que la construction",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M0",
+    "M7"
+   ],
+   "tasks": [
+    "@TASK.B145",
+    "@TASK.B44"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "doc",
+     "label": "doctor",
+     "kind": "module",
+     "code": "brigade/commands/doctor.py:375"
+    },
+    {
+     "id": "rsl",
+     "label": "list_slot_clients_elsewhere",
+     "kind": "module",
+     "code": "brigade/system/list_slot_clients_elsewhere.py:5"
+    },
+    {
+     "id": "rrs",
+     "label": "read_run_setting",
+     "kind": "module",
+     "code": "brigade/runs/read_run_setting.py:29"
+    },
+    {
+     "id": "rp",
+     "label": "resolve_plugin('client')",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py:157"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cfg",
+     "label": "[slot_clients] review = \"vibe\"",
+     "status": "implemented",
+     "code": "brigade/system/read_configuration.py:99",
+     "task": "@TASK.B145",
+     "frame": null,
+     "note": "slot validé, nom du client non validé",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade doctor",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:375",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "doc",
+     "label": "_read_slot_clients : slots hors client principal",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:369",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "doc",
+     "to": "op",
+     "label": "ligne 'slot review runs on vibe', aucune sonde",
+     "status": "implemented",
+     "code": "brigade/system/describe_slot_clients.py:1",
+     "task": null,
+     "frame": null,
+     "note": "le client du slot n'est ni résolu ni sondé ni ne compte pour un finding",
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade roles list",
+     "status": "implemented",
+     "code": "brigade/commands/roles_list.py:51",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rp",
+     "label": "résout chaque client lié (exécutable PATH ou module)",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:157",
+     "task": null,
+     "frame": null,
+     "note": "échoue ici, pas dans doctor",
+     "reply": false
+    },
+    {
+     "from": "rrs",
+     "to": "cfg",
+     "label": "au run : slot_clients > CLIENT du projet > client",
+     "status": "implemented",
+     "code": "brigade/runs/read_run_setting.py:31",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rrs",
+     "to": "rp",
+     "label": "résout le client choisi pour ce run",
+     "status": "implemented",
+     "code": "brigade/runs/read_run_setting.py:29",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "répétition B21 sur vibe + rapport des champs null",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B44",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "doctor sonde chaque client lié et refuse un nom inconnu",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "aucune tâche",
+     "reply": false
+    }
+   ],
+   "outcome": "La priorité slot > projet > machine fonctionne au lancement ; la validation avant l'exécution non surveillée manque.",
+   "steps_human": [
+    "je lance roles list après doctor pour attraper un nom de client erroné"
+   ]
+  },
+  {
+   "id": "inspecter-les-adapters",
+   "title": "Savoir ce que sait faire un client IA",
+   "intent": "je veux savoir ce que chaque client (claude-code, vibe, fake…) sait faire et les replis qu'il impose",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B42",
+    "@TASK.B49"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "am",
+     "label": "adapter_matrix",
+     "kind": "module",
+     "code": "brigade/commands/adapter_matrix.py:154"
+    },
+    {
+     "id": "lca",
+     "label": "list_client_adapters",
+     "kind": "module",
+     "code": "brigade/system/list_client_adapters.py"
+    },
+    {
+     "id": "rp",
+     "label": "resolve_plugin('client')",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py:157"
+    },
+    {
+     "id": "ask",
+     "label": "ask_named_client",
+     "kind": "module",
+     "code": "brigade/system/ask_named_client.py:12"
+    },
+    {
+     "id": "ad",
+     "label": "adapter (claude_code.answer / fake.answer / brigade-client-X)",
+     "kind": "external",
+     "code": "brigade/adapters/clients/claude_code.py:324"
+    },
+    {
+     "id": "readme",
+     "label": "README (table générée)",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade adapter matrix [--markdown|--json]",
+     "status": "implemented",
+     "code": "brigade/commands/adapter_matrix.py:160",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "am",
+     "label": "adapter_matrix(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/adapter_matrix.py:154",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "am",
+     "to": "lca",
+     "label": "liste modules intégrés + brigade-client-* sur PATH",
+     "status": "implemented",
+     "code": "brigade/system/list_client_adapters.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "am",
+     "to": "rp",
+     "label": "résout chaque adapter",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:157",
+     "task": null,
+     "frame": "loop: chaque adapter",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "am",
+     "to": "ask",
+     "label": "probe → operations et features",
+     "status": "implemented",
+     "code": "brigade/commands/adapter_matrix.py:60",
+     "task": null,
+     "frame": "loop: chaque adapter",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ask",
+     "to": "ad",
+     "label": "answer('probe', request)",
+     "status": "implemented",
+     "code": "brigade/adapters/clients/claude_code.py:324",
+     "task": null,
+     "frame": "loop: chaque adapter",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "am",
+     "to": "op",
+     "label": "grille full / fallback / absent + légende des replis",
+     "status": "implemented",
+     "code": "brigade/commands/adapter_matrix.py:113",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "am",
+     "to": "op",
+     "label": "exit 1 si un adapter ne répond pas",
+     "status": "implemented",
+     "code": "brigade/commands/adapter_matrix.py:148",
+     "task": null,
+     "frame": null,
+     "note": "inclut un exécutable du PATH de l'opérateur",
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade adapter probe | launch-argv | parse-result | resume-argv | transcripts | actions",
+     "status": "implemented",
+     "code": "brigade/commands/adapter_probe.py:27",
+     "task": null,
+     "frame": null,
+     "note": "le client de config.toml seulement ; demande lue sur stdin",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "readme",
+     "label": "README : tableau généré depuis la sonde (garde de test)",
+     "status": "implemented",
+     "code": "tests/guards/test_readme_adapter_matrix.py",
+     "task": "@TASK.B49",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "La matrice des capacités par adapter et, par opération, la réponse brute en JSON du client configuré.",
+   "steps_human": [
+    "je passe le JSON de la demande sur stdin à la main pour adapter launch-argv",
+    "je n'ai pas de commande pour interroger un autre client que celui de config.toml"
+   ]
+  },
+  {
+   "id": "brancher-un-autre-client",
+   "title": "Brancher un autre client IA",
+   "intent": "je veux utiliser Mistral Vibe (ou un autre client) à la place ou à côté de Claude Code",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M7"
+   ],
+   "tasks": [
+    "@TASK.B108",
+    "@TASK.B44",
+    "@TASK.B76"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "exe",
+     "label": "brigade-client-<nom> sur PATH",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "rp",
+     "label": "resolve_plugin('client')",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py:157"
+    },
+    {
+     "id": "caller",
+     "label": "ClientExecutableCaller.answer",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py:128"
+    },
+    {
+     "id": "v",
+     "label": "adapters/clients/vibe.py",
+     "kind": "module",
+     "code": null
+    },
+    {
+     "id": "cfg",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py:163"
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "exe",
+     "label": "écrire un exécutable brigade-client-<nom> (probe, launch-argv, parse-result, resume-argv)",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:109",
+     "task": null,
+     "frame": null,
+     "note": "contrat JSON stdin/stdout, validé à l'entrée",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cfg",
+     "label": "client = \"<nom>\" ou [slot_clients]",
+     "status": "implemented",
+     "code": "brigade/system/read_configuration.py:11",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rp",
+     "label": "_resolve_client : PATH d'abord, modules intégrés ensuite",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:157",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rp",
+     "to": "caller",
+     "label": "ClientExecutableCaller(name, executable)",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:165",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "caller",
+     "to": "exe",
+     "label": "<exe> probe  (cwd /, timeout 30 s, JSON sur stdin)",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:129",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "exe",
+     "to": "caller",
+     "label": "document JSON, sinon 'answered with no JSON'",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:138",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "v",
+     "label": "adapter vibe livré dans brigade/adapters/clients",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B108",
+     "frame": null,
+     "note": "aujourd'hui seulement un essai local hors dépôt (visible dans adapter matrix)",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "répétition du bac à sable sur vibe",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B44",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "exe",
+     "label": "forge et scheduler résolus par exécutable comme le client",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B76",
+     "frame": null,
+     "note": "resolve_plugin: forge/scheduler/document = modules seulement",
+     "reply": false
+    }
+   ],
+   "outcome": "Un client tiers se branche par exécutable ; l'adapter vibe officiel, sa répétition et la résolution des forges/schedulers externes sont planifiés.",
+   "steps_human": [
+    "j'écris et teste moi-même brigade-client-<nom>",
+    "je vérifie avec adapter matrix puis doctor"
+   ]
+  },
+  {
+   "id": "lire-le-corpus-dun-projet",
+   "title": "Lire le corpus d'un projet à une branche",
+   "intent": "je veux lire le corpus awawa d'un projet enregistré à une branche, un SHA ou un worktree, sans le cloner",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B08",
+    "@TASK.B68"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "co",
+     "label": "corpus / corpus_awawa",
+     "kind": "module",
+     "code": "brigade/commands/corpus.py:245"
+    },
+    {
+     "id": "ppt",
+     "label": "prepare_project_tree",
+     "kind": "module",
+     "code": "brigade/corpus/prepare_tree.py:204"
+    },
+    {
+     "id": "rp",
+     "label": "read_projects",
+     "kind": "module",
+     "code": "brigade/registry/read_projects.py:7"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "cache",
+     "label": "cache refs/ par SHA",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "awawa",
+     "label": "awawa",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade corpus <projet> --ref <branche|SHA>",
+     "status": "implemented",
+     "code": "brigade/commands/corpus.py:258",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "co",
+     "label": "corpus(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/corpus.py:245",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "co",
+     "to": "ppt",
+     "label": "prepare_project_tree(request, configuration, runtime)",
+     "status": "implemented",
+     "code": "brigade/corpus/prepare_project_tree.py:16",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ppt",
+     "to": "rp",
+     "label": "find_project(read_projects(runtime), nom)",
+     "status": "implemented",
+     "code": "brigade/registry/find_project.py:5",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ppt",
+     "to": "git",
+     "label": "git archive <ref> (SHA résolu)",
+     "status": "implemented",
+     "code": "brigade/corpus/prepare_tree.py:194",
+     "task": null,
+     "frame": "alt: --ref",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ppt",
+     "to": "cache",
+     "label": "extrait sous filtre tarfile data ; purge au-delà de refs_cache_mb",
+     "status": "implemented",
+     "code": "brigade/corpus/prepare_tree.py:94",
+     "task": "@TASK.B68",
+     "frame": "alt: --ref",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ppt",
+     "to": "git",
+     "label": "git worktree list (lecture en place)",
+     "status": "implemented",
+     "code": "brigade/corpus/prepare_tree.py:59",
+     "task": null,
+     "frame": "alt: --worktree / worktree:<branche>",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "co",
+     "to": "op",
+     "label": "@PROJECT.<nom>, ref, sha, kind, root",
+     "status": "implemented",
+     "code": "brigade/commands/corpus.py:229",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade corpus <projet> --ref main -- status .",
+     "status": "implemented",
+     "code": "brigade/commands/corpus_awawa.py:321",
+     "task": null,
+     "frame": "alt: -- <args awawa>",
+     "note": "cli.py:62 détecte le séparateur --",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "awawa",
+     "label": "awawa <args> dans la racine de l'arbre",
+     "status": "implemented",
+     "code": "brigade/corpus/run_awawa.py:9",
+     "task": null,
+     "frame": "alt: -- <args awawa>",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "awawa",
+     "to": "op",
+     "label": "stdout, stderr et code de sortie passés tels quels",
+     "status": "implemented",
+     "code": "brigade/commands/corpus_awawa.py:313",
+     "task": null,
+     "frame": "alt: -- <args awawa>",
+     "note": null,
+     "reply": true
+    }
+   ],
+   "outcome": "Le chemin d'un arbre du corpus du projet à un SHA donné, ou la sortie d'awawa exécuté dedans.",
+   "steps_human": [
+    "je recopie le chemin 'root' si je veux ouvrir l'arbre ailleurs"
+   ]
+  },
+  {
+   "id": "comprendre-un-echec",
+   "title": "Voir ce que brigade a lancé et pourquoi ça a échoué",
+   "intent": "je veux voir quels processus un run, un tick ou une commande ont lancés, et lequel a échoué",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B56",
+    "@TASK.B57"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "tw",
+     "label": "TrailWriter (par commande)",
+     "kind": "module",
+     "code": "brigade/cli.py:79"
+    },
+    {
+     "id": "pl",
+     "label": "processes_list",
+     "kind": "module",
+     "code": "brigade/commands/processes_list.py:24"
+    },
+    {
+     "id": "ps",
+     "label": "processes_show",
+     "kind": "module",
+     "code": "brigade/commands/processes_show.py:71"
+    },
+    {
+     "id": "li",
+     "label": "list_invocations",
+     "kind": "module",
+     "code": "brigade/processes/list_invocations.py:25"
+    },
+    {
+     "id": "si",
+     "label": "show_invocation",
+     "kind": "module",
+     "code": "brigade/processes/show_invocation.py:11"
+    },
+    {
+     "id": "trails",
+     "label": "state/commands, ticks, runs/*/processes",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "cli",
+     "to": "tw",
+     "label": "chaque commande ouvre un trail et y trace chaque sous-processus",
+     "status": "implemented",
+     "code": "brigade/cli.py:79",
+     "task": null,
+     "frame": null,
+     "note": "argv, cwd, issue, exit, durée : ni stdout ni stderr (process_trace.py:15)",
+     "reply": false
+    },
+    {
+     "from": "tw",
+     "to": "trails",
+     "label": "settle(trail) ; remove_expired_trails (trail_days)",
+     "status": "implemented",
+     "code": "brigade/system/remove_expired_trails.py:42",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade processes list",
+     "status": "implemented",
+     "code": "brigade/commands/processes_list.py:28",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "pl",
+     "label": "processes_list(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/processes_list.py:24",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pl",
+     "to": "li",
+     "label": "list_invocations(state_root)",
+     "status": "implemented",
+     "code": "brigade/processes/list_invocations.py:25",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pl",
+     "to": "op",
+     "label": "kind | id | instant | processes | failed",
+     "status": "implemented",
+     "code": "brigade/commands/processes_list.py:10",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade processes show <id> --failed",
+     "status": "implemented",
+     "code": "brigade/commands/processes_show.py:75",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "ps",
+     "label": "processes_show(request, runtime)",
+     "status": "implemented",
+     "code": "brigade/commands/processes_show.py:71",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ps",
+     "to": "si",
+     "label": "show_invocation(state_root, id, failed_only)",
+     "status": "implemented",
+     "code": "brigade/processes/show_invocation.py:11",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ps",
+     "to": "op",
+     "label": "issue, exit, durée, argv par ligne",
+     "status": "implemented",
+     "code": "brigade/commands/processes_show.py:55",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "lire la sortie d'erreur du processus échoué",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "rien n'est conservé : il faut rejouer la commande en --verbose",
+     "reply": false
+    }
+   ],
+   "outcome": "La liste des processus avec ceux qui ont échoué ; la cause (stderr) n'est pas conservée.",
+   "steps_human": [
+    "je rejoue la commande avec --verbose pour voir ce que le processus a affiché"
+   ]
+  },
+  {
+   "id": "projet-sans-corpus-awawa",
+   "title": "Enregistrer un projet qui n'a pas de corpus",
+   "intent": "je veux utiliser brigade sur un dépôt qui n'a pas de corpus awawa, ou le confiner à un dossier",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M7"
+   ],
+   "tasks": [
+    "@TASK.B55",
+    "@TASK.B140",
+    "@TASK.B139"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "pa",
+     "label": "project_add",
+     "kind": "module",
+     "code": "brigade/commands/project_add.py:118"
+    },
+    {
+     "id": "disc",
+     "label": "discover_project",
+     "kind": "module",
+     "code": "brigade/registry/discover_project.py:32"
+    },
+    {
+     "id": "forge",
+     "label": "adapter forge",
+     "kind": "module",
+     "code": "brigade/adapters/forges/github.py"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "opc",
+     "label": "Corpus opérationnel (~/.config/brigade)",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project add <path>",
+     "status": "implemented",
+     "code": "brigade/commands/project_add.py:118",
+     "task": null,
+     "frame": null,
+     "note": "CORPUS absent si aucun .awawa suivi (discover_project.py:26)",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "disc",
+     "label": "_locate_corpus(fichiers *.awawa)",
+     "status": "implemented",
+     "code": "brigade/registry/discover_project.py:26",
+     "task": null,
+     "frame": null,
+     "note": "plusieurs dossiers : racine '.' même si le corpus est dans corpus/",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "op",
+     "label": "demande le mode de corpus : control, area, none",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B140",
+     "frame": null,
+     "note": "champ PROJECT et modes pas encore dans le schéma",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project add <path> --init-corpus",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B55",
+     "frame": null,
+     "note": "installe le gabarit TASK/MILESTONE/DECISION/OPEN_QUESTION",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "git",
+     "label": "branche + commit du gabarit dans corpus/",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B55",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "forge",
+     "label": "ouvre la pull request d'installation",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B55",
+     "frame": null,
+     "note": "dépend de B46 (adapter forge)",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "op",
+     "label": "plan context / plan record honorent area et none",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B140",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "project add sans interaction (timer, agent)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "B140 : 'comment project add demande quand il tourne sans surveillance' reste à raffiner",
+     "reply": false
+    }
+   ],
+   "outcome": "Un projet sans corpus awawa peut entrer dans brigade et être planifié (planifié, rien n'existe encore pour le mode none/area).",
+   "steps_human": [
+    "aujourd'hui j'écris moi-même un corpus conforme avant project add"
+   ]
+  },
+  {
+   "id": "travailler-sans-forge",
+   "title": "Utiliser brigade sans GitHub",
+   "intent": "je veux faire tourner une vague sur des branches locales, sans forge ni compte gh",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M7"
+   ],
+   "tasks": [
+    "@TASK.B46",
+    "@TASK.B100"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade (cli.main)",
+     "kind": "cli",
+     "code": "brigade/cli.py:118"
+    },
+    {
+     "id": "doc",
+     "label": "doctor",
+     "kind": "module",
+     "code": "brigade/commands/doctor.py:169"
+    },
+    {
+     "id": "pa",
+     "label": "project_add (forge none)",
+     "kind": "module",
+     "code": "brigade/registry/describe_remote.py:29"
+    },
+    {
+     "id": "pass",
+     "label": "the-pass / merge",
+     "kind": "module",
+     "code": null
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade project add <path> (remote non GitHub ou absent)",
+     "status": "implemented",
+     "code": "brigade/registry/describe_remote.py:29",
+     "task": null,
+     "frame": null,
+     "note": "FORGE none posé par la découverte",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade doctor",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py:169",
+     "task": null,
+     "frame": null,
+     "note": "annonce 'fallback: local mode without a forge' alors que le mode n'existe pas",
+     "reply": false
+    },
+    {
+     "from": "pass",
+     "to": "git",
+     "label": "lit les résultats de task check au lieu des check runs",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B46",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pass",
+     "to": "git",
+     "label": "fusion locale dans l'intégration par git merge",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B46",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pass",
+     "to": "git",
+     "label": "POLICY.REVIEW local, une PR finale intégration→main",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B100",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "collectors pr-threads / check-runs déclarés absents sous FORGE none",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B46",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Prévu : une vague complète sans forge. Aujourd'hui, FORGE none est écrit mais aucun code ne le lit hors doctor et le registre.",
+   "steps_human": [
+    "aujourd'hui je ne peux pas faire tourner brigade sans GitHub"
+   ]
+  }
+ ],
+ "issues": [
+  {
+   "kind": "hole",
+   "severity": "high",
+   "title": "Après init, doctor sort en erreur : aucun client par défaut",
+   "detail": "config.toml est entièrement commenté et Configuration.client vaut None ; doctor exit 1 ('config.toml names no client', observé) et brigade run échoue. La règle distributed_tool_free_of_authors_machine demande des défauts qui fonctionnent sans configuration ; B45 attend doctor exit 0 sur compte vierge.",
+   "evidence": "brigade/system/require_configured_client.py:202 ; brigade/system/read_configuration.py:43 ; brigade/corpus/data/config.toml.tpl",
+   "use_cases": [
+    "initialiser-corpus-operationnel",
+    "configurer-la-machine",
+    "verifier-les-prerequis"
+   ],
+   "addressed_by": "@OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles (rôles seulement) / @TASK.B45",
+   "suggestion": "Que init sonde le client présent sur PATH et l'écrive, ou que claude-code soit le défaut intégré ; la question ouverte devrait couvrir le client, pas seulement les rôles.",
+   "id": "A1"
+  },
+  {
+   "kind": "hole",
+   "severity": "high",
+   "title": "Aucune commande pour lire ou écrire config.toml",
+   "detail": "14 clés se posent à la main dans un fichier TOML ; les noms de slots (9) sont à recopier, les erreurs n'apparaissent qu'à la lecture suivante.",
+   "evidence": "brigade/commands/init.py:98 ; brigade/system/read_configuration.py:163",
+   "use_cases": [
+    "configurer-la-machine",
+    "un-client-par-slot",
+    "personnaliser-les-roles"
+   ],
+   "addressed_by": null,
+   "suggestion": "brigade config get/set/unset avec validation par read_configuration, ou init --client/--scheduler.",
+   "id": "A2"
+  },
+  {
+   "kind": "defect",
+   "severity": "high",
+   "title": "doctor ne valide ni [slot_clients], ni [slots], ni le CLIENT d'un projet",
+   "detail": "Observé : slot_clients.review = nom inexistant donne doctor exit 0 alors que roles list échoue ; [slots] vers un AGENT inconnu donne doctor ok et roles lint 0 finding. L'erreur surgit au run non surveillé.",
+   "evidence": "brigade/commands/doctor.py:375 ; brigade/system/describe_slot_clients.py:1 ; brigade/commands/roles_lint.py:58 ; brigade/runs/read_run_setting.py:31",
+   "use_cases": [
+    "configurer-la-machine",
+    "un-client-par-slot",
+    "personnaliser-les-roles",
+    "verifier-les-prerequis"
+   ],
+   "addressed_by": null,
+   "suggestion": "doctor résout et sonde chaque client lié, chaque AGENT de [slots] et chaque CLIENT/ROLESET de projet, et en fait un finding.",
+   "id": "A3"
+  },
+  {
+   "kind": "defect",
+   "severity": "high",
+   "title": "project add --force remplace l'entité entière et perd les réglages manuels",
+   "detail": "L'entité est supprimée puis réécrite depuis la seule découverte : CLIENT, ROLESET, ROLE, SLOTS, MERGE, PRIVATE posés à la main disparaissent sans avertissement.",
+   "evidence": "brigade/commands/project_add.py:53 ; brigade/commands/project_add.py:69",
+   "use_cases": [
+    "modifier-un-projet",
+    "enregistrer-un-projet"
+   ],
+   "addressed_by": null,
+   "suggestion": "project set <nom> qui fusionne des champs ; --force conserve les champs non redécouverts ou liste ce qui sera perdu.",
+   "id": "A4"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Aucune option ni commande pour CLIENT, ROLESET, ROLE, SLOTS, MERGE, PRIVATE",
+   "detail": "Le schéma les porte mais project add n'expose que acceptance, heavy, setup, name ; tout le reste est une édition du dépôt de config.",
+   "evidence": "brigade/corpus/data/schema.awawa.tpl (SCHEMA PROJECT) ; brigade/commands/project_add.py:147",
+   "use_cases": [
+    "enregistrer-un-projet",
+    "modifier-un-projet"
+   ],
+   "addressed_by": null,
+   "suggestion": "Options de project add et commande project set.",
+   "id": "A5"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Aucune commande n'écrit un POLICY",
+   "detail": "REVIEW approval, PLAN_REVIEW ask, HANDOVERS sont lus par waves, runs et doctor (qui avertit) mais seule l'édition manuelle les crée.",
+   "evidence": "brigade/waves/read_plan_review.py:11 ; brigade/runs/read_handovers.py:12 ; brigade/commands/doctor.py:241",
+   "use_cases": [
+    "enregistrer-un-projet"
+   ],
+   "addressed_by": null,
+   "suggestion": "brigade project policy set <nom> --review approval, validé par lint.",
+   "id": "A6"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Pas de retrait de projet",
+   "detail": "STATUS ne vaut que active|paused et aucune tâche ne prévoit un remove ; remove_project_entity n'est appelé que par --force.",
+   "evidence": "brigade/corpus/data/schema.awawa.tpl ; brigade/registry/remove_project_entity.py ; brigade/commands/project_add.py:56",
+   "use_cases": [
+    "retirer-un-projet"
+   ],
+   "addressed_by": null,
+   "suggestion": "project remove (ou archive) qui refuse si des entités citent @PROJECT.",
+   "id": "A7"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Pas de scheduler uninstall, intervalle de 5 minutes figé",
+   "detail": "Les gabarits codent *:0/5 et */5 ; défaire l'installation est manuel alors que le marqueur cron existe déjà.",
+   "evidence": "brigade/adapters/schedulers/data/brigade.timer.tpl ; brigade/adapters/schedulers/data/crontab-line.tpl ; brigade/adapters/schedulers/cron.py:13",
+   "use_cases": [
+    "desinstaller-le-scheduler",
+    "installer-le-scheduler"
+   ],
+   "addressed_by": null,
+   "suggestion": "scheduler uninstall et --every ou une clé tick_every dans config.toml.",
+   "id": "A8"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Personne ne signale un tick mort",
+   "detail": "doctor 'scheduler ok' dit seulement que systemd est utilisable ; scheduler status sort 0 avec 'none' ou 'last tick never' et ne compare pas le heartbeat à l'horloge ; le mode loop est indétectable.",
+   "evidence": "brigade/commands/doctor.py:140 ; brigade/commands/scheduler_status.py:10 ; brigade/commands/scheduler_status.py:59",
+   "use_cases": [
+    "surveiller-le-scheduler",
+    "verifier-les-prerequis"
+   ],
+   "addressed_by": null,
+   "suggestion": "doctor lit le heartbeat et émet un warning au-delà de N intervalles ; status avec exit non nul si rien installé.",
+   "id": "A9"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "doctor ne lit jamais le registre",
+   "detail": "Aucune vérification que le chemin d'un projet existe encore, que sa branche principale existe, que ses commandes SETUP/ACCEPTANCE sont lançables.",
+   "evidence": "brigade/commands/doctor.py:375-396",
+   "use_cases": [
+    "verifier-les-prerequis",
+    "enregistrer-un-projet"
+   ],
+   "addressed_by": null,
+   "suggestion": "Un contrôle par projet dans doctor (ou project doctor).",
+   "id": "A10"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "La ligne cron est une chaîne shell chaînée par &&",
+   "detail": "crontab-line.tpl exécute 'mkdir -p … && … tick --once' par le shell de cron : le cas que l'utilisateur a refusé pour les commandes de projet. La décision l'exclut explicitement.",
+   "evidence": "brigade/adapters/schedulers/data/crontab-line.tpl ; @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell",
+   "use_cases": [
+    "installer-le-scheduler"
+   ],
+   "addressed_by": "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell ; @TASK.B163 (draft, M8) l'audite, aucun code ne le change",
+   "suggestion": "Un script ou un sous-commande brigade tick --once --ensure-state qui crée le dossier, la ligne cron ne portant qu'un argv.",
+   "id": "A11"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "SETUP/ACCEPTANCE : champs chaînes, validation tardive",
+   "detail": "SETUP est exécuté en argv par shlex.split (#142, B12) mais project add accepte 'a && b' sans refus ; l'erreur n'arrive qu'au premier lancement d'une tâche. ACCEPTANCE n'est pas encore lancé en argv.",
+   "evidence": "brigade/tick/prepare_task_worktree.py:30 ; brigade/commands/project_add.py:63",
+   "use_cases": [
+    "enregistrer-un-projet"
+   ],
+   "addressed_by": "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell ; SETUP livré par @TASK.B12, ACCEPTANCE par @TASK.B142 (todo), tableaux argv par @TASK.B163 (draft)",
+   "suggestion": "Refuser à l'enregistrement toute valeur que shlex.split rejette ou qui contient un opérateur shell.",
+   "id": "A12"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Pas de migration du schéma opérationnel",
+   "detail": "init laisse un _schema.awawa différent et sort 0 ; doctor conseille de jeter le corpus et de réenregistrer tous les projets (README).",
+   "evidence": "brigade/commands/init.py:54 ; brigade/commands/doctor.py:46 ; brigade/commands/doctor.py:310",
+   "use_cases": [
+    "initialiser-corpus-operationnel"
+   ],
+   "addressed_by": null,
+   "suggestion": "init --upgrade appliquant un script de migration versionné, avec sauvegarde commitée.",
+   "id": "A13"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "L'unité systemd et la ligne cron figent argv[0] absolu, PATH et XDG_*",
+   "detail": "Déplacer ou mettre à jour brigade, ou changer de PATH, casse le timer en silence ; il faut relancer scheduler install à la main.",
+   "evidence": "brigade/commands/scheduler_install.py:25 ; brigade/commands/scheduler_install.py:29",
+   "use_cases": [
+    "installer-le-scheduler",
+    "installer-brigade"
+   ],
+   "addressed_by": "@TASK.B93 (draft) pour la mise à jour, rien pour le timer",
+   "suggestion": "doctor compare l'unité installée au brigade courant et propose la ré-installation.",
+   "id": "A14"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Le repli annoncé par doctor pour la forge n'existe pas",
+   "detail": "FORGE_FALLBACK dit 'local mode without a forge' ; FORGE none n'est lu par aucun code de vague, le mode est dans B46.",
+   "evidence": "brigade/commands/doctor.py:34 ; @TASK.B46",
+   "use_cases": [
+    "travailler-sans-forge",
+    "verifier-les-prerequis"
+   ],
+   "addressed_by": "@TASK.B46 (draft, M7)",
+   "suggestion": "Formuler le repli comme 'les commandes agissant en ce compte s'arrêtent' tant que B46 n'est pas livré.",
+   "id": "A15"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "instructions = \"~/…\" n'est pas développé",
+   "detail": "Observé : doctor affiche 'awawa: no working directory ~/.ai' ; Path(configuration.instructions) sans expanduser.",
+   "evidence": "brigade/roles/resolve_role.py:136 ; brigade/commands/doctor.py:272",
+   "use_cases": [
+    "personnaliser-les-roles",
+    "verifier-les-prerequis"
+   ],
+   "addressed_by": null,
+   "suggestion": "Développer ~ à la lecture de la configuration (aussi worktree_root).",
+   "id": "A16"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Les traces de processus ne gardent pas stderr/stdout",
+   "detail": "processes show --failed dit quel processus a échoué, pas pourquoi ; il faut rejouer en --verbose.",
+   "evidence": "brigade/system/process_trace.py:15 ; brigade/processes/show_invocation.py:11",
+   "use_cases": [
+    "comprendre-un-echec"
+   ],
+   "addressed_by": null,
+   "suggestion": "Conserver la fin de stderr (tronquée, purgée de secrets) dans le trail des échecs.",
+   "id": "A17"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "roles list/show ignorent ROLESET et ROLE du projet",
+   "detail": "NO_PROJECT_BINDINGS est codé en dur : la résolution affichée n'est pas celle qu'un run de projet utilisera.",
+   "evidence": "brigade/commands/roles_list.py:53 ; brigade/commands/roles_show.py:33",
+   "use_cases": [
+    "lire-les-roles"
+   ],
+   "addressed_by": null,
+   "suggestion": "Option --project <nom> pour roles list/show/lint.",
+   "id": "A18"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Pas de point de départ pour personnaliser un rôle",
+   "detail": "Aucun roles init/copy ; on redirige roles show à la main. La question de savoir si init propose rôles intégrés ou personnalisés est ouverte sans tâche.",
+   "evidence": "brigade/commands/roles_show.py:31 ; @OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles",
+   "use_cases": [
+    "personnaliser-les-roles"
+   ],
+   "addressed_by": "@OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles",
+   "suggestion": "roles export <slot> qui écrit dans ~/.config/brigade/roles/ avec le bon front matter ; trancher la question.",
+   "id": "A19"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "adapter probe annonce une demande sur stdin qu'il ne lit pas ; les autres opérations bloquent sur stdin interactif",
+   "detail": "Le help de probe reprend 'the request read on stdin' ; launch-argv lit sys.stdin sans garde de terminal.",
+   "evidence": "brigade/commands/adapter_probe.py:36 ; brigade/commands/adapter_launch_argv.py:17",
+   "use_cases": [
+    "inspecter-les-adapters"
+   ],
+   "addressed_by": null,
+   "suggestion": "Corriger le help ; refuser un stdin interactif avec un message d'usage.",
+   "id": "A20"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "Détection du dossier de corpus par commonpath",
+   "detail": "Avec des .awawa dans plusieurs dossiers, le résultat est '.' même si le corpus est dans corpus/.",
+   "evidence": "brigade/registry/discover_project.py:26",
+   "use_cases": [
+    "projet-sans-corpus-awawa",
+    "enregistrer-un-projet"
+   ],
+   "addressed_by": "@TASK.B140 (draft)",
+   "suggestion": "Proposer les candidats et demander, ou prendre le dossier qui contient _schema.awawa.",
+   "id": "A21"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Pas de parcours guidé init → doctor → client → project add → scheduler",
+   "detail": "Quatre à cinq commandes et une édition de fichier à enchaîner à la main ; init n'indique pas la suite.",
+   "evidence": "brigade/commands/init.py:91 ; brigade/commands/init.py:72",
+   "use_cases": [
+    "initialiser-corpus-operationnel",
+    "installer-brigade"
+   ],
+   "addressed_by": "@TASK.B45 (répétition, draft) ; @OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles (installeur)",
+   "suggestion": "init affiche les étapes restantes depuis l'état réel, ou brigade setup les enchaîne.",
+   "id": "A22"
+  },
+  {
+   "kind": "hole",
+   "severity": "low",
+   "title": "Le dépôt de configuration n'a ni remote ni sauvegarde",
+   "detail": "init crée un dépôt local seul ; la perte du disque perd le registre, les POLICY et les REQUEST.",
+   "evidence": "brigade/commands/init.py:28 ; brigade/git/create_repository.py:9",
+   "use_cases": [
+    "initialiser-corpus-operationnel"
+   ],
+   "addressed_by": null,
+   "suggestion": "init --remote <url> ou une étape doctor qui avertit d'un dépôt sans remote.",
+   "id": "A23"
+  }
+ ]
+}

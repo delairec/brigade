@@ -27,9 +27,11 @@ awawa fmt --check . && awawa lint --strict .                              # the 
 ## Layout
 
 - `corpus/` — the corpus.
-- `artifact/` — the sources of the published Artifact "Brigade Blueprint",
+- `artifact/blueprint/` — the sources of the published Artifact "Brigade Blueprint",
   <https://claude.ai/artifact/ENPmZkLZS85qhvVBakhXJe>; `index.html` is the page, `parts/` the fragments it fetches.
   A republish goes through the Artifact tool with `url` set to that address, after a read of it.
+- `artifact/use-cases/` — the sources of the published Artifact "Brigade cas d'utilisation"; its `README.md` says how
+  to redo the map and republish it.
 - `HANDOFF.md` — the record of the planning run, dated: it is never rewritten.
 
 ## Stack
