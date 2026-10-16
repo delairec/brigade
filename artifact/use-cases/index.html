@@ -194,7 +194,7 @@ td.n { font-family: var(--f-mono); color: var(--muted); font-variant-numeric: ta
   const X = D.cross || {};
   let issues = families.flatMap(f => (f.issues || []).map(i => ({ ...i, family: f.family }))).concat((X.issues || []).map((i, k) => ({ ...i, family: 'X', id: 'X' + (k + 1), cross: true })));
   const byId = Object.fromEntries(issues.map(i => [i.id, i]));
-  (X.verdicts || []).forEach(v => { const i = byId[v.id]; if (!i) return; i.verdict = v.verdict; i.vnote = v.note; if (v.severity) i.severity = v.severity; });
+  (X.verdicts || []).forEach(v => { const i = byId[v.id]; if (!i) return; if (v.verdict) i.verdict = v.verdict; if (v.note) i.vnote = v.note; if (v.severity) i.severity = v.severity; if (v.addressed_by) i.addressed_by = v.addressed_by; });
   const dropped = new Set();
   (X.duplicates || []).forEach(d => { const k = byId[d.keep]; if (!k) return; k.also = (d.drop || []).filter(x => byId[x]); k.dnote = d.note;
     k.also.forEach(x => { dropped.add(x); k.use_cases = [...new Set([...(k.use_cases || []), ...(byId[x].use_cases || [])])]; }); });
