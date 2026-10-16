@@ -8163,10 +8163,12 @@ TASK B142
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
 	ROLE ada
-	SPEC "brigade task check runs the PROJECT.ACCEPTANCE commands, then awawa fmt --check . and"
-		+ "awawa lint --strict ., in the worktree of the task, and prints one line per command, its"
-		+ "verdict, the command and its duration, followed for each failing command by the last 20"
-		+ "lines of its output; it exits 1 when one fails"
+	SPEC "brigade task check runs each PROJECT.ACCEPTANCE line as one argv split by shlex.split"
+		+ "through the runner, never through a shell, in their order and stopping at the first"
+		+ "failure, refusing before any run a line shlex.split refuses, then awawa fmt --check ."
+		+ "and awawa lint --strict ., in the worktree of the task, and prints one line per command,"
+		+ "its verdict, the command and its duration, followed for each failing command by the last"
+		+ "20 lines of its output; it exits 1 when one fails"
 	SPEC "brigade task check records its verdicts with the sha of HEAD in"
 		+ "$XDG_STATE_HOME/brigade/checks/<project>/<task>.json, written atomically; inside a run,"
 		+ "the whole output of each command is written under <run dir>/check/"
@@ -8230,6 +8232,9 @@ TASK B142
 		+ "brigade/corpus/data/schema.awawa.tpl declares no SCHEMA TASK, so STATUS implemented and"
 		+ "DELIVERED_BY rest on the project's own schema, which promote checks before writing"
 		REF @DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory
+	RATIONALE "SPEC 1 amended on 2026-10-16: the acceptance lines run as argv, never through a"
+		+ "shell, as @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell rules"
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B13: check, pr and promote are a"
 		+ "task of their own; a missing milestone is created; promote reads the pull request from"
 		+ "the ledger"
@@ -8242,6 +8247,10 @@ TASK B142
 		+ "qui livre la tâche, et compose TYPE(COMPONENT): <sujet> (@TASK.X) ; il refuse un sujet"
 		+ "absent. Les SPEC 4 et 10 sont réécrites ainsi. »"
 		REF @DECISION.TaskPullRequestTitleIsTheTypeComponentAndAShortImperativeSubject
+	SOURCE "the user's ruling of 2026-10-15, « Dans tous les cas il est hors de question qu'on"
+		+ "passe des commandes dans des chaines de caractère. Je veux qu'on fasse les choses"
+		+ "proprement. », and the « ok » of 2026-10-16 on the session's recommendation: B142 SPEC 1"
+		+ "runs argv"
 
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
@@ -9202,3 +9211,98 @@ TASK B162
 		+ "phase de build. A ce moment, il faudra revenir sur la décision »; no guard SPEC,"
 		+ "REJECTED 5 of the decision"
 		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+
+TASK B163
+	TITLE "Audit and remediation: no command of brigade in a shell line, the project's commands as"
+		+ "argv steps, one sense per word, one command per thing, a README glossary with its guard,"
+		+ "the dead fields removed"
+	STATUS draft
+	MILESTONE @MILESTONE.M8
+	COMPONENT "audit"
+	ROLE lex
+	ROLE ada
+	SPEC "no command brigade runs is interpreted by a shell and none is stored as a shell line:"
+		+ "under brigade/, no sh -c, no shell=True and no && inside a value run as a command,"
+		+ "brigade/adapters/schedulers/data/crontab-line.tpl included unless a DECISION rules its"
+		+ "exception"
+	SPEC "the commands of a project, PROJECT.SETUP, PROJECT.ACCEPTANCE and PROJECT.HEAVY, are steps"
+		+ "of a recipe versioned by the project, each an argv array, run by the engine of"
+		+ "@TASK.B51; no string field of brigade/corpus/data/schema.awawa.tpl holds a command, and"
+		+ "brigade project add writes none"
+	SPEC "no word of brigade carries two senses: for each word of the inventory in RATIONALE, one"
+		+ "sense is kept and every other use is renamed in the code, the corpus, the README and the"
+		+ "Blueprint, or the coexistence is ruled by a DECISION naming both senses"
+	SPEC "no two commands of brigade do the same thing: the commands of one slot form one command"
+		+ "group, and a command whose work another command does is removed or merged, verify and"
+		+ "review among them"
+	SPEC "README.md carries a glossary table between two marker comments, one row per word, the"
+		+ "columns word, kind (command, argument, entity, field, concept), what it does and"
+		+ "milestone, each row citing the task that delivers it"
+	SPEC "a guard of tests/guards checks the glossary against the corpus, as"
+		+ "tests/guards/test_readme_adapter_matrix.py checks the adapter matrix: it fails on a row"
+		+ "citing a task the corpus lacks, on a milestone that is not that task's MILESTONE, on a"
+		+ "command of brigade or an entity or field of the operational schema without a row, and on"
+		+ "a row naming a word the code and the corpus do not carry"
+	SPEC "PROJECT.GRAPH, POLICY.AUTO_RATIFY, POLICY.SAMPLING and PATTERN.EVIDENCE are removed from"
+		+ "brigade/corpus/data/schema.awawa.tpl, each unless a task of the corpus reads it, that"
+		+ "task named in the pull request"
+	SPEC "what the audit does not settle becomes tasks of a remediation plan: one draft TASK per"
+		+ "finding left, citing this task in its RATIONALE, the set listed in the pull request; the"
+		+ "audit closes with no finding outside a SPEC of this task or a task of the plan"
+	AFTER @TASK.B50
+	AFTER @TASK.B51
+	RATIONALE "words carrying two senses, the inventory of the session of 2026-10-16, the starting"
+		+ "list of SPEC 3: wave, request and milestone (the ledger names a wave by its MILESTONE,"
+		+ "brigade/waves/start_wave.py:34, the CLI by its REQUEST); slot (the nature of a judging"
+		+ "step, the PROJECT.SLOTS cap, the [slots] binding of config.toml to an AGENT,"
+		+ "STUDY.SLOT); step (a recipe step, an agent turn counted by budgets, the STEP entity of a"
+		+ "progress file); check (brigade task check, a recipe gate check, the check runs of the"
+		+ "CI, the preflight checks); command (a CLI command, the recipe step kind command,"
+		+ "PROJECT.SETUP as a per-worktree command); setup (PROJECT.SETUP, the init, doctor and"
+		+ "scheduler group of the Blueprint); preflight (the pull-request checks of @TASK.B15, the"
+		+ "named set of collectors and checks of @TASK.B98); verify and review (verify of @TASK.B15"
+		+ "and @TASK.B16, review of @TASK.B18, no verify slot); round (the VERIFY_ROUNDS repair,"
+		+ "the lint round of a plan record, the rounds of tick --loop, the review round) beside the"
+		+ "pass; signal (the inbox signal of @TASK.B22, the ledger event signal.recorded, the"
+		+ "signals of the OS); document (the schema_version JSON, the plugin kind document, the key"
+		+ "document of config.toml, the graph document); the spellings of hand-over; trail,"
+		+ "journal, ledger and trace; context, package and brief; blocked, parked and paused;"
+		+ "corpus (the operational corpus, a project's corpus, the instructions corpus, the command"
+		+ "brigade corpus); brigade recipe lint beside brigade recipes list"
+		REF @TASK.B15
+		REF @TASK.B98
+		REF @TASK.B16
+		REF @TASK.B18
+		REF @TASK.B22
+	RATIONALE "fields no code reads, the same inventory, the starting list of SPEC 7:"
+		+ "PROJECT.GRAPH, POLICY.AUTO_RATIFY, POLICY.SAMPLING, PATTERN.EVIDENCE"
+	RATIONALE "commands stored as strings, the same inventory, the starting list of SPEC 1 and 2:"
+		+ "PROJECT.ACCEPTANCE, HEAVY, SETUP and GRAPH, with the flags and guesses of brigade"
+		+ "project add of @TASK.B04; the shell: form of STUDY.COLLECTOR of @TASK.B48; the recipe"
+		+ "step kind command of @TASK.B50; brigade/adapters/schedulers/data/crontab-line.tpl, whose"
+		+ "line cron runs through sh"
+		REF @TASK.B04
+		REF @TASK.B48
+		REF @TASK.B50
+	RATIONALE "after @TASK.B50 and @TASK.B51: the project's commands move to steps of a recipe only"
+		+ "once the recipe format exists and the engine runs them; until then"
+		+ "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell keeps them as string fields"
+		+ "serializing one argv, which an earlier audit would find by design; @TASK.B12, @TASK.B48"
+		+ "and @TASK.B142, whose code the audit reads, are tasks of M1 and need no edge"
+		REF @TASK.B50
+		REF @TASK.B51
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
+		REF @TASK.B12
+		REF @TASK.B48
+		REF @TASK.B142
+	RATIONALE "to be refined with the user before ratification: the words of the inventory each"
+		+ "need their kept sense, and the glossary its first rows"
+	SOURCE "the user's ruling of 2026-10-16: « on va faire au plus simple, on colle au plan"
+		+ "initial, on change rien pour l'instant, mais on enregistre une tâche en m8 pour vérifier"
+		+ "deux choses: que l'on ne passe plus de commandes dans des strings, qu'il n'y a plus de"
+		+ "chevauchement (commandes qui font la même chose par exemple), et prévoir un plan de"
+		+ "remédiation si c'est pas réglé. »"
+	SOURCE "the user's « ok » of 2026-10-16 on the session's recommendation: the M8 task audits no"
+		+ "command in a string and moves the project's commands to exec steps, settles the"
+		+ "vocabulary overlaps, one command group per slot among them, removes dead fields, adds"
+		+ "the README glossary table with a guard, and plans the remediation of anything left"

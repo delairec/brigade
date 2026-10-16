@@ -2758,3 +2758,80 @@ DECISION WaveShowReadsThePullRequestOfATaskFromItsDeliveredByAtTheBranch
 		REF @TASK.B11
 	SOURCE "the user's ratification of 2026-10-15 in the review of pull request #137: DELIVERED_BY"
 		+ "at BRANCH is the one source the corpus carries, with no call to the forge"
+
+DECISION ProjectCommandsRunAsAnArgvWithoutAShell
+	TITLE "every command brigade runs for a project or a study, PROJECT.SETUP, PROJECT.ACCEPTANCE,"
+		+ "PROJECT.HEAVY and the command of a STUDY.COLLECTOR, runs through the runner as one argv"
+		+ "split by shlex.split, never through sh -c"
+	STATUS active
+	DESC "a value of PROJECT.SETUP, PROJECT.ACCEPTANCE, PROJECT.HEAVY or of the shell: form of"
+		+ "STUDY.COLLECTOR is one call: split with shlex.split into the argv the runner of"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa runs; a value shlex.split"
+		+ "refuses is refused, naming it, before any command runs"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	DESC "the lines of a REPEATABLE field run in their order and stop at the first failure, in"
+		+ "place of &&"
+	DESC "a command that needs a shell feature, a chain inside one line, a variable, a redirection,"
+		+ "a pipe or a condition, is a script versioned by the project, called as one argv"
+	DESC "the string field is the serialization of that argv until @TASK.B163 moves the project's"
+		+ "commands to argv arrays in TOML versioned by the project"
+		REF @TASK.B163
+	DESC "it applies @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa without"
+		+ "exception: no sh -c and no shell=True, whatever the field the command comes from"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	DESC "the line of brigade/adapters/schedulers/data/crontab-line.tpl, run by cron through its"
+		+ "own shell, is outside this decision; @TASK.B163 audits it"
+		REF @TASK.B163
+	DESC "binds @TASK.B12, @TASK.B48 and @TASK.B142"
+		REF @TASK.B12
+		REF @TASK.B48
+		REF @TASK.B142
+	REJECTED "a POSIX sh line run by /bin/sh -c, as an exception named in"
+		+ "OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa: quoting defects, and a second"
+		+ "language inside the registry"
+	REJECTED "declaring the commands in the project tree now, as TOML arrays or steps: a format"
+		+ "imposed on every project before the recipe engine of M8 exists"
+	RATIONALE "pull request #142 ran each PROJECT.SETUP line through sh -c and its review thread"
+		+ "4286237837 asked which interpreter; pull request #143 ran the shell: form of a collector"
+		+ "through sh -c; the user ruled that no command passes as a string, then to keep the plan"
+		+ "and change nothing now: the defect is interpretation by a shell, not storage, so the"
+		+ "field stays a string serializing one argv, a fixture that chained two commands with &&"
+		+ "becomes two lines, and the home in the project tree waits for the engine of M8"
+	SOURCE "the user's ruling of 2026-10-15: « Dans tous les cas il est hors de question qu'on"
+		+ "passe des commandes dans des chaines de caractère. Je veux qu'on fasse les choses"
+		+ "proprement. »"
+	SOURCE "the user's ruling of 2026-10-16: « on va faire au plus simple, on colle au plan"
+		+ "initial, on change rien pour l'instant, mais on enregistre une tâche en m8 pour vérifier"
+		+ "deux choses: que l'on ne passe plus de commandes dans des strings, qu'il n'y a plus de"
+		+ "chevauchement (commandes qui font la même chose par exemple), et prévoir un plan de"
+		+ "remédiation si c'est pas réglé. »"
+	SOURCE "the user's « ok » of 2026-10-16 on the session's recommendation: in #142 SETUP runs as"
+		+ "an argv without a shell, split by shlex.split, the fixture in two lines; B142 SPEC 1"
+		+ "runs argv; the shell: form leaves B48; the field stays a string that serializes an argv,"
+		+ "the defect being interpretation by a shell, not storage, and the final home, TOML arrays"
+		+ "versioned by the project, waits for the M8 engine; review thread 4286237837 of pull"
+		+ "request #142"
+
+DECISION TheTickGitignoresBrigadeWorktreesAloneAndTheProjectVersionsItsCollectorsAndRecipes
+	TITLE "the tick adds .brigade/worktrees/ alone to a project's .gitignore; .brigade/collectors/"
+		+ "and .brigade/recipes/ are versioned by the project"
+	STATUS active
+	DESC "under the default worktree root, the line the tick adds to the project's .gitignore is"
+		+ ".brigade/worktrees/, never .brigade/"
+	DESC ".brigade/collectors/ is the project's collectors directory of"
+		+ "brigade/system/collector_places.py, where"
+		+ "@DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun resolves collectors first,"
+		+ "and .brigade/recipes/ the project's recipes directory of"
+		+ "@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder: both are versioned with the project and"
+		+ "ignored by nothing brigade writes"
+		REF @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+	DESC "binds @TASK.B12"
+		REF @TASK.B12
+	REJECTED "ignoring .brigade/ whole, as SPEC 5 of B12 read at its ratification: the project's"
+		+ "collectors and recipes under it would never reach a commit"
+	RATIONALE "the worktrees the tick cuts are disposable and the collectors and recipes of a"
+		+ "project are its versioned files; one directory holds both, so the ignore line names the"
+		+ "disposable part alone"
+	SOURCE "the user's « ok » of 2026-10-16 on the session's recommendation: only"
+		+ ".brigade/worktrees/ is gitignored"
