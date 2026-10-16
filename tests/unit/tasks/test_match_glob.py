@@ -12,6 +12,9 @@ class MatchGlobTest(unittest.TestCase):
             ("a single star stopping at a directory", "src/cart/*", "src/cart/ui/button.py", False),
             ("a dot taken literally", "src/*.py", "src/cartxpy", False),
             ("a path outside the glob", "src/cart/**", "src/billing/charge.py", False),
+            ("a leading double star over a directory at the root", "**/core-*/**", "core-foo/src/a.ts", True),
+            ("a leading double star over a nested directory", "**/core-*/**", "packages/core-foo/src/a.ts", True),
+            ("a leading double star over a file at the root", "**/*.spec.*", "a.spec.ts", True),
         ]
         for case, glob, path, expected in rows:
             with self.subTest(case=case):

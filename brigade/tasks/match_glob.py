@@ -1,7 +1,7 @@
 import re
 
-WILDCARDS = re.compile(r"(\*\*|\*)")
-TRANSLATIONS = {"**": ".*", "*": "[^/]*"}
+WILDCARDS = re.compile(r"(\*\*/|\*\*|\*)")
+TRANSLATIONS = {"**/": "(?:.*/)?", "**": ".*", "*": "[^/]*"}
 
 
 def match_glob(pattern: str, path: str) -> bool:
