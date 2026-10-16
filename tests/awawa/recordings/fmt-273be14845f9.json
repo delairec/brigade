@@ -1,0 +1,20 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/projects.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/projects.awawa": "PROJECT shop\n\tPATH \"<tmp:0>/projects/shop\"\n\tMAIN \"main\"\n\tCORPUS \"corpus\"\n\tSETUP \"touch \\\"$PWD\\\"\"\n\tFORGE \"none\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "version": "awawa 2.7.0"
+}

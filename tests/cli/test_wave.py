@@ -6,7 +6,7 @@ from pathlib import Path
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
-from tests.cli.temporary_project import TemporaryProject
+from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 REQUEST_TEXT = "let the customer empty the cart in one click"
@@ -77,7 +77,6 @@ TASK_STATES = (
     '{"schema_version": 1, "ts": "2026-10-13T12:00:00Z", "event": "task.state", "wave": "M0", "task": "S3",'
     ' "state": "merged"}\n'
 )
-PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
 ASKING_POLICY = "POLICY shop_review\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
 
 

@@ -9,11 +9,80 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY
 
+from tests.awawa.provide_awawa import provide_awawa
+from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
+from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 from tests.process_launcher import ProcessLauncher
 
 INSTANT = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
 STOP_WAIT_S = 10
+CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
+PROJECT_SCHEMA = (
+    "SCHEMA TASK\n"
+    '\tDESC "a change delivered by one pull request"\n'
+    "\tFIELD TITLE string\n\t\tREQUIRED\n"
+    "\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n"
+    "\tFIELD MILESTONE @MILESTONE\n"
+    "\tFIELD AFTER @TASK\n\t\tREPEATABLE\n"
+    "\n"
+    "SCHEMA MILESTONE\n"
+    '\tDESC "the tasks planned for one request"\n'
+    "\tFIELD TITLE string\n\t\tREQUIRED\n"
+    "\tFIELD STATUS planned|running\n\t\tREQUIRED\n"
+    "\n"
+    "SCHEMA OPEN_QUESTION\n"
+    '\tDESC "a fact left undecided"\n'
+    "\tFIELD STATUS open|closed\n\t\tREQUIRED\n"
+    "\tFIELD BLOCKS @TASK\n\t\tREPEATABLE\n\t\tCONVERSE BLOCKED_BY\n"
+    "\tWHEN STATUS closed\n\t\tGATE suppressed\n"
+)
+MAIN_TASKS = 'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n'
+WAVE_TASKS = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
+    'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\tAFTER @TASK.S2\n\n'
+    'TASK S4\n\tTITLE "Confirm before emptying the cart"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
+    "\tAFTER @TASK.S3\n\n"
+    'TASK S5\n\tTITLE "Undo the emptying"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\n'
+    'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
+)
+WAVE_MILESTONES = 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS running\n'
+WAVE_QUESTIONS = (
+    "OPEN_QUESTION Undecided\n\tSTATUS open\n\tBLOCKS @TASK.S5\n\n"
+    "OPEN_QUESTION Ruled\n\tSTATUS closed\n\tBLOCKS @TASK.S6\n"
+)
+WAVE_BRANCH = "integration/M1-empty-cart"
+RUNNING_REQUEST = (
+    "REQUEST shop_1\n"
+    "\tPROJECT @PROJECT.shop\n"
+    '\tTEXT "let the customer empty the cart in one click"\n'
+    '\tCREATED_AT "2026-10-12T09:30:00Z"\n'
+    "\tSTATUS running\n"
+    '\tMILESTONE "M1"\n'
+    f'\tBRANCH "{WAVE_BRANCH}"\n'
+)
+PLANNED_WAVE_REQUEST = (
+    "REQUEST shop_1\n"
+    "\tPROJECT @PROJECT.shop\n"
+    '\tTEXT "let the customer empty the cart in one click"\n'
+    '\tCREATED_AT "2026-10-12T09:30:00Z"\n'
+    "\tSTATUS planned\n"
+    '\tMILESTONE "M1"\n'
+    f'\tBRANCH "{WAVE_BRANCH}"\n'
+)
+PLANNED_REQUEST = (
+    "REQUEST shop_2\n"
+    "\tPROJECT @PROJECT.shop\n"
+    '\tTEXT "let the customer undo the emptying"\n'
+    '\tCREATED_AT "2026-10-12T10:30:00Z"\n'
+    "\tSTATUS planned\n"
+    '\tMILESTONE "M2"\n'
+    '\tBRANCH "integration/M2-undo"\n'
+)
+QUEUED_S3 = (
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "M1", "task": "S3",'
+    ' "state": "queued"}\n'
+)
 
 
 class TickTestCase(unittest.TestCase):
@@ -116,6 +185,518 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
         self.assertEqual(list(self.state.iterdir()), [self.state / "locks"])
 
 
+BUILD_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 75\n---\nDeliver the task.\n"
+TASK_BRANCH = "task/M1-empty-cart/S3"
+
+
+class WaveTickTestCase(TickTestCase):
+    setup_commands = ("touch setup-ran",)
+
+    def run_tick(self, *options: str):
+        return self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "tick",
+            *options,
+            environment={**self.machine.describe_environment(), **PINNED_COMMIT_DATES},
+        )
+
+    def setUp(self):
+        super().setUp()
+        provide_awawa(self)
+        self.machine.run_init()
+        self.project = TemporaryProject(
+            Path(self.root.name).resolve() / "projects" / "shop",
+            {**self.machine.describe_environment(), **PINNED_COMMIT_DATES},
+        )
+        self.project.write("corpus/_schema.awawa", PROJECT_SCHEMA)
+        self.project.write("corpus/tasks.awawa", MAIN_TASKS)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "-m", "the corpus")
+        self.project.run_git("checkout", "--quiet", "-b", WAVE_BRANCH)
+        self.project.write("corpus/tasks.awawa", WAVE_TASKS)
+        self.project.write("corpus/milestones.awawa", WAVE_MILESTONES)
+        self.project.write("corpus/questions.awawa", WAVE_QUESTIONS)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "-m", "the plan of M1")
+        self.project.run_git("checkout", "--quiet", "main")
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "project",
+            "add",
+            str(self.project.path),
+            *(argument for command in self.setup_commands for argument in ("--setup", command)),
+        )
+        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST)
+        (self.state / "ledger").mkdir(parents=True)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(QUEUED_S3)
+
+
+class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
+    def setUp(self):
+        super().setUp()
+        recordings = Path(self.root.name) / "recordings"
+        recordings.mkdir()
+        (recordings / "builder.json").write_text(json.dumps(DONE_RESULT))
+        instructions = Path(self.root.name) / "instructions"
+        (instructions / "procedures").mkdir(parents=True)
+        (instructions / "procedures" / "build-task.md").write_text(BUILD_PROCEDURE)
+        self.configure(recordings, instructions)
+        self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
+
+    def configure(self, recordings: Path, instructions: Path, keys: str = "") -> None:
+        self.machine.write_configuration(
+            f'client = "fake"\ndocument = "markdown"\ninstructions = "{instructions}"\n{keys}'
+            f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+        )
+
+    def read_events(self, name: str) -> list:
+        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
+        return [event for event in map(json.loads, lines) if event["event"] == name]
+
+    def tearDown(self):
+        for record in self.read_run_records():
+            self.wait_for_file(self.state / "runs" / record["run"] / "result.json")
+        super().tearDown()
+
+    def read_run_records(self) -> list:
+        return [json.loads(path.read_text()) for path in sorted((self.state / "runs").glob("*/run.json"))]
+
+
+class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
+    def test_should_cut_the_worktree_of_each_startable_task_from_the_head_of_the_wave_branch(self):
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.project.run_git("-C", str(self.worktree), "branch", "--show-current").strip(), TASK_BRANCH
+        )
+        self.assertEqual(
+            self.project.run_git("rev-parse", f"{TASK_BRANCH}").strip(),
+            self.project.run_git("rev-parse", WAVE_BRANCH).strip(),
+        )
+
+    def test_should_ignore_the_worktrees_on_the_wave_branch_once(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(self.project.run_git("show", f"{WAVE_BRANCH}:.gitignore"), ".brigade/worktrees/\n")
+        self.assertEqual(
+            self.project.run_git("log", "--format=%s", f"main..{WAVE_BRANCH}").splitlines(),
+            ["brigade tick: ignore .brigade/worktrees/", "the plan of M1"],
+        )
+
+    def test_should_run_the_setup_commands_of_the_project_in_the_worktree(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertTrue((self.worktree / "setup-ran").is_file())
+
+    def test_should_record_each_launched_task_running_in_the_wave(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            self.read_events("task.state"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "M1",
+                    "task": "S3",
+                    "state": "queued",
+                },
+                {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "M1", "task": "S3", "state": "running"},
+                {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "M1", "task": "S6", "state": "running"},
+            ],
+        )
+
+    def test_should_launch_the_build_procedure_detached_as_the_build_slot_of_the_project_in_the_worktree(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertCountEqual(
+            self.read_run_records(),
+            [
+                {
+                    "schema_version": 1,
+                    "run": ANY,
+                    "procedure_path": ANY,
+                    "role": "builder",
+                    "role_source": ANY,
+                    "client": "fake",
+                    "worktree": str(self.worktree),
+                    "capabilities": ["read", "write", "shell"],
+                    "budget": 75,
+                    "wall_limit_s": ANY,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "project": "shop",
+                    "cwd": str(self.worktree),
+                    "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
+                },
+                {
+                    "schema_version": 1,
+                    "run": ANY,
+                    "procedure_path": ANY,
+                    "role": "builder",
+                    "role_source": ANY,
+                    "client": "fake",
+                    "worktree": str(self.worktree.parent / "S6"),
+                    "capabilities": ["read", "write", "shell"],
+                    "budget": 75,
+                    "wall_limit_s": ANY,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "project": "shop",
+                    "cwd": str(self.worktree.parent / "S6"),
+                    "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
+                },
+            ],
+        )
+
+    def test_should_brief_the_build_run_with_the_project_the_wave_the_task_its_base_and_its_worktree(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            (self.state / "briefs" / "shop_1-S3.md").read_text(),
+            "Deliver @TASK.S3 of @PROJECT.shop, in the wave @MILESTONE.M1 of @REQUEST.shop_1.\n"
+            "\n"
+            f"- Base branch: {WAVE_BRANCH}.\n"
+            f"- Worktree: {self.worktree}, on the branch {TASK_BRANCH}, cut from the head of {WAVE_BRANCH}.\n",
+        )
+
+    def test_should_take_the_lock_of_the_worktrees_of_the_project(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertTrue((self.state / "locks" / "worktrees-shop.lock").is_file())
+
+    def test_should_launch_nothing_more_at_the_next_tick(self):
+        # Arrange
+        self.run_tick("--once")
+
+        # Act
+        completed = self.run_tick("--once", "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
+
+
+class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
+    setup_commands = ("false",)
+
+    def test_should_remove_the_worktree_and_its_branch_and_report_the_failure(self):
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("the setup of @TASK.S3 failed", completed.stderr)
+        self.assertFalse(self.worktree.exists())
+        self.assertEqual(self.project.run_git("branch", "--list", TASK_BRANCH), "")
+
+    def test_should_record_the_task_parked_in_the_wave(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            self.read_events("task.state"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "M1",
+                    "task": "S3",
+                    "state": "queued",
+                },
+                {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "M1", "task": "S3", "state": "parked"},
+            ],
+        )
+
+    def test_should_not_prepare_the_parked_task_again_at_the_next_tick(self):
+        # Arrange
+        self.run_tick("--once")
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertNotIn("the setup of @TASK.S3 failed", completed.stderr)
+
+
+class BrigadeTickOnceWithASetupLeavingTheWaveBranchTest(LaunchingTickTestCase):
+    setup_commands = ("git checkout --quiet --orphan elsewhere", "git commit --quiet --allow-empty -m elsewhere")
+
+    def test_should_remove_the_worktree_whose_head_no_longer_descends_from_the_wave_branch(self):
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("the setup of @TASK.S3 failed", completed.stderr)
+        self.assertFalse(self.worktree.exists())
+
+
+class BrigadeTickOnceWithASetupLineOfShellSyntaxTest(LaunchingTickTestCase):
+    setup_commands = ('touch "$PWD"',)
+
+    def test_should_run_the_line_as_one_argv_without_a_shell(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertTrue((self.worktree / "$PWD").is_file())
+
+
+class BrigadeTickOnceWithASetupFailingOnItsFirstLineTest(LaunchingTickTestCase):
+    setup_commands = ("false", "touch ../../../second-line-ran")
+
+    def test_should_run_no_line_after_the_failing_one(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertFalse((self.project.path / "second-line-ran").exists())
+
+
+class BrigadeTickOnceWithASetupLineThatSplitsIntoNoArgvTest(LaunchingTickTestCase):
+    setup_commands = ("touch ../../../first-line-ran", 'touch "unclosed')
+
+    def test_should_remove_the_worktree_and_its_branch_and_name_the_line(self):
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn(
+            'brigade tick: the setup of @TASK.S3 failed: the line touch "unclosed splits into no argv', completed.stderr
+        )
+        self.assertFalse(self.worktree.exists())
+        self.assertEqual(self.project.run_git("branch", "--list", TASK_BRANCH), "")
+
+    def test_should_run_no_line_of_the_setup(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertFalse((self.project.path / "first-line-ran").exists())
+
+
+class BrigadeTickOnceWithTheWaveBranchCheckedOutTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.run_git("checkout", "--quiet", WAVE_BRANCH)
+
+    def test_should_refuse_to_move_the_checked_out_wave_branch(self):
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn(
+            f"brigade tick: the wave branch {WAVE_BRANCH} is checked out in {self.project.path}", completed.stderr
+        )
+
+    def test_should_leave_the_checkout_and_its_branch_as_they_were(self):
+        # Arrange
+        head = self.project.run_git("rev-parse", WAVE_BRANCH)
+
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(self.project.run_git("status", "--porcelain"), "")
+        self.assertEqual(self.project.run_git("rev-parse", WAVE_BRANCH), head)
+
+
+class BrigadeTickOnceUnderAConfiguredWorktreeRootTest(LaunchingTickTestCase):
+    def test_should_cut_the_worktree_under_the_root_relative_to_the_repository_and_leave_the_gitignore_alone(self):
+        # Arrange
+        recordings = Path(self.root.name) / "recordings"
+        instructions = Path(self.root.name) / "instructions"
+        self.configure(recordings, instructions, keys='worktree_root = "../worktrees"\n')
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertTrue((self.project.path.parent / "worktrees" / "S3").is_dir())
+        self.assertEqual(self.project.run_git("ls-tree", "--name-only", WAVE_BRANCH), "corpus\n")
+
+
+class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
+    def test_should_print_the_wave_its_tasks_their_states_and_the_project_with_the_tasks_to_launch(self):
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "mode": "dry-run",
+                "snapshot": {
+                    "schema_version": 1,
+                    "now": ANY,
+                    "waves": [
+                        {
+                            "request": "shop_1",
+                            "project": "shop",
+                            "milestone": "M1",
+                            "branch": WAVE_BRANCH,
+                            "tasks": [
+                                {"task": "S3", "after": ["S2"], "blocked_by": []},
+                                {"task": "S4", "after": ["S3"], "blocked_by": []},
+                                {"task": "S5", "after": [], "blocked_by": ["OPEN_QUESTION.Undecided"]},
+                                {"task": "S6", "after": [], "blocked_by": []},
+                            ],
+                            "states": {"S3": "queued"},
+                            "implemented": ["S2"],
+                        }
+                    ],
+                    "projects": [{"project": "shop", "slots": 4, "live_runs": []}],
+                    "planned": [],
+                },
+                "plan": [
+                    {"request": "shop_1", "project": "shop", "milestone": "M1", "branch": WAVE_BRANCH, "task": "S3"},
+                    {"request": "shop_1", "project": "shop", "milestone": "M1", "branch": WAVE_BRANCH, "task": "S6"},
+                ],
+            },
+        )
+
+
+class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
+    def test_should_start_the_planned_request_under_the_automatic_plan_review_of_the_project(self):
+        # Arrange
+        (self.machine.corpus / "requests.awawa").write_text(PLANNED_WAVE_REQUEST)
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.read_events("wave.started"),
+            [{"schema_version": 1, "ts": ANY, "event": "wave.started", "wave": "M1", "project": "shop"}],
+        )
+
+
+class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LaunchingTickTestCase):
+    def tearDown(self):
+        for record in self.read_run_records():
+            self.wait_for_file(self.state / "runs" / record["run"] / "pid")
+            self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "stop", record["run"])
+        super().tearDown()
+
+    def configure_client_outliving_the_test(self) -> None:
+        recordings = Path(self.root.name) / "recordings"
+        instructions = Path(self.root.name) / "instructions"
+        self.machine.write_configuration(
+            f'client = "fake"\ndocument = "markdown"\ninstructions = "{instructions}"\n'
+            f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}{CLIENT_OUTLIVING_THE_TEST}'
+        )
+
+    def test_should_count_the_live_build_runs_of_the_project(self):
+        # Arrange
+        self.configure_client_outliving_the_test()
+        self.run_tick("--once")
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["snapshot"]["projects"],
+            [
+                {
+                    "project": "shop",
+                    "slots": 4,
+                    "live_runs": [{"run": ANY, "slot": "build"}, {"run": ANY, "slot": "build"}],
+                }
+            ],
+        )
+
+    def test_should_leave_out_the_finished_runs_and_the_runs_of_no_project(self):
+        # Arrange
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "run",
+            "build-task",
+            "--slot",
+            "build",
+            "--project",
+            "shop",
+            "--cwd",
+            str(self.project.path),
+        )
+        self.configure_client_outliving_the_test()
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "run", "build-task", "--slot", "build", "--cwd", str(self.project.path), "--detach"
+        )
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["snapshot"]["projects"], [{"project": "shop", "slots": 4, "live_runs": []}]
+        )
+
+
+ASKING_POLICY = "POLICY shop_review\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
+
+
+class BrigadeTickDryRunOfTheProjectsAndThePlannedRequestsTest(WaveTickTestCase):
+    def test_should_read_the_slots_of_the_project(self):
+        # Arrange
+        (self.machine.corpus / "projects.awawa").write_text(
+            f'PROJECT shop\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tSLOTS 1\n\tSTATUS active\n'
+        )
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["snapshot"]["projects"], [{"project": "shop", "slots": 1, "live_runs": []}]
+        )
+
+    def test_should_hold_each_planned_request_with_the_plan_review_of_its_project(self):
+        for case, policies, expected in [
+            ("no policy", "", [{"request": "shop_2", "project": "shop", "plan_review": "auto"}]),
+            ("a policy asking", ASKING_POLICY, [{"request": "shop_2", "project": "shop", "plan_review": "ask"}]),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                (self.machine.corpus / "policies.awawa").write_text(policies)
+                (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST + "\n" + PLANNED_REQUEST)
+
+                # Act
+                completed = self.run_tick("--dry-run", "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(json.loads(completed.stdout)["snapshot"]["planned"], expected)
+
+
 class BrigadeTickDryRunTest(TickTestCase):
     def test_should_print_the_snapshot_and_the_empty_plan_in_the_versioned_document(self):
         # Act
@@ -130,7 +711,13 @@ class BrigadeTickDryRunTest(TickTestCase):
             {
                 "schema_version": 1,
                 "mode": "dry-run",
-                "snapshot": {"schema_version": 1, "now": document["snapshot"]["now"]},
+                "snapshot": {
+                    "schema_version": 1,
+                    "now": document["snapshot"]["now"],
+                    "waves": [],
+                    "projects": [],
+                    "planned": [],
+                },
                 "plan": [],
             },
         )
@@ -162,7 +749,10 @@ class BrigadeTickDryRunTest(TickTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         report_lines = completed.stdout.splitlines()
         self.assertRegex(report_lines[1], r"^  now  \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-        self.assertEqual(report_lines, ["snapshot", report_lines[1], "plan", "  no action"])
+        self.assertEqual(
+            report_lines,
+            ["snapshot", report_lines[1], "  waves  []", "  projects  []", "  planned  []", "plan", "  no action"],
+        )
 
 
 class BrigadeTickLoopTest(TickTestCase):

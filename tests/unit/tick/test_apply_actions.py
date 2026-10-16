@@ -12,9 +12,10 @@ class ApplyActionsTest(unittest.TestCase):
     def test_should_apply_an_empty_plan_as_no_action(self):
         # Arrange
         empty_plan = ()
+        no_executors = {}
 
         # Act
-        actions_applied = apply_actions(empty_plan)
+        actions_applied = apply_actions(empty_plan, no_executors)
 
         # Assert
         self.assertEqual(actions_applied, 0)
@@ -22,10 +23,11 @@ class ApplyActionsTest(unittest.TestCase):
     def test_should_refuse_an_action_it_has_no_executor_for(self):
         # Arrange
         plan = (LaunchRun(),)
+        no_executors = {}
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            apply_actions(plan)
+            apply_actions(plan, no_executors)
 
         # Assert
         self.assertEqual(str(refusal.exception), "the tick has no executor for the action LaunchRun")

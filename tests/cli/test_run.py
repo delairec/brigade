@@ -1352,6 +1352,17 @@ class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):
         self.assertFalse(disposable_worktree.exists())
         self.assertEqual(self.project.run_git("worktree", "list", "--porcelain").count("worktree "), 1)
 
+    def test_should_take_no_lock_of_worktrees_for_a_reading_slot_run_outside_any_project(self):
+        # Arrange
+        self.record("explorer", DONE_RESULT)
+
+        # Act
+        completed = self.run_slot("explore")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(list((self.runs.parent / "locks").glob("worktrees-*")), [])
+
     def test_should_run_a_writing_slot_in_the_directory_it_is_given(self):
         # Arrange
         self.record("builder", DONE_RESULT)
@@ -1362,6 +1373,29 @@ class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["worktree"], str(self.project.path))
+
+
+class BrigadeRunOfAReadingSlotOfAProjectTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        provide_awawa(self)
+        initialised = self.machine.run_init()
+        self.assertEqual(initialised.returncode, 0, initialised.stderr)
+        self.configure_fake('features = "step_count"\n')
+        self.project = TemporaryProject(self.workspace / "shop", self.machine.describe_environment())
+        self.project.run_git("commit", "--quiet", "--allow-empty", "-m", "initial")
+        (self.machine.corpus / "projects.awawa").write_text(
+            f'PROJECT shop\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tSTATUS active\n'
+        )
+        self.record("explorer", DONE_RESULT)
+
+    def test_should_take_the_lock_of_the_worktrees_of_the_project_around_its_disposable_worktree(self):
+        # Act
+        completed = self.run_brigade("run", str(self.procedure), "--slot", "explore", "--project", "shop", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertTrue((self.runs.parent / "locks" / "worktrees-shop.lock").is_file())
 
 
 class BrigadeRunOfAProjectTest(RunTestCase):
