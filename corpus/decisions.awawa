@@ -2760,19 +2760,22 @@ DECISION WaveShowReadsThePullRequestOfATaskFromItsDeliveredByAtTheBranch
 		+ "at BRANCH is the one source the corpus carries, with no call to the forge"
 
 DECISION ProjectCommandsRunAsAnArgvWithoutAShell
-	TITLE "every command brigade runs for a project or a study, PROJECT.SETUP, PROJECT.ACCEPTANCE,"
-		+ "PROJECT.HEAVY and the command of a STUDY.COLLECTOR, runs through the runner as one argv"
-		+ "split by shlex.split, never through sh -c"
+	TITLE "every command brigade runs for a project or a study, PROJECT.SETUP, PROJECT.ACCEPTANCE"
+		+ "and the command of a STUDY.COLLECTOR, runs through the runner as one argv split by"
+		+ "shlex.split, never through sh -c"
 	STATUS active
-	DESC "a value of PROJECT.SETUP, PROJECT.ACCEPTANCE, PROJECT.HEAVY or of the shell: form of"
-		+ "STUDY.COLLECTOR is one call: split with shlex.split into the argv the runner of"
+	DESC "a value of PROJECT.SETUP, PROJECT.ACCEPTANCE or of the shell: form of STUDY.COLLECTOR is"
+		+ "one call: split with shlex.split into the argv the runner of"
 		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa runs; a value shlex.split"
 		+ "refuses is refused, naming it, before any command runs"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
-	DESC "the lines of a REPEATABLE field run in their order and stop at the first failure, in"
-		+ "place of &&"
+	DESC "the lines of PROJECT.SETUP run in their order and stop at the first failure, in place of"
+		+ "&&; each PROJECT.ACCEPTANCE line is one check run whatever the others returned"
 	DESC "a command that needs a shell feature, a chain inside one line, a variable, a redirection,"
 		+ "a pipe or a condition, is a script versioned by the project, called as one argv"
+	DESC "a value of PROJECT.HEAVY, a suite left to the continuous integration that brigade never"
+		+ "runs, is written in the same serialization of one argv, so that every project command"
+		+ "has one form"
 	DESC "the string field is the serialization of that argv until @TASK.B163 moves the project's"
 		+ "commands to argv arrays in TOML versioned by the project"
 		REF @TASK.B163
