@@ -61,6 +61,15 @@ RUNNING_REQUEST = (
     '\tMILESTONE "M1"\n'
     f'\tBRANCH "{WAVE_BRANCH}"\n'
 )
+PLANNED_WAVE_REQUEST = (
+    "REQUEST shop_1\n"
+    "\tPROJECT @PROJECT.shop\n"
+    '\tTEXT "let the customer empty the cart in one click"\n'
+    '\tCREATED_AT "2026-10-12T09:30:00Z"\n'
+    "\tSTATUS planned\n"
+    '\tMILESTONE "M1"\n'
+    f'\tBRANCH "{WAVE_BRANCH}"\n'
+)
 PLANNED_REQUEST = (
     "REQUEST shop_2\n"
     "\tPROJECT @PROJECT.shop\n"
@@ -468,7 +477,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
 class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
     def test_should_start_the_planned_request_under_the_automatic_plan_review_of_the_project(self):
         # Arrange
-        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST.replace("STATUS running", "STATUS planned"))
+        (self.machine.corpus / "requests.awawa").write_text(PLANNED_WAVE_REQUEST)
 
         # Act
         completed = self.run_tick("--once")
@@ -551,8 +560,9 @@ ASKING_POLICY = "POLICY shop_review\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\
 class BrigadeTickDryRunOfTheProjectsAndThePlannedRequestsTest(WaveTickTestCase):
     def test_should_read_the_slots_of_the_project(self):
         # Arrange
-        projects = self.machine.corpus / "projects.awawa"
-        projects.write_text(projects.read_text().replace("\tSTATUS active", "\tSLOTS 1\n\tSTATUS active"))
+        (self.machine.corpus / "projects.awawa").write_text(
+            f'PROJECT shop\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tSLOTS 1\n\tSTATUS active\n'
+        )
 
         # Act
         completed = self.run_tick("--dry-run", "--json")

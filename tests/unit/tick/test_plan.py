@@ -27,8 +27,9 @@ FOLLOWING = (TaskFacts(name="S3", after=("S2",)),)
 BLOCKED = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided",)),)
 
 
-def describe_launch(task: str) -> LaunchTask:
-    return LaunchTask(request="shop_1", project="shop", milestone="M1", branch=WAVE_BRANCH, task=task)
+LAUNCH_S3 = LaunchTask(request="shop_1", project="shop", milestone="M1", branch=WAVE_BRANCH, task="S3")
+LAUNCH_S9 = LaunchTask(request="shop_1", project="shop", milestone="M1", branch=WAVE_BRANCH, task="S9")
+LAUNCH_S10 = LaunchTask(request="shop_1", project="shop", milestone="M1", branch=WAVE_BRANCH, task="S10")
 
 
 class PlanTest(unittest.TestCase):
@@ -46,13 +47,13 @@ class PlanTest(unittest.TestCase):
 class PlanStartableTasksTest(unittest.TestCase):
     def test_should_launch_a_task_only_when_it_is_startable(self):
         for case, tasks, states, implemented, expected in [
-            ("with no state yet", ALONE, {}, (), (describe_launch("S3"),)),
-            ("queued", ALONE, {"S3": "queued"}, (), (describe_launch("S3"),)),
+            ("with no state yet", ALONE, {}, (), (LAUNCH_S3,)),
+            ("queued", ALONE, {"S3": "queued"}, (), (LAUNCH_S3,)),
             ("already running", ALONE, {"S3": "running"}, (), ()),
             ("with its pull request open", ALONE, {"S3": "pr_open"}, (), ()),
             ("parked", ALONE, {"S3": "parked"}, (), ()),
-            ("after a task merged in the wave", FOLLOWING, {"S2": "merged"}, (), (describe_launch("S3"),)),
-            ("after a task implemented in the corpus", FOLLOWING, {}, ("S2",), (describe_launch("S3"),)),
+            ("after a task merged in the wave", FOLLOWING, {"S2": "merged"}, (), (LAUNCH_S3,)),
+            ("after a task implemented in the corpus", FOLLOWING, {}, ("S2",), (LAUNCH_S3,)),
             ("after a task still running", FOLLOWING, {"S2": "running"}, (), ()),
             ("after a task neither merged nor implemented", FOLLOWING, {}, (), ()),
             ("blocked by a live question", BLOCKED, {}, (), ()),
@@ -86,7 +87,7 @@ class PlanSlotsTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, (describe_launch("S9"), describe_launch("S10")))
+        self.assertEqual(actions, (LAUNCH_S9, LAUNCH_S10))
 
     def test_should_launch_nothing_in_a_project_whose_live_build_runs_exceed_its_slots(self):
         # Arrange
@@ -123,7 +124,7 @@ class PlanSlotsTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, (describe_launch("S3"),))
+        self.assertEqual(actions, (LAUNCH_S3,))
 
 
 class PlanPlannedRequestsTest(unittest.TestCase):
