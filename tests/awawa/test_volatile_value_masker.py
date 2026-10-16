@@ -68,3 +68,18 @@ class VolatileValueMaskerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(unmasked, 'ANSWER trees_20261015T124950Z_05a3de\n\tRUN "20261015T124950Z-05a3de"\n')
+
+    def test_should_list_the_run_ids_it_masked_in_the_order_they_sort(self):
+        # Arrange
+        masker = VolatileValueMasker(TEMPORARY_ROOTS)
+        masker.mask(
+            'CREATED_AT "2026-10-15T08:00:00Z"\n'
+            "ANSWER trees_20261015T124950Z_f00000\n"
+            "ANSWER trees_20261015T124950Z_05a3de\n"
+        )
+
+        # Act
+        ordered = masker.order_run_ids()
+
+        # Assert
+        self.assertEqual(ordered, ["<run_name:2>", "<run_name:1>"])

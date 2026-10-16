@@ -30,5 +30,9 @@ class VolatileValueMasker:
     def mask(self, text: str) -> str:
         return self._volatile.sub(self._replace_value, text)
 
+    def order_run_ids(self) -> list[str]:
+        run_ids = [placeholder for placeholder in self._values if RUN_PLACEHOLDER.fullmatch(placeholder)]
+        return sorted(run_ids, key=self._values.__getitem__)
+
     def unmask(self, text: str) -> str:
         return VOLATILE_PLACEHOLDER.sub(lambda match: self._values[match.group(0)], text)

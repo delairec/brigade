@@ -51,19 +51,20 @@ def _replay_commit_name(number: str) -> str:
     return format(int(number), COMMIT_NAME_FORMAT)
 
 
-def _replay_run_id(kind: str, number: str) -> str:
-    separator = RUN_ID_SEPARATORS[kind]
-    return f"{REPLAYED_INSTANT.strftime(RUN_INSTANT_FORMAT)}{separator}{int(number):06x}"
+def _replay_run_id(placeholder: str, rank: int) -> str:
+    separator = RUN_ID_SEPARATORS[RUN_PLACEHOLDER.fullmatch(placeholder).group(1)]
+    return f"{REPLAYED_INSTANT.strftime(RUN_INSTANT_FORMAT)}{separator}{rank:06x}"
 
 
-def replay_recording(test_case: unittest.TestCase, call: dict) -> dict:
+def replay_recording(test_case: unittest.TestCase, recording: dict) -> dict:
+    call = recording["call"]
     recorded = json.dumps(call)
     placeholders = sorted(set(PLACEHOLDER.findall(recorded)), key=int)
     known = {f"<tmp:{number}>": _create_temporary_directory(test_case) for number in placeholders}
     known.update({f"<instant:{number}>": _replay_instant(number) for number in INSTANT_PLACEHOLDER.findall(recorded)})
     known.update({f"<commit:{number}>": _replay_commit_name(number) for number in COMMIT_PLACEHOLDER.findall(recorded)})
     known.update(
-        {f"<{kind}:{number}>": _replay_run_id(kind, number) for kind, number in RUN_PLACEHOLDER.findall(recorded)}
+        {placeholder: _replay_run_id(placeholder, rank) for rank, placeholder in enumerate(recording["run_order"])}
     )
     masker = VolatileValueMasker(list_temporary_roots(), known)
     for directory in call["directories"]:

@@ -74,6 +74,7 @@ def _record(configuration: dict, arguments: list[str], call: dict, files: list[P
             },
         },
     }
+    recording["run_order"] = masker.order_run_ids()
     recordings = Path(configuration["recordings"])
     recordings.mkdir(parents=True, exist_ok=True)
     (recordings / _name_recording(call)).write_text(json.dumps(recording, indent=2, sort_keys=True) + "\n")

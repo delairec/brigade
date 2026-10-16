@@ -24,7 +24,7 @@ class TheRecordingsMatchTheAwawaOnThePathTest(unittest.TestCase):
                 recording = json.loads(path.read_text())
 
                 # Act
-                outcome = replay_recording(self, recording["call"])
+                outcome = replay_recording(self, recording)
 
                 # Assert
                 self.assertEqual(

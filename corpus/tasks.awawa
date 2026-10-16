@@ -5977,7 +5977,7 @@ TASK B95
 		IMPL "tests/awawa/test_recordings.py::def"
 			+ "test_should_answer_every_recorded_call_as_it_was_recorded(self):"
 		IMPL "tests/awawa/replay_recording.py::def replay_recording(test_case: unittest.TestCase,"
-			+ "call: dict) -> dict:"
+			+ "recording: dict) -> dict:"
 	SPEC "the logs of the test jobs of the matrix and of the coverage job of"
 		+ ".github/workflows/ci.yml show no test skipped for want of awawa, and ci.yml installs no"
 		+ "awawa and runs no awawa command"

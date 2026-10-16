@@ -491,7 +491,8 @@ pinned ruff gives the verdict that counts.
 
 The tests that need awawa run against the real awawa where it is on PATH, and otherwise against a fake that replays
 the recordings of `tests/awawa/recordings/`: what the real awawa printed, its exit code and the files it rewrote, for
-the same arguments on the same input files, each recording naming the awawa version it was made with. A call with no
+the same arguments on the same input files, each recording naming the awawa version it was made with and the order
+its run ids sorted in, which the replay keeps for two runs of the same second. A call with no
 recording fails its test, naming its arguments. The CI installs no awawa, so its tests run on the recordings and none
 is skipped. Where awawa is on PATH, `tests/awawa/test_recordings.py` replays every recording against it and fails on a
 difference, naming the recording, its version and the version `awawa --version` prints. A recording is made, or
