@@ -405,6 +405,36 @@ class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
         self.assertFalse(self.worktree.exists())
         self.assertEqual(self.project.run_git("branch", "--list", TASK_BRANCH), "")
 
+    def test_should_record_the_task_parked_in_the_wave(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            self.read_events("task.state"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "M1",
+                    "task": "S3",
+                    "state": "queued",
+                },
+                {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "M1", "task": "S3", "state": "parked"},
+            ],
+        )
+
+    def test_should_not_prepare_the_parked_task_again_at_the_next_tick(self):
+        # Arrange
+        self.run_tick("--once")
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertNotIn("the setup of @TASK.S3 failed", completed.stderr)
+
 
 class BrigadeTickOnceWithASetupLeavingTheWaveBranchTest(LaunchingTickTestCase):
     setup_commands = ("git checkout --quiet --orphan elsewhere", "git commit --quiet --allow-empty -m elsewhere")

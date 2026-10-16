@@ -6,6 +6,8 @@ from brigade.git.add_branch_worktree import BranchWorktree, add_branch_worktree
 from brigade.git.delete_branch import delete_branch
 from brigade.git.remove_worktree import remove_worktree
 from brigade.git.require_ancestor import require_ancestor
+from brigade.ledger.append_event import append_event
+from brigade.ledger.task_state import TaskState
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -22,6 +24,7 @@ WAVE_BRANCH_PREFIX = "integration/"
 TASK_BRANCH_PREFIX = "task/"
 SETUP_FIELD = "SETUP"
 SETUP_TIMEOUT_S = 1800.0
+PARKED_STATE = "parked"
 
 
 def _split_line(line: str) -> tuple[str, ...]:
@@ -57,5 +60,6 @@ def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action
         with hold_lock(lock):
             remove_worktree(runtime.run_process, repository, worktree.path)
             delete_branch(runtime.run_process, repository, worktree.branch)
+        append_event(runtime.paths, runtime.now, TaskState(wave=action.milestone, task=action.task, state=PARKED_STATE))
         raise BrigadeError(f"the setup of @TASK.{action.task} failed: {failure}") from None
     return worktree
