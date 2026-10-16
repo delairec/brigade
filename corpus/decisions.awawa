@@ -637,8 +637,9 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 		+ "record, launch run, create worktree, merge pull request, pause wave, record event and"
 		+ "the like"
 	DESC "the executor applies the actions in order through the gateways and plugins handed to it,"
-		+ "records each outcome in the ledger and stops at the first failure; the next tick"
-		+ "recomputes from facts, so every action is idempotent or guarded by a fact"
+		+ "each action guarded by a fact, an existing branch or worktree reused; it records each"
+		+ "outcome in the ledger, a failed action as an event, and goes on with the other actions;"
+		+ "the next tick recomputes from facts, so every action is idempotent or guarded by a fact"
 	DESC "a tick runs plan and apply rounds until the plan is empty or a cap is reached, so a merge"
 		+ "makes its dependents startable in the same tick, as @TASK.B17 asks"
 		REF @TASK.B17
@@ -649,8 +650,8 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	DESC "the tick keeps no truth of its own: the heartbeat of the last tick of @TASK.B28 is a"
 		+ "state file written atomically, not a ledger line per empty tick"
 		REF @TASK.B28
-	DESC "binds @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B17, @TASK.B18, @TASK.B19, @TASK.B48 and"
-		+ "@TASK.B51"
+	DESC "binds @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B17, @TASK.B18, @TASK.B19, @TASK.B48,"
+		+ "@TASK.B51 and @TASK.B166"
 		REF @TASK.B07
 		REF @TASK.B12
 		REF @TASK.B14
@@ -659,11 +660,18 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 		REF @TASK.B19
 		REF @TASK.B48
 		REF @TASK.B51
+		REF @TASK.B166
 	REJECTED "an imperative tick with injected gateways: every test needs a fake git, a fake forge"
 		+ "and a fake ledger where the planner needs one JSON file"
 	REJECTED "a tick state file as the truth: the facts are in the ledger, git, the forge and the"
 		+ "corpora, as the decision ADeterministicTickReplacesTheCoordinatorAgent sets; a state"
 		+ "file is derived"
+	REJECTED "the fact guards with the stop at the first failure kept: one persistent failure of"
+		+ "one project blocks the tick of every project"
+	REJECTED "a compensation undoing the effects of a failed action, the worktree and the branch"
+		+ "removed on an exception: the decision"
+		+ "ThePlanOfAWaveIsWrittenInADetachedWorktreeAndItsBranchCreatedAfterTheCommit already"
+		+ "rejects a second write to undo"
 	RATIONALE "every transition of @DECISION.ADeterministicTickReplacesTheCoordinatorAgent is a"
 		+ "condition evaluated from facts, and @DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge"
 		+ "leaves no judgement to the tick; the rules test_static_data and test_quality of the"
@@ -672,6 +680,10 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 		REF @DECISION.ADeterministicTickReplacesTheCoordinatorAgent
 		REF @DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"Fact guards"
+		+ "+ per-action isolation (Recommended)\": DESC 3 rewritten, the stop at the first failure"
+		+ "removed, the two alternatives offered added as REJECTED"
+	SOURCE "use-case map of 2026-10-16, findings X3, G3 and B10"
 
 DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	TITLE "every command returns one document carrying schema_version, printed as JSON or rendered"
@@ -2710,6 +2722,12 @@ DECISION ACollectorDeclaresInItsDocumentWhetherItIsCached
 		+ "$XDG_STATE_HOME/brigade/collect/<name>/, the layout of the run directory, never under"
 		+ "the cache"
 	DESC "the five built-ins declare true, through describe_collection"
+	DESC "cache true requires declared cache inputs: a collector whose document declares cache true"
+		+ "and for which no cache input is declared is refused naming it, where"
+		+ "brigade/collecting/read_cache_input.py keys the five built-ins alone and would key any"
+		+ "other collector on none, its entry never invalidated outside --refresh; carried by"
+		+ "@TASK.B181"
+		REF @TASK.B181
 	REJECTED "a declaration file beside the executable, or an operation asked before the"
 		+ "collection: a second thing every collector carries and a second read per call, where the"
 		+ "document is already read and validated"
@@ -2730,6 +2748,9 @@ DECISION ACollectorDeclaresInItsDocumentWhetherItIsCached
 		+ "doivent pas être mis en cache? »; « Hors cache par défaut — Un collecteur n'est mis en"
 		+ "cache que s'il le déclare : chaque intégré déclare cache = true. »"
 		REF @TASK.B47
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"C10: amend"
+		+ "the cache decision\": DESC 4 added"
+	SOURCE "use-case map of 2026-10-16, finding C10"
 
 DECISION RunsPruneRemovesTheRunsBeyondTheBoundAndThoseSettledBeforeTheDay
 	TITLE "brigade runs prune removes a finished or dead run that lies beyond the bound or was"
@@ -2919,3 +2940,48 @@ DECISION TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore
 		+ "study new et study run refusent la sortie `inbox` tant que B22 n'est pas livrée. On"
 		+ "retire le code d'écriture des fichiers, et B22 portera cette sortie. »"
 		REF @TASK.B48
+
+DECISION ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
+	TITLE "brigade run takes optional --wave and --task, the tick passes them, and run.json and"
+		+ "every run.finished of the run carry them; brigade run stays generic"
+	STATUS active
+	DESC "brigade run takes --wave <request> and --task <task>, both optional; a run launched"
+		+ "outside a wave carries null in both"
+	DESC "the tick passes --wave and --task to every build run it launches"
+	DESC "run.json and every run.finished of the run carry wave and task; the cost views and the"
+		+ "wave report read them from run.finished"
+	DESC "SPEC 1 of @TASK.B151, wave and task null on every run, becomes false once @TASK.B164"
+		+ "ships: B164 archives B151 at delivery"
+		REF @TASK.B151
+		REF @TASK.B164
+	DESC "binds @TASK.B164"
+		REF @TASK.B164
+	REJECTED "task.state carrying the id of the run: the cost per task is then a join of task.state"
+		+ "and run.finished, where the cost views and the report already read run.finished"
+	REJECTED "both, the run carrying its task and task.state carrying the run: one fact written"
+		+ "twice"
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer"
+		+ "\"run.finished carries it (Recommended)\""
+	SOURCE "use-case map of 2026-10-16, findings X1 and G9"
+
+DECISION EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
+	TITLE "each STATUS of a REQUEST has a writer: the tick writes reporting, delivered and closed,"
+		+ "brigade wave cancel writes cancelled, and paused leaves the schema"
+	STATUS active
+	DESC "the tick writes reporting when every task of the wave is merged or parked, the trigger of"
+		+ "the wave-report study of @TASK.B20; delivered when the report is committed; closed when"
+		+ "the integration pull request is merged"
+		REF @TASK.B20
+	DESC "brigade wave cancel <request> writes cancelled"
+	DESC "paused leaves REQUEST.STATUS of brigade/corpus/data/schema.awawa.tpl: the pause of a wave"
+		+ "is the ledger's, wave.paused without a wave.resumed after it, as @TASK.B19 sets"
+		REF @TASK.B19
+	DESC "binds @TASK.B167"
+		REF @TASK.B167
+	REJECTED "pruning STATUS to the values written today, planning, planned and running: the end of"
+		+ "a wave would then have no state of its own"
+	REJECTED "an open question on the lifecycle: each writer follows from a task already ratified,"
+		+ "B20 for the report and B17 for the merges"
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"A writer"
+		+ "for each, paused dropped (Recommended)\""
+	SOURCE "use-case map of 2026-10-16, findings X4 and G7"

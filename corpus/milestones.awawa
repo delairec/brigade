@@ -1,6 +1,9 @@
 MILESTONE M0
 	TITLE "Foundations"
-	STATUS planned
+	STATUS reached
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"Both"
+		+ "reached (Recommended)\": every task of the milestone is implemented or archived"
+	SOURCE "use-case map of 2026-10-16, finding X8"
 
 MILESTONE M1
 	TITLE "Wave engine"
@@ -36,7 +39,7 @@ MILESTONE M8
 
 MILESTONE F0
 	TITLE "fix-foundations"
-	STATUS planned
+	STATUS reached
 	DESC "the fixes of the findings of the foundations review of M0 and of the first runs of"
 		+ "brigade on itself, one draft task per finding or pair of findings, each bringing the"
 		+ "code back to the decision it departs from"
@@ -47,6 +50,9 @@ MILESTONE F0
 		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle the GitHub"
 		+ "milestone is named after this TITLE"
 		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"Both"
+		+ "reached (Recommended)\": every task of the milestone is implemented or archived"
+	SOURCE "use-case map of 2026-10-16, finding X8"
 
 MILESTONE ADD0
 	TITLE "post-mvp"

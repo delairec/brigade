@@ -1799,6 +1799,7 @@ TASK B21
 	AFTER @TASK.B19
 	AFTER @TASK.B20
 	AFTER @TASK.B71
+	AFTER @TASK.B141
 	RATIONALE "it follows @TASK.B71, the launch options and the real run rehearsed, F1 and F22 of"
 		+ "the foundations review"
 		REF @TASK.B71
@@ -1816,6 +1817,12 @@ TASK B21
 		REF @TASK.B55
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19, B20, B21 and B143: the role"
 		+ "ada"
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"Keep order,"
+		+ "add B21 AFTER B141 (Recommended)\": the rehearsal's tick launches build-task, which"
+		+ "@TASK.B141 ships; B141 stays after B13 and B142, B21 keeps AFTER @TASK.B20"
+		REF @TASK.B141
+		REF @TASK.B20
+	SOURCE "use-case map of 2026-10-16, findings X5 and X6"
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"
@@ -1914,8 +1921,13 @@ TASK B27
 	SPEC "no response carries a CORS header, whatever the Origin of the request"
 	SPEC "/api/status, /api/waves/<id>, /api/inbox, /api/corpus, /api/ledger, /api/reports"
 	SPEC "a polling page shell with theme tokens"
+	SPEC "every state-changing POST of the server carries the token the server generated at its"
+		+ "start and an Origin header equal to the loopback origin, the rule of SPEC 5 of"
+		+ "@TASK.B28; a request missing either is refused with 403 and changes nothing"
+		REF @TASK.B28
 	AFTER @TASK.B05
 	AFTER @TASK.B08
+	SOURCE "use-case map of 2026-10-16, finding C19"
 
 TASK B28
 	TITLE "Home and Wave views"
@@ -1931,8 +1943,12 @@ TASK B28
 	SPEC "pause, resume and retry are POST requests carrying the token the server generated at its"
 		+ "start, handed to the page it serves, and an Origin header equal to the loopback origin;"
 		+ "a request missing either is refused with 403 and changes nothing"
+	SPEC "the quota shown on Home is a consumption computed from the usage of the run.finished"
+		+ "events over the reset window, the computation settled in the refinement, where today no"
+		+ "module computes it"
 	AFTER @TASK.B27
 	AFTER @TASK.B14
+	SOURCE "use-case map of 2026-10-16, finding C6"
 
 TASK B29
 	TITLE "Inbox view"
@@ -2036,8 +2052,11 @@ TASK B35
 	SPEC "a fixture test proves no declared identifier survives"
 	SPEC "transcripts and transcript-findings are built-in collectors under the contract of B47,"
 		+ "listed by brigade collectors list and cached by brigade collect"
+	SPEC "a finding joins its session to the run.finished of the run that held it, so that the cost"
+		+ "of a repeated correction can be summed"
 	AFTER @TASK.B22
 	AFTER @TASK.B47
+	SOURCE "use-case map of 2026-10-16, finding C20"
 
 TASK B36
 	TITLE "Built-in study mine-transcripts"
@@ -2059,7 +2078,13 @@ TASK B37
 	ROLE ada
 	SPEC "brigade ledger budgets proposes p90 steps per procedure"
 	SPEC "a pull request updates the front matter of each procedure"
+	SPEC "the budget declared in the front matter of each procedure is printed beside its p90"
+	SPEC "a p90 marked estimate is never proposed"
+	SPEC "the window of runs measured is bounded by the date of the last edit of the procedure and"
+		+ "by role, where today brigade/ledger/describe_budgets.py:20 takes the last 20 runs"
+		+ "whatever the change of instruction or role"
 	AFTER @TASK.B21
+	SOURCE "use-case map of 2026-10-16, findings C7, C14 and C8"
 
 TASK B38
 	TITLE "Decisions a project records when it joins brigade"
@@ -5992,7 +6017,7 @@ TASK B93
 
 TASK B94
 	TITLE "A run is followed while it runs, inside or outside a wave: /api/runs and a Runs view of"
-		+ "the dashboard, and brigade runs show <id> printing the progress file"
+		+ "the dashboard"
 	STATUS draft
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
@@ -6003,10 +6028,6 @@ TASK B94
 	SPEC "a Runs view of the dashboard lists the runs and shows one run with its progress file,"
 		+ "refreshed by the polling of the page shell; every string of a progress file is escaped"
 		+ "on render, as @TASK.B27 requires of every rendered string"
-	SPEC "brigade runs show <id>, which @TASK.B79 introduces with the summary of run.json, the"
-		+ "segments with their outcomes and --log, prints the progress file of the run too, text"
-		+ "and --json"
-		REF @TASK.B79
 	AFTER @TASK.B27
 	AFTER @TASK.B82
 	AFTER @TASK.B106
@@ -6022,6 +6043,9 @@ TASK B94
 		REF @TASK.B28
 	SOURCE "item 15 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
+	SOURCE "use-case map of 2026-10-16, finding C13: SPEC 3, brigade runs show printing the"
+		+ "progress file, moved to @TASK.B182, a command of the CLI needing no server"
+		REF @TASK.B182
 
 TASK B95
 	TITLE "the tests that need awawa replay recorded outputs of the real awawa where awawa is not"
@@ -6614,6 +6638,10 @@ TASK B104
 		+ "its reason in the milestone's DESC"
 	SPEC "each ruling binding beyond one task is a DECISION with its REJECTED lines; the pull"
 		+ "request changes the corpus alone"
+	SPEC "the plan holds a brigade clean command with a dry run listing what would go before"
+		+ "anything is removed, for the kinds DESC 3 names, so that the scans of @TASK.B33 have an"
+		+ "action"
+		REF @TASK.B33
 	RATIONALE "the purges are specified task by task, each with its key and its moment, and several"
 		+ "kinds have none; the user wants one configurable feature, so it is planned as a"
 		+ "milestone of its own, as the preflight was by @TASK.B98, rather than as one task"
@@ -6624,6 +6652,7 @@ TASK B104
 		+ "Si la réponse est nom, il faut créer une tâche en draft pour dire d'établir un plan pour"
 		+ "ajouter la fonctionnalité (un peu comme on a fait avec la tâche qui doit"
 		+ "programmer/planifier la feature \\\"preflight\\\")\""
+	SOURCE "use-case map of 2026-10-16, finding C18"
 
 TASK B105
 	TITLE "The claude-code client streams its events into stdout.log as they happen, and brigade"
@@ -7438,10 +7467,12 @@ TASK B110
 TASK B111
 	TITLE "a fallback configured in config.toml takes over a run whose client reports its quota"
 		+ "exhausted"
-	STATUS draft
+	STATUS archived
 	MILESTONE @MILESTONE.ADD0
 	COMPONENT "runs"
 	ROLE ada
+	DESC "merged into @TASK.B144, the same fallback on an exhausted quota, which carries its SPEC"
+		REF @TASK.B144
 	DESC "to settle in the refinement: what a fallback names, another model of the same client, a"
 		+ "row of [reasoning] or another client adapter; whether it is set per reasoning level, per"
 		+ "slot or once; whether the run resumes its session on the fallback or relaunches from its"
@@ -7465,6 +7496,7 @@ TASK B111
 		REF @TASK.B19
 	SOURCE "the user's words of 2026-10-09, \"je pense on peut ajouter une tâche en ADD0 pour"
 		+ "rendre configurable un fallback quand le quota est épuisé\""
+	SOURCE "use-case map of 2026-10-16, finding C15"
 
 TASK B112
 	TITLE "the claude-code adapter classifies \"out of usage credits\" as a rate limit"
@@ -8377,6 +8409,9 @@ TASK B140
 	SPEC "brigade project add, finding a corpus already in the repository, asks the user which mode"
 		+ "to set"
 	SPEC "plan context and plan record honour the area and none modes"
+	SPEC "brigade project add asks or confirms the corpus folder at registration, not the mode"
+		+ "alone, where today brigade/registry/discover_project.py:26 takes the common path of the"
+		+ "tracked .awawa files"
 	AFTER @TASK.B139
 	RATIONALE "the modes of @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus left after the control"
 		+ "mode @TASK.B10 and @TASK.B139 deliver"
@@ -8384,6 +8419,7 @@ TASK B140
 		REF @TASK.B10
 		REF @TASK.B139
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B10"
+	SOURCE "use-case map of 2026-10-16, finding A21"
 
 TASK B141
 	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
@@ -8566,10 +8602,17 @@ TASK B144
 		+ "to its client"
 	SPEC "config.toml names a fallback client; a rate limit of the client moves the next launches"
 		+ "to it instead of pausing every running wave"
+	SPEC "a run whose segment ends on an exhausted quota, with a fallback configured, continues on"
+		+ "the fallback, and the ledger records the switch with the client and model left and taken"
+	SPEC "without a fallback configured, the run ends as @TASK.B19 sets"
+		REF @TASK.B19
 	AFTER @TASK.B19
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19: \"toutes les vagues, mais je"
 		+ "pense qu'on doit prévoir un client fallback configurable (qui sera implémenté plus tard"
 		+ "en ADD0)\""
+	SOURCE "use-case map of 2026-10-16, finding C15: @TASK.B111 merged into this task, its two SPEC"
+		+ "lines carried here"
+		REF @TASK.B111
 
 TASK B145
 	TITLE "config.toml binds a client per slot in [slot_clients], so that two clients serve one"
@@ -9000,6 +9043,7 @@ TASK B153
 	COMPONENT "brigade, tests"
 	ROLE ada
 	AFTER @TASK.B152
+	AFTER @TASK.B21
 	SPEC "P1, awawa through its gateway: every awawa argv is built in brigade/corpus/ by a named"
 		+ "operation on run_awawa, with the gateway's timeout; grep -rn 'argv=(\"awawa\"' brigade"
 		+ "--include='*.py' names modules of brigade/corpus/ alone, where origin/main at d64a7ad"
@@ -9260,6 +9304,11 @@ TASK B153
 		+ "record Command porte des défauts (requête = options, sortie 0), un rendu JSON partagé va"
 		+ "dans brigade/system/render_json.py ; un module de commande ne déclare que ce qui diffère"
 		+ "du défaut. DESC 3 réécrit, la décision prend un SOURCE daté d'aujourd'hui. »"
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"B153 AFTER"
+		+ "B21 (Recommended)\": the rewrite of tests/cli waits for the last flow of M1, @TASK.B21,"
+		+ "and stays in M1"
+		REF @TASK.B21
+	SOURCE "use-case map of 2026-10-16, finding X7"
 
 TASK B154
 	TITLE "ruff.toml selects the 17 families the code already satisfies and DTZ, SIM, PERF, RUF,"
@@ -9571,3 +9620,428 @@ TASK B163
 		+ "command in a string and moves the project's commands to exec steps, settles the"
 		+ "vocabulary overlaps, one command group per slot among them, removes dead fields, adds"
 		+ "the README glossary table with a guard, and plans the remediation of anything left"
+
+TASK B164
+	TITLE "brigade run takes --wave and --task, run.json and every run.finished carry them, and"
+		+ "runs list, wave show and wave new follow a run from them"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "brigade run takes --wave <request> and --task <task>, both optional; run.json and every"
+		+ "run.finished of the run carry wave and task, null with the reason not launched by a wave"
+		+ "when they are absent, where today brigade/runs/describe_finished.py:93-94 writes null"
+		+ "for every run"
+	SPEC "the tick launches each build run with --wave and --task, so that brigade ledger --wave"
+		+ "retains the runs of the wave, where today brigade/ledger/describe_wave.py:57 retains"
+		+ "none"
+	SPEC "brigade runs list --task <task> lists the runs of a task, and brigade wave show prints"
+		+ "the run of each task in a column"
+	SPEC "brigade wave new prints the command that follows its planner run"
+	SPEC "@TASK.B151 is archived at delivery, its SPEC 1, wave and task null on every run, made"
+		+ "false by this task"
+		REF @TASK.B151
+	RATIONALE "the ruling is @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished;"
+		+ "brigade run stays generic, the two options being optional"
+		REF @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
+	SOURCE "use-case map of 2026-10-16, findings X1, G9 and B9"
+
+TASK B165
+	TITLE "A wave is keyed in the ledger by the key the open question settles, never by the"
+		+ "MILESTONE name alone"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "ledger"
+	ROLE ada
+	DESC "to be written once @OPEN_QUESTION.TheKeyOfAWaveInTheLedger is ruled: the field of"
+		+ "wave.started, task.state and the other wave events that carries the key, and the readers"
+		+ "that filter on it"
+		REF @OPEN_QUESTION.TheKeyOfAWaveInTheLedger
+	SPEC "wave.started, task.state and every event keyed by a wave carry the key the question"
+		+ "settles; brigade/waves/read_task_states.py, brigade/tick/build_snapshot.py and"
+		+ "brigade/ledger/describe_wave.py filter on it, so that two projects whose waves name the"
+		+ "same MILESTONE share no task state"
+	SPEC "a second wave on a MILESTONE already run is told apart from the first by brigade ledger"
+		+ "--wave"
+	SOURCE "use-case map of 2026-10-16, findings X2 and C2"
+
+TASK B166
+	TITLE "Every action of the tick is guarded by a fact and isolated: an existing branch or"
+		+ "worktree reused, task.state written before the launch, a failed action recorded and the"
+		+ "tick going on"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE ada
+	SPEC "the launch of a task reuses the branch task/<slug>/<task> and its worktree when they"
+		+ "exist, where today brigade/git/add_branch_worktree.py:22 fails on the existing branch at"
+		+ "every tick"
+	SPEC "task.state running is written before the run is spawned, so that a replay of the launch"
+		+ "after a crash is idempotent"
+	SPEC "a failed action records a ledger event naming the action and the failure, and the"
+		+ "executor applies the remaining actions; the heartbeat is written at the end of the tick"
+		+ "with the count of failures, where today brigade/tick/apply_actions.py:10-11 lets the"
+		+ "first failure end the tick before brigade/commands/tick.py:85-98 writes it"
+	SPEC "a wave whose task names carry no number is parked with the reason and the plan of the"
+		+ "other waves goes on, where today brigade/tick/plan.py:54-58 ends the tick of every"
+		+ "project"
+	SPEC "brigade wave start and brigade plan record are replayable after a failure between their"
+		+ "writes: a plan record whose integration branch exists for the same REQUEST marks it"
+		+ "planned alone, where today brigade/planning/record_plan.py:141-142 refuses the existing"
+		+ "branch, and a wave start whose REQUEST is running appends no second wave.started"
+	SPEC "no compensation: a failed action undoes nothing, the next tick recomputing from facts"
+	RATIONALE "DESC 3 of @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction as"
+		+ "amended on 2026-10-17: each action guarded by a fact, a failed action recorded and the"
+		+ "tick going on, no compensation"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "use-case map of 2026-10-16, findings X3, G3, B1, B10, B11 and B7"
+
+TASK B167
+	TITLE "Each STATUS of a REQUEST has its writer: the tick writes reporting, delivered and"
+		+ "closed, brigade wave cancel writes cancelled, and paused leaves the schema"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "waves"
+	ROLE ada
+	DESC "to settle in the refinement: what wave cancel undoes, the live runs, the worktrees and"
+		+ "branches, the open pull requests"
+	SPEC "the tick moves a running REQUEST to reporting when every task of its wave is merged or"
+		+ "parked, the moment it runs the wave-report study of @TASK.B20"
+		REF @TASK.B20
+	SPEC "the tick moves a reporting REQUEST to delivered when the report is committed, and a"
+		+ "delivered REQUEST to closed when the integration pull request is merged"
+	SPEC "brigade wave cancel <request> moves a REQUEST to cancelled; a REQUEST already delivered,"
+		+ "closed or cancelled exits 1 naming its STATUS"
+	SPEC "paused leaves REQUEST.STATUS of brigade/corpus/data/schema.awawa.tpl; the pause of a wave"
+		+ "is read from the ledger, wave.paused without a wave.resumed after it, as @TASK.B19 sets"
+		REF @TASK.B19
+	RATIONALE "the ruling is @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema;"
+		+ "today brigade/waves/mark_request_running.py:12 is the last writer of the eight values"
+		REF @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
+	SOURCE "use-case map of 2026-10-16, findings X4, G7 and B5"
+
+TASK B168
+	TITLE "The tick parks the task of a dead run with its reason, and brigade wave requeue"
+		+ "re-queues a parked task by hand"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE ada
+	SPEC "the snapshot reconciles the live runs with the tasks in state running: a running task"
+		+ "whose run is dead, as brigade runs list reports it, is moved to parked with the reason"
+		+ "run dead and the id of the run, where today brigade/tick/plan.py:46 never reopens"
+		+ "running"
+	SPEC "brigade wave requeue <request> <task> records task.state queued for a parked task, so"
+		+ "that the next tick may launch it; a task not parked exits 1 naming its state"
+	SPEC "the tick re-queues no task itself: SPEC 4 of @TASK.B12, parked until it is unparked by"
+		+ "hand, stays true"
+		REF @TASK.B12
+	SOURCE "use-case map of 2026-10-16, findings G1, B3, G2 and B4"
+
+TASK B169
+	TITLE "brigade wave replan relaunches by hand the planner of a REQUEST left planning by a dead"
+		+ "or blocked planner"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "waves"
+	ROLE ada
+	SPEC "brigade wave replan <request> launches brigade run wave-plan --slot plan request=<name>"
+		+ "detached for a REQUEST in planning whose last planner run is dead or ended blocked, and"
+		+ "prints the id of the run; a REQUEST in another STATUS, or whose planner run is live,"
+		+ "exits 1 naming it"
+	SPEC "brigade wave show of a planning REQUEST says whether its planner run is live, dead or"
+		+ "blocked"
+	SPEC "the tick relaunches no planner:"
+		+ "@DECISION.ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked"
+		+ "stays true, a second lint failure ending the run blocked with no automatic relaunch"
+		REF @DECISION.ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked
+	SOURCE "use-case map of 2026-10-16, findings G4 and B6"
+
+TASK B170
+	TITLE "brigade scheduler status exits non-zero when the last tick is older than the interval"
+		+ "allows, and summarises the paused waves and the parked tasks"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "scheduler"
+	ROLE ada
+	SPEC "brigade scheduler status exits 1 when the heartbeat of the last tick is older than the"
+		+ "interval allows, or when no tick ever ran while a scheduler is installed, where today"
+		+ "brigade/commands/scheduler_status.py:59-60 exits 0 on none and on last tick never"
+	SPEC "it prints the paused waves with their reason, quota or forge_account, and their"
+		+ "resume_at, and the parked tasks with their reason, text and --json"
+	SPEC "it resumes no wave: SPEC 4 of @TASK.B19, brigade wave resume run by the user after"
+		+ "forge_account.unavailable, stays true"
+		REF @TASK.B19
+	SOURCE "use-case map of 2026-10-16, findings G8, G5 and A9"
+
+TASK B171
+	TITLE "The pull request from integration to main is opened in forge mode, the default, and the"
+		+ "wave report and the rehearsal read it"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE ada
+	DESC "to settle in the refinement: whether the pull request opens at plan record or at the"
+		+ "first merged task, and where its number is recorded"
+	SPEC "under PROJECT.FORGE github and a POLICY.REVIEW other than local, the pull request from"
+		+ "integration/<slug> to PROJECT.MAIN is opened as the login of the key cli, where today"
+		+ "brigade/planning/record_plan.py:177-178 pushes the branch and nothing opens it;"
+		+ "@TASK.B100 keeps the one of REVIEW local"
+		REF @TASK.B100
+	SPEC "SPEC 3 of @TASK.B20, which updates the integration pull request, and SPEC 1 of @TASK.B21,"
+		+ "a wave delivered to the integration pull request, read the pull request this task opens"
+		REF @TASK.B20
+		REF @TASK.B21
+	SOURCE "use-case map of 2026-10-16, findings X10 and G6"
+
+TASK B172
+	TITLE "brigade doctor checks that the user systemd instance lingers, so that the timer survives"
+		+ "the end of the session"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "doctor"
+	ROLE ada
+	SPEC "brigade doctor reads loginctl show-user -p Linger when the scheduler is the user systemd"
+		+ "timer and reports a finding naming loginctl enable-linger when it is no, where today"
+		+ "brigade/system/read_user_systemd_state.py:11-19 probes is-system-running alone"
+	SPEC "brigade scheduler install reports the same finding after writing the timer"
+	SOURCE "use-case map of 2026-10-16, findings X11 and G10"
+
+TASK B173
+	TITLE "brigade doctor validates the agents of [slots], the CLIENT and ROLESET of each project,"
+		+ "and the path, MAIN and commands of each registered project"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "doctor"
+	ROLE ada
+	SPEC "doctor reports a finding for a [slots] entry naming an AGENT no role set declares, for a"
+		+ "[slot_clients] entry naming a client no adapter answers, and for a PROJECT whose CLIENT"
+		+ "or ROLESET resolves to nothing, where today brigade/commands/doctor.py:375-396 reports"
+		+ "none of them and the error surfaces at the unattended run"
+	SPEC "doctor reports a finding per registered project whose PATH does not exist, whose MAIN is"
+		+ "not a branch of the repository, or the first word of whose SETUP, ACCEPTANCE or HEAVY"
+		+ "line is no executable on PATH"
+	SOURCE "use-case map of 2026-10-16, findings A3 and A10"
+
+TASK B174
+	TITLE "The read cost of a tick is bounded: one awawa refs per task, the ledger read once per"
+		+ "wave per tick"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "tick"
+	ROLE ada
+	DESC "to settle in the refinement: whether the views of brigade ledger and /api/ledger of"
+		+ "@TASK.B27 share the bound, brigade/ledger/read_ledger.py:96-106 reading every monthly"
+		+ "file at every call"
+		REF @TASK.B27
+	SPEC "a tick runs awawa refs at most once per task of a running wave, for the queued tasks"
+		+ "whose AFTER are satisfied alone, where today brigade/tick/read_live_blockers.py:40-44"
+		+ "runs refs then show per citing type for every task at every round, up to 10 rounds"
+	SPEC "the ledger is read at most once per wave per tick, the rounds of"
+		+ "brigade/tick/run_rounds.py reusing the states read, where today"
+		+ "brigade/tick/build_snapshot.py:112-129 rereads it at every round"
+	SOURCE "use-case map of 2026-10-16, findings B12 and C11"
+
+TASK B175
+	TITLE "The ledger views give the cost by wave and by task, a --task view, --since on every view"
+		+ "and a comparison over a range"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "ledger"
+	ROLE ada
+	SPEC "brigade ledger --wave <request> prints the cost in USD and the tokens of the wave, summed"
+		+ "from the run.finished events carrying it, and one row per task with its steps, duration"
+		+ "and cost, where today brigade/ledger/describe_wave.py:56-84 reads neither cost_usd nor"
+		+ "usage"
+	SPEC "brigade ledger --task <task> prints the runs of a task with their outcome, steps,"
+		+ "duration and cost"
+	SPEC "--since applies to every view of brigade ledger, where today"
+		+ "brigade/commands/ledger.py:129-132 accepts it with --project alone"
+	SPEC "brigade ledger compare takes a range for each side, where today"
+		+ "brigade/ledger/describe_comparison.py:28-36 cuts at one day with no upper bound"
+	AFTER @TASK.B164
+	SOURCE "use-case map of 2026-10-16, findings C1, C5, C3 and C4"
+
+TASK B176
+	TITLE "The trace of a failed process keeps the tail of its stderr"
+	STATUS draft
+	MILESTONE @MILESTONE.M6
+	COMPONENT "processes"
+	ROLE ada
+	DESC "to settle in the refinement: the bound of the tail and the scrubbing of secrets"
+	SPEC "the trail of a failed subprocess keeps the tail of its stderr, and brigade processes show"
+		+ "--failed prints it, where today brigade/system/process_trace.py:15 keeps the argv, the"
+		+ "exit code and the duration alone"
+	RATIONALE "DESC 1 of @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa says the"
+		+ "record of a subprocess holds stdout and stderr; the trace drops them, so a failure is"
+		+ "explained only by replaying with --verbose"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	SOURCE "use-case map of 2026-10-16, finding A17"
+
+TASK B177
+	TITLE "brigade init probes the client adapters present, writes the client key, prints the next"
+		+ "steps and takes the remote of the configuration repository"
+	STATUS draft
+	MILESTONE @MILESTONE.M7
+	COMPONENT "install"
+	ROLE ada
+	SPEC "brigade init probes every client adapter present, built-in or brigade-client-<name> on"
+		+ "PATH, and writes the client key of config.toml when exactly one answers; with none or"
+		+ "several it leaves the key commented and says so, where today config.toml.tpl is"
+		+ "commented whole and doctor exits 1 on config.toml names no client"
+	SPEC "no client is a hard-coded default: @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters"
+		+ "refuses it"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	SPEC "brigade init prints the steps left from the state it finds, doctor, the client, project"
+		+ "add and scheduler install, where today brigade/commands/init.py:91 names none"
+	SPEC "brigade init takes the remote of the configuration repository and sets it as origin,"
+		+ "where today brigade/commands/init.py:28 creates a local repository alone"
+	SOURCE "use-case map of 2026-10-16, findings A1, A22 and A23"
+
+TASK B178
+	TITLE "The wave views: wave show --plan, wave reject, the pause shown, wave list --status, and"
+		+ "the cause of each task not launched in tick --dry-run"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "waves"
+	ROLE ada
+	SPEC "brigade wave show --plan prints, per task of the wave, its AFTER edges and its SPEC"
+		+ "lines, where today brigade/commands/wave_show.py:15-24 prints id, title, state and pull"
+		+ "request"
+	SPEC "brigade wave reject <request> moves a planned REQUEST back to planning"
+	SPEC "brigade wave show and brigade tick --dry-run print the pause of a wave, its reason and"
+		+ "its resume_at, from the events of @TASK.B19, where today"
+		+ "brigade/ledger/describe_wave.py:40-42 reads them and nothing prints them"
+		REF @TASK.B19
+	SPEC "brigade wave list --status <status> narrows the list to one STATUS"
+	SPEC "brigade tick --dry-run lists the tasks not launched with the cause of each, an AFTER not"
+		+ "merged, a blocker, no free slot or parked, where today brigade/commands/tick.py:116-123"
+		+ "prints the actions retained alone"
+	SOURCE "use-case map of 2026-10-16, findings B8, B14, B17 and B19"
+
+TASK B179
+	TITLE "brigade scheduler uninstall, one interval constant shared by the timer, the crontab line"
+		+ "and the tick, and scheduler status detecting a drifted installed line"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "scheduler"
+	ROLE ada
+	SPEC "brigade scheduler uninstall removes the user timer and its unit, or the crontab line by"
+		+ "its marker, and exits 0 when nothing is installed"
+	SPEC "the interval of the tick is one constant of brigade, five minutes as"
+		+ "@DECISION.ADeterministicTickReplacesTheCoordinatorAgent sets, which brigade.timer.tpl,"
+		+ "crontab-line.tpl and the tick read, where today"
+		+ "brigade/adapters/schedulers/data/brigade.timer.tpl, crontab-line.tpl and"
+		+ "brigade/commands/tick.py:37 each write it"
+		REF @DECISION.ADeterministicTickReplacesTheCoordinatorAgent
+	SPEC "brigade scheduler status reports the installed unit or line as drifted when its argv[0],"
+		+ "PATH or XDG variables differ from the running brigade's,"
+		+ "brigade/commands/scheduler_install.py:25-29 freezing them at install"
+	SOURCE "use-case map of 2026-10-16, findings A8, B15 and A14"
+
+TASK B180
+	TITLE "brigade project set merges fields into a PROJECT entity, POLICY included, and brigade"
+		+ "project remove retires one"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "registry"
+	ROLE ada
+	SPEC "brigade project set <name> <FIELD>=<value> ... merges the fields given, CLIENT, ROLESET,"
+		+ "ROLE, SLOTS, MERGE, PRIVATE and the fields of the project's POLICY among them, into the"
+		+ "entity and leaves the other fields as they are, through awawa fmt, awawa lint --strict"
+		+ "and one commit; a field the schema does not declare exits 2 naming it"
+	SPEC "brigade project remove <name> removes the PROJECT entity, and refuses, naming them, when"
+		+ "entities of the operational corpus cite it"
+	SPEC "SPEC 8 of @TASK.B04 stays true: project add --force still replaces the entity"
+		REF @TASK.B04
+	SOURCE "use-case map of 2026-10-16, findings A4, A5, A6 and A7"
+
+TASK B181
+	TITLE "collect and collectors list take --project, collectors show prints a collector with its"
+		+ "parameters, and cache true without declared inputs is refused"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "studies"
+	ROLE ada
+	SPEC "brigade collect --project <name> and brigade collectors list --project <name> resolve the"
+		+ "project through the registry, the current directory when absent, where today"
+		+ "brigade/commands/collect.py:63 and brigade/commands/collectors_list.py:27 take"
+		+ "Path.cwd()"
+	SPEC "brigade collectors show <name> prints the collector, its source, its parameters, whether"
+		+ "its document is cached and its cache inputs, text and --json"
+	SPEC "a collector whose document declares cache true and for which no cache input is declared"
+		+ "is refused naming it, where today brigade/collecting/read_cache_input.py:8-23 keys it on"
+		+ "none and never invalidates it outside --refresh, as DESC 4 of"
+		+ "@DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached rules"
+		REF @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached
+	SOURCE "use-case map of 2026-10-16, findings C9, C17 and C10"
+
+TASK B182
+	TITLE "brigade runs show <id> prints the progress file of the run, text and --json"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "runs"
+	ROLE ada
+	SPEC "brigade runs show <id> prints the progress file runs/<id>/progress.md after the segments,"
+		+ "and carries it under progress with --json, where today"
+		+ "brigade/commands/runs_show.py:108-117 prints the summary and the log alone"
+	RATIONALE "SPEC 3 of @TASK.B94, in M3 AFTER @TASK.B27, bound this command to the server; it is"
+		+ "removed from B94 and carried here, a command of the CLI needing no dashboard"
+		REF @TASK.B94
+		REF @TASK.B27
+	SOURCE "use-case map of 2026-10-16, finding C13"
+
+TASK B183
+	TITLE "brigade config get prints the configuration as brigade reads it, one key or all"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "system"
+	ROLE ada
+	SPEC "brigade config get [<key>] prints the value of one key of config.toml as"
+		+ "read_configuration resolves it, defaults included, or every key without one, text and"
+		+ "--json; an unknown key exits 2 naming it"
+	SPEC "no config set: REJECTED 5 of"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables stays, tomllib"
+		+ "reading only"
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	SOURCE "use-case map of 2026-10-16, finding A2"
+
+TASK B184
+	TITLE "brigade roles list and roles show take --project and resolve the ROLESET and ROLE of the"
+		+ "project"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "roles"
+	ROLE ada
+	SPEC "brigade roles list --project <name> and brigade roles show <slot> --project <name>"
+		+ "resolve the roles with the ROLESET and ROLE bindings of the PROJECT entity, as a run of"
+		+ "that project does, where today brigade/commands/roles_list.py:53 and"
+		+ "brigade/commands/roles_show.py:33 hard-code no project bindings"
+	SOURCE "use-case map of 2026-10-16, finding A18"
+
+TASK B185
+	TITLE "A leading ~ in a path of config.toml is expanded, in brigade/system/paths alone"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "system"
+	ROLE ada
+	SPEC "instructions, worktree_root and every other path key of config.toml expand a leading ~ to"
+		+ "the home directory, in brigade/system/paths, the one module DESC 1 of"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables allows expanduser,"
+		+ "where today brigade doctor prints awawa: no working directory ~/.ai for instructions ="
+		+ "~/.ai"
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+	SOURCE "use-case map of 2026-10-16, finding A16"
+
+TASK B186
+	TITLE "The adapter commands refuse a stdin that is a terminal, and their help says what stdin"
+		+ "carries"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "adapters"
+	ROLE ada
+	SPEC "an adapter command reading its request on stdin exits 2 with a usage message when stdin"
+		+ "is a terminal, where today brigade/commands/adapter_launch_argv.py:17 blocks on it"
+	SPEC "the help of each adapter command says what stdin carries, and the help of adapter probe"
+		+ "names no request it does not read, where today brigade/commands/adapter_probe.py:36 does"
+	SOURCE "use-case map of 2026-10-16, finding A20"
