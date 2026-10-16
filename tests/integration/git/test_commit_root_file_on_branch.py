@@ -6,7 +6,6 @@ from brigade.git.commit_root_file_on_branch import RootFileCommit, commit_root_f
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
 
-IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 WAVE_BRANCH = "integration/M1-empty-cart"
 
 
@@ -26,10 +25,12 @@ class CommitRootFileOnBranchTest(unittest.TestCase):
         self.repository = Path(self.root.name) / "repository"
         self.repository.mkdir()
         run_git(self.repository, "init", "--quiet", "--initial-branch=main")
+        run_git(self.repository, "config", "user.name", "Ada Lovelace")
+        run_git(self.repository, "config", "user.email", "ada@example.org")
         (self.repository / ".gitignore").write_text("build/\n")
         (self.repository / "README.md").write_text("# shop\n")
         run_git(self.repository, "add", ".gitignore", "README.md")
-        run_git(self.repository, *IDENTITY, "commit", "--quiet", "-m", "first")
+        run_git(self.repository, "commit", "--quiet", "-m", "first")
         run_git(self.repository, "branch", WAVE_BRANCH)
 
     def tearDown(self):
