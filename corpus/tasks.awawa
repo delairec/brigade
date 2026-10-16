@@ -1352,13 +1352,13 @@ TASK B13
 		+ "key per section; tests/cli prove each section and the exit 1 cases on a registered"
 		+ "repository in a temporary directory through the fake adapter"
 	AFTER @TASK.B12
-	RATIONALE "step 5 of the wave lifecycle of the Blueprint, artifact/parts/plan.html: the build"
-		+ "run's first message is one command, brigade task context, measured against the 61 fresh"
-		+ "task runs whose first edit came after 23 steps in median with 134 000 tokens read; the"
-		+ "package lists ancestry and setup printed as commands and output, awawa context and lint"
-		+ "--closure, the path triggers' rules, the project files, the acceptance commands, the"
-		+ "reserved task number, the run's temp dir and the attribution lines, and the mockup of"
-		+ "artifact/parts/mockups.html writes it to runs/<id>/context.md"
+	RATIONALE "step 5 of the wave lifecycle of the Blueprint, artifact/blueprint/parts/plan.html:"
+		+ "the build run's first message is one command, brigade task context, measured against the"
+		+ "61 fresh task runs whose first edit came after 23 steps in median with 134 000 tokens"
+		+ "read; the package lists ancestry and setup printed as commands and output, awawa context"
+		+ "and lint --closure, the path triggers' rules, the project files, the acceptance"
+		+ "commands, the reserved task number, the run's temp dir and the attribution lines, and"
+		+ "the mockup of artifact/blueprint/parts/mockups.html writes it to runs/<id>/context.md"
 	RATIONALE "the user ruled every item of the Blueprint's package kept unless a reason is stated:"
 		+ "the one narrowing is the project section, the text of AGENTS.md without the files it"
 		+ "names, because a project brigade delivers carries a corpus whose rules reach the task"
@@ -1470,9 +1470,9 @@ TASK B15
 	AFTER @TASK.B08
 	AFTER @TASK.B14
 	AFTER @TASK.B142
-	RATIONALE "the eight checks are those of the pass, section 7 of artifact/parts/plan.html; the"
-		+ "body and the promotion check what @TASK.B142 writes, its template and the promotion of"
-		+ "the task, so this task follows it"
+	RATIONALE "the eight checks are those of the pass, section 7 of"
+		+ "artifact/blueprint/parts/plan.html; the body and the promotion check what @TASK.B142"
+		+ "writes, its template and the promotion of the task, so this task follows it"
 		REF @TASK.B142
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
 		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
@@ -1512,8 +1512,8 @@ TASK B16
 	RATIONALE "the verdict follows the review mode of the project,"
 		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode, declared by"
 		+ "@TASK.B99; the rules of the path triggers are gathered as @TASK.B13 gathers them for a"
-		+ "build run, and step 7 of the wave lifecycle of artifact/parts/plan.html sets what the"
-		+ "run judges"
+		+ "build run, and step 7 of the wave lifecycle of artifact/blueprint/parts/plan.html sets"
+		+ "what the run judges"
 		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 		REF @TASK.B99
 		REF @TASK.B13
@@ -1552,7 +1552,7 @@ TASK B17
 		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 		REF @TASK.B99
 	RATIONALE "gh pr merge run without a terminal needs a method, and PROJECT.MERGE has no default"
-		+ "today; step 8 of the wave lifecycle of artifact/parts/plan.html merges into"
+		+ "today; step 8 of the wave lifecycle of artifact/blueprint/parts/plan.html merges into"
 		+ "integration/* only"
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
 		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
@@ -1580,8 +1580,8 @@ TASK B18
 		+ "counting none; past POLICY.VERIFY_ROUNDS rounds the task is parked with the reason and"
 		+ "the ledger event task.parked"
 	AFTER @TASK.B17
-	RATIONALE "step 7b of the wave lifecycle of artifact/parts/plan.html; the rebase path is"
-		+ "@TASK.B143, split from this task in its refinement"
+	RATIONALE "step 7b of the wave lifecycle of artifact/blueprint/parts/plan.html; the rebase path"
+		+ "is @TASK.B143, split from this task in its refinement"
 		REF @TASK.B143
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B14 to B18 grouped: the pause on"
 		+ "forge_account.unavailable moved to @TASK.B19; the worktree removed at merge or close;"
@@ -2821,15 +2821,15 @@ TASK B54
 	ROLE ada
 	SPEC "the board renders the corpus's statuses, draft, todo, implemented and archived, as they"
 		+ "are or through one mapping declared in one place of the page"
-		IMPL "artifact/index.html::var STATUS_TONES = {"
+		IMPL "artifact/blueprint/index.html::var STATUS_TONES = {"
 	SPEC "the board renders a task document whose field status holds any corpus value; the page"
 		+ "holds no other status vocabulary"
-		IMPL "artifact/index.html::function isCorpusStatus(status)"
-		IMPL "artifact/index.html::function labelStatusOf(t)"
+		IMPL "artifact/blueprint/index.html::function isCorpusStatus(status)"
+		IMPL "artifact/blueprint/index.html::function labelStatusOf(t)"
 	SPEC "the board's status control is read-only, or records a proposal in a field of its own,"
 		+ "distinct from status; no action of the page writes status"
-		IMPL "artifact/index.html::.update({ notes: text, updated_at"
-		IMPL "artifact/index.html::var badge = el('span', badgeAttrs);"
+		IMPL "artifact/blueprint/index.html::.update({ notes: text, updated_at"
+		IMPL "artifact/blueprint/index.html::var badge = el('span', badgeAttrs);"
 	RATIONALE "the board page of 2026-10-04 edits status in a vocabulary of its own, todo, doing,"
 		+ "review, done and blocked, and cannot display draft: republished with the 53 tasks of the"
 		+ "corpus, all draft, it would show every one as todo; split out of B41 on 2026-10-05 so"
@@ -3206,10 +3206,10 @@ TASK B61
 		IMPL "docs/2026-10-07-foundations-review.md::# Foundations review of brigade, M0, at main"
 			+ "30a7331 (2026-10-07)"
 	SPEC "the report names the commit of main it read; the repository at that commit is checked"
-		+ "against each section of the plan, artifact/parts/plan.html as brought in line with the"
-		+ "decisions, and against every active DECISION of corpus/decisions.awawa; each departure"
-		+ "names the file and the function or the line, and the plan section or the decision it"
-		+ "departs from"
+		+ "against each section of the plan, artifact/blueprint/parts/plan.html as brought in line"
+		+ "with the decisions, and against every active DECISION of corpus/decisions.awawa; each"
+		+ "departure names the file and the function or the line, and the plan section or the"
+		+ "decision it departs from"
 		IMPL "docs/2026-10-07-foundations-review.md::## Departures from the plan and the decisions"
 	SPEC "each risk the foundations carry for a later milestone, M1 to M8, or for the goal of the"
 		+ "tool, the CLI doing the mechanical work and waves running unattended on one machine"
@@ -3237,10 +3237,10 @@ TASK B61
 		IMPL "docs/2026-10-07-foundations-review.md::## Evolvability"
 		IMPL "docs/2026-10-07-foundations-review.md::## Dogfooding: can brigade start delivering"
 			+ "brigade"
-	SPEC "the report is also a page of the Artifact, artifact/parts/review.html behind a Review tab"
-		+ "of artifact/index.html, and the Artifact is republished with it"
-		IMPL "artifact/parts/review.html::<h1>Are the foundations solid?</h1>"
-		IMPL "artifact/index.html::data-src=\"parts/review.html\""
+	SPEC "the report is also a page of the Artifact, artifact/blueprint/parts/review.html behind a"
+		+ "Review tab of artifact/blueprint/index.html, and the Artifact is republished with it"
+		IMPL "artifact/blueprint/parts/review.html::<h1>Are the foundations solid?</h1>"
+		IMPL "artifact/blueprint/index.html::data-src=\"parts/review.html\""
 	AFTER @TASK.B01
 	AFTER @TASK.B02
 	AFTER @TASK.B03
@@ -7074,10 +7074,10 @@ TASK B108
 		REF @TASK.B145
 	RATIONALE "in @MILESTONE.M7 rather than @MILESTONE.ADD0: Portability, a fresh-account install"
 		+ "rehearsal and the forge adapter with its local mode in the milestone table of the"
-		+ "Blueprint, artifact/parts/plan.html, is brigade run off the author's account and forge,"
-		+ "and a second client is brigade run off the author's AI client, the portability"
-		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters rules; ADD0 holds what no milestone"
-		+ "of the MVP needs, and the rehearsal of @TASK.B44 on a second client needs one"
+		+ "Blueprint, artifact/blueprint/parts/plan.html, is brigade run off the author's account"
+		+ "and forge, and a second client is brigade run off the author's AI client, the"
+		+ "portability @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters rules; ADD0 holds what no"
+		+ "milestone of the MVP needs, and the rehearsal of @TASK.B44 on a second client needs one"
 		REF @MILESTONE.M7
 		REF @MILESTONE.ADD0
 		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
@@ -8292,9 +8292,9 @@ TASK B142
 	AFTER @TASK.B13
 	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
 		+ "lifecycle of the Blueprint, brigade task check, brigade task pr, brigade task promote"
-		+ "--pr N in artifact/parts/plan.html; the forge adapter answers no push nor pull request"
-		+ "today, brigade/adapters/forges/github.py holding the login environment and the account"
-		+ "alone"
+		+ "--pr N in artifact/blueprint/parts/plan.html; the forge adapter answers no push nor pull"
+		+ "request today, brigade/adapters/forges/github.py holding the login environment and the"
+		+ "account alone"
 		REF @TASK.B13
 	RATIONALE "F6 of the foundations review: the milestone the pull request carries is the one"
 		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle rules; under"
@@ -8358,8 +8358,8 @@ TASK B143
 	AFTER @TASK.B17
 	AFTER @TASK.B18
 	RATIONALE "split from @TASK.B18 in its refinement; step 7b of the wave lifecycle of"
-		+ "artifact/parts/plan.html: a clean git rebase costs no step, the rebase slot runs only"
-		+ "when git reports a conflict"
+		+ "artifact/blueprint/parts/plan.html: a clean git rebase costs no step, the rebase slot"
+		+ "runs only when git reports a conflict"
 		REF @TASK.B18
 	RATIONALE "the snapshot of @TASK.B14 tells whether the base moved past the head; the push"
 		+ "records its login as every write to the forge does under"

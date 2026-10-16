@@ -2838,3 +2838,25 @@ DECISION TheTickGitignoresBrigadeWorktreesAloneAndTheProjectVersionsItsCollector
 		+ "disposable part alone"
 	SOURCE "the user's « ok » of 2026-10-16 on the session's recommendation: only"
 		+ ".brigade/worktrees/ is gitignored"
+
+DECISION TheUseCaseMapIsKeptAsSourcesToBeRedone
+	TITLE "the use-case map is kept in artifact/use-cases/ with the briefs that redo it, and each"
+		+ "Artifact of the repository has a subfolder of artifact/"
+	STATUS active
+	DESC "artifact/use-cases/ holds the page of the Artifact \"Brigade cas d'utilisation\", the"
+		+ "data files it fetches and the briefs of the runs that produce them; redoing the map"
+		+ "reruns those briefs and republishes the page, never edits the data by hand"
+	DESC "the sources of the Blueprint move to artifact/blueprint/; a path of the corpus naming"
+		+ "them names the new place"
+		REF @DECISION.TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard
+	DESC "the page carries no automated test; it is checked by viewing it served locally, then"
+		+ "published"
+	REJECTED "the sources in the session's scratchpad only: the exercise could not be redone"
+	REJECTED "artifact/use-cases/ beside the Blueprint's index.html and parts/ at the root of"
+		+ "artifact/: two Artifacts sharing one folder"
+	RATIONALE "the map is a snapshot of the project by use case, worth redoing as the plan moves;"
+		+ "the briefs and the data shape are what a later session would otherwise rediscover"
+	SOURCE "the user's words of 2026-10-16, « On pourra ranger les fichiers nécessaires à"
+		+ "l'artefact dans un dossier du projet au cas où on a besoin de refaire cet exercice plus"
+		+ "tard », and their answer « artifcat/use-cases/ and we move the blueprint's related files"
+		+ "inside a blueprint subfolder »"

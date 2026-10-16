@@ -1,0 +1,435 @@
+<title>Brigade cas d'utilisation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working blueprint — summary strip, then one sheet per use case (intent → manual path → code sequence), then the register of holes and defects. */
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --ink: #15202b; --muted: #586674; --rule: #d3dae2; --accent: #1d5c8a; --accent-soft: #dbe8f2;
+  --ok: #2c7a4b; --todo: #a8690f; --draft: #6a4fc4; --missing: #c03a33;
+  --ok-soft: #e1f1e7; --todo-soft: #f8ecd6; --draft-soft: #ebe5fb; --missing-soft: #f9e2e0;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e141a; --surface: #151d25; --ink: #e2e8ee; --muted: #93a1ae; --rule: #2a3540; --accent: #72b2df; --accent-soft: #1b2e3d;
+  --ok: #62c08a; --todo: #e3a94c; --draft: #a796f2; --missing: #ef6d64;
+  --ok-soft: #173024; --todo-soft: #33270f; --draft-soft: #251f3e; --missing-soft: #3a1a18; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e141a; --surface: #151d25; --ink: #e2e8ee; --muted: #93a1ae; --rule: #2a3540; --accent: #72b2df; --accent-soft: #1b2e3d;
+  --ok: #62c08a; --todo: #e3a94c; --draft: #a796f2; --missing: #ef6d64;
+  --ok-soft: #173024; --todo-soft: #33270f; --draft-soft: #251f3e; --missing-soft: #3a1a18; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) }
+.wrap > *, #families > *, section.family > *, #issues > *, .issues > * { min-width: 0 }
+.issue, .issue *, article.uc p, .paths li, .better { overflow-wrap: anywhere }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 85%; text-wrap: balance; margin: 0; line-height: 1.15 }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 800; letter-spacing: -0.01em }
+h2 { font-size: 26px; font-weight: 750 }
+h3 { font-size: 20px; font-weight: 700 }
+code, .mono { font-family: var(--f-mono); font-size: 12.5px }
+a { color: var(--accent) }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.eyebrow { font: 600 11.5px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.lede { max-width: 70ch; color: var(--muted); margin: 10px 0 0 }
+
+header.top { display: grid; gap: 14px; border-bottom: 2px solid var(--ink); padding-bottom: 22px }
+.stamp { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 12px var(--f-mono); color: var(--muted) }
+
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; min-width: 0 }
+.panel h3 { font-size: 15px; margin-bottom: 12px }
+.ms { display: grid; grid-template-columns: 46px 1fr 34px; align-items: center; gap: 4px 10px; font-size: 12.5px }
+.ms .name { font: 600 12px var(--f-mono) }
+.ms .t { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; margin: -2px 0 4px 56px }
+.bar { display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: var(--rule) }
+.bar span { display: block; height: 100% }
+.num { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); font-family: var(--f-mono); font-size: 11.5px }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13.5px }
+.kv b { font-variant-numeric: tabular-nums; font-family: var(--f-mono) }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; align-items: center }
+.legend svg { vertical-align: middle; margin-right: 6px }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; font: 600 11px/1 var(--f-mono); letter-spacing: .04em; text-transform: uppercase;
+  padding: 5px 8px; border-radius: 3px; white-space: nowrap }
+.s-implemented { color: var(--ok); background: var(--ok-soft) }
+.s-partial { color: var(--todo); background: var(--todo-soft) }
+.s-planned { color: var(--draft); background: var(--draft-soft) }
+.s-unplanned { color: var(--missing); background: var(--missing-soft) }
+.sev-high { color: var(--missing); background: var(--missing-soft) }
+.sev-medium { color: var(--todo); background: var(--todo-soft) }
+.sev-low { color: var(--muted); background: var(--accent-soft) }
+.chip { font: 11.5px var(--f-mono); padding: 3px 6px; border: 1px solid var(--rule); border-radius: 3px; color: var(--muted); white-space: nowrap }
+
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--rule);
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.fgroup { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.fgroup > span { font: 600 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-right: 2px }
+button.tog { font: 500 12.5px var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 5px 9px; cursor: pointer }
+button.tog[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+input#q { font: 13px var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 6px 9px; min-width: 0; width: 220px; max-width: 100% }
+
+.toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px }
+.toc ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px }
+.toc li a { display: grid; grid-template-columns: 1fr auto; gap: 8px; text-decoration: none; color: var(--ink); font-size: 13.5px; padding: 3px 0; border-bottom: 1px dotted var(--rule) }
+.toc li a:hover { color: var(--accent) }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-top: 6px }
+
+section.family { display: grid; gap: 18px }
+.fam-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--ink); padding-bottom: 8px }
+
+article.uc { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 20px 22px; display: grid; gap: 14px; min-width: 0; scroll-margin-top: 70px }
+.uc-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center }
+.uc-head h3 { flex: 1 1 320px }
+.tags { display: flex; flex-wrap: wrap; gap: 6px }
+.intent { font-family: var(--f-display); font-stretch: 90%; font-size: 21px; font-weight: 500; margin: 0; padding-left: 14px; border-left: 3px solid var(--accent); max-width: 60ch }
+.intent::before { content: "« " } .intent::after { content: " »" }
+.paths { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px }
+@media (max-width: 720px) { .paths { grid-template-columns: 1fr } }
+.paths h4 { margin: 0 0 6px; font: 600 11.5px var(--f-mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted) }
+.paths ol { margin: 0; padding-left: 20px; display: grid; gap: 3px; font-size: 14px }
+.paths p { margin: 0; font-size: 14px }
+figure { margin: 0; min-width: 0 }
+.scroller { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg) }
+.scroller svg { display: block; color: var(--ink) }
+figcaption { font-size: 12.5px; color: var(--muted); margin-top: 6px }
+details { font-size: 13px }
+details summary { cursor: pointer; color: var(--accent); font-weight: 500 }
+.tbl { overflow-x: auto; margin-top: 8px }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--rule); vertical-align: top }
+th { font: 600 11px var(--f-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted) }
+td.n { font-family: var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.st { font: 600 11px var(--f-mono) }
+.st-implemented { color: var(--ok) } .st-todo { color: var(--todo) } .st-draft { color: var(--draft) } .st-missing { color: var(--missing) }
+.uc-issues { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px }
+
+.issues { display: grid; gap: 12px }
+.issue { background: var(--surface); border: 1px solid var(--rule); border-left-width: 4px; border-radius: 4px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; scroll-margin-top: 70px }
+.issue.sev-b-high { border-left-color: var(--missing) } .issue.sev-b-medium { border-left-color: var(--todo) } .issue.sev-b-low { border-left-color: var(--rule) }
+.issue-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.issue-head h4 { margin: 0; font: 600 15.5px/1.3 var(--f-body); flex: 1 1 300px }
+.issue p { margin: 0; font-size: 14px; max-width: 80ch }
+.issue .grid2 { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 12px; font-size: 13px }
+.issue .grid2 dt { color: var(--muted); font-size: 12px }
+.issue .grid2 dd { margin: 0; overflow-wrap: anywhere }
+.better { background: var(--ok-soft); border-radius: 3px; padding: 7px 10px; font-size: 13.5px }
+.better b { color: var(--ok) }
+.empty { color: var(--muted); font-style: italic }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">brigade · état du projet par cas d'utilisation</div>
+    <h1>Ce que brigade sait faire, et ce qui manque</h1>
+    <p class="lede" id="lede"></p>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="panel">
+    <h3>Lire un diagramme</h3>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <section id="critical" class="panel" style="display:grid;gap:12px" hidden>
+    <div><div class="eyebrow">L'ambition</div><h2 style="margin-top:6px">Chemin critique vers la livraison nocturne</h2>
+    <p class="lede" style="margin-top:6px">Les tâches qui doivent atterrir, dans l'ordre, pour que « je veux que la vague se livre seule pendant la nuit » fonctionne de bout en bout, puis les étapes qu'aucune tâche ne couvre.</p></div>
+    <div class="tbl"><table id="cp"><thead><tr><th>#</th><th>Tâche</th><th>État</th><th>Ce qu'elle apporte</th><th>Ce qu'elle débloque</th></tr></thead><tbody></tbody></table></div>
+    <div id="cgaps"></div>
+  </section>
+
+  <div class="filters" role="toolbar" aria-label="Filtres">
+    <div class="fgroup" id="f-family"><span>Famille</span></div>
+    <div class="fgroup" id="f-status"><span>État</span></div>
+    <input id="q" type="search" placeholder="Chercher (commande, tâche, module)" aria-label="Chercher">
+    <a href="#issues" style="margin-left:auto;font-size:13px">Trous et défauts ↓</a>
+  </div>
+
+  <nav class="toc panel" id="toc" aria-label="Sommaire"></nav>
+  <main id="families" style="display:grid;gap:40px"></main>
+
+  <section id="issues" style="display:grid;gap:16px;scroll-margin-top:70px">
+    <div class="fam-head"><h2>Trous et défauts</h2><span class="eyebrow" id="issues-count"></span></div>
+    <p class="lede" style="margin:0">Un <b>trou</b> est une intention que ni le code ni une tâche ne satisfait, ou une étape que l'opérateur doit faire à la main alors que la CLI devrait l'enchaîner. Un <b>défaut</b> est un choix de conception ou de code plus faible qu'une alternative évidente. Chaque entrée cite sa preuve.</p>
+    <div class="filters" style="position:static;border:0;padding:0">
+      <div class="fgroup" id="f-kind"><span>Nature</span></div>
+      <div class="fgroup" id="f-sev"><span>Gravité</span></div>
+      <div class="fgroup" id="f-ruled"><span>Traitement</span></div>
+    </div>
+    <div class="issues" id="issue-list"></div>
+  </section>
+</div>
+
+<script>
+(async function () {
+  const get = p => fetch(p).then(r => { if (!r.ok) throw new Error(p + ' : ' + r.status); return r.json(); });
+  let D;
+  try {
+    const [A, B, C, X, M, meta] = await Promise.all(['data/usecases-A.json', 'data/usecases-B.json', 'data/usecases-C.json', 'data/cross.json', 'data/milestones.json', 'data/meta.json'].map(get));
+    D = { families: [A, B, C], cross: X, milestones: M, stamp: meta.stamp };
+  } catch (e) { document.getElementById('lede').textContent = 'Les données de la page n\'ont pas pu être chargées : ' + e.message; return; }
+  const $ = (s, r = document) => r.querySelector(s);
+  const el = (tag, attrs = {}, html) => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const UC_STATUS = { implemented: 'livré', partial: 'partiel', planned: 'planifié', unplanned: 'non planifié' };
+  const MSG_STATUS = { implemented: 'livré', todo: 'todo', draft: 'draft', missing: 'manquant' };
+  const SEV = { high: 'haute', medium: 'moyenne', low: 'basse' };
+  const KIND = { hole: 'trou', defect: 'défaut' };
+  const MSG_COLOR = { implemented: 'var(--ink)', todo: 'var(--todo)', draft: 'var(--draft)', missing: 'var(--missing)' };
+  const MSG_DASH = { implemented: '', todo: '7 4', draft: '7 4', missing: '2 4' };
+  const UC_DOT = { implemented: 'var(--ok)', partial: 'var(--todo)', planned: 'var(--draft)', unplanned: 'var(--missing)' };
+
+  const families = D.families;
+  const allUC = families.flatMap(f => f.use_cases.map(u => ({ ...u, family: f.family, familyTitle: f.title })));
+  const ucById = Object.fromEntries(allUC.map(u => [u.id, u]));
+  const X = D.cross || {};
+  let issues = families.flatMap(f => (f.issues || []).map(i => ({ ...i, family: f.family }))).concat((X.issues || []).map((i, k) => ({ ...i, family: 'X', id: 'X' + (k + 1), cross: true })));
+  const byId = Object.fromEntries(issues.map(i => [i.id, i]));
+  (X.verdicts || []).forEach(v => { const i = byId[v.id]; if (!i) return; i.verdict = v.verdict; i.vnote = v.note; if (v.severity) i.severity = v.severity; });
+  const dropped = new Set();
+  (X.duplicates || []).forEach(d => { const k = byId[d.keep]; if (!k) return; k.also = (d.drop || []).filter(x => byId[x]); k.dnote = d.note;
+    k.also.forEach(x => { dropped.add(x); k.use_cases = [...new Set([...(k.use_cases || []), ...(byId[x].use_cases || [])])]; }); });
+  issues = issues.filter(i => !dropped.has(i.id));
+  issues.forEach(i => i.key = 'is-' + i.id);
+  const sevRank = { high: 0, medium: 1, low: 2 };
+  issues.sort((a, b) => (a.verdict === 'refuted') - (b.verdict === 'refuted') || sevRank[a.severity] - sevRank[b.severity] || (a.kind > b.kind ? 1 : -1));
+  issues.forEach((i, k) => i.num = k + 1);
+
+  // header
+  const cnt = s => allUC.filter(u => u.status === s).length;
+  $('#lede').textContent = `${allUC.length} cas d'utilisation, chacun parti de l'intention de l'opérateur et tracé comme une séquence d'appels dans le code livré ou planifié, puis ${issues.length} trous et défauts relevés en chemin.`;
+  $('#stamp').innerHTML = D.stamp.map(s => `<span>${esc(s)}</span>`).join('');
+
+  // summary
+  const MS_COL = { implemented: 'var(--ok)', todo: 'var(--todo)', draft: 'var(--draft)', archived: 'var(--rule)' };
+  const msPanel = el('div', { class: 'panel' });
+  msPanel.innerHTML = '<h3>Tâches par milestone</h3>';
+  const ms = el('div', { class: 'ms' });
+  D.milestones.forEach(m => {
+    const tot = Object.values(m.counts).reduce((a, b) => a + b, 0);
+    const segs = ['implemented', 'todo', 'draft', 'archived'].filter(k => m.counts[k]).map(k => `<span title="${k} : ${m.counts[k]}" style="width:${m.counts[k] / tot * 100}%;background:${MS_COL[k]}"></span>`).join('');
+    ms.insertAdjacentHTML('beforeend', `<span class="name">${m.id}</span><div class="bar" role="img" aria-label="${m.id} : ${Object.entries(m.counts).map(([k, v]) => v + ' ' + k).join(', ')}">${segs}</div><span class="num">${tot}</span><span class="t">${esc(m.title)} — ${['implemented', 'todo', 'draft'].filter(k => m.counts[k]).map(k => m.counts[k] + ' ' + k).join(' · ')}</span>`);
+  });
+  msPanel.append(ms);
+  msPanel.insertAdjacentHTML('beforeend', `<div class="legend" style="margin-top:10px;font-size:12px">${['implemented', 'todo', 'draft', 'archived'].map(k => `<span><span class="dot" style="background:${MS_COL[k]};margin:0 5px 0 0"></span>${k}</span>`).join('')}</div>`);
+
+  const ucPanel = el('div', { class: 'panel' });
+  ucPanel.innerHTML = '<h3>Cas d\'utilisation</h3>' + `<div class="kv">${['implemented', 'partial', 'planned', 'unplanned'].map(s => `<span><span class="pill s-${s}">${UC_STATUS[s]}</span></span><b>${cnt(s)}</b>`).join('')}</div>` +
+    `<div class="kv" style="margin-top:14px;border-top:1px solid var(--rule);padding-top:10px">${families.map(f => `<span>${esc(f.title)}</span><b>${f.use_cases.length}</b>`).join('')}</div>`;
+  const isPanel = el('div', { class: 'panel' });
+  const ic = (k, s) => issues.filter(i => i.kind === k && (!s || i.severity === s)).length;
+  isPanel.innerHTML = '<h3>Trous et défauts</h3>' + `<div class="kv">${['hole', 'defect'].map(k => `<span>${KIND[k]}s</span><b>${ic(k)}</b>`).join('')}
+    ${['high', 'medium', 'low'].map(s => `<span><span class="pill sev-${s}">gravité ${SEV[s]}</span></span><b>${issues.filter(i => i.severity === s).length}</b>`).join('')}
+    <span>déjà tranchés par une décision ou une tâche</span><b>${issues.filter(i => i.addressed_by).length}</b></div>`;
+  $('#summary').append(ucPanel, msPanel, isPanel);
+
+  // legend
+  const legLine = (st, label) => `<span><svg width="54" height="12" aria-hidden="true"><line x1="2" y1="6" x2="44" y2="6" stroke="${MSG_COLOR[st]}" stroke-width="1.6" stroke-dasharray="${MSG_DASH[st]}"/><polygon points="44,2 52,6 44,10" fill="${MSG_COLOR[st]}"/></svg>${label}</span>`;
+  $('#legend').innerHTML = legLine('implemented', 'appel livré (lien vers le code)') + legLine('todo', 'prévu par une tâche todo') + legLine('draft', 'prévu par une tâche draft') + legLine('missing', 'manquant : ni code ni tâche') +
+    `<span><svg width="54" height="12" aria-hidden="true"><line x1="2" y1="6" x2="44" y2="6" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="3 3"/><polyline points="44,2 52,6 44,10" fill="none" stroke="var(--muted)" stroke-width="1.2"/></svg>retour</span>` +
+    `<span style="color:var(--muted)">Participants : ${['actor', 'cli', 'module', 'store', 'external'].map(k => `<svg width="22" height="16" aria-hidden="true" style="margin:0 3px 0 8px">${shapeSmall(k)}</svg>${({ actor: 'acteur', cli: 'commande CLI', module: 'module', store: 'stockage', external: 'processus externe' })[k]}`).join('')}</span>`;
+
+  function shapeSmall(k) {
+    const s = 'stroke="currentColor" stroke-width="1.2" fill="var(--surface)"';
+    if (k === 'actor') return `<rect x="2" y="3" width="18" height="10" rx="5" ${s}/>`;
+    if (k === 'cli') return `<rect x="2" y="3" width="18" height="10" stroke="var(--accent)" stroke-width="1.6" fill="var(--accent-soft)"/>`;
+    if (k === 'store') return `<path d="M2 5 v7 a9 2.5 0 0 0 18 0 v-7" ${s}/><ellipse cx="11" cy="5" rx="9" ry="2.5" ${s}/>`;
+    if (k === 'external') return `<rect x="2" y="2" width="18" height="12" ${s}/><rect x="4" y="4" width="14" height="8" fill="none" stroke="currentColor" stroke-width=".8"/>`;
+    return `<rect x="2" y="3" width="18" height="10" ${s}/>`;
+  }
+
+  // ---- sequence diagram ----
+  const CH = 6.6; // px per char, 11px mono
+  function seq(uc) {
+    const P = uc.participants, idx = Object.fromEntries(P.map((p, i) => [p.id, i]));
+    const M = uc.messages.filter(m => m.from in idx && m.to in idx);
+    const boxW = P.map(p => Math.max(84, Math.min(170, p.label.length * 7 + 22)));
+    const lines = P.map(p => wrapLabel(p.label, 22));
+    const gaps = P.slice(0, -1).map((_, i) => Math.max(110, (boxW[i] + boxW[i + 1]) / 2 + 18));
+    let tail = 40;
+    const need = M.map(m => {
+      const a = idx[m.from], b = idx[m.to], lo = Math.min(a, b), hi = Math.max(a, b);
+      return { lo, hi, w: m.label.length * CH + 26 };
+    }).sort((x, y) => (x.hi - x.lo) - (y.hi - y.lo));
+    need.forEach(n => {
+      if (n.lo === n.hi) { if (n.lo < gaps.length) gaps[n.lo] = Math.max(gaps[n.lo], n.w + 30); else tail = Math.max(tail, n.w + 30); return; }
+      let have = 0; for (let k = n.lo; k < n.hi; k++) have += gaps[k];
+      if (have < n.w) { const add = (n.w - have) / (n.hi - n.lo); for (let k = n.lo; k < n.hi; k++) gaps[k] += add; }
+    });
+    const left = 40 + boxW[0] / 2;
+    const xs = [left]; gaps.forEach((g, i) => xs.push(xs[i] + g));
+    const W = Math.ceil(xs[xs.length - 1] + Math.max(boxW[boxW.length - 1] / 2, tail) + 16);
+    const boxH = Math.max(...lines.map(l => l.length)) * 13 + 14;
+    const top = 12, startY = top + boxH + 22, ROW = 34;
+    // rows with frames
+    const rows = []; let y = startY; let prevFrame = null;
+    M.forEach((m, i) => {
+      const f = m.frame || null;
+      if (f && f !== prevFrame) y += 28;
+      if (!f && prevFrame) y += 8;
+      const self = m.from === m.to;
+      rows.push({ m, i, y: y + (self ? 6 : 0), self });
+      y += self ? ROW + 14 : ROW;
+      prevFrame = f;
+    });
+    const H = y + 16;
+    let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc('Séquence : ' + uc.title)}" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11">`;
+    s += `<defs>${['implemented', 'todo', 'draft', 'missing'].map(k => `<marker id="a-${uc.id}-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 1 L10 5 L0 9 z" fill="${MSG_COLOR[k]}"/></marker>`).join('')}<marker id="a-${uc.id}-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 1 L10 5 L0 9" fill="none" stroke="var(--muted)" stroke-width="1.4"/></marker></defs>`;
+    // frames
+    let fi = 0;
+    while (fi < rows.length) {
+      const f = rows[fi].m.frame; if (!f) { fi++; continue; }
+      let fj = fi; while (fj + 1 < rows.length && rows[fj + 1].m.frame === f) fj++;
+      const span = rows.slice(fi, fj + 1);
+      const cols = span.flatMap(r => [idx[r.m.from], idx[r.m.to]]);
+      let x0 = xs[Math.min(...cols)] - 34, x1 = xs[Math.max(...cols)] + 34;
+      span.filter(r => r.self).forEach(r => { x1 = Math.max(x1, xs[idx[r.m.from]] + r.m.label.length * CH + 60); });
+      const tagW = Math.min(f.length * CH + 16, Math.max(80, x1 - x0));
+      x1 = Math.max(x1, x0 + tagW + 10);
+      const y0 = span[0].y - 44, y1 = span[span.length - 1].y + (span[span.length - 1].self ? 26 : 12);
+      s += `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="none" stroke="var(--accent)" stroke-width="1" opacity=".75"/>`;
+      s += `<path d="M${x0} ${y0} h${tagW} v12 l-6 6 h-${tagW - 6} z" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>`;
+      s += `<text x="${x0 + 6}" y="${y0 + 13}" fill="var(--accent)" font-weight="600">${esc(f)}</text>`;
+      fi = fj + 1;
+    }
+    // lifelines + boxes
+    P.forEach((p, i) => {
+      const x = xs[i];
+      s += `<line x1="${x}" y1="${top + boxH}" x2="${x}" y2="${H - 8}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 4" opacity=".7"/>`;
+      s += `<g><title>${esc(p.label + (p.code ? ' — ' + p.code : ''))}</title>${box(p.kind, x - boxW[i] / 2, top, boxW[i], boxH)}`;
+      lines[i].forEach((ln, k) => { s += `<text x="${x}" y="${top + 7 + 13 * (k + 1) - 2}" text-anchor="middle" fill="currentColor" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="12" font-weight="${p.kind === 'actor' ? 600 : 500}">${esc(ln)}</text>`; });
+      s += `</g>`;
+    });
+    // messages
+    rows.forEach(({ m, i, y, self }) => {
+      const st = MSG_STATUS[m.status] ? m.status : 'missing';
+      const a = xs[idx[m.from]], b = xs[idx[m.to]];
+      const col = m.reply ? 'var(--muted)' : MSG_COLOR[st];
+      const dash = m.reply ? '3 3' : MSG_DASH[st];
+      const mk = m.reply ? `a-${uc.id}-r` : `a-${uc.id}-${st}`;
+      const tip = `${i + 1}. ${m.label}\n${MSG_STATUS[st]}${m.code ? ' — ' + m.code : ''}${m.task ? ' — ' + m.task : ''}${m.note ? '\n' + m.note : ''}`;
+      s += `<g><title>${esc(tip)}</title>`;
+      s += `<circle cx="16" cy="${y - 5}" r="9" fill="${st === 'implemented' ? 'var(--surface)' : col}" stroke="${col}" stroke-width="1"/><text x="16" y="${y - 1.5}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${st === 'implemented' ? 'currentColor' : 'var(--surface)'}">${i + 1}</text>`;
+      if (self) {
+        s += `<path d="M${a} ${y - 8} h34 v18 h-32" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="${dash}" marker-end="url(#${mk})"/>`;
+        s += `<text x="${a + 40}" y="${y + 5}" fill="${col === 'var(--ink)' ? 'currentColor' : col}">${esc(m.label)}${m.note ? ' ※' : ''}</text>`;
+      } else {
+        const dir = b > a ? 1 : -1;
+        s += `<line x1="${a + dir * 2}" y1="${y}" x2="${b - dir * 2}" y2="${y}" stroke="${col}" stroke-width="${m.reply ? 1.2 : 1.6}" stroke-dasharray="${dash}" marker-end="url(#${mk})"/>`;
+        s += `<text x="${(a + b) / 2}" y="${y - 6}" text-anchor="middle" fill="${col === 'var(--ink)' ? 'currentColor' : col}" ${m.reply ? 'font-style="italic"' : ''}>${esc(m.label)}${m.note ? ' ※' : ''}</text>`;
+      }
+      s += `</g>`;
+    });
+    return s + '</svg>';
+  }
+  function box(kind, x, y, w, h) {
+    const s = 'stroke="currentColor" stroke-width="1.1" fill="var(--surface)"';
+    if (kind === 'actor') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" stroke="currentColor" stroke-width="1.6" fill="var(--surface)"/>`;
+    if (kind === 'cli') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" stroke="var(--accent)" stroke-width="1.6" fill="var(--accent-soft)"/>`;
+    if (kind === 'store') return `<path d="M${x} ${y + 5} v${h - 8} a${w / 2} 5 0 0 0 ${w} 0 v-${h - 8}" ${s}/><ellipse cx="${x + w / 2}" cy="${y + 5}" rx="${w / 2}" ry="5" ${s}/>`;
+    if (kind === 'external') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" ${s}/><rect x="${x + 3}" y="${y + 3}" width="${w - 6}" height="${h - 6}" fill="none" stroke="currentColor" stroke-width=".7"/>`;
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" ${s}/>`;
+  }
+  function wrapLabel(t, n) {
+    const out = []; let cur = '';
+    String(t).split(/(?<=[ /._])/).forEach(w => { if ((cur + w).length > n && cur) { out.push(cur.trim()); cur = w; } else cur += w; });
+    if (cur.trim()) out.push(cur.trim());
+    return out.slice(0, 3);
+  }
+
+  // ---- use cases ----
+  const issuesOf = id => issues.filter(i => (i.use_cases || []).includes(id));
+  const toc = $('#toc'), main = $('#families');
+  families.forEach(f => {
+    const tocCol = el('div'); tocCol.innerHTML = `<div class="eyebrow" style="margin-bottom:8px">${esc(f.title)}</div>`;
+    const ol = el('ol'); tocCol.append(ol); toc.append(tocCol);
+    const sec = el('section', { class: 'family', 'data-family': f.family });
+    sec.innerHTML = `<div class="fam-head"><h2>${esc(f.title)}</h2><span class="eyebrow">${f.use_cases.length} cas d'utilisation</span></div>`;
+    f.use_cases.forEach(u => {
+      ol.insertAdjacentHTML('beforeend', `<li data-uc="${u.id}"><a href="#${u.id}"><span>${esc(u.title)}</span><span class="dot" title="${UC_STATUS[u.status]}" style="background:${UC_DOT[u.status]}"></span></a></li>`);
+      const art = el('article', { class: 'uc', id: u.id, 'data-family': f.family, 'data-status': u.status });
+      const iss = issuesOf(u.id);
+      art.dataset.search = [u.title, u.intent, u.outcome, ...(u.tasks || []), ...(u.steps_human || []), ...u.participants.map(p => p.label + ' ' + (p.code || '')), ...u.messages.map(m => m.label + ' ' + (m.code || '') + ' ' + (m.task || ''))].join(' ').toLowerCase();
+      const rows = u.messages.map((m, i) => `<tr><td class="n">${i + 1}</td><td><code>${esc(m.label)}</code>${m.frame ? `<div style="color:var(--accent);font-size:11.5px">${esc(m.frame)}</div>` : ''}</td><td>${esc(name(u, m.from))} → ${esc(name(u, m.to))}</td><td class="st st-${m.status}">${MSG_STATUS[m.status] || m.status}</td><td><code>${esc(m.code || '')}</code>${m.task ? ` <span class="chip">${esc(m.task)}</span>` : ''}</td><td>${esc(m.note || '')}</td></tr>`).join('');
+      art.innerHTML = `
+        <div class="uc-head"><span class="pill s-${u.status}">${UC_STATUS[u.status] || u.status}</span><h3>${esc(u.title)}</h3>
+          <div class="tags">${(u.milestones || []).map(m => `<span class="chip">${esc(m)}</span>`).join('')}<span class="chip" title="acteur">${esc(u.actor)}</span></div></div>
+        <p class="intent">${esc(u.intent)}</p>
+        <div class="paths">
+          <div><h4>Chemin de l'opérateur</h4><ol>${(u.steps_human || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+          <div><h4>Ce qu'il obtient</h4><p>${esc(u.outcome)}</p>
+            ${(u.tasks || []).length ? `<h4 style="margin-top:12px">Tâches</h4><div class="tags">${u.tasks.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>` : ''}</div>
+        </div>
+        <figure><div class="scroller">${seq(u)}</div>
+          <figcaption>Séquence d'appels de « ${esc(u.title)} » : ${u.messages.filter(m => m.status === 'implemented').length} livrés, ${u.messages.filter(m => m.status === 'todo' || m.status === 'draft').length} prévus, ${u.messages.filter(m => m.status === 'missing').length} manquants. Survoler une flèche montre le code ou la tâche ; ※ signale une note.</figcaption></figure>
+        <details><summary>Messages, code et tâches (${u.messages.length})</summary><div class="tbl"><table><thead><tr><th>#</th><th>Message</th><th>De → vers</th><th>État</th><th>Code / tâche</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table></div></details>
+        ${iss.length ? `<div class="uc-issues"><span class="eyebrow">Relevé :</span>${iss.map(i => `<a href="#${i.key}" class="pill sev-${i.severity}" style="text-decoration:none">${KIND[i.kind]} n°${i.num}</a>`).join('')}</div>` : ''}`;
+      sec.append(art);
+    });
+    main.append(sec);
+  });
+  function name(u, id) { const p = u.participants.find(p => p.id === id); return p ? p.label : id; }
+
+  // ---- issues ----
+  const list = $('#issue-list');
+  issues.forEach(i => {
+    const d = el('div', { class: `issue sev-b-${i.severity}`, id: i.key, 'data-kind': i.kind, 'data-sev': i.severity, 'data-ruled': i.addressed_by ? 'yes' : 'no' });
+    if (i.verdict === 'refuted') d.style.opacity = '.62';
+    const VER = { confirmed: ['vérifié', 's-implemented'], adjusted: ['ajusté', 's-partial'], refuted: ['réfuté', 's-unplanned'] };
+    d.innerHTML = `<div class="issue-head"><span class="num" style="min-width:26px;text-align:left">n°${i.num}</span><span class="pill ${i.kind === 'hole' ? 's-unplanned' : 's-planned'}">${KIND[i.kind]}</span><span class="pill sev-${i.severity}">${SEV[i.severity]}</span>${i.cross ? '<span class="chip">transverse</span>' : ''}${i.verdict ? `<span class="pill ${VER[i.verdict][1]}">${VER[i.verdict][0]}</span>` : ''}<h4 ${i.verdict === 'refuted' ? 'style="text-decoration:line-through"' : ''}>${esc(i.title)}</h4></div>
+      ${i.vnote ? `<p style="font-size:13px;color:var(--muted)"><b>Contre-vérification :</b> ${esc(i.vnote)}</p>` : ''}
+      <p>${esc(i.detail)}</p>
+      <dl class="grid2"><dt>Preuve</dt><dd><code>${esc(i.evidence)}</code></dd>
+      <dt>Déjà traité par</dt><dd>${i.addressed_by ? `<code>${esc(i.addressed_by)}</code>` : '<span class="empty">rien : à décider</span>'}</dd>
+      ${(i.also || []).length ? `<dt>Aussi relevé</dt><dd>${i.also.map(x => esc(x)).join(', ')}${i.dnote ? ' — ' + esc(i.dnote) : ''}</dd>` : ''}
+      ${(i.use_cases || []).length ? `<dt>Cas touchés</dt><dd>${i.use_cases.map(id => ucById[id] ? `<a href="#${id}">${esc(ucById[id].title)}</a>` : esc(id)).join(' · ')}</dd>` : ''}</dl>
+      ${i.suggestion ? `<div class="better"><b>Mieux :</b> ${esc(i.suggestion)}</div>` : ''}`;
+    list.append(d);
+  });
+  $('#issues-count').textContent = `${issues.length} entrées`;
+
+  // ---- critical path ----
+  if ((X.critical_path || []).length) {
+    $('#critical').hidden = false;
+    $('#cp tbody').innerHTML = X.critical_path.map((c, k) => `<tr><td class="n">${k + 1}</td><td><code>${esc(c.task)}</code></td><td class="st st-${c.status}">${esc(c.status)}</td><td>${esc(c.title)}</td><td>${esc(c.unblocks)}</td></tr>`).join('');
+    if ((X.critical_gaps || []).length) $('#cgaps').innerHTML = `<h3 style="font-size:15px;margin:6px 0 8px">Étapes qu'aucune tâche ne couvre</h3><ul style="margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px">${X.critical_gaps.map(g => `<li>${esc(g)}</li>`).join('')}</ul>`;
+  }
+
+  // ---- filters ----
+  function toggles(host, opts, onChange) {
+    const state = new Set();
+    opts.forEach(([v, label]) => {
+      const b = el('button', { class: 'tog', type: 'button', 'aria-pressed': 'false' }, esc(label));
+      b.addEventListener('click', () => { state.has(v) ? state.delete(v) : state.add(v); b.setAttribute('aria-pressed', state.has(v)); onChange(); });
+      host.append(b);
+    });
+    return state;
+  }
+  const fFam = toggles($('#f-family'), families.map(f => [f.family, f.title]), applyUC);
+  const fSt = toggles($('#f-status'), Object.entries(UC_STATUS), applyUC);
+  $('#q').addEventListener('input', applyUC);
+  function applyUC() {
+    const q = $('#q').value.trim().toLowerCase();
+    document.querySelectorAll('article.uc').forEach(a => {
+      a.hidden = (fFam.size && !fFam.has(a.dataset.family)) || (fSt.size && !fSt.has(a.dataset.status)) || (q && !a.dataset.search.includes(q));
+      const li = document.querySelector(`li[data-uc="${a.id}"]`); if (li) li.hidden = a.hidden;
+    });
+    document.querySelectorAll('section.family').forEach(s => s.hidden = !s.querySelector('article.uc:not([hidden])'));
+  }
+  const fKind = toggles($('#f-kind'), Object.entries(KIND), applyIs);
+  const fSev = toggles($('#f-sev'), Object.entries(SEV), applyIs);
+  const fRuled = toggles($('#f-ruled'), [['yes', 'déjà tranché'], ['no', 'à décider']], applyIs);
+  function applyIs() {
+    document.querySelectorAll('.issue').forEach(d => d.hidden = (fKind.size && !fKind.has(d.dataset.kind)) || (fSev.size && !fSev.has(d.dataset.sev)) || (fRuled.size && !fRuled.has(d.dataset.ruled)));
+  }
+})();
+</script>

@@ -1,0 +1,3727 @@
+{
+ "family": "B",
+ "title": "Exécution des vagues",
+ "use_cases": [
+  {
+   "id": "la-vague-se-livre-seule-la-nuit",
+   "title": "Livrer une vague seule pendant la nuit",
+   "intent": "je veux que la vague se livre seule pendant la nuit",
+   "actor": "timer",
+   "status": "partial",
+   "milestones": [
+    "M1",
+    "F0"
+   ],
+   "tasks": [
+    "@TASK.B12",
+    "@TASK.B13",
+    "@TASK.B141",
+    "@TASK.B142",
+    "@TASK.B14",
+    "@TASK.B15",
+    "@TASK.B16",
+    "@TASK.B17",
+    "@TASK.B18",
+    "@TASK.B19",
+    "@TASK.B20",
+    "@TASK.B21"
+   ],
+   "participants": [
+    {
+     "id": "timer",
+     "label": "Timer (systemd/cron)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "snapshot",
+     "label": "build_snapshot",
+     "kind": "module",
+     "code": "brigade/tick/build_snapshot.py"
+    },
+    {
+     "id": "planfn",
+     "label": "tick.plan",
+     "kind": "module",
+     "code": "brigade/tick/plan.py"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "agent",
+     "label": "Agent (client claude)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "task_cli",
+     "label": "brigade task check|pr|promote",
+     "kind": "cli",
+     "code": null
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "verify",
+     "label": "brigade verify preflight|context|verdict",
+     "kind": "cli",
+     "code": null
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "timer",
+     "to": "tick",
+     "label": "brigade tick --once toutes les 5 min",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:175",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "snapshot",
+     "label": "faits: vagues running, tâches, états, runs vivants",
+     "status": "implemented",
+     "code": "brigade/tick/build_snapshot.py:148",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "planfn",
+     "label": "StartWave (auto) + LaunchTask dans la limite de SLOTS",
+     "status": "implemented",
+     "code": "brigade/tick/plan.py:14",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "git",
+     "label": "worktree + SETUP + run build-task détaché",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:55",
+     "task": "@TASK.B141",
+     "note": "la procédure build-task n'est pas livrée",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "task_cli",
+     "label": "task context, check, pr, promote -> PR ouverte",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "suivi PR: pr_open / merged / parked",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B14",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "verify",
+     "label": "preflight mécanique puis run de revue (the pass)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B15",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "verdict: approbation ou ledger, selon POLICY.REVIEW",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "fusion dans integration/<slug>; les dépendantes deviennent démarrables",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B17",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "réparations (remediate/build/rebase) dans VERIFY_ROUNDS",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "frame": "alt: changes ou checks rouges",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "pause quota puis reprise de la même session",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "frame": "alt: rate_limit",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "toutes tâches merged/parked: étude wave-report",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B20",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "gh",
+     "label": "au réveil: je lis le rapport et je fusionne integration dans main",
+     "status": "missing",
+     "code": null,
+     "task": "@TASK.B100",
+     "note": "porte humaine; pas de commande de clôture",
+     "reply": false
+    }
+   ],
+   "outcome": "Aujourd'hui seul le début existe (démarrage, worktree, lancement du run); PR, revue, fusion, reprise et rapport sont des tâches todo.",
+   "steps_human": [
+    "(la nuit) aucun geste",
+    "(au réveil) je lis wave show et le rapport, je fusionne integration dans main"
+   ]
+  },
+  {
+   "id": "suivre-un-run",
+   "title": "Suivre le déroulement d'un run",
+   "intent": "je veux suivre le déroulement d'un run",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B60",
+    "@TASK.B92",
+    "@TASK.B94"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "runs_list",
+     "label": "runs list",
+     "kind": "cli",
+     "code": "brigade/commands/runs_list.py"
+    },
+    {
+     "id": "list_runs",
+     "label": "list_runs / describe_run",
+     "kind": "module",
+     "code": "brigade/runs/list_runs.py"
+    },
+    {
+     "id": "rundir",
+     "label": "Dossier du run (journal, result, pid)",
+     "kind": "store",
+     "code": "brigade/runs/run_locations.py"
+    },
+    {
+     "id": "runs_show",
+     "label": "runs show",
+     "kind": "cli",
+     "code": "brigade/commands/runs_show.py"
+    },
+    {
+     "id": "follower",
+     "label": "RunFollower",
+     "kind": "module",
+     "code": "brigade/runs/run_follower.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "runs_list",
+     "label": "brigade runs list",
+     "status": "implemented",
+     "code": "brigade/commands/runs_list.py:38",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "runs_list",
+     "to": "list_runs",
+     "label": "list_runs(state_root)",
+     "status": "implemented",
+     "code": "brigade/runs/list_runs.py:8",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "list_runs",
+     "to": "rundir",
+     "label": "describe_run: run.json + result.json + pid",
+     "status": "implemented",
+     "code": "brigade/runs/describe_run.py:11",
+     "task": null,
+     "note": "state running/dead/finished déduit du pid et du result",
+     "reply": false
+    },
+    {
+     "from": "runs_list",
+     "to": "op",
+     "label": "tableau run/procedure/slot/role/project/state/outcome",
+     "status": "implemented",
+     "code": "brigade/commands/runs_list.py:18",
+     "task": null,
+     "note": "aucun argument de procédure (quelle tâche ?), aucun filtre",
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "op",
+     "label": "je repère le run et recopie son id",
+     "status": "missing",
+     "code": null,
+     "task": "@TASK.B92",
+     "note": "geste manuel: copier l'id d'une table triée du plus ancien au plus récent",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "runs_show",
+     "label": "brigade runs show <id> --follow",
+     "status": "implemented",
+     "code": "brigade/commands/runs_show.py:105",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "runs_show",
+     "to": "rundir",
+     "label": "show_run: résumé + segments (sans journal)",
+     "status": "implemented",
+     "code": "brigade/runs/show_run.py:44",
+     "task": null,
+     "frame": "loop: --follow, tant que state=running",
+     "reply": false
+    },
+    {
+     "from": "runs_show",
+     "to": "follower",
+     "label": "RunFollower.read_records()",
+     "status": "implemented",
+     "code": "brigade/runs/run_follower.py:15",
+     "task": null,
+     "frame": "loop: --follow, tant que state=running",
+     "reply": false
+    },
+    {
+     "from": "follower",
+     "to": "rundir",
+     "label": "journal.jsonl: lire les enregistrements entiers",
+     "status": "implemented",
+     "code": "brigade/runs/journal_reader.py",
+     "task": null,
+     "frame": "loop: --follow, tant que state=running",
+     "reply": false
+    },
+    {
+     "from": "runs_show",
+     "to": "op",
+     "label": "une ligne par enregistrement du journal",
+     "status": "implemented",
+     "code": "brigade/commands/runs_show.py:82",
+     "task": null,
+     "frame": "loop: --follow, tant que state=running",
+     "note": "sondage toutes les journal_poll_s",
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "runs_show",
+     "label": "Ctrl-C ou fin du run",
+     "status": "implemented",
+     "code": "brigade/system/poll_until_signalled.py:15",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "runs_show",
+     "to": "op",
+     "label": "state/outcome final + code de sortie 0/1/10..21",
+     "status": "implemented",
+     "code": "brigade/runs/decide_run_exit_code.py",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "runs_show",
+     "label": "brigade runs show <id> --log (progress.md ?)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B94",
+     "note": "afficher le fichier de progression: seulement en draft",
+     "reply": false
+    }
+   ],
+   "outcome": "Le déroulement du run est lu en direct dans le terminal et son issue donne le code de sortie; pas de lien run -> tâche -> vague.",
+   "steps_human": [
+    "j'exécute brigade runs list",
+    "je recopie l'id du run",
+    "j'exécute brigade runs show <id> --follow"
+   ]
+  },
+  {
+   "id": "demander-une-vague",
+   "title": "Demander une vague",
+   "intent": "je veux demander une vague à un projet en une phrase",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B11",
+    "@TASK.B10"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "wave_new",
+     "label": "wave new",
+     "kind": "cli",
+     "code": "brigade/commands/wave_new.py"
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    },
+    {
+     "id": "record_req",
+     "label": "record_request",
+     "kind": "module",
+     "code": "brigade/waves/record_request.py"
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "plan_run",
+     "label": "plan_run / detach_run",
+     "kind": "module",
+     "code": "brigade/runs/plan_run.py"
+    },
+    {
+     "id": "rundir",
+     "label": "Dossier du run (journal, result, pid)",
+     "kind": "store",
+     "code": "brigade/runs/run_locations.py"
+    },
+    {
+     "id": "runs_show",
+     "label": "runs show",
+     "kind": "cli",
+     "code": "brigade/commands/runs_show.py"
+    },
+    {
+     "id": "planner",
+     "label": "Planificateur (slot plan)",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "wave_new",
+     "label": "brigade wave new <projet> \"<texte>\"",
+     "status": "implemented",
+     "code": "brigade/commands/wave_new.py:49",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_new",
+     "to": "opcorpus",
+     "label": "require_operational_corpus + projet non paused",
+     "status": "implemented",
+     "code": "brigade/commands/wave_new.py:50",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_new",
+     "to": "record_req",
+     "label": "record_request(project, text)",
+     "status": "implemented",
+     "code": "brigade/waves/record_request.py:36",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "record_req",
+     "to": "opcorpus",
+     "label": "REQUEST <projet>_<n> STATUS planning (fmt+lint+commit)",
+     "status": "implemented",
+     "code": "brigade/corpus/change_corpus_file.py:54",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_new",
+     "to": "run",
+     "label": "run wave-plan --slot plan request=<n> --detach",
+     "status": "implemented",
+     "code": "brigade/commands/wave_new.py:35",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "plan_run",
+     "label": "plan_run + detach_run: spawn brigade run en arrière-plan",
+     "status": "implemented",
+     "code": "brigade/runs/detach_run.py:20",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "plan_run",
+     "to": "rundir",
+     "label": "dossier du run + run.json + pid",
+     "status": "implemented",
+     "code": "brigade/runs/create_run_directory.py:34",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_new",
+     "to": "op",
+     "label": "@REQUEST.<n> planning, run <id>",
+     "status": "implemented",
+     "code": "brigade/commands/wave_new.py:23",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "op",
+     "label": "je recopie l'id du run pour le suivre",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "wave new ne propose pas --follow; le lien request->run n'est écrit nulle part",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "runs_show",
+     "label": "brigade runs show <id> --follow",
+     "status": "implemented",
+     "code": "brigade/commands/runs_show.py:105",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "planner",
+     "to": "wave_new",
+     "label": "(si le planificateur échoue: la REQUEST reste planning)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: planificateur bloqué ou mort",
+     "note": "aucun code ne relit l'issue du run planner pour la REQUEST",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_new",
+     "label": "brigade wave replan <n> / wave cancel <n>",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: planificateur bloqué ou mort",
+     "note": "aucune commande ni tâche",
+     "reply": false
+    }
+   ],
+   "outcome": "Une REQUEST est enregistrée en planning et son planificateur tourne détaché; l'opérateur doit lui-même copier l'id du run pour le suivre.",
+   "steps_human": [
+    "j'exécute brigade wave new <projet> \"...\"",
+    "je recopie l'id du run",
+    "j'exécute brigade runs show <id> --follow"
+   ]
+  },
+  {
+   "id": "planifier-une-demande",
+   "title": "Planifier une demande en vague (planificateur)",
+   "intent": "je veux que ma demande soit découpée en tâches ordonnées sans que je l'écrive",
+   "actor": "agent",
+   "status": "implemented",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B10",
+    "@TASK.B139",
+    "@TASK.B129"
+   ],
+   "participants": [
+    {
+     "id": "planner",
+     "label": "Planificateur (slot plan)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "plan_ctx",
+     "label": "plan context",
+     "kind": "cli",
+     "code": "brigade/commands/plan_context.py"
+    },
+    {
+     "id": "awawa",
+     "label": "awawa",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "plan_rec",
+     "label": "plan record",
+     "kind": "cli",
+     "code": "brigade/commands/plan_record.py"
+    },
+    {
+     "id": "record_plan",
+     "label": "record_plan",
+     "kind": "module",
+     "code": "brigade/planning/record_plan.py"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "projcorpus",
+     "label": "Corpus du projet (branche integration)",
+     "kind": "store",
+     "code": "brigade/corpus/prepare_project_tree.py"
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "planner",
+     "to": "plan_ctx",
+     "label": "brigade plan context <req> --json",
+     "status": "implemented",
+     "code": "brigade/commands/plan_context.py:80",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "plan_ctx",
+     "to": "awawa",
+     "label": "awawa status/show/refs du corpus du projet",
+     "status": "implemented",
+     "code": "brigade/planning/assemble_plan_context.py:107",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "plan_ctx",
+     "to": "planner",
+     "label": "paquet: décisions, tâches todo/draft, schémas, n° libre, ancres IMPL",
+     "status": "implemented",
+     "code": "brigade/planning/assemble_plan_context.py:107",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "planner",
+     "to": "planner",
+     "label": "écrit plan.awawa (1 MILESTONE + N TASK, arêtes AFTER)",
+     "status": "implemented",
+     "code": "brigade/runs/data/procedures/wave-plan.md",
+     "task": null,
+     "note": "agent: seul jugement du slot",
+     "reply": false
+    },
+    {
+     "from": "planner",
+     "to": "awawa",
+     "label": "awawa fmt + lint --strict plan.awawa",
+     "status": "implemented",
+     "code": "brigade/runs/data/procedures/wave-plan.md",
+     "task": null,
+     "note": "1 tour de correction",
+     "reply": false
+    },
+    {
+     "from": "planner",
+     "to": "plan_rec",
+     "label": "brigade plan record <req> --file plan.awawa",
+     "status": "implemented",
+     "code": "brigade/commands/plan_record.py:27",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "plan_rec",
+     "to": "record_plan",
+     "label": "record_plan(recording)",
+     "status": "implemented",
+     "code": "brigade/planning/record_plan.py:164",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "record_plan",
+     "to": "git",
+     "label": "worktree détaché sur MAIN du projet",
+     "status": "implemented",
+     "code": "brigade/git/add_detached_worktree.py",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "record_plan",
+     "to": "record_plan",
+     "label": "collisions de noms, types déclarés, 1 MILESTONE, branche libre",
+     "status": "implemented",
+     "code": "brigade/planning/record_plan.py:130",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "record_plan",
+     "to": "projcorpus",
+     "label": "blocs ajoutés (fmt+lint), commit, create_branch integration/<slug>",
+     "status": "implemented",
+     "code": "brigade/planning/record_plan.py:118",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "record_plan",
+     "to": "git",
+     "label": "push_branch si FORGE=github",
+     "status": "implemented",
+     "code": "brigade/git/push_branch.py:10",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "record_plan",
+     "to": "opcorpus",
+     "label": "REQUEST planned + MILESTONE + BRANCH",
+     "status": "implemented",
+     "code": "brigade/planning/record_plan.py:146",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "record_plan",
+     "to": "ledger",
+     "label": "plan.lint_failed si lint KO (2e échec: run blocked)",
+     "status": "implemented",
+     "code": "brigade/planning/record_plan.py:126",
+     "task": null,
+     "frame": "alt: lint du corpus en échec",
+     "reply": false
+    }
+   ],
+   "outcome": "La branche d'intégration porte le MILESTONE et ses TASK; la REQUEST passe à planned.",
+   "steps_human": [
+    "(aucun geste: le planificateur est lancé par wave new)"
+   ]
+  },
+  {
+   "id": "relire-et-demarrer-la-vague",
+   "title": "Relire un plan puis démarrer la vague",
+   "intent": "je veux relire le plan avant que la vague ne parte, puis la démarrer",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B11",
+    "@TASK.B100"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "wave_list",
+     "label": "wave list",
+     "kind": "cli",
+     "code": "brigade/commands/wave_list.py"
+    },
+    {
+     "id": "wave_show",
+     "label": "wave show",
+     "kind": "cli",
+     "code": "brigade/commands/wave_show.py"
+    },
+    {
+     "id": "projcorpus",
+     "label": "Corpus du projet (branche integration)",
+     "kind": "store",
+     "code": "brigade/corpus/prepare_project_tree.py"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "wave_start",
+     "label": "wave start",
+     "kind": "cli",
+     "code": "brigade/commands/wave_start.py"
+    },
+    {
+     "id": "start_wave",
+     "label": "start_wave",
+     "kind": "module",
+     "code": "brigade/waves/start_wave.py"
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "wave_list",
+     "label": "brigade wave list [--project P]",
+     "status": "implemented",
+     "code": "brigade/commands/wave_list.py:31",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_list",
+     "to": "op",
+     "label": "une ligne par REQUEST (status, milestone, branch)",
+     "status": "implemented",
+     "code": "brigade/commands/wave_list.py:19",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "wave_show",
+     "label": "brigade wave show <req>",
+     "status": "implemented",
+     "code": "brigade/commands/wave_show.py:44",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_show",
+     "to": "projcorpus",
+     "label": "tâches de la branche integration via prepare_project_tree",
+     "status": "implemented",
+     "code": "brigade/waves/list_wave_tasks.py:21",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_show",
+     "to": "op",
+     "label": "waits for: wave start (ask) ou next tick (auto) + table tâche/état/PR/titre",
+     "status": "implemented",
+     "code": "brigade/waves/decide_waits_for.py:9",
+     "task": null,
+     "note": "ni AFTER ni SPEC des tâches",
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "git",
+     "label": "git diff main..integration/<slug> (lire les SPEC et les AFTER)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "geste manuel: aucune commande n'affiche le plan",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_start",
+     "label": "brigade wave start <req>",
+     "status": "implemented",
+     "code": "brigade/commands/wave_start.py:23",
+     "task": null,
+     "frame": "alt: POLICY.PLAN_REVIEW ask",
+     "reply": false
+    },
+    {
+     "from": "wave_start",
+     "to": "start_wave",
+     "label": "start_wave: exige planned",
+     "status": "implemented",
+     "code": "brigade/waves/start_wave.py:15",
+     "task": null,
+     "frame": "alt: POLICY.PLAN_REVIEW ask",
+     "reply": false
+    },
+    {
+     "from": "start_wave",
+     "to": "opcorpus",
+     "label": "REQUEST running (fmt+lint+commit)",
+     "status": "implemented",
+     "code": "brigade/waves/mark_request_running.py:8",
+     "task": null,
+     "frame": "alt: POLICY.PLAN_REVIEW ask",
+     "reply": false
+    },
+    {
+     "from": "start_wave",
+     "to": "ledger",
+     "label": "wave.started",
+     "status": "implemented",
+     "code": "brigade/waves/start_wave.py:34",
+     "task": null,
+     "frame": "alt: POLICY.PLAN_REVIEW ask",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "start_wave",
+     "label": "StartWave automatique au prochain tick",
+     "status": "implemented",
+     "code": "brigade/tick/plan.py:15",
+     "task": null,
+     "frame": "alt: PLAN_REVIEW auto (défaut)",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_start",
+     "label": "brigade wave reject <req> / amender le plan",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: plan refusé",
+     "note": "refuser ou corriger un plan: aucune commande",
+     "reply": false
+    }
+   ],
+   "outcome": "La REQUEST est running; le tick lancera ses tâches.",
+   "steps_human": [
+    "j'exécute brigade wave show <req>",
+    "je lis le plan dans git à la main",
+    "j'exécute brigade wave start <req>"
+   ]
+  },
+  {
+   "id": "lancer-le-tick",
+   "title": "Lancer le tick (une fois ou en boucle)",
+   "intent": "je veux que brigade lance seule les tâches prêtes de toutes mes vagues",
+   "actor": "timer",
+   "status": "implemented",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B12"
+   ],
+   "participants": [
+    {
+     "id": "timer",
+     "label": "Timer (systemd/cron)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "snapshot",
+     "label": "build_snapshot",
+     "kind": "module",
+     "code": "brigade/tick/build_snapshot.py"
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    },
+    {
+     "id": "projcorpus",
+     "label": "Corpus du projet (branche integration)",
+     "kind": "store",
+     "code": "brigade/corpus/prepare_project_tree.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "rundir",
+     "label": "Dossier du run (journal, result, pid)",
+     "kind": "store",
+     "code": "brigade/runs/run_locations.py"
+    },
+    {
+     "id": "planfn",
+     "label": "tick.plan",
+     "kind": "module",
+     "code": "brigade/tick/plan.py"
+    },
+    {
+     "id": "rounds",
+     "label": "run_rounds / apply_actions",
+     "kind": "module",
+     "code": "brigade/tick/run_rounds.py"
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "timer",
+     "to": "tick",
+     "label": "brigade tick --once  (ou --loop, toutes les 300 s)",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:175",
+     "task": null,
+     "note": "installé par scheduler install (autre famille)",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "tick",
+     "label": "verrou tick.lock sans attente",
+     "status": "implemented",
+     "code": "brigade/system/hold_lock_without_waiting.py:20",
+     "task": null,
+     "note": "déjà tenu: StandingDown",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "snapshot",
+     "label": "build_snapshot(runtime, configuration)",
+     "status": "implemented",
+     "code": "brigade/tick/build_snapshot.py:148",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "snapshot",
+     "to": "opcorpus",
+     "label": "REQUEST + POLICY (plan_review)",
+     "status": "implemented",
+     "code": "brigade/tick/build_snapshot.py:151",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "snapshot",
+     "to": "projcorpus",
+     "label": "tâches de chaque vague, AFTER, bloqueurs (awawa refs)",
+     "status": "implemented",
+     "code": "brigade/tick/build_snapshot.py:120",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "snapshot",
+     "to": "ledger",
+     "label": "derniers task.state de la vague",
+     "status": "implemented",
+     "code": "brigade/waves/read_task_states.py:7",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "snapshot",
+     "to": "rundir",
+     "label": "runs vivants par projet (slot build)",
+     "status": "implemented",
+     "code": "brigade/runs/list_runs.py:8",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "planfn",
+     "label": "plan(snapshot): StartWave + LaunchTask (≤ SLOTS)",
+     "status": "implemented",
+     "code": "brigade/tick/plan.py:14",
+     "task": null,
+     "note": "fonction pure",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "rounds",
+     "label": "apply_actions: StartWave, LaunchTask",
+     "status": "implemented",
+     "code": "brigade/tick/run_rounds.py:20",
+     "task": null,
+     "frame": "loop: jusqu'à 10 tours ou plan vide",
+     "reply": false
+    },
+    {
+     "from": "rounds",
+     "to": "run",
+     "label": "pour chaque LaunchTask: _launch_task (cf. worktree-par-tache)",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:55",
+     "task": null,
+     "frame": "loop: jusqu'à 10 tours ou plan vide",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "tick",
+     "label": "heartbeat.json écrit après la passe",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:93",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "timer",
+     "label": "stderr: N actions en X ms",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:126",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "suivre les PR, relancer, fusionner (hors lancement)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B14",
+     "note": "aucune action autre que StartWave/LaunchTask n'existe",
+     "reply": false
+    }
+   ],
+   "outcome": "Les vagues running avancent d'une passe: démarrage des vagues auto et lancement des tâches prêtes; rien d'autre.",
+   "steps_human": [
+    "(aucun) — le timer exécute brigade tick",
+    "je lis tick.log / heartbeat si besoin"
+   ]
+  },
+  {
+   "id": "predire-le-tick",
+   "title": "Voir ce que le tick ferait (dry-run)",
+   "intent": "je veux savoir ce que le prochain tick va lancer avant qu'il ne le fasse",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B12"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "snapshot",
+     "label": "build_snapshot",
+     "kind": "module",
+     "code": "brigade/tick/build_snapshot.py"
+    },
+    {
+     "id": "projcorpus",
+     "label": "Corpus du projet (branche integration)",
+     "kind": "store",
+     "code": "brigade/corpus/prepare_project_tree.py"
+    },
+    {
+     "id": "planfn",
+     "label": "tick.plan",
+     "kind": "module",
+     "code": "brigade/tick/plan.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "tick",
+     "label": "brigade tick --dry-run",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:116",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "snapshot",
+     "label": "build_snapshot sans verrou ni écriture",
+     "status": "implemented",
+     "code": "brigade/tick/build_snapshot.py:148",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "snapshot",
+     "to": "projcorpus",
+     "label": "tâches, AFTER, bloqueurs",
+     "status": "implemented",
+     "code": "brigade/tick/build_snapshot.py:120",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "planfn",
+     "label": "plan(snapshot)",
+     "status": "implemented",
+     "code": "brigade/tick/plan.py:14",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "op",
+     "label": "snapshot + liste des actions (ou no action)",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:150",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "op",
+     "label": "je déduis pourquoi une tâche n'est pas dans le plan",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "le plan n'explique pas les refus (AFTER non fusionné, bloqueur, slot plein, parked)",
+     "reply": false
+    }
+   ],
+   "outcome": "Le snapshot et les actions prévues sont imprimés; les raisons d'une tâche non lancée restent à déduire.",
+   "steps_human": [
+    "j'exécute brigade tick --dry-run",
+    "je compare le snapshot aux AFTER à la main"
+   ]
+  },
+  {
+   "id": "lancer-un-run",
+   "title": "Lancer une procédure comme un slot",
+   "intent": "je veux lancer à la main une procédure (build, plan…) comme un slot, en avant-plan ou détachée",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M1",
+    "F0"
+   ],
+   "tasks": [
+    "@TASK.B47",
+    "@TASK.B71",
+    "@TASK.B75",
+    "@TASK.B106",
+    "@TASK.B145"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "plan_run",
+     "label": "plan_run / detach_run",
+     "kind": "module",
+     "code": "brigade/runs/plan_run.py"
+    },
+    {
+     "id": "config",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py"
+    },
+    {
+     "id": "client",
+     "label": "Client (claude)",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "rundir",
+     "label": "Dossier du run (journal, result, pid)",
+     "kind": "store",
+     "code": "brigade/runs/run_locations.py"
+    },
+    {
+     "id": "segments",
+     "label": "run_segments / run_segment",
+     "kind": "module",
+     "code": "brigade/runs/run_segments.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "runs_prune",
+     "label": "runs prune",
+     "kind": "cli",
+     "code": "brigade/commands/runs_prune.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "run",
+     "label": "brigade run <proc> --slot build --project P --cwd W --brief F [--detach] k=v",
+     "status": "implemented",
+     "code": "brigade/commands/run.py:103",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "gh",
+     "label": "token du login du slot ([forge_accounts]); retries, forge_account.unavailable",
+     "status": "implemented",
+     "code": "brigade/commands/run.py:26",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "plan_run",
+     "label": "plan_run: procédure, rôle du slot, client, budget, cwd, brief",
+     "status": "implemented",
+     "code": "brigade/runs/plan_run.py:147",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "plan_run",
+     "to": "config",
+     "label": "procédure shippée ou corpus d'instructions; [slot_clients]",
+     "status": "implemented",
+     "code": "brigade/runs/resolve_procedure.py:60",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "plan_run",
+     "to": "client",
+     "label": "probe du client (step_count, tool_grants)",
+     "status": "implemented",
+     "code": "brigade/runs/plan_run.py:156",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "rundir",
+     "label": "create_run_directory: run.json, progress.*, role.md",
+     "status": "implemented",
+     "code": "brigade/runs/create_run_directory.py:34",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "run",
+     "label": "--detach: spawn brigade run --run-id, imprime l'id",
+     "status": "implemented",
+     "code": "brigade/runs/detach_run.py:20",
+     "task": null,
+     "frame": "alt: --detach",
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "segments",
+     "label": "run_segments: segment 1..1+HANDOVERS",
+     "status": "implemented",
+     "code": "brigade/runs/run_segments.py:98",
+     "task": null,
+     "frame": "alt: avant-plan",
+     "reply": false
+    },
+    {
+     "from": "segments",
+     "to": "client",
+     "label": "launch-argv, le client tourne (limite d'étapes et d'horloge)",
+     "status": "implemented",
+     "code": "brigade/runs/run_segment.py:248",
+     "task": null,
+     "frame": "loop: relance si handed_over/turn_limit/wall_limit",
+     "reply": false
+    },
+    {
+     "from": "segments",
+     "to": "rundir",
+     "label": "journal, result de segment, progress du document",
+     "status": "implemented",
+     "code": "brigade/runs/run_segments.py:72",
+     "task": null,
+     "frame": "loop: relance si handed_over/turn_limit/wall_limit",
+     "reply": false
+    },
+    {
+     "from": "segments",
+     "to": "ledger",
+     "label": "run.finished + signaux (budget_exceeded…)",
+     "status": "implemented",
+     "code": "brigade/runs/run_segments.py:79",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "runs_prune",
+     "label": "prune_runs(keep=runs_kept) après un run en avant-plan",
+     "status": "implemented",
+     "code": "brigade/commands/run.py:114",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "op",
+     "label": "run <id>: <proc> as <role> <outcome>, code de sortie par issue",
+     "status": "implemented",
+     "code": "brigade/commands/run.py:64",
+     "task": null,
+     "reply": true
+    }
+   ],
+   "outcome": "Un run (jusqu'à 3 segments par défaut) mené jusqu'à son issue, journalisé; en détaché seul l'id et le pid reviennent.",
+   "steps_human": [
+    "j'exécute brigade run <procédure> --slot <slot> [--detach] k=v",
+    "(détaché) je recopie l'id et le suis avec runs show --follow"
+   ]
+  },
+  {
+   "id": "arreter-un-run",
+   "title": "Arrêter un run",
+   "intent": "je veux arrêter un run qui dérape",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B19"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "runs_list",
+     "label": "runs list",
+     "kind": "cli",
+     "code": "brigade/commands/runs_list.py"
+    },
+    {
+     "id": "runs_stop",
+     "label": "runs stop",
+     "kind": "cli",
+     "code": "brigade/commands/runs_stop.py"
+    },
+    {
+     "id": "stop_run",
+     "label": "stop_run",
+     "kind": "module",
+     "code": "brigade/runs/stop_run.py"
+    },
+    {
+     "id": "rundir",
+     "label": "Dossier du run (journal, result, pid)",
+     "kind": "store",
+     "code": "brigade/runs/run_locations.py"
+    },
+    {
+     "id": "segments",
+     "label": "run_segments / run_segment",
+     "kind": "module",
+     "code": "brigade/runs/run_segments.py"
+    },
+    {
+     "id": "client",
+     "label": "Client (claude)",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "runs_list",
+     "label": "brigade runs list (trouver le run)",
+     "status": "implemented",
+     "code": "brigade/commands/runs_list.py:38",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "runs_stop",
+     "label": "brigade runs stop <id>",
+     "status": "implemented",
+     "code": "brigade/commands/runs_stop.py:21",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "runs_stop",
+     "to": "stop_run",
+     "label": "stop_run(state_root, id)",
+     "status": "implemented",
+     "code": "brigade/runs/stop_run.py:27",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "stop_run",
+     "to": "rundir",
+     "label": "refuse si finished; lit pid + identité du processus",
+     "status": "implemented",
+     "code": "brigade/runs/stop_run.py:29",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "stop_run",
+     "to": "segments",
+     "label": "SIGTERM au processus du run",
+     "status": "implemented",
+     "code": "brigade/runs/stop_run.py:38",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "segments",
+     "to": "client",
+     "label": "SIGTERM puis SIGKILL du groupe après le délai de grâce",
+     "status": "implemented",
+     "code": "brigade/system/stop_process_group.py:9",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "segments",
+     "to": "rundir",
+     "label": "result outcome=stopped",
+     "status": "implemented",
+     "code": "brigade/runs/run_segments.py:108",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "stop_run",
+     "to": "op",
+     "label": "run <id> finished on stopped",
+     "status": "implemented",
+     "code": "brigade/commands/runs_stop.py:12",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "runs_stop",
+     "to": "ledger",
+     "label": "task.state de la tâche du run: parked/queued",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: run d'une tâche de vague",
+     "note": "arrêter le run d'une tâche laisse la tâche 'running' dans le ledger",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "tick",
+     "label": "relancer la tâche arrêtée (unpark / requeue)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: run d'une tâche de vague",
+     "note": "aucune commande ni tâche",
+     "reply": false
+    }
+   ],
+   "outcome": "Le run est stoppé proprement; si c'était un build de vague, la tâche reste en 'running' sans run.",
+   "steps_human": [
+    "j'exécute brigade runs list",
+    "je recopie l'id",
+    "j'exécute brigade runs stop <id>"
+   ]
+  },
+  {
+   "id": "elaguer-les-runs",
+   "title": "Élaguer les runs",
+   "intent": "je veux faire le ménage dans les anciens runs sans perdre ceux en cours ni ceux à reprendre",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B60"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "runs_prune",
+     "label": "runs prune",
+     "kind": "cli",
+     "code": "brigade/commands/runs_prune.py"
+    },
+    {
+     "id": "config",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py"
+    },
+    {
+     "id": "prune",
+     "label": "prune_runs",
+     "kind": "module",
+     "code": "brigade/runs/prune_runs.py"
+    },
+    {
+     "id": "rundir",
+     "label": "Dossier du run (journal, result, pid)",
+     "kind": "store",
+     "code": "brigade/runs/run_locations.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "runs_prune",
+     "label": "brigade runs prune [--keep N] [--before J] [--resumable] [--dry-run]",
+     "status": "implemented",
+     "code": "brigade/commands/runs_prune.py:40",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "runs_prune",
+     "to": "config",
+     "label": "runs_kept de config.toml si pas --keep",
+     "status": "implemented",
+     "code": "brigade/commands/runs_prune.py:34",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "runs_prune",
+     "to": "prune",
+     "label": "prune_runs(PruneRequest)",
+     "status": "implemented",
+     "code": "brigade/runs/prune_runs.py:124",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "prune",
+     "to": "rundir",
+     "label": "liste les runs finished/dead; garde ceux qui tournent",
+     "status": "implemented",
+     "code": "brigade/runs/prune_runs.py:69",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "prune",
+     "to": "ledger",
+     "label": "runs repris après rate_limit épargnés sauf --resumable",
+     "status": "implemented",
+     "code": "brigade/runs/prune_runs.py:58",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "prune",
+     "to": "rundir",
+     "label": "déplace puis supprime les dossiers retenus",
+     "status": "implemented",
+     "code": "brigade/runs/prune_runs.py:115",
+     "task": null,
+     "frame": "alt: pas --dry-run",
+     "reply": false
+    },
+    {
+     "from": "runs_prune",
+     "to": "op",
+     "label": "removed <id> (<state>) ou would remove",
+     "status": "implemented",
+     "code": "brigade/commands/runs_prune.py:23",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "run",
+     "to": "runs_prune",
+     "label": "élagage automatique après chaque run en avant-plan",
+     "status": "implemented",
+     "code": "brigade/commands/run.py:114",
+     "task": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Les runs au-delà de la borne sont supprimés; un run vivant ou reprenable est préservé.",
+   "steps_human": [
+    "j'exécute brigade runs prune --dry-run",
+    "j'exécute brigade runs prune"
+   ]
+  },
+  {
+   "id": "worktree-par-tache",
+   "title": "Une tâche reçoit son worktree et son run de build",
+   "intent": "je veux que chaque tâche travaille dans son propre worktree, prêt à l'emploi, sans que je le prépare",
+   "actor": "timer",
+   "status": "partial",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B12",
+    "@TASK.B141",
+    "@TASK.B13",
+    "@TASK.B145"
+   ],
+   "participants": [
+    {
+     "id": "rounds",
+     "label": "run_rounds / apply_actions",
+     "kind": "module",
+     "code": "brigade/tick/run_rounds.py"
+    },
+    {
+     "id": "prep",
+     "label": "prepare_task_worktree",
+     "kind": "module",
+     "code": "brigade/tick/prepare_task_worktree.py"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "rundir",
+     "label": "Dossier du run (journal, result, pid)",
+     "kind": "store",
+     "code": "brigade/runs/run_locations.py"
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "config",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py"
+    },
+    {
+     "id": "agent",
+     "label": "Agent (client claude)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "task_cli",
+     "label": "brigade task check|pr|promote",
+     "kind": "cli",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "rounds",
+     "to": "prep",
+     "label": "LaunchTask(request, project, milestone, branch, task)",
+     "status": "implemented",
+     "code": "brigade/tick/actions.py:10",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "prep",
+     "to": "git",
+     "label": "verrou worktrees; .gitignore .brigade/worktrees/ sur la branche de vague",
+     "status": "implemented",
+     "code": "brigade/tick/ignore_worktrees.py:15",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "prep",
+     "to": "git",
+     "label": "git worktree add -b task/<slug>/<tâche> <chemin> integration/<slug>",
+     "status": "implemented",
+     "code": "brigade/git/add_branch_worktree.py:17",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "prep",
+     "to": "git",
+     "label": "PROJECT.SETUP: une ligne = un argv (shlex), sans shell",
+     "status": "implemented",
+     "code": "brigade/tick/prepare_task_worktree.py:37",
+     "task": "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell",
+     "reply": false
+    },
+    {
+     "from": "prep",
+     "to": "git",
+     "label": "merge-base --is-ancestor de la branche de vague et de HEAD",
+     "status": "implemented",
+     "code": "brigade/git/require_ancestor.py:9",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "prep",
+     "to": "ledger",
+     "label": "si setup KO: worktree+branche supprimés, task.state parked",
+     "status": "implemented",
+     "code": "brigade/tick/prepare_task_worktree.py:63",
+     "task": null,
+     "frame": "alt: setup en échec",
+     "reply": false
+    },
+    {
+     "from": "rounds",
+     "to": "rundir",
+     "label": "brief écrit: briefs/<req>-<tâche>.md",
+     "status": "implemented",
+     "code": "brigade/tick/write_build_brief.py:14",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "rounds",
+     "to": "run",
+     "label": "run build-task --slot build --cwd <wt> --brief … --detach",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:55",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "config",
+     "label": "résoudre la procédure build-task",
+     "status": "todo",
+     "code": "brigade/runs/resolve_procedure.py:60",
+     "task": "@TASK.B141",
+     "note": "aucune procédure build-task n'est livrée: ce pas échoue sans corpus d'instructions qui la porte",
+     "reply": false
+    },
+    {
+     "from": "rounds",
+     "to": "ledger",
+     "label": "task.state running",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py:68",
+     "task": null,
+     "note": "écrit APRÈS le spawn; jamais rouvert quand le run meurt",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "task_cli",
+     "label": "brigade task context (paquet de départ du run de build)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B13",
+     "reply": false
+    },
+    {
+     "from": "rounds",
+     "to": "git",
+     "label": "si le lancement échoue: retirer worktree et branche",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: run non lançable",
+     "note": "aucun rollback après prepare_task_worktree",
+     "reply": false
+    }
+   ],
+   "outcome": "Un worktree par tâche, des commandes de setup sans shell, un run de build détaché; échec de lancement non nettoyé.",
+   "steps_human": [
+    "(aucun geste en régime normal)",
+    "en cas de parked: je ne sais pas le relever (aucune commande)"
+   ]
+  },
+  {
+   "id": "ouvrir-la-pull-request",
+   "title": "Ouvrir la pull request d'une tâche",
+   "intent": "je veux que le run de build finisse par une pull request vérifiée et la tâche promue",
+   "actor": "agent",
+   "status": "planned",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B13",
+    "@TASK.B141",
+    "@TASK.B142",
+    "@TASK.B14"
+   ],
+   "participants": [
+    {
+     "id": "agent",
+     "label": "Agent (client claude)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "task_cli",
+     "label": "brigade task check|pr|promote",
+     "kind": "cli",
+     "code": null
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "agent",
+     "to": "task_cli",
+     "label": "brigade task context",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B13",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "agent",
+     "label": "tests d'abord, implémentation, commits",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B141",
+     "note": "build-task.md à livrer",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "task_cli",
+     "label": "brigade task check",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "task_cli",
+     "to": "git",
+     "label": "ACCEPTANCE (argv sans shell) + awawa fmt --check + lint --strict",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "task_cli",
+     "to": "ledger",
+     "label": "verdicts + sha de HEAD (checks/<projet>/<tâche>.json)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "task_cli",
+     "label": "brigade task pr \"<sujet>\"",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "task_cli",
+     "to": "gh",
+     "label": "push de task/<slug>/<tâche>; PR vers integration/<slug>, milestone GitHub",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "task_cli",
+     "to": "ledger",
+     "label": "task.pr_opened (+ milestone.created)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "task_cli",
+     "label": "brigade task promote",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "task_cli",
+     "to": "git",
+     "label": "STATUS implemented + DELIVERED_BY (fmt+lint), commit, push",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B142",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "voit la PR de la tâche: task.state pr_open / merged / parked",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B14",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "git",
+     "label": "retire le worktree une fois la PR fusionnée ou fermée",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B14",
+     "reply": false
+    }
+   ],
+   "outcome": "Une PR par tâche, avec contrôles mécaniques enregistrés avant l'ouverture; l'état de la tâche suit la PR.",
+   "steps_human": [
+    "(aucun geste)"
+   ]
+  },
+  {
+   "id": "revue-de-la-pull-request",
+   "title": "Passer la revue d'une pull request (the pass)",
+   "intent": "je veux que chaque PR soit contrôlée mécaniquement puis jugée par un relecteur indépendant",
+   "actor": "timer",
+   "status": "planned",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B15",
+    "@TASK.B16",
+    "@TASK.B99",
+    "@TASK.B75"
+   ],
+   "participants": [
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "verify",
+     "label": "brigade verify preflight|context|verdict",
+     "kind": "cli",
+     "code": null
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "agent",
+     "label": "Agent (client claude)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "config",
+     "label": "config.toml",
+     "kind": "store",
+     "code": "brigade/system/read_configuration.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "PR en pr_open dont les checks sont terminés",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B14",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "verify",
+     "label": "brigade verify preflight <pr>",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B15",
+     "reply": false
+    },
+    {
+     "from": "verify",
+     "to": "git",
+     "label": "ancestry, corpus (fmt/lint), promotion, untouched, privacy, body, size",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B15",
+     "reply": false
+    },
+    {
+     "from": "verify",
+     "to": "gh",
+     "label": "checks de la PR",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B15",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "findings du preflight; tâche -> verifying si aucun échec",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B15",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "run slot review, procédure verify-pr.md",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "verify",
+     "label": "brigade verify context <pr>",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "agent",
+     "label": "juge la PR (critical/high/medium/low)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "verify",
+     "label": "brigade verify verdict <pr> --file verdict",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "reply": false
+    },
+    {
+     "from": "verify",
+     "to": "gh",
+     "label": "POLICY.REVIEW approval: review approve / request changes (login du slot review)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "frame": "alt: REVIEW approval",
+     "reply": false
+    },
+    {
+     "from": "verify",
+     "to": "ledger",
+     "label": "POLICY.REVIEW verdict: événement ledger seul",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "frame": "alt: REVIEW verdict (défaut)",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "task.state verified ou changes_requested",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B16",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "config",
+     "label": "doctor: deux logins distincts build/review sous approval",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py",
+     "task": "@TASK.B99",
+     "note": "seul le contrôle de configuration existe",
+     "reply": false
+    }
+   ],
+   "outcome": "Chaque PR a un verdict traçable, d'un login distinct sous approval; aucun code de la passe n'existe hors du réglage B99.",
+   "steps_human": [
+    "(aucun geste)"
+   ]
+  },
+  {
+   "id": "fusion-et-dependantes",
+   "title": "Fusionner dans l'intégration et libérer les dépendantes",
+   "intent": "je veux que les PR validées fusionnent seules et débloquent les tâches suivantes",
+   "actor": "timer",
+   "status": "planned",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B17",
+    "@TASK.B143",
+    "@TASK.B20"
+   ],
+   "participants": [
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "planfn",
+     "label": "tick.plan",
+     "kind": "module",
+     "code": "brigade/tick/plan.py"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "PR verified, checks verts, base = branche de vague",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B17",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "merge selon PROJECT.MERGE (rebase par défaut), sauf AUTO_MERGE none",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B17",
+     "frame": "alt: AUTO_MERGE actif",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "événement de merge avec le login; task.state merged",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B17",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "planfn",
+     "label": "les tâches AFTER deviennent démarrables dans le même tick",
+     "status": "todo",
+     "code": "brigade/tick/plan.py:49",
+     "task": "@TASK.B17",
+     "note": "la condition est déjà codée, jamais satisfaite",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "git",
+     "label": "branche en retard: git rebase puis push --force-with-lease",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B143",
+     "frame": "alt: tâche derrière la branche de vague",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "conflit: run du slot rebase (brigade rebase context|done)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B143",
+     "frame": "alt: tâche derrière la branche de vague",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "toutes tâches merged/parked: étude wave-report",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B20",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "gh",
+     "label": "je fusionne integration/<slug> dans main",
+     "status": "missing",
+     "code": null,
+     "task": "@TASK.B100",
+     "note": "porte humaine voulue (DECISION AVerifierRunOnEveryPullRequestAndOneHumanGate); local review en draft",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "opcorpus",
+     "label": "REQUEST delivered/closed",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "aucun code n'écrit reporting|delivered|closed",
+     "reply": false
+    }
+   ],
+   "outcome": "Les tâches fusionnent dans l'intégration et leurs dépendantes partent; l'humain fusionne l'intégration dans main.",
+   "steps_human": [
+    "je fusionne integration/<slug> dans main à la main",
+    "je marque la REQUEST livrée (aucune commande)"
+   ]
+  },
+  {
+   "id": "reparer-une-pull-request",
+   "title": "Réparer une PR (changes demandés, checks rouges)",
+   "intent": "je veux qu'une PR refusée ou rouge soit corrigée seule, dans la limite de tours que j'ai fixée",
+   "actor": "timer",
+   "status": "planned",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B18"
+   ],
+   "participants": [
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "agent",
+     "label": "Agent (client claude)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "verify",
+     "label": "brigade verify preflight|context|verdict",
+     "kind": "cli",
+     "code": null
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "task.state changes_requested ou fixing",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "run slot remediate",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "frame": "alt: changes_requested",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "verify",
+     "label": "brigade review context (findings ou fils de revue)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "frame": "alt: changes_requested",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "gh",
+     "label": "brigade review reply: répondre à chaque fil (login remediate)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "frame": "alt: changes_requested",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "run slot build avec le log tronqué de chaque check rouge",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "frame": "alt: check en échec",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "git",
+     "label": "push de la réparation",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "task.state pr_open (retour au contrôle)",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "au-delà de VERIFY_ROUNDS: task.parked avec la raison",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B18",
+     "frame": "alt: tours épuisés",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "tick",
+     "label": "relever une tâche parked après correction humaine",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: tours épuisés",
+     "note": "aucune commande",
+     "reply": false
+    }
+   ],
+   "outcome": "La PR est réparée automatiquement dans la limite des tours, sinon la tâche est parquée avec sa raison.",
+   "steps_human": [
+    "(aucun geste) ou je corrige la PR parquée à la main"
+   ]
+  },
+  {
+   "id": "reprendre-apres-quota",
+   "title": "Reprendre après quota ou compte forge indisponible",
+   "intent": "je veux que la vague se mette en pause quand le quota saute et reprenne la même session à l'heure indiquée",
+   "actor": "timer",
+   "status": "planned",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B19",
+    "@TASK.B112",
+    "@TASK.B75"
+   ],
+   "participants": [
+    {
+     "id": "segments",
+     "label": "run_segments / run_segment",
+     "kind": "module",
+     "code": "brigade/runs/run_segments.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "planfn",
+     "label": "tick.plan",
+     "kind": "module",
+     "code": "brigade/tick/plan.py"
+    },
+    {
+     "id": "timer",
+     "label": "Timer (systemd/cron)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "client",
+     "label": "Client (claude)",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "segments",
+     "to": "ledger",
+     "label": "run.finished avec error_class rate_limit (reset éventuel)",
+     "status": "implemented",
+     "code": "brigade/runs/run_segments.py:79",
+     "task": null,
+     "note": "le classement existe pour claude-code (B112)",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "wave.paused (quota, resume_at) pour toutes les vagues running",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "note": "l'événement est déclaré dans brigade/ledger/wave_paused.py mais jamais émis",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "task.state paused:quota",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "planfn",
+     "label": "aucun lancement tant que la vague est en pause",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "reply": false
+    },
+    {
+     "from": "timer",
+     "to": "tick",
+     "label": "tick après resume_at",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "client",
+     "label": "resume-argv avec le session id du dernier segment",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "frame": "alt: l'adaptateur sait reprendre",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "sinon relance fraîche depuis progress.md",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "frame": "alt: pas de resume",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "wave.resumed; task.state running",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "reply": false
+    },
+    {
+     "from": "run",
+     "to": "ledger",
+     "label": "forge_account.unavailable (jeton introuvable, forge_attempts épuisés)",
+     "status": "implemented",
+     "code": "brigade/commands/run.py:26",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "ledger",
+     "label": "brigade wave resume [<req>]",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "frame": "alt: compte forge indisponible",
+     "reply": false
+    }
+   ],
+   "outcome": "La vague s'arrête sans perdre de travail et reprend seule après le quota; la pause forge exige un geste.",
+   "steps_human": [
+    "(quota) aucun geste",
+    "(forge) j'exécute brigade wave resume"
+   ]
+  },
+  {
+   "id": "relancer-une-tache-echouee",
+   "title": "Relancer une tâche dont le run a échoué",
+   "intent": "je veux relancer une tâche dont le run est mort, bloqué ou parqué, sans bricoler le ledger",
+   "actor": "operator",
+   "status": "unplanned",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "runs_list",
+     "label": "runs list",
+     "kind": "cli",
+     "code": "brigade/commands/runs_list.py"
+    },
+    {
+     "id": "wave_show",
+     "label": "wave show",
+     "kind": "cli",
+     "code": "brigade/commands/wave_show.py"
+    },
+    {
+     "id": "runs_show",
+     "label": "runs show",
+     "kind": "cli",
+     "code": "brigade/commands/runs_show.py"
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "planfn",
+     "label": "tick.plan",
+     "kind": "module",
+     "code": "brigade/tick/plan.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "runs_list",
+     "label": "brigade runs list: run dead ou outcome failed/blocked",
+     "status": "implemented",
+     "code": "brigade/runs/describe_run.py:11",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_show",
+     "label": "brigade wave show <req>: tâche restée running ou parked",
+     "status": "implemented",
+     "code": "brigade/waves/list_wave_tasks.py:21",
+     "task": null,
+     "note": "le run mort n'est pas rattaché à la tâche",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "runs_show",
+     "label": "brigade runs show <id> --log (pourquoi ?)",
+     "status": "implemented",
+     "code": "brigade/commands/runs_show.py:105",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "tick",
+     "label": "brigade task requeue <req> <tâche> (task.state queued)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "seuls prepare_task_worktree.py:63 et tick.py:68 écrivent task.state",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "détection d'un run dead -> task.state parked/queued",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": "alt: détection automatique",
+     "note": "_is_startable exige queued; running ne se rouvre jamais",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "run",
+     "label": "brigade run <proc> --resume <id> (reprendre la session)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "resume-argv n'existe que côté adaptateur",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "planfn",
+     "label": "la tâche redevient démarrable au tick suivant",
+     "status": "implemented",
+     "code": "brigade/tick/plan.py:45",
+     "task": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Aujourd'hui: impossible sans éditer le ledger ou supprimer branche et worktree; à planifier.",
+   "steps_human": [
+    "j'exécute brigade runs list",
+    "j'exécute brigade wave show <req>",
+    "(rien ne permet de relancer)"
+   ]
+  },
+  {
+   "id": "annuler-ou-clore-une-vague",
+   "title": "Annuler ou clore une vague",
+   "intent": "je veux annuler une vague, ou la déclarer livrée quand tout est fusionné",
+   "actor": "operator",
+   "status": "unplanned",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B20",
+    "@TASK.B100"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "wave_list",
+     "label": "wave list",
+     "kind": "cli",
+     "code": "brigade/commands/wave_list.py"
+    },
+    {
+     "id": "wave_show",
+     "label": "wave show",
+     "kind": "cli",
+     "code": "brigade/commands/wave_show.py"
+    },
+    {
+     "id": "wave_start",
+     "label": "wave start",
+     "kind": "cli",
+     "code": "brigade/commands/wave_start.py"
+    },
+    {
+     "id": "runs_stop",
+     "label": "runs stop",
+     "kind": "cli",
+     "code": "brigade/commands/runs_stop.py"
+    },
+    {
+     "id": "git",
+     "label": "git",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "wave_list",
+     "label": "brigade wave list --project P",
+     "status": "implemented",
+     "code": "brigade/commands/wave_list.py:31",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_show",
+     "label": "brigade wave show <req>",
+     "status": "implemented",
+     "code": "brigade/commands/wave_show.py:44",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_start",
+     "label": "brigade wave cancel <req>",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "le schéma déclare cancelled mais aucune commande n'y mène",
+     "reply": false
+    },
+    {
+     "from": "wave_start",
+     "to": "runs_stop",
+     "label": "arrêter les runs vivants de la vague",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_start",
+     "to": "git",
+     "label": "retirer worktrees, branches task/*, fermer les PR ouvertes",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_start",
+     "to": "opcorpus",
+     "label": "REQUEST cancelled",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "schema.awawa.tpl:128: paused|reporting|delivered|closed|cancelled",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "opcorpus",
+     "label": "toutes tâches merged -> REQUEST reporting puis delivered",
+     "status": "missing",
+     "code": null,
+     "task": "@TASK.B20",
+     "note": "B20 ne couvre que l'étude wave-report",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_list",
+     "label": "brigade wave list --status running",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "note": "wave list n'a que --project",
+     "reply": false
+    }
+   ],
+   "outcome": "Aujourd'hui une REQUEST ne quitte jamais running; l'abandon et la livraison sont à définir.",
+   "steps_human": [
+    "j'exécute brigade wave show <req>",
+    "je supprime worktrees et branches à la main"
+   ]
+  },
+  {
+   "id": "signaux-vers-vague",
+   "title": "Transformer des signaux en vague (intake et triage)",
+   "intent": "je veux déposer un signal ou laisser brigade trier ce qu'elle a observé, puis le ratifier en vague",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M2"
+   ],
+   "tasks": [
+    "@TASK.B22",
+    "@TASK.B23",
+    "@TASK.B24",
+    "@TASK.B25",
+    "@TASK.B26"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "gh",
+     "label": "gh / forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "run",
+     "label": "run",
+     "kind": "cli",
+     "code": "brigade/commands/run.py"
+    },
+    {
+     "id": "agent",
+     "label": "Agent (client claude)",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    },
+    {
+     "id": "wave_new",
+     "label": "wave new",
+     "kind": "cli",
+     "code": "brigade/commands/wave_new.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "ledger",
+     "label": "brigade note \"<signal>\"",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B22",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "collector pr-threads: fils de revue ouverts",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B23",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "gh",
+     "label": "collector check-runs: checks rouges",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B24",
+     "reply": false
+    },
+    {
+     "from": "tick",
+     "to": "run",
+     "label": "étude triage: regrouper les signaux en PATTERN",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B25",
+     "reply": false
+    },
+    {
+     "from": "agent",
+     "to": "opcorpus",
+     "label": "PATTERN new avec ses évidences",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B25",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "op",
+     "label": "brigade inbox: lire les patterns à ratifier",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B22",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wave_new",
+     "label": "ratifier un pattern en REQUEST (wave new FROM @PATTERN)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B26",
+     "reply": false
+    },
+    {
+     "from": "wave_new",
+     "to": "run",
+     "label": "planificateur lancé comme pour une demande directe",
+     "status": "implemented",
+     "code": "brigade/commands/wave_new.py:35",
+     "task": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Les signaux deviennent des patterns ratifiables, puis une vague planifiée; tout le chemin est en draft.",
+   "steps_human": [
+    "j'exécute brigade inbox",
+    "je ratifie un pattern"
+   ]
+  },
+  {
+   "id": "etat-d-une-vague",
+   "title": "Veiller à l'état d'une vague en cours",
+   "intent": "je veux savoir où en est ma vague: quelles tâches tournent, attendent, ont une PR",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B11",
+    "@TASK.B14",
+    "@TASK.B28"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "wave_show",
+     "label": "wave show",
+     "kind": "cli",
+     "code": "brigade/commands/wave_show.py"
+    },
+    {
+     "id": "opcorpus",
+     "label": "Corpus opératoire (requests.awawa)",
+     "kind": "store",
+     "code": "brigade/corpus/change_corpus_file.py"
+    },
+    {
+     "id": "projcorpus",
+     "label": "Corpus du projet (branche integration)",
+     "kind": "store",
+     "code": "brigade/corpus/prepare_project_tree.py"
+    },
+    {
+     "id": "ledger",
+     "label": "Ledger",
+     "kind": "store",
+     "code": "brigade/ledger/append_event.py"
+    },
+    {
+     "id": "tick",
+     "label": "tick",
+     "kind": "cli",
+     "code": "brigade/commands/tick.py"
+    },
+    {
+     "id": "runs_list",
+     "label": "runs list",
+     "kind": "cli",
+     "code": "brigade/commands/runs_list.py"
+    },
+    {
+     "id": "dash",
+     "label": "Tableau de bord",
+     "kind": "cli",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "wave_show",
+     "label": "brigade wave show <req>",
+     "status": "implemented",
+     "code": "brigade/commands/wave_show.py:44",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_show",
+     "to": "opcorpus",
+     "label": "REQUEST par nom",
+     "status": "implemented",
+     "code": "brigade/waves/read_wave_request.py:9",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_show",
+     "to": "projcorpus",
+     "label": "tâches du MILESTONE à la branche de vague",
+     "status": "implemented",
+     "code": "brigade/waves/list_wave_tasks.py:21",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_show",
+     "to": "ledger",
+     "label": "dernier task.state par tâche (queued par défaut)",
+     "status": "implemented",
+     "code": "brigade/waves/read_task_states.py:7",
+     "task": null,
+     "reply": false
+    },
+    {
+     "from": "wave_show",
+     "to": "op",
+     "label": "table tâche | état | PR (DELIVERED_BY) | titre",
+     "status": "implemented",
+     "code": "brigade/commands/wave_show.py:22",
+     "task": null,
+     "reply": true
+    },
+    {
+     "from": "tick",
+     "to": "ledger",
+     "label": "états pr_open/verifying/merged/…",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B14",
+     "note": "aujourd'hui seulement queued, running, parked",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "runs_list",
+     "label": "quel run travaille sur quelle tâche ?",
+     "status": "missing",
+     "code": null,
+     "task": "@TASK.B92",
+     "note": "runs list sans argument de procédure",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "dash",
+     "label": "vue Wave du tableau de bord",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B28",
+     "reply": false
+    }
+   ],
+   "outcome": "Un tableau d'états de tâches, pauvre tant que la tâche B14 n'écrit pas les états suivants.",
+   "steps_human": [
+    "j'exécute brigade wave show <req>",
+    "je croise avec brigade runs list"
+   ]
+  }
+ ],
+ "issues": [
+  {
+   "kind": "defect",
+   "severity": "high",
+   "title": "Lancement d'une tâche non atomique: worktree et branche fuient si le run ne part pas",
+   "detail": "_launch_task cut le worktree et la branche task/... avant de valider le run (procédure, jeton forge). Si run() lève, rien ne les retire et aucun task.state n'est écrit; au tick suivant git worktree add -b échoue sur la branche existante, à chaque tick. Aujourd'hui build-task n'est livrée par aucune source (seul wave-plan.md est dans brigade/runs/data/procedures), donc tout lancement de vague échoue ainsi.",
+   "evidence": "brigade/commands/tick.py:55-68; brigade/git/add_branch_worktree.py:22; brigade/runs/resolve_procedure.py:60-72",
+   "use_cases": [
+    "worktree-par-tache",
+    "lancer-le-tick",
+    "la-vague-se-livre-seule-la-nuit"
+   ],
+   "addressed_by": "@TASK.B141 (livre la procédure, pas l'atomicité)",
+   "suggestion": "Résoudre la procédure et préparer le plan de run avant de cuter le worktree, ou nettoyer worktree et branche sur toute exception; écrire task.state avant le spawn.",
+   "id": "B1"
+  },
+  {
+   "kind": "hole",
+   "severity": "high",
+   "title": "La chaîne de bout en bout s'arrête au lancement du build: rien ne suit PR, revue, fusion",
+   "detail": "Le tick ne connaît que StartWave et LaunchTask; task.state n'est écrit que running et parked; les dépendantes exigent merged (plan.py:49) qui n'est écrit nulle part. Une vague de plus d'une tâche reste donc bloquée, et le run de build n'a ni task check/pr/promote, ni revue, ni fusion.",
+   "evidence": "brigade/tick/actions.py:5-15; brigade/tick/plan.py:45-51; grep TaskState( : tick.py:68 et prepare_task_worktree.py:63 seulement",
+   "use_cases": [
+    "la-vague-se-livre-seule-la-nuit",
+    "ouvrir-la-pull-request",
+    "revue-de-la-pull-request",
+    "fusion-et-dependantes"
+   ],
+   "addressed_by": "@TASK.B142, @TASK.B14, @TASK.B15, @TASK.B16, @TASK.B17 (todo)",
+   "suggestion": "Ordre de livraison B13, B142, B141, B14, B15, B16, B17; tant que B14 manque, avertir dans tick --dry-run qu'aucune tâche ne peut être marquée merged.",
+   "id": "B2"
+  },
+  {
+   "kind": "hole",
+   "severity": "high",
+   "title": "Un run de build mort laisse sa tâche en running pour toujours",
+   "detail": "Une tâche n'est démarrable que si son état est queued ou absent; running ne se rouvre jamais. Un run qui meurt (crash, kill, reboot) reste dead dans runs list mais le tick ne le relie pas à la tâche; B18 couvre les checks rouges et B19 le seul rate_limit.",
+   "evidence": "brigade/tick/plan.py:46; brigade/runs/describe_run.py:19-21; brigade/commands/runs_stop.py",
+   "use_cases": [
+    "relancer-une-tache-echouee",
+    "arreter-un-run"
+   ],
+   "addressed_by": null,
+   "suggestion": "Que le snapshot rapproche live_runs de task.state: tâche running sans run vivant -> parked avec la raison run dead, et une commande brigade wave requeue.",
+   "id": "B3"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Aucune commande pour relever une tâche parked",
+   "detail": "La spec de B12 dit parked jusqu'à ce qu'elle soit relevée à la main, mais task.state est un ledger en ajout seul et aucune commande ne l'écrit.",
+   "evidence": "@TASK.B12 SPEC 4; brigade/tick/prepare_task_worktree.py:63; grep unpark dans brigade/: aucun résultat",
+   "use_cases": [
+    "worktree-par-tache",
+    "relancer-une-tache-echouee",
+    "reparer-une-pull-request"
+   ],
+   "addressed_by": null,
+   "suggestion": "Ajouter brigade wave requeue <req> <tâche> qui écrit task.state queued sous verrou.",
+   "id": "B4"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Une REQUEST ne peut ni être annulée ni être close",
+   "detail": "Le schéma déclare paused, reporting, delivered, closed et cancelled mais seuls planning, planned et running sont écrits par le code; pas de wave cancel, pas de transition vers delivered.",
+   "evidence": "brigade/corpus/data/schema.awawa.tpl:128; brigade/waves/mark_request_running.py; brigade/planning/mark_request_planned.py",
+   "use_cases": [
+    "annuler-ou-clore-une-vague",
+    "fusion-et-dependantes"
+   ],
+   "addressed_by": "@TASK.B20 (rapport seulement), @TASK.B100 (draft, local)",
+   "suggestion": "Ajouter wave cancel (arrête les runs, retire worktrees et branches, ferme les PR) et la transition vers delivered quand toutes les tâches sont merged.",
+   "id": "B5"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Un planificateur bloqué laisse la REQUEST en planning, sans reprise",
+   "detail": "Rien ne relit l'issue du run wave-plan; plan context refuse une REQUEST qui n'est plus planning et wave new crée une nouvelle REQUEST. Si le lancement détaché échoue après record_request, la REQUEST est déjà commitée sans run.",
+   "evidence": "brigade/commands/wave_new.py:54-55; brigade/planning/read_planning_request.py:22-26; brigade/planning/record_plan.py:49-54",
+   "use_cases": [
+    "demander-une-vague",
+    "planifier-une-demande"
+   ],
+   "addressed_by": null,
+   "suggestion": "Que le tick marque la REQUEST planning dont le run est dead/blocked, et ajouter wave replan <req> qui relance le planificateur.",
+   "id": "B6"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "plan record n'est pas rejouable après un push réussi",
+   "detail": "La branche integration/<slug> est créée et poussée avant que la REQUEST passe planned; si _mark_planned échoue, un nouveau plan record refuse parce que la branche existe.",
+   "evidence": "brigade/planning/record_plan.py:141-142,172-179",
+   "use_cases": [
+    "planifier-une-demande"
+   ],
+   "addressed_by": null,
+   "suggestion": "Détecter la branche existante liée à la même REQUEST et ne rejouer que _mark_planned.",
+   "id": "B7"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Relire un plan avant wave start exige git à la main",
+   "detail": "wave show affiche id, état, PR et titre, sans AFTER ni SPEC; l'opérateur lit le plan dans git, et ne peut ni le rejeter ni l'amender par commande.",
+   "evidence": "brigade/commands/wave_show.py:15,24; brigade/waves/list_wave_tasks.py:31-38",
+   "use_cases": [
+    "relire-et-demarrer-la-vague"
+   ],
+   "addressed_by": null,
+   "suggestion": "wave show --plan: arêtes AFTER, SPEC par tâche, ordre prévisible; wave reject <req> qui repasse planning.",
+   "id": "B8"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Copier l'id d'un run entre deux commandes",
+   "detail": "wave new imprime l'id du run planificateur sans l'option de le suivre, et runs list ne relie pas un run à une REQUEST ni à une tâche; l'opérateur recopie les ids.",
+   "evidence": "brigade/commands/wave_new.py:56; brigade/commands/runs_list.py:9 (COLUMNS); brigade/runs/list_runs.py:14 (tri croissant)",
+   "use_cases": [
+    "suivre-un-run",
+    "demander-une-vague",
+    "etat-d-une-vague"
+   ],
+   "addressed_by": "@TASK.B92 (draft: arguments, segments, durée, coût)",
+   "suggestion": "wave new --follow; runs list --project/--running/--task et colonne des arguments; runs show --last; wave show affiche le run de chaque tâche.",
+   "id": "B9"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Un lancement en échec abandonne tout le tick, heartbeat compris",
+   "detail": "apply_actions n'isole pas les actions et prepare_task_worktree lève BrigadeError sur setup KO; les autres lancements du tour sont perdus et write_json_atomically du heartbeat n'est jamais atteint, ce qui fait passer un tick partiellement actif pour mort.",
+   "evidence": "brigade/tick/apply_actions.py:10-11; brigade/tick/prepare_task_worktree.py:64; brigade/commands/tick.py:85-98",
+   "use_cases": [
+    "lancer-le-tick",
+    "worktree-par-tache"
+   ],
+   "addressed_by": null,
+   "suggestion": "Capturer l'échec par action, l'enregistrer dans le ledger et continuer; écrire le heartbeat avec le nombre d'échecs.",
+   "id": "B10"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Un nom de tâche sans numéro fait échouer le tick de tous les projets",
+   "detail": "_read_task_number lève BrigadeError pour une tâche sans suffixe numérique, dans plan() qui traite toutes les vagues: une vague au corpus atypique bloque les autres.",
+   "evidence": "brigade/tick/plan.py:54-58",
+   "use_cases": [
+    "lancer-le-tick"
+   ],
+   "addressed_by": null,
+   "suggestion": "Parquer la vague fautive avec la raison et continuer, ou trier par nom quand aucun numéro n'existe.",
+   "id": "B11"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Le snapshot relance awawa par tâche à chaque tour, jusqu'à 10 tours",
+   "detail": "read_live_blockers appelle awawa refs puis awawa show par type citant, pour chaque tâche de chaque vague, y compris les tâches déjà merged ou implémentées, et le snapshot est reconstruit à chaque tour (cap 10).",
+   "evidence": "brigade/tick/build_snapshot.py:112-117,129; brigade/tick/read_live_blockers.py:40-44; brigade/tick/run_rounds.py:22-25",
+   "use_cases": [
+    "lancer-le-tick",
+    "predire-le-tick"
+   ],
+   "addressed_by": null,
+   "suggestion": "Ne lire les bloqueurs que des tâches queued dont les AFTER sont satisfaits, et réutiliser les schémas lus dans le tick.",
+   "id": "B12"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Les commandes de projet sont des chaînes qui encodent un argv",
+   "detail": "SETUP est stocké en lignes de texte découpées par shlex.split, ACCEPTANCE le sera de même: un argv sérialisé dans une chaîne. La décision écarte le shell mais garde la chaîne comme stockage provisoire.",
+   "evidence": "brigade/tick/prepare_task_worktree.py:25,30-38; @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell",
+   "use_cases": [
+    "worktree-par-tache",
+    "ouvrir-la-pull-request"
+   ],
+   "addressed_by": "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell (#144); SETUP implémenté sans shell (B12), ACCEPTANCE en @TASK.B142 (todo), forme tableaux TOML en @TASK.B163 (draft, M8)",
+   "suggestion": "Garder la décision; planifier B163 avant d'ajouter d'autres champs de commandes, pour ne pas multiplier le format chaîne.",
+   "id": "B13"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "wave.paused et wave.resumed sont déclarés mais jamais émis",
+   "detail": "Les événements existent (ledger/wave_paused.py, wave_resumed.py) et describe_wave les lit, mais aucun code ne les écrit; wave show n'affiche aucune pause.",
+   "evidence": "brigade/ledger/describe_wave.py:40-42; grep WavePaused( hors ledger: aucun résultat",
+   "use_cases": [
+    "reprendre-apres-quota",
+    "etat-d-une-vague"
+   ],
+   "addressed_by": "@TASK.B19 (todo)",
+   "suggestion": "Afficher l'état de pause dans wave show et dans tick --dry-run dès B19.",
+   "id": "B14"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "Intervalle du tick figé à 300 s",
+   "detail": "TICK_INTERVAL_S est une constante alors que journal_poll_s, runs_kept et seconds_per_step sont des clés de config.toml.",
+   "evidence": "brigade/commands/tick.py:37; brigade/system/read_configuration.py:52-56",
+   "use_cases": [
+    "lancer-le-tick"
+   ],
+   "addressed_by": "@DECISION.ADeterministicTickReplacesTheCoordinatorAgent (cinq minutes)",
+   "suggestion": "Exposer tick_interval_s dans config.toml, valeur par défaut 300.",
+   "id": "B15"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "Le tick lance build-task alors que le démarrage manuel du dépôt documente awawa-task",
+   "detail": "AGENTS.md du dépôt lance les tâches avec la procédure awawa-task; le tick lance build-task (B141 la livre); deux noms pour une même étape tant que B141 n'est pas fusionnée.",
+   "evidence": "brigade/commands/tick.py:34; AGENTS.md section Bootstrap",
+   "use_cases": [
+    "worktree-par-tache"
+   ],
+   "addressed_by": "@TASK.B141",
+   "suggestion": "Fixer le nom unique dans B141 et aligner AGENTS.md à la livraison.",
+   "id": "B16"
+  },
+  {
+   "kind": "hole",
+   "severity": "low",
+   "title": "wave list ne filtre pas par statut et ne résume pas l'avancement",
+   "detail": "Un seul filtre --project; aucune colonne du nombre de tâches merged sur total.",
+   "evidence": "brigade/commands/wave_list.py:11,46",
+   "use_cases": [
+    "etat-d-une-vague",
+    "annuler-ou-clore-une-vague"
+   ],
+   "addressed_by": "@TASK.B28 (vue Wave, draft)",
+   "suggestion": "wave list --status running et une colonne merged/total.",
+   "id": "B17"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Le triage et la ratification d'un signal en vague n'ont aucun code",
+   "detail": "B22 à B26 sont draft: pas de note, d'inbox, de collecteurs pr-threads et check-runs, d'étude triage ni de ratification.",
+   "evidence": "@TASK.B22 .. @TASK.B26 (draft, M2)",
+   "use_cases": [
+    "signaux-vers-vague"
+   ],
+   "addressed_by": "@TASK.B22, @TASK.B25, @TASK.B26 (draft)",
+   "suggestion": "Ratifier B22 et B26 en premier, car wave new peut déjà recevoir une REQUEST FROM @PATTERN.",
+   "id": "B18"
+  },
+  {
+   "kind": "hole",
+   "severity": "low",
+   "title": "tick --dry-run n'explique pas pourquoi une tâche n'est pas lancée",
+   "detail": "Le plan ne liste que les actions retenues; une tâche refusée (AFTER non merged, bloqueur, slot plein, parked) n'apparaît pas avec sa cause.",
+   "evidence": "brigade/commands/tick.py:116-123; brigade/tick/plan.py:45-51",
+   "use_cases": [
+    "predire-le-tick"
+   ],
+   "addressed_by": null,
+   "suggestion": "Ajouter au document dry-run la liste des tâches écartées avec leur cause.",
+   "id": "B19"
+  }
+ ]
+}

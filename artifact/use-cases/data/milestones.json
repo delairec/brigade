@@ -1,0 +1,86 @@
+[
+ {
+  "id": "M0",
+  "counts": {
+   "archived": 2,
+   "implemented": 22
+  },
+  "title": "Foundations"
+ },
+ {
+  "id": "F0",
+  "counts": {
+   "implemented": 33,
+   "archived": 3
+  },
+  "title": "fix-foundations"
+ },
+ {
+  "id": "M1",
+  "counts": {
+   "archived": 1,
+   "implemented": 16,
+   "todo": 16
+  },
+  "title": "Wave engine"
+ },
+ {
+  "id": "M2",
+  "counts": {
+   "draft": 5
+  },
+  "title": "Intake and triage"
+ },
+ {
+  "id": "M3",
+  "counts": {
+   "draft": 7,
+   "archived": 1
+  },
+  "title": "Dashboard"
+ },
+ {
+  "id": "M4",
+  "counts": {
+   "draft": 2
+  },
+  "title": "Gardening scans"
+ },
+ {
+  "id": "M5",
+  "counts": {
+   "draft": 2
+  },
+  "title": "Miner"
+ },
+ {
+  "id": "M6",
+  "counts": {
+   "draft": 4
+  },
+  "title": "Hardening"
+ },
+ {
+  "id": "M7",
+  "counts": {
+   "draft": 5,
+   "todo": 1
+  },
+  "title": "Portability"
+ },
+ {
+  "id": "M8",
+  "counts": {
+   "draft": 5
+  },
+  "title": "Recipes"
+ },
+ {
+  "id": "ADD0",
+  "counts": {
+   "draft": 11,
+   "archived": 1
+  },
+  "title": "post-mvp"
+ }
+]

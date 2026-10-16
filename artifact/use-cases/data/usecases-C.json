@@ -1,0 +1,4801 @@
+{
+ "family": "C",
+ "title": "Observation et ambitions",
+ "use_cases": [
+  {
+   "id": "ledger-overview",
+   "title": "Aperçu du journal d'événements",
+   "intent": "je veux voir ce qui s'est passé sur la machine ces derniers temps",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B05"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade ledger",
+     "kind": "cli",
+     "code": "brigade/commands/ledger.py"
+    },
+    {
+     "id": "rd",
+     "label": "read_ledger",
+     "kind": "module",
+     "code": "brigade/ledger/read_ledger.py"
+    },
+    {
+     "id": "ls",
+     "label": "ledger/YYYY-MM.jsonl",
+     "kind": "store",
+     "code": "$XDG_STATE_HOME/brigade/ledger/"
+    },
+    {
+     "id": "ov",
+     "label": "describe_overview",
+     "kind": "module",
+     "code": "brigade/ledger/describe_overview.py"
+    },
+    {
+     "id": "gr",
+     "label": "group_runs",
+     "kind": "module",
+     "code": "brigade/ledger/group_runs.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:139",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rd",
+     "label": "read_ledger(state_root)",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:96",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rd",
+     "to": "ls",
+     "label": "lit chaque fichier mensuel en entier",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:100",
+     "task": null,
+     "frame": "loop: chaque mois",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ls",
+     "to": "rd",
+     "label": "lignes JSON",
+     "status": "implemented",
+     "code": null,
+     "task": null,
+     "frame": "loop: chaque mois",
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "rd",
+     "to": "rd",
+     "label": "ligne invalide -> SkippedLine",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:104",
+     "task": null,
+     "frame": "alt: ligne refusée",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rd",
+     "to": "cli",
+     "label": "LedgerReading(entries, files, skipped)",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:96",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "ov",
+     "label": "describe_overview(reading)",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_overview.py:15",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ov",
+     "to": "gr",
+     "label": "group_runs: un run = son dernier segment",
+     "status": "implemented",
+     "code": "brigade/ledger/group_runs.py:8",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "événements, runs finis, classes d'erreur",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:51",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "lignes sautées sur stderr, exit 0 toujours",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:135",
+     "task": null,
+     "frame": null,
+     "note": "le code de sortie ne signale pas un journal corrompu",
+     "reply": false
+    }
+   ],
+   "outcome": "Compteurs d'événements, de runs et de segments terminés par résultat et par classe d'erreur, sans aucune durée ni coût.",
+   "steps_human": [
+    "j'exécute brigade ledger",
+    "je lis les compteurs",
+    "pour un coût ou une durée je dois ouvrir le fichier .jsonl moi-même"
+   ]
+  },
+  {
+   "id": "wave-ledger",
+   "title": "Bilan d'une vague",
+   "intent": "je veux savoir combien de temps, de pas et de pauses a pris la vague F0",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B05"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade ledger",
+     "kind": "cli",
+     "code": "brigade/commands/ledger.py"
+    },
+    {
+     "id": "rd",
+     "label": "read_ledger",
+     "kind": "module",
+     "code": "brigade/ledger/read_ledger.py"
+    },
+    {
+     "id": "ls",
+     "label": "ledger/YYYY-MM.jsonl",
+     "kind": "store",
+     "code": "$XDG_STATE_HOME/brigade/ledger/"
+    },
+    {
+     "id": "dw",
+     "label": "describe_wave",
+     "kind": "module",
+     "code": "brigade/ledger/describe_wave.py"
+    },
+    {
+     "id": "sm",
+     "label": "summarize_measure",
+     "kind": "module",
+     "code": "brigade/ledger/summarize_measure.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger --wave F0",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:139",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rd",
+     "label": "read_ledger(state_root)",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:96",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rd",
+     "to": "ls",
+     "label": "lit tous les mois",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:100",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "dw",
+     "label": "describe_wave(reading, 'F0')",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_wave.py:56",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dw",
+     "to": "dw",
+     "label": "filtre getattr(event,'wave')==F0",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_wave.py:57",
+     "task": null,
+     "frame": null,
+     "note": "le nom de vague est le MILESTONE, deux vagues du même jalon se mêlent",
+     "reply": false
+    },
+    {
+     "from": "dw",
+     "to": "dw",
+     "label": "aucun événement -> BrigadeError exit 1",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_wave.py:59",
+     "task": null,
+     "frame": "alt: vague inconnue",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dw",
+     "to": "sm",
+     "label": "pas p50/p90 par slot et par rôle",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_wave.py:28",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dw",
+     "to": "dw",
+     "label": "appaire wave.paused / wave.resumed",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_wave.py:36",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dw",
+     "to": "cli",
+     "label": "tâches, PR, pauses, hand-overs, parquées",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_wave.py:56",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "durée murale, PR et tours, pas par slot",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:87",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "coût / jetons de la vague",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "cost_usd et usage sont dans run.finished mais jamais agrégés",
+     "reply": false
+    }
+   ],
+   "outcome": "Durée murale, tâches, PR mergées avec leurs tours, pas par slot et par rôle, pauses, passages de relais, tâches parquées. Pas de coût.",
+   "steps_human": [
+    "j'exécute brigade ledger --wave <milestone>",
+    "pour le coût je somme cost_usd à la main dans le JSONL"
+   ]
+  },
+  {
+   "id": "cost-of-wave",
+   "title": "Coût d'une vague",
+   "intent": "je veux savoir combien m'a coûté la vague d'hier",
+   "actor": "operator",
+   "status": "unplanned",
+   "milestones": [
+    "M0",
+    "M3"
+   ],
+   "tasks": [
+    "@TASK.B92",
+    "@TASK.B31"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade ledger",
+     "kind": "cli",
+     "code": "brigade/commands/ledger.py"
+    },
+    {
+     "id": "dw",
+     "label": "describe_wave",
+     "kind": "module",
+     "code": "brigade/ledger/describe_wave.py"
+    },
+    {
+     "id": "fr",
+     "label": "FinishedRun",
+     "kind": "module",
+     "code": "brigade/ledger/finished_run.py"
+    },
+    {
+     "id": "ls",
+     "label": "ledger/YYYY-MM.jsonl",
+     "kind": "store",
+     "code": "$XDG_STATE_HOME/brigade/ledger/"
+    },
+    {
+     "id": "rf",
+     "label": "RunFinished",
+     "kind": "module",
+     "code": "brigade/ledger/run_finished.py"
+    },
+    {
+     "id": "cc",
+     "label": "claude_code adapter",
+     "kind": "module",
+     "code": "brigade/adapters/clients/claude_code.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "cc",
+     "to": "rf",
+     "label": "result.total_cost_usd -> cost_usd",
+     "status": "implemented",
+     "code": "brigade/adapters/clients/claude_code.py:215",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rf",
+     "to": "ls",
+     "label": "run.finished porte cost_usd et usage (4 compteurs)",
+     "status": "implemented",
+     "code": "brigade/ledger/run_finished.py:31",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger --wave F0 --since hier",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "--since n'existe que avec --project",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "dw",
+     "label": "describe_wave(reading, wave)",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_wave.py:56",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dw",
+     "to": "fr",
+     "label": "somme cost_usd / usage par run (propriété manquante)",
+     "status": "missing",
+     "code": "brigade/ledger/finished_run.py:20",
+     "task": null,
+     "frame": null,
+     "note": "FinishedRun n'a que main_steps, oversized_output_steps, steps_to_first_edit",
+     "reply": false
+    },
+    {
+     "from": "dw",
+     "to": "cli",
+     "label": "champ cost dans le document",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "coût USD, jetons, par tâche et par slot",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade runs list (coût par run)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B92",
+     "frame": null,
+     "note": "B92 : coût par run seulement, pas par vague",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "vue Ledger du dashboard: coût/vague",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B31",
+     "frame": null,
+     "note": "B31 liste pas p50/p90, pauses, comparaison; aucun coût",
+     "reply": false
+    }
+   ],
+   "outcome": "Aujourd'hui rien : le coût est écrit mais aucune commande ni vue planifiée ne l'additionne par vague ou par jour.",
+   "steps_human": [
+    "j'ouvre ~/.local/state/brigade/ledger/AAAA-MM.jsonl",
+    "je filtre les run.finished de la vague avec jq",
+    "je somme cost_usd",
+    "je répète pour les jetons"
+   ]
+  },
+  {
+   "id": "project-activity",
+   "title": "Activité d'un projet",
+   "intent": "je veux savoir ce que brigade a produit sur le projet X cette semaine",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B05"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade ledger",
+     "kind": "cli",
+     "code": "brigade/commands/ledger.py"
+    },
+    {
+     "id": "rd",
+     "label": "read_ledger",
+     "kind": "module",
+     "code": "brigade/ledger/read_ledger.py"
+    },
+    {
+     "id": "ls",
+     "label": "ledger/YYYY-MM.jsonl",
+     "kind": "store",
+     "code": "$XDG_STATE_HOME/brigade/ledger/"
+    },
+    {
+     "id": "dp",
+     "label": "describe_project",
+     "kind": "module",
+     "code": "brigade/ledger/describe_project.py"
+    },
+    {
+     "id": "rs",
+     "label": "read_since",
+     "kind": "module",
+     "code": "brigade/system/read_since.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger --project X --since 7d",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:139",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "cli",
+     "label": "--since sans --project -> UsageError",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:129",
+     "task": null,
+     "frame": "alt: --since seul",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rs",
+     "label": "read_since('7d') -> timedelta ou date",
+     "status": "implemented",
+     "code": "brigade/system/read_since.py:9",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rd",
+     "label": "read_ledger(state_root)",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:96",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "dp",
+     "label": "describe_project(reading, X, since)",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_project.py:22",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dp",
+     "to": "dp",
+     "label": "filtre event.project==X et ts>=since",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_project.py:25",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dp",
+     "to": "cli",
+     "label": "vagues, ordres, PR mergées, signaux, motifs, contraintes",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_project.py:31",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "compteurs seulement",
+     "status": "implemented",
+     "code": "brigade/commands/ledger.py:108",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "runs, pas, durée, coût du projet",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "describe_project ne compte aucun RunFinished",
+     "reply": false
+    }
+   ],
+   "outcome": "Nombre de vagues lancées, ordres faits, PR mergées, signaux, motifs ratifiés, contraintes livrées; rien sur l'effort consommé.",
+   "steps_human": [
+    "j'exécute brigade ledger --project X --since 7d",
+    "pour l'effort je retourne au JSONL"
+   ]
+  },
+  {
+   "id": "budgets-view",
+   "title": "Budgets observés par procédure",
+   "intent": "je veux savoir combien de pas prend vraiment chaque procédure",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0"
+   ],
+   "tasks": [
+    "@TASK.B05"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade ledger budgets",
+     "kind": "cli",
+     "code": "brigade/commands/ledger_budgets.py"
+    },
+    {
+     "id": "rd",
+     "label": "read_ledger",
+     "kind": "module",
+     "code": "brigade/ledger/read_ledger.py"
+    },
+    {
+     "id": "db",
+     "label": "describe_budgets",
+     "kind": "module",
+     "code": "brigade/ledger/describe_budgets.py"
+    },
+    {
+     "id": "sm",
+     "label": "summarize_measure",
+     "kind": "module",
+     "code": "brigade/ledger/summarize_measure.py"
+    },
+    {
+     "id": "ss",
+     "label": "summarize_steps",
+     "kind": "module",
+     "code": "brigade/ledger/summarize_steps.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger budgets --last 20",
+     "status": "implemented",
+     "code": "brigade/commands/ledger_budgets.py:34",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rd",
+     "label": "read_ledger(state_root)",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:96",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "db",
+     "label": "describe_budgets(reading, last)",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_budgets.py:14",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "db",
+     "to": "db",
+     "label": "group_runs puis tri par procédure du dernier segment",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_budgets.py:20",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "db",
+     "to": "sm",
+     "label": "summarize_measure(runs, 'main_steps')",
+     "status": "implemented",
+     "code": "brigade/ledger/summarize_measure.py:13",
+     "task": null,
+     "frame": "loop: chaque procédure",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sm",
+     "to": "ss",
+     "label": "p50 / p90 au rang le plus proche",
+     "status": "implemented",
+     "code": "brigade/ledger/summarize_steps.py:13",
+     "task": null,
+     "frame": "loop: chaque procédure",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "db",
+     "to": "db",
+     "label": "estimate si <5 runs mesurés",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_budgets.py:11",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "p50/p90 par procédure, marque 'estimate'",
+     "status": "implemented",
+     "code": "brigade/commands/ledger_budgets.py:17",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    }
+   ],
+   "outcome": "p50 et p90 des pas principaux par procédure sur ses N derniers runs, marqués estimation sous 5 runs. Aucun budget n'est comparé au front matter de la procédure.",
+   "steps_human": [
+    "j'exécute brigade ledger budgets",
+    "je compare au budget: du front matter de chaque procédure que je relis à la main"
+   ]
+  },
+  {
+   "id": "budgets-apply",
+   "title": "Appliquer les budgets mesurés",
+   "intent": "je veux que les budgets des procédures soient proposés puis mis à jour dans le dépôt",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M1",
+    "M6"
+   ],
+   "tasks": [
+    "@TASK.B37",
+    "@TASK.B21"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade ledger budgets",
+     "kind": "cli",
+     "code": "brigade/commands/ledger_budgets.py"
+    },
+    {
+     "id": "db",
+     "label": "describe_budgets",
+     "kind": "module",
+     "code": "brigade/ledger/describe_budgets.py"
+    },
+    {
+     "id": "fm",
+     "label": "front matter des procédures",
+     "kind": "store",
+     "code": "brigade/runs/data/ (budget:)"
+    },
+    {
+     "id": "gh",
+     "label": "forge github",
+     "kind": "external",
+     "code": "brigade/adapters/forges/github.py"
+    },
+    {
+     "id": "ac",
+     "label": "agent ada",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger budgets",
+     "status": "implemented",
+     "code": "brigade/commands/ledger_budgets.py:34",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "db",
+     "label": "describe_budgets -> p90 par procédure",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_budgets.py:14",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "propose p90 par procédure",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B37",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger budgets --apply (nom à décider)",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "B37 ne nomme pas de commande d'application",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "fm",
+     "label": "écrit budget: dans le front matter de chaque procédure",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B37",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "gh",
+     "label": "ouvre une PR de mise à jour des budgets",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B37",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "gh",
+     "label": "je relis et merge la PR",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "étape humaine, aucun garde-fou sur un p90 sur <5 runs",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "B21: répétition sur sandbox écrit les budgets + cité dans la PR",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B21",
+     "frame": null,
+     "note": "B21 est la version manuelle, une fois",
+     "reply": false
+    }
+   ],
+   "outcome": "Budgets des procédures alignés sur le p90 observé via une PR; la boucle de mesure est fermée.",
+   "steps_human": [
+    "je lance brigade ledger budgets",
+    "je recopie les p90 dans chaque front matter (B21 aujourd'hui)",
+    "j'ouvre la PR"
+   ]
+  },
+  {
+   "id": "compare-baseline",
+   "title": "Comparer avant/après un changement",
+   "intent": "je veux savoir si le changement de consigne du 3 octobre a réduit les pas",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M0",
+    "M6"
+   ],
+   "tasks": [
+    "@TASK.B05",
+    "@TASK.B39",
+    "@TASK.B40"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade ledger compare",
+     "kind": "cli",
+     "code": "brigade/commands/ledger_compare.py"
+    },
+    {
+     "id": "rd",
+     "label": "read_ledger",
+     "kind": "module",
+     "code": "brigade/ledger/read_ledger.py"
+    },
+    {
+     "id": "dc",
+     "label": "describe_comparison",
+     "kind": "module",
+     "code": "brigade/ledger/describe_comparison.py"
+    },
+    {
+     "id": "sm",
+     "label": "summarize_measure",
+     "kind": "module",
+     "code": "brigade/ledger/summarize_measure.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade ledger compare --before 2026-10-03",
+     "status": "implemented",
+     "code": "brigade/commands/ledger_compare.py:50",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rd",
+     "label": "read_ledger(state_root)",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:96",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "dc",
+     "label": "describe_comparison(reading, before)",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_comparison.py:28",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dc",
+     "to": "dc",
+     "label": "coupe à minuit UTC: runs avant / runs depuis",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_comparison.py:29",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dc",
+     "to": "dc",
+     "label": "aucun run d'un côté -> BrigadeError",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_comparison.py:34-36",
+     "task": null,
+     "frame": "alt: période vide",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dc",
+     "to": "sm",
+     "label": "pas, pas jusqu'à la 1re édition, sorties volumineuses",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_comparison.py:19",
+     "task": null,
+     "frame": "loop: chaque période",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "deux blocs avant / depuis",
+     "status": "implemented",
+     "code": "brigade/commands/ledger_compare.py:34",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "compare avec fenêtre bornée: --from --to / vague A vs B",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "B39 veut 26/09 -> 03/10; B40 une vague avec rtk, une sans",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "compare par procédure ou par rôle",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "compare coût et jetons",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Deux blocs de statistiques (avant le jour, depuis le jour sans borne haute) sur les pas; impossible de borner la seconde fenêtre ni de filtrer par procédure ou vague.",
+   "steps_human": [
+    "j'exécute brigade ledger compare --before J",
+    "pour borner la fin ou comparer deux vagues je filtre le JSONL à la main"
+   ]
+  },
+  {
+   "id": "collect-document",
+   "title": "Collecter un document déterministe",
+   "intent": "je veux collecter le git-log du projet depuis 7 jours sans appeler de modèle",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B47"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade collect",
+     "kind": "cli",
+     "code": "brigade/commands/collect.py"
+    },
+    {
+     "id": "rp",
+     "label": "resolve_plugin",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py"
+    },
+    {
+     "id": "cd",
+     "label": "collect_document",
+     "kind": "module",
+     "code": "brigade/collecting/collect_document.py"
+    },
+    {
+     "id": "rc",
+     "label": "read_cache_input",
+     "kind": "module",
+     "code": "brigade/collecting/read_cache_input.py"
+    },
+    {
+     "id": "co",
+     "label": "collecteur (git-log…)",
+     "kind": "module",
+     "code": "brigade/collectors/git_log.py"
+    },
+    {
+     "id": "ca",
+     "label": "cache/collectors/<nom>/<clé>",
+     "kind": "store",
+     "code": "$XDG_CACHE_HOME/brigade/collectors/"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade collect git-log --since 7d",
+     "status": "implemented",
+     "code": "brigade/commands/collect.py:62",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "cli",
+     "label": "projet = Path.cwd()",
+     "status": "implemented",
+     "code": "brigade/commands/collect.py:63",
+     "task": null,
+     "frame": null,
+     "note": "pas d'option --project",
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rp",
+     "label": "resolve_plugin('collector', nom, places)",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:86",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "cd",
+     "label": "collect_document(collector, request, runtime)",
+     "status": "implemented",
+     "code": "brigade/collecting/collect_document.py:103",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cd",
+     "to": "rc",
+     "label": "read_cache_input: SHA de HEAD",
+     "status": "implemented",
+     "code": "brigade/collecting/read_cache_input.py:17",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cd",
+     "to": "ca",
+     "label": "clé = sha256(commande, params, since, entrée)",
+     "status": "implemented",
+     "code": "brigade/collecting/collect_document.py:61",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cd",
+     "to": "co",
+     "label": "collect(environment, runtime, config)",
+     "status": "implemented",
+     "code": "brigade/collectors/git_log.py:11",
+     "task": null,
+     "frame": "alt: pas en cache ou --refresh",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "co",
+     "to": "cd",
+     "label": "document + summary + cache:true",
+     "status": "implemented",
+     "code": "brigade/collecting/collect_document.py:47",
+     "task": null,
+     "frame": "alt: pas en cache ou --refresh",
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cd",
+     "to": "ca",
+     "label": "écrit document.json et sidecar.json",
+     "status": "implemented",
+     "code": "brigade/collecting/collect_document.py:89",
+     "task": null,
+     "frame": "alt: pas en cache ou --refresh",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "résumé et chemin du document",
+     "status": "implemented",
+     "code": "brigade/commands/collect.py:46",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    }
+   ],
+   "outcome": "Le résumé du collecteur (commits, fichiers) et le chemin du document JSON, servi du cache si le HEAD n'a pas bougé.",
+   "steps_human": [
+    "je me place dans le dépôt du projet",
+    "j'exécute brigade collect <nom> k=v",
+    "j'ouvre le document par son chemin"
+   ]
+  },
+  {
+   "id": "collectors-list",
+   "title": "Lister les collecteurs disponibles",
+   "intent": "je veux savoir quels collecteurs existent et d'où ils viennent",
+   "actor": "operator",
+   "status": "implemented",
+   "milestones": [
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B47"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade collectors list",
+     "kind": "cli",
+     "code": "brigade/commands/collectors_list.py"
+    },
+    {
+     "id": "lc",
+     "label": "locate_collectors",
+     "kind": "module",
+     "code": "brigade/system/collector_places.py"
+    },
+    {
+     "id": "ls",
+     "label": "list_collectors",
+     "kind": "module",
+     "code": "brigade/system/list_collectors.py"
+    },
+    {
+     "id": "fs",
+     "label": "projet .brigade/collectors, machine, PATH, built-ins",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade collectors list",
+     "status": "implemented",
+     "code": "brigade/commands/collectors_list.py:25",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "lc",
+     "label": "locate_collectors(Path.cwd(), paths)",
+     "status": "implemented",
+     "code": "brigade/system/collector_places.py:23",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "ls",
+     "label": "list_collectors(places)",
+     "status": "implemented",
+     "code": "brigade/system/list_collectors.py:42",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ls",
+     "to": "fs",
+     "label": "exécutables du projet",
+     "status": "implemented",
+     "code": "brigade/system/list_collectors.py:20",
+     "task": null,
+     "frame": "loop: chaque source",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ls",
+     "to": "fs",
+     "label": "exécutables brigade-collector-* sur PATH",
+     "status": "implemented",
+     "code": "brigade/system/list_collectors.py:26",
+     "task": null,
+     "frame": "loop: chaque source",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ls",
+     "to": "fs",
+     "label": "modules built-in de brigade/collectors/",
+     "status": "implemented",
+     "code": "brigade/system/list_collectors.py:33",
+     "task": null,
+     "frame": "loop: chaque source",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "tableau nom/source",
+     "status": "implemented",
+     "code": "brigade/commands/collectors_list.py:15",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "description, paramètres, cache de chaque collecteur",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "la liste ne dit ni les paramètres key=value ni si le document est mis en cache",
+     "reply": false
+    }
+   ],
+   "outcome": "Tableau nom/source des collecteurs; les paramètres acceptés ne sont découvrables qu'en lisant le code.",
+   "steps_human": [
+    "j'exécute brigade collectors list",
+    "pour connaître les paramètres de git-diff-stat (from, to) je lis le code"
+   ]
+  },
+  {
+   "id": "follow-run-progress",
+   "title": "Suivre un run en cours",
+   "intent": "je veux voir où en est le run qui tourne en ce moment",
+   "actor": "operator",
+   "status": "partial",
+   "milestones": [
+    "M3"
+   ],
+   "tasks": [
+    "@TASK.B94"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade runs show",
+     "kind": "cli",
+     "code": "brigade/commands/runs_show.py"
+    },
+    {
+     "id": "sr",
+     "label": "show_run",
+     "kind": "module",
+     "code": "brigade/runs/show_run.py"
+    },
+    {
+     "id": "rd",
+     "label": "runs/<id>/ run.json, progress.md",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "api",
+     "label": "/api/runs",
+     "kind": "module",
+     "code": "brigade/dashboard (à créer)"
+    },
+    {
+     "id": "pg",
+     "label": "vue Runs",
+     "kind": "module",
+     "code": "brigade/dashboard (à créer)"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade runs show <id> [--log]",
+     "status": "implemented",
+     "code": "brigade/commands/runs_show.py:108",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "sr",
+     "label": "show_run(state_root, id, with_journal)",
+     "status": "implemented",
+     "code": "brigade/runs/show_run.py:44",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sr",
+     "to": "rd",
+     "label": "lit run.json, segments, résultats",
+     "status": "implemented",
+     "code": "brigade/runs/show_run.py:44",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "résumé, segments et issues, journal avec --log",
+     "status": "implemented",
+     "code": "brigade/commands/runs_show.py:113",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade runs show <id> affiche progress.md",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B94",
+     "frame": null,
+     "note": "seule trace vivante, aucune commande ne l'imprime",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "api",
+     "label": "GET /api/runs, /api/runs/<id>",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B94",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "rd",
+     "label": "état running/finished/dead + progress.md à chaque requête",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B94",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "vue Runs rafraîchie par le polling",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B94",
+     "frame": null,
+     "note": "chaque chaîne du progress est échappée (B27)",
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "op",
+     "label": "runs hors vague visibles",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B94",
+     "frame": null,
+     "note": null,
+     "reply": true
+    }
+   ],
+   "outcome": "Suivi d'un run, dans ou hors vague, avec sa trace de progression; seul le résumé et le journal brut existent aujourd'hui.",
+   "steps_human": [
+    "j'ouvre runs/<id>/progress.md à la main",
+    "je relance runs list pour l'état"
+   ]
+  },
+  {
+   "id": "dashboard-home",
+   "title": "Tableau de bord: accueil et vague",
+   "intent": "je veux ouvrir une page et voir l'état de mes vagues, et pouvoir pauser ou relancer",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M3"
+   ],
+   "tasks": [
+    "@TASK.B27",
+    "@TASK.B28"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "sv",
+     "label": "brigade serve",
+     "kind": "cli",
+     "code": "brigade/dashboard (à créer)"
+    },
+    {
+     "id": "api",
+     "label": "JSON API",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "pg",
+     "label": "page Home / Wave",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "ld",
+     "label": "read_ledger + registre + runs",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "cmd",
+     "label": "CLI wave pause/resume/retry",
+     "kind": "cli",
+     "code": "brigade/commands/"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "sv",
+     "label": "brigade serve",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B27",
+     "frame": null,
+     "note": "127.0.0.1 seulement, Host contrôlé, aucun CORS",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "GET / (coquille + jeton généré au démarrage)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B27",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "api",
+     "label": "GET /api/status, /api/waves/<id>",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B27",
+     "frame": "loop: polling",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "ld",
+     "label": "lit registre, ledger, runs, tick",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B27",
+     "frame": "loop: polling",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "pg",
+     "label": "projets, vagues, inbox, quota, dernier tick, tâches parquées",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B28",
+     "frame": "loop: polling",
+     "note": "le quota affiché n'est calculé nulle part",
+     "reply": true
+    },
+    {
+     "from": "pg",
+     "to": "op",
+     "label": "tableau des tâches par état + frise",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B28",
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "clic pause / reprise / retry",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B28",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "api",
+     "label": "POST + jeton + Origin loopback, sinon 403",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B28",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "cmd",
+     "label": "appelle la CLI",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B28",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cmd",
+     "to": "ld",
+     "label": "wave pause / resume / retry",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "aucune commande wave pause/resume/retry dans brigade/commands/; B19 et B14 (todo) autre famille",
+     "reply": false
+    }
+   ],
+   "outcome": "Une page locale d'état des vagues, avec actions protégées par jeton; rien n'existe encore, B28 dépend de B14 (todo).",
+   "steps_human": [
+    "aujourd'hui: brigade wave show, runs list, ledger --wave, chacun dans un terminal"
+   ]
+  },
+  {
+   "id": "dashboard-inbox",
+   "title": "Tableau de bord: boîte de réception",
+   "intent": "je veux trier mes signaux et ratifier un motif depuis la page",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M3",
+    "M2"
+   ],
+   "tasks": [
+    "@TASK.B29",
+    "@TASK.B22",
+    "@TASK.B25",
+    "@TASK.B26"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "pg",
+     "label": "page Inbox",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "api",
+     "label": "/api/inbox",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "sg",
+     "label": "signals JSONL",
+     "kind": "store",
+     "code": "brigade/intake (B22)"
+    },
+    {
+     "id": "cl",
+     "label": "brigade inbox ratify/dismiss",
+     "kind": "cli",
+     "code": "B22 / B26"
+    },
+    {
+     "id": "tr",
+     "label": "study triage",
+     "kind": "module",
+     "code": "B25"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "GET /inbox",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B29",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "api",
+     "label": "GET /api/inbox",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B27",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "sg",
+     "label": "lit signaux (empreinte, compte, âge, statut)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B22",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "tr",
+     "to": "sg",
+     "label": "triage groupe les signaux en PATTERN",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B25",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "pg",
+     "label": "signaux groupés et motifs proposés",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B29",
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "clic ratifier ou rejeter",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B29",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "cl",
+     "label": "POST -> brigade inbox ratify / dismiss",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B29",
+     "frame": null,
+     "note": "jeton + Origin comme B28: B29 ne le répète pas",
+     "reply": false
+    },
+    {
+     "from": "cl",
+     "to": "sg",
+     "label": "statut mis à jour, empreinte rejetée ne revient plus",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B22",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Ratification et rejet depuis la page, par appel à la CLI.",
+   "steps_human": [
+    "aujourd'hui: brigade inbox list/show/dismiss quand B22 sera livrée"
+   ]
+  },
+  {
+   "id": "dashboard-corpus",
+   "title": "Tableau de bord: corpus et sélecteur de branche",
+   "intent": "je veux voir le tableau des tâches du corpus à la branche X, sans le Blueprint",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M3"
+   ],
+   "tasks": [
+    "@TASK.B30",
+    "@TASK.B32"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "pg",
+     "label": "page Corpus",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "api",
+     "label": "/api/corpus",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "cc",
+     "label": "collecteur corpus",
+     "kind": "module",
+     "code": "brigade/collectors/corpus.py"
+    },
+    {
+     "id": "aw",
+     "label": "awawa status --json",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "ij",
+     "label": "plugin IntelliJ",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "choisit projet, ref, type",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B30",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "api",
+     "label": "GET /api/corpus?ref=…",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B30",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "cc",
+     "label": "collect corpus ref=<ref>",
+     "status": "implemented",
+     "code": "brigade/collectors/corpus.py:27",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cc",
+     "to": "aw",
+     "label": "git archive du ref puis awawa status --json",
+     "status": "implemented",
+     "code": "brigade/collectors/corpus.py:31-32",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cc",
+     "to": "api",
+     "label": "summary par type + entités",
+     "status": "implemented",
+     "code": "brigade/collectors/corpus.py:34",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "api",
+     "to": "pg",
+     "label": "arbre, tableau par champ, dépendances (lecture seule)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B30",
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "pg",
+     "to": "op",
+     "label": "tableau STATUS de toutes les tâches; Blueprint retiré",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B30",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "op",
+     "label": "liens awawa-web et ligne IDE",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B30",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "ij",
+     "to": "api",
+     "label": "le plugin consomme /api/corpus",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B32",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Le tableau des tâches à la branche voulue, qui remplace le Blueprint publié.",
+   "steps_human": [
+    "aujourd'hui: awawa status TASK . ou republier l'Artifact Blueprint"
+   ]
+  },
+  {
+   "id": "dashboard-ledger-reports",
+   "title": "Tableau de bord: ledger et rapports",
+   "intent": "je veux voir les p50/p90 par rôle, les vagues par mois et lire les rapports de vague",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M3",
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B31",
+    "@TASK.B20",
+    "@TASK.B106"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "pg",
+     "label": "page Ledger / Reports",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "api",
+     "label": "/api/ledger, /api/reports",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "rl",
+     "label": "read_ledger",
+     "kind": "module",
+     "code": "brigade/ledger/read_ledger.py"
+    },
+    {
+     "id": "dk",
+     "label": "document kind (awawa/markdown)",
+     "kind": "module",
+     "code": "B106"
+    },
+    {
+     "id": "rep",
+     "label": "REPORT entity",
+     "kind": "store",
+     "code": "B20"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "ouvre Ledger",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B31",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "api",
+     "label": "GET /api/ledger (à chaque poll)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B27",
+     "frame": "loop: polling",
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "rl",
+     "label": "read_ledger relit tous les mois en entier",
+     "status": "implemented",
+     "code": "brigade/ledger/read_ledger.py:100",
+     "task": null,
+     "frame": "loop: polling",
+     "note": "relecture complète à chaque requête",
+     "reply": false
+    },
+    {
+     "from": "api",
+     "to": "pg",
+     "label": "pas p50/p90 par rôle et procédure, vagues/mois, pauses, base",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B31",
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "pg",
+     "to": "op",
+     "label": "comparaison à la base",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B31",
+     "frame": null,
+     "note": "reprend ledger compare, fenêtre non bornée",
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "op",
+     "label": "coût par vague",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "ouvre Reports",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B31",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pg",
+     "to": "dk",
+     "label": "lit rapport de vague, réponse d'étude, sortie d'ordre",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B31",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dk",
+     "to": "rep",
+     "label": "REPORT rendu depuis ses entités + tableaux de tests manuels",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B20",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Statistiques d'effort et rapports rendus depuis leurs entités; pas de coût.",
+   "steps_human": [
+    "aujourd'hui: brigade ledger budgets/compare et lecture des waves/<n>-report.md"
+   ]
+  },
+  {
+   "id": "gardening-scans",
+   "title": "Scans de jardinage",
+   "intent": "je veux être prévenu quand une branche traîne, que le corpus ne passe plus lint ou qu'un worktree est orphelin",
+   "actor": "timer",
+   "status": "planned",
+   "milestones": [
+    "M4"
+   ],
+   "tasks": [
+    "@TASK.B33",
+    "@TASK.B34",
+    "@TASK.B147",
+    "@TASK.B48"
+   ],
+   "participants": [
+    {
+     "id": "tm",
+     "label": "Minuteur / tick",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "st",
+     "label": "tick: études dues",
+     "kind": "module",
+     "code": "brigade/tick/ (B147)"
+    },
+    {
+     "id": "sc",
+     "label": "STUDY scan (SLOT none)",
+     "kind": "module",
+     "code": "B33"
+    },
+    {
+     "id": "co",
+     "label": "collecteurs corpus-lint, corpus-fmt, stale-branches, worktrees",
+     "kind": "module",
+     "code": "brigade/collectors/"
+    },
+    {
+     "id": "sg",
+     "label": "signals (inbox)",
+     "kind": "store",
+     "code": "B22"
+    },
+    {
+     "id": "pg",
+     "label": "Home / Inbox",
+     "kind": "module",
+     "code": "brigade/dashboard"
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "tm",
+     "to": "st",
+     "label": "tick",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "st",
+     "to": "sc",
+     "label": "étude due selon EVERY et dernier run",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B147",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sc",
+     "to": "co",
+     "label": "collect: corpus-lint, corpus-fmt, stale-branches, worktrees",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B33",
+     "frame": null,
+     "note": "corpus et worktrees existent; lint, fmt, stale-branches non",
+     "reply": false
+    },
+    {
+     "from": "co",
+     "to": "sc",
+     "label": "document + summary",
+     "status": "implemented",
+     "code": "brigade/collecting/collect_document.py:103",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "sc",
+     "to": "sg",
+     "label": "sortie non vide -> signal, empreinte du collecteur",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B33",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sg",
+     "to": "pg",
+     "label": "scan en échec avec son âge",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B34",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "pg",
+     "label": "je vois le scan dans Home et Inbox",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B34",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "sg",
+     "label": "je rejette ou je corrige",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B34",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sc",
+     "to": "sc",
+     "label": "retire ce que le scan signale",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "B104: stale-branches et worktrees ne retirent rien",
+     "reply": false
+    }
+   ],
+   "outcome": "Les anomalies mécaniques remontent seules en signaux, sans appel de modèle.",
+   "steps_human": [
+    "aujourd'hui: awawa lint, git branch --merged et git worktree list à la main"
+   ]
+  },
+  {
+   "id": "miner",
+   "title": "Mineur de transcriptions",
+   "intent": "je veux que brigade repère mes corrections répétées et propose des contraintes",
+   "actor": "timer",
+   "status": "planned",
+   "milestones": [
+    "M5"
+   ],
+   "tasks": [
+    "@TASK.B35",
+    "@TASK.B36",
+    "@TASK.B25"
+   ],
+   "participants": [
+    {
+     "id": "tm",
+     "label": "Tick hebdo",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "tr",
+     "label": "collecteur transcripts",
+     "kind": "module",
+     "code": "B35"
+    },
+    {
+     "id": "tf",
+     "label": "collecteur transcript-findings",
+     "kind": "module",
+     "code": "B35"
+    },
+    {
+     "id": "sx",
+     "label": "scrubber",
+     "kind": "module",
+     "code": "B35"
+    },
+    {
+     "id": "ad",
+     "label": "client adapter transcripts",
+     "kind": "external",
+     "code": "brigade/adapters/clients/"
+    },
+    {
+     "id": "mi",
+     "label": "study mine-transcripts (slot triage)",
+     "kind": "module",
+     "code": "B36"
+    },
+    {
+     "id": "pt",
+     "label": "PATTERN entities",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "tm",
+     "to": "mi",
+     "label": "tick lance l'étude hebdomadaire",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B36",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "mi",
+     "to": "tr",
+     "label": "collect transcripts depuis le marqueur",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B35",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "tr",
+     "to": "ad",
+     "label": "operation transcripts du client, sinon journaux de run",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B35",
+     "frame": null,
+     "note": "l'opération transcripts existe déjà côté adaptateur",
+     "reply": false
+    },
+    {
+     "from": "tr",
+     "to": "sx",
+     "label": "scrub: PRIVATE des projets, e-mails, chemins home",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B35",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "sx",
+     "to": "tf",
+     "label": "session sans identifiant déclaré",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B35",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "tf",
+     "to": "mi",
+     "label": "corrections, refus, commandes répétées, relectures",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B35",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "mi",
+     "to": "pt",
+     "label": "le slot triage groupe en PATTERN + candidats de contrainte",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B36",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "pt",
+     "label": "je ratifie par le chemin de ratification",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B36",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pt",
+     "to": "op",
+     "label": "contrainte livrée (constraint.delivered)",
+     "status": "implemented",
+     "code": "brigade/ledger/constraint_delivered.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Des contraintes candidates issues de l'usage réel, sans fuite d'identifiant.",
+   "steps_human": [
+    "aujourd'hui: je relis les transcriptions de Claude Code moi-même"
+   ]
+  },
+  {
+   "id": "recipes-order",
+   "title": "Recettes et ordres",
+   "intent": "je veux décrire une tâche répétable (ex. rapport d'usage d'une PR) et la lancer sans modèle sauf pour le jugement",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M8"
+   ],
+   "tasks": [
+    "@TASK.B50",
+    "@TASK.B51",
+    "@TASK.B52",
+    "@TASK.B53"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "rl",
+     "label": "brigade recipe lint / recipes list",
+     "kind": "cli",
+     "code": "B50"
+    },
+    {
+     "id": "rf",
+     "label": "recipes/*.toml",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "or",
+     "label": "brigade order new/run/…",
+     "kind": "cli",
+     "code": "B51"
+    },
+    {
+     "id": "en",
+     "label": "moteur de recette",
+     "kind": "module",
+     "code": "B51"
+    },
+    {
+     "id": "jg",
+     "label": "étape judge (run)",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "lg",
+     "label": "ledger order.* / step.*",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "rf",
+     "label": "écrit une recette TOML (collect, command, gate, judge, output)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B50",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "rl",
+     "label": "brigade recipe lint",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B50",
+     "frame": null,
+     "note": "refuse client/modèle et binaire du client",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "or",
+     "label": "brigade order new pr-usage-report pr=56",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "or",
+     "to": "en",
+     "label": "enregistre l'ORDER (fmt, lint, commit) et le lance une fois",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "en",
+     "to": "en",
+     "label": "étapes dans l'ordre, un fichier par étape",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "en",
+     "to": "jg",
+     "label": "étape judge = un run avec budget de procédure",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "jg",
+     "to": "or",
+     "label": "brigade order answer --file validé par awawa lint",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "en",
+     "to": "op",
+     "label": "gate/commande en échec -> ordre parqué + Home/inbox",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "en",
+     "to": "lg",
+     "label": "order.started, step.done, order.parked, order.done",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "or",
+     "label": "brigade order resume",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B51",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Des routines versionnées, mécaniques sauf un jugement; la ratification d'un motif peut poser un ordre (B53).",
+   "steps_human": [
+    "aujourd'hui: brigade study run/answer prévu en B48 (todo), remplacé par la recette"
+   ]
+  },
+  {
+   "id": "hardening-onboard",
+   "title": "Décisions à l'inscription d'un projet",
+   "intent": "je veux que brigade project add prépare les trois décisions d'une vague",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M6"
+   ],
+   "tasks": [
+    "@TASK.B38"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "pa",
+     "label": "brigade project add --init-decisions",
+     "kind": "cli",
+     "code": "brigade/commands/project_add.py"
+    },
+    {
+     "id": "cr",
+     "label": "corpus du projet",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "fl",
+     "label": "fmt + lint",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "gh",
+     "label": "forge",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "pa",
+     "label": "brigade project add X --init-decisions",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B38",
+     "frame": null,
+     "note": "project add existe sans cette option: brigade/commands/project_add.py",
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "cr",
+     "label": "rédige: plan sur la branche d'intégration",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B38",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "cr",
+     "label": "rédige: compte forge fusionne dans l'intégration",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B38",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "cr",
+     "label": "rédige: politique d'auto-merge",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B38",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "fl",
+     "label": "awawa fmt puis lint --strict",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B38",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pa",
+     "to": "gh",
+     "label": "PR dédiée",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B38",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "gh",
+     "label": "je relis les trois décisions et je merge",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B38",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Trois décisions brouillon dans une PR, prêtes à ratifier.",
+   "steps_human": [
+    "j'écris les trois décisions à la main dans le corpus du projet"
+   ]
+  },
+  {
+   "id": "hardening-rtk",
+   "title": "Évaluer rtk sur la sortie shell",
+   "intent": "je veux savoir si un filtre de sortie shell économise des pas sans fausser la vérification",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M6"
+   ],
+   "tasks": [
+    "@TASK.B40",
+    "@TASK.B39"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "rt",
+     "label": "rtk",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "rn",
+     "label": "runs d'implémentation / de vérification",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "lg",
+     "label": "ledger",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "cmp",
+     "label": "brigade ledger compare",
+     "kind": "cli",
+     "code": "brigade/commands/ledger_compare.py"
+    },
+    {
+     "id": "dc",
+     "label": "DECISION",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "rt",
+     "label": "installe rtk, télémétrie coupée",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B40",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "rt",
+     "label": "implémentation lit une sortie compacte",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B40",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "rn",
+     "label": "vérification et merge gate lisent le brut",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B40",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "lg",
+     "label": "run.finished avec pas et relectures",
+     "status": "implemented",
+     "code": "brigade/ledger/run_finished.py:31",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cmp",
+     "label": "brigade ledger compare vague avec / sans rtk",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "compare ne sait pas isoler deux vagues, seulement avant/depuis un jour",
+     "reply": false
+    },
+    {
+     "from": "cmp",
+     "to": "op",
+     "label": "pas, relectures de sorties volumineuses",
+     "status": "implemented",
+     "code": "brigade/ledger/describe_comparison.py:19",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "dc",
+     "label": "DECISION d'adoption ou rejet avec la mesure",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B40",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cmp",
+     "label": "constats manqués par le vérificateur",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "aucune mesure de ce genre dans le ledger",
+     "reply": false
+    }
+   ],
+   "outcome": "Une décision d'adoption chiffrée; la mesure aujourd'hui possible ne couvre que deux fenêtres adjacentes.",
+   "steps_human": [
+    "je note les dates des deux vagues",
+    "je compare à la main"
+   ]
+  },
+  {
+   "id": "first-real-wave",
+   "title": "Documentation et première vraie vague",
+   "intent": "je veux livrer une vraie vague d'environ dix tâches sur un de mes projets avec son rapport",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "M6"
+   ],
+   "tasks": [
+    "@TASK.B39"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "wv",
+     "label": "brigade wave new/start",
+     "kind": "cli",
+     "code": "brigade/commands/wave_start.py"
+    },
+    {
+     "id": "tk",
+     "label": "tick",
+     "kind": "module",
+     "code": null
+    },
+    {
+     "id": "lg",
+     "label": "ledger",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "cmp",
+     "label": "brigade ledger compare",
+     "kind": "cli",
+     "code": "brigade/commands/ledger_compare.py"
+    },
+    {
+     "id": "rd",
+     "label": "README / handbook",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "rd",
+     "label": "README, brigade help, handbook rafraîchis",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B39",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "wv",
+     "label": "brigade wave new puis start",
+     "status": "implemented",
+     "code": "brigade/commands/wave_start.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "wv",
+     "to": "tk",
+     "label": "le tick lance les tâches",
+     "status": "implemented",
+     "code": "brigade/commands/tick.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "tk",
+     "to": "lg",
+     "label": "run.finished par segment",
+     "status": "implemented",
+     "code": "brigade/ledger/run_finished.py:31",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "tk",
+     "to": "op",
+     "label": "rapport de vague",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B20",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cmp",
+     "label": "brigade ledger compare --before 2026-10-03 (base 26/09-03/10)",
+     "status": "implemented",
+     "code": "brigade/commands/ledger_compare.py:50",
+     "task": null,
+     "frame": null,
+     "note": "la fenêtre de base n'est pas bornée à droite",
+     "reply": false
+    },
+    {
+     "from": "cmp",
+     "to": "op",
+     "label": "avant / depuis",
+     "status": "implemented",
+     "code": "brigade/commands/ledger_compare.py:34",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "lg",
+     "label": "coût de la vague",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Une vraie vague livrée, son rapport et sa comparaison à la base.",
+   "steps_human": [
+    "je rédige la section de comparaison dans le rapport à la main"
+   ]
+  },
+  {
+   "id": "clean-leftovers",
+   "title": "Nettoyage de ce que brigade laisse",
+   "intent": "je veux que brigade supprime seul worktrees, branches, caches et runs anciens, selon ma configuration",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B104",
+    "@TASK.B08",
+    "@TASK.B60",
+    "@TASK.B72",
+    "@TASK.B14",
+    "@TASK.B33"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cl",
+     "label": "brigade clean",
+     "kind": "cli",
+     "code": "à créer"
+    },
+    {
+     "id": "cf",
+     "label": "config.toml: booleans par genre",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "fs",
+     "label": "worktrees, branches, caches, runs, trails",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "lg",
+     "label": "ledger",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "tk",
+     "label": "tick / minuteur",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cl",
+     "label": "brigade clean --dry-run",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "B104 ne crée que le milestone et le plan, aucun code",
+     "reply": false
+    },
+    {
+     "from": "cl",
+     "to": "cf",
+     "label": "lit quels genres sont activés, âges, comptes",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cl",
+     "to": "fs",
+     "label": "liste: cache refs, trails, worktree, runs au-delà de runs_kept",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "purges partielles: B08 et B72 livrées, B60 livrée, B14 todo",
+     "reply": false
+    },
+    {
+     "from": "cl",
+     "to": "fs",
+     "label": "épargne run vivant, worktree modifié, branche à commits",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cl",
+     "to": "op",
+     "label": "aperçu de ce qui part",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cl",
+     "label": "brigade clean",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cl",
+     "to": "lg",
+     "label": "événement de ledger par suppression",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "tk",
+     "to": "cl",
+     "label": "purge à l'échéance configurée",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Un milestone et ses tâches décrivent la fonction; rien n'est écrit; le ledger append-only n'est borné par aucune tâche.",
+   "steps_human": [
+    "git worktree remove, git branch -D, rm des caches à la main (39 worktrees le 2026-10-07)"
+   ]
+  },
+  {
+   "id": "preflight-lists",
+   "title": "Préflight par listes nommées",
+   "intent": "je veux lancer un préflight nommé (raffinement) qui vérifie mécaniquement les citations et les chevauchements",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B98",
+    "@TASK.B15",
+    "@TASK.B47",
+    "@TASK.B50"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "pf",
+     "label": "brigade preflight <nom> / add",
+     "kind": "cli",
+     "code": "à créer"
+    },
+    {
+     "id": "co",
+     "label": "collecteurs et checks",
+     "kind": "module",
+     "code": "brigade/collectors/"
+    },
+    {
+     "id": "en",
+     "label": "entité PREFLIGHT",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "ag",
+     "label": "session de raffinement",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "pf",
+     "label": "brigade preflight refinement",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "B98 planifie le milestone, aucune commande",
+     "reply": false
+    },
+    {
+     "from": "pf",
+     "to": "en",
+     "label": "lit l'ensemble nommé de collecteurs et checks",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pf",
+     "to": "co",
+     "label": "citations file:line déplacées depuis le commit source",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pf",
+     "to": "co",
+     "label": "tâches touchant les mêmes fichiers hors AFTER",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pf",
+     "to": "co",
+     "label": "brouillons aux livrables qui se chevauchent",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pf",
+     "to": "co",
+     "label": "logins [forge_accounts] vérifiés avant vague",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "co",
+     "to": "pf",
+     "label": "constats",
+     "status": "implemented",
+     "code": "brigade/collecting/collect_document.py:103",
+     "task": null,
+     "frame": null,
+     "note": "les collecteurs existent; checks de B15 todo",
+     "reply": true
+    },
+    {
+     "from": "pf",
+     "to": "op",
+     "label": "constats, jugement laissé à la conversation",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "pf",
+     "label": "brigade preflight add <check>",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Les contrôles mécaniques du raffinement faits par commande, pas à la main.",
+   "steps_human": [
+    "je relis chaque citation file:line",
+    "je cherche les tâches qui touchent les mêmes fichiers"
+   ]
+  },
+  {
+   "id": "quota-fallback",
+   "title": "Repli quand le quota est épuisé",
+   "intent": "je veux qu'un run dont le client n'a plus de quota continue sur un autre modèle ou client",
+   "actor": "agent",
+   "status": "planned",
+   "milestones": [
+    "ADD0",
+    "M1"
+   ],
+   "tasks": [
+    "@TASK.B111",
+    "@TASK.B144",
+    "@TASK.B19",
+    "@TASK.B112"
+   ],
+   "participants": [
+    {
+     "id": "rn",
+     "label": "brigade run segment",
+     "kind": "module",
+     "code": "brigade/runs/run_segment.py"
+    },
+    {
+     "id": "cc",
+     "label": "claude_code adapter",
+     "kind": "module",
+     "code": "brigade/adapters/clients/claude_code.py"
+    },
+    {
+     "id": "pz",
+     "label": "pause de vague",
+     "kind": "module",
+     "code": "B19"
+    },
+    {
+     "id": "fb",
+     "label": "config.toml fallback",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "lg",
+     "label": "ledger",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "rn",
+     "to": "cc",
+     "label": "segment lancé",
+     "status": "implemented",
+     "code": "brigade/runs/run_segment.py:241",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cc",
+     "to": "rn",
+     "label": "error_class execution, 'out of usage credits' non reconnu",
+     "status": "implemented",
+     "code": "brigade/adapters/clients/claude_code.py:215",
+     "task": null,
+     "frame": null,
+     "note": "run 20261009T114125Z-b7c554 (rationale de B111)",
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "pz",
+     "label": "rate_limit -> pause de toutes les vagues",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "pz",
+     "to": "fb",
+     "label": "fallback configuré ?",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B111",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "rn",
+     "label": "reprend sur le fallback (session ou progress)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B111",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "lg",
+     "label": "enregistre le changement (client, modèle quittés/pris)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B111",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "pz",
+     "label": "sans fallback: le run s'arrête comme B19",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B19",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "fb",
+     "label": "B144: prochains lancements vers le client de repli",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B144",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "rn",
+     "label": "relance à la main sur un autre slot",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "geste actuel",
+     "reply": false
+    }
+   ],
+   "outcome": "Le travail continue sur un repli configuré, ou la vague se met en pause; deux tâches se recouvrent.",
+   "steps_human": [
+    "je relance le run sur le slot build à la main"
+   ]
+  },
+  {
+   "id": "run-notes",
+   "title": "Message à un run en cours",
+   "intent": "je veux passer une consigne à un run qui tourne",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B91"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade run note <id> (nom à décider)",
+     "kind": "cli",
+     "code": "à créer"
+    },
+    {
+     "id": "nf",
+     "label": "runs/<id>/notes",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "rn",
+     "label": "segment suivant / relance",
+     "kind": "module",
+     "code": "brigade/runs/run_segment.py"
+    },
+    {
+     "id": "cl",
+     "label": "client (claude -p)",
+     "kind": "external",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade run note <id> 'texte'",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B91",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "nf",
+     "label": "ajoute texte + horodatage",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B91",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "sortie 1 si run inexistant ou résultat écrit",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B91",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "dit qu'un segment lancé ne le lira pas",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B91",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "nf",
+     "label": "lit les notes depuis le segment précédent",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B91",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rn",
+     "to": "cl",
+     "label": "brief du segment suivant: progress puis notes",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B91",
+     "frame": null,
+     "note": "brief construit dans run_segment.py",
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "cl",
+     "label": "message direct au segment en cours",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "claude -p n'accepte aucune entrée une fois lancé",
+     "reply": false
+    }
+   ],
+   "outcome": "La consigne atteint le prochain segment ou la relance, jamais le segment en cours.",
+   "steps_human": [
+    "j'attends la fin du segment puis je relance avec un brief modifié"
+   ]
+  },
+  {
+   "id": "runs-list-cost",
+   "title": "Liste des runs avec arguments, segments et coût",
+   "intent": "je veux voir pour chaque run sa tâche, ses segments et ce qu'il a coûté",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B92"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cli",
+     "label": "brigade runs list",
+     "kind": "cli",
+     "code": "brigade/commands/runs_list.py"
+    },
+    {
+     "id": "rj",
+     "label": "run.json",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "lg",
+     "label": "ledger",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "rn",
+     "label": "renderer commun des tableaux",
+     "kind": "module",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "brigade runs list",
+     "status": "implemented",
+     "code": "brigade/commands/runs_list.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rj",
+     "label": "arguments de la procédure (task=…, pr=…)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B92",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "rj",
+     "label": "segments et issue de chacun (wall_limit puis done)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B92",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "lg",
+     "label": "durée sommée et cost_usd là où le ledger a l'usage",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B92",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "lg",
+     "to": "cli",
+     "label": "cost_usd par run.finished",
+     "status": "implemented",
+     "code": "brigade/ledger/run_finished.py:31",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "cli",
+     "to": "rn",
+     "label": "colonnes alignées (texte et --json)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B92",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "cli",
+     "to": "op",
+     "label": "deux runs d'une procédure distingués",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B92",
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "op",
+     "to": "cli",
+     "label": "somme par vague ou par jour",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "B92 ne somme rien",
+     "reply": false
+    }
+   ],
+   "outcome": "Les runs se distinguent par arguments et issues; coût par run seulement.",
+   "steps_human": [
+    "je sors run.json et brigade.log pour savoir pourquoi un run est coupé"
+   ]
+  },
+  {
+   "id": "self-update",
+   "title": "Mise à jour de brigade installé",
+   "intent": "je veux que brigade installé reste à jour sans git pull à la main",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B93",
+    "@TASK.B87"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "up",
+     "label": "commande de mise à jour ou procédure README",
+     "kind": "cli",
+     "code": "à décider"
+    },
+    {
+     "id": "cl",
+     "label": "clone / dist/brigade.pyz",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "up2",
+     "label": "upstream",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "dr",
+     "label": "brigade doctor",
+     "kind": "cli",
+     "code": "brigade/commands/doctor.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "up",
+     "label": "brigade update (ou README)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B93",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "up",
+     "to": "up2",
+     "label": "récupère la tête de l'upstream",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B93",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "up",
+     "to": "cl",
+     "label": "met à jour clone ou pyz",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B93",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "dr",
+     "label": "brigade doctor",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dr",
+     "to": "cl",
+     "label": "avertit d'un checkout périmé",
+     "status": "implemented",
+     "code": "brigade/commands/doctor.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "dr",
+     "to": "op",
+     "label": "aucun avertissement après mise à jour",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B93",
+     "frame": null,
+     "note": null,
+     "reply": true
+    }
+   ],
+   "outcome": "Un chemin unique de mise à jour.",
+   "steps_human": [
+    "cd clone && git pull",
+    "python3 build.py"
+   ]
+  },
+  {
+   "id": "local-review",
+   "title": "Revue locale et PR unique",
+   "intent": "je veux que les tâches d'une vague soient fusionnées en local et qu'une seule PR soit ouverte à la fin",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B100",
+    "@TASK.B99",
+    "@TASK.B17",
+    "@TASK.B46"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "tk",
+     "label": "tick",
+     "kind": "module",
+     "code": "brigade/tick/"
+    },
+    {
+     "id": "rv",
+     "label": "slot review",
+     "kind": "module",
+     "code": null
+    },
+    {
+     "id": "gt",
+     "label": "git local",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "gh",
+     "label": "forge",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "lg",
+     "label": "ledger",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "tk",
+     "to": "rv",
+     "label": "tâche vérifiée par le slot review",
+     "status": "todo",
+     "code": null,
+     "task": "@TASK.B17",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rv",
+     "to": "gt",
+     "label": "merge de la branche de tâche dans l'intégration, en local",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B100",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rv",
+     "to": "lg",
+     "label": "task.state, pas de PR par tâche",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B100",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "tk",
+     "to": "tk",
+     "label": "vague livrée: critère à définir",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B100",
+     "frame": null,
+     "note": "'X tâches' non défini",
+     "reply": false
+    },
+    {
+     "from": "tk",
+     "to": "gh",
+     "label": "une PR intégration -> main",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B100",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "gh",
+     "label": "je relis une seule PR",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B100",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rv",
+     "to": "gt",
+     "label": "comment FORGE none (B46) s'articule",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": "le DESC de B100 le laisse ouvert",
+     "reply": false
+    }
+   ],
+   "outcome": "Un mode de revue sans forge par tâche; deux tâches (B46, B100) décrivent des modes voisins.",
+   "steps_human": [
+    "je merge chaque PR de tâche à la main"
+   ]
+  },
+  {
+   "id": "sensitive-data-audit",
+   "title": "Audit des données sensibles",
+   "intent": "je veux savoir quelles données sensibles brigade manipule et où",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B101",
+    "@TASK.B75"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "au",
+     "label": "session d'audit",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "cd",
+     "label": "code de brigade",
+     "kind": "store",
+     "code": "brigade/"
+    },
+    {
+     "id": "rp",
+     "label": "docs/…-sensitive-data.md",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "tk",
+     "label": "tâches brouillon",
+     "kind": "store",
+     "code": null
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "au",
+     "label": "lance l'audit",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B101",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "au",
+     "to": "cd",
+     "label": "jetons de forge: où lus, tenus, passés, écrits",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B101",
+     "frame": null,
+     "note": "ex. require_login_environment.py",
+     "reply": false
+    },
+    {
+     "from": "au",
+     "to": "cd",
+     "label": "sous-processus recevant l'environnement",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B101",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "au",
+     "to": "rp",
+     "label": "rapport sous docs/",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B101",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "au",
+     "to": "tk",
+     "label": "une tâche par précaution manquante",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B101",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "tk",
+     "label": "je ratifie",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B101",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Rapport et tâches de précautions.",
+   "steps_human": [
+    "je relis à la main où passe GH_TOKEN"
+   ]
+  },
+  {
+   "id": "plugin-executables",
+   "title": "Forge et planificateur externes",
+   "intent": "je veux brancher mon propre forge ou planificateur par un exécutable sur PATH",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B76",
+    "@TASK.B73",
+    "@TASK.B74",
+    "@TASK.B75"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "rp",
+     "label": "resolve_plugin",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py"
+    },
+    {
+     "id": "ex",
+     "label": "brigade-forge-<nom> sur PATH",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "cl",
+     "label": "_resolve_client",
+     "kind": "module",
+     "code": "brigade/system/resolve_plugin.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "ex",
+     "label": "installe brigade-forge-<nom>",
+     "status": "missing",
+     "code": null,
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "rp",
+     "label": "resolve_plugin('forge', nom)",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:86",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rp",
+     "to": "cl",
+     "label": "client: PATH puis module",
+     "status": "implemented",
+     "code": "brigade/system/resolve_plugin.py:70",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rp",
+     "to": "ex",
+     "label": "forge/scheduler: PATH avant le module",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B76",
+     "frame": null,
+     "note": "aujourd'hui modules intégrés seulement",
+     "reply": false
+    },
+    {
+     "from": "rp",
+     "to": "ex",
+     "label": "opérations en JSON stdin/stdout",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B76",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rp",
+     "to": "op",
+     "label": "nom inconnu: erreur nommant les deux sources",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B76",
+     "frame": null,
+     "note": null,
+     "reply": true
+    }
+   ],
+   "outcome": "Forge et planificateur externes, confort post-MVP.",
+   "steps_human": [
+    "je modifie le module intégré de mon clone"
+   ]
+  },
+  {
+   "id": "roles-awawa-form",
+   "title": "Rôles et procédures en forme awawa",
+   "intent": "je veux écrire un rôle ou une procédure comme une entité awawa",
+   "actor": "operator",
+   "status": "planned",
+   "milestones": [
+    "ADD0"
+   ],
+   "tasks": [
+    "@TASK.B107",
+    "@TASK.B106"
+   ],
+   "participants": [
+    {
+     "id": "op",
+     "label": "Opérateur",
+     "kind": "actor",
+     "code": null
+    },
+    {
+     "id": "dk",
+     "label": "document kind",
+     "kind": "module",
+     "code": "B106"
+    },
+    {
+     "id": "rf",
+     "label": "fichier rôle .md / .awawa",
+     "kind": "store",
+     "code": null
+    },
+    {
+     "id": "rr",
+     "label": "resolve_role",
+     "kind": "module",
+     "code": "brigade/roles/resolve_role.py"
+    },
+    {
+     "id": "al",
+     "label": "awawa lint",
+     "kind": "external",
+     "code": null
+    },
+    {
+     "id": "rl",
+     "label": "brigade roles lint",
+     "kind": "cli",
+     "code": "brigade/commands/roles_lint.py"
+    }
+   ],
+   "messages": [
+    {
+     "from": "op",
+     "to": "rf",
+     "label": "écrit un rôle en forme awawa",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B107",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "op",
+     "to": "rl",
+     "label": "brigade roles lint",
+     "status": "implemented",
+     "code": "brigade/commands/roles_lint.py",
+     "task": null,
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "al",
+     "label": "awawa lint contre le schéma livré par brigade",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B107",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rl",
+     "to": "op",
+     "label": "fichier et constat nommés",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B107",
+     "frame": null,
+     "note": null,
+     "reply": true
+    },
+    {
+     "from": "rr",
+     "to": "dk",
+     "label": "lecture selon l'extension (.md ou .awawa)",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B107",
+     "frame": null,
+     "note": null,
+     "reply": false
+    },
+    {
+     "from": "rr",
+     "to": "rf",
+     "label": "role.md rendu depuis l'entité, identique pour le client",
+     "status": "draft",
+     "code": null,
+     "task": "@TASK.B107",
+     "frame": null,
+     "note": null,
+     "reply": false
+    }
+   ],
+   "outcome": "Confort: aucun gain de quota.",
+   "steps_human": [
+    "je garde le front matter Markdown"
+   ]
+  }
+ ],
+ "issues": [
+  {
+   "kind": "hole",
+   "severity": "high",
+   "title": "Le coût et les jetons sont écrits mais jamais agrégés",
+   "detail": "cost_usd et usage entrent dans chaque run.finished, mais ni describe_wave, ni describe_project, ni describe_overview, ni FinishedRun ne les lisent. B92 ne planifie que le coût par run dans runs list, B31 aucun coût.",
+   "evidence": "brigade/ledger/run_finished.py:31; brigade/ledger/describe_wave.py:56-84; brigade/ledger/finished_run.py:20; @TASK.B92; @TASK.B31",
+   "use_cases": [
+    "cost-of-wave",
+    "wave-ledger",
+    "project-activity",
+    "dashboard-ledger-reports",
+    "runs-list-cost"
+   ],
+   "addressed_by": "@TASK.B92 (par run seulement)",
+   "suggestion": "Ajouter cost_usd et jetons à FinishedRun et aux vues vague, projet et jour, et à la vue Ledger du dashboard; tâche à ajouter en M1 ou M3.",
+   "id": "C1"
+  },
+  {
+   "kind": "defect",
+   "severity": "high",
+   "title": "Une vague est nommée par son jalon: deux vagues du même jalon se confondent",
+   "detail": "Le ledger nomme la vague par MILESTONE (WaveStarted(wave=request['milestone'])) et describe_wave filtre sur ce champ; relancer F0 additionne les deux vagues dans un seul bilan.",
+   "evidence": "brigade/waves/start_wave.py:34; brigade/ledger/describe_wave.py:57",
+   "use_cases": [
+    "wave-ledger",
+    "cost-of-wave"
+   ],
+   "addressed_by": "@TASK.B163 (audit, draft, M8)",
+   "suggestion": "Identifier une vague par un id unique (REQUEST) et garder le jalon comme attribut.",
+   "id": "C2"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Pas de sélection par date pour une vague ou le journal entier",
+   "detail": "--since n'existe qu'avec --project; ledger, ledger --wave et ledger budgets ne se bornent pas dans le temps; 'la vague d'hier' ne se désigne pas.",
+   "evidence": "brigade/commands/ledger.py:129-132",
+   "use_cases": [
+    "cost-of-wave",
+    "wave-ledger",
+    "ledger-overview"
+   ],
+   "addressed_by": null,
+   "suggestion": "Accepter --since et --until sur toutes les vues, et une liste des vagues avec leurs dates.",
+   "id": "C3"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "La comparaison ne coupe qu'en un point, sans borne haute",
+   "detail": "describe_comparison compare tout ce qui précède un jour à tout ce qui suit; B39 veut une base du 26/09 au 03/10 et B40 une vague avec rtk contre une sans, ce que la commande ne peut pas exprimer.",
+   "evidence": "brigade/ledger/describe_comparison.py:28-36; @TASK.B39; @TASK.B40",
+   "use_cases": [
+    "compare-baseline",
+    "hardening-rtk",
+    "first-real-wave"
+   ],
+   "addressed_by": null,
+   "suggestion": "Ajouter --from/--to ou deux sélecteurs --wave A --wave B, et un filtre par procédure et par rôle.",
+   "id": "C4"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Aucune vue par tâche ni par run dans le ledger",
+   "detail": "describe_wave liste les tâches et les passages de relais mais ne donne ni pas, ni durée, ni coût par tâche; il faut aller dans runs show pour un seul run.",
+   "evidence": "brigade/ledger/describe_wave.py:56-84",
+   "use_cases": [
+    "wave-ledger",
+    "cost-of-wave"
+   ],
+   "addressed_by": null,
+   "suggestion": "brigade ledger --task <id> et un détail par tâche dans la vue vague.",
+   "id": "C5"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Le quota affiché sur l'accueil n'est calculé nulle part",
+   "detail": "B28 liste 'quota' sur Home, mais aucun module ne calcule la consommation depuis usage; B19 ne fait que mettre en pause sur rate_limit.",
+   "evidence": "@TASK.B28; brigade/ledger/run_finished.py:30",
+   "use_cases": [
+    "dashboard-home",
+    "cost-of-wave"
+   ],
+   "addressed_by": null,
+   "suggestion": "Planifier le calcul du quota consommé (jetons par fenêtre de reset) avant B28.",
+   "id": "C6"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Appliquer les budgets reste un recopiage à la main",
+   "detail": "B37 propose p90 puis une PR; en attendant, B21 recopie les mesures dans le front matter. La commande budgets ne dit pas non plus quel budget la procédure déclare déjà.",
+   "evidence": "brigade/ledger/describe_budgets.py:14-22; @TASK.B37; @TASK.B21",
+   "use_cases": [
+    "budgets-view",
+    "budgets-apply"
+   ],
+   "addressed_by": "@TASK.B37 (draft, M6)",
+   "suggestion": "Afficher le budget déclaré à côté du p90, et chaîner l'édition du front matter et la PR dans la commande.",
+   "id": "C7"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Les budgets mêlent toutes les versions d'une procédure",
+   "detail": "describe_budgets prend les 20 derniers runs d'une procédure quel que soit le changement de consigne ou de rôle, et ne regarde que main_steps.",
+   "evidence": "brigade/ledger/describe_budgets.py:20",
+   "use_cases": [
+    "budgets-view",
+    "budgets-apply"
+   ],
+   "addressed_by": "@TASK.B37",
+   "suggestion": "Borner par date de dernière édition de la procédure ou par rôle, et exposer total_steps.",
+   "id": "C8"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "collect et collectors list prennent le projet dans le répertoire courant",
+   "detail": "Il n'y a pas d'option --project: le projet est Path.cwd(), et un collecteur de projet du dossier .brigade/collectors dépend de l'endroit où l'on se tient.",
+   "evidence": "brigade/commands/collect.py:63; brigade/commands/collectors_list.py:27",
+   "use_cases": [
+    "collect-document",
+    "collectors-list"
+   ],
+   "addressed_by": null,
+   "suggestion": "Ajouter --project <nom> résolu par le registre, cwd en repli.",
+   "id": "C9"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "La clé de cache des collecteurs est câblée par nom de collecteur",
+   "detail": "read_cache_input ne connaît que quatre noms de dépôt et 'ledger'; un collecteur externe qui déclare cache:true reçoit une entrée None et n'est jamais invalidé hors --refresh.",
+   "evidence": "brigade/collecting/read_cache_input.py:8-23; @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached",
+   "use_cases": [
+    "collect-document"
+   ],
+   "addressed_by": null,
+   "suggestion": "Laisser le collecteur déclarer ses entrées de cache, ou refuser cache:true sans entrée déclarée.",
+   "id": "C10"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Le ledger est relu en entier à chaque commande et à chaque poll",
+   "detail": "read_ledger lit tous les fichiers mensuels en bytes à chaque appel; B27 fait relire /api/ledger à chaque requête de polling, et B104 constate qu'aucune tâche ne borne la taille du ledger.",
+   "evidence": "brigade/ledger/read_ledger.py:96-106; @TASK.B27; @TASK.B104",
+   "use_cases": [
+    "dashboard-ledger-reports",
+    "ledger-overview",
+    "wave-ledger"
+   ],
+   "addressed_by": null,
+   "suggestion": "Index par mois ou cache keyé sur la taille du fichier (déjà utilisé par le collecteur ledger) et lecture limitée à la période demandée.",
+   "id": "C11"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "Le code de sortie est 0 même quand des lignes du journal sont ignorées",
+   "detail": "Les vues ledger renvoient toujours 0; les lignes refusées ne sont dites que sur stderr.",
+   "evidence": "brigade/commands/ledger.py:135-136; brigade/commands/ledger_budgets.py:28",
+   "use_cases": [
+    "ledger-overview",
+    "budgets-view",
+    "compare-baseline"
+   ],
+   "addressed_by": null,
+   "suggestion": "Un code distinct (ou --strict) quand skipped n'est pas vide, pour qu'un script le voie.",
+   "id": "C12"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "L'option runs show --progress attend le dashboard",
+   "detail": "B94 range dans M3, AFTER B27, une commande CLI qui n'a pas besoin du serveur; runs show ne montre que résumé et journal.",
+   "evidence": "@TASK.B94 AFTER @TASK.B27; brigade/commands/runs_show.py:108-117",
+   "use_cases": [
+    "follow-run-progress"
+   ],
+   "addressed_by": "@TASK.B94 (draft)",
+   "suggestion": "Scinder B94: la commande runs show affiche progress.md dès M1, le dashboard suit.",
+   "id": "C13"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Aucune commande ne chaîne mesure, budget et PR",
+   "detail": "Après ledger budgets, l'opérateur ouvre chaque front matter et la PR lui-même, B37 n'a ni nom de commande ni garde sur un p90 estimé.",
+   "evidence": "@TASK.B37",
+   "use_cases": [
+    "budgets-apply"
+   ],
+   "addressed_by": "@TASK.B37",
+   "suggestion": "Fixer la commande dans B37 et refuser d'appliquer un p90 marqué estimate.",
+   "id": "C14"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Deux brouillons pour le même repli sur épuisement de quota",
+   "detail": "B111 (par run, selon le niveau de raisonnement ou le slot) et B144 (client de repli de la machine) répondent à la même intention et dépendent tous deux de B19; leurs DESC laissent ouverts les mêmes points.",
+   "evidence": "@TASK.B111; @TASK.B144; @TASK.B19",
+   "use_cases": [
+    "quota-fallback"
+   ],
+   "addressed_by": null,
+   "suggestion": "Les fusionner en une tâche ou ordonner B144 AFTER B111 avec un rôle distinct pour chacune.",
+   "id": "C15"
+  },
+  {
+   "kind": "defect",
+   "severity": "medium",
+   "title": "Commandes en chaîne de caractère dans les études et la planification, ruling déjà posé",
+   "detail": "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell (#144) tranche l'argv sans shell; B48 prévoit encore un collecteur shell dont les éléments sont les lignes de sortie d'une 'command line', et B163 (M8, brouillon) déplace les commandes de projet vers des étapes de recette.",
+   "evidence": "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell; @TASK.B48 SPEC 8; @TASK.B163; @TASK.B142",
+   "use_cases": [
+    "gardening-scans",
+    "recipes-order",
+    "preflight-lists"
+   ],
+   "addressed_by": "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell; B12 implémente la part du tick; B142 (todo) et B163 (draft) la suite",
+   "suggestion": "Écrire le collecteur shell de B48 en argv dès sa spécification, sans attendre l'audit de M8.",
+   "id": "C16"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "collectors list ne dit ni les paramètres ni le cache",
+   "detail": "La liste ne retourne que nom et source; les paramètres key=value de chaque collecteur (ref, from, to) ne se découvrent qu'en lisant le code.",
+   "evidence": "brigade/commands/collectors_list.py:12-16; brigade/collectors/git_diff_stat.py:11-12",
+   "use_cases": [
+    "collectors-list"
+   ],
+   "addressed_by": null,
+   "suggestion": "Un 'brigade collectors show <nom>' avec paramètres, cache et sortie type.",
+   "id": "C17"
+  },
+  {
+   "kind": "hole",
+   "severity": "medium",
+   "title": "Les scans stale-branches et worktrees signalent sans retirer, et nul nettoyage n'est codé",
+   "detail": "B104 note que rien ne retire la branche locale d'une PR squash-mergée, les worktrees non coupés par brigade, ni ne borne le ledger; la commande clean n'a ni code ni milestone.",
+   "evidence": "@TASK.B104; @TASK.B33",
+   "use_cases": [
+    "gardening-scans",
+    "clean-leftovers"
+   ],
+   "addressed_by": "@TASK.B104 (plan en draft)",
+   "suggestion": "Planifier brigade clean --dry-run avant les scans de M4 pour que les signaux aient une action.",
+   "id": "C18"
+  },
+  {
+   "kind": "defect",
+   "severity": "low",
+   "title": "Les vues du dashboard répètent l'exigence jeton + Origin dans B28 seulement",
+   "detail": "B29 (ratifier, rejeter) fait des POST à la CLI mais ne cite pas la règle de B28; un POST de plus sans jeton ouvrirait une action sans protection.",
+   "evidence": "@TASK.B28 SPEC 5; @TASK.B29",
+   "use_cases": [
+    "dashboard-inbox"
+   ],
+   "addressed_by": null,
+   "suggestion": "Placer la règle jeton+Origin dans B27 pour tout POST.",
+   "id": "C19"
+  },
+  {
+   "kind": "hole",
+   "severity": "low",
+   "title": "B35 lit les transcriptions mais aucun lien ne les rattache au coût",
+   "detail": "Le collecteur transcripts lira les sessions sans les croiser avec les run.finished; le coût d'une correction répétée n'est pas calculable.",
+   "evidence": "@TASK.B35; brigade/ledger/run_finished.py:23",
+   "use_cases": [
+    "miner",
+    "cost-of-wave"
+   ],
+   "addressed_by": null,
+   "suggestion": "Joindre session et run dans les trouvailles pour chiffrer le coût d'une erreur répétée.",
+   "id": "C20"
+  }
+ ]
+}

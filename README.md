@@ -482,8 +482,10 @@ rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest   # awawa on 
   directory read by `runs list` and `runs show`.
 - `corpus/` — the project's own awawa corpus: the schema, the milestones, the tasks, the decisions of the plan.
   Read it with `awawa status .` from this directory.
-- `artifact/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board,
-  demo, brief); `index.html` is the page, `parts/` the fragments it fetches.
+- `artifact/blueprint/` — the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task
+  board, demo, brief); `index.html` is the page, `parts/` the fragments it fetches.
+- `artifact/use-cases/` — the sources of the published Artifact "Brigade cas d'utilisation": one sequence diagram per
+  use case, the holes and defects, and the briefs of the runs that redo the map.
 - `brigade/corpus/data/schema.awawa.tpl` — the schema of the operational corpus `brigade init` installs in the config
   directory (kept as a template so it does not join this corpus); every file brigade ships lives in a `data/` folder
   of the package, so the clone and the zipapp read the same files.
