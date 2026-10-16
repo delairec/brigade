@@ -190,7 +190,7 @@ TASK_BRANCH = "task/M1-empty-cart/S3"
 
 
 class WaveTickTestCase(TickTestCase):
-    setup_command = "touch setup-ran"
+    setup_commands = ("touch setup-ran",)
 
     def run_tick(self, *options: str):
         return self.machine.run_brigade(
@@ -220,7 +220,11 @@ class WaveTickTestCase(TickTestCase):
         self.project.run_git("commit", "--quiet", "-m", "the plan of M1")
         self.project.run_git("checkout", "--quiet", "main")
         self.machine.run_brigade(
-            CLONE_ENTRY_POINT, "project", "add", str(self.project.path), "--setup", self.setup_command
+            CLONE_ENTRY_POINT,
+            "project",
+            "add",
+            str(self.project.path),
+            *(argument for command in self.setup_commands for argument in ("--setup", command)),
         )
         (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST)
         (self.state / "ledger").mkdir(parents=True)
@@ -278,10 +282,10 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
         self.run_tick("--once")
 
         # Assert
-        self.assertEqual(self.project.run_git("show", f"{WAVE_BRANCH}:.gitignore"), ".brigade/\n")
+        self.assertEqual(self.project.run_git("show", f"{WAVE_BRANCH}:.gitignore"), ".brigade/worktrees/\n")
         self.assertEqual(
             self.project.run_git("log", "--format=%s", f"main..{WAVE_BRANCH}").splitlines(),
-            ["brigade tick: ignore the worktrees of .brigade/", "the plan of M1"],
+            ["brigade tick: ignore .brigade/worktrees/", "the plan of M1"],
         )
 
     def test_should_run_the_setup_commands_of_the_project_in_the_worktree(self):
@@ -389,7 +393,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
 
 
 class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
-    setup_command = "false"
+    setup_commands = ("false",)
 
     def test_should_remove_the_worktree_and_its_branch_and_report_the_failure(self):
         # Act
@@ -403,7 +407,7 @@ class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
 
 
 class BrigadeTickOnceWithASetupLeavingTheWaveBranchTest(LaunchingTickTestCase):
-    setup_command = 'git checkout --quiet --orphan "elsewhere-${PWD##*/}" && git commit --quiet -m elsewhere'
+    setup_commands = ("git checkout --quiet --orphan elsewhere", "git commit --quiet --allow-empty -m elsewhere")
 
     def test_should_remove_the_worktree_whose_head_no_longer_descends_from_the_wave_branch(self):
         # Act
@@ -413,6 +417,78 @@ class BrigadeTickOnceWithASetupLeavingTheWaveBranchTest(LaunchingTickTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertIn("the setup of @TASK.S3 failed", completed.stderr)
         self.assertFalse(self.worktree.exists())
+
+
+class BrigadeTickOnceWithASetupLineOfShellSyntaxTest(LaunchingTickTestCase):
+    setup_commands = ('touch "$PWD"',)
+
+    def test_should_run_the_line_as_one_argv_without_a_shell(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertTrue((self.worktree / "$PWD").is_file())
+
+
+class BrigadeTickOnceWithASetupFailingOnItsFirstLineTest(LaunchingTickTestCase):
+    setup_commands = ("false", "touch ../../../second-line-ran")
+
+    def test_should_run_no_line_after_the_failing_one(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertFalse((self.project.path / "second-line-ran").exists())
+
+
+class BrigadeTickOnceWithASetupLineThatSplitsIntoNoArgvTest(LaunchingTickTestCase):
+    setup_commands = ("touch ../../../first-line-ran", 'touch "unclosed')
+
+    def test_should_remove_the_worktree_and_its_branch_and_name_the_line(self):
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn(
+            'brigade tick: the setup of @TASK.S3 failed: the line touch "unclosed splits into no argv', completed.stderr
+        )
+        self.assertFalse(self.worktree.exists())
+        self.assertEqual(self.project.run_git("branch", "--list", TASK_BRANCH), "")
+
+    def test_should_run_no_line_of_the_setup(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertFalse((self.project.path / "first-line-ran").exists())
+
+
+class BrigadeTickOnceWithTheWaveBranchCheckedOutTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.run_git("checkout", "--quiet", WAVE_BRANCH)
+
+    def test_should_refuse_to_move_the_checked_out_wave_branch(self):
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn(
+            f"brigade tick: the wave branch {WAVE_BRANCH} is checked out in {self.project.path}", completed.stderr
+        )
+
+    def test_should_leave_the_checkout_and_its_branch_as_they_were(self):
+        # Arrange
+        head = self.project.run_git("rev-parse", WAVE_BRANCH)
+
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(self.project.run_git("status", "--porcelain"), "")
+        self.assertEqual(self.project.run_git("rev-parse", WAVE_BRANCH), head)
 
 
 class BrigadeTickOnceUnderAConfiguredWorktreeRootTest(LaunchingTickTestCase):

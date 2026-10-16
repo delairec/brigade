@@ -1,3 +1,4 @@
+import shlex
 from pathlib import Path
 
 from brigade.errors import BrigadeError, ToolFailure
@@ -23,11 +24,16 @@ SETUP_FIELD = "SETUP"
 SETUP_TIMEOUT_S = 1800.0
 
 
+def _split_line(line: str) -> tuple[str, ...]:
+    try:
+        return tuple(shlex.split(line))
+    except ValueError as error:
+        raise ToolFailure(f"the line {line} splits into no argv: {error}") from None
+
+
 def _set_up(runtime: Runtime, setup: tuple[str, ...], worktree: BranchWorktree) -> None:
-    for command in setup:
-        runtime.run_process(
-            ProcessRequest(argv=("sh", "-c", command), cwd=str(worktree.path), timeout_s=SETUP_TIMEOUT_S)
-        )
+    for argv in tuple(_split_line(line) for line in setup):
+        runtime.run_process(ProcessRequest(argv=argv, cwd=str(worktree.path), timeout_s=SETUP_TIMEOUT_S))
     require_ancestor(runtime.run_process, worktree.path, worktree.start)
 
 
