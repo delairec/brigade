@@ -12,6 +12,7 @@ from brigade.runtime import Runtime
 from brigade.studies.collect_evidence import collect_evidence
 from brigade.studies.judge_evidence import judge_evidence
 from brigade.studies.read_study import Study
+from brigade.studies.refuse_inbox_output import refuse_inbox_output
 from brigade.studies.study_run_context import (
     STEPS_DIRECTORY,
     STUDY_KIND,
@@ -67,6 +68,7 @@ def _start_run(runtime: Runtime, study: Study, equipment: StudyEquipment) -> Stu
 
 
 def run_study(runtime: Runtime, study: Study, equipment: StudyEquipment) -> dict:
+    refuse_inbox_output(study.output)
     context = _start_run(runtime, study, equipment)
     for step, perform in STEPS:
         result_path = context.run_directory / STEPS_DIRECTORY / f"{step}.json"

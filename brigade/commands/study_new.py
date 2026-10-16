@@ -8,6 +8,7 @@ from brigade.registry.require_operational_corpus import require_operational_corp
 from brigade.runtime import Runtime
 from brigade.studies.read_collector_line import read_collector_line
 from brigade.studies.record_study import NewStudy, record_study
+from brigade.studies.refuse_inbox_output import refuse_inbox_output
 from brigade.studies.require_answer_type import require_answer_type
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -38,6 +39,7 @@ def study_new(request, runtime: Runtime) -> dict:
     for line in request.collector:
         read_collector_line(line)
     require_answer_type(runtime, runtime.paths.config_root, request.answer)
+    refuse_inbox_output(request.output)
     record_study(
         runtime,
         NewStudy(
@@ -78,7 +80,10 @@ COMMAND = Command(
         ),
         Argument(("--slot",), {"choices": SLOTS, "default": DEFAULT_SLOT, "help": "the judging slot; none, a scan"}),
         Argument(("--every",), {"help": "a schedule of the tick; absent, the study runs on demand"}),
-        Argument(("--output",), {"required": True, "help": "inbox, file:<path>, entity:<TYPE>, issue or a name"}),
+        Argument(
+            ("--output",),
+            {"required": True, "help": "file:<path>, entity:<TYPE>, issue or a name; inbox refused until task B22"},
+        ),
         Argument(("--answer",), {"default": DEFAULT_ANSWER_TYPE, "help": "the entity type of the answer"}),
     ),
     run=study_new,

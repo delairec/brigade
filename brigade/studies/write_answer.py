@@ -7,11 +7,10 @@ from brigade.studies.read_collected import read_collected
 from brigade.studies.render_answer import render_answer
 from brigade.studies.study_run_context import ANSWER_FILE, StudyRunContext
 from brigade.studies.write_answer_to_file import FILE_OUTPUT_PREFIX, write_answer_to_file
-from brigade.studies.write_answer_to_inbox import write_answer_to_inbox
 from brigade.system.write_text_atomically import write_text_atomically
 
 ENTITY_OUTPUT_PREFIX = "entity:"
-PUBLISHERS_BY_OUTPUT = {"inbox": write_answer_to_inbox, "issue": open_answer_issue}
+PUBLISHERS_BY_OUTPUT = {"issue": open_answer_issue}
 
 
 def _append_block(text: str, block: str) -> str:

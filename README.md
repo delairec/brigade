@@ -128,7 +128,7 @@ writes it:
 |-------------------|------------------------------------------------------------------------------------------------|
 | `entity:<TYPE>`   | appended to the operational corpus through `awawa fmt`, `awawa lint --strict` and a commit     |
 | `file:<pattern>`  | committed on the branch `brigade/study-<study>-<run>` of the project, pushed with a pull request where the project has a forge; `{run}` in the pattern is the run |
-| `inbox`           | `$XDG_STATE_HOME/brigade/inbox/<run>.md`                                                       |
+| `inbox`           | refused by `study new` and `study run` until task B22 gives the inbox a store                  |
 | `issue`           | a forge issue of the project                                                                   |
 | any other name    | `brigade-output-<name>` on `PATH`, given `{"schema_version", "study", "run", "markdown"}` on stdin |
 

@@ -58,7 +58,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--every",
             "1d",
             "--output",
-            "inbox",
+            "issue",
         )
 
         # Assert
@@ -73,7 +73,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             '\tCOLLECTOR "shell: ls"\n'
             "\tSLOT report\n"
             '\tEVERY "1d"\n'
-            '\tOUTPUT "inbox"\n'
+            '\tOUTPUT "issue"\n'
             '\tANSWER "ANSWER"\n'
             "\tSTATUS active\n",
         )
@@ -81,7 +81,7 @@ class BrigadeStudyNewTest(StudyTestCase):
     def test_should_commit_the_study(self):
         # Act
         self.run_study(
-            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "inbox"
+            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "issue"
         )
 
         # Assert
@@ -101,7 +101,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--every",
             "1h",
             "--output",
-            "inbox",
+            "issue",
             "--answer",
             "ANSWER",
         )
@@ -115,7 +115,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             '\tCOLLECTOR "worktrees"\n'
             "\tSLOT none\n"
             '\tEVERY "1h"\n'
-            '\tOUTPUT "inbox"\n'
+            '\tOUTPUT "issue"\n'
             '\tANSWER "ANSWER"\n'
             "\tSTATUS active\n",
         )
@@ -123,7 +123,7 @@ class BrigadeStudyNewTest(StudyTestCase):
     def test_should_print_the_study_recorded(self):
         # Act
         completed = self.run_study(
-            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "inbox"
+            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "issue"
         )
 
         # Assert
@@ -141,7 +141,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--every",
             "1d",
             "--output",
-            "inbox",
+            "issue",
             "--answer",
             "VERDICT",
         )
@@ -166,7 +166,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--every",
             "1d",
             "--output",
-            "inbox",
+            "issue",
         )
 
         # Assert
@@ -186,7 +186,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--every",
             "1d",
             "--output",
-            "inbox",
+            "issue",
         )
 
         # Assert
@@ -194,6 +194,27 @@ class BrigadeStudyNewTest(StudyTestCase):
             (completed.returncode, completed.stderr),
             (1, "brigade study new: the command printf 'oak cannot be split into an argv: No closing quotation\n"),
         )
+
+    def test_should_exit_1_naming_the_inbox_output_it_refuses_until_the_inbox_has_a_store(self):
+        # Act
+        completed = self.run_study(
+            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "inbox"
+        )
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade study new: the output inbox is refused: the inbox has no store until @TASK.B22\n"),
+        )
+
+    def test_should_record_no_study_whose_output_is_the_inbox(self):
+        # Act
+        self.run_study(
+            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "inbox"
+        )
+
+        # Assert
+        self.assertEqual(self.machine.read_git("log", "-1", "--format=%s"), "brigade project add: shop\n")
 
 
 class StudyRunTestCase(StudyTestCase):
@@ -321,6 +342,37 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         (self.machine.corpus / "studies.awawa").write_text(
             self.read_studies().replace('"shell: printf oak"', '"shell: printf \'oak"')
         )
+
+        # Act
+        self.run_study("run", "trees")
+
+        # Assert
+        self.assertCountEqual(
+            self.project.path.iterdir(), [self.project.path / ".git", self.project.path / "README.md"]
+        )
+
+    def record_scan_whose_output_became_the_inbox(self, collector: str) -> None:
+        self.record_scan(collector)
+        (self.machine.corpus / "studies.awawa").write_text(
+            self.read_studies().replace('OUTPUT "entity:ANSWER"', 'OUTPUT "inbox"')
+        )
+
+    def test_should_exit_1_naming_the_inbox_output_of_a_study_recorded_earlier(self):
+        # Arrange
+        self.record_scan_whose_output_became_the_inbox("shell: printf oak")
+
+        # Act
+        completed = self.run_study("run", "trees")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade study run: the output inbox is refused: the inbox has no store until @TASK.B22\n"),
+        )
+
+    def test_should_run_no_collector_of_a_study_whose_output_is_the_inbox(self):
+        # Arrange
+        self.record_scan_whose_output_became_the_inbox("shell: touch ran")
 
         # Act
         self.run_study("run", "trees")
@@ -798,21 +850,6 @@ class StudyOutputTestCase(StudyRunTestCase):
             CLONE_ENTRY_POINT, "study", "run", "trees", "--json", environment=self.environment
         )
         return json.loads(completed.stdout)
-
-
-class BrigadeStudyInboxOutputTest(StudyOutputTestCase):
-    def test_should_leave_the_markdown_of_the_answer_in_the_inbox(self):
-        # Arrange
-        self.record_study("inbox", "--project", "shop")
-
-        # Act
-        run_id = self.run_output()["run"]
-
-        # Assert
-        self.assertEqual(
-            (self.machine.state_home / "brigade" / "inbox" / f"{run_id}.md").read_text(),
-            f"# ANSWER trees_{run_id.replace('-', '_')}\n\n- STUDY: trees\n- RUN: {run_id}\n- COLLECTED: shell\n",
-        )
 
 
 class BrigadeStudyFileOutputTest(StudyOutputTestCase):
