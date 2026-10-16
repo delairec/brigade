@@ -2475,8 +2475,7 @@ DECISION TheRunOfAPlanRecordIsTheDirectoryBrigadeRunExports
 	DESC "brigade run exports BRIGADE_RUN_DIR, the directory of the run, to the client's process;"
 		+ "plan.lint_failed carries the name of that directory, read in brigade/system/paths.py;"
 		+ "with no such variable the event carries run null and a second plan record is not refused"
-	DESC "binds @TASK.B139 and @TASK.B13, which moved the reading from the parent directory of"
-		+ "BRIGADE_PROGRESS_FILE to BRIGADE_RUN_DIR"
+	DESC "binds @TASK.B139 and @TASK.B13"
 		REF @TASK.B139
 		REF @TASK.B13
 	REJECTED "a --run option of plan record: the planner would have to copy an identifier it is"
