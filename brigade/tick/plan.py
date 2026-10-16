@@ -45,6 +45,7 @@ def _count_free_slots(project: ProjectFacts) -> int:
 def _is_startable(task: TaskFacts, wave: WaveFacts) -> bool:
     return (
         wave.states.get(task.name, WAITING_STATE) == WAITING_STATE
+        and task.name not in wave.implemented
         and all(wave.states.get(earlier) == MERGED_STATE or earlier in wave.implemented for earlier in task.after)
         and not task.blocked_by
     )

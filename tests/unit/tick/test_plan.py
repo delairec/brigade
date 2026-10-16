@@ -58,6 +58,7 @@ class PlanStartableTasksTest(unittest.TestCase):
             ("after a task still running", FOLLOWING, {"S2": "running"}, (), ()),
             ("after a task neither merged nor implemented", FOLLOWING, {}, (), ()),
             ("blocked by a live question", BLOCKED, {}, (), ()),
+            ("implemented at the branch of the wave with no state", ALONE, {}, ("S3",), ()),
         ]:
             with self.subTest(case=case):
                 # Arrange
