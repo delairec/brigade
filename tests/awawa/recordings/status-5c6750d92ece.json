@@ -1,0 +1,27 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "TASK",
+      "--where",
+      "STATUS==implemented",
+      "--json",
+      "<tmp:0>"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [
+      "<tmp:0>"
+    ],
+    "inputs": {
+      "<tmp:0>/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change\"\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n",
+      "<tmp:0>/tasks.awawa": "TASK S2\n\tSTATUS implemented\n\nTASK S3\n\tSTATUS todo\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"implemented\", \"todo\"], \"types\": [{\"type\": \"SCHEMA\", \"counts\": {\"implemented\": 0, \"todo\": 0}, \"unset\": 1, \"total\": 1}, {\"type\": \"TASK\", \"counts\": {\"implemented\": 1, \"todo\": 1}, \"unset\": 0, \"total\": 2}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"TASK\", \"name\": \"S2\", \"target\": \"@TASK.S2\", \"file\": \"<tmp:0>/tasks.awawa\", \"line\": 1, \"status\": \"implemented\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 2, \"entities\": 3}}\n"
+  },
+  "version": "awawa 2.7.0"
+}
