@@ -1,0 +1,20 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/projects.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/projects.awawa": "PROJECT my_app_v2\n\tPATH \"<tmp:0>/projects/my-app.v2\"\n\tREMOTE \"acme/my-app\"\n\tMAIN \"trunk\"\n\tCORPUS \"corpus\"\n\tACCEPTANCE \"npm run test\"\n\tACCEPTANCE \"npm run lint\"\n\tSETUP \"npm ci\"\n\tFORGE \"github\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "version": "awawa 2.7.0"
+}

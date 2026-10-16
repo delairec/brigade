@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "--json",
+      "<tmp:0>/progress.awawa"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/progress.awawa": "SCHEMA STEP\n\tDESC \"a step the run completed\"\n\tFIELD DONE string\n\t\tREQUIRED\n\t\tDESC \"what the step did, one line\"\n\nSCHEMA HANDOVER\n\tDESC \"the state of a run that hands over\"\n\tFIELD NEXT string\n\t\tREQUIRED\n\t\tDESC \"the step to resume at\"\n\nSTEP s1\n\tDONE \"read the task\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [], \"types\": [{\"type\": \"HANDOVER\", \"counts\": {}, \"unset\": 0, \"total\": 0}, {\"type\": \"SCHEMA\", \"counts\": {}, \"unset\": 2, \"total\": 2}, {\"type\": \"STEP\", \"counts\": {}, \"unset\": 1, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"SCHEMA\", \"name\": \"HANDOVER\", \"target\": \"@SCHEMA.HANDOVER\", \"file\": \"<tmp:0>/progress.awawa\", \"line\": 7, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"SCHEMA\", \"name\": \"STEP\", \"target\": \"@SCHEMA.STEP\", \"file\": \"<tmp:0>/progress.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"STEP\", \"name\": \"s1\", \"target\": \"@STEP.s1\", \"file\": \"<tmp:0>/progress.awawa\", \"line\": 13, \"status\": null, \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 1, \"entities\": 3}}\n"
+  },
+  "version": "awawa 2.7.0"
+}
