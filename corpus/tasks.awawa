@@ -1753,7 +1753,12 @@ TASK B22
 	SPEC "note appends"
 	SPEC "inbox lists, shows and dismisses"
 	SPEC "a dismissed fingerprint never returns as new"
+	SPEC "carries the output inbox of a study: study new and study run accept it, and the output"
+		+ "step of a study run records the answer as a signal of the store"
 	AFTER @TASK.B05
+	SOURCE "the user's ruling of 2026-10-16 on pull request #143: « B22 portera cette sortie »,"
+		+ "recorded as @DECISION.TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore"
+		REF @DECISION.TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore
 
 TASK B23
 	TITLE "Connector: review threads"
@@ -2616,10 +2621,10 @@ TASK B48
 	SPEC "study answer --file validates the answer by awawa lint against the schema of its type,"
 		+ "never by a comparison of headings, refuses an answer that changed a field the CLI"
 		+ "filled, writes it to the output, file on a branch of the project with a pull request"
-		+ "where the project has a forge, corpus entity through fmt, lint and a commit, inbox"
-		+ "signal, forge issue or brigade-output-<name> on PATH; the answer is written and read"
-		+ "through the document kind, and the Markdown an output hands to a person is rendered from"
-		+ "the entity"
+		+ "where the project has a forge, corpus entity through fmt, lint and a commit, forge issue"
+		+ "or brigade-output-<name> on PATH; study new and study run refuse the output inbox,"
+		+ "naming task B22, which carries it; the answer is written and read through the document"
+		+ "kind, and the Markdown an output hands to a person is rendered from the entity"
 		IMPL "brigade/studies/validate_answer.py::def validate_answer(runtime: Runtime, study:"
 			+ "Study, run_directory: Path, answer: str) -> None:"
 		IMPL "brigade/studies/write_answer.py::def write_answer(context: StudyRunContext) -> dict:"
@@ -2631,8 +2636,11 @@ TASK B48
 			+ "test_should_refuse_an_answer_that_changed_a_field_the_cli_filled(self):"
 		IMPL "tests/cli/test_study.py::def"
 			+ "test_should_open_a_pull_request_holding_the_markdown_where_the_project_has_a_forge(self):"
+		IMPL "brigade/studies/refuse_inbox_output.py::def refuse_inbox_output(output: str) -> None:"
 		IMPL "tests/cli/test_study.py::def"
-			+ "test_should_leave_the_markdown_of_the_answer_in_the_inbox(self):"
+			+ "test_should_exit_1_naming_the_inbox_output_it_refuses_until_the_inbox_has_a_store(self):"
+		IMPL "tests/cli/test_study.py::def"
+			+ "test_should_exit_1_naming_the_inbox_output_of_a_study_recorded_earlier(self):"
 		IMPL "tests/cli/test_study.py::def"
 			+ "test_should_open_an_issue_holding_the_markdown_of_the_answer(self):"
 		IMPL "tests/cli/test_study.py::def test_should_hand_the_answer_to_the_output_on_path(self):"
@@ -2708,6 +2716,11 @@ TASK B48
 		+ "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell, which rewrote the SPEC of the shell"
 		+ "collector: one argv split by shlex.split, never sh -c"
 		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
+	SOURCE "the user's ruling of 2026-10-16 on pull request #143: « Refuser inbox d'ici B22 »,"
+		+ "recorded as @DECISION.TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore, which"
+		+ "rewrote SPEC 7: study new and study run refuse the output inbox until @TASK.B22"
+		REF @DECISION.TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore
+		REF @TASK.B22
 
 TASK B49
 	TITLE "brigade adapter matrix and the supported-clients table of the README, generated from the"
@@ -7821,7 +7834,7 @@ TASK B130
 	ROLE ada
 	SPEC "tests/awawa/recordings holds one recording per awawa call of the suite, each carrying the"
 		+ "operational schema installed by brigade init from the template of main"
-		IMPL "tests/awawa/recordings/status-403b0faccb29.json::e.g. remediate=builder"
+		IMPL "tests/awawa/recordings/status-430b05b39490.json::e.g. remediate=builder"
 	SPEC "python3 -m unittest passes with no awawa on PATH, every test running on the fake"
 		IMPL "tests/awawa/test_recordings.py::class"
 	RATIONALE "the fake awawa of @TASK.B95 replays a recording matched on the arguments, the"
