@@ -5,9 +5,9 @@ from pathlib import Path
 APPLICATION_DIRECTORY = "brigade"
 CONFIGURATION_FILE = "config.toml"
 LOCK_DIRECTORY = "locks"
+SETUP_DIRECTORY = "setups"
 HEARTBEAT_FILE = "tick.json"
 SCHEMA_FILE = "_schema.awawa"
-PROGRESS_FILE_VARIABLE = "BRIGADE_PROGRESS_FILE"
 RUN_DIRECTORY_VARIABLE = "BRIGADE_RUN_DIR"
 
 
@@ -18,7 +18,6 @@ class Paths:
     cache_root: Path
     home: Path
     executable_search_path: str
-    run_progress_file: Path | None = None
     run_directory: Path | None = None
 
     @property
@@ -28,6 +27,10 @@ class Paths:
     @property
     def lock_directory(self) -> Path:
         return self.state_root / LOCK_DIRECTORY
+
+    @property
+    def setup_directory(self) -> Path:
+        return self.state_root / SETUP_DIRECTORY
 
     @property
     def heartbeat_file(self) -> Path:
@@ -59,6 +62,5 @@ def build_paths() -> Paths:
         cache_root=_resolve_base("XDG_CACHE_HOME", ".cache") / APPLICATION_DIRECTORY,
         home=Path.home(),
         executable_search_path=os.environ.get("PATH", os.defpath),
-        run_progress_file=_resolve_absolute_path(PROGRESS_FILE_VARIABLE),
         run_directory=_resolve_absolute_path(RUN_DIRECTORY_VARIABLE),
     )

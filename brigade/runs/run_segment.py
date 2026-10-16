@@ -26,6 +26,7 @@ from brigade.system.client_role import ClientRole
 from brigade.system.create_directory import create_directory
 from brigade.system.launch_argv_request import LaunchArgvRequest
 from brigade.system.parse_result_request import ParseResultRequest
+from brigade.system.paths import RUN_DIRECTORY_VARIABLE
 from brigade.system.process_trace import CUT, EXITED, STOPPED, ProcessTrace
 from brigade.system.reset_hour import ResetHour
 from brigade.system.spawn_process import SpawnRequest
@@ -186,7 +187,12 @@ def _run_process(
     request = SpawnRequest(
         argv=launch.argv,
         cwd=str(plan.worktree),
-        environment={**launch.environment, **plan.forge_environment, PROGRESS_FILE_VARIABLE: progress_file},
+        environment={
+            **launch.environment,
+            **plan.forge_environment,
+            PROGRESS_FILE_VARIABLE: progress_file,
+            RUN_DIRECTORY_VARIABLE: str(plan.run_directory),
+        },
         stdin=launch.stdin,
         stdout=segment_directory / STDOUT_FILE,
         stderr=segment_directory / STDERR_FILE,

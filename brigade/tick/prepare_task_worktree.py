@@ -16,6 +16,7 @@ from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.read_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
+from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
 from brigade.tick.ignore_worktrees import ignore_worktrees
 
@@ -24,6 +25,8 @@ WAVE_BRANCH_PREFIX = "integration/"
 TASK_BRANCH_PREFIX = "task/"
 SETUP_FIELD = "SETUP"
 SETUP_TIMEOUT_S = 1800.0
+SETUP_PROMPT = "$ "
+SETUP_LOG_SUFFIX = ".log"
 PARKED_STATE = "parked"
 
 
@@ -34,9 +37,12 @@ def _split_line(line: str) -> tuple[str, ...]:
         raise ToolFailure(f"the line {line} splits into no argv: {error}") from None
 
 
-def _set_up(runtime: Runtime, setup: tuple[str, ...], worktree: BranchWorktree) -> None:
-    for argv in tuple(_split_line(line) for line in setup):
-        runtime.run_process(ProcessRequest(argv=argv, cwd=str(worktree.path), timeout_s=SETUP_TIMEOUT_S))
+def _set_up(runtime: Runtime, setup: tuple[str, ...], worktree: BranchWorktree, log: Path) -> None:
+    transcript = []
+    for line, argv in tuple((line, _split_line(line)) for line in setup):
+        record = runtime.run_process(ProcessRequest(argv=argv, cwd=str(worktree.path), timeout_s=SETUP_TIMEOUT_S))
+        transcript.append(f"{SETUP_PROMPT}{line}\n{record.stdout}{record.stderr}")
+    write_text_atomically(log, "".join(transcript))
     require_ancestor(runtime.run_process, worktree.path, worktree.start)
 
 
@@ -55,7 +61,12 @@ def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action
             ignore_worktrees(runtime.run_process, repository, action.branch)
         add_branch_worktree(runtime.run_process, repository, worktree)
     try:
-        _set_up(runtime, tuple(field.value for field in project.fields if field.name == SETUP_FIELD), worktree)
+        _set_up(
+            runtime,
+            tuple(field.value for field in project.fields if field.name == SETUP_FIELD),
+            worktree,
+            runtime.paths.setup_directory / action.project / f"{action.task}{SETUP_LOG_SUFFIX}",
+        )
     except ToolFailure as failure:
         with hold_lock(lock):
             remove_worktree(runtime.run_process, repository, worktree.path)

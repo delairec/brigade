@@ -479,8 +479,8 @@ class PlanRecordTestCase(PlanContextTestCase):
         )
 
     def describe_run_environment(self, run: str) -> dict:
-        progress_file = self.machine.state_home / "brigade" / "runs" / run / "progress.md"
-        return {**self.machine.describe_environment(), "BRIGADE_PROGRESS_FILE": str(progress_file)}
+        run_directory = self.machine.state_home / "brigade" / "runs" / run
+        return {**self.machine.describe_environment(), "BRIGADE_RUN_DIR": str(run_directory)}
 
     def read_ledger_events(self) -> list[dict]:
         ledger_files = list((self.machine.state_home / "brigade" / "ledger").glob("*.jsonl"))

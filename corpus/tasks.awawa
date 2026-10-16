@@ -8197,7 +8197,7 @@ TASK B139
 		+ "any write, naming the round already spent; the planner run ends blocked, declaring"
 		+ "brigade-end: blocked, and the REQUEST stays planning"
 		IMPL "brigade/planning/record_plan.py::def _refuse_a_second_round("
-		IMPL "brigade/system/paths.py::run_progress_file=_resolve_absolute_path(PROGRESS_FILE_VARIABLE),"
+		IMPL "brigade/system/paths.py::run_directory=_resolve_absolute_path(RUN_DIRECTORY_VARIABLE),"
 		IMPL "tests/cli/test_plan.py::class"
 			+ "BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):"
 	SPEC "the integration branch, integration/<NAME>-<slug>, NAME the name of the MILESTONE and"
