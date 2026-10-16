@@ -8,6 +8,7 @@ from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.corpus.run_awawa import run_awawa
+from brigade.errors import CommandFailed
 from brigade.git.check_ancestor import check_ancestor
 from brigade.planning.count_next_task_number import count_next_task_number
 from brigade.runtime import Runtime
@@ -24,6 +25,7 @@ PATH_TRIGGERS = "KIND==path"
 GLOB_FIELD = "GLOB"
 SPEC_FIELD = "SPEC"
 ANCHOR_SEPARATOR = "::"
+TRAILING_PUNCTUATION = ",."
 AGENTS_FILE = "AGENTS.md"
 TEMPORARY_DIRECTORY = "tmp"
 WORKTREE_ROOT = "."
@@ -31,7 +33,12 @@ WHEN_DONE = ["brigade task check", "brigade task pr", "brigade task promote"]
 
 
 def _describe_command(record: ProcessRecord) -> dict:
-    return {"command": " ".join(record.argv), "output": record.stdout}
+    return {
+        "command": " ".join(record.argv),
+        "exit_code": record.exit_code,
+        "stderr": record.stderr,
+        "output": record.stdout,
+    }
 
 
 def _describe_ancestry(runtime: Runtime, worktree: TaskWorktree) -> dict:
@@ -49,7 +56,7 @@ def _read_setup(runtime: Runtime, worktree: TaskWorktree) -> str | None:
 def _list_task_paths(task: dict) -> list[str]:
     anchored = [anchor.partition(ANCHOR_SEPARATOR)[0] for anchor in collect_anchors(task["fields"])]
     named = [
-        token
+        token.rstrip(TRAILING_PUNCTUATION)
         for field in task["fields"]
         if field["name"] == SPEC_FIELD
         for token in "".join(json.loads(atom) for atom in field["atoms"]).split()
@@ -87,6 +94,13 @@ def _list_rules(runtime: Runtime, configuration: Configuration, worktree: TaskWo
     ]
 
 
+def _read_task(runtime: Runtime, worktree: TaskWorktree, target: str) -> ProcessRecord:
+    record = run_awawa(runtime.run_process, worktree.path, ("context", target, "--with-schema", WORKTREE_ROOT))
+    if record.exit_code != 0:
+        raise CommandFailed(record.argv, record.exit_code, record.stderr)
+    return record
+
+
 def _read_agents(worktree: TaskWorktree) -> str | None:
     agents = worktree.path / AGENTS_FILE
     if not agents.exists():
@@ -119,9 +133,7 @@ def assemble_task_context(
     return {
         "worktree": {"ancestry": _describe_ancestry(runtime, worktree), "setup": _read_setup(runtime, worktree)},
         "task": [
-            _describe_command(
-                run_awawa(runtime.run_process, worktree.path, ("context", target, "--with-schema", WORKTREE_ROOT))
-            ),
+            _describe_command(_read_task(runtime, worktree, target)),
             _describe_command(
                 run_awawa(runtime.run_process, worktree.path, ("lint", "--closure", target, WORKTREE_ROOT))
             ),

@@ -25,12 +25,13 @@ MAIN_TASKS = 'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemen
 WAVE_TASKS = (
     'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
     'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
-    '\tSPEC "the button of src/cart/button.py empties the cart"\n'
+    '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
     '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n\n'
     'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
 )
 TASK_ADDED_ON_THE_WAVE = 'TASK S9\n\tTITLE "Name the emptied carts"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
 WAVE_MILESTONES = 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS running\n'
+REPEATED_MILESTONE = 'MILESTONE M1\n\tTITLE "Empty cart again"\n\tSTATUS running\n'
 WAVE_BRANCH = "integration/M1-empty-cart"
 TASK_BRANCH = "task/M1-empty-cart/S3"
 RUNNING_REQUEST = (
@@ -66,6 +67,8 @@ INSTRUCTIONS_TRIGGERS = (
     'TRIGGER shipping_code\n\tKIND path\n\tCONDITION "a file of the shipping"\n\tGLOB "src/shipping/**"\n'
     "\tLOADS @RULE.parcels_are_weighed\n\n"
     'TRIGGER changing_code\n\tKIND task\n\tCONDITION "changing code"\n\tLOADS @RULE.cart_is_pure\n\n'
+    'TRIGGER cart_button_code\n\tKIND path\n\tCONDITION "the button of the cart"\n\tGLOB "src/cart/button.py"\n'
+    "\tLOADS @RULE.cart_is_pure\n\n"
     'RULE cart_is_pure\n\tSPEC "the cart computes without input or output"\n\n'
     'RULE charges_are_logged\n\tSPEC "every charge is logged"\n\n'
     'RULE parcels_are_weighed\n\tSPEC "every parcel is weighed"\n'
@@ -159,8 +162,8 @@ class BrigadeTaskContextInTheWorktreeOfATaskTest(TaskContextTestCase):
                     "setup": SETUP_LOG,
                 },
                 "task": [
-                    {"command": "awawa context @TASK.S3 --with-schema .", "output": ANY},
-                    {"command": "awawa lint --closure @TASK.S3 .", "output": ANY},
+                    {"command": "awawa context @TASK.S3 --with-schema .", "exit_code": 0, "stderr": "", "output": ANY},
+                    {"command": "awawa lint --closure @TASK.S3 .", "exit_code": 0, "stderr": "", "output": ANY},
                 ],
                 "rules": None,
                 "project": None,
@@ -176,14 +179,14 @@ class BrigadeTaskContextInTheWorktreeOfATaskTest(TaskContextTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertIn("$ awawa context @TASK.S3 --with-schema .\nTASK S3\n", completed.stdout)
+        self.assertIn("$ awawa context @TASK.S3 --with-schema .\nexit 0\nTASK S3\n", completed.stdout)
 
     def test_should_print_the_closure_of_the_task_under_its_command_line(self):
         # Act
         completed = self.run_task_context()
 
         # Assert
-        self.assertIn("$ awawa lint --closure @TASK.S3 .\n", completed.stdout)
+        self.assertIn("$ awawa lint --closure @TASK.S3 .\nexit 0\n", completed.stdout)
 
     def test_should_accept_the_task_of_the_branch_named_as_its_argument(self):
         # Act
@@ -249,6 +252,52 @@ class BrigadeTaskContextOutsideTheWorktreeOfATaskTest(TaskContextTestCase):
             (completed.returncode, completed.stdout, completed.stderr),
             (1, "", f"brigade task context: @TASK.S6 is not the task of the branch {TASK_BRANCH}\n"),
         )
+
+
+class BrigadeTaskContextOfATaskTheCorpusDoesNotHoldTest(TaskContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.worktree = self.project.path / ".brigade" / "worktrees" / "S7"
+        self.project.run_git(
+            "worktree", "add", "--quiet", "-b", "task/M1-empty-cart/S7", str(self.worktree), WAVE_BRANCH
+        )
+
+    def test_should_exit_1_naming_the_task(self):
+        # Act
+        completed = self.run_task_context()
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stdout), (1, ""))
+        self.assertRegex(
+            completed.stderr, r"\Abrigade task context: awawa context @TASK\.S7 --with-schema \. exited 1: "
+        )
+
+
+class BrigadeTaskContextOfAWorktreeWhoseCorpusRepeatsAMilestoneTest(TaskContextTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.worktree / "corpus" / "again.awawa").write_text(REPEATED_MILESTONE)
+
+    def test_should_print_what_awawa_writes_on_stderr(self):
+        # Act
+        document = self.read_document()
+
+        # Assert
+        self.assertIn("duplicate identity @MILESTONE.M1", document["task"][0]["stderr"])
+
+    def test_should_print_the_exit_code_of_the_closure_that_finds_an_error(self):
+        # Act
+        document = self.read_document()
+
+        # Assert
+        self.assertEqual(document["task"][1]["exit_code"], 1)
+
+    def test_should_print_the_exit_code_then_the_stderr_under_the_command_line(self):
+        # Act
+        completed = self.run_task_context()
+
+        # Assert
+        self.assertRegex(completed.stdout, r"\$ awawa context @TASK\.S3 --with-schema \.\nexit 0\nL005 ")
 
 
 class BrigadeTaskContextOfAWaveNoRequestStartedTest(TaskContextTestCase):
@@ -366,12 +415,22 @@ class BrigadeTaskContextOfAProjectWithAgentsInstructionsTest(TaskContextTestCase
         # Assert
         self.assertEqual(document["project"], AGENTS_TEXT)
 
-    def test_should_print_it_under_the_project_section(self):
+    def test_should_print_the_agents_file_under_the_project_section(self):
         # Act
         completed = self.run_task_context()
 
         # Assert
         self.assertIn(f"# project\n{AGENTS_TEXT}", completed.stdout)
+
+    def test_should_read_the_agents_file_at_the_root_of_the_worktree_from_one_of_its_directories(self):
+        # Arrange
+        directory_of_the_worktree = self.worktree / "corpus"
+
+        # Act
+        completed = self.run_task_context("--json", cwd=directory_of_the_worktree)
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["project"], AGENTS_TEXT)
 
 
 class BrigadeTaskContextWithAnInstructionsCorpusTest(TaskContextTestCase):
@@ -394,11 +453,24 @@ class BrigadeTaskContextWithAnInstructionsCorpusTest(TaskContextTestCase):
                 {
                     "trigger": "cart_code",
                     "command": f"awawa context @TRIGGER.cart_code --depth 1 --skip reasoning {self.instructions}",
+                    "exit_code": 0,
+                    "stderr": "",
                     "output": ANY,
                 },
                 {
                     "trigger": "billing_code",
                     "command": f"awawa context @TRIGGER.billing_code --depth 1 --skip reasoning {self.instructions}",
+                    "exit_code": 0,
+                    "stderr": "",
+                    "output": ANY,
+                },
+                {
+                    "trigger": "cart_button_code",
+                    "command": (
+                        f"awawa context @TRIGGER.cart_button_code --depth 1 --skip reasoning {self.instructions}"
+                    ),
+                    "exit_code": 0,
+                    "stderr": "",
                     "output": ANY,
                 },
             ],
@@ -411,13 +483,13 @@ class BrigadeTaskContextWithAnInstructionsCorpusTest(TaskContextTestCase):
         # Assert
         self.assertIn("RULE cart_is_pure\n", document["rules"][0]["output"])
 
-    def test_should_print_them_under_the_rules_section(self):
+    def test_should_print_the_matching_triggers_under_the_rules_section(self):
         # Act
         completed = self.run_task_context()
 
         # Assert
         self.assertIn(
-            f"# rules\n$ awawa context @TRIGGER.cart_code --depth 1 --skip reasoning {self.instructions}\n",
+            f"# rules\n$ awawa context @TRIGGER.cart_code --depth 1 --skip reasoning {self.instructions}\nexit 0\n",
             completed.stdout,
         )
 
@@ -453,14 +525,16 @@ class BrigadeTaskContextInARunTest(TaskContextTestCase):
 class BrigadeTaskContextOfAClientAnsweringAnAttributionTest(TaskContextTestCase):
     def setUp(self):
         super().setUp()
-        self.configure(settings='attribution = "Co-Authored-By: Fake Model <fake@example.org>"\n')
+        self.configure(settings='attribution = "Co-Authored-By: Fake Model <fake@example.org>,Session: 42"\n')
 
     def test_should_print_the_attribution_lines_the_probe_of_the_client_answers(self):
         # Act
         document = self.read_document()
 
         # Assert
-        self.assertEqual(document["reserved"]["attribution"], ["Co-Authored-By: Fake Model <fake@example.org>"])
+        self.assertEqual(
+            document["reserved"]["attribution"], ["Co-Authored-By: Fake Model <fake@example.org>", "Session: 42"]
+        )
 
     def test_should_print_the_attribution_lines_of_the_configuration_in_their_place(self):
         # Arrange
@@ -475,9 +549,11 @@ class BrigadeTaskContextOfAClientAnsweringAnAttributionTest(TaskContextTestCase)
         # Assert
         self.assertEqual(document["reserved"]["attribution"], ["Co-Authored-By: Ada <ada@example.org>", "Session: 42"])
 
-    def test_should_print_them_under_the_reserved_section(self):
+    def test_should_print_the_attribution_lines_under_the_reserved_section(self):
         # Act
         completed = self.run_task_context()
 
         # Assert
-        self.assertIn("# reserved\ntask number 7\nCo-Authored-By: Fake Model <fake@example.org>\n", completed.stdout)
+        self.assertIn(
+            "# reserved\ntask number 7\nCo-Authored-By: Fake Model <fake@example.org>\nSession: 42\n", completed.stdout
+        )

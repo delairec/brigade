@@ -33,10 +33,10 @@ def _read_list_setting(request: dict, name: str) -> list[str]:
     return [value.strip() for value in declared.split(SETTING_SEPARATOR) if value.strip()]
 
 
-def _answer_attribution(settings: dict) -> dict:
-    if ATTRIBUTION_SETTING not in settings:
+def _answer_attribution(request: dict) -> dict:
+    if ATTRIBUTION_SETTING not in request.get("settings", {}):
         return {}
-    return {"attribution": [settings[ATTRIBUTION_SETTING]]}
+    return {"attribution": _read_list_setting(request, ATTRIBUTION_SETTING)}
 
 
 def _probe(request: dict) -> dict:
@@ -47,7 +47,7 @@ def _probe(request: dict) -> dict:
         "operations": [*REPLAYED_OPERATIONS, *_read_list_setting(request, "operations")],
         "features": _read_list_setting(request, "features"),
         "models": {},
-        **_answer_attribution(request.get("settings", {})),
+        **_answer_attribution(request),
     }
 
 

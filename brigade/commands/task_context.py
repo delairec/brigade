@@ -20,7 +20,9 @@ def _render_lines(lines: list[str]) -> str:
 
 
 def _render_commands(entries: list[dict]) -> str:
-    return "".join(f"$ {entry['command']}\n{entry['output']}" for entry in entries)
+    return "".join(
+        f"$ {entry['command']}\nexit {entry['exit_code']}\n{entry['stderr']}{entry['output']}" for entry in entries
+    )
 
 
 def _render_worktree(worktree: dict) -> str:
