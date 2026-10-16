@@ -251,6 +251,63 @@ class BrigadeTaskContextOutsideTheWorktreeOfATaskTest(TaskContextTestCase):
         )
 
 
+class BrigadeTaskContextOfAWaveNoRequestStartedTest(TaskContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.worktree = self.project.path / ".brigade" / "worktrees" / "S6"
+        self.project.run_git("worktree", "add", "--quiet", "-b", "task/M2-gift-wrap/S6", str(self.worktree), "main")
+
+    def test_should_exit_1_naming_the_wave_branch_no_request_carries(self):
+        # Act
+        completed = self.run_task_context()
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", "brigade task context: no REQUEST of @PROJECT.shop has the BRANCH integration/M2-gift-wrap\n"),
+        )
+
+
+class BrigadeTaskContextInARepositoryNoProjectRegistersTest(TaskContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.pantry = TemporaryProject(
+            Path(self.root.name).resolve() / "projects" / "pantry", self.describe_environment()
+        )
+        self.pantry.run_git("commit", "--quiet", "--allow-empty", "-m", "the pantry")
+        self.pantry.run_git("checkout", "--quiet", "-b", TASK_BRANCH)
+
+    def test_should_exit_1_naming_the_repository(self):
+        # Act
+        completed = self.run_task_context(cwd=self.pantry.path)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade task context: no registered project at {self.pantry.path}\n"),
+        )
+
+
+class BrigadeTaskContextWithNoClientConfiguredTest(TaskContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configuration_file = self.machine.write_configuration("")
+
+    def test_should_exit_1_asking_for_the_client_that_names_the_attribution(self):
+        # Act
+        completed = self.run_task_context()
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (
+                1,
+                "",
+                f"brigade task context: config.toml names no client: set the client key in {self.configuration_file}\n",
+            ),
+        )
+
+
 class BrigadeTaskContextOfAWorktreeCutByHandTest(TaskContextTestCase):
     def setUp(self):
         super().setUp()
@@ -360,6 +417,16 @@ class BrigadeTaskContextWithAnInstructionsCorpusTest(TaskContextTestCase):
 
         # Assert
         self.assertIn("RULE cart_is_pure\n", document["rules"][0]["output"])
+
+    def test_should_print_them_under_the_rules_section(self):
+        # Act
+        completed = self.run_task_context()
+
+        # Assert
+        self.assertIn(
+            f"# rules\n$ awawa context @TRIGGER.cart_code --depth 1 --skip reasoning {self.instructions}\n",
+            completed.stdout,
+        )
 
 
 class BrigadeTaskContextInARunTest(TaskContextTestCase):

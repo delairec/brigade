@@ -19,6 +19,16 @@ PROBE_OF_NO_CLIENT_EXECUTABLE = {
     "models": {},
 }
 
+PROBE_OF_A_CLIENT_ANSWERING_AN_ATTRIBUTION = {
+    "schema_version": 1,
+    "client": "fake",
+    "version_argv": None,
+    "operations": ["probe"],
+    "features": [],
+    "models": {},
+    "attribution": ["Co-Authored-By: Fake Model <fake@example.org>"],
+}
+
 
 class ProbeAnswerTest(unittest.TestCase):
     def test_should_write_back_the_answer_of_a_client_with_an_executable(self):
@@ -52,5 +62,23 @@ class ProbeAnswerTest(unittest.TestCase):
                 "operations": ["probe"],
                 "features": [],
                 "models": {},
+            },
+        )
+
+    def test_should_write_back_the_attribution_lines_the_client_answers(self):
+        # Act
+        document = ProbeAnswer.from_document(PROBE_OF_A_CLIENT_ANSWERING_AN_ATTRIBUTION).to_document()
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "client": "fake",
+                "version_argv": None,
+                "operations": ["probe"],
+                "features": [],
+                "models": {},
+                "attribution": ["Co-Authored-By: Fake Model <fake@example.org>"],
             },
         )
