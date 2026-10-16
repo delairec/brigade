@@ -174,6 +174,7 @@ class FakeAwawaRecordingTest(FakeAwawaTestCase):
                     "directories": [],
                     "inputs": {"<tmp:0>/corpus/tasks.awawa": "TASK  B1\n"},
                 },
+                "run_order": [],
                 "outcome": {
                     "stdout": "<tmp:0>/corpus/tasks.awawa\n",
                     "stderr": "1 file rewritten\n",
@@ -181,6 +182,21 @@ class FakeAwawaRecordingTest(FakeAwawaTestCase):
                     "rewritten": {"<tmp:0>/corpus/tasks.awawa": "TASK B1\n"},
                 },
             },
+        )
+
+    def test_should_record_the_run_ids_of_the_call_in_the_order_they_sort(self):
+        # Arrange
+        install_fake_awawa(self, self.recordings, str(SCRIPTED_AWAWA))
+        (self.corpus / "answers.awawa").write_text(
+            "ANSWER trees_20261015T124950Z_f00000\nANSWER trees_20261015T124950Z_05a3de\n"
+        )
+
+        # Act
+        self.run_awawa("fmt", str(self.corpus / "answers.awawa"))
+
+        # Assert
+        self.assertEqual(
+            json.loads(next(self.recordings.iterdir()).read_text())["run_order"], ["<run_name:2>", "<run_name:1>"]
         )
 
     def test_should_answer_the_call_with_what_the_real_awawa_answered(self):

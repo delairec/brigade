@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "TASK S4\n\tTITLE // string\n\tSTATUS // draft|todo|implemented|archived\n\t// SPEC string\n\t\t// IMPL anchor\n\t// MILESTONE @MILESTONE\n\t// AFTER @TASK\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -80,7 +80,8 @@ SCHEMA STUDY
 	FIELD COLLECTOR string
 		REQUIRED
 		REPEATABLE
-		DESC "a collector name with its parameters, e.g. git-log since=30d, or shell: <command>"
+		DESC "a collector name with its parameters, e.g. git-log since=30d, or shell: <command>,"
+			+ "one argv split by shlex.split and run without a shell"
 	FIELD SLOT report|explore|triage|rules|none
 		DEFAULT report
 		DESC "the judging slot; none makes the study a scan"
@@ -89,13 +90,40 @@ SCHEMA STUDY
 			+ "means on demand"
 	FIELD OUTPUT string
 		REQUIRED
-		DESC "inbox, file:<path pattern>, entity:<TYPE>, issue, or an output on PATH"
-	FIELD TEMPLATE string
-		DESC "a Markdown skeleton whose placeholders the CLI fills from the collectors"
+		DESC "file:<path pattern>, entity:<TYPE>, issue, or an output on PATH; inbox refused until"
+			+ "task B22"
+	FIELD ANSWER string
+		DEFAULT "ANSWER"
+		DESC "the entity type of this schema the answer is written as"
 	FIELD STATUS active|paused|archived
 		REQUIRED
 	WHEN STATUS archived
 		GATE suppressed
+
+SCHEMA ANSWER
+	DESC "the answer of one run of a study: the CLI fills what the collectors gave, the judging"
+		+ "slot the prose"
+	FIELD STUDY string
+		REQUIRED
+		DESC "the name of the STUDY answered"
+	FIELD RUN string
+		REQUIRED
+		DESC "the run of the study"
+	FIELD COLLECTED string
+		REPEATABLE
+		DESC "one per collector, its name, filled by the CLI"
+		FIELD SUMMARY string
+			REQUIRED
+			DESC "the summary of its document, as JSON"
+		FIELD DOCUMENT string
+			REQUIRED
+			DESC "the path of its full document"
+	FIELD NARRATIVE string
+		REPEATABLE
+		DESC "filled by the judging slot"
+	FIELD FINDING string
+		REPEATABLE
+		DESC "one finding with its evidence, filled by the judging slot"
 
 SCHEMA ORDER
 	DESC "one instance of a recipe: its parameters, its project, its schedule"

@@ -97,6 +97,43 @@ its milestone read from its branch, each with the last `task.state` of the ledge
 request that delivered it; a request of a project that declares no corpus exits 1. `wave list` prints one row per request, those of one project with `--project`. Every write
 goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
 
+## Studies
+
+A study is a `STUDY` entity of `studies.awawa` in the operational corpus: deterministic collectors, then at most one
+judging run, then an output. Every command prints text or, with `--json`, a JSON document.
+
+```
+brigade study new <name> --title T --output O [--question Q] [--project P] [--collector LINE ...] [--slot S] [--every E] [--answer TYPE]
+brigade study run <name>
+brigade study context <run>
+brigade study answer <run> --file <answer.awawa>
+```
+
+`study new` records the study through `awawa fmt`, `awawa lint --strict` and a commit, the question verbatim, and
+runs it once unless `--every` is given. `study run` runs the steps `collect`, `judge` and `output`, each writing its
+result under `runs/<id>/steps/` and the ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and
+`order.done` with the kind `study`; a failed step parks the study, and its next `study run` resumes that run at its
+first undone step. `--slot none` makes a scan: no judging run, the answer holds the fields brigade filled.
+
+A collector line is a collector name and its `key=value` parameters, or `shell: <command line>`, whose items are the
+lines the command prints. `study name=<study>` collects the answer of the last run of that study.
+
+The answer is an entity of the type `--answer` names, `ANSWER` by default: brigade fills `STUDY`, `RUN` and one
+`COLLECTED` per collector, its summary and the path of its full document; the judging run fills `NARRATIVE` and
+`FINDING`. The judging run reads `study context <run>` and hands its answer to `study answer`, which validates it by
+`awawa lint` against the schema of its type and refuses one that changed a field brigade filled. The output step
+writes it:
+
+| `--output`        | where the answer goes                                                                          |
+|-------------------|------------------------------------------------------------------------------------------------|
+| `entity:<TYPE>`   | appended to the operational corpus through `awawa fmt`, `awawa lint --strict` and a commit     |
+| `file:<pattern>`  | committed on the branch `brigade/study-<study>-<run>` of the project, pushed with a pull request where the project has a forge; `{run}` in the pattern is the run |
+| `inbox`           | refused by `study new` and `study run` until task B22 gives the inbox a store                  |
+| `issue`           | a forge issue of the project                                                                   |
+| any other name    | `brigade-output-<name>` on `PATH`, given `{"schema_version", "study", "run", "markdown"}` on stdin |
+
+Every output but `entity:` hands a person the Markdown rendered from the answer entity.
+
 ## Tick and scheduler
 
 A tick builds a snapshot of the facts, plans the actions they call for and applies them, round after round until the
@@ -454,7 +491,8 @@ pinned ruff gives the verdict that counts.
 
 The tests that need awawa run against the real awawa where it is on PATH, and otherwise against a fake that replays
 the recordings of `tests/awawa/recordings/`: what the real awawa printed, its exit code and the files it rewrote, for
-the same arguments on the same input files, each recording naming the awawa version it was made with. A call with no
+the same arguments on the same input files, each recording naming the awawa version it was made with and the order
+its run ids sorted in, which the replay keeps for two runs of the same second. A call with no
 recording fails its test, naming its arguments. The CI installs no awawa, so its tests run on the recordings and none
 is skipped. Where awawa is on PATH, `tests/awawa/test_recordings.py` replays every recording against it and fails on a
 difference, naming the recording, its version and the version `awawa --version` prints. A recording is made, or

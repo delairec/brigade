@@ -1,0 +1,28 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/answers.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/answers.awawa": "ANSWER trees_<run_name:1>\n\tSTUDY \"trees\"\n\tRUN \"<run:2>\"\n\tCOLLECTED \"shell\"\n\t\tSUMMARY \"{\\\"lines\\\": 1}\"\n\t\tDOCUMENT \"<tmp:0>/state/brigade/runs/<run:2>/collectors/1/collect/shell/document.json\"\n\nANSWER trees_<run_name:3>\n\tSTUDY \"trees\"\n\tRUN \"<run:4>\"\n\tCOLLECTED \"shell\"\n\t\tSUMMARY \"{\\\"lines\\\": 1}\"\n\t\tDOCUMENT \"<tmp:0>/state/brigade/runs/<run:4>/collectors/1/collect/shell/document.json\"\n\nANSWER digest_<run_name:5>\n\tSTUDY \"digest\"\n\tRUN \"<run:6>\"\n\tCOLLECTED \"study\"\n\t\tSUMMARY \"{\\\"run\\\": \\\"<run:4>\\\"}\"\n\t\tDOCUMENT \"<tmp:0>/state/brigade/runs/<run:6>/collectors/1/collect/study/document.json\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [
+    "<run:2>",
+    "<run:4>",
+    "<run_name:1>",
+    "<run_name:3>",
+    "<run:6>",
+    "<run_name:5>"
+  ],
+  "version": "awawa 2.7.0"
+}

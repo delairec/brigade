@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"DECISION\", \"name\": \"CartLivesInMemory\", \"file\": \"<tmp:0>/projects/shop/corpus/decisions.awawa\", \"line\": 1, \"status\": \"active\", \"fields\": [{\"name\": \"STATUS\", \"atoms\": [\"active\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

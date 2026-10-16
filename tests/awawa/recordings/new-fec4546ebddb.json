@@ -22,5 +22,6 @@
     "stderr": "awawa new: no SCHEMA entry for entity type EPIC\n",
     "stdout": ""
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

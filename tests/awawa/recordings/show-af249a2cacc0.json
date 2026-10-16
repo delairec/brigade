@@ -23,5 +23,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"SCHEMA\", \"name\": \"TASK\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"DESC\", \"atoms\": [\"\\\"a change delivered by one pull request\\\"\"], \"fields\": []}, {\"name\": \"FIELD\", \"atoms\": [\"TITLE\", \"string\"], \"fields\": [{\"name\": \"REQUIRED\", \"atoms\": [], \"fields\": []}]}, {\"name\": \"FIELD\", \"atoms\": [\"STATUS\", \"todo|implemented\"], \"fields\": [{\"name\": \"REQUIRED\", \"atoms\": [], \"fields\": []}]}, {\"name\": \"FIELD\", \"atoms\": [\"MILESTONE\", \"@MILESTONE\"], \"fields\": []}, {\"name\": \"FIELD\", \"atoms\": [\"AFTER\", \"@TASK\"], \"fields\": [{\"name\": \"REPEATABLE\", \"atoms\": [], \"fields\": []}]}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -23,5 +23,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S3\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 5, \"status\": \"todo\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Empty the cart in one click\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"todo\"], \"fields\": []}, {\"name\": \"MILESTONE\", \"atoms\": [\"@MILESTONE.M1\"], \"fields\": []}, {\"name\": \"AFTER\", \"atoms\": [\"@TASK.S2\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

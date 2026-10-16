@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/studies.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/studies.awawa": "STUDY trees\n\tTITLE \"the worktrees\"\n\tCOLLECTOR \"worktrees\"\n\tSLOT none\n\tEVERY \"1h\"\n\tOUTPUT \"issue\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

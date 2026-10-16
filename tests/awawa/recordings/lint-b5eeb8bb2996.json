@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "<tmp:0>/cache/brigade/plans/R1/corpus/tasks.awawa \u2014 1 error(s), 0 warning(s)\nL007  error  <tmp:0>/cache/brigade/plans/R1/corpus/tasks.awawa:8:9\n      field STATUS expects draft|todo|implemented|archived, given doing\n\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -23,5 +23,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"incoming\": [{\"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/questions.awawa\", \"line\": 3, \"col\": 9, \"from\": {\"type\": \"OPEN_QUESTION\", \"name\": \"Undecided\", \"status\": \"open\"}, \"field_path\": [\"BLOCKS\"], \"target\": {\"type\": \"TASK\", \"name\": \"S5\"}, \"resolved\": true}], \"outgoing\": [{\"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 20, \"col\": 12, \"from\": {\"type\": \"TASK\", \"name\": \"S5\", \"status\": \"todo\"}, \"field_path\": [\"MILESTONE\"], \"target\": {\"type\": \"MILESTONE\", \"name\": \"M1\"}, \"resolved\": true}]}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

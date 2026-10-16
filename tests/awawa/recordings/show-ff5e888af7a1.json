@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S2\", \"file\": \"<tmp:0>/projects/shop/corpus/tasks.awawa\", \"line\": 12, \"status\": \"todo\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Remove an item from the cart\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"todo\"], \"fields\": []}, {\"name\": \"SPEC\", \"atoms\": [\"\\\"a removed item leaves the cart\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

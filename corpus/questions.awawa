@@ -42,3 +42,16 @@ OPEN_QUESTION HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B10, recorded by"
 		+ "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus"
 		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+
+OPEN_QUESTION WhereTheInboxOutputOfAStudyIsStored
+	QUESTION "where does the inbox output of a study land until the inbox has a store: one Markdown"
+		+ "file per run under $XDG_STATE_HOME/brigade/inbox/, as brigade study run writes it, or"
+		+ "another place the inbox will read?"
+	STATUS closed
+	RATIONALE "SPEC 7 of @TASK.B48 names an inbox signal, and the inbox has no store yet, @TASK.B22"
+		+ "being a draft; the delivery writes one file per run, the option the inbox can read once"
+		+ "it exists"
+		REF @TASK.B48
+		REF @TASK.B22
+	SOURCE "pull request #143 of the brigade repository, delivering @TASK.B48"
+		REF @TASK.B48

@@ -315,9 +315,11 @@ DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 		+ "full document, the answer entity with the fields the CLI filled from the collectors and"
 		+ "the schema of its type; the judging run reads nothing a collector already collected"
 	DESC "brigade study answer validates the answer by awawa lint against the schema of its type,"
-		+ "refuses one that changed a field the CLI filled, writes it to the declared output, inbox"
-		+ "signal, file on a branch, corpus entity or forge issue, and records the ledger event; an"
-		+ "executable brigade-output-<name> on PATH adds an output"
+		+ "refuses one that changed a field the CLI filled and records it in the run; the output"
+		+ "step of brigade study run writes it to the declared output, file on a branch, corpus"
+		+ "entity, forge issue or, once @TASK.B22 gives the inbox a store, inbox signal, and"
+		+ "records the ledger event; an executable brigade-output-<name> on PATH adds an output"
+		REF @TASK.B22
 	DESC "the report slot answers with a narrative, the explore slot with findings and their"
 		+ "evidence, the triage slot with patterns, the rules slot with rules"
 	DESC "a study with no judging slot is a scan: its non-empty output is the answer; the gardening"
@@ -2860,3 +2862,51 @@ DECISION TheUseCaseMapIsKeptAsSourcesToBeRedone
 		+ "l'artefact dans un dossier du projet au cas où on a besoin de refaire cet exercice plus"
 		+ "tard », and their answer « artifcat/use-cases/ and we move the blueprint's related files"
 		+ "inside a blueprint subfolder »"
+
+DECISION TheOutputStepOfAStudyRunWritesTheAnswerStudyAnswerRecorded
+	TITLE "brigade study answer validates the answer and records it in the run directory; the"
+		+ "output step of brigade study run writes it to the declared output"
+	STATUS active
+	DESC "study answer writes runs/<id>/answer.awawa; the judge step is done once that file exists,"
+		+ "and the output step reads it, or renders the fields the CLI filled for a study with SLOT"
+		+ "none, and writes it to the output"
+	DESC "file:<path pattern>, {run} standing for the run, commits the Markdown on the branch"
+		+ "brigade/study-<study>-<run>, created afresh in a worktree under the run directory, and"
+		+ "force-pushes it, the branch being the run's alone, with a pull request where the project"
+		+ "has a forge"
+	DESC "issue opens a forge issue holding the Markdown; any other name but inbox is handed to"
+		+ "brigade-output-<name> on PATH as a JSON document of schema_version, study, run and"
+		+ "markdown on its stdin"
+	DESC "binds @TASK.B48"
+		REF @TASK.B48
+	REJECTED "study answer writing the output itself: a failed push or issue would fall to the"
+		+ "judging run to retry, where the output step parks the study and its next run resumes"
+		+ "there without judging again"
+	RATIONALE "the output is one step of the study run, as SPEC 3 of @TASK.B48 orders it, so a"
+		+ "failed write is parked and resumed like any step, and one writer of the output serves"
+		+ "the scan and the judged study alike"
+		REF @TASK.B48
+	SOURCE "pull request #143 of the brigade repository, delivering @TASK.B48"
+		REF @TASK.B48
+
+DECISION TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore
+	TITLE "brigade study new and brigade study run refuse the output inbox until task B22 gives the"
+		+ "inbox a store"
+	STATUS active
+	DESC "study new refuses OUTPUT inbox before it records the study, and study run refuses it"
+		+ "before its run starts, for a study recorded earlier; each exits 1 naming the output and"
+		+ "@TASK.B22"
+		REF @TASK.B22
+	DESC "brigade writes no inbox file; @TASK.B22 carries the inbox output of a study with the"
+		+ "signals store"
+		REF @TASK.B22
+	DESC "binds @TASK.B48"
+		REF @TASK.B48
+	REJECTED "one Markdown file per run under $XDG_STATE_HOME/brigade/inbox/, as the first delivery"
+		+ "of #143 wrote it: the signals store of task B22 plans is JSONL with fingerprint, count,"
+		+ "age and status, and would not read those files"
+	CLOSES @OPEN_QUESTION.WhereTheInboxOutputOfAStudyIsStored
+	SOURCE "the user's ruling of 2026-10-16 on pull request #143: « Refuser inbox d'ici B22 » — «"
+		+ "study new et study run refusent la sortie `inbox` tant que B22 n'est pas livrée. On"
+		+ "retire le code d'écriture des fichiers, et B22 portera cette sortie. »"
+		REF @TASK.B48

@@ -17,5 +17,6 @@
     "stderr": "",
     "stdout": "<tmp:0>/progress.awawa \u2014 2 error(s), 0 warning(s)\nL003  error  <tmp:0>/progress.awawa:14:2\n      field NEXT is not declared on STEP\nL006  error  <tmp:0>/progress.awawa:13:1\n      required field DONE is absent from STEP\n\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

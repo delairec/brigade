@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/projects.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/projects.awawa": "PROJECT shop\n\tPATH \"<tmp:0>/projects/shop\"\n\tMAIN \"main\"\n\tFORGE \"none\"\n\tSTATUS active\n\nPROJECT atelier\n\tPATH \"<tmp:0>/projects/atelier\"\n\tREMOTE \"acme/atelier\"\n\tMAIN \"main\"\n\tFORGE \"github\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

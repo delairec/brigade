@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"DECISION\", \"name\": \"CartLivesInADatabase\", \"file\": \"<tmp:0>/projects/shop/corpus/decisions.awawa\", \"line\": 1, \"status\": \"archived\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"the cart lives in a database\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"archived\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

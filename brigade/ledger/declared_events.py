@@ -1,11 +1,15 @@
 from brigade.ledger.constraint_delivered import ConstraintDelivered
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.order_done import OrderDone
+from brigade.ledger.order_parked import OrderParked
+from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.pattern_ratified import PatternRatified
 from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.ledger.step_done import StepDone
+from brigade.ledger.step_failed import StepFailed
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.undeclared_event import UndeclaredEvent
@@ -26,6 +30,10 @@ DECLARED_EVENTS = {
         TaskParked,
         TaskState,
         PrMerged,
+        OrderStarted,
+        StepDone,
+        StepFailed,
+        OrderParked,
         OrderDone,
         SignalRecorded,
         PatternRatified,
@@ -42,6 +50,10 @@ LedgerEvent = (
     | TaskParked
     | TaskState
     | PrMerged
+    | OrderStarted
+    | StepDone
+    | StepFailed
+    | OrderParked
     | OrderDone
     | SignalRecorded
     | PatternRatified

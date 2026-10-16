@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S1\", \"file\": \"<tmp:0>/projects/shop/corpus/tasks.awawa\", \"line\": 6, \"status\": \"implemented\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Add an item to the cart\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"implemented\"], \"fields\": []}, {\"name\": \"SPEC\", \"atoms\": [\"\\\"an item added appears in the cart\\\"\"], \"fields\": [{\"name\": \"IMPL\", \"atoms\": [\"\\\"src/cart.py::def add_item\\\"\"], \"fields\": []}]}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }
