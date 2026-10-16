@@ -1160,8 +1160,8 @@ TASK B12
 	SPEC "a task is startable when its last task.state is queued or absent, every task it names in"
 		+ "AFTER has merged as its last task.state in the wave or STATUS implemented in the"
 		+ "project's corpus, and no entity whose STATUS its gate does not suppress cites it through"
-		+ "a field whose converse is BLOCKED_BY; the planner's tests prove each case on snapshot"
-		+ "rows"
+		+ "a field whose converse is BLOCKED_BY, and it is not STATUS implemented at BRANCH; the"
+		+ "planner's tests prove each case on snapshot rows"
 		IMPL "brigade/tick/plan.py::def _is_startable(task: TaskFacts, wave: WaveFacts) -> bool:"
 		IMPL "brigade/tick/read_live_blockers.py::def read_live_blockers("
 		IMPL "tests/unit/tick/test_plan.py::class PlanStartableTasksTest(unittest.TestCase):"
@@ -1178,7 +1178,8 @@ TASK B12
 		+ "split before the first runs, a line shlex.split refuses failing the setup by name, the"
 		+ "lines running in their order and stopping at the first failure; git merge-base"
 		+ "--is-ancestor of BRANCH and HEAD is asserted, and a failure removes the worktree and"
-		+ "records the failure"
+		+ "records task.state parked for the task, which the planner then leaves out until it is"
+		+ "unparked by hand"
 		IMPL "brigade/tick/prepare_task_worktree.py::def prepare_task_worktree(runtime: Runtime,"
 			+ "configuration: Configuration, action: LaunchTask) -> BranchWorktree:"
 		IMPL "brigade/git/require_ancestor.py::def require_ancestor(run_process:"
@@ -1297,6 +1298,11 @@ TASK B12
 		+ "SPEC 4 runs each SETUP line as one argv, SPEC 5 ignores .brigade/worktrees/ alone"
 		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
 		REF @DECISION.TheTickGitignoresBrigadeWorktreesAloneAndTheProjectVersionsItsCollectorsAndRecipes
+	SOURCE "the user's rulings of 2026-10-16 on review threads 4286237800 and 4286237807 of pull"
+		+ "request #142: « Enregistrer parked (Recommandé) — Le tick enregistre task.state parked."
+		+ "Le planificateur ne relance déjà pas une tâche parked [...] : vous la débloquez à la"
+		+ "main. » (SPEC 4) and « L'exclure (Recommandé) — On ajoute la condition task.name not in"
+		+ "wave.implemented à _is_startable [...] La SPEC 2 de B12 est complétée. » (SPEC 2)"
 	DELIVERED_BY 142
 
 TASK B13
