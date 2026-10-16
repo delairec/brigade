@@ -1,6 +1,7 @@
 import unittest
 from datetime import UTC, datetime
 
+from brigade.errors import BrigadeError
 from brigade.tick.actions import LaunchTask, StartWave
 from brigade.tick.build_snapshot import LiveRun, PlannedRequest, ProjectFacts, Snapshot, TaskFacts, WaveFacts
 from brigade.tick.plan import plan
@@ -125,6 +126,19 @@ class PlanSlotsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (LAUNCH_S3,))
+
+
+class PlanTaskOrderTest(unittest.TestCase):
+    def test_should_refuse_a_startable_task_whose_name_carries_no_number_to_order_it_by(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, waves=(create_wave((TaskFacts(name="Login"),), {}),), projects=(SHOP,))
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            plan(snapshot)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "@TASK.Login of the wave M1 carries no number to be ordered by")
 
 
 class PlanPlannedRequestsTest(unittest.TestCase):
