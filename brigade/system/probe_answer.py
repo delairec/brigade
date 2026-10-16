@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 DOCUMENT_SCHEMA_VERSION = 1
+ATTRIBUTION_KEY = "attribution"
+NO_ATTRIBUTION = ()
 
 
 @dataclass(frozen=True)
@@ -10,6 +12,7 @@ class ProbeAnswer:
     operations: tuple[str, ...]
     features: tuple[str, ...]
     models: dict
+    attribution: tuple[str, ...] = NO_ATTRIBUTION
 
     @classmethod
     def from_document(cls, document: dict) -> "ProbeAnswer":
@@ -20,6 +23,7 @@ class ProbeAnswer:
             operations=tuple(document["operations"]),
             features=tuple(document["features"]),
             models=document["models"],
+            attribution=tuple(document.get(ATTRIBUTION_KEY, NO_ATTRIBUTION)),
         )
 
     def to_document(self) -> dict:
@@ -30,4 +34,5 @@ class ProbeAnswer:
             "operations": list(self.operations),
             "features": list(self.features),
             "models": self.models,
+            **({ATTRIBUTION_KEY: list(self.attribution)} if self.attribution else {}),
         }

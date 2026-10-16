@@ -84,6 +84,7 @@ CLIENT_ANSWER_SHAPES = {
             items=Field(kinds=(str,), values=("step_count", "tool_grants", "reset_hour", "graceful_stop")),
         ),
         "models": Field(kinds=(dict,)),
+        "attribution": Field(kinds=(list,), items=TEXT, optional=True),
     },
     "launch-argv": COMMAND_ANSWER,
     "resume-argv": COMMAND_ANSWER,

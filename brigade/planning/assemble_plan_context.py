@@ -1,9 +1,10 @@
 import json
-import re
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.corpus.collect_anchors import collect_anchors
 from brigade.errors import BrigadeError
+from brigade.planning.count_next_task_number import count_next_task_number
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 AWAWA_TIMEOUT_S = 30.0
@@ -14,12 +15,10 @@ MILESTONE_TYPE = "MILESTONE"
 PLANNED_SCHEMAS = (TASK_TYPE, MILESTONE_TYPE)
 ACTIVE_STATUS = "active"
 OPEN_TASK_STATUSES = ("draft", "todo")
-ANCHOR_FIELD = "IMPL"
 TITLE_FIELD = "TITLE"
 MILESTONE_FIELD = "MILESTONE"
 FIELD_DECLARATION = "FIELD"
 ANCHOR_SEPARATOR = "::"
-TRAILING_NUMBER = re.compile(r"\d+$")
 SCHEMA_NOT_DEFINED = 1
 SHOWN = (0,)
 SHOWN_OR_NOT_DEFINED = (0, SCHEMA_NOT_DEFINED)
@@ -69,16 +68,6 @@ def _read_title(entity: dict) -> str:
     return titles[0]
 
 
-def _collect_anchors(fields: list) -> list[str]:
-    return [
-        anchor
-        for field in fields
-        for anchor in (
-            [_decode_atom(field["atoms"][0])] if field["name"] == ANCHOR_FIELD else _collect_anchors(field["fields"])
-        )
-    ]
-
-
 def _summarise_status(types: list) -> list[dict]:
     return [
         {
@@ -93,15 +82,10 @@ def _summarise_status(types: list) -> list[dict]:
 def _index_anchors(shown: list[dict]) -> dict:
     anchors = {}
     for entity in shown:
-        for anchor in _collect_anchors(entity["fields"]):
+        for anchor in collect_anchors(entity["fields"]):
             file = anchor.partition(ANCHOR_SEPARATOR)[0]
             anchors.setdefault(file, []).append({"entity": f"@{entity['type']}.{entity['name']}", "anchor": anchor})
     return anchors
-
-
-def _count_next_task_number(entities: list) -> int:
-    names = [entity["name"] for entity in entities if entity["type"] == TASK_TYPE]
-    return max((int(digits) for name in names for digits in TRAILING_NUMBER.findall(name)), default=0) + 1
 
 
 def assemble_plan_context(run_process: Callable[[ProcessRequest], ProcessRecord], root: Path) -> dict:
@@ -125,6 +109,6 @@ def assemble_plan_context(run_process: Callable[[ProcessRequest], ProcessRecord]
         ],
         "schemas": {entity_type: text for entity_type, text in schemas.items() if text is not None},
         "missing": _list_missing(run_process, root, schemas),
-        "next_task_number": _count_next_task_number(entities),
+        "next_task_number": count_next_task_number(entities),
         "anchors": _index_anchors(shown),
     }

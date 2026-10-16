@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@TRIGGER.billing_code",
+      "--json",
+      "<tmp:0>/instructions"
+    ],
+    "cwd": "<tmp:0>/instructions",
+    "directories": [
+      "<tmp:0>/instructions"
+    ],
+    "inputs": {
+      "<tmp:0>/instructions/_schema.awawa": "SCHEMA TRIGGER\n\tDESC \"a condition a session establishes\"\n\tFIELD KIND task|path\n\t\tREQUIRED\n\tFIELD CONDITION string\n\t\tREQUIRED\n\tFIELD GLOB glob\n\t\tREPEATABLE\n\tFIELD LOADS @RULE\n\t\tREPEATABLE\n\nSCHEMA RULE\n\tDESC \"a rule\"\n\tFIELD SPEC string\n\t\tREQUIRED\n",
+      "<tmp:0>/instructions/triggers.awawa": "TRIGGER cart_code\n\tKIND path\n\tCONDITION \"a file of the cart\"\n\tGLOB \"src/cart/**\"\n\tLOADS @RULE.cart_is_pure\n\nTRIGGER billing_code\n\tKIND path\n\tCONDITION \"a file of the billing\"\n\tGLOB \"src/billing/**\"\n\tLOADS @RULE.charges_are_logged\n\nTRIGGER shipping_code\n\tKIND path\n\tCONDITION \"a file of the shipping\"\n\tGLOB \"src/shipping/**\"\n\tLOADS @RULE.parcels_are_weighed\n\nTRIGGER changing_code\n\tKIND task\n\tCONDITION \"changing code\"\n\tLOADS @RULE.cart_is_pure\n\nRULE cart_is_pure\n\tSPEC \"the cart computes without input or output\"\n\nRULE charges_are_logged\n\tSPEC \"every charge is logged\"\n\nRULE parcels_are_weighed\n\tSPEC \"every parcel is weighed\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TRIGGER\", \"name\": \"billing_code\", \"file\": \"<tmp:0>/instructions/triggers.awawa\", \"line\": 7, \"status\": null, \"fields\": [{\"name\": \"KIND\", \"atoms\": [\"path\"], \"fields\": []}, {\"name\": \"CONDITION\", \"atoms\": [\"\\\"a file of the billing\\\"\"], \"fields\": []}, {\"name\": \"GLOB\", \"atoms\": [\"\\\"src/billing/**\\\"\"], \"fields\": []}, {\"name\": \"LOADS\", \"atoms\": [\"@RULE.charges_are_logged\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "version": "awawa 2.7.0"
+}

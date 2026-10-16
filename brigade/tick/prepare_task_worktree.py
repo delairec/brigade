@@ -13,6 +13,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
+from brigade.system.locate_setup_log import locate_setup_log
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.read_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
@@ -26,7 +27,6 @@ TASK_BRANCH_PREFIX = "task/"
 SETUP_FIELD = "SETUP"
 SETUP_TIMEOUT_S = 1800.0
 SETUP_PROMPT = "$ "
-SETUP_LOG_SUFFIX = ".log"
 PARKED_STATE = "parked"
 
 
@@ -65,7 +65,7 @@ def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action
             runtime,
             tuple(field.value for field in project.fields if field.name == SETUP_FIELD),
             worktree,
-            runtime.paths.setup_directory / action.project / f"{action.task}{SETUP_LOG_SUFFIX}",
+            locate_setup_log(runtime.paths.setup_directory, action.project, action.task),
         )
     except ToolFailure as failure:
         with hold_lock(lock):
