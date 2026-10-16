@@ -1,0 +1,24 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "--json",
+      "."
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/app/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a task\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa": "TASK T1\n\tTITLE \"write the app\"\n\tSTATUS todo\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"todo\"], \"types\": [{\"type\": \"SCHEMA\", \"counts\": {\"todo\": 0}, \"unset\": 1, \"total\": 1}, {\"type\": \"TASK\", \"counts\": {\"todo\": 1}, \"unset\": 0, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"SCHEMA\", \"name\": \"TASK\", \"target\": \"@SCHEMA.TASK\", \"file\": \"./corpus/_schema.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"TASK\", \"name\": \"T1\", \"target\": \"@TASK.T1\", \"file\": \"./corpus/tasks.awawa\", \"line\": 1, \"status\": \"todo\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 2, \"entities\": 2}}\n"
+  },
+  "version": "awawa 2.7.0"
+}
