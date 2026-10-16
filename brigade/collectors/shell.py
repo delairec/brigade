@@ -4,11 +4,11 @@ from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import Configuration
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
+from brigade.system.split_command import split_command
 
 NAME = "shell"
 COMMAND_PARAMETER = "command"
-SHELL = "sh"
-SHELL_COMMAND_OPTION = "-c"
+NO_COMMAND = ""
 COMMAND_TIMEOUT_S = 600.0
 COMPLETE_EXIT_CODE = 0
 FRESH_AT_EACH_CALL = False
@@ -16,11 +16,12 @@ FRESH_AT_EACH_CALL = False
 
 def collect(environment: dict, runtime: Runtime, configuration: Configuration) -> dict:
     inputs = read_collector_environment(environment)
-    if COMMAND_PARAMETER not in inputs.parameters:
+    argv = split_command(inputs.parameters.get(COMMAND_PARAMETER, NO_COMMAND))
+    if not argv:
         raise BrigadeError(f"the shell collector takes {COMMAND_PARAMETER}=<line>")
     record = runtime.run_process(
         ProcessRequest(
-            argv=(SHELL, SHELL_COMMAND_OPTION, inputs.parameters[COMMAND_PARAMETER]),
+            argv=argv,
             cwd=str(inputs.project),
             timeout_s=COMMAND_TIMEOUT_S,
             acceptable_exit_codes=EVERY_EXIT_CODE,

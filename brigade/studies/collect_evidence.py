@@ -25,8 +25,8 @@ def collect_evidence(context: StudyRunContext) -> dict:
     runtime = context.runtime
     project = _locate_project(context)
     collected = []
-    for index, line in enumerate(context.study.collectors, start=FIRST_COLLECTOR):
-        name, parameters = read_collector_line(line)
+    declared_collectors = [read_collector_line(line) for line in context.study.collectors]
+    for index, (name, parameters) in enumerate(declared_collectors, start=FIRST_COLLECTOR):
         collector = context.equipment.resolve_collector(name, project)
         place = context.run_directory / COLLECTORS_DIRECTORY / str(index)
         collection = collect_document(

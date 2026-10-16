@@ -174,6 +174,27 @@ class BrigadeStudyNewTest(StudyTestCase):
             (completed.returncode, completed.stderr), (1, "brigade study new: @PROJECT.cart is not registered\n")
         )
 
+    def test_should_exit_1_naming_a_shell_command_it_cannot_split(self):
+        # Act
+        completed = self.run_study(
+            "new",
+            "weekly",
+            "--title",
+            "what moved",
+            "--collector",
+            "shell: printf 'oak",
+            "--every",
+            "1d",
+            "--output",
+            "inbox",
+        )
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade study new: the command printf 'oak cannot be split into an argv: No closing quotation\n"),
+        )
+
 
 class StudyRunTestCase(StudyTestCase):
     def setUp(self):
@@ -275,6 +296,38 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertEqual(
             self.read_order_events(), [("order.started", None), ("step.failed", "collect"), ("order.parked", "collect")]
+        )
+
+    def test_should_run_no_collector_of_a_study_holding_a_command_it_cannot_split(self):
+        # Arrange
+        self.run_study(
+            "new",
+            "trees",
+            "--title",
+            "the trees",
+            "--project",
+            "shop",
+            "--collector",
+            "shell: touch ran",
+            "--collector",
+            "shell: printf oak",
+            "--slot",
+            "none",
+            "--every",
+            "1h",
+            "--output",
+            "entity:ANSWER",
+        )
+        (self.machine.corpus / "studies.awawa").write_text(
+            self.read_studies().replace('"shell: printf oak"', '"shell: printf \'oak"')
+        )
+
+        # Act
+        self.run_study("run", "trees")
+
+        # Assert
+        self.assertCountEqual(
+            self.project.path.iterdir(), [self.project.path / ".git", self.project.path / "README.md"]
         )
 
     def test_should_print_the_step_a_study_parked_at(self):

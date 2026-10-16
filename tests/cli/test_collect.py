@@ -52,6 +52,7 @@ SHAPELESS_COLLECTOR = (
     'echo \'{"schema_version": 1, "collector": "shapeless", "collected_at": "2026-10-15T08:00:00Z", "items": []}\'\n'
 )
 MUTE_COLLECTOR = "#!/bin/sh\necho done\n"
+FAILING_COMMAND = "#!/bin/sh\necho broken >&2\nexit 4\n"
 LAST_TWENTY_LINES = (
     "line 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\n"
     "line 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\n"
@@ -834,9 +835,35 @@ class BrigadeCollectShellTest(CollectTestCase):
         # Assert
         self.assertEqual(json.loads(completed.stdout)["cached"], False)
 
-    def test_should_name_the_exit_code_and_the_stderr_of_a_failing_command(self):
+    def test_should_run_the_command_without_a_shell(self):
         # Act
-        completed = self.run_collect("shell", "command=echo broken >&2; exit 4")
+        completed = self.run_collect("shell", "command=echo alpha && echo beta", "--json")
+
+        # Assert
+        self.assertEqual(self.read_document(completed)["items"], ["alpha && echo beta"])
+
+    def test_should_refuse_naming_a_command_it_cannot_split_into_an_argv(self):
+        # Act
+        completed = self.run_collect("shell", "command=printf 'oak")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (
+                1,
+                (
+                    "brigade collect: collector shell exited 1\n"
+                    "the command printf 'oak cannot be split into an argv: No closing quotation\n"
+                ),
+            ),
+        )
+
+    def test_should_name_the_exit_code_and_the_stderr_of_a_failing_command(self):
+        # Arrange
+        install_executable(self.project.path / "fail", FAILING_COMMAND)
+
+        # Act
+        completed = self.run_collect("shell", "command=./fail")
 
         # Assert
         self.assertEqual(completed.returncode, 1)
@@ -853,6 +880,19 @@ class BrigadeCollectShellTest(CollectTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(
             completed.stderr, "brigade collect: collector shell exited 1\nthe shell collector takes command=<line>\n"
+        )
+
+    def test_should_refuse_an_empty_command(self):
+        # Arrange
+        empty_command = "command="
+
+        # Act
+        completed = self.run_collect("shell", empty_command)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade collect: collector shell exited 1\nthe shell collector takes command=<line>\n"),
         )
 
 

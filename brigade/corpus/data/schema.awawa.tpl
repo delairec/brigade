@@ -80,7 +80,8 @@ SCHEMA STUDY
 	FIELD COLLECTOR string
 		REQUIRED
 		REPEATABLE
-		DESC "a collector name with its parameters, e.g. git-log since=30d, or shell: <command>"
+		DESC "a collector name with its parameters, e.g. git-log since=30d, or shell: <command>,"
+			+ "one argv split by shlex.split and run without a shell"
 	FIELD SLOT report|explore|triage|rules|none
 		DEFAULT report
 		DESC "the judging slot; none makes the study a scan"

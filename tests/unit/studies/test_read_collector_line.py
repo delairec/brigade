@@ -1,5 +1,6 @@
 import unittest
 
+from brigade.errors import BrigadeError
 from brigade.studies.read_collector_line import read_collector_line
 
 
@@ -20,3 +21,11 @@ class ReadCollectorLineTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(read, expected)
+
+    def test_should_refuse_a_shell_command_it_cannot_split(self):
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_collector_line("shell: printf 'oak")
+
+        # Assert
+        self.assertIn("printf 'oak", str(refusal.exception))

@@ -6,6 +6,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
+from brigade.studies.read_collector_line import read_collector_line
 from brigade.studies.record_study import NewStudy, record_study
 from brigade.studies.require_answer_type import require_answer_type
 
@@ -34,6 +35,8 @@ def study_new(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     if request.project is not None:
         find_project(read_projects(runtime), request.project)
+    for line in request.collector:
+        read_collector_line(line)
     require_answer_type(runtime, runtime.paths.config_root, request.answer)
     record_study(
         runtime,
@@ -67,7 +70,11 @@ COMMAND = Command(
         Argument(("--project",), {"help": "the registered project; absent for a machine-wide study"}),
         Argument(
             ("--collector",),
-            {"action": "append", "required": True, "help": "a collector and its parameters, or shell: <command>"},
+            {
+                "action": "append",
+                "required": True,
+                "help": "a collector and its parameters, or shell: <command>, one argv run without a shell",
+            },
         ),
         Argument(("--slot",), {"choices": SLOTS, "default": DEFAULT_SLOT, "help": "the judging slot; none, a scan"}),
         Argument(("--every",), {"help": "a schedule of the tick; absent, the study runs on demand"}),
