@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.tick.read_awawa_document import read_awawa_document
 
 TASK_TYPE = "TASK"
 
