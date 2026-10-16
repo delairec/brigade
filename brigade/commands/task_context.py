@@ -6,7 +6,6 @@ from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import Configuration, read_configuration
-from brigade.system.require_configured_client import require_configured_client
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tasks.assemble_task_context import assemble_task_context
 from brigade.tasks.locate_task_worktree import locate_task_worktree
@@ -69,9 +68,10 @@ def _decide_exit_code(document: dict) -> int:
 def _read_attribution(configuration: Configuration, runtime: Runtime) -> list[str]:
     if configuration.attribution is not None:
         return list(configuration.attribution)
-    configured = require_configured_client(configuration, runtime.paths.configuration_file)
-    client = runtime.resolve_plugin("client", configured.name)
-    probe = ask_named_client(client, ClientQuestion(configured.name, ProbeRequest()), configuration, runtime)
+    if configuration.client is None:
+        return []
+    client = runtime.resolve_plugin("client", configuration.client)
+    probe = ask_named_client(client, ClientQuestion(configuration.client, ProbeRequest()), configuration, runtime)
     return list(probe.attribution)
 
 

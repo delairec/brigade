@@ -291,21 +291,14 @@ class BrigadeTaskContextInARepositoryNoProjectRegistersTest(TaskContextTestCase)
 class BrigadeTaskContextWithNoClientConfiguredTest(TaskContextTestCase):
     def setUp(self):
         super().setUp()
-        self.configuration_file = self.machine.write_configuration("")
+        self.machine.write_configuration("")
 
-    def test_should_exit_1_asking_for_the_client_that_names_the_attribution(self):
+    def test_should_print_no_attribution_line(self):
         # Act
-        completed = self.run_task_context()
+        document = self.read_document()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                1,
-                "",
-                f"brigade task context: config.toml names no client: set the client key in {self.configuration_file}\n",
-            ),
-        )
+        self.assertEqual(document["reserved"]["attribution"], [])
 
 
 class BrigadeTaskContextOfAWorktreeCutByHandTest(TaskContextTestCase):
