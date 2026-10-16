@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"DECISION\", \"name\": \"CartLivesInMemory\", \"file\": \"<tmp:0>/projects/shop/corpus/decisions.awawa\", \"line\": 5, \"status\": \"active\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"the cart lives in memory\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"active\"], \"fields\": []}, {\"name\": \"IMPL\", \"atoms\": [\"\\\"src/cart.py::CART = []\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

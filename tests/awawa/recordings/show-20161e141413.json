@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"PROJECT\", \"name\": \"alpha\", \"file\": \"<tmp:0>/projects.awawa\", \"line\": 8, \"status\": \"active\", \"fields\": [{\"name\": \"PATH\", \"atoms\": [\"\\\"/srv/alpha\\\"\"], \"fields\": []}, {\"name\": \"MAIN\", \"atoms\": [\"\\\"trunk\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"active\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

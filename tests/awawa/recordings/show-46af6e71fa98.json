@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"PROJECT\", \"name\": \"shop\", \"file\": \"<tmp:0>/config/brigade/projects.awawa\", \"line\": 1, \"status\": \"active\", \"fields\": [{\"name\": \"PATH\", \"atoms\": [\"\\\"<tmp:0>/projects/shop\\\"\"], \"fields\": []}, {\"name\": \"MAIN\", \"atoms\": [\"\\\"main\\\"\"], \"fields\": []}, {\"name\": \"CORPUS\", \"atoms\": [\"\\\"corpus\\\"\"], \"fields\": []}, {\"name\": \"SETUP\", \"atoms\": [\"\\\"false\\\"\"], \"fields\": []}, {\"name\": \"SETUP\", \"atoms\": [\"\\\"touch ../../../second-line-ran\\\"\"], \"fields\": []}, {\"name\": \"FORGE\", \"atoms\": [\"\\\"none\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"active\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

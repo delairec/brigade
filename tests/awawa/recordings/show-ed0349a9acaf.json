@@ -21,5 +21,6 @@
     "stderr": "",
     "stdout": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS draft|todo|implemented|archived\n\t\tREQUIRED\n\tFIELD SPEC string\n\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"POLICY\", \"name\": \"a_depot_policy\", \"file\": \"<tmp:0>/config/brigade/policies.awawa\", \"line\": 6, \"status\": null, \"fields\": [{\"name\": \"PROJECT\", \"atoms\": [\"@PROJECT.depot\"], \"fields\": []}, {\"name\": \"HANDOVERS\", \"atoms\": [\"0\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

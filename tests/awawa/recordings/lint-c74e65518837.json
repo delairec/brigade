@@ -21,5 +21,6 @@
     "stderr": "",
     "stdout": "<tmp:0>/config/brigade/policies.awawa \u2014 1 error(s), 0 warning(s)\nL007  error  <tmp:0>/config/brigade/policies.awawa:3:9\n      field REVIEW expects approval|verdict, given local\n\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

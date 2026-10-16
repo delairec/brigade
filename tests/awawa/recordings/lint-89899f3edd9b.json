@@ -20,5 +20,8 @@
     "stderr": "",
     "stdout": ""
   },
+  "run_order": [
+    "<run:1>"
+  ],
   "version": "awawa 2.7.0"
 }

@@ -18,5 +18,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"EPIC\", \"name\": \"E1\", \"file\": \"<tmp:0>/plan.awawa\", \"line\": 11, \"status\": null, \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Checkout\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

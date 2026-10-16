@@ -21,5 +21,6 @@
     "stderr": "awawa: <tmp:0>/agents.awawa: Permission denied (os error 13)\n",
     "stdout": ""
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

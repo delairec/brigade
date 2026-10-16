@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "DECISION CartEmptiesInOneClick\n\tTITLE // string\n\tSTATUS // active|archived\n\t// IMPL anchor\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

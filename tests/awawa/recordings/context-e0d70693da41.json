@@ -24,5 +24,6 @@
     "stderr": "",
     "stdout": "AGENT planner\n\tWORK \"the plan of a wave\"\n\tWORK \"the order of its tasks\"\n\tREASONING deep\n\tCAPABILITY read\n\tCAPABILITY shell\n\tBUDGET 40\n\tRETURNS \"the wave plan\"\n\tRETURNS \"the blockers\"\n\tLOADS @RULE.plans_are_short\n\nRULE plans_are_short\n\tSPEC \"a plan fits one screen\"\n\n// context: 2 entities, 12 lines, depth 2\n// skip matched no declaration: reasoning\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

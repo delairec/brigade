@@ -24,5 +24,6 @@
     "stderr": "",
     "stdout": "AGENT planner\n\tWORK \"the plan of a wave\"\n\tREASONING light\n\tCAPABILITY read\n\tBUDGET 40\n\tRETURNS \"the wave plan\"\n\n// context: 1 entities, 6 lines, depth 2\n// skip matched no declaration: reasoning\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

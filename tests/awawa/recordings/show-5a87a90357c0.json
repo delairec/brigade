@@ -17,5 +17,8 @@
     "stderr": "",
     "stdout": "STEP s1\n\tDONE \"read the task\"\n\tNEXT \"section 3\"\n"
   },
+  "run_order": [
+    "<run:1>"
+  ],
   "version": "awawa 2.7.0"
 }

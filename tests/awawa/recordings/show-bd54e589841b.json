@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"REQUEST\", \"name\": \"shop_2\", \"file\": \"<tmp:0>/config/brigade/requests.awawa\", \"line\": 1, \"status\": \"planning\", \"fields\": [{\"name\": \"PROJECT\", \"atoms\": [\"@PROJECT.shop\"], \"fields\": []}, {\"name\": \"TEXT\", \"atoms\": [\"\\\"show the total of the cart\\\"\"], \"fields\": []}, {\"name\": \"CREATED_AT\", \"atoms\": [\"\\\"<instant:1>\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"planning\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

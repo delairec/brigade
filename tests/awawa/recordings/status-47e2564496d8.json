@@ -24,5 +24,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"implemented\", \"planned\", \"todo\"], \"types\": [{\"type\": \"MILESTONE\", \"counts\": {\"implemented\": 0, \"planned\": 1, \"todo\": 0}, \"unset\": 0, \"total\": 1}, {\"type\": \"SCHEMA\", \"counts\": {\"implemented\": 0, \"planned\": 0, \"todo\": 0}, \"unset\": 2, \"total\": 2}, {\"type\": \"TASK\", \"counts\": {\"implemented\": 2, \"planned\": 0, \"todo\": 1}, \"unset\": 0, \"total\": 3}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"TASK\", \"name\": \"S3\", \"target\": \"@TASK.S3\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 5, \"status\": \"todo\", \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"TASK\", \"name\": \"S4\", \"target\": \"@TASK.S4\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 10, \"status\": \"implemented\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 2, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 3, \"entities\": 6}}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

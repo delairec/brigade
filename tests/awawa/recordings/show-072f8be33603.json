@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"FIX7\", \"file\": \"<tmp:0>/projects/shop/corpus/tasks.awawa\", \"line\": 1, \"status\": \"draft\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Round the total to the cent\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"draft\"], \"fields\": []}, {\"name\": \"SPEC\", \"atoms\": [\"\\\"the total is rounded to the cent\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

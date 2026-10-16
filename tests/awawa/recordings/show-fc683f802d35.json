@@ -20,5 +20,6 @@
     "stderr": "awawa show: @SCHEMA.VERDICT is not defined in the workspace\n",
     "stdout": ""
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

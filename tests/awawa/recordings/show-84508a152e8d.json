@@ -22,5 +22,6 @@
     "stderr": "awawa show: @REQUEST.shop_9 is not defined in the workspace\n",
     "stdout": ""
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

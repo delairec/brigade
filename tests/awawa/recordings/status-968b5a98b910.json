@@ -17,5 +17,8 @@
     "stderr": "",
     "stdout": "STEP (1):\n  @STEP.s1  (none)  <tmp:0>/state/brigade/runs/<run:1>/progress.awawa:26  incoming 0\n"
   },
+  "run_order": [
+    "<run:1>"
+  ],
   "version": "awawa 2.7.0"
 }

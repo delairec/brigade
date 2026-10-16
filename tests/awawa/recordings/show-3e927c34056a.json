@@ -21,5 +21,9 @@
     "stderr": "awawa show: @ANSWER.weekly_<run_name:2> is not defined in the workspace\n",
     "stdout": ""
   },
+  "run_order": [
+    "<run:1>",
+    "<run_name:2>"
+  ],
   "version": "awawa 2.7.0"
 }

@@ -23,5 +23,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"SCHEMA\", \"name\": \"OPEN_QUESTION\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa\", \"line\": 18, \"status\": null, \"fields\": [{\"name\": \"DESC\", \"atoms\": [\"\\\"a fact left undecided\\\"\"], \"fields\": []}, {\"name\": \"FIELD\", \"atoms\": [\"STATUS\", \"open|closed\"], \"fields\": [{\"name\": \"REQUIRED\", \"atoms\": [], \"fields\": []}]}, {\"name\": \"FIELD\", \"atoms\": [\"BLOCKS\", \"@TASK\"], \"fields\": [{\"name\": \"REPEATABLE\", \"atoms\": [], \"fields\": []}, {\"name\": \"CONVERSE\", \"atoms\": [\"BLOCKED_BY\"], \"fields\": []}]}, {\"name\": \"WHEN\", \"atoms\": [\"STATUS\", \"closed\"], \"fields\": [{\"name\": \"GATE\", \"atoms\": [\"suppressed\"], \"fields\": []}]}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -18,5 +18,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"MILESTONE\", \"name\": \"W2\", \"file\": \"<tmp:0>/plan.awawa\", \"line\": 5, \"status\": \"planned\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Pay in one click\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"planned\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

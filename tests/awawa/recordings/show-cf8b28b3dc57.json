@@ -21,5 +21,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"AGENT\", \"name\": \"planner\", \"file\": \"<tmp:0>/agents.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"WORK\", \"atoms\": [\"\\\"the plan of a wave\\\"\"], \"fields\": []}, {\"name\": \"WORK\", \"atoms\": [\"\\\"the order of its tasks\\\"\"], \"fields\": []}, {\"name\": \"BUDGET\", \"atoms\": [\"40\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -23,5 +23,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"implemented\", \"todo\"], \"types\": [{\"type\": \"SCHEMA\", \"counts\": {\"implemented\": 0, \"todo\": 0}, \"unset\": 1, \"total\": 1}, {\"type\": \"TASK\", \"counts\": {\"implemented\": 1, \"todo\": 1}, \"unset\": 0, \"total\": 2}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"TASK\", \"name\": \"S2\", \"target\": \"@TASK.S2\", \"file\": \"<tmp:0>/tasks.awawa\", \"line\": 1, \"status\": \"implemented\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 2, \"entities\": 3}}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

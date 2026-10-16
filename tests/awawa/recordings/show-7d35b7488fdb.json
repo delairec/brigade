@@ -17,5 +17,6 @@
     "stderr": "",
     "stdout": "STEP s2\n\tDONE \"wrote the tests\"\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

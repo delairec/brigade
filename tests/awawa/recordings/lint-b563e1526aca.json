@@ -21,5 +21,6 @@
     "stderr": "",
     "stdout": "<tmp:0>/config/brigade/broken.awawa \u2014 1 error(s), 0 warning(s)\nL017  error  <tmp:0>/config/brigade/broken.awawa:1:9\n      entity name must be an identifier; found a word that is not an identifier `bad-name`\n\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

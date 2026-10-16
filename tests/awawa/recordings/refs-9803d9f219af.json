@@ -23,5 +23,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"incoming\": [], \"outgoing\": [{\"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 14, \"col\": 12, \"from\": {\"type\": \"TASK\", \"name\": \"S4\", \"status\": \"todo\"}, \"field_path\": [\"MILESTONE\"], \"target\": {\"type\": \"MILESTONE\", \"name\": \"M1\"}, \"resolved\": true}, {\"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 15, \"col\": 8, \"from\": {\"type\": \"TASK\", \"name\": \"S4\", \"status\": \"todo\"}, \"field_path\": [\"AFTER\"], \"target\": {\"type\": \"TASK\", \"name\": \"S3\"}, \"resolved\": true}]}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

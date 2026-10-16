@@ -18,5 +18,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"STEP\", \"name\": \"s1\", \"file\": \"<tmp:0>/progress.awawa\", \"line\": 13, \"status\": null, \"fields\": [{\"name\": \"DONE\", \"atoms\": [\"\\\"read the task\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

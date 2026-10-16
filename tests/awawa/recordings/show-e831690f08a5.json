@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"STUDY\", \"name\": \"trees\", \"file\": \"<tmp:0>/config/brigade/studies.awawa\", \"line\": 1, \"status\": \"active\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"the trees\\\"\"], \"fields\": []}, {\"name\": \"PROJECT\", \"atoms\": [\"@PROJECT.shop\"], \"fields\": []}, {\"name\": \"COLLECTOR\", \"atoms\": [\"\\\"shell: printf 'oak\\\\\\\\n'\\\"\"], \"fields\": []}, {\"name\": \"SLOT\", \"atoms\": [\"none\"], \"fields\": []}, {\"name\": \"EVERY\", \"atoms\": [\"\\\"1h\\\"\"], \"fields\": []}, {\"name\": \"OUTPUT\", \"atoms\": [\"\\\"notes\\\"\"], \"fields\": []}, {\"name\": \"ANSWER\", \"atoms\": [\"\\\"ANSWER\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"active\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

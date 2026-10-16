@@ -17,5 +17,6 @@
     "stderr": "",
     "stdout": "STEP (2):\n  @STEP.s1  (none)  <tmp:0>/progress.awawa:13  incoming 0\n  @STEP.s2  (none)  <tmp:0>/progress.awawa:16  incoming 0\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

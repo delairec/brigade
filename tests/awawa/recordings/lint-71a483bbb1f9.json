@@ -20,5 +20,9 @@
     "stderr": "",
     "stdout": "<tmp:0>/state/brigade/runs/<run:1>/validation/submitted/answer.awawa \u2014 1 error(s), 0 warning(s)\nL003  error  <tmp:0>/state/brigade/runs/<run:1>/validation/submitted/answer.awawa:7:2\n      field VERDICT is not declared on ANSWER\n\n"
   },
+  "run_order": [
+    "<run:1>",
+    "<run_name:2>"
+  ],
   "version": "awawa 2.7.0"
 }

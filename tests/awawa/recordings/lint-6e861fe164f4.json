@@ -17,5 +17,8 @@
     "stderr": "",
     "stdout": "<tmp:0>/state/brigade/runs/<run:1>/progress.awawa \u2014 1 error(s), 0 warning(s)\nL014  error  <tmp:0>/state/brigade/runs/<run:1>/progress.awawa:26:1\n      line does not start with a keyword ([A-Z][A-Z0-9_]*)\n\n"
   },
+  "run_order": [
+    "<run:1>"
+  ],
   "version": "awawa 2.7.0"
 }

@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"PROJECT\", \"name\": \"zeta\", \"file\": \"<tmp:0>/projects.awawa\", \"line\": 1, \"status\": \"paused\", \"fields\": [{\"name\": \"PATH\", \"atoms\": [\"\\\"/srv/a \\\\\\\"quoted\\\\\\\" \\\\\\\\ path\\\"\"], \"fields\": []}, {\"name\": \"MAIN\", \"atoms\": [\"\\\"main\\\"\"], \"fields\": []}, {\"name\": \"ACCEPTANCE\", \"atoms\": [\"\\\"make check\\\"\"], \"fields\": []}, {\"name\": \"ACCEPTANCE\", \"atoms\": [\"\\\"make lint\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"paused\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -21,5 +21,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"AGENT\", \"name\": \"planner\", \"file\": \"<tmp:0>/instructions/agents.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"WORK\", \"atoms\": [\"\\\"the plan of a wave\\\"\"], \"fields\": []}, {\"name\": \"REASONING\", \"atoms\": [\"deep\"], \"fields\": []}, {\"name\": \"CAPABILITY\", \"atoms\": [\"read\"], \"fields\": []}, {\"name\": \"RETURNS\", \"atoms\": [\"\\\"the wave plan\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

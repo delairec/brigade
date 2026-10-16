@@ -21,5 +21,9 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"ANSWER\", \"name\": \"weekly_<run_name:2>\", \"file\": \"<tmp:0>/state/brigade/runs/<run:1>/validation/filled/answer.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"STUDY\", \"atoms\": [\"\\\"weekly\\\"\"], \"fields\": []}, {\"name\": \"RUN\", \"atoms\": [\"\\\"<run:1>\\\"\"], \"fields\": []}, {\"name\": \"COLLECTED\", \"atoms\": [\"\\\"shell\\\"\"], \"fields\": [{\"name\": \"SUMMARY\", \"atoms\": [\"\\\"{\\\\\\\"lines\\\\\\\": 0}\\\"\"], \"fields\": []}, {\"name\": \"DOCUMENT\", \"atoms\": [\"\\\"<tmp:0>/state/brigade/runs/<run:1>/collectors/1/collect/shell/document.json\\\"\"], \"fields\": []}]}], \"duplicates\": []}\n"
   },
+  "run_order": [
+    "<run:1>",
+    "<run_name:2>"
+  ],
   "version": "awawa 2.7.0"
 }

@@ -17,5 +17,8 @@
     "stderr": "",
     "stdout": "<tmp:0>/state/brigade/runs/<run:1>/progress.awawa \u2014 1 error(s), 0 warning(s)\nL005  error  <tmp:0>/state/brigade/runs/<run:1>/progress.awawa:30:6\n      duplicate identity @STEP.s1\n      also at <tmp:0>/state/brigade/runs/<run:1>/progress.awawa:26\n\n"
   },
+  "run_order": [
+    "<run:1>"
+  ],
   "version": "awawa 2.7.0"
 }

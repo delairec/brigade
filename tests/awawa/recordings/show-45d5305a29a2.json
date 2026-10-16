@@ -23,5 +23,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"POLICY\", \"name\": \"shop_review\", \"file\": \"<tmp:0>/config/brigade/policies.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"PROJECT\", \"atoms\": [\"@PROJECT.shop\"], \"fields\": []}, {\"name\": \"PLAN_REVIEW\", \"atoms\": [\"ask\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

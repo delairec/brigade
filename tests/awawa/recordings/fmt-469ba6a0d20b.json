@@ -18,5 +18,8 @@
     "stderr": "L014  error  <tmp:0>/state/brigade/runs/<run:1>/progress.awawa:26:1\n      line does not start with a keyword ([A-Z][A-Z0-9_]*)\nL014  error  <tmp:0>/state/brigade/runs/<run:1>/progress.awawa:27:1\n      line does not start with a keyword ([A-Z][A-Z0-9_]*)\n",
     "stdout": ""
   },
+  "run_order": [
+    "<run:1>"
+  ],
   "version": "awawa 2.7.0"
 }
