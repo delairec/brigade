@@ -2489,6 +2489,8 @@ DECISION TheRunOfAPlanRecordIsTheDirectoryBrigadeRunExports
 	SOURCE "the user's ruling of 2026-10-13 recorded in @TASK.B13: the decision kept, then migrated"
 		+ "to BRIGADE_RUN_DIR by B13"
 		REF @TASK.B13
+	SOURCE "pull request #145 of the brigade repository, delivering @TASK.B13"
+		REF @TASK.B13
 
 DECISION ThePlanIsCheckedAgainstTheFieldsAwawaNewPrintsForEachType
 	TITLE "the types and fields a plan may use are those awawa new TYPE prints on the corpus"
