@@ -1142,7 +1142,10 @@ TASK B11
 TASK B12
 	TITLE "brigade tick launches the startable tasks of every running wave in worktrees of their"
 		+ "own, within the slots of each project"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-17: @TASK.B141 made false its SPEC that the tests of the tick resolve"
+		+ "a fixture build-task.md from a test instructions corpus, brigade shipping none, since"
+		+ "brigade ships build-task.md; the launch of the startable tasks it delivers stands"
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -8432,21 +8435,29 @@ TASK B140
 
 TASK B141
 	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
-	STATUS todo
+	STATUS implemented
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
 	SPEC "brigade/runs/data/procedures/build-task.md is the procedure of the build slot, budget 75,"
 		+ "and brigade run resolves it by name without an instructions corpus"
+		IMPL "brigade/runs/data/procedures/build-task.md::budget: 75"
 	SPEC "build-task.md orders its steps: brigade task context, the failing tests of each SPEC"
 		+ "written first, the implementation, brigade task check until it passes, the commits,"
 		+ "brigade task pr, brigade task promote, and a report naming the pull request"
+		IMPL "brigade/runs/data/procedures/build-task.md::## 4. Commit, then check until it passes"
 	SPEC "the key build of the section [procedures] of config.toml names another procedure for the"
 		+ "build slot, resolved as the argument of brigade run is, and the tick launches it in"
 		+ "place of build-task"
+		IMPL "brigade/system/read_configuration.py::def _read_procedures("
+		IMPL "brigade/commands/tick.py::configuration.procedures.get(BUILD_SLOT, BUILD_PROCEDURE)"
 	SPEC "a unit test resolves build-task with no instructions corpus set; a test of the tick"
 		+ "proves that the key build of [procedures] replaces it"
+		IMPL "tests/unit/runs/test_resolve_procedure.py::def"
+			+ "test_should_resolve_it_with_no_instructions_corpus_set"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_launch_the_procedure_the_key_build_of_procedures_names_in_place_of_build_task"
 	AFTER @TASK.B12
 	AFTER @TASK.B13
 	AFTER @TASK.B142
@@ -8466,6 +8477,7 @@ TASK B141
 		+ "of its own"
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B142: the name build-task, the"
 		+ "key build of [procedures]; the task is ratified"
+	DELIVERED_BY 151
 
 TASK B142
 	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"

@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.runs.plan_run import SHIPPED_PROCEDURES
 from brigade.runs.resolve_procedure import ProcedureDirectories, resolve_procedure
 
 SHIPPED_REVIEW = "---\ncapabilities: read\nbudget: 30\n---\nReview as brigade ships it.\n"
@@ -71,6 +72,21 @@ class ResolveProcedureWithNoInstructionsCorpusTest(ResolveProcedureByNameTestCas
             str(raised.exception),
             "no procedure triage: not shipped with brigade and no instructions corpus set in config.toml",
         )
+
+
+class ResolveTheBuildProcedureBrigadeShipsTest(unittest.TestCase):
+    def test_should_resolve_it_with_no_instructions_corpus_set(self):
+        # Arrange
+        no_instructions_corpus = None
+        directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=no_instructions_corpus)
+
+        # Act
+        procedure = resolve_procedure("build-task", directories)
+
+        # Assert
+        self.assertEqual(procedure.location, str(SHIPPED_PROCEDURES / "build-task.md"))
+        self.assertEqual(procedure.capabilities, ("read", "write", "shell"))
+        self.assertEqual(procedure.budget, 75)
 
 
 class ResolveProcedureGivenByPathTest(ResolveProcedureByNameTestCase):
