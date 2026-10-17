@@ -13,6 +13,7 @@ from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
 from brigade.studies.collect_evidence import collect_evidence
 from brigade.studies.judge_evidence import judge_evidence
+from brigade.studies.read_live_study_runs import read_live_study_runs
 from brigade.studies.read_study import Study
 from brigade.studies.refuse_inbox_output import refuse_inbox_output
 from brigade.studies.start_study_run import start_study_run
@@ -40,7 +41,15 @@ def _find_parked_run(runtime: Runtime, study: Study) -> str | None:
     return NO_PARKED_RUN
 
 
+def _refuse_a_live_run(runtime: Runtime, study: Study) -> None:
+    for live in read_live_study_runs(runtime.paths.state_root):
+        if live.study == study.name:
+            raise BrigadeError(f"@STUDY.{study.name} is running in run {live.run}")
+
+
 def _start_run(runtime: Runtime, study: Study, equipment: StudyEquipment, started_run: str | None) -> StudyRunContext:
+    if started_run is None:
+        _refuse_a_live_run(runtime, study)
     run_id = started_run or _find_parked_run(runtime, study) or start_study_run(runtime, study)
     context = StudyRunContext(
         runtime=runtime,

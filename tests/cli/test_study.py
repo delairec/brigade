@@ -9,6 +9,7 @@ from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.cli.test_collect import install_executable
+from tests.cli.test_tick import WEEKLY_RUN, LiveStudyRunTestCase
 
 PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
 QUESTION = "what changed in the shop this week?"
@@ -535,6 +536,28 @@ class BrigadeStudyRunTest(StudyRunTestCase):
             (completed.returncode, completed.stderr),
             (1, "brigade study run: @STUDY.absent is not defined in the operational corpus\n"),
         )
+
+
+class BrigadeStudyRunWhileARunOfTheStudyIsLiveTest(LiveStudyRunTestCase):
+    def test_should_exit_1_naming_the_live_run_and_start_no_second_run(self):
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "study", "run", "weekly")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr, self.read_order_events("weekly")),
+            (1, f"brigade study run: @STUDY.weekly is running in run {WEEKLY_RUN}\n", [("order.started", None)]),
+        )
+
+    def test_should_run_another_study(self):
+        # Arrange
+        self.record_study("trees", slot="none")
+
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "study", "run", "trees")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
 
 class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
