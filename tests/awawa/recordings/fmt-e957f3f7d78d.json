@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/studies.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/studies.awawa": "STUDY trees\n\tTITLE \"the trees\"\n\tPROJECT @PROJECT.shop\n\tCOLLECTOR \"shell: true\"\n\tSLOT none\n\tEVERY \"1h\"\n\tOUTPUT \"entity:ANSWER\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n\nSTUDY weekly\n\tTITLE \"what moved this week\"\n\tQUESTION \"what changed in the shop this week?\"\n\tCOLLECTOR \"shell: true\"\n\tSLOT report\n\tEVERY \"mon@09:00\"\n\tOUTPUT \"entity:ANSWER\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

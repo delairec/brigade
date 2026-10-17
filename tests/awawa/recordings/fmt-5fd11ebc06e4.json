@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/studies.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/studies.awawa": "STUDY monthly\n\tTITLE \"the monthly study\"\n\tCOLLECTOR \"shell: true\"\n\tSLOT report\n\tEVERY \"1h\"\n\tOUTPUT \"entity:ANSWER\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n\nSTUDY weekly\n\tTITLE \"the weekly study\"\n\tCOLLECTOR \"shell: true\"\n\tSLOT report\n\tEVERY \"1h\"\n\tOUTPUT \"entity:ANSWER\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
