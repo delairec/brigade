@@ -5,7 +5,6 @@ from brigade.runtime import Runtime
 from brigade.tasks.check_task import check_task
 from brigade.tasks.locate_task_worktree import locate_task_worktree
 
-
 PASSED = "pass"
 FAILED = "fail"
 MS_PER_S = 1000

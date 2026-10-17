@@ -1,6 +1,5 @@
 import argparse
 import dataclasses
-import time
 
 from brigade.command import Argument, Command
 from brigade.runs.create_run_directory import create_run_directory
@@ -14,27 +13,11 @@ from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import SLOTS, Configuration, read_configuration
-from brigade.system.require_login_environment import LoginDemand, require_login_environment
+from brigade.system.read_forge_environment import read_forge_environment
 from brigade.system.stop_signal_receiver import StopSignalReceiver
 
 DOCUMENT_SCHEMA_VERSION = 1
 SINGLE_SEGMENT = 1
-FORGE_NAME = "github"
-UNBOUND_ENVIRONMENT = {}
-
-
-def _read_forge_environment(configuration: Configuration, slot: str, runtime: Runtime) -> dict:
-    login = configuration.forge_accounts.get(slot)
-    if login is None:
-        return UNBOUND_ENVIRONMENT
-    demand = LoginDemand(
-        forge=runtime.resolve_plugin("forge", FORGE_NAME),
-        forge_name=FORGE_NAME,
-        login=login,
-        key=slot,
-        attempts=configuration.forge_attempts,
-    )
-    return require_login_environment(demand, runtime, time.sleep)
 
 
 def _read_run_request(request) -> RunRequest:
@@ -88,7 +71,7 @@ def _describe_diagnostics(document: dict) -> list[str]:
 
 def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
-    forge_environment = _read_forge_environment(configuration, run_request.slot, runtime)
+    forge_environment = read_forge_environment(configuration, run_request.slot, runtime)
     setting = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
     client_adapter = runtime.resolve_plugin("client", setting.client)
     document = runtime.resolve_plugin("document", configuration.document)

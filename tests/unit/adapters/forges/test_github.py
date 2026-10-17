@@ -123,9 +123,7 @@ class OpenPullRequestTest(unittest.TestCase):
         answer = open_pull_request(PULL_REQUEST_REQUEST, runtime)
 
         # Assert
-        self.assertEqual(
-            answer, {"schema_version": 1, "url": "https://github.com/acme/shop/pull/42", "number": 42}
-        )
+        self.assertEqual(answer, {"schema_version": 1, "url": "https://github.com/acme/shop/pull/42", "number": 42})
 
     def test_should_open_it_on_the_base_with_the_milestone_as_the_login_of_the_environment(self):
         # Arrange
