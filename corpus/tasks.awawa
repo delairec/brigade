@@ -8802,25 +8802,53 @@ TASK B146
 TASK B147
 	TITLE "The tick runs each due study within study_runs, and brigade study list, show, pause and"
 		+ "resume"
-	STATUS todo
+	STATUS implemented
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
 	SPEC "EVERY of a STUDY is 5m, 1h, daily@HH:MM or a day of the week at an hour, mon@HH:MM, in"
 		+ "the machine's timezone; study new --every refuses another form, exit 1 naming the value"
+		IMPL "brigade/studies/read_schedule.py::def read_schedule(every: str)"
+		IMPL "tests/cli/test_study.py::def"
+			+ "test_should_exit_1_naming_a_schedule_of_another_form(self):"
 	SPEC "a study is due when it never ran, or when its schedule has passed since its last"
 		+ "order.started read from the ledger; a paused or archived study is never due"
+		IMPL "brigade/tick/plan.py::def _is_study_due("
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_launch_a_study_only_when_it_is_due(self):"
 	SPEC "the tick runs each due study through study run, launching a judging run only while fewer"
 		+ "than study_runs of config.toml, 2 by default, judging runs of studies are live on the"
 		+ "machine and no run of the same study is live; a scan, SLOT none, launches no run and"
 		+ "counts in no cap; study_runs below 1 is an error naming the key and the file"
+		IMPL "brigade/tick/plan.py::def _plan_studies("
+		IMPL "brigade/studies/detach_study_run.py::def detach_study_run("
+		IMPL "brigade/system/read_study_runs.py::def read_study_runs("
+		IMPL "tests/unit/system/test_read_study_runs.py::def"
+			+ "test_should_refuse_a_value_that_is_no_integer_of_1_or_more_naming_the_key_and_the_file(self):"
 	SPEC "study list, show, pause and resume; list prints every study with its schedule, last run"
 		+ "and last outcome, text and --json; pause and resume move STATUS between active and"
 		+ "paused through fmt, lint and a commit"
+		IMPL "brigade/commands/study_list.py::def study_list("
+		IMPL "brigade/commands/study_show.py::def study_show("
+		IMPL "brigade/studies/change_study_status.py::def change_study_status("
 	SPEC "tests/cli prove the due study launched, the cap of study_runs, the study not launched"
 		+ "while a run of it is live, the scan launched beyond the cap, the paused study skipped"
 		+ "and each of study list, show, pause and resume, through the fake adapter"
+		IMPL "tests/cli/test_tick.py::def test_should_run_the_due_study_through_study_run(self):"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_launch_no_more_judging_studies_than_the_study_runs(self):"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_launch_no_study_while_a_run_of_it_is_live(self):"
+		IMPL "tests/cli/test_tick.py::def test_should_launch_a_scan_beyond_the_study_runs(self):"
+		IMPL "tests/cli/test_tick.py::def test_should_launch_no_paused_study(self):"
+		IMPL "tests/cli/test_study.py::def"
+			+ "test_should_list_every_study_with_its_schedule_its_last_run_and_its_outcome(self):"
+		IMPL "tests/cli/test_study.py::def"
+			+ "test_should_present_the_fields_of_the_study_and_its_last_run(self):"
+		IMPL "tests/cli/test_study.py::def"
+			+ "test_should_pause_the_study_and_commit_the_studies(self):"
+		IMPL "tests/cli/test_study.py::def test_should_resume_a_paused_study(self):"
 	AFTER @TASK.B48
 	AFTER @TASK.B12
 	RATIONALE "split from @TASK.B48 as the user ruled on 2026-10-13: the planner of the tick is the"
@@ -8840,6 +8868,7 @@ TASK B147
 	SOURCE "the user's rulings of 2026-10-13 in the refinement of B48: « Scinder B48 »; « Régler le"
 		+ "plafond maintenant », on the proposal « clé study_runs de config.toml, 2 par défaut,"
 		+ "jamais deux runs d'une même étude »"
+	DELIVERED_BY 148
 
 TASK B151
 	TITLE "result.json of a segment and of a run is the run.finished document of the segment, the"

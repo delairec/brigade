@@ -3142,3 +3142,5 @@ DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 		+ "began collecting will judge in the same process; one study never runs twice at once, as"
 		+ "the user ruled"
 		REF @TASK.B147
+	SOURCE "pull request #148 of the brigade repository, delivering @TASK.B147"
+		REF @TASK.B147
