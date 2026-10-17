@@ -8,7 +8,7 @@ from brigade.errors import BrigadeError, CorpusLintFailed
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.create_branch import create_branch
 from brigade.git.find_branch import find_branch
-from brigade.git.push_branch import push_branch
+from brigade.git.push_branch import BranchPush, push_branch
 from brigade.git.remove_worktree import remove_worktree
 from brigade.ledger.append_event import append_event
 from brigade.ledger.plan_lint_failed import PlanLintFailed
@@ -29,6 +29,7 @@ from brigade.runtime import Runtime
 MILESTONE_TYPE = "MILESTONE"
 TASK_TYPE = "TASK"
 GITHUB_FORGE = "github"
+UNBOUND_ENVIRONMENT = {}
 WORKTREES_DIRECTORY = "plans"
 FILE_SUFFIX = "s.awawa"
 
@@ -175,6 +176,6 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
     finally:
         remove_worktree(runtime.run_process, root, worktree)
     if read_project_field(recording.project, "FORGE") == GITHUB_FORGE:
-        push_branch(runtime.run_process, root, branch)
+        push_branch(runtime.run_process, BranchPush(repository=root, branch=branch, environment=UNBOUND_ENVIRONMENT))
     _mark_planned(runtime, name, milestone.entity.name, branch)
     return {"request": name, "milestone": milestone.entity.name, "branch": branch}

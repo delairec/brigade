@@ -1,11 +1,9 @@
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._read_attribution import read_attribution
 from brigade.runtime import Runtime
-from brigade.system.ask_named_client import ask_named_client
-from brigade.system.client_question import ClientQuestion
-from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import Configuration, read_configuration
+from brigade.system.read_configuration import read_configuration
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tasks.assemble_task_context import assemble_task_context
 from brigade.tasks.locate_task_worktree import locate_task_worktree
@@ -67,22 +65,12 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def _read_attribution(configuration: Configuration, runtime: Runtime) -> list[str]:
-    if configuration.attribution is not None:
-        return list(configuration.attribution)
-    if configuration.client is None:
-        return []
-    client = runtime.resolve_plugin("client", configuration.client)
-    probe = ask_named_client(client, ClientQuestion(configuration.client, ProbeRequest()), configuration, runtime)
-    return list(probe.attribution)
-
-
 def task_context(request, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     worktree = locate_task_worktree(runtime, Path.cwd(), request.task)
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **assemble_task_context(runtime, configuration, worktree, _read_attribution(configuration, runtime)),
+        **assemble_task_context(runtime, configuration, worktree, read_attribution(configuration, runtime)),
     }
     if runtime.paths.run_directory is not None:
         write_text_atomically(runtime.paths.run_directory / PACKAGE_FILE, f"{_render_text(document)}\n")

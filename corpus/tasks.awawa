@@ -1406,7 +1406,7 @@ TASK B13
 	SPEC "the section reserved prints the attribution lines of the run's commits: those of the key"
 		+ "attribution of config.toml when set, else those the probe of the client adapter answers,"
 		+ "else none"
-		IMPL "brigade/commands/task_context.py::def _read_attribution("
+		IMPL "brigade/commands/_read_attribution.py::def read_attribution("
 		IMPL "brigade/system/read_configuration.py::def _read_attribution("
 		IMPL "brigade/adapters/test_clients/fake.py::def _answer_attribution("
 		IMPL "tests/cli/test_task.py::class"
@@ -1475,6 +1475,7 @@ TASK B14
 	TITLE "The tick follows the pull request of each task and moves the task state from its forge"
 		+ "facts"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -1519,6 +1520,7 @@ TASK B15
 	TITLE "brigade verify preflight runs the deterministic checks of a pull request before any"
 		+ "judgment"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
@@ -1558,6 +1560,7 @@ TASK B15
 TASK B16
 	TITLE "Procedure verify-pr.md and brigade verify context|verdict"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
@@ -1602,6 +1605,7 @@ TASK B16
 TASK B17
 	TITLE "Auto-merge into integration and scheduling of dependents"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -1638,6 +1642,7 @@ TASK B17
 TASK B18
 	TITLE "Repair paths: changes requested and failing checks, within the rounds of the policy"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -1667,6 +1672,7 @@ TASK B18
 TASK B19
 	TITLE "Wave pause and resume: quota and forge account"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -1729,6 +1735,7 @@ TASK B19
 TASK B20
 	TITLE "Built-in study wave-report"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
@@ -1781,6 +1788,7 @@ TASK B20
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
 	STATUS todo
+	TYPE test
 	MILESTONE @MILESTONE.M1
 	COMPONENT "validation"
 	ROLE ada
@@ -2378,6 +2386,7 @@ TASK B44
 	TITLE "The sandbox rehearsal of B21 runs on vibe, and its report lists what the normalised"
 		+ "results of each client lack"
 	STATUS todo
+	TYPE test
 	MILESTONE @MILESTONE.M7
 	COMPONENT "validation"
 	ROLE ada
@@ -4539,7 +4548,7 @@ TASK B75
 		IMPL "brigade/adapters/forges/github.py::def read_login_environment(request: dict, runtime:"
 			+ "Runtime) -> dict:"
 		IMPL "brigade/adapters/forges/github.py::environment=request[\"environment\"],"
-		IMPL "brigade/commands/run.py::def _read_forge_environment("
+		IMPL "brigade/commands/_read_forge_environment.py::def read_forge_environment("
 		IMPL "brigade/runs/run_segment.py::**plan.forge_environment"
 		IMPL "tests/unit/adapters/forges/test_github.py::class"
 			+ "ReadLoginEnvironmentTest(unittest.TestCase):"
@@ -8424,6 +8433,7 @@ TASK B140
 TASK B141
 	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -8460,7 +8470,9 @@ TASK B141
 TASK B142
 	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"
 		+ "pull request and the promotion of its task"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 149
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
 	ROLE ada
@@ -8470,11 +8482,24 @@ TASK B142
 		+ "awawa fmt --check . and awawa lint --strict ., in the worktree of the task, and prints"
 		+ "one line per command, its verdict, the command and its duration, followed for each"
 		+ "failing command by the last 20 lines of its output; it exits 1 when one fails"
+		IMPL "brigade/tasks/check_task.py::def check_task("
+		IMPL "tests/cli/test_task_check.py::def"
+			+ "test_should_run_every_command_whatever_the_others_returned"
 	SPEC "brigade task check records its verdicts with the sha of HEAD in"
 		+ "$XDG_STATE_HOME/brigade/checks/<project>/<task>.json, written atomically; inside a run,"
 		+ "the whole output of each command is written under <run dir>/check/"
+		IMPL "brigade/tasks/locate_check_record.py::def locate_check_record("
+		IMPL "brigade/tasks/check_task.py::def _write_output("
+	SPEC "brigade task check refuses, before any command runs and naming them, the files of the"
+		+ "worktree that differ from HEAD, staged, modified or untracked: a recorded verdict is"
+		+ "always of HEAD exactly"
+		IMPL "brigade/tasks/check_task.py::def _require_worktree_at_head("
+		IMPL "tests/cli/test_task_check.py::def"
+			+ "test_should_refuse_naming_the_files_that_differ_from_head_before_any_command_runs"
 	SPEC "brigade task pr refuses, naming the cause, a task whose last recorded check is not of"
 		+ "HEAD or has a failing command, and a task that carries no TYPE"
+		IMPL "brigade/tasks/open_task_pull_request.py::def _require_passing_check("
+		IMPL "tests/cli/test_task_pr.py::def test_should_refuse_a_task_that_carries_no_type"
 	SPEC "brigade task pr takes the subject of the pull request as an argument, written in the"
 		+ "imperative by the run that delivers the task, and refuses a missing subject, naming the"
 		+ "cause; it pushes the task branch and opens its pull request on the wave's BRANCH through"
@@ -8483,27 +8508,42 @@ TASK B142
 		+ "when the task has no COMPONENT, with a body filled from a string.Template shipped in the"
 		+ "package: the TITLE of the task, one line per SPEC, the verdicts of the last check and"
 		+ "the attribution lines"
+		IMPL "brigade/tasks/compose_pull_request_title.py::def compose_pull_request_title("
+		IMPL "brigade/tasks/describe_pull_request_body.py::def describe_pull_request_body("
 	SPEC "the pull request carries the GitHub milestone named after the TITLE of the task's"
 		+ "MILESTONE, created through the forge adapter when the repository has none of that name"
 		+ "and recorded as the ledger event milestone.created carrying the project, the title and"
 		+ "the login"
+		IMPL "brigade/tasks/open_task_pull_request.py::def _ensure_milestone("
+		IMPL "brigade/adapters/forges/github.py::def create_milestone("
 	SPEC "brigade task pr records the ledger event task.pr_opened carrying the project, the task,"
 		+ "the wave, the branch, the pull request number and the login"
+		IMPL "brigade/ledger/task_pr_opened.py::class TaskPrOpened:"
 	SPEC "brigade task promote sets STATUS implemented and DELIVERED_BY on the task through"
 		+ "change_corpus_file of brigade/corpus/, which formats and lints under the lock of the"
-		+ "repository and restores the file when lint fails, then commits, pushes and records the"
+		+ "repository and restores the file when lint fails, then commits, the message ending on"
+		+ "the attribution lines the body of the pull request carries, pushes and records the"
 		+ "ledger event task.promoted carrying the project, the task, the pull request and the"
 		+ "commit; the pull request is the one of the last task.pr_opened of the task, --pr <n>"
 		+ "naming another"
+		IMPL "brigade/tasks/promote_task.py::def promote_task("
+		IMPL "tests/cli/test_task_promote.py::def"
+			+ "test_should_end_the_promotion_commit_on_the_attribution_lines"
 	SPEC "brigade task promote refuses before any write, naming it, STATUS implemented or"
 		+ "DELIVERED_BY when the TASK schema of the project's corpus does not declare it"
+		IMPL "brigade/tasks/promote_task.py::def _require_promotion_fields("
 	SPEC "the corpus of the brigade repository declares the field TYPE on TASK, one of build,"
 		+ "chore, ci, docs, feat, fix, perf, refactor, revert, style and test, and every task of"
 		+ "STATUS todo carries one"
+		IMPL "corpus/_schema.awawa::FIELD TYPE"
+			+ "build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test"
 	SPEC "tests/cli prove check, promote and each refusal of pr and promote on a registered"
 		+ "repository in a temporary directory; unit tests prove the composition of the title from"
 		+ "TYPE, COMPONENT, the subject and the task id, the refusal of a missing subject, the body"
 		+ "and the three ledger events"
+		IMPL "tests/cli/test_task_promote.py::class BrigadeTaskPromoteRefusalTest"
+		IMPL "tests/unit/tasks/test_compose_pull_request_title.py::def"
+			+ "test_should_refuse_a_missing_subject_naming_the_cause"
 	AFTER @TASK.B13
 	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
 		+ "lifecycle of the Blueprint, brigade task check, brigade task pr, brigade task promote"
@@ -8552,11 +8592,19 @@ TASK B142
 		+ "passe des commandes dans des chaines de caractère. Je veux qu'on fasse les choses"
 		+ "proprement. », and the « ok » of 2026-10-16 on the session's recommendation: B142 SPEC 1"
 		+ "runs argv"
+	SOURCE "the user's ruling of 2026-10-17 on the review of pull request #149, « check refuse un"
+		+ "worktree sale (Recommandé) — check refuse de s'exécuter et nomme les fichiers modifiés :"
+		+ "un verdict enregistré correspond toujours exactement à HEAD. Une SPEC est ajoutée à"
+		+ "B142. »"
+	SOURCE "the user's ruling of 2026-10-17 on the review of pull request #149, « Oui, comme les"
+		+ "commits du run (Recommandé) — promote est appelé par le run qui livre la tâche : son"
+		+ "commit fait partie de la livraison et porte les mêmes lignes que le corps de la PR. »"
 
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
 		+ "conflict"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -8713,6 +8761,7 @@ TASK B146
 	TITLE "The built-in collector pr-list prints the pull requests of a project through the forge"
 		+ "adapter"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
@@ -8754,6 +8803,7 @@ TASK B147
 	TITLE "The tick runs each due study within study_runs, and brigade study list, show, pause and"
 		+ "resume"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
@@ -9039,6 +9089,7 @@ TASK B153
 		+ "suite under 60 s with no skip, no patch, no duplicated fixture and no gesture after"
 		+ "Assert"
 	STATUS todo
+	TYPE refactor
 	MILESTONE @MILESTONE.M1
 	COMPONENT "brigade, tests"
 	ROLE ada
@@ -9625,6 +9676,7 @@ TASK B164
 	TITLE "brigade run takes --wave and --task, run.json and every run.finished carry them, and"
 		+ "runs list, wave show and wave new follow a run from them"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -9670,6 +9722,7 @@ TASK B165
 	TITLE "A wave is named <project>_w<n> when it starts, that name keys every wave event of the"
 		+ "ledger, and wave.started carries its project, its branch and its tasks"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ledger"
 	ROLE ada
@@ -9724,6 +9777,7 @@ TASK B166
 		+ "worktree reused, task.state written before the launch, a failed action recorded and the"
 		+ "tick going on"
 	STATUS todo
+	TYPE fix
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -9801,6 +9855,7 @@ TASK B168
 	TITLE "The tick parks the task of a dead run with its reason, and brigade wave requeue"
 		+ "re-queues a parked task by hand"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -9834,6 +9889,7 @@ TASK B169
 	TITLE "brigade request replan relaunches by hand the planner of a REQUEST left planning by a"
 		+ "dead or blocked planner"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
 	ROLE ada
@@ -9864,6 +9920,7 @@ TASK B170
 	TITLE "brigade scheduler status exits non-zero when the last tick is older than the interval"
 		+ "allows, and summarises the paused waves and the parked tasks"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "scheduler"
 	ROLE ada
@@ -9895,6 +9952,7 @@ TASK B171
 	TITLE "The pull request from the integration branch of a wave to main is opened in forge mode,"
 		+ "the default, recorded as wave.pr_opened, and the wave report and the rehearsal read it"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -9929,6 +9987,7 @@ TASK B172
 	TITLE "brigade doctor checks that the user systemd instance lingers, so that the timer survives"
 		+ "the end of the session"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "doctor"
 	ROLE ada
@@ -10201,6 +10260,7 @@ TASK B187
 		+ "is a batch of ratified tasks that brigade wave start or the tick composes, started on"
 		+ "integration/<project>_w<n> and recorded in the ledger alone"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
 	ROLE ada
@@ -10357,3 +10417,31 @@ TASK B187
 		+ "runs vivants (Recommended) »; « Parquer « blocked » (Recommended) »; on the plan pull"
 		+ "request, « Review par le slot review »; « Non bornée (Recommended) »"
 		REF @TASK.B166
+
+TASK B189
+	TITLE "the five modules of studies/ and planning/ that call awawa go through named operations"
+		+ "of brigade/corpus/, and a guard keeps awawa inside the gateway"
+	STATUS draft
+	TYPE refactor
+	MILESTONE @MILESTONE.M1
+	COMPONENT "corpus"
+	ROLE ada
+	DESC "found by the review of pull request #149: brigade/studies/require_answer_type.py:14,"
+		+ "brigade/planning/list_undeclared.py:18, brigade/planning/assemble_plan_context.py:35,"
+		+ "brigade/planning/read_plan.py:22 and brigade/planning/read_entity_sites.py:21 build an"
+		+ "argv opening on awawa and run it through the runner, where"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa rules that nothing but"
+		+ "brigade/corpus/ calls awawa"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	SPEC "no module outside brigade/corpus/ builds an argv opening on awawa: each of the five calls"
+		+ "goes through a named operation of brigade/corpus/, tested in tests/integration against a"
+		+ "real corpus, the output of each command unchanged"
+	SPEC "a guard of tests/guards, wired into the quality gate, refuses an argv opening on awawa or"
+		+ "git outside brigade/corpus/ and brigade/git/, naming the file and the line"
+	RATIONALE "@TASK.B142 moved its own two calls into brigade/corpus/ with check_corpus; the five"
+		+ "merged ones were left to a task of their own so that #149 changes no merged module"
+		REF @TASK.B142
+	SOURCE "the user's ruling of 2026-10-17 on the review of pull request #149, « Corriger #149 +"
+		+ "tâche pour le reste (Recommandé) — Les deux appels de check_task passent par"
+		+ "brigade/corpus/ dans #149, et le round ouvre une tâche draft M1 (B189) pour déplacer les"
+		+ "cinq autres. La décision reste telle quelle. »"

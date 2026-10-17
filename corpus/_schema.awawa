@@ -42,6 +42,8 @@ SCHEMA TASK
 	FIELD STATUS draft|todo|implemented|archived
 		REQUIRED
 		DESC "draft: not ratified; todo: ratified; implemented: merged; archived: retired"
+	FIELD TYPE build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test
+		DESC "the Conventional Commits type of the pull request that delivers it"
 	FIELD SPEC string
 		REQUIRED
 		REPEATABLE
@@ -67,6 +69,8 @@ SCHEMA TASK
 		GATE suppressed
 	WHEN STATUS todo
 		GATE error
+		FIELD TYPE
+			REQUIRED
 	WHEN STATUS implemented
 		GATE error
 		FIELD SPEC

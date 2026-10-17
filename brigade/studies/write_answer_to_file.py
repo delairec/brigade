@@ -15,6 +15,8 @@ RUN_PLACEHOLDER = "{run}"
 BRANCH_PREFIX = "brigade/study-"
 CHECKOUT_DIRECTORY = "checkout"
 NO_PULL_REQUEST = None
+NO_MILESTONE = None
+UNBOUND_ENVIRONMENT = {}
 
 
 def _open_pull_request(
@@ -32,6 +34,8 @@ def _open_pull_request(
             "branch": branch,
             "title": publication.title,
             "body": publication.markdown,
+            "milestone": NO_MILESTONE,
+            "environment": UNBOUND_ENVIRONMENT,
         },
         context.runtime,
     )
