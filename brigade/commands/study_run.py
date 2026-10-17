@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runtime import Runtime
 from brigade.studies.read_study import read_study
@@ -41,14 +43,17 @@ def study_run(request, runtime: Runtime) -> dict:
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **run_study(runtime, read_study(runtime, request.name), equipment),
+        **run_study(runtime, read_study(runtime, request.name), equipment, request.run_id),
     }
 
 
 COMMAND = Command(
     path=("study", "run"),
     help="run a study: its collectors, its judging run, its output; resume it where it parked",
-    arguments=(Argument(("name",), {"help": "the name of the STUDY entity"}),),
+    arguments=(
+        Argument(("name",), {"help": "the name of the STUDY entity"}),
+        Argument(("--run-id",), {"help": argparse.SUPPRESS}),
+    ),
     run=study_run,
     read_request=_read_request,
     render_text=_render_text,

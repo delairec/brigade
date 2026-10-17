@@ -56,7 +56,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--collector",
             "shell: ls",
             "--every",
-            "1d",
+            "daily@09:00",
             "--output",
             "issue",
         )
@@ -72,7 +72,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             '\tCOLLECTOR "git-log since=7d"\n'
             '\tCOLLECTOR "shell: ls"\n'
             "\tSLOT report\n"
-            '\tEVERY "1d"\n'
+            '\tEVERY "daily@09:00"\n'
             '\tOUTPUT "issue"\n'
             '\tANSWER "ANSWER"\n'
             "\tSTATUS active\n",
@@ -81,7 +81,16 @@ class BrigadeStudyNewTest(StudyTestCase):
     def test_should_commit_the_study(self):
         # Act
         self.run_study(
-            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "issue"
+            "new",
+            "weekly",
+            "--title",
+            "what moved",
+            "--collector",
+            "worktrees",
+            "--every",
+            "daily@09:00",
+            "--output",
+            "issue",
         )
 
         # Assert
@@ -123,11 +132,35 @@ class BrigadeStudyNewTest(StudyTestCase):
     def test_should_print_the_study_recorded(self):
         # Act
         completed = self.run_study(
+            "new",
+            "weekly",
+            "--title",
+            "what moved",
+            "--collector",
+            "worktrees",
+            "--every",
+            "daily@09:00",
+            "--output",
+            "issue",
+        )
+
+        # Assert
+        self.assertEqual(completed.stdout, "@STUDY.weekly recorded, every daily@09:00\n")
+
+    def test_should_exit_1_naming_a_schedule_of_another_form(self):
+        # Act
+        completed = self.run_study(
             "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "issue"
         )
 
         # Assert
-        self.assertEqual(completed.stdout, "@STUDY.weekly recorded, every 1d\n")
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (
+                1,
+                "brigade study new: the schedule 1d is none of <n>m, <n>h, daily@HH:MM or <day>@HH:MM, day mon to sun\n",
+            ),
+        )
 
     def test_should_exit_1_naming_an_answer_type_the_schema_does_not_declare(self):
         # Act
@@ -139,7 +172,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--collector",
             "worktrees",
             "--every",
-            "1d",
+            "daily@09:00",
             "--output",
             "issue",
             "--answer",
@@ -164,7 +197,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--collector",
             "worktrees",
             "--every",
-            "1d",
+            "daily@09:00",
             "--output",
             "issue",
         )
@@ -184,7 +217,7 @@ class BrigadeStudyNewTest(StudyTestCase):
             "--collector",
             "shell: printf 'oak",
             "--every",
-            "1d",
+            "daily@09:00",
             "--output",
             "issue",
         )
@@ -198,7 +231,16 @@ class BrigadeStudyNewTest(StudyTestCase):
     def test_should_exit_1_naming_the_inbox_output_it_refuses_until_the_inbox_has_a_store(self):
         # Act
         completed = self.run_study(
-            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "inbox"
+            "new",
+            "weekly",
+            "--title",
+            "what moved",
+            "--collector",
+            "worktrees",
+            "--every",
+            "daily@09:00",
+            "--output",
+            "inbox",
         )
 
         # Assert
@@ -210,7 +252,16 @@ class BrigadeStudyNewTest(StudyTestCase):
     def test_should_record_no_study_whose_output_is_the_inbox(self):
         # Act
         self.run_study(
-            "new", "weekly", "--title", "what moved", "--collector", "worktrees", "--every", "1d", "--output", "inbox"
+            "new",
+            "weekly",
+            "--title",
+            "what moved",
+            "--collector",
+            "worktrees",
+            "--every",
+            "daily@09:00",
+            "--output",
+            "inbox",
         )
 
         # Assert
@@ -459,7 +510,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
             "--collector",
             "shell: true",
             "--every",
-            "1d",
+            "daily@09:00",
             "--output",
             "entity:ANSWER",
         )
@@ -687,7 +738,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
             "--collector",
             "shell: true",
             "--every",
-            "1d",
+            "daily@09:00",
             "--output",
             "entity:ANSWER",
         )
@@ -1005,7 +1056,7 @@ class BrigadeStudyCollectorTest(StudyRunTestCase):
             "--slot",
             "none",
             "--every",
-            "1d",
+            "daily@09:00",
             "--output",
             "entity:ANSWER",
         )
