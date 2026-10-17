@@ -1,6 +1,7 @@
 import unittest
 from datetime import UTC, datetime
 
+from brigade.errors import BrigadeError
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
@@ -43,3 +44,24 @@ class NameNextWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(name, "shop_w11")
+
+    def test_should_refuse_a_wave_of_its_project_named_otherwise_naming_its_line(self):
+        for wave in ["shop/16", "shop_w", "shop_wx", "cafe_w3"]:
+            with self.subTest(wave=wave):
+                # Arrange
+                entries = (
+                    LedgerEntry(
+                        instant=INSTANT,
+                        event=WaveStarted(wave=wave, project="shop", branch="integration/M1-empty-cart", tasks=("S3",)),
+                    ),
+                )
+
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    name_next_wave("shop", entries)
+
+                # Assert
+                self.assertEqual(
+                    str(refusal.exception),
+                    f"the wave.started of 2026-10-13T09:00:00Z names the wave {wave}, not shop_w<n>",
+                )
