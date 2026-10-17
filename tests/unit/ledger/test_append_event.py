@@ -115,7 +115,9 @@ class AppendEventOfAnInstantWithATimeZoneTest(AppendEventTestCase):
     def test_should_append_after_the_lines_already_written(self):
         # Arrange
         self.ledger.mkdir(parents=True)
-        earlier_line = '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "wave.resumed", "wave": "tp/16"}\n'
+        earlier_line = (
+            '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "wave.resumed", "wave": "tidepool_w16"}\n'
+        )
         (self.ledger / "2026-10.jsonl").write_text(earlier_line)
         instant = datetime(2026, 10, 6, 9, 30, tzinfo=UTC)
 

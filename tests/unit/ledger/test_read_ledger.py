@@ -11,10 +11,10 @@ from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_started import WaveStarted
 
 WAVE_STARTED = (
-    '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tp/16",'
+    '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
     ' "project": "tidepool", "branch": "integration/M4-tides", "tasks": ["T7"]}\n'
 )
-WAVE_PAUSED = '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.paused", "wave": "tp/16"}\n'
+WAVE_PAUSED = '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.paused", "wave": "tidepool_w16"}\n'
 RUN_FINISHED_OF_SCHEMA_1 = (
     '{"schema_version": 1, "ts": "2026-10-07T10:33:00Z", "event": "run.finished", "run": "20261007T101817Z-2ee96f",'
     ' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
@@ -82,12 +82,12 @@ class ReadLedgerWhenEveryLineIsWholeTest(ReadLedgerTestCase):
                     LedgerEntry(
                         instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
                         event=WaveStarted(
-                            wave="tp/16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
+                            wave="tidepool_w16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
                         ),
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                        event=WavePaused(wave="tp/16"),
+                        event=WavePaused(wave="tidepool_w16"),
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 20, tzinfo=UTC),
@@ -146,25 +146,25 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
             (b"\n", "not JSON"),
             (b"[1, 2]\n", "the document is a list, not an object"),
             (
-                b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n',
+                b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tidepool_w16"}\n',
                 "lacks the key schema_version",
             ),
-            (b'{"schema_version": 1, "event": "wave.paused", "wave": "tp/16"}\n', "lacks the key ts"),
-            (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "wave": "tp/16"}\n', "lacks the key event"),
+            (b'{"schema_version": 1, "event": "wave.paused", "wave": "tidepool_w16"}\n', "lacks the key ts"),
+            (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "wave": "tidepool_w16"}\n', "lacks the key event"),
             (
-                b'{"schema_version": 2, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n',
+                b'{"schema_version": 2, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tidepool_w16"}\n',
                 "schema_version is 2, not one of 1",
             ),
             (
-                b'{"schema_version": 1, "ts": "yesterday", "event": "wave.paused", "wave": "tp/16"}\n',
+                b'{"schema_version": 1, "ts": "yesterday", "event": "wave.paused", "wave": "tidepool_w16"}\n',
                 "ts 'yesterday' is not an ISO 8601 UTC instant",
             ),
             (
-                b'{"schema_version": 1, "ts": "2026-10-01T02:41:00+02:00", "event": "wave.paused", "wave": "tp/16"}\n',
+                b'{"schema_version": 1, "ts": "2026-10-01T02:41:00+02:00", "event": "wave.paused", "wave": "tidepool_w16"}\n',
                 "ts '2026-10-01T02:41:00+02:00' is not an ISO 8601 UTC instant",
             ),
             (
-                b'{"schema_version": 1, "ts": "2026-13-01T00:41:00Z", "event": "wave.paused", "wave": "tp/16"}\n',
+                b'{"schema_version": 1, "ts": "2026-13-01T00:41:00Z", "event": "wave.paused", "wave": "tidepool_w16"}\n',
                 "ts '2026-13-01T00:41:00Z' is not an ISO 8601 UTC instant",
             ),
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused"}\n', "lacks the key wave"),
