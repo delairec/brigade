@@ -1260,7 +1260,6 @@ TASK B12
 		IMPL "tests/cli/test_run.py::class BrigadeRunOfAReadingSlotOfAProjectTest(RunTestCase):"
 	AFTER @TASK.B06
 	AFTER @TASK.B07
-	AFTER @TASK.B11
 	AFTER @TASK.B74
 	AFTER @TASK.B77
 	RATIONALE "F16 of the foundations review: run_segments.py:101-109 adds and removes the"
@@ -1700,7 +1699,6 @@ TASK B19
 	SPEC "tests/cli proves the pause on a rate limit with and without reset, the resume at"
 		+ "resume_at by resume-argv and by a fresh launch, the pause on forge_account.unavailable"
 		+ "and brigade wave resume with and without a request, through the fake adapter"
-	AFTER @TASK.B11
 	AFTER @TASK.B14
 	AFTER @TASK.B71
 	AFTER @TASK.B106
@@ -1916,7 +1914,6 @@ TASK B26
 		+ "its request"
 	SPEC "the wave engine delivers it and the report lists the constraint with its reason"
 	AFTER @TASK.B25
-	AFTER @TASK.B11
 
 TASK B27
 	TITLE "brigade serve and the JSON API"
@@ -2783,7 +2780,6 @@ TASK B48
 	AFTER @TASK.B43
 	AFTER @TASK.B47
 	AFTER @TASK.B106
-	AFTER @TASK.B11
 	AFTER @TASK.B60
 	RATIONALE "the answer is designed as an entity from the start, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
@@ -6330,7 +6326,6 @@ TASK B99
 		IMPL "tests/cli/test_doctor.py::def"
 			+ "test_should_warn_naming_the_project_when_no_config_toml_binds_build_and_review(self):"
 	AFTER @TASK.B75
-	AFTER @TASK.B11
 	RATIONALE "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode sets three"
 		+ "review modes; approval and verdict are needed by the verdict and the merge of M1,"
 		+ "@TASK.B16 and @TASK.B17, which follow this task; local is delivered by @TASK.B100"
