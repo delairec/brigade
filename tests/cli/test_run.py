@@ -2197,3 +2197,34 @@ class BrigadeRunOfASlotTheSlotClientsTableBindsTest(RunTestCase):
                     (completed.returncode, completed.stderr),
                     (1, f"brigade run: {expected_error} in {configuration}\n"),
                 )
+
+
+RUN_DIRECTORY_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-run-directory"
+
+
+class BrigadeRunExportingItsDirectoryTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.machine.write_configuration('client = "claude-code"\ndocument = "markdown"\n')
+        self.environment_record = Path(self.root.name) / "environment.txt"
+
+    def test_should_hand_the_client_the_directory_of_the_run(self):
+        # Act
+        completed = self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "run",
+            str(self.procedure),
+            "--slot",
+            "build",
+            "--cwd",
+            str(self.workspace),
+            environment={
+                **self.machine.describe_environment(),
+                "PATH": os.pathsep.join([str(RUN_DIRECTORY_CLAUDE), os.environ["PATH"]]),
+                "BRIGADE_ENVIRONMENT_RECORD": str(self.environment_record),
+            },
+        )
+
+        # Assert
+        [run_directory] = self.runs.iterdir()
+        self.assertEqual(self.environment_record.read_text(), f"{run_directory}\n", completed.stderr)

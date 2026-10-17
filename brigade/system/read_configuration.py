@@ -26,6 +26,7 @@ SLOT_CLIENTS_KEY = "slot_clients"
 FORGE_ATTEMPTS_KEY = "forge_attempts"
 FORGE_ATTEMPTS_BY_DEFAULT = 3
 FEWEST_FORGE_ATTEMPTS = 1
+ATTRIBUTION_KEY = "attribution"
 
 
 class ConfigurationMissing(BrigadeError):
@@ -58,6 +59,7 @@ class Configuration:
     forge_accounts: dict = field(default_factory=dict)
     forge_attempts: int = FORGE_ATTEMPTS_BY_DEFAULT
     worktree_root: str | None = None
+    attribution: tuple[str, ...] | None = None
 
 
 def _require(value, kind: type, expected: str, location: str, path: Path):
@@ -149,6 +151,15 @@ def _read_positive_number(document: dict, key: str, default: int, path: Path) ->
     return value
 
 
+def _read_attribution(document: dict, path: Path) -> tuple[str, ...] | None:
+    if ATTRIBUTION_KEY not in document:
+        return None
+    lines = _require(document[ATTRIBUTION_KEY], list, "an array", ATTRIBUTION_KEY, path)
+    return tuple(
+        _require(line, str, "a string", f"{ATTRIBUTION_KEY}[{index}]", path) for index, line in enumerate(lines)
+    )
+
+
 def _parse(path: Path) -> dict:
     try:
         content = path.read_text(encoding="utf-8")
@@ -179,6 +190,7 @@ def read_configuration(path: Path) -> Configuration:
             JOURNAL_POLL_KEY,
             FORGE_ACCOUNTS_KEY,
             FORGE_ATTEMPTS_KEY,
+            ATTRIBUTION_KEY,
         ),
         "",
         path,
@@ -205,4 +217,5 @@ def read_configuration(path: Path) -> Configuration:
         findings=findings,
         forge_accounts=_read_forge_accounts(document.get(FORGE_ACCOUNTS_KEY, {}), path),
         forge_attempts=_read_forge_attempts(document, path),
+        attribution=_read_attribution(document, path),
     )

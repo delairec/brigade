@@ -54,6 +54,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             "refs_cache_mb = 2048\n"
             "forge_attempts = 5\n"
             'worktree_root = "../worktrees"\n'
+            'attribution = ["Co-Authored-By: Ada <ada@example.org>"]\n'
             "[reasoning.deep]\n"
             'model = "opus"\n'
             'effort = "max"\n'
@@ -87,6 +88,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
                 forge_attempts=5,
                 slot_clients={"review": "vibe"},
                 worktree_root="../worktrees",
+                attribution=("Co-Authored-By: Ada <ada@example.org>",),
             ),
         )
 
@@ -186,6 +188,16 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
                 "refs_cache_mb is a boolean, not an integer,",
             ),
             ("a negative cache bound", "refs_cache_mb = -1\n", "refs_cache_mb is -1, not 0 or more,"),
+            (
+                "an attribution of the wrong type",
+                'attribution = "Co-Authored-By: Ada <ada@example.org>"\n',
+                "attribution is a string, not an array,",
+            ),
+            (
+                "an attribution line of the wrong type",
+                'attribution = ["Co-Authored-By: Ada <ada@example.org>", 1]\n',
+                "attribution[1] is an integer, not a string,",
+            ),
         ]
         for case, content, expected_problem in rows:
             with self.subTest(case=case):

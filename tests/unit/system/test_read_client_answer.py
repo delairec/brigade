@@ -5,6 +5,7 @@ from brigade.system.client_question import ClientQuestion
 from brigade.system.client_role import ClientRole
 from brigade.system.launch_argv_request import LaunchArgvRequest
 from brigade.system.parse_result_request import ParseResultRequest
+from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_client_answer import read_client_answer
 from brigade.system.transcripts_request import TranscriptsRequest
 
@@ -27,6 +28,25 @@ LAUNCH_QUESTION = ClientQuestion(
         stop_at=None,
     ),
 )
+PROBE_QUESTION = ClientQuestion("vibe", ProbeRequest())
+PROBE_WITH_ONE_ATTRIBUTION_LINE_AS_A_STRING = {
+    "schema_version": 1,
+    "client": "vibe",
+    "version_argv": None,
+    "operations": ["probe"],
+    "features": [],
+    "models": {},
+    "attribution": "Co-Authored-By: Vibe <vibe@example.org>",
+}
+PROBE_WITH_AN_ATTRIBUTION_LINE_NOT_A_STRING = {
+    "schema_version": 1,
+    "client": "vibe",
+    "version_argv": None,
+    "operations": ["probe"],
+    "features": [],
+    "models": {},
+    "attribution": ["Co-Authored-By: Vibe <vibe@example.org>", 1],
+}
 TRANSCRIPTS_QUESTION = ClientQuestion("vibe", TranscriptsRequest(session_id="session-b83", worktree="/work/b83"))
 RESULT_WITHOUT_COST = {
     "schema_version": 1,
@@ -97,6 +117,29 @@ class ReadClientAnswerTest(unittest.TestCase):
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
                     read_client_answer(question, answer)
+
+                # Assert
+                self.assertEqual(str(raised.exception), expected_message)
+
+    def test_should_refuse_a_probe_whose_attribution_is_not_a_list_of_lines(self):
+        # Arrange
+        cases = (
+            (
+                "one line written as a string",
+                PROBE_WITH_ONE_ATTRIBUTION_LINE_AS_A_STRING,
+                "client adapter vibe answered probe: attribution is a string, not a list",
+            ),
+            (
+                "a line that is not a string",
+                PROBE_WITH_AN_ATTRIBUTION_LINE_NOT_A_STRING,
+                "client adapter vibe answered probe: attribution[1] is an integer, not a string",
+            ),
+        )
+        for name, answer, expected_message in cases:
+            with self.subTest(name):
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    read_client_answer(PROBE_QUESTION, answer)
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_message)

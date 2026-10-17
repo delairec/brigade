@@ -1,0 +1,28 @@
+{
+  "call": {
+    "arguments": [
+      "lint",
+      "--closure",
+      "@TASK.S3",
+      "."
+    ],
+    "cwd": "<tmp:0>/projects/shop/.brigade/worktrees/S3",
+    "directories": [
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3"
+    ],
+    "inputs": {
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD SPEC string\n\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running\n\t\tREQUIRED\n",
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/again.awawa": "MILESTONE M1\n\tTITLE \"Empty cart again\"\n\tSTATUS running\n",
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/milestones.awawa": "MILESTONE M1\n\tTITLE \"Empty cart\"\n\tSTATUS running\n",
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/tasks.awawa": "TASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS implemented\n\nTASK S3\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\tSPEC \"the button of src/cart/button.py, once pressed, empties the cart\"\n\tSPEC \"the emptying charges nothing\"\n\t\tIMPL \"src/billing/charge.py::def charge\"\n\nTASK S6\n\tTITLE \"Count the emptied carts\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 1,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "./corpus/milestones.awawa \u2014 1 error(s), 0 warning(s)\nL005  error  ./corpus/milestones.awawa:1:11\n      duplicate identity @MILESTONE.M1\n      also at ./corpus/again.awawa:1\n\n./corpus/tasks.awawa \u2014 0 error(s), 1 warning(s)\nL016  warning  ./corpus/tasks.awawa:11:8\n      field IMPL: anchor path src/billing/charge.py does not exist under the workspace root\n\nclosure: 2 entities, 1 MILESTONE, 1 TASK \u2014 0 implemented, 1 running, 1 todo\nreferenced by (rest, 1): @TASK.S6\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

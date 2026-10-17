@@ -25,11 +25,18 @@ SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
 TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 RESUMED_RECORDING_SUFFIX = ".resumed.json"
 RESUMED_BRIEF_OPENING = f"# {PROGRESS_SECTION}\n"
+ATTRIBUTION_SETTING = "attribution"
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
     declared = request.get("settings", {}).get(name, "")
     return [value.strip() for value in declared.split(SETTING_SEPARATOR) if value.strip()]
+
+
+def _answer_attribution(request: dict) -> dict:
+    if ATTRIBUTION_SETTING not in request.get("settings", {}):
+        return {}
+    return {"attribution": _read_list_setting(request, ATTRIBUTION_SETTING)}
 
 
 def _probe(request: dict) -> dict:
@@ -40,6 +47,7 @@ def _probe(request: dict) -> dict:
         "operations": [*REPLAYED_OPERATIONS, *_read_list_setting(request, "operations")],
         "features": _read_list_setting(request, "features"),
         "models": {},
+        **_answer_attribution(request),
     }
 
 

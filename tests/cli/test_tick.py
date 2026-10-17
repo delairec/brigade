@@ -953,3 +953,17 @@ class BrigadeTickLoopWhereTheMachineRefusesTheWriteTest(TickTestCase):
             (f"brigade tick: cannot write {self.state}: Permission denied\n", "", 0, False),
         )
         self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
+
+
+class BrigadeTickOnceKeepingTheSetupOfTheWorktreeTest(LaunchingTickTestCase):
+    setup_commands = ("touch setup-ran", "git branch --show-current")
+
+    def test_should_keep_each_setup_command_and_its_output_in_the_setup_log_of_the_task(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            (self.state / "setups" / "shop" / "S3.log").read_text(),
+            "$ touch setup-ran\n$ git branch --show-current\ntask/M1-empty-cart/S3\n",
+        )

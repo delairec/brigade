@@ -41,9 +41,9 @@ class PlanRecording:
 
 
 def _read_run(runtime: Runtime) -> str | None:
-    if runtime.paths.run_progress_file is None:
+    if runtime.paths.run_directory is None:
         return None
-    return runtime.paths.run_progress_file.parent.name
+    return runtime.paths.run_directory.name
 
 
 def _refuse_a_second_round(runtime: Runtime, request: str, run: str | None) -> None:

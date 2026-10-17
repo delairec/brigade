@@ -392,11 +392,16 @@ class RunSegmentTest(unittest.TestCase):
 
         # Assert
         [request] = self.spawn.requests
-        progress_file = str(self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "progress.md")
+        run_directory = str(self.root / "state" / "runs" / "20261007T090000Z-b73a01")
         self.assertEqual(request.argv, ("double-client", "--print"))
         self.assertEqual(request.cwd, str(self.root / "project"))
         self.assertEqual(
-            request.environment, {"DOUBLE_CLIENT_MODE": "unattended", "BRIGADE_PROGRESS_FILE": progress_file}
+            request.environment,
+            {
+                "DOUBLE_CLIENT_MODE": "unattended",
+                "BRIGADE_PROGRESS_FILE": f"{run_directory}/progress.md",
+                "BRIGADE_RUN_DIR": run_directory,
+            },
         )
         self.assertEqual(request.stdin, "the brief of the run")
 

@@ -2468,19 +2468,28 @@ DECISION EachEntityOfAPlanGoesToTheCorpusFileAlreadyHoldingItsType
 		+ "option A pour le finding 1 (refuser la collision avant toute écriture), ok pour ta"
 		+ "variante de l'option 2 pour le finding 7 »"
 
-DECISION TheRunOfAPlanRecordIsTheDirectoryOfItsProgressFile
-	TITLE "the run a plan record belongs to is the name of the directory of BRIGADE_PROGRESS_FILE;"
+DECISION TheRunOfAPlanRecordIsTheDirectoryBrigadeRunExports
+	TITLE "the run a plan record belongs to is the name of the directory BRIGADE_RUN_DIR names;"
 		+ "outside a run no lint round is counted"
 	STATUS active
-	DESC "plan.lint_failed carries the name of the parent directory of the file"
-		+ "BRIGADE_PROGRESS_FILE names, read in brigade/system/paths.py; with no such variable the"
-		+ "event carries run null and a second plan record is not refused"
-	DESC "binds @TASK.B139"
+	DESC "brigade run exports BRIGADE_RUN_DIR, the directory of the run, to the client's process;"
+		+ "plan.lint_failed carries the name of that directory, read in brigade/system/paths.py;"
+		+ "with no such variable the event carries run null and a second plan record is not refused"
+	DESC "binds @TASK.B139 and @TASK.B13"
 		REF @TASK.B139
+		REF @TASK.B13
 	REJECTED "a --run option of plan record: the planner would have to copy an identifier it is"
-		+ "never given, while every segment of a run already receives its progress file"
+		+ "never given, while every segment of a run already receives the variables of its run"
+	REJECTED "the parent directory of BRIGADE_PROGRESS_FILE kept as a fallback: a second way to"
+		+ "read the same run, while every client process brigade run starts receives"
+		+ "BRIGADE_RUN_DIR"
 	SOURCE "pull request #121 of the brigade repository, delivering @TASK.B139"
 		REF @TASK.B139
+	SOURCE "the user's ruling of 2026-10-13 recorded in @TASK.B13: the decision kept, then migrated"
+		+ "to BRIGADE_RUN_DIR by B13"
+		REF @TASK.B13
+	SOURCE "pull request #145 of the brigade repository, delivering @TASK.B13"
+		REF @TASK.B13
 
 DECISION ThePlanIsCheckedAgainstTheFieldsAwawaNewPrintsForEachType
 	TITLE "the types and fields a plan may use are those awawa new TYPE prints on the corpus"
