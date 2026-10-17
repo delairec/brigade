@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "lint",
+      "--strict",
+      "."
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [
+      "<tmp:0>"
+    ],
+    "inputs": {
+      "<tmp:0>/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change\"\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n",
+      "<tmp:0>/tasks.awawa": "TASK S2\n\tSTATUS shipped\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 1,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "./tasks.awawa \u2014 1 error(s), 0 warning(s)\nL007  error  ./tasks.awawa:2:9\n      field STATUS expects todo|implemented, given shipped\n\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
