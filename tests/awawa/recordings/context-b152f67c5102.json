@@ -24,5 +24,6 @@
     "stderr": "",
     "stdout": "TRIGGER billing_code\n\tKIND path\n\tCONDITION \"a file of the billing\"\n\tGLOB \"src/billing/**\"\n\tLOADS @RULE.charges_are_logged\n\nRULE charges_are_logged\n\tSPEC \"every charge is logged\"\n\n// context: 2 entities, 7 lines, depth 1\n// skip matched no declaration: reasoning\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

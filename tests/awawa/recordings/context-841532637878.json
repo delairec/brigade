@@ -24,5 +24,6 @@
     "stderr": "",
     "stdout": "TRIGGER cart_code\n\tKIND path\n\tCONDITION \"a file of the cart\"\n\tGLOB \"src/cart/**\"\n\tLOADS @RULE.cart_is_pure\n\nRULE cart_is_pure\n\tSPEC \"the cart computes without input or output\"\n\n// context: 2 entities, 7 lines, depth 1\n// skip matched no declaration: reasoning\n// referenced by (rest, 2): @TRIGGER.changing_code @TRIGGER.cart_button_code\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

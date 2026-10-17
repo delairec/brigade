@@ -21,5 +21,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TRIGGER\", \"name\": \"billing_code\", \"file\": \"<tmp:0>/instructions/triggers.awawa\", \"line\": 7, \"status\": null, \"fields\": [{\"name\": \"KIND\", \"atoms\": [\"path\"], \"fields\": []}, {\"name\": \"CONDITION\", \"atoms\": [\"\\\"a file of the billing\\\"\"], \"fields\": []}, {\"name\": \"GLOB\", \"atoms\": [\"\\\"src/billing/**\\\"\"], \"fields\": []}, {\"name\": \"LOADS\", \"atoms\": [\"@RULE.charges_are_logged\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

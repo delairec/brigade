@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "./corpus/tasks.awawa \u2014 0 error(s), 1 warning(s)\nL016  warning  ./corpus/tasks.awawa:11:8\n      field IMPL: anchor path src/billing/charge.py does not exist under the workspace root\n\nclosure: 2 entities, 1 MILESTONE, 1 TASK \u2014 0 implemented, 1 running, 1 todo\nreferenced by (rest, 1): @TASK.S6\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -21,5 +21,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TRIGGER\", \"name\": \"shipping_code\", \"file\": \"<tmp:0>/instructions/triggers.awawa\", \"line\": 13, \"status\": null, \"fields\": [{\"name\": \"KIND\", \"atoms\": [\"path\"], \"fields\": []}, {\"name\": \"CONDITION\", \"atoms\": [\"\\\"a file of the shipping\\\"\"], \"fields\": []}, {\"name\": \"GLOB\", \"atoms\": [\"\\\"src/shipping/**\\\"\"], \"fields\": []}, {\"name\": \"LOADS\", \"atoms\": [\"@RULE.parcels_are_weighed\"], \"fields\": []}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }

@@ -22,5 +22,6 @@
     "stderr": "",
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S3\", \"file\": \"<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/tasks.awawa\", \"line\": 5, \"status\": \"todo\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Empty the cart in one click\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"todo\"], \"fields\": []}, {\"name\": \"MILESTONE\", \"atoms\": [\"@MILESTONE.M1\"], \"fields\": []}, {\"name\": \"SPEC\", \"atoms\": [\"\\\"the button of src/cart/button.py, once pressed, empties the cart\\\"\"], \"fields\": []}, {\"name\": \"SPEC\", \"atoms\": [\"\\\"the emptying charges nothing\\\"\"], \"fields\": [{\"name\": \"IMPL\", \"atoms\": [\"\\\"src/billing/charge.py::def charge\\\"\"], \"fields\": []}]}], \"duplicates\": []}\n"
   },
+  "run_order": [],
   "version": "awawa 2.7.0"
 }
