@@ -59,7 +59,7 @@ OPEN_QUESTION WhereTheInboxOutputOfAStudyIsStored
 OPEN_QUESTION TheKeyOfAWaveInTheLedger
 	QUESTION "what keys a wave in the ledger: the name of its REQUEST, <project>_<n>, or the pair"
 		+ "project and MILESTONE?"
-	STATUS open
+	STATUS closed
 	BLOCKS @TASK.B165
 	RATIONALE "today wave.started and task.state are keyed by the MILESTONE name alone,"
 		+ "brigade/waves/start_wave.py:34, brigade/commands/tick.py:68,"

@@ -9624,45 +9624,99 @@ TASK B163
 TASK B164
 	TITLE "brigade run takes --wave and --task, run.json and every run.finished carry them, and"
 		+ "runs list, wave show and wave new follow a run from them"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	SPEC "brigade run takes --wave <request> and --task <task>, both optional; run.json and every"
-		+ "run.finished of the run carry wave and task, null with the reason not launched by a wave"
-		+ "when they are absent, where today brigade/runs/describe_finished.py:93-94 writes null"
-		+ "for every run"
-	SPEC "the tick launches each build run with --wave and --task, so that brigade ledger --wave"
+	SPEC "brigade run takes --wave <wave>, the name of the wave, and --task <task>, both optional;"
+		+ "run.json and every run.finished of the run carry wave and task, null with the reason not"
+		+ "launched by a wave when they are absent, where today"
+		+ "brigade/runs/describe_finished.py:93-94 writes null for every run"
+	SPEC "a run.json without the keys wave and task is refused by brigade/runs/read_run_document.py"
+		+ "naming the file and the key, its schema_version unchanged; brigade runs list leaves such"
+		+ "a run out of the list, names it and the refusal on stderr and under skipped with --json,"
+		+ "brigade/runs/list_runs.py:17-18, and exits 0; brigade runs show of such a run fails on"
+		+ "that refusal; never upgraded"
+	SPEC "the tick launches each build run with wave and task, the Namespace of"
+		+ "brigade/commands/tick.py:57-66 carrying them, so that brigade ledger --wave <wave>"
 		+ "retains the runs of the wave, where today brigade/ledger/describe_wave.py:57 retains"
 		+ "none"
-	SPEC "brigade runs list --task <task> lists the runs of a task, and brigade wave show prints"
-		+ "the run of each task in a column"
-	SPEC "brigade wave new prints the command that follows its planner run"
-	SPEC "@TASK.B151 is archived at delivery, its SPEC 1, wave and task null on every run, made"
+	SPEC "brigade runs list --wave <wave> and --task <task> keep the rows of that wave or task,"
+		+ "text and --json; brigade wave show prints the run of each task in a column, the last run"
+		+ "naming the task in run.finished, blank when none"
+	SPEC "brigade wave new prints, after the request and the run, the line brigade runs show <id>"
+		+ "--log, the command that follows its planner run"
+	SPEC "TASK B151 is archived at delivery, its SPEC 1, wave and task null on every run, made"
 		+ "false by this task"
-		REF @TASK.B151
+	SPEC "tests/cli prove the two options and the nulls of run.finished on a run of the fake"
+		+ "client, the refusal of a run.json without the two keys in runs list and runs show, the"
+		+ "launch of a build run by the tick with its wave and its task, the filters of runs list"
+		+ "and the column of wave show"
+	AFTER @TASK.B165
 	RATIONALE "the ruling is @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished;"
-		+ "brigade run stays generic, the two options being optional"
+		+ "brigade run stays generic, the two options being optional; after @TASK.B165, the value"
+		+ "of --wave being the wave name it sets"
 		REF @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
+		REF @TASK.B165
+	RATIONALE "a run.json of the older shape is refused, as @TASK.B151 refuses a result.json of"
+		+ "schema_version 1: brigade keeps no legacy while it has no user"
+		REF @TASK.B151
+	SOURCE "the user's rulings of 2026-10-17 in the refinement of B164 and B165: « B164 AFTER B165"
+		+ "(Recommended) »; on an older run.json, « Refusé, listé en skipped (Recommended) »; on"
+		+ "what wave new prints, « brigade runs show <id> --log (Recommended) »"
 	SOURCE "use-case map of 2026-10-16, findings X1, G9 and B9"
 
 TASK B165
-	TITLE "A wave is keyed in the ledger by the key the open question settles, never by the"
-		+ "MILESTONE name alone"
-	STATUS draft
+	TITLE "A wave is named <project>_w<n> when it starts, that name keys every wave event of the"
+		+ "ledger, and wave.started carries its project, its branch and its tasks"
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ledger"
 	ROLE ada
-	DESC "to be written once @OPEN_QUESTION.TheKeyOfAWaveInTheLedger is ruled: the field of"
-		+ "wave.started, task.state and the other wave events that carries the key, and the readers"
-		+ "that filter on it"
+	SPEC "brigade wave start names the wave <project>_w<n>, n one above the highest wave number of"
+		+ "the project among the wave.started events of the ledger, 1 when none, read and appended"
+		+ "under one lock; the name is printed, text and --json, and never changed"
+	SPEC "wave.started carries wave, project, branch and tasks, the task names in the order of"
+		+ "their number; brigade/ledger/wave_started.py declares the four fields where today it"
+		+ "declares wave and project alone, WRITTEN_SCHEMA_VERSIONS of"
+		+ "brigade/ledger/declared_events.py maps wave.started to 2, and a wave.started line of"
+		+ "schema_version 1 is refused as brigade/ledger/read_ledger.py:52-54 refuses every line of"
+		+ "another version, listed under skipped, never upgraded"
+	SPEC "task.state, task.parked, pr.merged, wave.paused and wave.resumed carry in wave that name;"
+		+ "brigade/commands/tick.py:68 and brigade/tick/prepare_task_worktree.py:74 write it where"
+		+ "today they write the MILESTONE; brigade/waves/read_task_states.py:11,"
+		+ "brigade/tick/build_snapshot.py:130 and brigade/ledger/describe_wave.py:57 filter on it,"
+		+ "so that two projects whose waves name one MILESTONE share no task state and two waves on"
+		+ "one MILESTONE are told apart by brigade ledger --wave <wave>"
+	SPEC "WaveFacts of brigade/tick/build_snapshot.py and LaunchTask of brigade/tick/actions.py"
+		+ "carry wave, the name, beside milestone, and the build brief of"
+		+ "brigade/tick/data/build-brief.md.tpl names the wave beside the MILESTONE of the task"
+	SPEC "brigade wave start, brigade wave show and brigade wave list print the wave name of a"
+		+ "REQUEST that started, read from wave.started, blank for one that did not"
+	SPEC "TASK B11 is archived at delivery, its SPEC 4, wave.started carrying the MILESTONE and the"
+		+ "project, made false by this task"
+	SPEC "tests/cli prove the name, the four fields of wave.started, the refusal of a wave.started"
+		+ "line of version 1 and the filtering of two projects whose waves name one MILESTONE,"
+		+ "through the fake adapter; unit tests prove the number, one above the highest of the"
+		+ "project and 1 for a first wave"
+	RATIONALE "the ruling is @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone,"
+		+ "which closes @OPEN_QUESTION.TheKeyOfAWaveInTheLedger: the name is fixed when the wave is"
+		+ "created, never renamed, and is the key of the ledger"
+		REF @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		REF @OPEN_QUESTION.TheKeyOfAWaveInTheLedger
-	SPEC "wave.started, task.state and every event keyed by a wave carry the key the question"
-		+ "settles; brigade/waves/read_task_states.py, brigade/tick/build_snapshot.py and"
-		+ "brigade/ledger/describe_wave.py filter on it, so that two projects whose waves name the"
-		+ "same MILESTONE share no task state"
-	SPEC "a second wave on a MILESTONE already run is told apart from the first by brigade ledger"
-		+ "--wave"
+	RATIONALE "until @TASK.B187 the wave still starts from a planned REQUEST,"
+		+ "brigade/waves/start_wave.py:15-18: its branch is the BRANCH of the REQUEST and its tasks"
+		+ "the TASK entities of its MILESTONE at that branch; the branch"
+		+ "integration/<project>_w<n>, cut from PROJECT.MAIN, and the formation of the wave by the"
+		+ "CLI are B187's"
+		REF @TASK.B187
+	RATIONALE "today wave.started and task.state are keyed by the MILESTONE name alone,"
+		+ "brigade/waves/start_wave.py:34 and brigade/commands/tick.py:68: two projects whose waves"
+		+ "name a milestone M1 share their task states, and a milestone cannot be run twice"
+	SOURCE "the user's rulings of 2026-10-17 in the refinement of B164 and B165: « bon on va rester"
+		+ "sur l'option A, ça parait plus simple, et ça permet des tâches hors milestone », the"
+		+ "name fixed at creation, never renamed, the key of the ledger; « Les deux préfixés »,"
+		+ "REQUEST <project>_r<n> and wave <project>_w<n>"
 	SOURCE "use-case map of 2026-10-16, findings X2 and C2"
 
 TASK B166
@@ -9686,9 +9740,11 @@ TASK B166
 		+ "other waves goes on, where today brigade/tick/plan.py:54-58 ends the tick of every"
 		+ "project"
 	SPEC "brigade wave start and brigade plan record are replayable after a failure between their"
-		+ "writes: a plan record whose integration branch exists for the same REQUEST marks it"
-		+ "planned alone, where today brigade/planning/record_plan.py:141-142 refuses the existing"
-		+ "branch, and a wave start whose REQUEST is running appends no second wave.started"
+		+ "writes: a plan record whose plan branch exists for the same REQUEST marks it planned"
+		+ "alone, where today brigade/planning/record_plan.py:140-142 refuses the existing branch,"
+		+ "and a wave start replayed for a wave already started, its wave.started in the ledger,"
+		+ "creates its branch when missing and appends no second wave.started for the same wave,"
+		+ "whatever the other open waves of the project"
 	SPEC "no compensation: a failed action undoes nothing, the next tick recomputing from facts"
 	RATIONALE "DESC 3 of @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction as"
 		+ "amended on 2026-10-17: each action guarded by a fact, a failed action recorded and the"
@@ -9699,12 +9755,14 @@ TASK B166
 TASK B167
 	TITLE "Each STATUS of a REQUEST has its writer: the tick writes reporting, delivered and"
 		+ "closed, brigade wave cancel writes cancelled, and paused leaves the schema"
-	STATUS draft
+	STATUS archived
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
 	ROLE ada
-	DESC "to settle in the refinement: what wave cancel undoes, the live runs, the worktrees and"
-		+ "branches, the open pull requests"
+	DESC "absorbed by @TASK.B187 on the user's rulings of 2026-10-17: reporting, delivered and"
+		+ "closed are states of a wave, ledger events, and REQUEST keeps planning, planned and"
+		+ "cancelled; what wave cancel undoes is carried into its DESC"
+		REF @TASK.B187
 	SPEC "the tick moves a running REQUEST to reporting when every task of its wave is merged or"
 		+ "parked, the moment it runs the wave-report study of @TASK.B20"
 		REF @TASK.B20
@@ -9715,8 +9773,9 @@ TASK B167
 	SPEC "paused leaves REQUEST.STATUS of brigade/corpus/data/schema.awawa.tpl; the pause of a wave"
 		+ "is read from the ledger, wave.paused without a wave.resumed after it, as @TASK.B19 sets"
 		REF @TASK.B19
-	RATIONALE "the ruling is @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema;"
-		+ "today brigade/waves/mark_request_running.py:12 is the last writer of the eight values"
+	RATIONALE "the ruling was @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema as"
+		+ "first written; today brigade/waves/mark_request_running.py:12 is the last writer of the"
+		+ "eight values"
 		REF @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
 	SOURCE "use-case map of 2026-10-16, findings X4, G7 and B5"
 
@@ -10045,3 +10104,149 @@ TASK B186
 	SPEC "the help of each adapter command says what stdin carries, and the help of adapter probe"
 		+ "names no request it does not read, where today brigade/commands/adapter_probe.py:36 does"
 	SOURCE "use-case map of 2026-10-16, finding A20"
+
+TASK B187
+	TITLE "A REQUEST is the user's text and its plan, merged into MAIN from plan/<request>; a wave"
+		+ "is a batch of ratified tasks that brigade wave start or the tick composes, started on"
+		+ "integration/<project>_w<n> and recorded in the ledger alone"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "waves"
+	ROLE ada
+	DESC "to settle in the refinement: what wave cancel undoes, the live runs, the worktrees and"
+		+ "branches, the open pull requests"
+	DESC "to settle in the refinement: a task of an open wave that becomes blocked never lets the"
+		+ "wave end; the plan pull request under PLAN_REVIEW auto when the forge requires a review;"
+		+ "the size of a wave the tick starts, bounded by PROJECT.SLOTS alone; the numbering per"
+		+ "machine, the existing remote branch being the one guard"
+	SPEC "brigade request new <project> \"<text>\" writes a REQUEST named <project>_r<n>, n the"
+		+ "next free number among the project's requests under the lock of the corpus, STATUS"
+		+ "planning, launches its planner detached and prints the request, the run and the line"
+		+ "brigade runs show <id> --log; brigade wave new leaves the command tree"
+	SPEC "SCHEMA REQUEST of brigade/corpus/data/schema.awawa.tpl declares STATUS"
+		+ "planning|planned|cancelled and PR uint, and no BRANCH; running, paused, reporting,"
+		+ "delivered and closed leave it; an operational corpus of the older schema is thrown away,"
+		+ "never upgraded"
+	SPEC "brigade plan record <request> --file writes the plan, one MILESTONE and its tasks, in the"
+		+ "detached worktree of PROJECT.MAIN, commits it, creates plan/<request> on the commit,"
+		+ "pushes it when PROJECT.FORGE is github and opens a pull request to PROJECT.MAIN whose"
+		+ "number the REQUEST receives in PR as it goes planned; under PROJECT.FORGE none the"
+		+ "branch is merged into PROJECT.MAIN at once; where today"
+		+ "brigade/planning/record_plan.py:140-142 names and refuses the integration branch of the"
+		+ "wave"
+	SPEC "under POLICY.PLAN_REVIEW auto, the default, brigade merges the plan pull request itself,"
+		+ "squash, and under ask leaves it to the user; the tasks of a plan not yet in PROJECT.MAIN"
+		+ "are candidates of no wave"
+	SPEC "brigade wave start <project> [--task <task> ...] composes the wave without a model:"
+		+ "candidates are the TASK entities STATUS todo of the corpus at PROJECT.MAIN with a number"
+		+ "in their name, in no open wave and with no live blocker, admitted by fixpoint when every"
+		+ "task of their AFTER is implemented or in the wave, taken in the order of their number;"
+		+ "--task takes exactly the named tasks and exits 1 naming a task in an open wave or whose"
+		+ "AFTER is neither implemented nor named; an empty wave exits 1 naming the project"
+	SPEC "wave start names the wave <project>_w<n> as @TASK.B165 sets, cuts"
+		+ "integration/<project>_w<n> from PROJECT.MAIN through the gateways of brigade/git/,"
+		+ "pushes it when PROJECT.FORGE is github and appends wave.started with the branch and the"
+		+ "tasks; a branch of that name already existing, local or remote, exits 1 naming it;"
+		+ "replayed after a failure between its writes, it reuses the branch and appends no second"
+		+ "wave.started for the same wave"
+		REF @TASK.B165
+	SPEC "the planner of the tick emits StartWave(project) for a project under POLICY.WAVE_START"
+		+ "auto, the default when no POLICY names the project, when at least one candidate lies"
+		+ "outside every open wave, and nothing under ask; SCHEMA POLICY of"
+		+ "brigade/corpus/data/schema.awawa.tpl declares WAVE_START auto|ask, DEFAULT auto, beside"
+		+ "PLAN_REVIEW, read as brigade/waves/read_plan_review.py reads PLAN_REVIEW; the executor"
+		+ "runs wave start on it"
+	SPEC "the snapshot of the tick reads its waves from the ledger, every wave.started without a"
+		+ "wave.closed or a wave.cancelled after it, the tasks of a wave from the event and their"
+		+ "TASK entities from the project's corpus at the wave's branch, where today"
+		+ "brigade/tick/build_snapshot.py:155-157 reads the REQUEST entities whose STATUS is"
+		+ "running"
+	SPEC "brigade task context reads the wave of a worktree from the ledger, the wave.started whose"
+		+ "branch names the slug of task/<slug>/<task>, where today"
+		+ "brigade/tasks/locate_task_worktree.py:38-46 reads a REQUEST by its BRANCH"
+	SPEC "brigade request show <request> prints the REQUEST, its STATUS, MILESTONE, PR and"
+		+ "CREATED_AT, and brigade request list one row per REQUEST, --project narrowing it;"
+		+ "brigade wave show <wave> prints wave.started, then one row per task with its last"
+		+ "task.state, its pull request and its run; brigade wave list prints one row per wave of"
+		+ "the ledger, name, project, branch, last event and task count, the open waves first,"
+		+ "--project narrowing it; text and --json carrying schema_version"
+	SPEC "the ledger declares wave.reported with wave and run, written by the tick when every task"
+		+ "of the wave is merged or parked, the moment it runs the wave-report study of @TASK.B20;"
+		+ "wave.closed with wave and pr, written by the tick when the integration pull request is"
+		+ "merged; wave.cancelled with wave and reason, written by brigade wave cancel <wave>,"
+		+ "which exits 1 naming the last event of a wave already closed or cancelled; the pause of"
+		+ "a wave stays wave.paused without a wave.resumed after it, as @TASK.B19 sets"
+		REF @TASK.B20
+		REF @TASK.B19
+	SPEC "brigade request cancel <request> moves a REQUEST planning or planned to cancelled, and"
+		+ "one already cancelled exits 1 naming its STATUS"
+	SPEC "the implemented tasks whose SPEC this task makes false are archived at delivery, each"
+		+ "with a DESC naming this task: @TASK.B139, SPEC 6 to 9, the integration branch named,"
+		+ "committed, pushed and written in BRANCH by plan record; @TASK.B12, SPEC 1 and 9, the"
+		+ "snapshot built from the running REQUEST entities and the planned request started by the"
+		+ "tick; @TASK.B13, SPEC 1, the wave read from integration/<slug> naming the REQUEST;"
+		+ "@TASK.B10, SPEC 3, the procedure wave-plan.md cutting one request into a wave"
+		REF @TASK.B139
+		REF @TASK.B12
+		REF @TASK.B13
+		REF @TASK.B10
+	SPEC "tests/cli prove request new, show, list and cancel, plan record with its branch and its"
+		+ "pull request under each FORGE and each PLAN_REVIEW, wave start with and without --task,"
+		+ "each refusal, the replay, wave show and list, the tick starting a wave under auto and"
+		+ "not under ask, the snapshot read from the ledger, and each wave event with its writer,"
+		+ "on a fixture project through the fake adapter, awawa replayed from recorded outputs"
+		+ "where it is not on PATH"
+	AFTER @TASK.B164
+	RATIONALE "the ruling is @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone:"
+		+ "three names, wave, milestone and request, covered one reality, a REQUEST becoming one"
+		+ "MILESTONE becoming one wave on one branch, brigade/corpus/data/schema.awawa.tpl:149,"
+		+ "brigade/planning/record_plan.py:63-65 and brigade/waves/start_wave.py:34; the writers of"
+		+ "the wave events are those of"
+		+ "@DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema as amended"
+		REF @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
+		REF @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
+	RATIONALE "absorbs @TASK.B167, archived: its reporting, delivered and closed are the wave"
+		+ "events of SPEC 11, its wave cancel acts on a wave and its cancelled is request cancel"
+		REF @TASK.B167
+	RATIONALE "to amend at delivery, in the same pull request, each reread against the model:"
+		+ "@TASK.B19, wave resume by wave name; @TASK.B20, REPORT.WAVE the wave name; @TASK.B21,"
+		+ "from request new to the integration pull request; @TASK.B14, @TASK.B17, @TASK.B142 and"
+		+ "@TASK.B143, the branch of the wave read from wave.started; @TASK.B168, wave requeue"
+		+ "<wave> <task>; @TASK.B169, request replan <request>; @TASK.B170, the paused waves by"
+		+ "wave name; @TASK.B171, the integration pull request opened at the first merged task, the"
+		+ "branch equalling PROJECT.MAIN at start; @TASK.B175, --wave <wave>; @TASK.B163, one sense"
+		+ "each for wave, request and milestone; @TASK.B166 SPEC 5 is already reworded on the wave"
+		+ "name; @TASK.B11 is archived by @TASK.B165"
+		REF @TASK.B19
+		REF @TASK.B20
+		REF @TASK.B21
+		REF @TASK.B14
+		REF @TASK.B17
+		REF @TASK.B142
+		REF @TASK.B143
+		REF @TASK.B168
+		REF @TASK.B169
+		REF @TASK.B170
+		REF @TASK.B171
+		REF @TASK.B175
+		REF @TASK.B163
+		REF @TASK.B166
+		REF @TASK.B11
+		REF @TASK.B165
+	RATIONALE "the integration pull request cannot open at wave start, the branch equalling"
+		+ "PROJECT.MAIN; the overlap of the tasks is the planner's AFTER edges,"
+		+ "@DECISION.ThePlannerWritesEveryOverlapRulingAsAnAfterEdge, and the rebase of @TASK.B143"
+		REF @DECISION.ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
+		REF @TASK.B143
+	SOURCE "the user's words of 2026-10-17 in the refinement of B164 and B165: « mon but c'est"
+		+ "d'harmoniser les commandes pour éviter d'avoir 3 noms qui recouvrent une même réalité."
+		+ "On parle de wave, milestone et request. »; « pour moi, une milestone c'est un groupe de"
+		+ "tâche qui tendent vers un même objectif, tandis qu'une wave c'est un groupe de tâche qui"
+		+ "vont être exécutés en parallèle, indépendemment de leur appartenance à une milestone. »;"
+		+ "« La wave ne doit pas forcément apparaitre dans le corpus, ça se décide au démarrage"
+		+ "après analyse des tâches démarrables, du recouvrement de code etc. »"
+	SOURCE "the user's rulings of 2026-10-17 in the same refinement: « Oui, ce modèle (Recommended)"
+		+ "» on the model; « Les deux préfixés »; « Plusieurs » open waves on one project; « Le"
+		+ "tick, si la politique WAVE_START vaut auto (Recommended) »"
+	SOURCE "use-case map of 2026-10-16, findings X4, G7 and B5, through @TASK.B167"
+		REF @TASK.B167
