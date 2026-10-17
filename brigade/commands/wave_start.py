@@ -1,5 +1,6 @@
 from brigade.command import Argument, Command
 from brigade.runtime import Runtime
+from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.waves.start_wave import start_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -11,8 +12,8 @@ def _read_request(options):
 
 def _render_text(document: dict) -> str:
     return (
-        f"@REQUEST.{document['request']} {document['status']},"
-        f" wave @MILESTONE.{document['milestone']} of @PROJECT.{document['project']}"
+        f"@REQUEST.{document['request']} {document['status']}, wave {document['wave']},"
+        f" @MILESTONE.{document['milestone']} of @PROJECT.{document['project']}"
     )
 
 
@@ -21,7 +22,8 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def wave_start(request, runtime: Runtime) -> dict:
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **start_wave(runtime, request.request)}
+    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **start_wave(runtime, configuration, request.request)}
 
 
 COMMAND = Command(

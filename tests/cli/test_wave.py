@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
@@ -44,6 +45,21 @@ WAVE_TASKS = (
     "\tMILESTONE @MILESTONE.M1\n"
     "\tDELIVERED_BY 12\n"
 )
+UNORDERED_WAVE_TASKS = (
+    "TASK S2\n"
+    '\tTITLE "Remove an item from the cart"\n'
+    "\tSTATUS implemented\n"
+    "\n"
+    "TASK S10\n"
+    '\tTITLE "Show the emptied cart"\n'
+    "\tSTATUS todo\n"
+    "\tMILESTONE @MILESTONE.M1\n"
+    "\n"
+    "TASK S9\n"
+    '\tTITLE "Empty the cart in one click"\n'
+    "\tSTATUS todo\n"
+    "\tMILESTONE @MILESTONE.M1\n"
+)
 WAVE_MILESTONES = 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS planned\n'
 WAVE_BRANCH = "integration/M1-empty-cart"
 CLOSED_REQUEST = (
@@ -62,6 +78,15 @@ PLANNED_REQUEST = (
     '\tMILESTONE "M1"\n'
     f'\tBRANCH "{WAVE_BRANCH}"\n'
 )
+RUNNING_REQUEST = (
+    "REQUEST shop_1\n"
+    "\tPROJECT @PROJECT.shop\n"
+    f'\tTEXT "{REQUEST_TEXT}"\n'
+    '\tCREATED_AT "2026-10-12T09:30:00Z"\n'
+    "\tSTATUS running\n"
+    '\tMILESTONE "M1"\n'
+    f'\tBRANCH "{WAVE_BRANCH}"\n'
+)
 PLANNING_REQUEST = (
     "REQUEST shop_2\n"
     "\tPROJECT @PROJECT.shop\n"
@@ -69,13 +94,27 @@ PLANNING_REQUEST = (
     '\tCREATED_AT "2026-10-13T14:00:00Z"\n'
     "\tSTATUS planning\n"
 )
-TASK_STATES = (
-    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "M1", "task": "S3",'
+WAVE_STARTED = (
+    '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3", "S4"]}}\n'
+)
+WAVE_EVENTS = (
+    '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3", "S4"]}}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "queued"}\n'
-    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "M1", "task": "S3",'
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "running"}\n'
-    '{"schema_version": 1, "ts": "2026-10-13T12:00:00Z", "event": "task.state", "wave": "M0", "task": "S3",'
+    '{"schema_version": 2, "ts": "2026-10-13T11:30:00Z", "event": "wave.started", "wave": "cafe_w1",'
+    f' "project": "cafe", "branch": "{WAVE_BRANCH}", "tasks": ["S3"]}}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T12:00:00Z", "event": "task.state", "wave": "cafe_w1", "task": "S3",'
     ' "state": "merged"}\n'
+)
+EARLIER_WAVES = (
+    '{"schema_version": 2, "ts": "2026-10-10T09:00:00Z", "event": "wave.started", "wave": "shop_w2",'
+    ' "project": "shop", "branch": "integration/M0-cart", "tasks": ["S2"]}\n'
+    '{"schema_version": 2, "ts": "2026-10-11T09:00:00Z", "event": "wave.started", "wave": "cafe_w5",'
+    ' "project": "cafe", "branch": "integration/M3-receipt", "tasks": ["C4"]}\n'
 )
 ASKING_POLICY = "POLICY shop_review\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
 
@@ -114,9 +153,9 @@ class WaveTestCase(FileWaitingTestCase):
         lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
         return [event for event in map(json.loads, lines) if event["event"] == name]
 
-    def cut_wave_branch(self) -> None:
+    def cut_wave_branch(self, tasks: str = WAVE_TASKS) -> None:
         self.project.run_git("checkout", "--quiet", "-b", WAVE_BRANCH)
-        self.project.write("corpus/tasks.awawa", WAVE_TASKS)
+        self.project.write("corpus/tasks.awawa", tasks)
         self.project.write("corpus/milestones.awawa", WAVE_MILESTONES)
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the plan of M1")
@@ -244,6 +283,10 @@ class BrigadeWaveNewWithAClientCountingNoStepsTest(WaveTestCase):
 
 
 class BrigadeWaveStartTest(WaveTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cut_wave_branch(UNORDERED_WAVE_TASKS)
+
     def test_should_move_a_planned_request_to_running(self):
         # Arrange
         self.write_requests(PLANNED_REQUEST)
@@ -255,7 +298,14 @@ class BrigadeWaveStartTest(WaveTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "request": "shop_1", "status": "running", "milestone": "M1", "project": "shop"},
+            {
+                "schema_version": 1,
+                "request": "shop_1",
+                "status": "running",
+                "wave": "shop_w1",
+                "milestone": "M1",
+                "project": "shop",
+            },
         )
         self.assertEqual(self.read_requests(), PLANNED_REQUEST.replace("STATUS planned", "STATUS running"))
 
@@ -267,8 +317,33 @@ class BrigadeWaveStartTest(WaveTestCase):
         self.run_wave("start", "shop_1")
 
         # Assert
-        [started] = self.read_events("wave.started")
-        self.assertEqual((started["wave"], started["project"]), ("M1", "shop"))
+        self.assertEqual(
+            self.read_events("wave.started"),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": ANY,
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": WAVE_BRANCH,
+                    "tasks": ["S9", "S10"],
+                }
+            ],
+        )
+
+    def test_should_number_the_wave_one_above_the_highest_wave_of_its_project(self):
+        # Arrange
+        self.write_requests(PLANNED_REQUEST)
+        self.ledger.mkdir(parents=True)
+        (self.ledger / "2026-10.jsonl").write_text(EARLIER_WAVES)
+
+        # Act
+        completed = self.run_wave("start", "shop_1", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["wave"], "shop_w3")
 
     def test_should_print_the_start_as_text(self):
         # Arrange
@@ -279,7 +354,7 @@ class BrigadeWaveStartTest(WaveTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "@REQUEST.shop_1 running, wave @MILESTONE.M1 of @PROJECT.shop\n")
+        self.assertEqual(completed.stdout, "@REQUEST.shop_1 running, wave shop_w1, @MILESTONE.M1 of @PROJECT.shop\n")
 
     def test_should_exit_1_naming_the_status_of_a_request_that_is_not_planned(self):
         # Arrange
@@ -301,9 +376,9 @@ class BrigadeWaveShowTest(WaveTestCase):
     def setUp(self):
         super().setUp()
         self.cut_wave_branch()
-        self.write_requests(f"{PLANNED_REQUEST}\n{PLANNING_REQUEST}")
+        self.write_requests(f"{RUNNING_REQUEST}\n{PLANNING_REQUEST}")
         self.ledger.mkdir(parents=True)
-        (self.ledger / "2026-10.jsonl").write_text(TASK_STATES)
+        (self.ledger / "2026-10.jsonl").write_text(WAVE_EVENTS)
 
     def test_should_print_the_request_and_the_tasks_of_its_wave_with_their_states(self):
         # Act
@@ -318,11 +393,12 @@ class BrigadeWaveShowTest(WaveTestCase):
                 "request": "shop_1",
                 "project": "shop",
                 "text": REQUEST_TEXT,
-                "status": "planned",
+                "status": "running",
+                "wave": "shop_w1",
                 "milestone": "M1",
                 "branch": WAVE_BRANCH,
                 "created_at": "2026-10-12T09:30:00Z",
-                "waits_for": "the next tick",
+                "waits_for": None,
                 "tasks": [
                     {"task": "S3", "title": "Empty the cart in one click", "state": "running", "pull_request": None},
                     {"task": "S4", "title": "Confirm before emptying the cart", "state": "queued", "pull_request": 12},
@@ -332,6 +408,7 @@ class BrigadeWaveShowTest(WaveTestCase):
 
     def test_should_print_that_a_planned_request_waits_for_wave_start_under_plan_review_ask(self):
         # Arrange
+        self.write_requests(PLANNED_REQUEST)
         (self.machine.corpus / "policies.awawa").write_text(ASKING_POLICY)
 
         # Act
@@ -355,6 +432,7 @@ class BrigadeWaveShowTest(WaveTestCase):
                 "project": "shop",
                 "text": "show the total of the cart",
                 "status": "planning",
+                "wave": None,
                 "milestone": None,
                 "branch": None,
                 "created_at": "2026-10-13T14:00:00Z",
@@ -371,12 +449,13 @@ class BrigadeWaveShowTest(WaveTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "@REQUEST.shop_1 of @PROJECT.shop  planned\n"
+            "@REQUEST.shop_1 of @PROJECT.shop  running\n"
             f"{REQUEST_TEXT}\n"
+            "wave        shop_w1\n"
             "milestone   M1\n"
             f"branch      {WAVE_BRANCH}\n"
             "created at  2026-10-12T09:30:00Z\n"
-            "waits for   the next tick\n"
+            "waits for   -\n"
             "\n"
             "task  state    pull request  title\n"
             "S3    running  -             Empty the cart in one click\n"
@@ -447,8 +526,10 @@ class BrigadeWaveListTest(WaveTestCase):
         cafe.write("corpus/_schema.awawa", PROJECT_SCHEMA)
         cafe.track("corpus")
         self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(cafe.path))
+        self.ledger.mkdir(parents=True)
+        (self.ledger / "2026-10.jsonl").write_text(WAVE_STARTED)
         self.write_requests(
-            f"{PLANNED_REQUEST}\n{PLANNING_REQUEST}\n"
+            f"{RUNNING_REQUEST}\n{PLANNING_REQUEST}\n"
             "REQUEST cafe_1\n"
             "\tPROJECT @PROJECT.cafe\n"
             '\tTEXT "print the receipt"\n'
@@ -471,6 +552,7 @@ class BrigadeWaveListTest(WaveTestCase):
                         "name": "cafe_1",
                         "project": "cafe",
                         "status": "planning",
+                        "wave": None,
                         "milestone": None,
                         "branch": None,
                         "created_at": "2026-10-14T07:15:00Z",
@@ -478,7 +560,8 @@ class BrigadeWaveListTest(WaveTestCase):
                     {
                         "name": "shop_1",
                         "project": "shop",
-                        "status": "planned",
+                        "status": "running",
+                        "wave": "shop_w1",
                         "milestone": "M1",
                         "branch": WAVE_BRANCH,
                         "created_at": "2026-10-12T09:30:00Z",
@@ -487,6 +570,7 @@ class BrigadeWaveListTest(WaveTestCase):
                         "name": "shop_2",
                         "project": "shop",
                         "status": "planning",
+                        "wave": None,
                         "milestone": None,
                         "branch": None,
                         "created_at": "2026-10-13T14:00:00Z",
@@ -508,6 +592,7 @@ class BrigadeWaveListTest(WaveTestCase):
                     "name": "cafe_1",
                     "project": "cafe",
                     "status": "planning",
+                    "wave": None,
                     "milestone": None,
                     "branch": None,
                     "created_at": "2026-10-14T07:15:00Z",
@@ -523,10 +608,10 @@ class BrigadeWaveListTest(WaveTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "request  project  status    milestone  branch                     created at\n"
-            "cafe_1   cafe     planning  -          -                          2026-10-14T07:15:00Z\n"
-            f"shop_1   shop     planned   M1         {WAVE_BRANCH}  2026-10-12T09:30:00Z\n"
-            "shop_2   shop     planning  -          -                          2026-10-13T14:00:00Z\n",
+            "request  project  status    wave     milestone  branch                     created at\n"
+            "cafe_1   cafe     planning  -        -          -                          2026-10-14T07:15:00Z\n"
+            f"shop_1   shop     running   shop_w1  M1         {WAVE_BRANCH}  2026-10-12T09:30:00Z\n"
+            "shop_2   shop     planning  -        -          -                          2026-10-13T14:00:00Z\n",
         )
 
 

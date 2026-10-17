@@ -25,6 +25,7 @@ def create_wave(tasks: tuple[TaskFacts, ...], states: dict, implemented: tuple[s
         request="shop_1",
         project="shop",
         milestone="M1",
+        wave="shop_w1",
         branch=WAVE_BRANCH,
         tasks=tasks,
         states=states,
@@ -37,9 +38,11 @@ FOLLOWING = (TaskFacts(name="S3", after=("S2",)),)
 BLOCKED = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided",)),)
 
 
-LAUNCH_S3 = LaunchTask(request="shop_1", project="shop", milestone="M1", branch=WAVE_BRANCH, task="S3")
-LAUNCH_S9 = LaunchTask(request="shop_1", project="shop", milestone="M1", branch=WAVE_BRANCH, task="S9")
-LAUNCH_S10 = LaunchTask(request="shop_1", project="shop", milestone="M1", branch=WAVE_BRANCH, task="S10")
+LAUNCH_S3 = LaunchTask(request="shop_1", project="shop", milestone="M1", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
+LAUNCH_S9 = LaunchTask(request="shop_1", project="shop", milestone="M1", wave="shop_w1", branch=WAVE_BRANCH, task="S9")
+LAUNCH_S10 = LaunchTask(
+    request="shop_1", project="shop", milestone="M1", wave="shop_w1", branch=WAVE_BRANCH, task="S10"
+)
 
 
 class PlanTest(unittest.TestCase):
@@ -126,6 +129,7 @@ class PlanSlotsTest(unittest.TestCase):
             request="shop_2",
             project="shop",
             milestone="M2",
+            wave="shop_w2",
             branch="integration/M2-total",
             tasks=(TaskFacts(name="S7"),),
         )

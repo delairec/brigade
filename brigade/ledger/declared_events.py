@@ -22,7 +22,11 @@ from brigade.ledger.wave_started import WaveStarted
 
 LEDGER_SCHEMA_VERSION = 1
 RUN_FINISHED_SCHEMA_VERSION = 2
-WRITTEN_SCHEMA_VERSIONS = {RunFinished.name: RUN_FINISHED_SCHEMA_VERSION}
+WAVE_STARTED_SCHEMA_VERSION = 2
+WRITTEN_SCHEMA_VERSIONS = {
+    RunFinished.name: RUN_FINISHED_SCHEMA_VERSION,
+    WaveStarted.name: WAVE_STARTED_SCHEMA_VERSION,
+}
 DECLARED_EVENTS = {
     kind.name: kind
     for kind in (

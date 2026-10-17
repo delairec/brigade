@@ -62,7 +62,8 @@ SCHEMA = (
 )
 TASKS = 'TASK T1\n\tTITLE "write the app"\n\tSTATUS todo\n'
 LEDGER_LINES = (
-    '{"schema_version": 1, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "app/1", "project": "app"}\n'
+    '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "app/1", "project": "app",'
+    ' "branch": "integration/M1", "tasks": ["T1"]}\n'
     '{"schema_version": 2, "ts": "2026-10-02T10:00:00Z", "event": "run.finished", "wave": "app/1", "task": "B1",'
     ' "run": "20261002T100000Z-a00001", "client": "claude-code", "project": "app", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'

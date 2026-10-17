@@ -11,8 +11,8 @@ from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_started import WaveStarted
 
 WAVE_STARTED = (
-    '{"schema_version": 1, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tp/16",'
-    ' "project": "tidepool"}\n'
+    '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tp/16",'
+    ' "project": "tidepool", "branch": "integration/M4-tides", "tasks": ["T7"]}\n'
 )
 WAVE_PAUSED = '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.paused", "wave": "tp/16"}\n'
 RUN_FINISHED_OF_SCHEMA_1 = (
@@ -81,7 +81,9 @@ class ReadLedgerWhenEveryLineIsWholeTest(ReadLedgerTestCase):
                 entries=(
                     LedgerEntry(
                         instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
-                        event=WaveStarted(wave="tp/16", project="tidepool"),
+                        event=WaveStarted(
+                            wave="tp/16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
+                        ),
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
@@ -169,6 +171,13 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
             (
                 b'{"schema_version": 3, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "run": "r1"}\n',
                 "schema_version is 3, not one of 2",
+            ),
+            (
+                (
+                    b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.started", "wave": "M1",'
+                    b' "project": "tidepool"}\n'
+                ),
+                "schema_version is 1, not one of 2",
             ),
             (
                 (
