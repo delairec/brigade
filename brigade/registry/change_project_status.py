@@ -1,12 +1,13 @@
+from brigade.corpus.set_entity_status import set_entity_status
 from brigade.errors import BrigadeError
 from brigade.registry.change_registry import REGISTRY_FILE, change_registry
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
-from brigade.registry.set_project_status import set_project_status
 from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
+ENTITY_TYPE = "PROJECT"
 ACTIONS = {"paused": "pause", "active": "resume"}
 
 
@@ -15,7 +16,7 @@ def _build_rewrite(runtime: Runtime, name: str, status: str):
         project = find_project(read_projects(runtime), name)
         if any(field.name == "STATUS" and field.value == status for field in project.fields):
             return None
-        rewritten = set_project_status(text, name, status)
+        rewritten = set_entity_status(text, ENTITY_TYPE, name, status)
         if rewritten is None:
             raise BrigadeError(f"@PROJECT.{name} is not written in {REGISTRY_FILE}")
         return rewritten

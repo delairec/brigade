@@ -280,7 +280,7 @@ TASK B04
 		+ "already in that status is left as it is, exit 0"
 		IMPL "brigade/registry/change_project_status.py::def change_project_status(runtime:"
 			+ "Runtime, name: str, status: str) -> dict:"
-		IMPL "brigade/registry/set_project_status.py::def set_project_status("
+		IMPL "brigade/corpus/set_entity_status.py::def set_entity_status("
 		IMPL "tests/cli/test_project.py::class BrigadeProjectPauseAndResumeTest(ProjectTestCase):"
 	SPEC "every write runs under the lock of the corpus repository in"
 		+ "$XDG_STATE_HOME/brigade/locks/, then awawa fmt, awawa lint --strict and one git commit;"
