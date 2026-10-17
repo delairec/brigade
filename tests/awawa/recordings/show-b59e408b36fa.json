@@ -24,10 +24,10 @@
     "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"STUDY\", \"name\": \"digest\", \"file\": \"<tmp:0>/config/brigade/studies.awawa\", \"line\": 11, \"status\": \"active\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"the digest\\\"\"], \"fields\": []}, {\"name\": \"PROJECT\", \"atoms\": [\"@PROJECT.shop\"], \"fields\": []}, {\"name\": \"COLLECTOR\", \"atoms\": [\"\\\"study name=trees\\\"\"], \"fields\": []}, {\"name\": \"SLOT\", \"atoms\": [\"none\"], \"fields\": []}, {\"name\": \"EVERY\", \"atoms\": [\"\\\"daily@09:00\\\"\"], \"fields\": []}, {\"name\": \"OUTPUT\", \"atoms\": [\"\\\"entity:ANSWER\\\"\"], \"fields\": []}, {\"name\": \"ANSWER\", \"atoms\": [\"\\\"ANSWER\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"active\"], \"fields\": []}], \"duplicates\": []}\n"
   },
   "run_order": [
-    "<run:2>",
     "<run:4>",
-    "<run_name:1>",
-    "<run_name:3>"
+    "<run:2>",
+    "<run_name:3>",
+    "<run_name:1>"
   ],
   "version": "awawa 2.7.0"
 }

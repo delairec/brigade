@@ -7,7 +7,7 @@
     "cwd": "<tmp:0>/config/brigade",
     "directories": [],
     "inputs": {
-      "<tmp:0>/config/brigade/studies.awawa": "STUDY monthly\n\tTITLE \"the monthly study\"\n\tCOLLECTOR \"shell: true\"\n\tSLOT report\n\tEVERY \"1h\"\n\tOUTPUT \"entity:ANSWER\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n"
+      "<tmp:0>/config/brigade/studies.awawa": "STUDY weekly\n\tTITLE \"the weekly study\"\n\tCOLLECTOR \"shell: sh -c \\\"until [ -e <tmp:0>/gate ]; do sleep 0.1; done\\\"\"\n\tSLOT report\n\tEVERY \"1h\"\n\tOUTPUT \"entity:ANSWER\"\n\tANSWER \"ANSWER\"\n\tSTATUS active\n"
     }
   },
   "outcome": {
