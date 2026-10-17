@@ -5,6 +5,13 @@ from unittest.mock import ANY
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_task import RUN_ID, TaskContextTestCase
 
+CHECKED_TASKS = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\nTASK S3\n'
+    '\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
+    '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+    '\tSPEC "the emptying charges nothing"\n\nTASK S6\n\tTITLE "Count the emptied carts"\n'
+    "\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+)
 PASSING_LINE = "python3 -c \"print('the cart is empty')\""
 FAILING_LINE = "python3 -c \"import sys; [print(f'line {n}') for n in range(1, 26)]; sys.exit(3)\""
 UNSPLITTABLE_LINE = "python3 -c \"print('the cart is empty')"
@@ -17,9 +24,7 @@ LAST_TWENTY_LINES = (
 class TaskCheckTestCase(TaskContextTestCase):
     def setUp(self):
         super().setUp()
-        anchored = self.worktree / "src" / "billing" / "charge.py"
-        anchored.parent.mkdir(parents=True)
-        anchored.write_text("def charge():\n    pass\n")
+        (self.worktree / "corpus" / "tasks.awawa").write_text(CHECKED_TASKS)
 
     def describe_project_commands(self) -> tuple[str, ...]:
         return ("--acceptance", PASSING_LINE)

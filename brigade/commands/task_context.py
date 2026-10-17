@@ -1,12 +1,12 @@
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._read_attribution import read_attribution
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import read_configuration
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tasks.assemble_task_context import assemble_task_context
 from brigade.tasks.locate_task_worktree import locate_task_worktree
-from brigade.tasks.read_attribution import read_attribution
 
 DOCUMENT_SCHEMA_VERSION = 1
 PACKAGE_FILE = "context.md"

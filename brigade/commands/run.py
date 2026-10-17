@@ -2,6 +2,7 @@ import argparse
 import dataclasses
 
 from brigade.command import Argument, Command
+from brigade.commands._read_forge_environment import read_forge_environment
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.describe_skipped_runs import describe_skipped_runs
@@ -13,7 +14,6 @@ from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import SLOTS, Configuration, read_configuration
-from brigade.system.read_forge_environment import read_forge_environment
 from brigade.system.stop_signal_receiver import StopSignalReceiver
 
 DOCUMENT_SCHEMA_VERSION = 1

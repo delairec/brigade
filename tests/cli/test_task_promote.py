@@ -2,16 +2,33 @@ from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_task import TASK_BRANCH
-from tests.cli.test_task_pr import SUBJECT, TYPED_SCHEMA, TYPED_TASKS, TaskPrTestCase
+from tests.cli.test_task_pr import SUBJECT, TYPED_TASKS, TaskPrTestCase
 
 PROMOTED_TASK = (
     'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY {pr}\n\tTYPE feat\n'
     '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
     '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
-    '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n'
+    '\tSPEC "the emptying charges nothing"\n'
 )
-SCHEMA_WITHOUT_DELIVERED_BY = TYPED_SCHEMA.replace("\tFIELD DELIVERED_BY uint\n", "")
-SCHEMA_WITHOUT_IMPLEMENTED = TYPED_SCHEMA.replace("\tFIELD STATUS todo|implemented\n", "\tFIELD STATUS todo|done\n")
+OTHER_TASK_PR_OPENED = (
+    '{"schema_version": 1, "ts": "2026-10-17T12:00:00Z", "event": "task.pr_opened", "project": "shop",'
+    ' "task": "S6", "wave": "M1", "branch": "task/M1-empty-cart/S6", "pr": 43, "login": "octo-bot"}\n'
+)
+SCHEMA_WITHOUT_DELIVERED_BY = (
+    'SCHEMA TASK\n\tDESC "a change delivered by one pull request"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
+    "\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD TYPE feat|fix\n\tFIELD COMPONENT string\n"
+    "\tFIELD MILESTONE @MILESTONE\n\tFIELD SPEC string\n\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n"
+    '\t\t\tREPEATABLE\n\nSCHEMA MILESTONE\n\tDESC "the tasks planned for one request"\n'
+    "\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running\n\t\tREQUIRED\n"
+)
+SCHEMA_WITHOUT_IMPLEMENTED = (
+    'SCHEMA TASK\n\tDESC "a change delivered by one pull request"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
+    "\tFIELD STATUS todo|done\n\t\tREQUIRED\n\tFIELD TYPE feat|fix\n\tFIELD COMPONENT string\n"
+    "\tFIELD MILESTONE @MILESTONE\n\tFIELD SPEC string\n\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n"
+    "\t\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n"
+    '\tDESC "the tasks planned for one request"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
+    "\tFIELD STATUS planned|running\n\t\tREQUIRED\n"
+)
 
 
 class TaskPromoteTestCase(TaskPrTestCase):
@@ -47,7 +64,11 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
         completed = self.run_task_promote()
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            (completed.returncode, completed.stdout),
+            (0, f"@TASK.S3 implemented, delivered by #42, in {self.read_head()}\n"),
+            completed.stderr,
+        )
         self.assertIn(PROMOTED_TASK.format(pr=42), self.read_tasks())
 
     def test_should_commit_the_promotion_and_push_it(self):
@@ -62,6 +83,13 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
             ),
             ("docs(corpus): mark @TASK.S3 implemented, delivered by #42", self.read_head()),
         )
+
+    def test_should_push_the_promotion_as_the_login_of_the_build_slot(self):
+        # Act
+        self.run_task_promote()
+
+        # Assert
+        self.assertEqual(self.pushes.read_text(), "token-of-octo-bot\ntoken-of-octo-bot\n")
 
     def test_should_record_the_promotion_in_the_ledger(self):
         # Act
@@ -82,6 +110,18 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
                 }
             ],
         )
+
+    def test_should_promote_on_the_pull_request_of_the_task_not_on_the_last_one_of_the_wave(self):
+        # Arrange
+        ledger = next((self.state / "ledger").glob("*.jsonl"))
+        with ledger.open("a") as lines:
+            lines.write(OTHER_TASK_PR_OPENED)
+
+        # Act
+        self.run_task_promote()
+
+        # Assert
+        self.assertIn(PROMOTED_TASK.format(pr=42), self.read_tasks())
 
     def test_should_promote_on_the_pull_request_the_option_names(self):
         # Act

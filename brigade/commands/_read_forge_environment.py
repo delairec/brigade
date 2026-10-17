@@ -5,6 +5,7 @@ from brigade.system.read_configuration import Configuration
 from brigade.system.require_login_environment import LoginDemand, require_login_environment
 
 FORGE_NAME = "github"
+BUILD_SLOT = "build"
 UNBOUND_ENVIRONMENT = {}
 
 

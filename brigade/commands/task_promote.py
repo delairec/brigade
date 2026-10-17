@@ -1,7 +1,9 @@
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._read_forge_environment import BUILD_SLOT, read_forge_environment
 from brigade.runtime import Runtime
+from brigade.system.read_configuration import read_configuration
 from brigade.tasks.promote_task import TaskPromotionDemand, promote_task
 
 
@@ -18,7 +20,16 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def task_promote(request, runtime: Runtime) -> dict:
-    return promote_task(runtime, TaskPromotionDemand(path=Path.cwd(), task=request.task, pr=request.pr))
+    configuration = read_configuration(runtime.paths.configuration_file)
+    return promote_task(
+        runtime,
+        TaskPromotionDemand(
+            path=Path.cwd(),
+            task=request.task,
+            pr=request.pr,
+            environment=read_forge_environment(configuration, BUILD_SLOT, runtime),
+        ),
+    )
 
 
 COMMAND = Command(

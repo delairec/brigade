@@ -2,10 +2,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.git.push_branch import push_branch
+from brigade.git.push_branch import BranchPush, push_branch
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
 
+NO_ENVIRONMENT = {}
 IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 
 
@@ -40,7 +41,10 @@ class PushBranchTest(RepositoryTestCase):
         run_git(self.repository, "branch", "integration/W1-empty-the-cart")
 
         # Act
-        push_branch(run_process_without_trail, self.repository, "integration/W1-empty-the-cart")
+        push_branch(
+            run_process_without_trail,
+            BranchPush(repository=self.repository, branch="integration/W1-empty-the-cart", environment=NO_ENVIRONMENT),
+        )
 
         # Assert
         self.assertEqual(

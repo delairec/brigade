@@ -29,10 +29,17 @@ TYPED_TASKS = (
     'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tTYPE feat\n\tCOMPONENT "cart button"\n'
     "\tMILESTONE @MILESTONE.M1\n"
     '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
-    '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n\n'
+    '\tSPEC "the emptying charges nothing"\n\n'
     'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
 )
-UNTYPED_TASKS = TYPED_TASKS.replace("\tTYPE feat\n", "")
+UNTYPED_TASKS = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\nTASK S3\n'
+    '\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tCOMPONENT "cart button"\n'
+    "\tMILESTONE @MILESTONE.M1\n"
+    '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+    '\tSPEC "the emptying charges nothing"\n\nTASK S6\n\tTITLE "Count the emptied carts"\n'
+    "\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+)
 FAKE_GH = (
     "#!/bin/sh\n"
     'printf \'%s\\n\' "$*" >> "{calls}"\n'
@@ -50,6 +57,7 @@ PULL_REQUEST_CREATION = (
     f"pr create --base {WAVE_BRANCH} --head {TASK_BRANCH} --milestone Empty cart"
     f" --title feat(cart-button): {SUBJECT} (@TASK.S3) --body-file -\n"
 )
+RECEIVING_HOOK = '#!/bin/sh\nprintf "%s\\n" "$GH_TOKEN" >> "{pushes}"\n'
 MILESTONE_CREATION = "api --method POST repos/{owner}/{repo}/milestones -f title=Empty cart\n"
 
 
@@ -63,6 +71,8 @@ class TaskPrTestCase(TaskCheckTestCase):
         install_executable(root / "tools" / "gh", FAKE_GH.format(calls=self.gh_calls, milestones=self.milestones))
         self.remote = root / "remotes" / "shop.git"
         self.project.run_git("init", "--quiet", "--bare", str(self.remote))
+        self.pushes = root / "pushes"
+        install_executable(self.remote / "hooks" / "pre-receive", RECEIVING_HOOK.format(pushes=self.pushes))
         self.project.run_git("remote", "add", "origin", str(self.remote))
         self.configure(keys=PR_KEYS)
         self.write_task(TYPED_TASKS)
@@ -74,7 +84,7 @@ class TaskPrTestCase(TaskCheckTestCase):
     def write_task(self, tasks: str) -> None:
         (self.worktree / "corpus" / "_schema.awawa").write_text(TYPED_SCHEMA)
         (self.worktree / "corpus" / "tasks.awawa").write_text(tasks)
-        self.project.run_git("-C", str(self.worktree), "add", "corpus", "src")
+        self.project.run_git("-C", str(self.worktree), "add", "corpus")
         self.project.run_git("-C", str(self.worktree), "commit", "--quiet", "-m", "the task")
 
     def run_task_pr(self, *arguments: str):
@@ -115,12 +125,21 @@ class BrigadeTaskPrAfterAPassingCheckTest(TaskPrTestCase):
             self.project.run_git("-C", str(self.remote), "rev-parse", TASK_BRANCH).strip(), self.read_head()
         )
 
+    def test_should_push_the_task_branch_as_the_login_of_the_build_slot(self):
+        # Act
+        self.run_task_pr("--subject", SUBJECT)
+
+        # Assert
+        self.assertEqual(self.pushes.read_text(), "token-of-octo-bot\n")
+
     def test_should_open_the_pull_request_on_the_wave_branch_titled_from_the_task_and_the_subject(self):
         # Act
         completed = self.run_task_pr("--subject", SUBJECT)
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            (completed.returncode, completed.stdout), (0, "https://github.com/acme/shop/pull/42\n"), completed.stderr
+        )
         self.assertIn(PULL_REQUEST_CREATION, self.read_gh_calls())
 
     def test_should_fill_the_body_with_the_task_its_criteria_its_checks_and_the_attribution(self):
@@ -214,8 +233,9 @@ class BrigadeTaskPrRefusalTest(TaskPrTestCase):
         # Arrange
         self.run_task_check()
         checked = self.read_head()
-        (self.worktree / "src" / "billing" / "charge.py").write_text("def charge():\n    return 0\n")
-        self.project.run_git("-C", str(self.worktree), "commit", "--quiet", "-am", "charge nothing")
+        (self.worktree / "README.md").write_text("the cart empties in one click\n")
+        self.project.run_git("-C", str(self.worktree), "add", "README.md")
+        self.project.run_git("-C", str(self.worktree), "commit", "--quiet", "-m", "describe the button")
 
         # Act
         completed = self.run_task_pr("--subject", SUBJECT)

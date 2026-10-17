@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import BrigadeError
-from brigade.git.push_branch import push_branch
+from brigade.git.push_branch import BranchPush, push_branch
 from brigade.git.read_current_branch import read_current_branch
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.append_event import append_event
@@ -12,17 +12,12 @@ from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
-from brigade.system.ask_forge_account import ask_forge_account
-from brigade.system.read_configuration import read_configuration
-from brigade.system.read_forge_environment import FORGE_NAME, read_forge_environment
 from brigade.tasks.compose_pull_request_title import PullRequestTitleParts, compose_pull_request_title
 from brigade.tasks.describe_pull_request_body import PullRequestBodyParts, describe_pull_request_body
 from brigade.tasks.locate_check_record import locate_check_record
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
-from brigade.tasks.read_attribution import read_attribution
 
 DOCUMENT_SCHEMA_VERSION = 1
-BUILD_SLOT = "build"
 HEAD = "HEAD"
 MILESTONE_PREFIX = "@MILESTONE."
 
@@ -32,6 +27,10 @@ class TaskPullRequestDemand:
     path: Path
     task: str | None
     subject: str | None
+    forge: object
+    environment: dict
+    login: str
+    attribution: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -92,28 +91,22 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
     check = _require_passing_check(runtime, worktree)
     task = read_entity(runtime.run_process, worktree.path, "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
-    configuration = read_configuration(runtime.paths.configuration_file)
-    forge = runtime.resolve_plugin("forge", FORGE_NAME)
-    environment = read_forge_environment(configuration, BUILD_SLOT, runtime)
-    session = ForgeSession(
-        worktree=worktree,
-        forge=forge,
-        environment=environment,
-        login=ask_forge_account(forge, FORGE_NAME, environment, runtime).login,
-    )
+    session = ForgeSession(worktree=worktree, forge=demand.forge, environment=demand.environment, login=demand.login)
     branch = read_current_branch(runtime.run_process, worktree.path)
     milestone = _read_milestone_title(runtime, worktree, task)
-    push_branch(runtime.run_process, worktree.path, branch)
+    push_branch(
+        runtime.run_process, BranchPush(repository=worktree.path, branch=branch, environment=demand.environment)
+    )
     _ensure_milestone(runtime, session, milestone)
     body = describe_pull_request_body(
         PullRequestBodyParts(
             title=read_project_field(task, "TITLE"),
             specs=tuple(field.value for field in task.fields if field.name == "SPEC"),
             check=check,
-            attribution=tuple(read_attribution(configuration, runtime)),
+            attribution=demand.attribution,
         )
     )
-    pull_request = forge.open_pull_request(
+    pull_request = demand.forge.open_pull_request(
         {
             "repository": str(worktree.path),
             "base": worktree.wave["branch"],
@@ -121,7 +114,7 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
             "title": title,
             "body": body,
             "milestone": milestone,
-            "environment": environment,
+            "environment": demand.environment,
         },
         runtime,
     )

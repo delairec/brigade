@@ -3,7 +3,7 @@
     "arguments": [
       "lint",
       "--strict",
-      "<tmp:0>/projects/shop/.brigade/worktrees/S3"
+      "."
     ],
     "cwd": "<tmp:0>/projects/shop/.brigade/worktrees/S3",
     "directories": [
@@ -12,7 +12,7 @@
     "inputs": {
       "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD TYPE feat|fix\n\tFIELD COMPONENT string\n\tFIELD MILESTONE @MILESTONE\n\tFIELD SPEC string\n\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running\n\t\tREQUIRED\n",
       "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/milestones.awawa": "MILESTONE M1\n\tTITLE \"Empty cart\"\n\tSTATUS running\n",
-      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/tasks.awawa": "TASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS implemented\n\nTASK S3\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS implemented\n\tDELIVERED_BY 57\n\tTYPE feat\n\tCOMPONENT \"cart button\"\n\tMILESTONE @MILESTONE.M1\n\tSPEC \"the button of src/cart/button.py, once pressed, empties the cart\"\n\tSPEC \"the emptying charges nothing\"\n\t\tIMPL \"src/billing/charge.py::def charge\"\n\nTASK S6\n\tTITLE \"Count the emptied carts\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/tasks.awawa": "TASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS implemented\n\nTASK S3\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS todo\n\tCOMPONENT \"cart button\"\n\tMILESTONE @MILESTONE.M1\n\tSPEC \"the button of src/cart/button.py, once pressed, empties the cart\"\n\tSPEC \"the emptying charges nothing\"\n\nTASK S6\n\tTITLE \"Count the emptied carts\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
     }
   },
   "outcome": {
