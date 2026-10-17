@@ -30,6 +30,30 @@ SCHEMA_WITHOUT_IMPLEMENTED = (
     "\tFIELD STATUS planned|running\n\t\tREQUIRED\n"
 )
 
+SCHEMA_WITHOUT_STATUS = (
+    'SCHEMA TASK\n\tDESC "a change delivered by one pull request"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
+    "\tFIELD TYPE feat|fix\n\tFIELD COMPONENT string\n\tFIELD MILESTONE @MILESTONE\n\tFIELD SPEC string\n"
+    "\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n"
+    '\tDESC "the tasks planned for one request"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
+    "\tFIELD STATUS planned|running\n\t\tREQUIRED\n"
+)
+TASKS_PROMOTED_BY_57 = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
+    'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY 57\n\tTYPE feat\n'
+    '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
+    '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+    '\tSPEC "the emptying charges nothing"\n\n'
+    'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
+)
+TASKS_PROMOTED_BY_42 = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
+    'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY 42\n\tTYPE feat\n'
+    '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
+    '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+    '\tSPEC "the emptying charges nothing"\n\n'
+    'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
+)
+
 
 class TaskPromoteTestCase(TaskPrTestCase):
     def run_task_promote(self, *arguments: str):
@@ -141,6 +165,47 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
         self.assertIn(PROMOTED_TASK.format(pr=57), self.read_tasks())
 
 
+class BrigadeTaskPromoteOfAnAlreadyPromotedTaskTest(TaskPromoteTestCase):
+    def setUp(self):
+        super().setUp()
+        self.run_task_promote("--pr", "57")
+        self.promotion = self.read_head()
+
+    def test_should_push_and_record_it_again_without_a_second_commit(self):
+        # Act
+        completed = self.run_task_promote("--pr", "57")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, self.read_head(), self.read_tasks()),
+            (0, self.promotion, TASKS_PROMOTED_BY_57),
+            completed.stderr,
+        )
+        self.assertEqual(
+            self.read_events("task.promoted")[-1],
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "task.promoted",
+                "project": "shop",
+                "task": "S3",
+                "pr": 57,
+                "commit": self.promotion,
+            },
+        )
+
+    def test_should_replace_the_pull_request_that_delivers_it(self):
+        # Act
+        completed = self.run_task_promote("--pr", "42")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, self.read_tasks()),
+            (0, TASKS_PROMOTED_BY_42),
+            completed.stderr,
+        )
+
+
 class BrigadeTaskPromoteRefusalTest(TaskPromoteTestCase):
     def assert_refused(self, completed, cause: str) -> None:
         self.assertEqual(completed.returncode, 1)
@@ -168,6 +233,16 @@ class BrigadeTaskPromoteRefusalTest(TaskPromoteTestCase):
     def test_should_refuse_a_schema_that_declares_no_status_implemented(self):
         # Arrange
         self.write_schema(SCHEMA_WITHOUT_IMPLEMENTED)
+
+        # Act
+        completed = self.run_task_promote("--pr", "42")
+
+        # Assert
+        self.assert_refused(completed, "the TASK schema of the corpus of shop declares no STATUS implemented")
+
+    def test_should_refuse_a_schema_that_declares_no_status(self):
+        # Arrange
+        self.write_schema(SCHEMA_WITHOUT_STATUS)
 
         # Act
         completed = self.run_task_promote("--pr", "42")

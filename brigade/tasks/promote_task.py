@@ -22,6 +22,7 @@ TYPE_SEPARATOR = "|"
 IMPLEMENTED = "implemented"
 STATUS_LINE = "\tSTATUS "
 DELIVERED_BY = "DELIVERED_BY"
+DELIVERED_BY_LINE = f"\t{DELIVERED_BY} "
 
 
 @dataclass(frozen=True)
@@ -53,18 +54,28 @@ def _refuse_undeclared(worktree: TaskWorktree, undeclared: str) -> BrigadeError:
 def _require_promotion_fields(runtime: Runtime, worktree: TaskWorktree) -> None:
     schema = read_awawa_document(runtime.run_process, worktree.path, ("show", "TASK"))
     declared = {field["atoms"][0]: field["atoms"][1] for field in schema["fields"] if field["name"] == "FIELD"}
-    if IMPLEMENTED not in declared["STATUS"].split(TYPE_SEPARATOR):
+    if IMPLEMENTED not in declared.get("STATUS", "").split(TYPE_SEPARATOR):
         raise _refuse_undeclared(worktree, f"STATUS {IMPLEMENTED}")
     if DELIVERED_BY not in declared:
         raise _refuse_undeclared(worktree, DELIVERED_BY)
 
 
+def _promote_line(line: str, pr: int) -> list[str]:
+    if line.startswith(STATUS_LINE):
+        return [f"{STATUS_LINE}{IMPLEMENTED}\n", f"{DELIVERED_BY_LINE}{pr}\n"]
+    if line.startswith(DELIVERED_BY_LINE):
+        return []
+    return [line]
+
+
 def _promote(text: str, task: str, pr: int) -> str:
     lines = text.splitlines(keepends=True)
     block = locate_entity_block(lines, "TASK", task)
-    status = next(index for index in block if lines[index].startswith(STATUS_LINE))
-    lines[status : status + 1] = [f"{STATUS_LINE}{IMPLEMENTED}\n", f"\t{DELIVERED_BY} {pr}\n"]
-    return "".join(lines)
+    return "".join(
+        promoted_line
+        for index, line in enumerate(lines)
+        for promoted_line in (_promote_line(line, pr) if index in block else [line])
+    )
 
 
 def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
