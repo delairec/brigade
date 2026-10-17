@@ -3886,7 +3886,7 @@ TASK B69
 		IMPL "brigade/system/write_text_atomically.py::def write_text_atomically(path: Path,"
 			+ "content: str) -> None:"
 		IMPL "brigade/runs/create_run_directory.py::record_run_pid(plan.run_directory, os.getpid())"
-		IMPL "brigade/runs/detach_run.py::record_run_pid(plan.run_directory, process.pid)"
+		IMPL "brigade/runs/detach_brigade_command.py::record_run_pid(run_directory, process.pid)"
 		IMPL "tests/unit/runs/test_record_run_pid.py::def list_state_at_the_first_write("
 		IMPL "tests/unit/system/test_write_text_atomically.py::def"
 			+ "test_should_keep_the_previous_text_whole_when_the_new_one_cannot_be_written(self):"
