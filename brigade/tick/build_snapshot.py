@@ -12,6 +12,7 @@ from brigade.registry.read_projects import read_projects
 from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import Configuration
+from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.describe_request import describe_request
@@ -93,11 +94,43 @@ class PlannedRequest:
 
 
 @dataclass(frozen=True)
+class StudyFacts:
+    name: str
+    slot: str
+    every: str | None
+    status: str
+    last_started: datetime | None
+    parked: bool
+
+    def to_document(self) -> dict:
+        return {
+            "study": self.name,
+            "slot": self.slot,
+            "every": self.every,
+            "status": self.status,
+            "last_started": None if self.last_started is None else format_instant(self.last_started),
+            "parked": self.parked,
+        }
+
+
+@dataclass(frozen=True)
+class LiveStudyRun:
+    study: str
+    run: str
+
+    def to_document(self) -> dict:
+        return {"study": self.study, "run": self.run}
+
+
+@dataclass(frozen=True)
 class Snapshot:
     now: datetime
     waves: tuple[WaveFacts, ...] = ()
     projects: tuple[ProjectFacts, ...] = ()
     planned: tuple[PlannedRequest, ...] = ()
+    studies: tuple[StudyFacts, ...] = ()
+    live_study_runs: tuple[LiveStudyRun, ...] = ()
+    study_runs: int = STUDY_RUNS_BY_DEFAULT
 
     def to_document(self) -> dict:
         return {
@@ -106,6 +139,9 @@ class Snapshot:
             "waves": [wave.to_document() for wave in self.waves],
             "projects": [project.to_document() for project in self.projects],
             "planned": [planned.to_document() for planned in self.planned],
+            "studies": [study.to_document() for study in self.studies],
+            "live_study_runs": [live.to_document() for live in self.live_study_runs],
+            "study_runs": self.study_runs,
         }
 
 

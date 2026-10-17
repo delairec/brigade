@@ -13,3 +13,8 @@ class LaunchTask:
     milestone: str
     branch: str
     task: str
+
+
+@dataclass(frozen=True)
+class LaunchStudy:
+    study: str

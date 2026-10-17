@@ -288,6 +288,18 @@ class ReadConfigurationOfTheRunsKeptTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.runs_kept, 20)
 
 
+class ReadConfigurationOfTheStudyRunsTest(ReadConfigurationTestCase):
+    def test_should_answer_the_count_the_key_sets(self):
+        # Arrange
+        self.path.write_text("study_runs = 3\n")
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.study_runs, 3)
+
+
 class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
     def test_should_answer_2_and_no_finding_when_the_key_is_absent(self):
         # Arrange

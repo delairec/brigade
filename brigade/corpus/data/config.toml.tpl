@@ -42,6 +42,10 @@
 # a running run and a run a resume after a rate limit takes up spared and not counted.
 # runs_kept = 100
 
+# The judging runs of studies the tick lets live at once on this machine, 1 or more; a scan launches no run and counts in
+# no cap, and the tick never launches a study while a run of it is live.
+# study_runs = 2
+
 # The seconds between two reads of a running segment's output into the journal of its run, a positive number.
 # journal_poll_s = 2
 

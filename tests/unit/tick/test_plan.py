@@ -2,8 +2,17 @@ import unittest
 from datetime import UTC, datetime
 
 from brigade.errors import BrigadeError
-from brigade.tick.actions import LaunchTask, StartWave
-from brigade.tick.build_snapshot import LiveRun, PlannedRequest, ProjectFacts, Snapshot, TaskFacts, WaveFacts
+from brigade.tick.actions import LaunchStudy, LaunchTask, StartWave
+from brigade.tick.build_snapshot import (
+    LiveRun,
+    LiveStudyRun,
+    PlannedRequest,
+    ProjectFacts,
+    Snapshot,
+    StudyFacts,
+    TaskFacts,
+    WaveFacts,
+)
 from brigade.tick.plan import plan
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
@@ -158,3 +167,125 @@ class PlanPlannedRequestsTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+
+def create_study(
+    *,
+    name: str = "weekly",
+    slot: str = "report",
+    every: str | None = "1h",
+    status: str = "active",
+    last_started: datetime | None = None,
+    parked: bool = False,
+) -> StudyFacts:
+    return StudyFacts(name=name, slot=slot, every=every, status=status, last_started=last_started, parked=parked)
+
+
+TWO_HOURS_AGO = datetime(2026, 10, 6, 10, 0, tzinfo=UTC)
+HALF_AN_HOUR_AGO = datetime(2026, 10, 6, 11, 30, tzinfo=UTC)
+LAUNCH_WEEKLY = LaunchStudy(study="weekly")
+LAUNCH_MONTHLY = LaunchStudy(study="monthly")
+LAUNCH_TREES = LaunchStudy(study="trees")
+LIVE_MONTHLY = LiveStudyRun(study="monthly", run="20261006T110000Z-a1b2c3")
+LIVE_TREES = LiveStudyRun(study="trees", run="20261006T110500Z-d4e5f6")
+
+
+class PlanDueStudiesTest(unittest.TestCase):
+    def test_should_launch_a_study_only_when_it_is_due(self):
+        for case, study, expected in [
+            ("never ran", create_study(), (LAUNCH_WEEKLY,)),
+            ("started before its schedule passed", create_study(last_started=TWO_HOURS_AGO), (LAUNCH_WEEKLY,)),
+            ("started within its schedule", create_study(last_started=HALF_AN_HOUR_AGO), ()),
+            ("run on demand", create_study(every=None), ()),
+            ("paused", create_study(status="paused"), ()),
+            ("archived", create_study(status="archived"), ()),
+            ("parked", create_study(last_started=TWO_HOURS_AGO, parked=True), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, studies=(study,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_launch_no_study_while_a_run_of_it_is_live(self):
+        # Arrange
+        live_weekly = (LiveStudyRun(study="weekly", run="20261006T110000Z-a1b2c3"),)
+        snapshot = Snapshot(now=NOW, studies=(create_study(),), live_study_runs=live_weekly)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_refuse_a_schedule_of_another_form_naming_the_study(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, studies=(create_study(every="1d"),))
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "@STUDY.weekly: the schedule 1d is none of <n>m, <n>h, daily@HH:MM or <day>@HH:MM, day mon to sun",
+        )
+
+
+class PlanStudyRunsTest(unittest.TestCase):
+    def test_should_launch_the_judging_studies_within_the_study_runs_in_the_order_of_their_names(self):
+        # Arrange
+        studies = (create_study(name="weekly"), create_study(name="monthly"))
+        snapshot = Snapshot(now=NOW, studies=studies, study_runs=1)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_MONTHLY,))
+
+    def test_should_count_the_live_runs_of_judging_studies_against_the_study_runs(self):
+        for case, live_study_runs, expected in [
+            ("a judging study live", (LIVE_MONTHLY,), ()),
+            ("a scan live", (LIVE_TREES,), (LAUNCH_WEEKLY,)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                studies = (
+                    create_study(name="weekly"),
+                    create_study(name="monthly", every=None),
+                    create_study(name="trees", slot="none", every=None),
+                )
+                snapshot = Snapshot(now=NOW, studies=studies, live_study_runs=live_study_runs, study_runs=1)
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_launch_a_scan_beyond_the_study_runs(self):
+        # Arrange
+        studies = (create_study(name="monthly", every=None), create_study(name="trees", slot="none"))
+        snapshot = Snapshot(now=NOW, studies=studies, live_study_runs=(LIVE_MONTHLY,), study_runs=1)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_TREES,))
+
+    def test_should_count_the_live_run_of_a_study_the_corpus_no_longer_holds_as_judging(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, studies=(create_study(),), live_study_runs=(LIVE_MONTHLY,), study_runs=1)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
