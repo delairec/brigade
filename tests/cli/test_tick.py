@@ -80,6 +80,15 @@ PLANNED_REQUEST = (
     '\tMILESTONE "M2"\n'
     '\tBRANCH "integration/M2-undo"\n'
 )
+UNSTARTED_RUNNING_REQUEST = (
+    "REQUEST shop_2\n"
+    "\tPROJECT @PROJECT.shop\n"
+    '\tTEXT "let the customer undo the emptying"\n'
+    '\tCREATED_AT "2026-10-12T10:30:00Z"\n'
+    "\tSTATUS running\n"
+    '\tMILESTONE "M2"\n'
+    '\tBRANCH "integration/M2-undo"\n'
+)
 QUEUED_S3 = (
     '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "queued"}\n'
@@ -699,20 +708,44 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
 
 
 class BrigadeTickDryRunOnARunningRequestNoWaveStartedNamesTest(WaveTickTestCase):
-    def test_should_exit_1_naming_the_request_and_its_branch(self):
+    def test_should_name_the_request_skip_it_and_plan_the_waves_of_the_others(self):
         # Arrange
-        (self.state / "ledger" / "2026-10.jsonl").write_text(QUEUED_S3)
+        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST + UNSTARTED_RUNNING_REQUEST)
 
         # Act
-        completed = self.run_tick("--dry-run")
+        completed = self.run_tick("--dry-run", "--json")
 
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stderr),
             (
-                1,
-                f"brigade tick: no wave.started of @PROJECT.shop names {WAVE_BRANCH}, the BRANCH of @REQUEST.shop_1\n",
+                0,
+                (
+                    "brigade tick: @REQUEST.shop_2 skipped: no wave.started of @PROJECT.shop names integration/M2-undo,"
+                    " the BRANCH of @REQUEST.shop_2\n"
+                ),
             ),
+        )
+        self.assertEqual(
+            json.loads(completed.stdout)["plan"],
+            [
+                {
+                    "request": "shop_1",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "wave": "shop_w1",
+                    "branch": WAVE_BRANCH,
+                    "task": "S3",
+                },
+                {
+                    "request": "shop_1",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "wave": "shop_w1",
+                    "branch": WAVE_BRANCH,
+                    "task": "S6",
+                },
+            ],
         )
 
 

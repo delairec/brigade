@@ -188,7 +188,8 @@ A tick builds a snapshot of the facts, plans the actions they call for and appli
 plan is empty or ten rounds have passed. Among those actions, it runs the due studies, as Studies says, and launches
 each startable task of a running wave as a detached build run, in the worktree it cuts for the task, of `build-task`,
 the procedure brigade ships, or of the one the key `build` of the table `[procedures]` of `config.toml` names in its
-place, resolved as the argument of `brigade run` is.
+place, resolved as the argument of `brigade run` is. A running REQUEST that no `wave.started` names is skipped, named
+on stderr, and the tick serves the waves of the others.
 
 ```
 brigade tick --once       # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock

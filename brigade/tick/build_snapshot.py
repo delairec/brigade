@@ -1,10 +1,12 @@
 import argparse
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
+from brigade.errors import BrigadeError
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.find_project import find_project
@@ -153,8 +155,12 @@ def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
     )
 
 
-def _read_wave_facts(runtime: Runtime, configuration: Configuration, request: dict, events: tuple) -> WaveFacts:
-    wave = require_wave_name(events, request)
+def _read_wave_facts(runtime: Runtime, configuration: Configuration, request: dict, events: tuple) -> WaveFacts | None:
+    try:
+        wave = require_wave_name(events, request)
+    except BrigadeError as refusal:
+        sys.stderr.write(f"brigade tick: @{REQUEST_TYPE}.{request['name']} skipped: {refusal}\n")
+        return None
     query = argparse.Namespace(project=request["project"], ref=request["branch"], worktree=None)
     tree = prepare_project_tree(query, configuration, runtime)
     tasks = read_entities(runtime.run_process, tree.root, TASK_TYPE, f"MILESTONE==@MILESTONE.{request['milestone']}")
@@ -203,9 +209,13 @@ def build_snapshot(runtime: Runtime, configuration: Configuration) -> Snapshot:
     )
     events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
     waves = tuple(
-        _read_wave_facts(runtime, configuration, request, events)
-        for request in requests
-        if request["status"] == RUNNING_STATUS
+        facts
+        for facts in (
+            _read_wave_facts(runtime, configuration, request, events)
+            for request in requests
+            if request["status"] == RUNNING_STATUS
+        )
+        if facts is not None
     )
     registered = read_projects(runtime)
     runs = list_runs(runtime.paths.state_root)["runs"]
