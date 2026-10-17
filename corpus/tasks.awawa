@@ -9928,15 +9928,34 @@ TASK B171
 TASK B172
 	TITLE "brigade doctor checks that the user systemd instance lingers, so that the timer survives"
 		+ "the end of the session"
-	STATUS draft
+	STATUS todo
 	MILESTONE @MILESTONE.M1
 	COMPONENT "doctor"
 	ROLE ada
-	SPEC "brigade doctor reads loginctl show-user -p Linger when the scheduler is the user systemd"
-		+ "timer and reports a finding naming loginctl enable-linger when it is no, where today"
-		+ "brigade/system/read_user_systemd_state.py:11-19 probes is-system-running alone"
-	SPEC "brigade scheduler install reports the same finding after writing the timer"
+	SPEC "brigade doctor reports an optional item linger when the scheduler is systemd, chosen as"
+		+ "brigade scheduler install chooses it: the scheduler key of config.toml, else the probe"
+		+ "of the user systemd instance; no item linger for any other scheduler"
+	SPEC "the item linger reads loginctl show-user -p Linger: ok on yes, warning on no with a"
+		+ "detail naming loginctl enable-linger, warning when loginctl is not on PATH; the exit"
+		+ "code of brigade doctor is unchanged by it"
+	SPEC "brigade scheduler install, having installed the systemd timer, carries in its document a"
+		+ "list warnings holding the same warning and prints it as one line of its text; empty for"
+		+ "another scheduler or on Linger=yes; exit 0 in every case"
+	AFTER @TASK.B153
+	RATIONALE "without lingering, the user systemd instance stops with the last session of the"
+		+ "user, and the timer with it: the tick no longer fires once the user logs out; today"
+		+ "brigade/system/read_user_systemd_state.py:11-19 probes systemctl --user"
+		+ "is-system-running alone, and the machine of 2026-10-17 answers Linger=no"
+	RATIONALE "a warning, never a finding: the scheduler is optional, and an optional item is"
+		+ "reported with its fallback as a warning"
+		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
+	RATIONALE "after the audit answer, which changes brigade/commands/doctor.py and"
+		+ "tests/unit/commands/test_doctor.py and the guards their tests obey"
+		REF @TASK.B153
 	SOURCE "use-case map of 2026-10-16, findings X11 and G10"
+	SOURCE "the user's ruling of 2026-10-17 in the refinement of B172: the scheduler chosen as"
+		+ "install chooses it, an optional item linger as a warning, a list warnings in the"
+		+ "document of install with exit 0, after B153"
 
 TASK B173
 	TITLE "brigade doctor validates the agents of [slots], the CLIENT and ROLESET of each project,"
