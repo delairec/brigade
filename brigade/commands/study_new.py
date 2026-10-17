@@ -7,6 +7,7 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
 from brigade.studies.read_collector_line import read_collector_line
+from brigade.studies.read_schedule import read_schedule
 from brigade.studies.record_study import NewStudy, record_study
 from brigade.studies.refuse_inbox_output import refuse_inbox_output
 from brigade.studies.require_answer_type import require_answer_type
@@ -40,6 +41,8 @@ def study_new(request, runtime: Runtime) -> dict:
         read_collector_line(line)
     require_answer_type(runtime, runtime.paths.config_root, request.answer)
     refuse_inbox_output(request.output)
+    if request.every is not None:
+        read_schedule(request.every)
     record_study(
         runtime,
         NewStudy(
@@ -57,7 +60,7 @@ def study_new(request, runtime: Runtime) -> dict:
     document = {"schema_version": DOCUMENT_SCHEMA_VERSION, "study": request.name, "every": request.every}
     if request.every is not None:
         return document
-    ran = study_run(argparse.Namespace(name=request.name), runtime)
+    ran = study_run(argparse.Namespace(name=request.name, run_id=None), runtime)
     return {**document, "run": ran["run"], "state": ran["state"]}
 
 

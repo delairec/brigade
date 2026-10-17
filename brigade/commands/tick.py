@@ -12,6 +12,9 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.task_state import TaskState
 from brigade.runtime import Runtime
+from brigade.studies.detach_study_run import detach_study_run
+from brigade.studies.read_study import read_study
+from brigade.studies.start_study_run import start_study_run
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
@@ -20,7 +23,7 @@ from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
-from brigade.tick.actions import LaunchTask, StartWave
+from brigade.tick.actions import LaunchStudy, LaunchTask, StartWave
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
 from brigade.tick.heartbeat import Heartbeat
@@ -68,10 +71,16 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
     append_event(runtime.paths, runtime.now, TaskState(wave=action.milestone, task=action.task, state=RUNNING_STATE))
 
 
+def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
+    study = read_study(runtime, action.study)
+    detach_study_run(runtime, study.name, start_study_run(runtime, study))
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         StartWave: lambda action: start_wave(runtime, action.request),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
+        LaunchStudy: lambda action: _launch_study(runtime, action),
     }
 
 

@@ -1,11 +1,10 @@
 from pathlib import Path
 
+from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.read_run_finished import read_run_finished
-from brigade.runs.read_run_pid import read_run_pid
 from brigade.runs.run_locations import RESULT_FILE, RUN_RECORD_FILE
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
-from brigade.system.read_process_identity import read_process_identity
 
 
 def describe_run(run_directory: Path) -> dict:
@@ -15,9 +14,7 @@ def describe_run(run_directory: Path) -> dict:
         state = "finished"
         outcome = read_run_finished(result_path, "run result").outcome
     else:
-        recorded = read_run_pid(run_directory)
-        alive = recorded is not None and read_process_identity(recorded.pid) == recorded.identity
-        state = "running" if alive else "dead"
+        state = "running" if is_recorded_process_alive(run_directory) else "dead"
         outcome = None
     return {
         "run": record.run,

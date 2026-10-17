@@ -11,7 +11,12 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
+from brigade.studies.convert_study import Study
+from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
+from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
+from brigade.studies.read_studies import read_studies
 from brigade.system.read_configuration import Configuration
+from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.describe_request import describe_request
@@ -28,6 +33,7 @@ SLOTS_FIELD = "SLOTS"
 AFTER_FIELD = "AFTER"
 TASK_PREFIX = "@TASK."
 PROJECT_SLOTS = 4
+PARKED_OUTCOME = "parked"
 
 
 @dataclass(frozen=True)
@@ -93,11 +99,34 @@ class PlannedRequest:
 
 
 @dataclass(frozen=True)
+class StudyFacts:
+    name: str
+    slot: str
+    every: str | None
+    status: str
+    last_started: datetime | None
+    parked: bool
+
+    def to_document(self) -> dict:
+        return {
+            "study": self.name,
+            "slot": self.slot,
+            "every": self.every,
+            "status": self.status,
+            "last_started": None if self.last_started is None else format_instant(self.last_started),
+            "parked": self.parked,
+        }
+
+
+@dataclass(frozen=True)
 class Snapshot:
     now: datetime
     waves: tuple[WaveFacts, ...] = ()
     projects: tuple[ProjectFacts, ...] = ()
     planned: tuple[PlannedRequest, ...] = ()
+    studies: tuple[StudyFacts, ...] = ()
+    live_study_runs: tuple[LiveStudyRun, ...] = ()
+    study_runs: int = STUDY_RUNS_BY_DEFAULT
 
     def to_document(self) -> dict:
         return {
@@ -106,6 +135,9 @@ class Snapshot:
             "waves": [wave.to_document() for wave in self.waves],
             "projects": [project.to_document() for project in self.projects],
             "planned": [planned.to_document() for planned in self.planned],
+            "studies": [study.to_document() for study in self.studies],
+            "live_study_runs": [live.to_document() for live in self.live_study_runs],
+            "study_runs": self.study_runs,
         }
 
 
@@ -145,6 +177,17 @@ def _read_project_facts(name: str, projects: tuple[Entity, ...], runs: list[dict
     )
 
 
+def _describe_study(study: Study, last_order: LastStudyOrder | None) -> StudyFacts:
+    return StudyFacts(
+        name=study.name,
+        slot=study.slot,
+        every=study.every,
+        status=study.status,
+        last_started=None if last_order is None else last_order.started,
+        parked=last_order is not None and last_order.outcome == PARKED_OUTCOME,
+    )
+
+
 def build_snapshot(runtime: Runtime, configuration: Configuration) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
@@ -169,4 +212,13 @@ def build_snapshot(runtime: Runtime, configuration: Configuration) -> Snapshot:
         for request in requests
         if request["status"] == PLANNED_STATUS
     )
-    return Snapshot(now=runtime.now, waves=waves, projects=projects, planned=planned)
+    last_orders = read_last_study_orders(runtime.paths.state_root)
+    return Snapshot(
+        now=runtime.now.astimezone(),
+        waves=waves,
+        projects=projects,
+        planned=planned,
+        studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
+        live_study_runs=read_live_study_runs(runtime.paths.state_root),
+        study_runs=configuration.study_runs,
+    )
