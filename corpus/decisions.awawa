@@ -3119,3 +3119,26 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "politique WAVE_START vaut auto (Recommended) »"
 	SOURCE "the user's rulings of 2026-10-17 in the refinement of B166 with B187 and B168 to B171:"
 		+ "« wave.started d'abord (Recommended) »; « Non bornée (Recommended) »"
+
+DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
+	TITLE "the tick runs an active study that is due and not parked, and counts against study_runs"
+		+ "every live study run of a judging study, from its collect step on"
+	STATUS active
+	DESC "a parked study is never due: its next brigade study run, the user's, resumes it at its"
+		+ "first undone step"
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+	DESC "a study run is live while the process whose pid it records in runs/<id>/pid lives; the"
+		+ "tick launches no study while a run of it is live"
+	DESC "study_runs counts the live study runs of every study whose SLOT is not none, whatever"
+		+ "step they are at"
+	DESC "study pause and study resume exit 1 for an archived study, which stays archived"
+	DESC "binds @TASK.B147"
+		REF @TASK.B147
+	REJECTED "the tick resuming a parked study when its schedule passes: a step parks on a cause"
+		+ "the schedule does not clear, and the study would park again at every due round"
+	REJECTED "counting only the runs at their judge step: the collect step of a live run leads into"
+		+ "the judge step with no tick in between to hold it back, so the cap would be exceeded"
+	RATIONALE "the cap bounds the judging runs a machine carries at once, and a study run that"
+		+ "began collecting will judge in the same process; one study never runs twice at once, as"
+		+ "the user ruled"
+		REF @TASK.B147

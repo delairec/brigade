@@ -136,6 +136,10 @@ brigade study new <name> --title T --output O [--question Q] [--project P] [--co
 brigade study run <name>
 brigade study context <run>
 brigade study answer <run> --file <answer.awawa>
+brigade study list
+brigade study show <name>
+brigade study pause <name>
+brigade study resume <name>
 ```
 
 `study new` records the study through `awawa fmt`, `awawa lint --strict` and a commit, the question verbatim, and
@@ -143,6 +147,19 @@ runs it once unless `--every` is given. `study run` runs the steps `collect`, `j
 result under `runs/<id>/steps/` and the ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and
 `order.done` with the kind `study`; a failed step parks the study, and its next `study run` resumes that run at its
 first undone step. `--slot none` makes a scan: no judging run, the answer holds the fields brigade filled.
+
+`--every` takes minutes or hours, `<n>m` or `<n>h` such as `5m` or `1h`, `daily@HH:MM`, or a day of the week at an
+hour, `mon@HH:MM` to `sun@HH:MM`, in the machine's timezone; `study new` refuses another form, exit 1 naming the value. A study is due when it never ran or when
+its schedule has passed since its last `order.started`; a paused or archived study, or one parked at a step, is never
+due, its next `study run` resuming it. Each tick runs every due study through `study run`, detached: a judging study
+only while fewer than `study_runs` of `config.toml`, 2 by default, judging runs of studies are live on the machine, a
+scan beyond that cap, and never a study while a run of it is live. `study_runs` below 1 is an error naming the key and
+the file.
+
+`study list` prints every study with its status, its schedule, its last run and the outcome of that run, `started`,
+`done` or `parked`; `study show` prints the fields of one study, its last run and its outcome. `study pause` and
+`study resume` move its `STATUS` between `active` and `paused` through `awawa fmt`, `awawa lint --strict` and a commit,
+leave a study already in that status as it is, and exit 1 for an archived study.
 
 A collector line is a collector name and its `key=value` parameters, or `shell: <command line>`, whose items are the
 lines the command prints. `study name=<study>` collects the answer of the last run of that study.
@@ -166,7 +183,7 @@ Every output but `entity:` hands a person the Markdown rendered from the answer 
 ## Tick and scheduler
 
 A tick builds a snapshot of the facts, plans the actions they call for and applies them, round after round until the
-plan is empty or ten rounds have passed. The planner plans no action yet.
+plan is empty or ten rounds have passed. Among those actions, it runs the due studies, as Studies says.
 
 ```
 brigade tick --once       # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock
