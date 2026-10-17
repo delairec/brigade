@@ -40,6 +40,13 @@ UNTYPED_TASKS = (
     '\tSPEC "the emptying charges nothing"\n\nTASK S6\n\tTITLE "Count the emptied carts"\n'
     "\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
 )
+UNPLANNED_TASKS = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\nTASK S3\n'
+    '\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tTYPE feat\n\tCOMPONENT "cart button"\n'
+    '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+    '\tSPEC "the emptying charges nothing"\n\nTASK S6\n\tTITLE "Count the emptied carts"\n'
+    "\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+)
 FAKE_GH = (
     "#!/bin/sh\n"
     'printf \'%s\\n\' "$*" >> "{calls}"\n'
@@ -268,6 +275,19 @@ class BrigadeTaskPrRefusalTest(TaskPrTestCase):
 
         # Assert
         self.assert_refused(completed, "@TASK.S3 carries no TYPE, which the title of its pull request opens on")
+
+    def test_should_refuse_a_task_that_carries_no_milestone(self):
+        # Arrange
+        self.write_task(UNPLANNED_TASKS)
+        self.run_task_check()
+
+        # Act
+        completed = self.run_task_pr("--subject", SUBJECT)
+
+        # Assert
+        self.assert_refused(
+            completed, "@TASK.S3 carries no MILESTONE, whose TITLE names the milestone of its pull request"
+        )
 
 
 class BrigadeTaskPrAfterAFailingCheckTest(TaskPrTestCase):

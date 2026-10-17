@@ -70,7 +70,12 @@ def _compose_title(task: Entity, subject: str | None) -> str:
 
 
 def _read_milestone_title(runtime: Runtime, worktree: TaskWorktree, task: Entity) -> str:
-    milestone = read_project_field(task, "MILESTONE").removeprefix(MILESTONE_PREFIX)
+    milestone = read_project_field(task, "MILESTONE")
+    if milestone is None:
+        raise BrigadeError(
+            f"@TASK.{task.name} carries no MILESTONE, whose TITLE names the milestone of its pull request"
+        )
+    milestone = milestone.removeprefix(MILESTONE_PREFIX)
     return read_project_field(read_entity(runtime.run_process, worktree.path, "MILESTONE", milestone), "TITLE")
 
 
