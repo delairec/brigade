@@ -1108,3 +1108,247 @@ class BrigadeStudyCollectorTest(StudyRunTestCase):
 
         # Assert
         self.assertEqual(parked["reason"], "collector study exited 1\nthe study collector takes name=<study>")
+
+
+class BrigadeStudyListTest(StudyRunTestCase):
+    def record_weekly(self) -> None:
+        self.run_study(
+            "new",
+            "weekly",
+            "--title",
+            "what moved this week",
+            "--question",
+            QUESTION,
+            "--collector",
+            "shell: true",
+            "--every",
+            "mon@09:00",
+            "--output",
+            "entity:ANSWER",
+        )
+
+    def test_should_list_every_study_with_its_schedule_its_last_run_and_its_outcome(self):
+        # Arrange
+        self.record_scan("shell: true")
+        trees_run = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
+        self.record_weekly()
+
+        # Act
+        completed = self.run_study("list", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "studies": [
+                    {"name": "trees", "status": "active", "every": "1h", "last_run": trees_run, "outcome": "done"},
+                    {"name": "weekly", "status": "active", "every": "mon@09:00", "last_run": None, "outcome": None},
+                ],
+            },
+        )
+
+    def test_should_print_the_studies_as_a_table(self):
+        # Arrange
+        self.record_weekly()
+
+        # Act
+        completed = self.run_study("list")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout),
+            (
+                0,
+                "name    status  every      last run  outcome\nweekly  active  mon@09:00  -         -\n",
+            ),
+        )
+
+    def test_should_print_that_no_study_is_recorded(self):
+        # Act
+        completed = self.run_study("list")
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stdout), (0, "no study recorded\n"))
+
+
+class BrigadeStudyShowTest(StudyRunTestCase):
+    def test_should_present_the_fields_of_the_study_and_its_last_run(self):
+        # Arrange
+        self.record_scan("shell: true")
+        trees_run = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
+
+        # Act
+        completed = self.run_study("show", "trees", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "study": {
+                    "name": "trees",
+                    "fields": [
+                        {"name": "TITLE", "value": "the trees"},
+                        {"name": "PROJECT", "value": "@PROJECT.shop"},
+                        {"name": "COLLECTOR", "value": "shell: true"},
+                        {"name": "SLOT", "value": "none"},
+                        {"name": "EVERY", "value": "1h"},
+                        {"name": "OUTPUT", "value": "entity:ANSWER"},
+                        {"name": "ANSWER", "value": "ANSWER"},
+                        {"name": "STATUS", "value": "active"},
+                    ],
+                    "last_run": trees_run,
+                    "outcome": "done",
+                },
+            },
+        )
+
+    def test_should_print_the_fields_of_a_study_that_never_ran(self):
+        # Arrange
+        self.record_scan("shell: true")
+
+        # Act
+        completed = self.run_study("show", "trees")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout),
+            (
+                0,
+                (
+                    "@STUDY.trees\n"
+                    "TITLE       the trees\n"
+                    "PROJECT     @PROJECT.shop\n"
+                    "COLLECTOR   shell: true\n"
+                    "SLOT        none\n"
+                    "EVERY       1h\n"
+                    "OUTPUT      entity:ANSWER\n"
+                    "ANSWER      ANSWER\n"
+                    "STATUS      active\n"
+                    "last run    -\n"
+                    "outcome     -\n"
+                ),
+            ),
+        )
+
+    def test_should_exit_1_naming_a_study_that_is_not_defined(self):
+        # Act
+        completed = self.run_study("show", "ghost")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade study show: @STUDY.ghost is not defined in the operational corpus\n"),
+        )
+
+
+class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.record_scan("shell: true")
+
+    def count_commits(self) -> str:
+        return self.machine.read_git("rev-list", "--count", "HEAD")
+
+    def test_should_pause_the_study_and_commit_the_studies(self):
+        # Act
+        completed = self.run_study("pause", "trees", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout), {"schema_version": 1, "study": "trees", "status": "paused", "changed": True}
+        )
+        self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS paused")
+        self.assertEqual(
+            self.machine.read_git("log", "-1", "--format=%s", "--name-only"),
+            "brigade study pause: trees\n\nstudies.awawa\n",
+        )
+
+    def test_should_resume_a_paused_study(self):
+        # Arrange
+        self.run_study("pause", "trees")
+
+        # Act
+        completed = self.run_study("resume", "trees")
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stdout), (0, "resumed @STUDY.trees\n"))
+        self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS active")
+
+    def test_should_leave_a_study_already_in_that_status_as_it_is(self):
+        # Arrange
+        rows = [
+            ("pause", "paused", "@STUDY.trees is already paused\n"),
+            ("resume", "active", "@STUDY.trees is already active\n"),
+        ]
+        for action, status, text in rows:
+            with self.subTest(action=action):
+                # Arrange
+                self.run_study(action, "trees")
+                commits = self.count_commits()
+
+                # Act
+                completed = self.run_study(action, "trees")
+
+                # Assert
+                self.assertEqual(
+                    (
+                        completed.returncode,
+                        completed.stdout,
+                        self.read_studies().splitlines()[-1],
+                        self.count_commits(),
+                    ),
+                    (0, text, f"\tSTATUS {status}", commits),
+                )
+
+    def test_should_exit_1_naming_a_study_that_is_not_defined(self):
+        for action in ["pause", "resume"]:
+            with self.subTest(action=action):
+                # Act
+                completed = self.run_study(action, "ghost")
+
+                # Assert
+                self.assertEqual(
+                    (completed.returncode, completed.stderr),
+                    (1, f"brigade study {action}: @STUDY.ghost is not defined in the operational corpus\n"),
+                )
+
+    def test_should_exit_1_naming_an_archived_study_it_leaves_archived(self):
+        # Arrange
+        studies = self.machine.corpus / "studies.awawa"
+        studies.write_text(self.read_studies().replace("\tSTATUS active", "\tSTATUS archived"))
+        self.machine.read_git("commit", "--quiet", "--all", "-m", "archive the trees")
+        for action in ["pause", "resume"]:
+            with self.subTest(action=action):
+                # Act
+                completed = self.run_study(action, "trees")
+
+                # Assert
+                self.assertEqual(
+                    (completed.returncode, completed.stderr, self.read_studies().splitlines()[-1]),
+                    (
+                        1,
+                        f"brigade study {action}: @STUDY.trees is archived; it is neither paused nor resumed\n",
+                        "\tSTATUS archived",
+                    ),
+                )
+
+    def test_should_exit_1_naming_a_study_written_outside_the_studies_file(self):
+        # Arrange
+        (self.machine.corpus / "hand.awawa").write_text(self.read_studies())
+        (self.machine.corpus / "studies.awawa").write_text("")
+        self.machine.read_git("add", "hand.awawa")
+        self.machine.read_git("commit", "--quiet", "--all", "-m", "move the trees by hand")
+
+        # Act
+        completed = self.run_study("pause", "trees")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade study pause: @STUDY.trees is not written in studies.awawa\n"),
+        )

@@ -1088,6 +1088,17 @@ class BrigadeTickOnceWithADueStudyTest(StudyTickTestCase):
         # Assert
         self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
 
+    def test_should_launch_no_paused_study(self):
+        # Arrange
+        self.record_study("weekly")
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "study", "pause", "weekly")
+
+        # Act
+        completed = self.run_tick("--once", "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
+
 
 class BrigadeTickOnceWithTheStudyRunsTakenTest(StudyTickTestCase):
     client_keys = CLIENT_LIVING_A_FEW_SECONDS
