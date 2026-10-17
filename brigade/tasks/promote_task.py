@@ -30,6 +30,7 @@ class TaskPromotionDemand:
     task: str | None
     pr: int | None
     environment: dict
+    attribution: tuple[str, ...]
 
 
 def _read_recorded_pull_request(runtime: Runtime, worktree: TaskWorktree) -> int:
@@ -78,7 +79,9 @@ def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
             repository=worktree.path,
             lock=locate_corpus_lock(runtime.paths.lock_directory, worktree.path),
             file_names=(file_name,),
-            describe_message=lambda: f"docs(corpus): mark @TASK.{worktree.task} implemented, delivered by #{pr}",
+            describe_message=lambda: "\n".join(
+                (f"docs(corpus): mark @TASK.{worktree.task} implemented, delivered by #{pr}", "", *demand.attribution)
+            ),
             rewrite=lambda texts: (_promote(texts[0], worktree.task, pr),),
         ),
     )

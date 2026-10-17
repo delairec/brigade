@@ -84,6 +84,16 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
             ("docs(corpus): mark @TASK.S3 implemented, delivered by #42", self.read_head()),
         )
 
+    def test_should_end_the_promotion_commit_on_the_attribution_lines(self):
+        # Act
+        self.run_task_promote()
+
+        # Assert
+        self.assertEqual(
+            self.project.run_git("-C", str(self.worktree), "log", "-1", "--format=%B"),
+            "docs(corpus): mark @TASK.S3 implemented, delivered by #42\n\nCo-Authored-By: Ada <ada@example.org>\n\n",
+        )
+
     def test_should_push_the_promotion_as_the_login_of_the_build_slot(self):
         # Act
         self.run_task_promote()

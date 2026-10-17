@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._read_attribution import read_attribution
 from brigade.commands._read_forge_environment import BUILD_SLOT, read_forge_environment
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import read_configuration
@@ -28,6 +29,7 @@ def task_promote(request, runtime: Runtime) -> dict:
             task=request.task,
             pr=request.pr,
             environment=read_forge_environment(configuration, BUILD_SLOT, runtime),
+            attribution=tuple(read_attribution(configuration, runtime)),
         ),
     )
 
