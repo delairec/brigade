@@ -3144,3 +3144,17 @@ DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 		REF @TASK.B147
 	SOURCE "pull request #148 of the brigade repository, delivering @TASK.B147"
 		REF @TASK.B147
+
+DECISION TheBuildProcedureCommitsBeforeItsCheck
+	TITLE "build-task commits the work before brigade task check, and corrects a failing check in a"
+		+ "new commit before checking again"
+	STATUS active
+	DESC "binds @TASK.B141"
+		REF @TASK.B141
+	REJECTED "the check before the commits, the order the SPEC of the task words: brigade task"
+		+ "check refuses a worktree whose files differ from HEAD, and brigade task pr a check that"
+		+ "is not of HEAD"
+	RATIONALE "a verdict of brigade task check is always of HEAD exactly, @TASK.B142; a run that"
+		+ "checked before committing would be refused, and one that rewrote its commits after the"
+		+ "check would open no pull request"
+		REF @TASK.B142

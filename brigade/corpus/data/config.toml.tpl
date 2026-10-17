@@ -65,6 +65,11 @@
 # [slots]
 # plan = ""
 
+# The procedure the tick launches for a slot in place of the one brigade ships, a name or a path resolved as the
+# argument of brigade run is; key build, in place of build-task.
+# [procedures]
+# build = ""
+
 # The client adapter a slot runs on, in place of the CLIENT of the project and of the client key, one key per slot
 # bound; slots plan, build, review, remediate, rebase, report, triage, rules, explore.
 # [slot_clients]

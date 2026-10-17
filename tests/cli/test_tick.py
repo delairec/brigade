@@ -12,7 +12,7 @@ from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
-from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
+from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 from tests.process_launcher import ProcessLauncher
 
@@ -186,7 +186,8 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
         self.assertEqual(list(self.state.iterdir()), [self.state / "locks"])
 
 
-BUILD_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 75\n---\nDeliver the task.\n"
+REPLACING_PROCEDURE = "---\ncapabilities: read, shell\nbudget: 40\n---\nDeliver the task another way.\n"
+SHIPPED_BUILD_PROCEDURE = REPOSITORY_ROOT / "brigade" / "runs" / "data" / "procedures" / "build-task.md"
 TASK_BRANCH = "task/M1-empty-cart/S3"
 
 
@@ -240,7 +241,7 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
         (recordings / "builder.json").write_text(json.dumps(DONE_RESULT))
         instructions = Path(self.root.name) / "instructions"
         (instructions / "procedures").mkdir(parents=True)
-        (instructions / "procedures" / "build-task.md").write_text(BUILD_PROCEDURE)
+        (instructions / "procedures" / "deliver.md").write_text(REPLACING_PROCEDURE)
         self.configure(recordings, instructions)
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
 
@@ -328,7 +329,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                 {
                     "schema_version": 1,
                     "run": ANY,
-                    "procedure_path": ANY,
+                    "procedure_path": str(SHIPPED_BUILD_PROCEDURE),
                     "role": "builder",
                     "role_source": ANY,
                     "client": "fake",
@@ -345,7 +346,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                 {
                     "schema_version": 1,
                     "run": ANY,
-                    "procedure_path": ANY,
+                    "procedure_path": str(SHIPPED_BUILD_PROCEDURE),
                     "role": "builder",
                     "role_source": ANY,
                     "client": "fake",
@@ -536,6 +537,59 @@ class BrigadeTickOnceUnderAConfiguredWorktreeRootTest(LaunchingTickTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertTrue((self.project.path.parent / "worktrees" / "S3").is_dir())
         self.assertEqual(self.project.run_git("ls-tree", "--name-only", WAVE_BRANCH), "corpus\n")
+
+
+class BrigadeTickOnceWithTheBuildProcedureReplacedTest(LaunchingTickTestCase):
+    def test_should_launch_the_procedure_the_key_build_of_procedures_names_in_place_of_build_task(self):
+        # Arrange
+        recordings = Path(self.root.name) / "recordings"
+        instructions = Path(self.root.name) / "instructions"
+        self.configure(recordings, instructions, keys='[procedures]\nbuild = "deliver"\n')
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertCountEqual(
+            self.read_run_records(),
+            [
+                {
+                    "schema_version": 1,
+                    "run": ANY,
+                    "procedure_path": str(instructions / "procedures" / "deliver.md"),
+                    "role": "builder",
+                    "role_source": ANY,
+                    "client": "fake",
+                    "worktree": str(self.worktree),
+                    "capabilities": ["read", "shell"],
+                    "budget": 40,
+                    "wall_limit_s": ANY,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "project": "shop",
+                    "cwd": str(self.worktree),
+                    "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
+                },
+                {
+                    "schema_version": 1,
+                    "run": ANY,
+                    "procedure_path": str(instructions / "procedures" / "deliver.md"),
+                    "role": "builder",
+                    "role_source": ANY,
+                    "client": "fake",
+                    "worktree": str(self.worktree.parent / "S6"),
+                    "capabilities": ["read", "shell"],
+                    "budget": 40,
+                    "wall_limit_s": ANY,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "project": "shop",
+                    "cwd": str(self.worktree.parent / "S6"),
+                    "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
+                },
+            ],
+        )
 
 
 class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
