@@ -104,10 +104,7 @@ class TaskContextTestCase(unittest.TestCase):
             "project",
             "add",
             str(self.project.path),
-            "--acceptance",
-            ACCEPTANCE_COMMAND,
-            "--heavy",
-            HEAVY_COMMAND,
+            *self.describe_project_commands(),
         )
         (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST)
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
@@ -121,6 +118,9 @@ class TaskContextTestCase(unittest.TestCase):
 
     def describe_environment(self) -> dict:
         return {**self.machine.describe_environment(), **PINNED_COMMIT_DATES}
+
+    def describe_project_commands(self) -> tuple[str, ...]:
+        return ("--acceptance", ACCEPTANCE_COMMAND, "--heavy", HEAVY_COMMAND)
 
     def configure(self, keys: str = "", settings: str = "") -> None:
         self.machine.write_configuration(FAKE_CLIENT.format(keys=keys, recordings=self.recordings, settings=settings))
