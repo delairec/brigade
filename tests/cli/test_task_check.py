@@ -82,14 +82,24 @@ class BrigadeTaskCheckOfPassingCommandsTest(TaskCheckTestCase):
         )
 
     def test_should_record_the_verdicts_with_the_head_in_the_state_directory(self):
-        # Arrange
-        completed = self.run_task_check("--json")
-
         # Act
-        record = json.loads(self.locate_record().read_text())
+        self.run_task_check()
 
         # Assert
-        self.assertEqual(record, json.loads(completed.stdout))
+        self.assertEqual(
+            json.loads(self.locate_record().read_text()),
+            {
+                "schema_version": 1,
+                "project": "shop",
+                "task": "S3",
+                "head": self.read_head(),
+                "checks": [
+                    {"command": PASSING_LINE, "passed": True, "duration_ms": ANY, "tail": []},
+                    {"command": "awawa fmt --check .", "passed": True, "duration_ms": ANY, "tail": []},
+                    {"command": "awawa lint --strict .", "passed": True, "duration_ms": ANY, "tail": []},
+                ],
+            },
+        )
 
 
 class BrigadeTaskCheckWithAFailingAcceptanceLineTest(TaskCheckTestCase):
@@ -125,13 +135,16 @@ class BrigadeTaskCheckWithALineShlexRefusesTest(TaskCheckTestCase):
         return ("--acceptance", PASSING_LINE, "--acceptance", UNSPLITTABLE_LINE)
 
     def test_should_refuse_the_line_by_name_before_any_command_runs(self):
+        # Arrange
+        no_check_record = []
+
         # Act
         completed = self.run_task_check()
 
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertIn(f"the command {UNSPLITTABLE_LINE} cannot be split into an argv", completed.stderr)
-        self.assertFalse(self.locate_record().exists())
+        self.assertEqual(sorted((self.state / "checks").glob("**/*.json")), no_check_record)
 
 
 class BrigadeTaskCheckInARunTest(TaskCheckTestCase):

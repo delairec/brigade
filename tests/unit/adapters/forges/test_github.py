@@ -181,7 +181,8 @@ class ListMilestonesTest(unittest.TestCase):
 
     def test_should_ask_the_milestones_api_of_the_repository_as_the_login_of_the_environment(self):
         # Arrange
-        runtime = create_runtime("")
+        no_milestone_titles = ""
+        runtime = create_runtime(no_milestone_titles)
 
         # Act
         list_milestones(MILESTONES_REQUEST, runtime)
