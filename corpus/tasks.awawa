@@ -10408,3 +10408,31 @@ TASK B187
 		+ "runs vivants (Recommended) »; « Parquer « blocked » (Recommended) »; on the plan pull"
 		+ "request, « Review par le slot review »; « Non bornée (Recommended) »"
 		REF @TASK.B166
+
+TASK B189
+	TITLE "the five modules of studies/ and planning/ that call awawa go through named operations"
+		+ "of brigade/corpus/, and a guard keeps awawa inside the gateway"
+	STATUS draft
+	TYPE refactor
+	MILESTONE @MILESTONE.M1
+	COMPONENT "corpus"
+	ROLE ada
+	DESC "found by the review of pull request #149: brigade/studies/require_answer_type.py:14,"
+		+ "brigade/planning/list_undeclared.py:18, brigade/planning/assemble_plan_context.py:35,"
+		+ "brigade/planning/read_plan.py:22 and brigade/planning/read_entity_sites.py:21 build an"
+		+ "argv opening on awawa and run it through the runner, where"
+		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa rules that nothing but"
+		+ "brigade/corpus/ calls awawa"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	SPEC "no module outside brigade/corpus/ builds an argv opening on awawa: each of the five calls"
+		+ "goes through a named operation of brigade/corpus/, tested in tests/integration against a"
+		+ "real corpus, the output of each command unchanged"
+	SPEC "a guard of tests/guards, wired into the quality gate, refuses an argv opening on awawa or"
+		+ "git outside brigade/corpus/ and brigade/git/, naming the file and the line"
+	RATIONALE "@TASK.B142 moved its own two calls into brigade/corpus/ with check_corpus; the five"
+		+ "merged ones were left to a task of their own so that #149 changes no merged module"
+		REF @TASK.B142
+	SOURCE "the user's ruling of 2026-10-17 on the review of pull request #149, « Corriger #149 +"
+		+ "tâche pour le reste (Recommandé) — Les deux appels de check_task passent par"
+		+ "brigade/corpus/ dans #149, et le round ouvre une tâche draft M1 (B189) pour déplacer les"
+		+ "cinq autres. La décision reste telle quelle. »"
