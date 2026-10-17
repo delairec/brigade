@@ -1020,7 +1020,7 @@ class StudyTickTestCase(TickTestCase, FileWaitingTestCase):
             self.wait_for_order_end(study)
         super().tearDown()
 
-    def record_study(self, name: str, slot: str = "report") -> None:
+    def record_study(self, name: str, slot: str = "report", collector: str = "shell: true") -> None:
         self.machine.run_brigade(
             CLONE_ENTRY_POINT,
             "study",
@@ -1029,7 +1029,7 @@ class StudyTickTestCase(TickTestCase, FileWaitingTestCase):
             "--title",
             f"the {name} study",
             "--collector",
-            "shell: true",
+            collector,
             "--slot",
             slot,
             "--every",
@@ -1115,13 +1115,20 @@ class BrigadeTickOnceWithTheStudyRunsTakenTest(StudyTickTestCase):
         # Assert
         self.assertEqual(self.read_started_studies(), {"monthly"})
 
+    def run_tick_before_the_scan_collects(self, gate: Path) -> None:
+        try:
+            self.run_tick("--once")
+        finally:
+            gate.touch()
+
     def test_should_launch_a_scan_beyond_the_study_runs(self):
         # Arrange
+        gate = Path(self.root.name) / "gate"
         self.record_study("monthly")
-        self.record_study("trees", slot="none")
+        self.record_study("trees", slot="none", collector=f'shell: sh -c "until [ -e {gate} ]; do sleep 0.1; done"')
 
         # Act
-        self.run_tick("--once")
+        self.run_tick_before_the_scan_collects(gate)
 
         # Assert
         self.assertEqual(self.read_started_studies(), {"monthly", "trees"})
