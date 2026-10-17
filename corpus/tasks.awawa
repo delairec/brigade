@@ -8490,6 +8490,12 @@ TASK B142
 		+ "the whole output of each command is written under <run dir>/check/"
 		IMPL "brigade/tasks/locate_check_record.py::def locate_check_record("
 		IMPL "brigade/tasks/check_task.py::def _write_output("
+	SPEC "brigade task check refuses, before any command runs and naming them, the files of the"
+		+ "worktree that differ from HEAD, staged, modified or untracked: a recorded verdict is"
+		+ "always of HEAD exactly"
+		IMPL "brigade/tasks/check_task.py::def _require_worktree_at_head("
+		IMPL "tests/cli/test_task_check.py::def"
+			+ "test_should_refuse_naming_the_files_that_differ_from_head_before_any_command_runs"
 	SPEC "brigade task pr refuses, naming the cause, a task whose last recorded check is not of"
 		+ "HEAD or has a failing command, and a task that carries no TYPE"
 		IMPL "brigade/tasks/open_task_pull_request.py::def _require_passing_check("
@@ -8583,6 +8589,10 @@ TASK B142
 		+ "passe des commandes dans des chaines de caractère. Je veux qu'on fasse les choses"
 		+ "proprement. », and the « ok » of 2026-10-16 on the session's recommendation: B142 SPEC 1"
 		+ "runs argv"
+	SOURCE "the user's ruling of 2026-10-17 on the review of pull request #149, « check refuse un"
+		+ "worktree sale (Recommandé) — check refuse de s'exécuter et nomme les fichiers modifiés :"
+		+ "un verdict enregistré correspond toujours exactement à HEAD. Une SPEC est ajoutée à"
+		+ "B142. »"
 
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"

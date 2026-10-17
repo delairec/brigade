@@ -25,6 +25,7 @@ class TaskCheckTestCase(TaskContextTestCase):
     def setUp(self):
         super().setUp()
         (self.worktree / "corpus" / "tasks.awawa").write_text(CHECKED_TASKS)
+        self.project.run_git("-C", str(self.worktree), "commit", "--quiet", "-am", "the checked tasks")
 
     def describe_project_commands(self) -> tuple[str, ...]:
         return ("--acceptance", PASSING_LINE)
@@ -143,3 +144,23 @@ class BrigadeTaskCheckInARunTest(TaskCheckTestCase):
 
         # Assert
         self.assertEqual(output, "the cart is empty\n")
+
+
+class BrigadeTaskCheckOfAWorktreeHoldingChangesTest(TaskCheckTestCase):
+    def test_should_refuse_naming_the_files_that_differ_from_head_before_any_command_runs(self):
+        # Arrange
+        no_check_record = []
+        (self.worktree / "corpus" / "tasks.awawa").write_text(CHECKED_TASKS.replace("in one click", "at once"))
+        (self.worktree / "notes.txt").write_text("the cart\n")
+
+        # Act
+        completed = self.run_task_check()
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn(
+            "the worktree of @TASK.S3 holds changes HEAD does not: corpus/tasks.awawa, notes.txt;"
+            " commit them, then run brigade task check",
+            completed.stderr,
+        )
+        self.assertEqual(sorted((self.state / "checks").glob("**/*.json")), no_check_record)

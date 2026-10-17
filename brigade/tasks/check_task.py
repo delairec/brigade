@@ -1,4 +1,6 @@
 from brigade.corpus.check_corpus import check_corpus
+from brigade.errors import BrigadeError
+from brigade.git.list_changed_files import list_changed_files
 from brigade.git.resolve_commit import resolve_commit
 from brigade.runtime import Runtime
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
@@ -52,7 +54,17 @@ def _record_check(runtime: Runtime, rank: int, check: tuple[str, ProcessRecord])
     return _describe_check(command, record, output)
 
 
+def _require_worktree_at_head(runtime: Runtime, worktree: TaskWorktree) -> None:
+    changed = list_changed_files(runtime.run_process, worktree.path)
+    if changed:
+        raise BrigadeError(
+            f"the worktree of @TASK.{worktree.task} holds changes HEAD does not: {', '.join(changed)};"
+            " commit them, then run brigade task check"
+        )
+
+
 def check_task(runtime: Runtime, worktree: TaskWorktree) -> dict:
+    _require_worktree_at_head(runtime, worktree)
     acceptance = tuple(field.value for field in worktree.project.fields if field.name == ACCEPTANCE_FIELD)
     commands = tuple((line, split_command(line)) for line in acceptance)
     head = resolve_commit(runtime.run_process, worktree.path, HEAD)
