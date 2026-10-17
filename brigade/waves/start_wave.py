@@ -1,9 +1,5 @@
-import argparse
-
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
-from brigade.corpus.prepare_project_tree import prepare_project_tree
-from brigade.corpus.read_entities import read_entities
 from brigade.errors import BrigadeError
 from brigade.ledger.append_derived_event import append_derived_event
 from brigade.ledger.read_ledger import LedgerReading
@@ -11,20 +7,20 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.planning.locate_request_file import locate_request_file
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import Configuration
+from brigade.tasks.read_milestone_tasks import read_milestone_tasks
 from brigade.tasks.read_task_number import read_task_number
 from brigade.waves.describe_request import describe_request
 from brigade.waves.mark_request_running import RUNNING_STATUS, mark_request_running
 from brigade.waves.name_next_wave import name_next_wave
+from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_wave_request import ENTITY_TYPE, read_wave_request
 
 PLANNED_STATUS = "planned"
-TASK_TYPE = "TASK"
 
 
 def _list_wave_tasks(runtime: Runtime, configuration: Configuration, request: dict) -> tuple[str, ...]:
-    query = argparse.Namespace(project=request["project"], ref=request["branch"], worktree=None)
-    tree = prepare_project_tree(query, configuration, runtime)
-    tasks = read_entities(runtime.run_process, tree.root, TASK_TYPE, f"MILESTONE==@MILESTONE.{request['milestone']}")
+    tree = prepare_wave_tree(runtime, configuration, request)
+    tasks = read_milestone_tasks(runtime.run_process, tree.root, request["milestone"])
     return tuple(sorted((task.name for task in tasks), key=lambda task: read_task_number(task, request["milestone"])))
 
 

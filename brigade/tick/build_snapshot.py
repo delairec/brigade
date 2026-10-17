@@ -1,10 +1,8 @@
-import argparse
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.errors import BrigadeError
 from brigade.ledger.format_instant import format_instant
@@ -20,16 +18,17 @@ from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_r
 from brigade.studies.read_studies import read_studies
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
+from brigade.tasks.read_milestone_tasks import read_milestone_tasks
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.describe_request import describe_request
+from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_plan_review import read_plan_review
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.require_wave_name import require_wave_name
 
 DOCUMENT_SCHEMA_VERSION = 1
 REQUEST_TYPE = "REQUEST"
-TASK_TYPE = "TASK"
 RUNNING_STATUS = "running"
 PLANNED_STATUS = "planned"
 LIVE_RUN_STATE = "running"
@@ -161,9 +160,8 @@ def _read_wave_facts(runtime: Runtime, configuration: Configuration, request: di
     except BrigadeError as refusal:
         sys.stderr.write(f"brigade tick: @{REQUEST_TYPE}.{request['name']} skipped: {refusal}\n")
         return None
-    query = argparse.Namespace(project=request["project"], ref=request["branch"], worktree=None)
-    tree = prepare_project_tree(query, configuration, runtime)
-    tasks = read_entities(runtime.run_process, tree.root, TASK_TYPE, f"MILESTONE==@MILESTONE.{request['milestone']}")
+    tree = prepare_wave_tree(runtime, configuration, request)
+    tasks = read_milestone_tasks(runtime.run_process, tree.root, request["milestone"])
     return WaveFacts(
         request=request["name"],
         project=request["project"],
