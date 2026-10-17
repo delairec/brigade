@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/tasks.awawa"
+    ],
+    "cwd": "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/projects/shop/.brigade/worktrees/S3/corpus/tasks.awawa": "TASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS implemented\n\nTASK S3\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS implemented\n\tDELIVERED_BY 57\n\tTYPE feat\n\tCOMPONENT \"cart button\"\n\tMILESTONE @MILESTONE.M1\n\tSPEC \"the button of src/cart/button.py, once pressed, empties the cart\"\n\tSPEC \"the emptying charges nothing\"\n\t\tIMPL \"src/billing/charge.py::def charge\"\n\nTASK S6\n\tTITLE \"Count the emptied carts\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

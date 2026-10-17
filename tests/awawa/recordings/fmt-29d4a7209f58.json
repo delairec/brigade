@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/config/brigade/projects.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/projects.awawa": "PROJECT shop\n\tPATH \"<tmp:0>/projects/shop\"\n\tMAIN \"main\"\n\tCORPUS \"corpus\"\n\tACCEPTANCE \"python3 -c \\\"import sys; [print(f'line {n}') for n in range(1, 26)]; sys.exit(3)\\\"\"\n\tFORGE \"none\"\n\tSTATUS active\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
