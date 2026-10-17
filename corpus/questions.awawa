@@ -55,3 +55,23 @@ OPEN_QUESTION WhereTheInboxOutputOfAStudyIsStored
 		REF @TASK.B22
 	SOURCE "pull request #143 of the brigade repository, delivering @TASK.B48"
 		REF @TASK.B48
+
+OPEN_QUESTION TheKeyOfAWaveInTheLedger
+	QUESTION "what keys a wave in the ledger: the name of its REQUEST, <project>_<n>, or the pair"
+		+ "project and MILESTONE?"
+	STATUS open
+	BLOCKS @TASK.B165
+	RATIONALE "today wave.started and task.state are keyed by the MILESTONE name alone,"
+		+ "brigade/waves/start_wave.py:34, brigade/commands/tick.py:68,"
+		+ "brigade/waves/read_task_states.py:7-12, brigade/tick/build_snapshot.py:130 and"
+		+ "brigade/ledger/describe_wave.py:56-57: two projects whose waves name a milestone M1"
+		+ "share their task states, and a milestone cannot be relaunched,"
+		+ "brigade/planning/record_plan.py:131 refusing the existing integration branch"
+	RATIONALE "the candidates: the name of the REQUEST, unique by construction, SPEC 1 of"
+		+ "@TASK.B11; the pair project and MILESTONE; neither creates a WAVE type, which"
+		+ "@DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt rejects"
+		REF @TASK.B11
+		REF @DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
+	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"Open"
+		+ "question\""
+	SOURCE "use-case map of 2026-10-16, findings X2 and C2"

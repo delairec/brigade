@@ -4,259 +4,378 @@
    "id": "A1",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "require_configured_client.py:15-16 lève dès que Configuration.client est None (read_configuration.py:43, défaut None) ; config.toml.tpl:6 laisse la clé client commentée ; doctor.py:122-126 en fait un prerequisite « finding », donc exit 1 (doctor.py:359-362). Le défaut intégré proposé contredirait @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters (le cœur ne nomme aucun client) : la correction passe par init qui sonde les adapters présents (brigade/system/list_client_adapters.py) et écrit la clé, pas par un défaut en dur."
+   "note": "require_configured_client.py:15-16 lève dès que Configuration.client est None (read_configuration.py:43, défaut None) ; config.toml.tpl:6 laisse la clé client commentée ; doctor.py:122-126 en fait un prerequisite « finding », donc exit 1 (doctor.py:359-362). Le défaut intégré proposé contredirait @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters (le cœur ne nomme aucun client) : la correction passe par init qui sonde les adapters présents (brigade/system/list_client_adapters.py) et écrit la clé, pas par un défaut en dur.",
+   "addressed_by": "@TASK.B177"
   },
   {
    "id": "A2",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "Aucun module de brigade/commands ne déclare path=(\"config\", …) : les 40 commandes relevées par grep path=( sont adapter, collect, collectors, corpus, doctor, init, ledger, plan, processes, project, roles, run, runs, scheduler, tick, wave ; read_configuration.py:163-208 est le seul lecteur et refuse une clé inconnue, l'erreur n'apparaît donc qu'à la commande suivante."
+   "note": "Aucun module de brigade/commands ne déclare path=(\"config\", …) : les 40 commandes relevées par grep path=( sont adapter, collect, collectors, corpus, doctor, init, ledger, plan, processes, project, roles, run, runs, scheduler, tick, wave ; read_configuration.py:163-208 est le seul lecteur et refuse une clé inconnue, l'erreur n'apparaît donc qu'à la commande suivante.",
+   "addressed_by": "@TASK.B183"
   },
   {
    "id": "A3",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "doctor.py:369-372 et :348 ne font que lister [slot_clients] (describe_slot_clients) ; _check_client (doctor.py:122-137) sonde le seul client global ; [slots] et PROJECT.CLIENT ne sont lus nulle part dans doctor (doctor.py:375-396). La vérification existe dans roles list seulement : B145 SPEC 5, exit 1 sur un adapter introuvable."
+   "note": "doctor.py:369-372 et :348 ne font que lister [slot_clients] (describe_slot_clients) ; _check_client (doctor.py:122-137) sonde le seul client global ; [slots] et PROJECT.CLIENT ne sont lus nulle part dans doctor (doctor.py:375-396). La vérification existe dans roles list seulement : B145 SPEC 5, exit 1 sur un adapter introuvable.",
+   "addressed_by": "@TASK.B173"
   },
   {
    "id": "A4",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "project_add.py:53-60 : remove_project_entity puis render_project_entity depuis _describe_fields (project_add.py:69-83), qui ne porte que PATH, REMOTE, MAIN, CORPUS, ACCEPTANCE, HEAVY, SETUP, FORGE, STATUS ; SLOTS, MERGE, GRAPH, CLIENT, ROLESET, ROLE, PRIVATE (schema.awawa.tpl:31-44) disparaissent sans avertissement."
+   "note": "project_add.py:53-60 : remove_project_entity puis render_project_entity depuis _describe_fields (project_add.py:69-83), qui ne porte que PATH, REMOTE, MAIN, CORPUS, ACCEPTANCE, HEAVY, SETUP, FORGE, STATUS ; SLOTS, MERGE, GRAPH, CLIENT, ROLESET, ROLE, PRIVATE (schema.awawa.tpl:31-44) disparaissent sans avertissement.",
+   "addressed_by": "@TASK.B180"
   },
   {
    "id": "A5",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "project_add.py:147-154 : path, --name, --acceptance, --heavy, --setup, --force seulement ; schema.awawa.tpl:31-44 déclare SLOTS, MERGE, GRAPH, CLIENT, ROLESET, ROLE, PRIVATE."
+   "note": "project_add.py:147-154 : path, --name, --acceptance, --heavy, --setup, --force seulement ; schema.awawa.tpl:31-44 déclare SLOTS, MERGE, GRAPH, CLIENT, ROLESET, ROLE, PRIVATE.",
+   "addressed_by": "@TASK.B180"
   },
   {
    "id": "A6",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "Aucune commande policy parmi les path=( de brigade/commands ; doctor.py:241 lit POLICY par read_entities, read_plan_review.py et read_handovers.py lisent PLAN_REVIEW et HANDOVERS : trois lecteurs, aucun écrivain."
+   "note": "Aucune commande policy parmi les path=( de brigade/commands ; doctor.py:241 lit POLICY par read_entities, read_plan_review.py et read_handovers.py lisent PLAN_REVIEW et HANDOVERS : trois lecteurs, aucun écrivain.",
+   "addressed_by": "@TASK.B180"
   },
   {
    "id": "A7",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "Le groupe project n'a que add, list, pause, resume, show ; schema.awawa.tpl:49 STATUS active|paused ; remove_project_entity n'est appelé que par project_add.py:56."
+   "note": "Le groupe project n'a que add, list, pause, resume, show ; schema.awawa.tpl:49 STATUS active|paused ; remove_project_entity n'est appelé que par project_add.py:56.",
+   "addressed_by": "@TASK.B180"
   },
   {
    "id": "A8",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "brigade.timer.tpl:5 OnCalendar=*:0/5 et crontab-line.tpl */5 figés, tick.py:37 TICK_INTERVAL_S = 300 : trois déclarations ; le groupe scheduler n'a que install et status, alors que cron.py:53 sait déjà retirer la ligne au MARKER."
+   "note": "brigade.timer.tpl:5 OnCalendar=*:0/5 et crontab-line.tpl */5 figés, tick.py:37 TICK_INTERVAL_S = 300 : trois déclarations ; le groupe scheduler n'a que install et status, alors que cron.py:53 sait déjà retirer la ligne au MARKER.",
+   "addressed_by": "@TASK.B179"
   },
   {
    "id": "A9",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "scheduler_status.py:59-60 exit 0 toujours ; _describe_last_tick (:32-36) imprime le heartbeat sans le comparer à l'horloge ni à l'intervalle ; doctor.py:140-149 ne sonde que l'état de l'instance systemd. Pire : sur exception, tick.py:78-99 n'écrit pas le heartbeat (write_json_atomically à :98, après run_rounds) et aucun des 13 événements de brigade/ledger ne concerne le tick."
+   "note": "scheduler_status.py:59-60 exit 0 toujours ; _describe_last_tick (:32-36) imprime le heartbeat sans le comparer à l'horloge ni à l'intervalle ; doctor.py:140-149 ne sonde que l'état de l'instance systemd. Pire : sur exception, tick.py:78-99 n'écrit pas le heartbeat (write_json_atomically à :98, après run_rounds) et aucun des 13 événements de brigade/ledger ne concerne le tick.",
+   "addressed_by": "@TASK.B170"
   },
   {
    "id": "A10",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "doctor.py:375-396 : aucun appel à read_projects ; la seule lecture du corpus opérationnel est read_entities(POLICY) à :241."
+   "note": "doctor.py:375-396 : aucun appel à read_projects ; la seule lecture du corpus opérationnel est read_entities(POLICY) à :241.",
+   "addressed_by": "@TASK.B173"
   },
   {
    "id": "A11",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "crontab-line.tpl:1 : mkdir -p … && … tick --once >/dev/null 2>>… ; @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell DESC 7 la déclare hors décision et @TASK.B163 SPEC 1 (draft, M8) l'audite. Même défaut que B13 à un autre site : regroupé sous B13."
+   "note": "crontab-line.tpl:1 : mkdir -p … && … tick --once >/dev/null 2>>… ; @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell DESC 7 la déclare hors décision et @TASK.B163 SPEC 1 (draft, M8) l'audite. Même défaut que B13 à un autre site : regroupé sous B13.",
+   "addressed_by": "écarté : @TASK.B163 SPEC 1"
   },
   {
    "id": "A12",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "project_add.py:63-83 range les valeurs telles quelles ; shlex.split n'intervient qu'à prepare_task_worktree.py:30-34, au premier lancement ; la décision DESC 1 (« refusée, en la nommant, avant qu'une commande ne tourne ») n'est tenue qu'au tick. Regroupé sous B13."
+   "note": "project_add.py:63-83 range les valeurs telles quelles ; shlex.split n'intervient qu'à prepare_task_worktree.py:30-34, au premier lancement ; la décision DESC 1 (« refusée, en la nommant, avant qu'une commande ne tourne ») n'est tenue qu'au tick. Regroupé sous B13.",
+   "addressed_by": "écarté : @TASK.B142 SPEC 1, @TASK.B163 SPEC 2"
   },
   {
    "id": "A13",
    "verdict": "adjusted",
    "severity": "low",
-   "note": "Ce n'est pas un défaut mais une décision de l'utilisateur : B11 SOURCE 3-4 et B99 SOURCE 2 (2026-10-15 : « on ne fait pas de legacy […] ils sont jetés, ils ne sont pas supportés ») ; init.py:54-56 et doctor.py:46,310-314 l'appliquent. Reste un trou mineur : le repli « throw the operational corpus away, then run brigade init » n'a pas de commande (réenregistrer chaque projet à la main)."
+   "note": "Ce n'est pas un défaut mais une décision de l'utilisateur : B11 SOURCE 3-4 et B99 SOURCE 2 (2026-10-15 : « on ne fait pas de legacy […] ils sont jetés, ils ne sont pas supportés ») ; init.py:54-56 et doctor.py:46,310-314 l'appliquent. Reste un trou mineur : le repli « throw the operational corpus away, then run brigade init » n'a pas de commande (réenregistrer chaque projet à la main).",
+   "addressed_by": "réfuté : décision de l'utilisateur du 2026-10-15 (@TASK.B11 SOURCE)"
   },
   {
    "id": "A14",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "scheduler_install.py:29 fige Path(sys.argv[0]).absolute(), :30-35 PATH et XDG_* ; brigade.service.tpl:6-7 et crontab-line.tpl les écrivent ; scheduler_status.py:63-72 ne compare pas l'unité installée au brigade courant."
+   "note": "scheduler_install.py:29 fige Path(sys.argv[0]).absolute(), :30-35 PATH et XDG_* ; brigade.service.tpl:6-7 et crontab-line.tpl les écrivent ; scheduler_status.py:63-72 ne compare pas l'unité installée au brigade courant.",
+   "addressed_by": "@TASK.B179"
   },
   {
    "id": "A15",
    "verdict": "adjusted",
    "severity": "medium",
-   "note": "FORGE none est lu par record_plan.py:177-178 (pas de push), donc « lu par aucun code » est inexact ; mais aucun mode local n'existe au-delà (B46 draft M7, B100 draft ADD0) et FORGE_FALLBACK (doctor.py:34) promet « local mode without a forge »."
+   "note": "FORGE none est lu par record_plan.py:177-178 (pas de push), donc « lu par aucun code » est inexact ; mais aucun mode local n'existe au-delà (B46 draft M7, B100 draft ADD0) et FORGE_FALLBACK (doctor.py:34) promet « local mode without a forge ».",
+   "addressed_by": "écarté : @TASK.B46 SPEC 2"
   },
   {
    "id": "A16",
    "verdict": "confirmed",
    "severity": "low",
-   "note": "grep expanduser brigade/ : aucun résultat ; doctor.py:272 Path(configuration.instructions) ; plan_run.py:151 passe la chaîne brute à ProcedureDirectories."
+   "note": "grep expanduser brigade/ : aucun résultat ; doctor.py:272 Path(configuration.instructions) ; plan_run.py:151 passe la chaîne brute à ProcedureDirectories.",
+   "addressed_by": "@TASK.B185"
   },
   {
    "id": "A17",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "process_trace.py:13-33 : argv, cwd, outcome, exit, duration_ms, pid ; ni stdout ni stderr."
+   "note": "process_trace.py:13-33 : argv, cwd, outcome, exit, duration_ms, pid ; ni stdout ni stderr.",
+   "addressed_by": "@TASK.B176"
+  },
+  {
+   "id": "A18",
+   "addressed_by": "@TASK.B184"
+  },
+  {
+   "id": "A19",
+   "addressed_by": "écarté : @OPEN_QUESTION.InitAsksForBuiltInOrCustomRoles"
+  },
+  {
+   "id": "A20",
+   "addressed_by": "@TASK.B186"
+  },
+  {
+   "id": "A21",
+   "addressed_by": "@TASK.B140 (SPEC 4)"
+  },
+  {
+   "id": "A22",
+   "addressed_by": "@TASK.B177"
+  },
+  {
+   "id": "A23",
+   "addressed_by": "@TASK.B177"
   },
   {
    "id": "B1",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "tick.py:56 coupe le worktree (prepare_task_worktree) avant tick.py:67 run(), qui résout la procédure (plan_run.py:152 → resolve_procedure.py:60-73 lève « no procedure build-task ») ; aucun try autour de run(), task.state running n'est écrit qu'à tick.py:68. Au tick suivant, add_branch_worktree.py:22 (git worktree add -b) échoue sur la branche existante, hors du try de prepare_task_worktree.py:57, donc CommandFailed (errors.py:13) remonte et le tick entier échoue, à chaque tick. brigade/runs/data/procedures/ ne contient que wave-plan.md."
+   "note": "tick.py:56 coupe le worktree (prepare_task_worktree) avant tick.py:67 run(), qui résout la procédure (plan_run.py:152 → resolve_procedure.py:60-73 lève « no procedure build-task ») ; aucun try autour de run(), task.state running n'est écrit qu'à tick.py:68. Au tick suivant, add_branch_worktree.py:22 (git worktree add -b) échoue sur la branche existante, hors du try de prepare_task_worktree.py:57, donc CommandFailed (errors.py:13) remonte et le tick entier échoue, à chaque tick. brigade/runs/data/procedures/ ne contient que wave-plan.md.",
+   "addressed_by": "@TASK.B166 · @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction (DESC 3)"
   },
   {
    "id": "B2",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "actions.py déclare StartWave et LaunchTask seulement ; plan.py:49 exige merged pour les AFTER ; grep TaskState( : tick.py:68 (running) et prepare_task_worktree.py:63 (parked) sont les deux seuls écrivains ; pr.merged, task.parked, wave.paused, wave.resumed n'ont aucun écrivain dans brigade/ (grep PrMerged(|TaskParked(|WavePaused(|WaveResumed( hors brigade/ledger : rien)."
+   "note": "actions.py déclare StartWave et LaunchTask seulement ; plan.py:49 exige merged pour les AFTER ; grep TaskState( : tick.py:68 (running) et prepare_task_worktree.py:63 (parked) sont les deux seuls écrivains ; pr.merged, task.parked, wave.paused, wave.resumed n'ont aucun écrivain dans brigade/ (grep PrMerged(|TaskParked(|WavePaused(|WaveResumed( hors brigade/ledger : rien).",
+   "addressed_by": "écarté : @TASK.B14 SPEC 2, @TASK.B17 SPEC 5"
   },
   {
    "id": "B3",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "plan.py:47 : seul queued (ou absent) est démarrable ; describe_run.py:17-20 sait dire dead mais build_snapshot.py:140-144 ne retient que les runs running pour compter les slots ; aucune action du tick ne rapproche task.state running d'un run mort. B14 (todo) ne lit que des faits de forge (PR vue) : un run mort sans PR reste running après B14 aussi ; B18 couvre les checks rouges, B19 le seul rate_limit."
+   "note": "plan.py:47 : seul queued (ou absent) est démarrable ; describe_run.py:17-20 sait dire dead mais build_snapshot.py:140-144 ne retient que les runs running pour compter les slots ; aucune action du tick ne rapproche task.state running d'un run mort. B14 (todo) ne lit que des faits de forge (PR vue) : un run mort sans PR reste running après B14 aussi ; B18 couvre les checks rouges, B19 le seul rate_limit.",
+   "addressed_by": "@TASK.B168"
   },
   {
    "id": "B4",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "B12 SPEC 4 : « unparked by hand » ; grep unpark|requeue brigade/ : rien ; aucune commande n'écrit task.state (tick.py:68 et prepare_task_worktree.py:63 seuls écrivains) ; aucune des 137 tâches ne nomme requeue."
+   "note": "B12 SPEC 4 : « unparked by hand » ; grep unpark|requeue brigade/ : rien ; aucune commande n'écrit task.state (tick.py:68 et prepare_task_worktree.py:63 seuls écrivains) ; aucune des 137 tâches ne nomme requeue.",
+   "addressed_by": "@TASK.B168"
   },
   {
    "id": "B5",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "schema.awawa.tpl:128 STATUS planning|planned|running|paused|reporting|delivered|closed|cancelled ; écrivains : record_request (planning), mark_request_planned.py:12, mark_request_running.py:12 ; grep delivered|cancelled|reporting brigade/ : aucun écrivain ; sur les 137 tâches, aucune ne nomme wave cancel ni une transition vers delivered (le seul « cancel » est order cancel, B51, M8)."
+   "note": "schema.awawa.tpl:128 STATUS planning|planned|running|paused|reporting|delivered|closed|cancelled ; écrivains : record_request (planning), mark_request_planned.py:12, mark_request_running.py:12 ; grep delivered|cancelled|reporting brigade/ : aucun écrivain ; sur les 137 tâches, aucune ne nomme wave cancel ni une transition vers delivered (le seul « cancel » est order cancel, B51, M8).",
+   "addressed_by": "@TASK.B167 · @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema"
   },
   {
    "id": "B6",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "wave_new.py:54-55 : record_request commité puis _launch_planner ; read_planning_request.py:22-23 refuse une REQUEST hors planning ; aucune action du tick ne lit un run planificateur dead ; aucune commande replan."
+   "note": "wave_new.py:54-55 : record_request commité puis _launch_planner ; read_planning_request.py:22-23 refuse une REQUEST hors planning ; aucune action du tick ne lit un run planificateur dead ; aucune commande replan.",
+   "addressed_by": "@TASK.B169"
   },
   {
    "id": "B7",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "record_plan.py:141-142 refuse la branche existante ; :177-179 push puis _mark_planned ; pas de reprise partielle."
+   "note": "record_plan.py:141-142 refuse la branche existante ; :177-179 push puis _mark_planned ; pas de reprise partielle.",
+   "addressed_by": "@TASK.B166 · @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction (DESC 3)"
+  },
+  {
+   "id": "B8",
+   "addressed_by": "@TASK.B178"
   },
   {
    "id": "B9",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "runs_list.py:9 COLUMNS sans arguments ; wave_show.py:15 sans colonne run ; et describe_finished.py:93-94 écrit wave=None, task=None pour tout run : le lien run↔tâche n'existe que dans runs/<id>/run.json (arguments task=@TASK.X, tick.py:63), élagué par runs_kept. Aggravé : voir la fiche nouvelle sur l'identité."
+   "note": "runs_list.py:9 COLUMNS sans arguments ; wave_show.py:15 sans colonne run ; et describe_finished.py:93-94 écrit wave=None, task=None pour tout run : le lien run↔tâche n'existe que dans runs/<id>/run.json (arguments task=@TASK.X, tick.py:63), élagué par runs_kept. Aggravé : voir la fiche nouvelle sur l'identité.",
+   "addressed_by": "@TASK.B164 · @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished"
   },
   {
    "id": "B10",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "apply_actions.py:7-11 sans isolement ; prepare_task_worktree.py:64 relève BrigadeError après avoir parqué ; tick.py:85-98 : heartbeat écrit après run_rounds. @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction DESC 3 demande de s'arrêter au premier échec mais aussi d'enregistrer chaque issue dans le ledger : aucun événement d'échec n'existe."
+   "note": "apply_actions.py:7-11 sans isolement ; prepare_task_worktree.py:64 relève BrigadeError après avoir parqué ; tick.py:85-98 : heartbeat écrit après run_rounds. @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction DESC 3 demande de s'arrêter au premier échec mais aussi d'enregistrer chaque issue dans le ledger : aucun événement d'échec n'existe.",
+   "addressed_by": "@TASK.B166 · @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction (DESC 3)"
   },
   {
    "id": "B11",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "plan.py:54-58 lève BrigadeError dans plan(), appelé pour toutes les vagues (plan.py:22-25)."
+   "note": "plan.py:54-58 lève BrigadeError dans plan(), appelé pour toutes les vagues (plan.py:22-25).",
+   "addressed_by": "@TASK.B166 · @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction (DESC 3)"
   },
   {
    "id": "B12",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "build_snapshot.py:116,129 : read_live_blockers par tâche, deux appels awawa au moins (read_live_blockers.py:40-44) ; run_rounds.py:22-23 reconstruit le snapshot à chaque tour, cap 10 (tick.py:38) ; read_task_states.py:10 relit en plus le ledger entier par vague et par tour."
+   "note": "build_snapshot.py:116,129 : read_live_blockers par tâche, deux appels awawa au moins (read_live_blockers.py:40-44) ; run_rounds.py:22-23 reconstruit le snapshot à chaque tour, cap 10 (tick.py:38) ; read_task_states.py:10 relit en plus le ledger entier par vague et par tour.",
+   "addressed_by": "@TASK.B174"
   },
   {
    "id": "B13",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "prepare_task_worktree.py:30-39 ; décision DESC 5 : « the string field is the serialization of that argv until @TASK.B163 ». Fiche canonique du groupe commandes en chaînes (A11, A12, C16)."
+   "note": "prepare_task_worktree.py:30-39 ; décision DESC 5 : « the string field is the serialization of that argv until @TASK.B163 ». Fiche canonique du groupe commandes en chaînes (A11, A12, C16).",
+   "addressed_by": "écarté : @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell, @TASK.B142 SPEC 1"
   },
   {
    "id": "B14",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "grep WavePaused(|WaveResumed( hors brigade/ledger : rien ; describe_wave.py:36-53 les lit ; B19 SPEC 3 les étend."
+   "note": "grep WavePaused(|WaveResumed( hors brigade/ledger : rien ; describe_wave.py:36-53 les lit ; B19 SPEC 3 les étend.",
+   "addressed_by": "@TASK.B178"
   },
   {
    "id": "B15",
    "verdict": "confirmed",
    "severity": "low",
-   "note": "tick.py:37 TICK_INTERVAL_S = 300 ; brigade.timer.tpl:5 ; crontab-line.tpl : trois déclarations de l'intervalle. Regroupé sous A8."
+   "note": "tick.py:37 TICK_INTERVAL_S = 300 ; brigade.timer.tpl:5 ; crontab-line.tpl : trois déclarations de l'intervalle. Regroupé sous A8.",
+   "addressed_by": "@TASK.B179"
   },
   {
    "id": "B16",
    "verdict": "confirmed",
    "severity": "low",
-   "note": "tick.py:34 build-task ; AGENTS.md § Bootstrap : brigade run awawa-task ; B141 RATIONALE 2 justifie le nom (une procédure livrée se résout avant celles du corpus d'instructions, resolve_procedure.py:60-73)."
+   "note": "tick.py:34 build-task ; AGENTS.md § Bootstrap : brigade run awawa-task ; B141 RATIONALE 2 justifie le nom (une procédure livrée se résout avant celles du corpus d'instructions, resolve_procedure.py:60-73).",
+   "addressed_by": "écarté : séparation voulue de awawa-task et build-task (@TASK.B141 RATIONALE)"
+  },
+  {
+   "id": "B17",
+   "addressed_by": "@TASK.B178"
   },
   {
    "id": "B18",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "B22 à B26 : STATUS draft (awawa status TASK --where STATUS==draft)."
+   "note": "B22 à B26 : STATUS draft (awawa status TASK --where STATUS==draft).",
+   "addressed_by": "écarté : @TASK.B22, @TASK.B25, @TASK.B26"
+  },
+  {
+   "id": "B19",
+   "addressed_by": "@TASK.B178"
   },
   {
    "id": "C1",
    "verdict": "confirmed",
    "severity": "high",
-   "note": "run_finished.py:22,31 porte usage et cost_usd ; finished_run.py:30-48 n'expose que main_steps, oversized_output_steps et steps_to_first_edit ; describe_wave.py:56-87 ne lit ni l'un ni l'autre (grep cost_usd hors adapters : parse_result_answer, run_segment, describe_finished seulement). Cause plus profonde : describe_finished.py:93-94 écrit wave=None, task=None pour tout run, donc même agrégé le coût ne se rattacherait ni à une vague ni à une tâche."
+   "note": "run_finished.py:22,31 porte usage et cost_usd ; finished_run.py:30-48 n'expose que main_steps, oversized_output_steps et steps_to_first_edit ; describe_wave.py:56-87 ne lit ni l'un ni l'autre (grep cost_usd hors adapters : parse_result_answer, run_segment, describe_finished seulement). Cause plus profonde : describe_finished.py:93-94 écrit wave=None, task=None pour tout run, donc même agrégé le coût ne se rattacherait ni à une vague ni à une tâche.",
+   "addressed_by": "@TASK.B175"
   },
   {
    "id": "C2",
    "verdict": "adjusted",
    "severity": "high",
-   "note": "La revendication « relancer F0 » est refusée par le code : record_plan.py:131-133 (list_name_collisions) refuse un nom déjà dans le corpus du projet et :141-142 une branche integration/<slug> existante. La confusion est entre projets : start_wave.py:34 et tick.py:68 clé = request['milestone'] sans projet ; TaskState (task_state.py:23-25) n'a pas de champ project ; read_task_states.py:11 filtre sur wave seul et alimente le tick (build_snapshot.py:130) et wave show (list_wave_tasks.py:29) ; describe_wave.py:57 idem alors que WaveStarted porte project. Deux projets dont les plans nomment un jalon M1 avec des tâches B1… partagent leurs task.state dans le tick : la sévérité high tient, le libellé change."
+   "note": "La revendication « relancer F0 » est refusée par le code : record_plan.py:131-133 (list_name_collisions) refuse un nom déjà dans le corpus du projet et :141-142 une branche integration/<slug> existante. La confusion est entre projets : start_wave.py:34 et tick.py:68 clé = request['milestone'] sans projet ; TaskState (task_state.py:23-25) n'a pas de champ project ; read_task_states.py:11 filtre sur wave seul et alimente le tick (build_snapshot.py:130) et wave show (list_wave_tasks.py:29) ; describe_wave.py:57 idem alors que WaveStarted porte project. Deux projets dont les plans nomment un jalon M1 avec des tâches B1… partagent leurs task.state dans le tick : la sévérité high tient, le libellé change.",
+   "addressed_by": "@OPEN_QUESTION.TheKeyOfAWaveInTheLedger · @TASK.B165"
+  },
+  {
+   "id": "C3",
+   "addressed_by": "@TASK.B175"
+  },
+  {
+   "id": "C4",
+   "addressed_by": "@TASK.B175"
+  },
+  {
+   "id": "C5",
+   "addressed_by": "@TASK.B175"
   },
   {
    "id": "C6",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "grep quota brigade/ : la seule occurrence est l'état paused:quota (task_state.py:16) ; B28 SPEC 1 liste quota sur Home."
+   "note": "grep quota brigade/ : la seule occurrence est l'état paused:quota (task_state.py:16) ; B28 SPEC 1 liste quota sur Home.",
+   "addressed_by": "@TASK.B28 (SPEC 6)"
   },
   {
    "id": "C7",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "describe_budgets.py:14-23 : p90 sur les derniers runs, aucune lecture du front matter des procédures ; B37 (draft, M6) n'a ni nom de commande ni garde. Fiche canonique pour C14."
+   "note": "describe_budgets.py:14-23 : p90 sur les derniers runs, aucune lecture du front matter des procédures ; B37 (draft, M6) n'a ni nom de commande ni garde. Fiche canonique pour C14.",
+   "addressed_by": "@TASK.B37 (SPEC 3 à 5)"
+  },
+  {
+   "id": "C8",
+   "addressed_by": "@TASK.B37 (SPEC 3 à 5)"
   },
   {
    "id": "C9",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "collect.py:63 et collectors_list.py:28 : Path.cwd()."
+   "note": "collect.py:63 et collectors_list.py:28 : Path.cwd().",
+   "addressed_by": "@TASK.B181"
+  },
+  {
+   "id": "C10",
+   "addressed_by": "@TASK.B181 · @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached (DESC 4)"
   },
   {
    "id": "C11",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "read_ledger.py:96-107 relit tous les fichiers mensuels à chaque appel ; read_task_states.py:10 le relit par vague, build_snapshot.py:130 par vague et par tour du tick."
+   "note": "read_ledger.py:96-107 relit tous les fichiers mensuels à chaque appel ; read_task_states.py:10 le relit par vague, build_snapshot.py:130 par vague et par tour du tick.",
+   "addressed_by": "@TASK.B174"
+  },
+  {
+   "id": "C12",
+   "addressed_by": "rien : les lignes ignorées restent des diagnostics, sortie 0 (arbitrage du 2026-10-17)"
   },
   {
    "id": "C13",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "B94 : MILESTONE M3, AFTER B27, B82, B106 ; runs_show.py n'imprime pas le fichier de progression."
+   "note": "B94 : MILESTONE M3, AFTER B27, B82, B106 ; runs_show.py n'imprime pas le fichier de progression.",
+   "addressed_by": "@TASK.B182"
+  },
+  {
+   "id": "C14",
+   "addressed_by": "@TASK.B37 (SPEC 3 à 5)"
   },
   {
    "id": "C15",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "B111 et B144 : draft, ADD0, COMPONENT runs, toutes deux « un repli quand le quota est épuisé » ; B144 AFTER B19, B111 REF B19 ; leurs DESC posent les mêmes questions (quels runs basculent, quel niveau de raisonnement, retour au client)."
+   "note": "B111 et B144 : draft, ADD0, COMPONENT runs, toutes deux « un repli quand le quota est épuisé » ; B144 AFTER B19, B111 REF B19 ; leurs DESC posent les mêmes questions (quels runs basculent, quel niveau de raisonnement, retour au client).",
+   "addressed_by": "@TASK.B144 (@TASK.B111 archivé)"
   },
   {
    "id": "C16",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "B48 SPEC 8 (collecteur shell : « the stdout lines of the command line the STUDY declares ») ; décision DESC 1 et 8 le lient ; B163 SPEC 1-2. Regroupé sous B13."
+   "note": "B48 SPEC 8 (collecteur shell : « the stdout lines of the command line the STUDY declares ») ; décision DESC 1 et 8 le lient ; B163 SPEC 1-2. Regroupé sous B13.",
+   "addressed_by": "écarté : @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell, @TASK.B48 (PR #143)"
+  },
+  {
+   "id": "C17",
+   "addressed_by": "@TASK.B181"
   },
   {
    "id": "C18",
    "verdict": "confirmed",
    "severity": "medium",
-   "note": "B33 (M4, draft) : les scans sont des STUDY SLOT none, OUTPUT inbox ; B104 (ADD0, draft) planifie clean ; aucune commande clean parmi les 40 commandes."
+   "note": "B33 (M4, draft) : les scans sont des STUDY SLOT none, OUTPUT inbox ; B104 (ADD0, draft) planifie clean ; aucune commande clean parmi les 40 commandes.",
+   "addressed_by": "@TASK.B104 (SPEC 4)"
+  },
+  {
+   "id": "C19",
+   "addressed_by": "@TASK.B27 (SPEC 9)"
+  },
+  {
+   "id": "C20",
+   "addressed_by": "@TASK.B35 (SPEC 6)"
   }
  ],
  "duplicates": [
@@ -306,7 +425,7 @@
     "etat-d-une-vague",
     "dashboard-ledger-reports"
    ],
-   "addressed_by": null,
+   "addressed_by": "@TASK.B164 · @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished",
    "suggestion": "brigade run reçoit --wave <request> --task <task> (ou les lit de ses arguments) et les écrit dans run.json et dans chaque run.finished ; task.state porte run ; la clé de vague est le nom de la REQUEST."
   },
   {
@@ -321,7 +440,7 @@
     "etat-d-une-vague",
     "wave-ledger"
    ],
-   "addressed_by": "@TASK.B163 (audit du vocabulaire, draft, M8)",
+   "addressed_by": "@OPEN_QUESTION.TheKeyOfAWaveInTheLedger · @TASK.B165",
    "suggestion": "Clé de vague = nom de la REQUEST (<project>_<n>, unique par construction, B11 SPEC 1), le jalon devenant un attribut ; task.state porte project ou request."
   },
   {
@@ -337,7 +456,7 @@
     "planifier-une-demande",
     "la-vague-se-livre-seule-la-nuit"
    ],
-   "addressed_by": null,
+   "addressed_by": "@TASK.B166 · @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction (DESC 3)",
    "suggestion": "Une règle d'ordre par action : le fait de garde d'abord (task.state running avec l'id de run réservé), l'effet ensuite, la compensation sur exception (remove_worktree + delete_branch, déjà écrits pour le setup) ; prepare_task_worktree réutilise une branche task/… existante au lieu d'échouer."
   },
   {
@@ -353,7 +472,7 @@
     "relancer-une-tache-echouee",
     "wave-ledger"
    ],
-   "addressed_by": "@TASK.B14, @TASK.B15, @TASK.B16, @TASK.B18, @TASK.B19 pour task.state (partiel) ; null pour la REQUEST",
+   "addressed_by": "@TASK.B167 · @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema",
    "suggestion": "Une tâche « cycle de vie de la REQUEST » : reporting quand toutes les tâches sont merged ou parked, delivered au commit du rapport, closed/cancelled par wave close|cancel ; un seul événement parked (task.state avec reason) ; wave requeue écrit queued."
   },
   {
@@ -367,7 +486,7 @@
     "worktree-par-tache",
     "lancer-le-tick"
    ],
-   "addressed_by": "@TASK.B141",
+   "addressed_by": "@TASK.B21 AFTER @TASK.B141 (arbitrage du 2026-10-17)",
    "suggestion": "Ratifier B141 réduit (le fichier et son budget) avant B13/B142, la clé [procedures] venant ensuite ; ou ajouter au snapshot la résolution de la procédure et parquer la tâche avec la raison."
   },
   {
@@ -381,7 +500,7 @@
     "first-real-wave",
     "dashboard-ledger-reports"
    ],
-   "addressed_by": null,
+   "addressed_by": "rien : @TASK.B21 garde AFTER @TASK.B20 (arbitrage du 2026-10-17)",
    "suggestion": "Scinder B21 : une répétition de livraison (wave new → PR d'intégration, sans rapport) AFTER B19/B143, et la répétition du rapport AFTER B20 ; ou retirer AFTER B48 de B20 en laissant le rapport remplir ses champs par son code."
   },
   {
@@ -393,7 +512,7 @@
    "use_cases": [
     "la-vague-se-livre-seule-la-nuit"
    ],
-   "addressed_by": null,
+   "addressed_by": "@TASK.B153 AFTER @TASK.B21",
    "suggestion": "Livrer B153 seule d'abord (elle est démarrable) et poser B13 AFTER B153 ; ou la repousser AFTER B21."
   },
   {
@@ -403,7 +522,7 @@
    "detail": "awawa status TASK par jalon : M0 22 implemented + 2 archived sur 24, F0 33 + 3 sur 36 ; les 11 MILESTONE ont STATUS planned alors que le schéma offre reached (awawa show MILESTONE : STATUS planned|reached). Sur un export de HEAD en scratch, M0 passé à reached garde awawa fmt --check et awawa lint --strict à 0.",
    "evidence": "awawa status MILESTONE . ; awawa status TASK --where MILESTONE==@MILESTONE.M0 . ; awawa show MILESTONE . ; corpus/milestones.awawa:1,37",
    "use_cases": [],
-   "addressed_by": null,
+   "addressed_by": "@MILESTONE.M0, @MILESTONE.F0 reached",
    "suggestion": "Une PR corpus : M0 et F0 reached ; une règle : un jalon est reached quand chacune de ses tâches est implemented ou archived."
   },
   {
@@ -418,7 +537,7 @@
     "reprendre-apres-quota",
     "surveiller-le-scheduler"
    ],
-   "addressed_by": null,
+   "addressed_by": "@TASK.B166, @TASK.B168, @TASK.B169, @TASK.B170",
    "suggestion": "Une tâche M1 « incidents de nuit » : le snapshot porte les runs dead et le tick parque la tâche avec la raison ; une clé notify de config.toml, un argv appelé sur parked, paused et rapport ; le tick retente la reprise forge_account à chaque tour."
   },
   {
@@ -432,7 +551,7 @@
     "fusion-et-dependantes",
     "local-review"
    ],
-   "addressed_by": "@TASK.B100 (REVIEW local seulement, draft, ADD0)",
+   "addressed_by": "@TASK.B171",
    "suggestion": "Ouvrir la PR integration → main à plan record (FORGE github) ou au premier merged, comme login cli, et l'enregistrer dans la REQUEST ; B20 la lit de là."
   },
   {
@@ -446,7 +565,7 @@
     "surveiller-le-scheduler",
     "la-vague-se-livre-seule-la-nuit"
    ],
-   "addressed_by": null,
+   "addressed_by": "@TASK.B172",
    "suggestion": "doctor lit loginctl show-user $USER -p Linger et avertit ; scheduler install propose enable-linger ; le README le dit dans le parcours de nuit."
   },
   {
@@ -462,7 +581,7 @@
     "gardening-scans",
     "preflight-lists"
    ],
-   "addressed_by": "@TASK.B163 (vocabulaire, draft, M8) ; @TASK.B104 (plan clean, draft)",
+   "addressed_by": "rien : renvoyé au raffinement de @TASK.B100, @TASK.B104, @TASK.B163",
    "suggestion": "Fusionner B46 SPEC 2 et B100 en un mode local unique porté par POLICY.REVIEW, FORGE none n'en étant que la cause ; une seule maison pour le nettoyage (B104) que B14 et B33 citent ; renommer l'une des deux « preflight »."
   }
  ],
@@ -553,15 +672,15 @@
   }
  ],
  "critical_gaps": [
-  "Run de build mort (crash, kill, reboot) : la tâche reste running, aucune tâche ne rapproche live_runs de task.state (plan.py:47 ; describe_run.py:17-20 ; B14 ne lit que des faits de forge).",
-  "Tâche parked (setup KO, PR fermée, rounds épuisés) : aucune commande ne la relève ; B12 SPEC 4 dit « unparked by hand », grep unpark|requeue sur brigade/ et sur les 137 tâches : rien.",
-  "Lancement en échec : le tick entier s'arrête sans heartbeat et laisse worktree et branche (tick.py:56-68 ; apply_actions.py:7-11) ; aucune tâche ne l'isole ni ne compense.",
-  "Planificateur mort ou bloqué : la REQUEST reste planning, pas de wave replan (wave_new.py:54-55 ; aucune commande replan parmi les 40).",
-  "Pause forge_account : la reprise est brigade wave resume lancé par l'utilisateur (B19 SPEC 4) ; la nuit, la vague reste en pause.",
-  "PR d'intégration vers main : personne ne l'ouvre dans le mode par défaut (record_plan.py:177-178 pousse seulement ; B20 SPEC 3 la suppose ; B100 draft ADD0 sous REVIEW local seulement).",
-  "Clôture : aucune transition de la REQUEST vers reporting, delivered ou closed, dans le code ni dans une tâche (schema.awawa.tpl:128 ; mark_request_running.py:12 est le dernier écrivain).",
-  "Signal au réveil : aucune notification ; scheduler status exit 0 même tick mort (scheduler_status.py:59-60) ; aucun événement tick.* dans le ledger ; le dashboard (M3) est en polling.",
-  "Lien run ↔ tâche : run.finished porte wave et task null pour tout run (describe_finished.py:93-94) ; la table des tâches et les statistiques du rapport B20 et le coût de la vague n'ont pas leurs données.",
-  "Session de nuit : ni linger ni alimentation ne sont vérifiés (read_user_systemd_state.py:11-19) ; 0 occurrence de linger dans le corpus."
+  "Run de build mort (crash, kill, reboot) : la tâche reste running, aucune tâche ne rapproche live_runs de task.state (plan.py:47 ; describe_run.py:17-20 ; B14 ne lit que des faits de forge). → porté par @TASK.B168",
+  "Tâche parked (setup KO, PR fermée, rounds épuisés) : aucune commande ne la relève ; B12 SPEC 4 dit « unparked by hand », grep unpark|requeue sur brigade/ et sur les 137 tâches : rien. → porté par @TASK.B168",
+  "Lancement en échec : le tick entier s'arrête sans heartbeat et laisse worktree et branche (tick.py:56-68 ; apply_actions.py:7-11) ; aucune tâche ne l'isole ni ne compense. → porté par @TASK.B166 · @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction (DESC 3)",
+  "Planificateur mort ou bloqué : la REQUEST reste planning, pas de wave replan (wave_new.py:54-55 ; aucune commande replan parmi les 40). → porté par @TASK.B169",
+  "Pause forge_account : la reprise est brigade wave resume lancé par l'utilisateur (B19 SPEC 4) ; la nuit, la vague reste en pause. → porté par @TASK.B170",
+  "PR d'intégration vers main : personne ne l'ouvre dans le mode par défaut (record_plan.py:177-178 pousse seulement ; B20 SPEC 3 la suppose ; B100 draft ADD0 sous REVIEW local seulement). → porté par @TASK.B171",
+  "Clôture : aucune transition de la REQUEST vers reporting, delivered ou closed, dans le code ni dans une tâche (schema.awawa.tpl:128 ; mark_request_running.py:12 est le dernier écrivain). → porté par @TASK.B167 · @DECISION.EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema",
+  "Signal au réveil : aucune notification ; scheduler status exit 0 même tick mort (scheduler_status.py:59-60) ; aucun événement tick.* dans le ledger ; le dashboard (M3) est en polling. → porté par @TASK.B170",
+  "Lien run ↔ tâche : run.finished porte wave et task null pour tout run (describe_finished.py:93-94) ; la table des tâches et les statistiques du rapport B20 et le coût de la vague n'ont pas leurs données. → porté par @TASK.B164 · @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished",
+  "Session de nuit : ni linger ni alimentation ne sont vérifiés (read_user_systemd_state.py:11-19) ; 0 occurrence de linger dans le corpus. → porté par @TASK.B172"
  ]
 }

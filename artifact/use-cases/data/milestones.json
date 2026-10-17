@@ -5,20 +5,21 @@
    "archived": 2,
    "implemented": 22
   },
-  "title": "Foundations"
+  "title": "Foundations (reached)"
  },
  {
   "id": "F0",
   "counts": {
-   "implemented": 33,
-   "archived": 3
+   "archived": 3,
+   "implemented": 33
   },
-  "title": "fix-foundations"
+  "title": "fix-foundations (reached)"
  },
  {
   "id": "M1",
   "counts": {
    "archived": 1,
+   "draft": 9,
    "implemented": 16,
    "todo": 16
   },
@@ -34,8 +35,8 @@
  {
   "id": "M3",
   "counts": {
-   "draft": 7,
-   "archived": 1
+   "archived": 1,
+   "draft": 7
   },
   "title": "Dashboard"
  },
@@ -56,14 +57,14 @@
  {
   "id": "M6",
   "counts": {
-   "draft": 4
+   "draft": 8
   },
   "title": "Hardening"
  },
  {
   "id": "M7",
   "counts": {
-   "draft": 5,
+   "draft": 6,
    "todo": 1
   },
   "title": "Portability"
@@ -78,8 +79,8 @@
  {
   "id": "ADD0",
   "counts": {
-   "draft": 11,
-   "archived": 1
+   "archived": 2,
+   "draft": 19
   },
   "title": "post-mvp"
  }
