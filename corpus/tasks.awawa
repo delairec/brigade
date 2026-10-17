@@ -1475,6 +1475,7 @@ TASK B14
 	TITLE "The tick follows the pull request of each task and moves the task state from its forge"
 		+ "facts"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -1519,6 +1520,7 @@ TASK B15
 	TITLE "brigade verify preflight runs the deterministic checks of a pull request before any"
 		+ "judgment"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
@@ -1558,6 +1560,7 @@ TASK B15
 TASK B16
 	TITLE "Procedure verify-pr.md and brigade verify context|verdict"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
 	ROLE ada
@@ -1602,6 +1605,7 @@ TASK B16
 TASK B17
 	TITLE "Auto-merge into integration and scheduling of dependents"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -1638,6 +1642,7 @@ TASK B17
 TASK B18
 	TITLE "Repair paths: changes requested and failing checks, within the rounds of the policy"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -1667,6 +1672,7 @@ TASK B18
 TASK B19
 	TITLE "Wave pause and resume: quota and forge account"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -1729,6 +1735,7 @@ TASK B19
 TASK B20
 	TITLE "Built-in study wave-report"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
@@ -1781,6 +1788,7 @@ TASK B20
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
 	STATUS todo
+	TYPE test
 	MILESTONE @MILESTONE.M1
 	COMPONENT "validation"
 	ROLE ada
@@ -2378,6 +2386,7 @@ TASK B44
 	TITLE "The sandbox rehearsal of B21 runs on vibe, and its report lists what the normalised"
 		+ "results of each client lack"
 	STATUS todo
+	TYPE test
 	MILESTONE @MILESTONE.M7
 	COMPONENT "validation"
 	ROLE ada
@@ -8424,6 +8433,7 @@ TASK B140
 TASK B141
 	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -8461,6 +8471,7 @@ TASK B142
 	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"
 		+ "pull request and the promotion of its task"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
 	ROLE ada
@@ -8557,6 +8568,7 @@ TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
 		+ "conflict"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -8713,6 +8725,7 @@ TASK B146
 	TITLE "The built-in collector pr-list prints the pull requests of a project through the forge"
 		+ "adapter"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
@@ -8754,6 +8767,7 @@ TASK B147
 	TITLE "The tick runs each due study within study_runs, and brigade study list, show, pause and"
 		+ "resume"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
@@ -9039,6 +9053,7 @@ TASK B153
 		+ "suite under 60 s with no skip, no patch, no duplicated fixture and no gesture after"
 		+ "Assert"
 	STATUS todo
+	TYPE refactor
 	MILESTONE @MILESTONE.M1
 	COMPONENT "brigade, tests"
 	ROLE ada
