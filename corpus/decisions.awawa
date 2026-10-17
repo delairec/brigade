@@ -3158,3 +3158,5 @@ DECISION TheBuildProcedureCommitsBeforeItsCheck
 		+ "checked before committing would be refused, and one that rewrote its commits after the"
 		+ "check would open no pull request"
 		REF @TASK.B142
+	SOURCE "pull request #151 of the brigade repository, delivering @TASK.B141"
+		REF @TASK.B141

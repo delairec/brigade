@@ -8435,7 +8435,7 @@ TASK B140
 
 TASK B141
 	TITLE "brigade ships the procedure its build slot runs, test first up to the pull request"
-	STATUS todo
+	STATUS implemented
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
@@ -8477,6 +8477,7 @@ TASK B141
 		+ "of its own"
 	SOURCE "the user's rulings of 2026-10-12 in the refinement of B142: the name build-task, the"
 		+ "key build of [procedures]; the task is ratified"
+	DELIVERED_BY 151
 
 TASK B142
 	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"
