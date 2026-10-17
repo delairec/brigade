@@ -68,7 +68,7 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         detach=True,
     )
     run(building, runtime)
-    append_event(runtime.paths, runtime.now, TaskState(wave=action.milestone, task=action.task, state=RUNNING_STATE))
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
 
 
 def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
@@ -78,7 +78,7 @@ def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
 
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
-        StartWave: lambda action: start_wave(runtime, action.request),
+        StartWave: lambda action: start_wave(runtime, configuration, action.request),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
     }

@@ -26,7 +26,7 @@ def list_wave_tasks(runtime: Runtime, configuration: Configuration, request: dic
         raise BrigadeError(f"@PROJECT.{project.name} declares no corpus")
     query = argparse.Namespace(project=request["project"], ref=request["branch"], worktree=None)
     tree = prepare_project_tree(query, configuration, runtime)
-    states = read_task_states(runtime.paths.state_root, request["milestone"])
+    states = read_task_states(runtime.paths.state_root, request["wave"])
     tasks = read_entities(runtime.run_process, tree.root, TASK_TYPE, f"MILESTONE==@MILESTONE.{request['milestone']}")
     return [
         {

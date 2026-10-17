@@ -17,6 +17,7 @@ def write_build_brief(state_root: Path, action: LaunchTask, worktree: BranchWork
         task=action.task,
         project=action.project,
         milestone=action.milestone,
+        wave=action.wave,
         request=action.request,
         branch=action.branch,
         worktree=worktree.path,

@@ -71,6 +71,6 @@ def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action
         with hold_lock(lock):
             remove_worktree(runtime.run_process, repository, worktree.path)
             delete_branch(runtime.run_process, repository, worktree.branch)
-        append_event(runtime.paths, runtime.now, TaskState(wave=action.milestone, task=action.task, state=PARKED_STATE))
+        append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=PARKED_STATE))
         raise BrigadeError(f"the setup of @TASK.{action.task} failed: {failure}") from None
     return worktree

@@ -90,11 +90,13 @@ brigade wave list [--project P]
 `wave new` records the request as `<project>_<n>`, `n` one above the highest its project holds, with the UTC instant
 of its creation and the status `planning`, then launches the planner on it detached, `brigade run wave-plan --slot
 plan --project <project> --detach request=<name>`, and prints the request and the run. A project that is not
-registered or is paused exits 1. `wave start` moves a `planned` request to `running` and records `wave.started` in the
-ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
+registered or is paused exits 1. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
+wave number of the project in the ledger, and records `wave.started` with the wave, the project, the branch and the
+tasks of its milestone in the order of their number; that name keys every wave event of the ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
 `brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of
 its milestone read from its branch, each with the last `task.state` of the ledger, `queued` when none, and the pull
-request that delivered it; a request of a project that declares no corpus exits 1. `wave list` prints one row per request, those of one project with `--project`. Every write
+request that delivered it; a request of a project that declares no corpus exits 1. `wave show` and `wave list` print the wave name of a started request, `-` for one that did not start.
+`wave list` prints one row per request, those of one project with `--project`. Every write
 goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
 
 ## Tasks

@@ -1,17 +1,19 @@
 from brigade.command import Argument, Command
+from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.render_table import render_table
 from brigade.waves.decide_waits_for import decide_waits_for
 from brigade.waves.describe_request import describe_request
+from brigade.waves.find_wave_name import find_wave_name
 from brigade.waves.list_wave_tasks import list_wave_tasks
 from brigade.waves.read_wave_request import read_wave_request
 
 DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
 FIELD_NAME_WIDTH = 12
-DESCRIBED_FIELDS = (("milestone", "milestone"), ("branch", "branch"), ("created at", "created_at"))
+DESCRIBED_FIELDS = (("wave", "wave"), ("milestone", "milestone"), ("branch", "branch"), ("created at", "created_at"))
 TASK_HEADER = ("task", "state", "pull request", "title")
 
 
@@ -43,7 +45,12 @@ def _decide_exit_code(document: dict) -> int:
 
 def wave_show(request, runtime: Runtime) -> dict:
     entity = read_wave_request(runtime, request.request)
-    described = describe_request(entity)
+    request_fields = describe_request(entity)
+    events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
+    described = {
+        **request_fields,
+        "wave": find_wave_name(events, request_fields["project"], request_fields["branch"]),
+    }
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -51,6 +58,7 @@ def wave_show(request, runtime: Runtime) -> dict:
         "project": described["project"],
         "text": read_project_field(entity, "TEXT"),
         "status": described["status"],
+        "wave": described["wave"],
         "milestone": described["milestone"],
         "branch": described["branch"],
         "created_at": described["created_at"],

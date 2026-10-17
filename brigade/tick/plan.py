@@ -34,6 +34,7 @@ def plan(snapshot: Snapshot) -> tuple:
                     request=wave.request,
                     project=wave.project,
                     milestone=wave.milestone,
+                    wave=wave.wave,
                     branch=wave.branch,
                     task=task.name,
                 )

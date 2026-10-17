@@ -81,8 +81,16 @@ PLANNED_REQUEST = (
     '\tBRANCH "integration/M2-undo"\n'
 )
 QUEUED_S3 = (
-    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "M1", "task": "S3",'
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "queued"}\n'
+)
+WAVE_EVENTS = (
+    '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3", "S4", "S5", "S6"]}}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
+    ' "state": "queued"}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T10:30:00Z", "event": "task.state", "wave": "cafe_w1", "task": "S6",'
+    ' "state": "running"}\n'
 )
 
 
@@ -230,7 +238,7 @@ class WaveTickTestCase(TickTestCase):
         )
         (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST)
         (self.state / "ledger").mkdir(parents=True)
-        (self.state / "ledger" / "2026-10.jsonl").write_text(QUEUED_S3)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(WAVE_EVENTS)
 
 
 class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
@@ -309,12 +317,34 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "schema_version": 1,
                     "ts": "2026-10-13T10:00:00Z",
                     "event": "task.state",
-                    "wave": "M1",
+                    "wave": "shop_w1",
                     "task": "S3",
                     "state": "queued",
                 },
-                {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "M1", "task": "S3", "state": "running"},
-                {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "M1", "task": "S6", "state": "running"},
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:30:00Z",
+                    "event": "task.state",
+                    "wave": "cafe_w1",
+                    "task": "S6",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S6",
+                    "state": "running",
+                },
             ],
         )
 
@@ -370,7 +400,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
         # Assert
         self.assertEqual(
             (self.state / "briefs" / "shop_1-S3.md").read_text(),
-            "Deliver @TASK.S3 of @PROJECT.shop, in the wave @MILESTONE.M1 of @REQUEST.shop_1.\n"
+            "Deliver @TASK.S3 of @PROJECT.shop, in the wave shop_w1, @MILESTONE.M1 of @REQUEST.shop_1.\n"
             "\n"
             f"- Base branch: {WAVE_BRANCH}.\n"
             f"- Worktree: {self.worktree}, on the branch {TASK_BRANCH}, cut from the head of {WAVE_BRANCH}.\n",
@@ -419,11 +449,26 @@ class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
                     "schema_version": 1,
                     "ts": "2026-10-13T10:00:00Z",
                     "event": "task.state",
-                    "wave": "M1",
+                    "wave": "shop_w1",
                     "task": "S3",
                     "state": "queued",
                 },
-                {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "M1", "task": "S3", "state": "parked"},
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:30:00Z",
+                    "event": "task.state",
+                    "wave": "cafe_w1",
+                    "task": "S6",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "parked",
+                },
             ],
         )
 
@@ -613,6 +658,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                             "request": "shop_1",
                             "project": "shop",
                             "milestone": "M1",
+                            "wave": "shop_w1",
                             "branch": WAVE_BRANCH,
                             "tasks": [
                                 {"task": "S3", "after": ["S2"], "blocked_by": []},
@@ -631,10 +677,42 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                     "study_runs": 2,
                 },
                 "plan": [
-                    {"request": "shop_1", "project": "shop", "milestone": "M1", "branch": WAVE_BRANCH, "task": "S3"},
-                    {"request": "shop_1", "project": "shop", "milestone": "M1", "branch": WAVE_BRANCH, "task": "S6"},
+                    {
+                        "request": "shop_1",
+                        "project": "shop",
+                        "milestone": "M1",
+                        "wave": "shop_w1",
+                        "branch": WAVE_BRANCH,
+                        "task": "S3",
+                    },
+                    {
+                        "request": "shop_1",
+                        "project": "shop",
+                        "milestone": "M1",
+                        "wave": "shop_w1",
+                        "branch": WAVE_BRANCH,
+                        "task": "S6",
+                    },
                 ],
             },
+        )
+
+
+class BrigadeTickDryRunOnARunningRequestNoWaveStartedNamesTest(WaveTickTestCase):
+    def test_should_exit_1_naming_the_request_and_its_branch(self):
+        # Arrange
+        (self.state / "ledger" / "2026-10.jsonl").write_text(QUEUED_S3)
+
+        # Act
+        completed = self.run_tick("--dry-run")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (
+                1,
+                f"brigade tick: no wave.started of @PROJECT.shop names {WAVE_BRANCH}, the BRANCH of @REQUEST.shop_1\n",
+            ),
         )
 
 
@@ -642,6 +720,7 @@ class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
     def test_should_start_the_planned_request_under_the_automatic_plan_review_of_the_project(self):
         # Arrange
         (self.machine.corpus / "requests.awawa").write_text(PLANNED_WAVE_REQUEST)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(QUEUED_S3)
 
         # Act
         completed = self.run_tick("--once")
@@ -650,7 +729,17 @@ class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             self.read_events("wave.started"),
-            [{"schema_version": 1, "ts": ANY, "event": "wave.started", "wave": "M1", "project": "shop"}],
+            [
+                {
+                    "schema_version": 2,
+                    "ts": ANY,
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": WAVE_BRANCH,
+                    "tasks": ["S3", "S4", "S5", "S6"],
+                }
+            ],
         )
 
 

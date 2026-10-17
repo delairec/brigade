@@ -6,8 +6,8 @@ from pathlib import Path
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 
 WAVE_SEPTEMBER_LINES = (
-    '{"schema_version": 1, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tp/16",'
-    ' "project": "tidepool"}\n'
+    '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tp/16",'
+    ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
     '{"schema_version": 2, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
@@ -85,8 +85,8 @@ BUDGET_LINES = (
     ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
 )
 COMPARISON_LINES = (
-    '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tp/16",'
-    ' "project": "tidepool"}\n'
+    '{"schema_version": 2, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tp/16",'
+    ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
     '{"schema_version": 2, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tp/16", "task": "TP146",'
     ' "run": "20261001T000000Z-c00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
@@ -114,14 +114,14 @@ COMPARISON_LINES = (
     ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
 )
 PROJECT_SEPTEMBER_LINES = (
-    '{"schema_version": 1, "ts": "2026-09-20T08:00:00Z", "event": "wave.started", "wave": "tp/15",'
-    ' "project": "tidepool"}\n'
+    '{"schema_version": 2, "ts": "2026-09-20T08:00:00Z", "event": "wave.started", "wave": "tp/15",'
+    ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
 )
 PROJECT_OCTOBER_LINES = (
-    '{"schema_version": 1, "ts": "2026-10-02T08:00:00Z", "event": "wave.started", "wave": "tp/16",'
-    ' "project": "tidepool"}\n'
-    '{"schema_version": 1, "ts": "2026-10-02T08:00:00Z", "event": "wave.started", "wave": "ob/3",'
-    ' "project": "oboe"}\n'
+    '{"schema_version": 2, "ts": "2026-10-02T08:00:00Z", "event": "wave.started", "wave": "tp/16",'
+    ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
+    '{"schema_version": 2, "ts": "2026-10-02T08:00:00Z", "event": "wave.started", "wave": "ob/3",'
+    ' "project": "oboe", "branch": "integration/M1", "tasks": ["T1"]}\n'
     '{"schema_version": 1, "ts": "2026-10-02T09:00:00Z", "event": "order.done", "project": "tidepool",'
     ' "kind": "study"}\n'
     '{"schema_version": 1, "ts": "2026-10-02T10:00:00Z", "event": "order.done", "project": "tidepool",'
@@ -137,12 +137,12 @@ PROJECT_OCTOBER_LINES = (
     '{"schema_version": 1, "ts": "2026-10-02T15:00:00Z", "event": "constraint.delivered", "project": "tidepool"}\n'
 )
 OLD_WAVE_LINES = (
-    '{"schema_version": 1, "ts": "2020-01-01T08:00:00Z", "event": "wave.started", "wave": "tp/1",'
-    ' "project": "tidepool"}\n'
+    '{"schema_version": 2, "ts": "2020-01-01T08:00:00Z", "event": "wave.started", "wave": "tp/1",'
+    ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
 )
 REPEATED_PAUSE_LINES = (
-    '{"schema_version": 1, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tp/18",'
-    ' "project": "tidepool"}\n'
+    '{"schema_version": 2, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tp/18",'
+    ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
     '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "wave.paused", "wave": "tp/18"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T09:30:00Z", "event": "wave.paused", "wave": "tp/18"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T10:00:00Z", "event": "wave.resumed", "wave": "tp/18"}\n'
@@ -191,6 +191,26 @@ class LedgerTestCase(unittest.TestCase):
 
     def run_ledger(self, *arguments: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "ledger", *arguments)
+
+
+class BrigadeLedgerOnAWaveStartedOfTheFirstVersionTest(LedgerTestCase):
+    def test_should_list_the_line_under_skipped_without_reading_it(self):
+        # Arrange
+        october = self.write_ledger(
+            "2026-10",
+            '{"schema_version": 1, "ts": "2026-10-02T08:00:00Z", "event": "wave.started", "wave": "M1",'
+            ' "project": "tidepool"}\n',
+        )
+
+        # Act
+        completed = self.run_ledger("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            (json.loads(completed.stdout)["events"], json.loads(completed.stdout)["skipped"]),
+            ({}, [{"file": str(october), "line": 1, "reason": "schema_version is 1, not one of 2"}]),
+        )
 
 
 class BrigadeLedgerOverviewTest(LedgerTestCase):
