@@ -56,7 +56,7 @@ def start_wave(runtime: Runtime, configuration: Configuration, name: str) -> dic
 
     def name_wave(reading: LedgerReading) -> WaveStarted:
         return WaveStarted(
-            wave=name_next_wave(request["project"], tuple(entry.event for entry in reading.entries)),
+            wave=name_next_wave(request["project"], reading.entries),
             project=request["project"],
             branch=request["branch"],
             tasks=tasks,

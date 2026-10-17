@@ -9781,7 +9781,7 @@ TASK B165
 	SPEC "brigade wave start names the wave <project>_w<n>, n one above the highest wave number of"
 		+ "the project among the wave.started events of the ledger, 1 when none, read and appended"
 		+ "under one lock; the name is printed, text and --json, and never changed"
-		IMPL "brigade/waves/name_next_wave.py::def name_next_wave(project: str, events: tuple) ->"
+		IMPL "brigade/waves/name_next_wave.py::def name_next_wave(project: str, entries: tuple) ->"
 			+ "str:"
 		IMPL "brigade/ledger/append_derived_event.py::def append_derived_event("
 		IMPL "brigade/commands/wave_start.py::wave {document['wave']},"
