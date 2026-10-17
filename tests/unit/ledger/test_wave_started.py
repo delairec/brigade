@@ -22,7 +22,7 @@ class WaveStartedTest(unittest.TestCase):
             WaveStarted(wave="tidepool_w16", project="tidepool", branch="integration/M4-tides", tasks=("T7", "T12")),
         )
 
-    def test_should_write_the_wave_its_project_its_branch_and_its_tasks(self):
+    def test_should_write_the_start_of_a_wave(self):
         # Arrange
         event = WaveStarted(wave="shop_w1", project="shop", branch="integration/M1-empty-cart", tasks=("S3", "S4"))
 

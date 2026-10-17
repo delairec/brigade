@@ -9790,7 +9790,7 @@ TASK B165
 		+ "another version, listed under skipped, never upgraded"
 		IMPL "brigade/ledger/declared_events.py::WaveStarted.name: WAVE_STARTED_SCHEMA_VERSION,"
 		IMPL "tests/unit/ledger/test_wave_started.py::def"
-			+ "test_should_write_the_wave_its_project_its_branch_and_its_tasks(self):"
+			+ "test_should_write_the_start_of_a_wave(self):"
 		IMPL "tests/cli/test_ledger.py::class"
 			+ "BrigadeLedgerOnAWaveStartedOfTheFirstVersionTest(LedgerTestCase):"
 	SPEC "task.state, task.parked, pr.merged, wave.paused and wave.resumed carry in wave that name;"
