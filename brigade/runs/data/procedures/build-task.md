@@ -37,7 +37,9 @@ report.
 
 Write only the code the failing tests demand, until they pass; then the broader tests of the project. Refactor with
 the tests green. Record in the corpus, as you take it, each ruling the task leaves open: a `DECISION` naming the task,
-in the file of its type, appended. Anchor each `SPEC` with an `IMPL` pointing at the code that delivers it.
+in the file of its type, appended. A `SPEC` you cannot satisfy as worded, or that a ruling of the project
+contradicts, is not yours to reword or override: stop and end blocked, naming the `SPEC` and the ruling, as step 1
+does for a live `BLOCKED_BY`. Anchor each `SPEC` with an `IMPL` pointing at the code that delivers it.
 
 ## 4. Commit, then check until it passes
 
