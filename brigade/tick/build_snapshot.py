@@ -1,5 +1,4 @@
 import argparse
-import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -10,14 +9,12 @@ from brigade.ledger.format_instant import format_instant
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
-from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
-from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
 from brigade.studies.convert_study import Study
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
+from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_studies import read_studies
-from brigade.studies.study_run_context import STUDY_RECORD_FILE
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
@@ -122,15 +119,6 @@ class StudyFacts:
 
 
 @dataclass(frozen=True)
-class LiveStudyRun:
-    study: str
-    run: str
-
-    def to_document(self) -> dict:
-        return {"study": self.study, "run": self.run}
-
-
-@dataclass(frozen=True)
 class Snapshot:
     now: datetime
     waves: tuple[WaveFacts, ...] = ()
@@ -200,14 +188,6 @@ def _describe_study(study: Study, last_order: LastStudyOrder | None) -> StudyFac
     )
 
 
-def _read_live_study_runs(state_root: Path) -> tuple[LiveStudyRun, ...]:
-    return tuple(
-        LiveStudyRun(study=json.loads(record.read_text(encoding="utf-8"))["study"], run=record.parent.name)
-        for record in sorted((state_root / RUNS_DIRECTORY).glob(f"*/{STUDY_RECORD_FILE}"))
-        if is_recorded_process_alive(record.parent)
-    )
-
-
 def build_snapshot(runtime: Runtime, configuration: Configuration) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
@@ -239,6 +219,6 @@ def build_snapshot(runtime: Runtime, configuration: Configuration) -> Snapshot:
         projects=projects,
         planned=planned,
         studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
-        live_study_runs=_read_live_study_runs(runtime.paths.state_root),
+        live_study_runs=read_live_study_runs(runtime.paths.state_root),
         study_runs=configuration.study_runs,
     )

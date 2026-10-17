@@ -2,10 +2,10 @@ import unittest
 from datetime import UTC, datetime
 
 from brigade.errors import BrigadeError
+from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.tick.actions import LaunchStudy, LaunchTask, StartWave
 from brigade.tick.build_snapshot import (
     LiveRun,
-    LiveStudyRun,
     PlannedRequest,
     ProjectFacts,
     Snapshot,

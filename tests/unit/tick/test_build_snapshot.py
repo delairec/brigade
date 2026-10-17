@@ -1,7 +1,8 @@
 import unittest
 from datetime import UTC, datetime
 
-from brigade.tick.build_snapshot import LiveStudyRun, Snapshot, StudyFacts
+from brigade.studies.read_live_study_runs import LiveStudyRun
+from brigade.tick.build_snapshot import Snapshot, StudyFacts
 
 
 class SnapshotTest(unittest.TestCase):
