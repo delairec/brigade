@@ -996,6 +996,10 @@ WEEKLY_STARTED_LONG_AGO = (
     '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "order.started", "project": null,'
     f' "kind": "study", "order": "weekly", "run": "{WEEKLY_RUN}"}}\n'
 )
+WEEKLY_PARKED_LONG_AGO = WEEKLY_STARTED_LONG_AGO + (
+    '{"schema_version": 1, "ts": "2026-10-01T09:05:00Z", "event": "order.parked", "project": null,'
+    f' "kind": "study", "order": "weekly", "run": "{WEEKLY_RUN}", "step": "judge", "reason": "no answer"}}\n'
+)
 WEEKLY_RECORD = {"schema_version": 1, "study": "weekly", "project": None}
 
 
@@ -1092,6 +1096,18 @@ class BrigadeTickOnceWithADueStudyTest(StudyTickTestCase):
         # Arrange
         self.record_study("weekly")
         self.machine.run_brigade(CLONE_ENTRY_POINT, "study", "pause", "weekly")
+
+        # Act
+        completed = self.run_tick("--once", "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
+
+    def test_should_launch_no_study_whose_last_run_parked(self):
+        # Arrange
+        self.record_study("weekly")
+        (self.state / "ledger").mkdir(parents=True, exist_ok=True)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(WEEKLY_PARKED_LONG_AGO)
 
         # Act
         completed = self.run_tick("--once", "--json")
