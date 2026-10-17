@@ -6,6 +6,7 @@ from brigade.ledger.declared_events import LEDGER_SCHEMA_VERSION, WRITTEN_SCHEMA
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_locations import LEDGER_DIRECTORY, LOCK_FILE
+from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
@@ -14,6 +15,8 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
+from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.hold_lock import hold_lock
@@ -39,7 +42,10 @@ def append_event(
     | StepDone
     | StepFailed
     | OrderParked
-    | OrderDone,
+    | OrderDone
+    | TaskPrOpened
+    | MilestoneCreated
+    | TaskPromoted,
 ) -> dict:
     if instant.utcoffset() is None:
         raise LedgerEventRefused(f"the instant of the event {event.name} carries no time zone")
