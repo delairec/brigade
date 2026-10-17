@@ -9676,6 +9676,7 @@ TASK B164
 	TITLE "brigade run takes --wave and --task, run.json and every run.finished carry them, and"
 		+ "runs list, wave show and wave new follow a run from them"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -9721,6 +9722,7 @@ TASK B165
 	TITLE "A wave is named <project>_w<n> when it starts, that name keys every wave event of the"
 		+ "ledger, and wave.started carries its project, its branch and its tasks"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ledger"
 	ROLE ada
@@ -9775,6 +9777,7 @@ TASK B166
 		+ "worktree reused, task.state written before the launch, a failed action recorded and the"
 		+ "tick going on"
 	STATUS todo
+	TYPE fix
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -9852,6 +9855,7 @@ TASK B168
 	TITLE "The tick parks the task of a dead run with its reason, and brigade wave requeue"
 		+ "re-queues a parked task by hand"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -9885,6 +9889,7 @@ TASK B169
 	TITLE "brigade request replan relaunches by hand the planner of a REQUEST left planning by a"
 		+ "dead or blocked planner"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
 	ROLE ada
@@ -9915,6 +9920,7 @@ TASK B170
 	TITLE "brigade scheduler status exits non-zero when the last tick is older than the interval"
 		+ "allows, and summarises the paused waves and the parked tasks"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "scheduler"
 	ROLE ada
@@ -9946,6 +9952,7 @@ TASK B171
 	TITLE "The pull request from the integration branch of a wave to main is opened in forge mode,"
 		+ "the default, recorded as wave.pr_opened, and the wave report and the rehearsal read it"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
@@ -9980,6 +9987,7 @@ TASK B172
 	TITLE "brigade doctor checks that the user systemd instance lingers, so that the timer survives"
 		+ "the end of the session"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "doctor"
 	ROLE ada
@@ -10252,6 +10260,7 @@ TASK B187
 		+ "is a batch of ratified tasks that brigade wave start or the tick composes, started on"
 		+ "integration/<project>_w<n> and recorded in the ledger alone"
 	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
 	ROLE ada
