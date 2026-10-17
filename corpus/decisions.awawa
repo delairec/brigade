@@ -3004,9 +3004,15 @@ DECISION EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
 		+ "wave start, wave.paused and wave.resumed by the tick as @TASK.B19 sets, wave.reported by"
 		+ "the tick when every task of the wave is merged or parked, the trigger of the wave-report"
 		+ "study of @TASK.B20, wave.closed by the tick when the integration pull request is merged,"
-		+ "wave.cancelled by brigade wave cancel <wave>"
+		+ "wave.cancelled by brigade wave cancel <wave>, wave.pr_opened by the tick when it opens"
+		+ "the integration pull request at the first merged task of the wave, as @TASK.B171 sets"
 		REF @TASK.B19
 		REF @TASK.B20
+		REF @TASK.B171
+	DESC "brigade wave cancel stops the live runs of the wave and undoes nothing else: worktrees,"
+		+ "branches and pull requests stay and are listed, the tasks becoming candidates again"
+	DESC "a queued task of an open wave that a live blocker cites is parked with the reason"
+		+ "blocked, so that every wave reaches wave.reported"
 	DESC "running, paused, reporting, delivered and closed leave REQUEST.STATUS: they are states of"
 		+ "a wave, read from the ledger, the pause being wave.paused without a wave.resumed after"
 		+ "it"
@@ -3024,7 +3030,15 @@ DECISION EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
 		+ "absorbed by @TASK.B187"
 		REF @TASK.B167
 		REF @TASK.B187
+	REJECTED "wave cancel closing the pull requests and removing the worktrees and the branches: a"
+		+ "compensation, which the decision"
+		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction rejects"
+	REJECTED "a blocked task counted as ended for wave.reported without an event: its state would"
+		+ "differ between the ledger and the report"
 	SOURCE "use-case map of 2026-10-16, findings X4 and G7"
+	SOURCE "the user's rulings of 2026-10-17 in the refinement of B166 with B187 and B168 to B171:"
+		+ "« Arrête les runs vivants (Recommended) »; « Parquer « blocked » (Recommended) »; «"
+		+ "Événement wave.pr_opened »"
 
 DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 	TITLE "a MILESTONE is a goal grouping of the project corpus, a REQUEST the user's text and its"
@@ -3043,7 +3057,11 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "project in the ledger, read and appended under one lock; the name is never changed and"
 		+ "is the key of every wave event"
 	DESC "the integration branch of a wave is integration/<project>_w<n>, cut from PROJECT.MAIN"
-		+ "when the wave starts"
+		+ "when the wave starts, after wave.started is appended: an open wave without its branch"
+		+ "has it cut again, and a branch of the name that no wave.started of the ledger names, as"
+		+ "another machine leaves it, refuses the start"
+	DESC "a wave the tick starts takes every candidate, its size unbounded; PROJECT.SLOTS bounds"
+		+ "the live build runs of the project, not the size of a wave"
 	DESC "several waves of a project may be open at once; a task belongs to at most one open wave,"
 		+ "and the tick and brigade wave start take their candidates outside every open wave"
 	DESC "the CLI forms a wave without a model: the candidates are the tasks STATUS todo of the"
@@ -3077,6 +3095,10 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "several waves"
 	REJECTED "keeping the plan on the wave branch: a wave spanning requests or milestones has no"
 		+ "single base until the plan reaches PROJECT.MAIN"
+	REJECTED "the branch cut before wave.started, a branch of the name at the head of PROJECT.MAIN"
+		+ "taken for a replay: a branch another machine cut from the same head reads the same"
+	REJECTED "a wave bounded to PROJECT.SLOTS tasks: one integration branch and one pull request to"
+		+ "PROJECT.MAIN per batch of SLOTS tasks, where the slots already bound the runs"
 	CLOSES @OPEN_QUESTION.TheKeyOfAWaveInTheLedger
 	RATIONALE "the user's words: « mon but c'est d'harmoniser les commandes pour éviter d'avoir 3"
 		+ "noms qui recouvrent une même réalité. On parle de wave, milestone et request. »; « pour"
@@ -3095,3 +3117,5 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "sur l'option A, ça parait plus simple, et ça permet des tâches hors milestone »; « Oui,"
 		+ "ce modèle (Recommended) »; « Les deux préfixés »; « Plusieurs »; « Le tick, si la"
 		+ "politique WAVE_START vaut auto (Recommended) »"
+	SOURCE "the user's rulings of 2026-10-17 in the refinement of B166 with B187 and B168 to B171:"
+		+ "« wave.started d'abord (Recommended) »; « Non bornée (Recommended) »"
