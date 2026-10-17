@@ -73,7 +73,10 @@ class GroupRunsTest(unittest.TestCase):
     def test_should_gather_the_segments_of_a_run_and_date_it_by_its_last_one(self):
         # Arrange
         entries = [
-            LedgerEntry(datetime(2026, 10, 10, 9, tzinfo=UTC), WaveStarted(wave="tp/16", project="tidepool")),
+            LedgerEntry(
+                datetime(2026, 10, 10, 9, tzinfo=UTC),
+                WaveStarted(wave="tp/16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)),
+            ),
             LedgerEntry(datetime(2026, 10, 10, 10, tzinfo=UTC), CUT_SEGMENT),
             LedgerEntry(datetime(2026, 10, 10, 11, tzinfo=UTC), OTHER_RUN),
             LedgerEntry(datetime(2026, 10, 10, 12, tzinfo=UTC), RESUMED_SEGMENT),

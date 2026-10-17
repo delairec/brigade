@@ -11,6 +11,7 @@ class LaunchTask:
     request: str
     project: str
     milestone: str
+    wave: str
     branch: str
     task: str
 
