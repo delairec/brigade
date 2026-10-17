@@ -990,7 +990,6 @@ class BrigadeTickOnceKeepingTheSetupOfTheWorktreeTest(LaunchingTickTestCase):
 ORDER_END_EVENTS = ("order.done", "order.parked")
 ORDER_WAIT_S = 30.0
 ORDER_POLL_S = 0.1
-CLIENT_LIVING_A_FEW_SECONDS = 'delay = "5"\n'
 WEEKLY_RUN = "20261001T090000Z-a1b2c3"
 WEEKLY_STARTED_LONG_AGO = (
     '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "order.started", "project": null,'
@@ -1020,9 +1019,24 @@ class StudyTickTestCase(TickTestCase, FileWaitingTestCase):
         )
 
     def tearDown(self):
+        self.gate.touch()
         for study in self.read_started_studies():
             self.wait_for_order_end(study)
         super().tearDown()
+
+    @property
+    def gate(self) -> Path:
+        return Path(self.root.name) / "gate"
+
+    @property
+    def gated_collector(self) -> str:
+        return f'shell: sh -c "until [ -e {self.gate} ]; do sleep 0.1; done"'
+
+    def run_tick_before_the_collectors_end(self, *arguments: str) -> subprocess.CompletedProcess:
+        try:
+            return self.run_tick("--once", *arguments)
+        finally:
+            self.gate.touch()
 
     def record_study(self, name: str, slot: str = "report", collector: str = "shell: true") -> None:
         self.machine.run_brigade(
@@ -1117,45 +1131,35 @@ class BrigadeTickOnceWithADueStudyTest(StudyTickTestCase):
 
 
 class BrigadeTickOnceWithTheStudyRunsTakenTest(StudyTickTestCase):
-    client_keys = CLIENT_LIVING_A_FEW_SECONDS
     configuration_keys = "study_runs = 1\n"
 
     def test_should_launch_no_more_judging_studies_than_the_study_runs(self):
         # Arrange
-        self.record_study("monthly")
-        self.record_study("weekly")
+        self.record_study("monthly", collector=self.gated_collector)
+        self.record_study("weekly", collector=self.gated_collector)
 
         # Act
-        self.run_tick("--once")
+        self.run_tick_before_the_collectors_end()
 
         # Assert
         self.assertEqual(self.read_started_studies(), {"monthly"})
 
-    def run_tick_before_the_scan_collects(self, gate: Path) -> None:
-        try:
-            self.run_tick("--once")
-        finally:
-            gate.touch()
-
     def test_should_launch_a_scan_beyond_the_study_runs(self):
         # Arrange
-        gate = Path(self.root.name) / "gate"
-        self.record_study("monthly")
-        self.record_study("trees", slot="none", collector=f'shell: sh -c "until [ -e {gate} ]; do sleep 0.1; done"')
+        self.record_study("monthly", collector=self.gated_collector)
+        self.record_study("trees", slot="none", collector=self.gated_collector)
 
         # Act
-        self.run_tick_before_the_scan_collects(gate)
+        self.run_tick_before_the_collectors_end()
 
         # Assert
         self.assertEqual(self.read_started_studies(), {"monthly", "trees"})
 
 
-class BrigadeTickOnceWhileARunOfTheStudyIsLiveTest(StudyTickTestCase):
-    client_keys = CLIENT_LIVING_A_FEW_SECONDS
-
+class LiveStudyRunTestCase(StudyTickTestCase):
     def setUp(self):
         super().setUp()
-        self.record_study("weekly")
+        self.record_study("weekly", collector=self.gated_collector)
         (self.state / "ledger").mkdir(parents=True, exist_ok=True)
         (self.state / "ledger" / "2026-10.jsonl").write_text(WEEKLY_STARTED_LONG_AGO)
         (self.state / "runs" / WEEKLY_RUN).mkdir(parents=True)
@@ -1169,12 +1173,15 @@ class BrigadeTickOnceWhileARunOfTheStudyIsLiveTest(StudyTickTestCase):
         self.wait_for_file(self.state / "runs" / WEEKLY_RUN / "pid")
 
     def tearDown(self):
+        self.gate.touch()
         self.live_run.wait()
         super().tearDown()
 
+
+class BrigadeTickOnceWhileARunOfTheStudyIsLiveTest(LiveStudyRunTestCase):
     def test_should_launch_no_study_while_a_run_of_it_is_live(self):
         # Act
-        completed = self.run_tick("--once", "--json")
+        completed = self.run_tick_before_the_collectors_end("--json")
 
         # Assert
         self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
