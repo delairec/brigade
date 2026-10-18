@@ -59,8 +59,10 @@ def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) 
     nulls = {}
     if finished.project is None:
         nulls["project"] = "no project given"
-    nulls["wave"] = NOT_IN_A_WAVE
-    nulls["task"] = NOT_IN_A_WAVE
+    if finished.wave is None:
+        nulls["wave"] = NOT_IN_A_WAVE
+    if finished.task is None:
+        nulls["task"] = NOT_IN_A_WAVE
     ending_reason = _choose_ending_reason(record, finished)
     if ending_reason is None:
         return {**nulls, **_explain_client_nulls(plan, record, finished)}
@@ -90,8 +92,8 @@ def describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
         outcome=record.outcome,
         error_class=record.error_class,
         exit=record.exit_code,
-        wave=None,
-        task=None,
+        wave=plan.wave,
+        task=plan.task,
         nulls=NO_NULLS_EXPLAINED,
         cost_usd=record.cost_usd,
         message=record.message,

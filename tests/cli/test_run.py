@@ -223,6 +223,67 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         )
 
 
+class BrigadeRunOfATaskOfAWaveTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+
+    def run_deliver(self, *options: str):
+        return self.run_brigade(
+            "run",
+            str(self.procedure),
+            "--slot",
+            "build",
+            "--cwd",
+            str(self.workspace),
+            "--wave",
+            "shop_w3",
+            "--task",
+            "S3",
+            *options,
+        )
+
+    def test_should_record_the_wave_and_the_task_in_the_run_record(self):
+        # Act
+        completed = self.run_deliver("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        run_record = self.read_run_record(json.loads(completed.stdout)["run"])
+        self.assertEqual((run_record["wave"], run_record["task"]), ("shop_w3", "S3"))
+
+    def test_should_carry_the_wave_and_the_task_in_the_finished_run_with_no_reason_for_them(self):
+        # Act
+        completed = self.run_deliver("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(
+            (finished["wave"], finished["task"], finished["nulls"]),
+            (
+                "shop_w3",
+                "S3",
+                {
+                    "project": "no project given",
+                    "total_steps": "the client reads no transcript",
+                    "error_class": "the run did not fail",
+                },
+            ),
+        )
+
+    def test_should_carry_the_wave_and_the_task_through_a_detached_run(self):
+        # Act
+        completed = self.run_deliver("--detach")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.wait_for_file(self.runs / completed.stdout.strip() / "result.json")
+        [finished] = self.read_events("run.finished")
+        self.assertEqual((finished["wave"], finished["task"]), ("shop_w3", "S3"))
+
+
 class BrigadeRunOfAClientReadingTranscriptsTest(RunTestCase):
     def setUp(self):
         super().setUp()
@@ -426,6 +487,8 @@ class BrigadeRunOfTheShippedWavePlanProcedureTest(RunTestCase):
                 "budget": 30,
                 "wall_limit_s": 1140,
                 "arguments": {"request": "R1"},
+                "wave": None,
+                "task": None,
             },
         )
 
@@ -580,6 +643,8 @@ class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):
                 "budget": 75,
                 "wall_limit_s": 2820,
                 "arguments": {"task": "B06"},
+                "wave": None,
+                "task": None,
             },
         )
 
@@ -623,6 +688,8 @@ class BrigadeRunOfTheReviewAndRemediateSlotsTest(RunTestCase):
                         "budget": 75,
                         "wall_limit_s": 2820,
                         "arguments": {"task": "B06"},
+                        "wave": None,
+                        "task": None,
                     },
                 )
 

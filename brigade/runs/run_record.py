@@ -20,6 +20,8 @@ RUN_RECORD_SHAPE = {
     "budget": Field(kinds=(int,)),
     "wall_limit_s": Field(kinds=(int, float)),
     "arguments": Field(kinds=(dict,)),
+    "wave": Field(kinds=(str,), nullable=True),
+    "task": Field(kinds=(str,), nullable=True),
 }
 
 
@@ -39,6 +41,8 @@ class RunRecord:
     budget: int
     wall_limit_s: float
     arguments: dict
+    wave: str | None
+    task: str | None
 
     @classmethod
     def from_document(cls, document: dict) -> "RunRecord":
@@ -57,6 +61,8 @@ class RunRecord:
             budget=document["budget"],
             wall_limit_s=document["wall_limit_s"],
             arguments=document["arguments"],
+            wave=document["wave"],
+            task=document["task"],
         )
 
     def to_document(self) -> dict:
@@ -76,4 +82,6 @@ class RunRecord:
             "budget": self.budget,
             "wall_limit_s": self.wall_limit_s,
             "arguments": self.arguments,
+            "wave": self.wave,
+            "task": self.task,
         }

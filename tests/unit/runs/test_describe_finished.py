@@ -14,6 +14,8 @@ from brigade.system.token_usage import TokenUsage
 
 ROOT = Path("/state/brigade")
 NO_ARGUMENTS = {}
+NO_WAVE = None
+NO_TASK = None
 NO_WARNINGS = ()
 NOT_IN_A_WAVE = "not launched by a wave"
 CUT = "cut at the wall-time limit"
@@ -46,6 +48,8 @@ def _create_plan(*, counts_steps: bool = True) -> RunPlan:
         capabilities=("read", "write", "shell"),
         wall_limit_s=2820.0,
         arguments=NO_ARGUMENTS,
+        wave=NO_WAVE,
+        task=NO_TASK,
         brief_path=None,
         brief=None,
         counts_steps=counts_steps,

@@ -25,4 +25,6 @@ def describe_run(run_directory: Path) -> dict:
         "worktree": record.worktree,
         "state": state,
         "outcome": outcome,
+        "wave": record.wave,
+        "task": record.task,
     }

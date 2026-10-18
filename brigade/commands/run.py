@@ -29,6 +29,8 @@ def _read_run_request(request) -> RunRequest:
         brief=request.brief,
         arguments=tuple(request.arguments),
         run_id=request.run_id,
+        wave=request.wave,
+        task=request.task,
     )
 
 
@@ -124,6 +126,8 @@ COMMAND = Command(
         Argument(("--project",), {"help": "the registered project the run belongs to"}),
         Argument(("--cwd",), {"help": "the directory the client runs in; the project's path, else the current one"}),
         Argument(("--brief",), {"help": "a file whose text the run receives as its brief"}),
+        Argument(("--wave",), {"help": "the name of the wave the run belongs to"}),
+        Argument(("--task",), {"help": "the task of the wave the run delivers"}),
         Argument(("--detach",), {"action": "store_true", "help": "run in the background and print the run id"}),
         Argument(("--run-id",), {"help": argparse.SUPPRESS}),
     ),

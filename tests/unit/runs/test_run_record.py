@@ -18,6 +18,8 @@ RECORD_OF_A_PROJECT_RUN = {
     "budget": 40,
     "wall_limit_s": 1500.0,
     "arguments": {"task": "@TASK.B74"},
+    "wave": None,
+    "task": None,
 }
 
 
@@ -45,6 +47,8 @@ class RunRecordTest(unittest.TestCase):
                 "budget": 40,
                 "wall_limit_s": 1500.0,
                 "arguments": {"task": "@TASK.B74"},
+                "wave": None,
+                "task": None,
             },
         )
 

@@ -109,6 +109,21 @@ WAVE_EVENTS = (
     f' "project": "cafe", "branch": "{WAVE_BRANCH}", "tasks": ["S3"]}}\n'
     '{"schema_version": 1, "ts": "2026-10-13T12:00:00Z", "event": "task.state", "wave": "cafe_w1", "task": "S3",'
     ' "state": "merged"}\n'
+    '{"schema_version": 2, "ts": "2026-10-13T12:10:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
+    ' "run": "20261013T110000Z-a00001", "client": "fake", "project": "shop", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
+    ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
+    ' "error_class": "rate_limit", "main_steps": 50, "total_steps": null}\n'
+    '{"schema_version": 2, "ts": "2026-10-13T12:20:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
+    ' "run": "20261013T121500Z-a00002", "client": "fake", "project": "shop", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
+    ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
+    '{"schema_version": 2, "ts": "2026-10-13T12:30:00Z", "event": "run.finished", "wave": "cafe_w1", "task": "S3",'
+    ' "run": "20261013T122500Z-a00003", "client": "fake", "project": "cafe", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
+    ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
+    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
 )
 EARLIER_WAVES = (
     '{"schema_version": 2, "ts": "2026-10-10T09:00:00Z", "event": "wave.started", "wave": "shop_w2",'
@@ -225,8 +240,11 @@ class BrigadeWaveNewTest(WaveTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertRegex(completed.stdout, r"^@REQUEST\.shop_1 planning, run \d{8}T\d{6}Z-[0-9a-f]{6}\n$")
-        self.wait_for_result(completed.stdout.split()[-1])
+        self.assertRegex(
+            completed.stdout,
+            r"^@REQUEST\.shop_1 planning, run (\d{8}T\d{6}Z-[0-9a-f]{6})\nbrigade runs show \1 --log\n$",
+        )
+        self.wait_for_result(completed.stdout.split()[-2])
 
     def test_should_write_a_quote_of_the_text_escaped(self):
         # Act
@@ -400,8 +418,20 @@ class BrigadeWaveShowTest(WaveTestCase):
                 "created_at": "2026-10-12T09:30:00Z",
                 "waits_for": None,
                 "tasks": [
-                    {"task": "S3", "title": "Empty the cart in one click", "state": "running", "pull_request": None},
-                    {"task": "S4", "title": "Confirm before emptying the cart", "state": "queued", "pull_request": 12},
+                    {
+                        "task": "S3",
+                        "title": "Empty the cart in one click",
+                        "state": "running",
+                        "run": "20261013T121500Z-a00002",
+                        "pull_request": None,
+                    },
+                    {
+                        "task": "S4",
+                        "title": "Confirm before emptying the cart",
+                        "state": "queued",
+                        "run": None,
+                        "pull_request": 12,
+                    },
                 ],
             },
         )
@@ -457,9 +487,9 @@ class BrigadeWaveShowTest(WaveTestCase):
             "created at  2026-10-12T09:30:00Z\n"
             "waits for   -\n"
             "\n"
-            "task  state    pull request  title\n"
-            "S3    running  -             Empty the cart in one click\n"
-            "S4    queued   12            Confirm before emptying the cart\n",
+            "task  state    run                      pull request  title\n"
+            "S3    running  20261013T121500Z-a00002  -             Empty the cart in one click\n"
+            "S4    queued                            12            Confirm before emptying the cart\n",
         )
 
     def test_should_read_the_tasks_with_the_root_of_the_project_tree_as_the_awawa_workspace(self):

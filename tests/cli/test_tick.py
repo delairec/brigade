@@ -308,9 +308,12 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
         return [event for event in map(json.loads, lines) if event["event"] == name]
 
     def tearDown(self):
+        self.wait_for_the_runs()
+        super().tearDown()
+
+    def wait_for_the_runs(self) -> None:
         for record in self.read_run_records():
             self.wait_for_file(self.state / "runs" / record["run"] / "result.json")
-        super().tearDown()
 
     def read_run_records(self) -> list:
         return [json.loads(path.read_text()) for path in sorted((self.state / "runs").glob("*/run.json"))]
@@ -416,6 +419,8 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "project": "shop",
                     "cwd": str(self.worktree),
                     "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
+                    "wave": "shop_w1",
+                    "task": "S3",
                 },
                 {
                     "schema_version": 1,
@@ -433,8 +438,21 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "project": "shop",
                     "cwd": str(self.worktree.parent / "S6"),
                     "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
+                    "wave": "shop_w1",
+                    "task": "S6",
                 },
             ],
+        )
+
+    def test_should_carry_the_wave_and_the_task_in_every_finished_build_run(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.wait_for_the_runs()
+        [first, second] = self.read_events("run.finished")
+        self.assertCountEqual(
+            [(first["wave"], first["task"]), (second["wave"], second["task"])], [("shop_w1", "S3"), ("shop_w1", "S6")]
         )
 
     def test_should_brief_the_build_run_with_the_project_the_wave_the_task_its_base_and_its_worktree(self):
@@ -659,6 +677,8 @@ class BrigadeTickOnceWithTheBuildProcedureReplacedTest(LaunchingTickTestCase):
                     "project": "shop",
                     "cwd": str(self.worktree),
                     "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
+                    "wave": "shop_w1",
+                    "task": "S3",
                 },
                 {
                     "schema_version": 1,
@@ -676,6 +696,8 @@ class BrigadeTickOnceWithTheBuildProcedureReplacedTest(LaunchingTickTestCase):
                     "project": "shop",
                     "cwd": str(self.worktree.parent / "S6"),
                     "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
+                    "wave": "shop_w1",
+                    "task": "S6",
                 },
             ],
         )

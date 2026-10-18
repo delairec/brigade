@@ -42,6 +42,8 @@ class RunRequest:
     brief: str | None
     arguments: tuple[str, ...]
     run_id: str | None
+    wave: str | None
+    task: str | None
 
 
 @dataclass(frozen=True)
@@ -63,6 +65,8 @@ class RunPlan:
     capabilities: tuple[str, ...]
     wall_limit_s: float
     arguments: dict
+    wave: str | None
+    task: str | None
     brief_path: Path | None
     brief: str | None
     counts_steps: bool
@@ -182,6 +186,8 @@ def plan_run(request: RunRequest, setting: RunSetting, client_adapter, document,
         capabilities=capabilities,
         wall_limit_s=wall_limit_s,
         arguments=arguments,
+        wave=request.wave,
+        task=request.task,
         brief_path=brief_path,
         brief=brief,
         counts_steps=counts_steps,

@@ -26,6 +26,8 @@ RUN_RECORD = {
     "budget": 40,
     "wall_limit_s": 1500.0,
     "arguments": {},
+    "wave": None,
+    "task": None,
 }
 WRITE_CALL = "write"
 PID_HELD_BY_NO_PROCESS = 2**31 - 1

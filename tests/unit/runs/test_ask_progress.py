@@ -10,6 +10,8 @@ from brigade.system.entry_detection import EntryDetection
 from brigade.system.read_configuration import Configuration
 
 NO_ARGUMENTS = {}
+NO_WAVE = None
+NO_TASK = None
 NO_WARNINGS = ()
 NO_RUNTIME_NEEDED = None
 
@@ -54,6 +56,8 @@ def _create_plan(document, configuration: Configuration) -> RunPlan:
         capabilities=("read", "write", "shell"),
         wall_limit_s=2820.0,
         arguments=NO_ARGUMENTS,
+        wave=NO_WAVE,
+        task=NO_TASK,
         brief_path=None,
         brief=None,
         counts_steps=True,

@@ -28,6 +28,8 @@ def _describe_run(plan: RunPlan) -> RunRecord:
         budget=plan.procedure.budget,
         wall_limit_s=plan.wall_limit_s,
         arguments=plan.arguments,
+        wave=plan.wave,
+        task=plan.task,
     )
 
 
