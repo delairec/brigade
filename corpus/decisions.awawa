@@ -3235,5 +3235,5 @@ DECISION TheRateLimitIsReadFromTheLastRunOfARunningTaskOfARunningWave
 	RATIONALE "@TASK.B164 keys every run.finished by its wave and its task, so the run a rate limit"
 		+ "stopped is found without reading run.json"
 		REF @TASK.B164
-	SOURCE "the delivery of @TASK.B19"
+	SOURCE "pull request #156 of the brigade repository, delivering @TASK.B19"
 		REF @TASK.B19
