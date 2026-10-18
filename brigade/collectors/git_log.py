@@ -1,14 +1,14 @@
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.describe_collection import describe_collection
 from brigade.collecting.read_collector_environment import read_collector_environment
 from brigade.git.list_commits import list_commits
 from brigade.ledger.format_instant import format_instant
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
 
 NAME = "git-log"
 
 
-def collect(environment: dict, runtime: Runtime, configuration: Configuration) -> dict:
+def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
     inputs = read_collector_environment(environment)
     commits = list_commits(runtime.run_process, inputs.project, inputs.since)
     items = [

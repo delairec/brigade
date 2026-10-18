@@ -165,7 +165,13 @@ the file.
 leave a study already in that status as it is, and exit 1 for an archived study.
 
 A collector line is a collector name and its `key=value` parameters, or `shell: <command line>`, whose items are the
-lines the command prints. `study name=<study>` collects the answer of the last run of that study.
+lines the command prints. `study name=<study>` collects the answer of the last run of that study. `pr-list
+state=<state>` collects the pull requests of the project, read on the forge as the login of the key `cli` of
+`[forge_accounts]`, `open` by default, or `merged`, `closed` or `all`, each with its number, title, head and base
+branches, state, author, draft state, review decision, the verdict of its check runs and the task its head branch
+`task/<slug>/<task>` names; it reads every one of them, page after page, is collected afresh on every call, and is
+absent under `FORGE none`: `brigade collect pr-list` exits 1 naming it and `brigade collectors list` prints it in its
+`absent` column.
 
 The answer is an entity of the type `--answer` names, `ANSWER` by default: brigade fills `STUDY`, `RUN` and one
 `COLLECTED` per collector, its summary and the path of its full document; the judging run fills `NARRATIVE` and

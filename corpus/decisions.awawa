@@ -556,8 +556,9 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "answer no operation; the guard of tests/guards parses every module with ast and fails on"
 		+ "a static import of brigade.adapters, brigade.collectors, brigade.checks or"
 		+ "brigade.outputs from outside their own package, on an import of the package of another"
-		+ "kind from a plugin, and on an import of a module defining its kind's entry point from"
-		+ "another module of that kind, the guard @TASK.B42 asks for, widened"
+		+ "kind from a plugin, on an import of a module defining its kind's entry point from"
+		+ "another module of that kind, the collect function of a collector included, and on an"
+		+ "import of brigade.commands from a plugin, the guard @TASK.B42 asks for, widened"
 		REF @TASK.B42
 	DESC "cli.py builds the runtime, once per command and once per round of tick --loop through a"
 		+ "factory it hands that command: paths, clock, process runner, spawner, resolver; the"
@@ -565,7 +566,9 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable sets; the"
 		+ "commands resolve the plugins through the runtime's resolver, and a core function"
 		+ "receives resolved plugin objects as arguments and resolves nothing itself, as @TASK.B73"
-		+ "delivers"
+		+ "delivers; a plugin neither imports nor resolves another plugin: a built-in collector"
+		+ "receives the forge resolved by the command in its CollectorEquipment, an executable"
+		+ "collector never receiving it"
 		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		REF @TASK.B73
 	DESC "binds @TASK.B06, @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B23, @TASK.B24, @TASK.B42,"
@@ -630,6 +633,13 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "brigade repository, « un plugin doit être autonome et ne pas dépendre d'un autre plugin"
 		+ "»: DESC 4 amended"
 		REF @TASK.B106
+	REJECTED "a built-in collector reaching the forge through a module of brigade/commands/ that"
+		+ "resolves it: a plugin depending on another plugin one import away, which the guard of"
+		+ "resolver calls does not see"
+	SOURCE "the user's ruling of 2026-10-18 in the review of pull request #155 of the brigade"
+		+ "repository, « Le plugin doit être autonome »: the command passes the forge, a plugin"
+		+ "importing brigade.commands is refused by the guard, DESC 4 and 5 amended"
+		REF @TASK.B146
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
@@ -3174,3 +3184,37 @@ DECISION TheBuildProcedureCommitsBeforeItsCheck
 	SOURCE "the user's ruling of 2026-10-18 in the review of pull request #151: the decision"
 		+ "ratified, SPEC 2 of @TASK.B141 reworded to the delivered order"
 		REF @TASK.B141
+
+DECISION PrListReadsEveryPullRequestAfreshAndIsAbsentOnlyAsABuiltIn
+	TITLE "pr-list reads every pull request of the state asked, with no bound, collected afresh on"
+		+ "every call, and only a built-in row of collectors list is ever absent"
+	STATUS active
+	DESC "pr-list declares cache false: the state, the review and the check runs of a pull request"
+		+ "move on the forge without HEAD moving, so no cache key brigade can read would invalidate"
+		+ "its entry"
+		REF @TASK.B146
+		REF @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached
+	DESC "the forge adapter reads the pull requests through gh api graphql --paginate --slurp over"
+		+ "repository.pullRequests, a hundred per page and every page, within the 600 seconds a"
+		+ "collector is given; the check runs of a pull request are the first hundred contexts of"
+		+ "the status check rollup of its last commit"
+	DESC "the absence of a collector is decided by its name and the FORGE of the registered"
+		+ "project, in brigade/collecting/find_absence.py; collectors list sets it on built-in rows"
+		+ "alone, since a project, machine or PATH collector of the same name is resolved first and"
+		+ "answers without the forge"
+	REJECTED "gh api --paginate on the REST pulls endpoint, which reads every pull request: it"
+		+ "carries neither the review decision nor the check runs, a second call per pull request"
+	REJECTED "gh pr list --limit 1000: a project holding more pull requests of the state asked"
+		+ "loses the oldest beyond the bound, and the document gives no sign of the cut"
+	REJECTED "pr-list cached and keyed on HEAD as the git built-ins are: a pull request merged or"
+		+ "reviewed since would be answered from the cache"
+	REJECTED "collectors list going on when awawa is missing, the registry read as no project: a"
+		+ "second path for a tool brigade doctor already requires"
+	RATIONALE "@TASK.B146 names the items and the absence and leaves the cache and the rows of the"
+		+ "absence to its delivery; its SPEC counts the pull requests of the project with no bound"
+		REF @TASK.B146
+	SOURCE "pull request #155 of the brigade repository, delivering @TASK.B146 on 2026-10-18"
+		REF @TASK.B146
+	SOURCE "the user's ruling of 2026-10-18 in the review of pull request #155 of the brigade"
+		+ "repository, « GraphQL paginé, sans borne »: the bound of 1000 rejected"
+		REF @TASK.B146

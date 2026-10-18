@@ -103,6 +103,52 @@ class PluginImportsGuardTest(unittest.TestCase):
             violations, ["brigade/adapters/documents/markdown.py:1 imports brigade.adapters.documents.awawa"]
         )
 
+    def test_should_flag_a_static_import_of_the_commands_from_a_plugin(self):
+        # Arrange
+        rows = [
+            (
+                "brigade/collectors/pr_list.py",
+                "from brigade.commands._read_pull_requests import read_pull_requests\n",
+                "brigade/collectors/pr_list.py:1 imports brigade.commands._read_pull_requests",
+            ),
+            (
+                "brigade/adapters/forges/github.py",
+                "import brigade.commands.tick\n",
+                "brigade/adapters/forges/github.py:1 imports brigade.commands.tick",
+            ),
+            (
+                "brigade/adapters/documents/awawa.py",
+                "from ...commands import corpus\n",
+                "brigade/adapters/documents/awawa.py:1 imports brigade.commands",
+            ),
+        ]
+        for module_path, source, expected_violation in rows:
+            with self.subTest(module=module_path, source=source), tempfile.TemporaryDirectory() as root:
+                # Arrange
+                module = Path(root) / module_path
+                module.parent.mkdir(parents=True)
+                module.write_text(source)
+
+                # Act
+                violations = find_plugin_imports(Path(root) / "brigade")
+
+                # Assert
+                self.assertEqual(violations, [expected_violation])
+
+    def test_should_flag_a_static_import_of_another_collector(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        collectors = root / "brigade" / "collectors"
+        collectors.mkdir(parents=True)
+        (collectors / "git_log.py").write_text("def collect(environment, runtime, equipment):\n    return {}\n")
+        (collectors / "worktrees.py").write_text("from brigade.collectors import git_log\n")
+
+        # Act
+        violations = find_plugin_imports(root / "brigade")
+
+        # Assert
+        self.assertEqual(violations, ["brigade/collectors/worktrees.py:1 imports brigade.collectors.git_log"])
+
     def test_should_let_a_plugin_import_its_own_package_and_the_core_and_the_resolver_import_by_name(self):
         # Arrange
         rows = [

@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.collecting.collector_environment import CollectorInputs, create_collector_environment
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.collector_shapes import COLLECTOR_DOCUMENT_SHAPE
 from brigade.collecting.read_cache_input import read_cache_input
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
 from brigade.system.validate_document import DocumentInvalid, validate_document
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.system.write_text_atomically import write_text_atomically
@@ -29,7 +29,7 @@ NOT_CACHED = False
 class CollectionRequest:
     inputs: CollectorInputs
     refresh: bool
-    configuration: Configuration
+    equipment: CollectorEquipment
 
 
 @dataclass(frozen=True)
@@ -70,7 +70,7 @@ def _compute_cache_key(collector, inputs: CollectorInputs, cache_input) -> str:
 
 def _collect_afresh(collector, request: CollectionRequest, key: str, runtime: Runtime) -> dict:
     inputs = request.inputs
-    answer = collector.collect(create_collector_environment(inputs), runtime, request.configuration)
+    answer = collector.collect(create_collector_environment(inputs), runtime, request.equipment)
     return {
         DOCUMENT_FILE: _read_answer(collector.name, answer),
         SIDECAR_FILE: {

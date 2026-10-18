@@ -1,5 +1,6 @@
 import json
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.describe_collection import describe_collection
 from brigade.collecting.read_collector_environment import read_collector_environment
 from brigade.corpus.run_awawa import run_awawa
@@ -11,7 +12,6 @@ from brigade.runtime import Runtime
 from brigade.studies.read_study import read_study
 from brigade.studies.render_answer import name_answer
 from brigade.studies.study_run_context import ANSWER_FILE, STUDY_KIND
-from brigade.system.read_configuration import Configuration
 
 NAME = "study"
 STUDY_PARAMETER = "name"
@@ -43,7 +43,7 @@ def _read_answer(runtime: Runtime, study: str, run_id: str) -> dict:
     return {"type": answer_type, "name": name, "fields": fields}
 
 
-def collect(environment: dict, runtime: Runtime, configuration: Configuration) -> dict:
+def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
     inputs = read_collector_environment(environment)
     if STUDY_PARAMETER not in inputs.parameters:
         raise BrigadeError(f"the study collector takes {STUDY_PARAMETER}=<study>")

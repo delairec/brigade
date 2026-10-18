@@ -2,9 +2,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.runtime import Runtime
 from brigade.studies.read_study import Study
-from brigade.system.read_configuration import Configuration
 
 STUDY_KIND = "study"
 STEPS_DIRECTORY = "steps"
@@ -17,7 +17,7 @@ FIELDS_THE_CLI_FILLS = ("STUDY", "RUN", "COLLECTED")
 
 @dataclass(frozen=True)
 class StudyEquipment:
-    configuration: Configuration
+    collector_equipment: CollectorEquipment
     resolve_collector: Callable[[str, Path], object]
     document: object
     resolve_forge: Callable[[str], object]

@@ -15,6 +15,24 @@ UNBOUND_ENVIRONMENT = {}
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
 PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+PULL_REQUESTS_QUERY = """query($owner: String!, $name: String!, $states: [PullRequestState!], $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: 100, after: $endCursor, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) {
+      nodes {
+        number title headRefName baseRefName state isDraft reviewDecision
+        author { login }
+        commits(last: 1) {
+          nodes { commit { statusCheckRollup { contexts(first: 100) {
+            nodes { __typename ... on CheckRun { name conclusion } }
+          } } } }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}"""
+EVERY_STATE = "all"
+LISTING_TIMEOUT_S = 600.0
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
@@ -136,7 +154,83 @@ def _ask_gh(request: dict, runtime: Runtime, arguments: tuple[str, ...]) -> str:
 
 
 def _describe_check_run(check_run: dict) -> dict:
-    return {"name": check_run["name"], "verdict": check_run["conclusion"].lower() or PENDING_VERDICT}
+    return {"name": check_run["name"], "verdict": (check_run["conclusion"] or PENDING_VERDICT).lower()}
+
+
+def _describe_check_runs(status_check_rollup: list) -> list[dict]:
+    return [_describe_check_run(check) for check in status_check_rollup if check["__typename"] == CHECK_RUN_TYPE]
+
+
+def _describe_review(review_decision: str | None) -> str | None:
+    if not review_decision:
+        return None
+    return review_decision.lower()
+
+
+def _read_login(author: dict | None) -> str | None:
+    if author is None:
+        return None
+    return author["login"]
+
+
+def _read_check_contexts(pull_request: dict) -> list:
+    rollup = pull_request["commits"]["nodes"][0]["commit"]["statusCheckRollup"]
+    if rollup is None:
+        return []
+    return rollup["contexts"]["nodes"]
+
+
+def _describe_listed_pull_request(pull_request: dict) -> dict:
+    return {
+        "number": pull_request["number"],
+        "title": pull_request["title"],
+        "head": pull_request["headRefName"],
+        "base": pull_request["baseRefName"],
+        "state": pull_request["state"].lower(),
+        "author": _read_login(pull_request["author"]),
+        "draft": pull_request["isDraft"],
+        "review": _describe_review(pull_request["reviewDecision"]),
+        "checks": _describe_check_runs(_read_check_contexts(pull_request)),
+    }
+
+
+def _describe_states(state: str) -> tuple[str, ...]:
+    if state == EVERY_STATE:
+        return ()
+    return ("-f", f"states[]={state.upper()}")
+
+
+def list_pull_requests(request: dict, runtime: Runtime) -> dict:
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=(
+                "gh",
+                "api",
+                "graphql",
+                "--paginate",
+                "--slurp",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "name={repo}",
+                *_describe_states(request["state"]),
+                "-f",
+                f"query={PULL_REQUESTS_QUERY}",
+            ),
+            cwd=request["repository"],
+            timeout_s=LISTING_TIMEOUT_S,
+            environment=request["environment"],
+        )
+    )
+    pages = json.loads(record.stdout)
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "pull_requests": [
+            _describe_listed_pull_request(pull_request)
+            for page in pages
+            for pull_request in page["data"]["repository"]["pullRequests"]["nodes"]
+        ],
+    }
 
 
 def find_pull_request(request: dict, runtime: Runtime) -> dict:
@@ -171,12 +265,8 @@ def find_pull_request(request: dict, runtime: Runtime) -> dict:
         "pull_request": {
             "number": pull_request["number"],
             "state": pull_request["state"].lower(),
-            "checks": [
-                _describe_check_run(check)
-                for check in pull_request["statusCheckRollup"]
-                if check["__typename"] == CHECK_RUN_TYPE
-            ],
-            "review": pull_request["reviewDecision"].lower() or None,
+            "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
+            "review": _describe_review(pull_request["reviewDecision"]),
             "behind": int(behind_by) > 0,
         },
     }

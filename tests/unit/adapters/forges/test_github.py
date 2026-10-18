@@ -6,6 +6,7 @@ from brigade.adapters.forges.github import (
     describe_account,
     find_pull_request,
     list_milestones,
+    list_pull_requests,
     open_pull_request,
     read_login_environment,
 )
@@ -197,6 +198,19 @@ class ListMilestonesTest(unittest.TestCase):
                 {"GH_TOKEN": "token-of-octo-bot"},
             ),
         )
+
+
+class ListPullRequestsTest(unittest.TestCase):
+    def test_should_give_the_paginated_read_as_long_as_a_collector(self):
+        # Arrange
+        no_page = "[]"
+        runtime = create_runtime(no_page)
+
+        # Act
+        list_pull_requests({"repository": "/projects/shop", "state": "all", "environment": BOT_ENVIRONMENT}, runtime)
+
+        # Assert
+        self.assertEqual(runtime.requests[0].timeout_s, 600.0)
 
 
 class CreateMilestoneTest(unittest.TestCase):

@@ -493,16 +493,17 @@ class BrigadeCollectorsListTest(CollectTestCase):
             {
                 "schema_version": 1,
                 "collectors": [
-                    {"name": "alpha", "source": "project"},
-                    {"name": "beta", "source": "machine"},
-                    {"name": "gamma", "source": "PATH"},
-                    {"name": "corpus", "source": "built-in"},
-                    {"name": "git-diff-stat", "source": "built-in"},
-                    {"name": "git-log", "source": "built-in"},
-                    {"name": "ledger", "source": "built-in"},
-                    {"name": "shell", "source": "built-in"},
-                    {"name": "study", "source": "built-in"},
-                    {"name": "worktrees", "source": "built-in"},
+                    {"name": "alpha", "source": "project", "absent": None},
+                    {"name": "beta", "source": "machine", "absent": None},
+                    {"name": "gamma", "source": "PATH", "absent": None},
+                    {"name": "corpus", "source": "built-in", "absent": None},
+                    {"name": "git-diff-stat", "source": "built-in", "absent": None},
+                    {"name": "git-log", "source": "built-in", "absent": None},
+                    {"name": "ledger", "source": "built-in", "absent": None},
+                    {"name": "pr-list", "source": "built-in", "absent": None},
+                    {"name": "shell", "source": "built-in", "absent": None},
+                    {"name": "study", "source": "built-in", "absent": None},
+                    {"name": "worktrees", "source": "built-in", "absent": None},
                 ],
             },
         )
@@ -517,17 +518,18 @@ class BrigadeCollectorsListTest(CollectTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "name           source",
-                "alpha          project",
-                "beta           machine",
-                "gamma          PATH",
-                "corpus         built-in",
-                "git-diff-stat  built-in",
-                "git-log        built-in",
-                "ledger         built-in",
-                "shell          built-in",
-                "study          built-in",
-                "worktrees      built-in",
+                "name           source    absent",
+                "alpha          project   -",
+                "beta           machine   -",
+                "gamma          PATH      -",
+                "corpus         built-in  -",
+                "git-diff-stat  built-in  -",
+                "git-log        built-in  -",
+                "ledger         built-in  -",
+                "pr-list        built-in  -",
+                "shell          built-in  -",
+                "study          built-in  -",
+                "worktrees      built-in  -",
             ],
         )
 
@@ -535,11 +537,13 @@ class BrigadeCollectorsListTest(CollectTestCase):
 class BrigadeCollectorsListWithoutCollectorDirectoriesTest(CollectTestCase):
     def test_should_list_the_built_ins_alone(self):
         # Arrange
-        missing_directory = self.root_path / "missing"
+        awawa_alone = self.root_path / "awawa-alone"
+        awawa_alone.mkdir()
+        (awawa_alone / "awawa").symlink_to(shutil.which("awawa"))
 
         # Act
         completed = self.run_brigade(
-            "collectors", "list", "--json", environment=self.describe_environment_with(PATH=str(missing_directory))
+            "collectors", "list", "--json", environment=self.describe_environment_with(PATH=str(awawa_alone))
         )
 
         # Assert
@@ -549,13 +553,14 @@ class BrigadeCollectorsListWithoutCollectorDirectoriesTest(CollectTestCase):
             {
                 "schema_version": 1,
                 "collectors": [
-                    {"name": "corpus", "source": "built-in"},
-                    {"name": "git-diff-stat", "source": "built-in"},
-                    {"name": "git-log", "source": "built-in"},
-                    {"name": "ledger", "source": "built-in"},
-                    {"name": "shell", "source": "built-in"},
-                    {"name": "study", "source": "built-in"},
-                    {"name": "worktrees", "source": "built-in"},
+                    {"name": "corpus", "source": "built-in", "absent": None},
+                    {"name": "git-diff-stat", "source": "built-in", "absent": None},
+                    {"name": "git-log", "source": "built-in", "absent": None},
+                    {"name": "ledger", "source": "built-in", "absent": None},
+                    {"name": "pr-list", "source": "built-in", "absent": None},
+                    {"name": "shell", "source": "built-in", "absent": None},
+                    {"name": "study", "source": "built-in", "absent": None},
+                    {"name": "worktrees", "source": "built-in", "absent": None},
                 ],
             },
         )
@@ -942,3 +947,253 @@ class BuiltInCollectorsLaunchNoModelTest(BuiltInCollectorsTestCase):
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assertEqual(NOT_A_TOOL.findall(completed.stderr), [])
+
+
+GH_ANSWERS = Path(__file__).resolve().parent / "fixtures" / "recordings" / "gh-pr-list"
+FAKE_GH = (
+    "#!/bin/sh\n"
+    'arguments="$*"\n'
+    'printf \'%s %s\\n\' "${{GH_TOKEN:-no GH_TOKEN}}" "${{arguments%% -f query=*}}" >> "{calls}"\n'
+    'case "$arguments" in\n'
+    '  "auth token "*) printf \'token-of-%s\\n\' "$6" ;;\n'
+    '  "api graphql "*"-f states[]=OPEN -f query="*) cat "{answers}/open.json" ;;\n'
+    '  "api graphql "*"-F name={{repo}} -f query="*) cat "{answers}/all.json" ;;\n'
+    "  *) exit 2 ;;\n"
+    "esac\n"
+)
+CLI_LOGIN_CONFIGURATION = '[forge_accounts]\ncli = "octo-cli"\n'
+NOT_A_FORGE_TOOL = re.compile(r"^brigade collect: ran (?!git |awawa |gh )", re.MULTILINE)
+
+
+class PrListTestCase(CollectTestCase):
+    def setUp(self):
+        super().setUp()
+        self.tools = self.root_path / "tools"
+        self.gh_calls = self.root_path / "gh-calls"
+        install_executable(self.tools / "gh", FAKE_GH.format(calls=self.gh_calls, answers=GH_ANSWERS))
+        self.machine.write_configuration(CLI_LOGIN_CONFIGURATION)
+
+    def describe_environment_with_gh(self) -> dict:
+        return self.describe_environment_with(PATH=f"{self.tools}{os.pathsep}{os.environ['PATH']}")
+
+    def collect_pull_requests(self, *arguments: str):
+        return self.run_collect("pr-list", *arguments, environment=self.describe_environment_with_gh())
+
+
+class BrigadeCollectPrListTest(PrListTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.run_git("remote", "add", "origin", "https://github.com/octo/app.git")
+        self.register_project()
+
+    def test_should_present_the_open_pull_requests_of_every_page_the_forge_answers(self):
+        # Act
+        completed = self.collect_pull_requests("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.read_document(completed)["items"],
+            [
+                {
+                    "number": 14,
+                    "title": "docs: describe the menu",
+                    "head": "docs/menu",
+                    "base": "main",
+                    "state": "open",
+                    "author": "delairec",
+                    "draft": True,
+                    "review": None,
+                    "checks": [],
+                    "task": None,
+                },
+                {
+                    "number": 12,
+                    "title": "feat(cart): empty the cart (@TASK.S3)",
+                    "head": "task/M1-empty-cart/S3",
+                    "base": "integration/M1-empty-cart",
+                    "state": "open",
+                    "author": "Clauche-bot",
+                    "draft": False,
+                    "review": "review_required",
+                    "checks": [{"name": "tests", "verdict": "success"}, {"name": "lint", "verdict": "pending"}],
+                    "task": "S3",
+                },
+            ],
+        )
+
+    def test_should_count_the_open_pull_requests_by_state(self):
+        # Act
+        completed = self.collect_pull_requests("--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["summary"], {"open": 2, "merged": 0, "closed": 0})
+
+    def test_should_read_every_page_of_the_open_pull_requests_as_the_login_of_the_key_cli(self):
+        # Act
+        self.collect_pull_requests()
+
+        # Assert
+        self.assertEqual(
+            self.gh_calls.read_text().splitlines(),
+            [
+                "no GH_TOKEN auth token --hostname github.com --user octo-cli",
+                "token-of-octo-cli api graphql --paginate --slurp -F owner={owner} -F name={repo} -f states[]=OPEN",
+            ],
+        )
+
+    def test_should_read_the_pull_requests_as_the_active_account_of_gh_when_the_key_cli_has_no_login(self):
+        # Arrange
+        no_forge_account = ""
+        self.machine.write_configuration(no_forge_account)
+
+        # Act
+        self.collect_pull_requests()
+
+        # Assert
+        self.assertEqual(
+            self.gh_calls.read_text().splitlines(),
+            ["no GH_TOKEN api graphql --paginate --slurp -F owner={owner} -F name={repo} -f states[]=OPEN"],
+        )
+
+    def test_should_count_the_pull_requests_of_every_state_the_parameter_names(self):
+        # Arrange
+        every_state = "state=all"
+
+        # Act
+        completed = self.collect_pull_requests(every_state, "--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["summary"], {"open": 2, "merged": 1, "closed": 1})
+
+    def test_should_present_a_pull_request_of_a_deleted_account_without_author(self):
+        # Arrange
+        every_state = "state=all"
+
+        # Act
+        completed = self.collect_pull_requests(every_state, "--json")
+
+        # Assert
+        self.assertEqual(
+            self.read_document(completed)["items"][3],
+            {
+                "number": 7,
+                "title": "fix: a typo",
+                "head": "fix/typo",
+                "base": "main",
+                "state": "closed",
+                "author": None,
+                "draft": False,
+                "review": None,
+                "checks": [],
+                "task": None,
+            },
+        )
+
+    def test_should_refuse_a_state_the_forge_does_not_know(self):
+        # Act
+        completed = self.collect_pull_requests("state=draft")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (
+                1,
+                (
+                    "brigade collect: collector pr-list exited 1\n"
+                    "the parameter state of pr-list takes open, merged, closed or all, not draft\n"
+                ),
+            ),
+        )
+
+    def test_should_collect_afresh_on_every_call(self):
+        # Arrange
+        self.collect_pull_requests()
+
+        # Act
+        completed = self.collect_pull_requests("--json")
+
+        # Assert
+        self.assertEqual(json.loads(completed.stdout)["cached"], False)
+
+    def test_should_spawn_no_process_but_git_awawa_and_gh(self):
+        # Arrange
+        (self.tools / "git").symlink_to(shutil.which("git"))
+        (self.tools / "awawa").symlink_to(shutil.which("awawa"))
+        (self.tools / "cat").symlink_to(shutil.which("cat"))
+
+        # Act
+        completed = self.run_collect(
+            "pr-list", "--verbose", environment=self.describe_environment_with(PATH=str(self.tools))
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(NOT_A_FORGE_TOOL.findall(completed.stderr), [])
+
+
+class BrigadeCollectPrListUnderNoForgeTest(PrListTestCase):
+    def setUp(self):
+        super().setUp()
+        self.register_project()
+
+    def test_should_exit_naming_forge_none(self):
+        # Act
+        completed = self.collect_pull_requests()
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade collect: collector pr-list exited 1\npr-list is absent: FORGE none\n"),
+        )
+
+    def test_should_ask_nothing_of_the_forge(self):
+        # Act
+        self.collect_pull_requests()
+
+        # Assert
+        self.assertFalse(self.gh_calls.exists())
+
+    def test_should_list_pr_list_absent_naming_forge_none(self):
+        # Act
+        completed = self.run_brigade("collectors", "list", "--json")
+
+        # Assert
+        self.assertIn(
+            {"name": "pr-list", "source": "built-in", "absent": "FORGE none"},
+            json.loads(completed.stdout)["collectors"],
+        )
+
+    def test_should_print_pr_list_absent_naming_forge_none(self):
+        # Act
+        completed = self.run_brigade("collectors", "list")
+
+        # Assert
+        self.assertIn("pr-list        built-in  FORGE none", completed.stdout.splitlines())
+
+    def test_should_list_a_project_collector_named_pr_list_present(self):
+        # Arrange
+        install_executable(self.project_collectors / "pr-list", ECHO_COLLECTOR)
+
+        # Act
+        completed = self.run_brigade("collectors", "list", "--json")
+
+        # Assert
+        self.assertIn(
+            {"name": "pr-list", "source": "project", "absent": None}, json.loads(completed.stdout)["collectors"]
+        )
+
+
+class BrigadeCollectorsListWithoutOperationalCorpusTest(CollectTestCase):
+    def test_should_list_pr_list_present(self):
+        # Arrange
+        (self.machine.corpus / "_schema.awawa").unlink()
+
+        # Act
+        completed = self.run_brigade("collectors", "list", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            {"name": "pr-list", "source": "built-in", "absent": None}, json.loads(completed.stdout)["collectors"]
+        )
