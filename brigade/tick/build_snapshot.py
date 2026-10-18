@@ -1,11 +1,12 @@
-import argparse
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
+from brigade.errors import BrigadeError
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -17,15 +18,17 @@ from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_r
 from brigade.studies.read_studies import read_studies
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
+from brigade.tasks.read_milestone_tasks import read_milestone_tasks
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.describe_request import describe_request
+from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_plan_review import read_plan_review
 from brigade.waves.read_task_states import read_task_states
+from brigade.waves.require_wave_name import require_wave_name
 
 DOCUMENT_SCHEMA_VERSION = 1
 REQUEST_TYPE = "REQUEST"
-TASK_TYPE = "TASK"
 RUNNING_STATUS = "running"
 PLANNED_STATUS = "planned"
 LIVE_RUN_STATE = "running"
@@ -51,6 +54,7 @@ class WaveFacts:
     request: str
     project: str
     milestone: str
+    wave: str
     branch: str
     tasks: tuple[TaskFacts, ...] = ()
     states: dict = field(default_factory=dict)
@@ -61,6 +65,7 @@ class WaveFacts:
             "request": self.request,
             "project": self.project,
             "milestone": self.milestone,
+            "wave": self.wave,
             "branch": self.branch,
             "tasks": [task.to_document() for task in self.tasks],
             "states": dict(self.states),
@@ -149,17 +154,22 @@ def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
     )
 
 
-def _read_wave_facts(runtime: Runtime, configuration: Configuration, request: dict) -> WaveFacts:
-    query = argparse.Namespace(project=request["project"], ref=request["branch"], worktree=None)
-    tree = prepare_project_tree(query, configuration, runtime)
-    tasks = read_entities(runtime.run_process, tree.root, TASK_TYPE, f"MILESTONE==@MILESTONE.{request['milestone']}")
+def _read_wave_facts(runtime: Runtime, configuration: Configuration, request: dict, events: tuple) -> WaveFacts | None:
+    try:
+        wave = require_wave_name(events, request)
+    except BrigadeError as refusal:
+        sys.stderr.write(f"brigade tick: @{REQUEST_TYPE}.{request['name']} skipped: {refusal}\n")
+        return None
+    tree = prepare_wave_tree(runtime, configuration, request)
+    tasks = read_milestone_tasks(runtime.run_process, tree.root, request["milestone"])
     return WaveFacts(
         request=request["name"],
         project=request["project"],
         milestone=request["milestone"],
+        wave=wave,
         branch=request["branch"],
         tasks=tuple(_read_task_facts(runtime, tree.root, task) for task in tasks),
-        states=read_task_states(runtime.paths.state_root, request["milestone"]),
+        states=read_task_states(runtime.paths.state_root, wave),
         implemented=read_implemented_tasks(runtime.run_process, tree.root),
     )
 
@@ -195,8 +205,15 @@ def build_snapshot(runtime: Runtime, configuration: Configuration) -> Snapshot:
         describe_request(request)
         for request in read_entities(runtime.run_process, runtime.paths.config_root, REQUEST_TYPE)
     )
+    events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
     waves = tuple(
-        _read_wave_facts(runtime, configuration, request) for request in requests if request["status"] == RUNNING_STATUS
+        facts
+        for facts in (
+            _read_wave_facts(runtime, configuration, request, events)
+            for request in requests
+            if request["status"] == RUNNING_STATUS
+        )
+        if facts is not None
     )
     registered = read_projects(runtime)
     runs = list_runs(runtime.paths.state_root)["runs"]

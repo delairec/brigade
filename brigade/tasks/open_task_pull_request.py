@@ -9,6 +9,7 @@ from brigade.git.read_current_branch import read_current_branch
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_created import MilestoneCreated
+from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
@@ -16,6 +17,7 @@ from brigade.tasks.compose_pull_request_title import PullRequestTitleParts, comp
 from brigade.tasks.describe_pull_request_body import PullRequestBodyParts, describe_pull_request_body
 from brigade.tasks.locate_check_record import locate_check_record
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
+from brigade.waves.require_wave_name import require_wave_name
 
 DOCUMENT_SCHEMA_VERSION = 1
 HEAD = "HEAD"
@@ -94,6 +96,9 @@ def _ensure_milestone(runtime: Runtime, session: ForgeSession, title: str) -> No
 def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
     check = _require_passing_check(runtime, worktree)
+    wave = require_wave_name(
+        tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), worktree.wave
+    )
     task = read_entity(runtime.run_process, worktree.path, "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
     session = ForgeSession(worktree=worktree, forge=demand.forge, environment=demand.environment, login=demand.login)
@@ -129,7 +134,7 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
         TaskPrOpened(
             project=worktree.project.name,
             task=worktree.task,
-            wave=worktree.wave["milestone"],
+            wave=wave,
             branch=branch,
             pr=pull_request["number"],
             login=session.login,
