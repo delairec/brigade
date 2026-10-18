@@ -3166,3 +3166,33 @@ DECISION TheBuildProcedureCommitsBeforeItsCheck
 	SOURCE "the user's ruling of 2026-10-18 in the review of pull request #151: the decision"
 		+ "ratified, SPEC 2 of @TASK.B141 reworded to the delivered order"
 		REF @TASK.B141
+
+DECISION PrListIsReadAfreshAsTheLoginOfTheKeyCliAndIsAbsentUnderForgeNone
+	TITLE "pr-list reads at most 1000 pull requests as the login of the key cli, collected afresh"
+		+ "on every call, and only a built-in row of collectors list is ever absent"
+	STATUS active
+	DESC "pr-list declares cache false: the state, the review and the check runs of a pull request"
+		+ "move on the forge without HEAD moving, so no cache key brigade can read would invalidate"
+		+ "its entry"
+		REF @TASK.B146
+		REF @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached
+	DESC "the forge adapter reads gh pr list with --limit 1000, the README stating it; a project"
+		+ "holding more pull requests of the state asked loses the oldest beyond that bound"
+	DESC "the absence of a collector is decided by its name and the FORGE of the registered"
+		+ "project, in brigade/collecting/find_absence.py; collectors list sets it on built-in rows"
+		+ "alone, since a project, machine or PATH collector of the same name is resolved first and"
+		+ "answers without the forge"
+	DESC "the forge of pr-list is resolved in brigade/commands/_read_pull_requests.py, the guard of"
+		+ "plugin resolution allowing resolve_plugin in brigade/commands/ and not in"
+		+ "brigade/collectors/"
+	REJECTED "gh api --paginate on the REST pulls endpoint, which reads every pull request: it"
+		+ "carries neither the review decision nor the check runs, a second call per pull request"
+	REJECTED "pr-list cached and keyed on HEAD as the git built-ins are: a pull request merged or"
+		+ "reviewed since would be answered from the cache"
+	REJECTED "collectors list going on when awawa is missing, the registry read as no project: a"
+		+ "second path for a tool brigade doctor already requires"
+	RATIONALE "@TASK.B146 names the items and the absence and leaves the cache, the bound of the"
+		+ "read and the rows of the absence to its delivery"
+		REF @TASK.B146
+	SOURCE "pull request #155 of the brigade repository, delivering @TASK.B146 on 2026-10-18"
+		REF @TASK.B146

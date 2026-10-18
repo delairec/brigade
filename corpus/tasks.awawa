@@ -8814,7 +8814,8 @@ TASK B145
 TASK B146
 	TITLE "The built-in collector pr-list prints the pull requests of a project through the forge"
 		+ "adapter"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 155
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
@@ -8825,10 +8826,30 @@ TASK B146
 		+ "author login, draft state, review decision, the verdict of its check runs and the task"
 		+ "its head branch task/<slug>/<task> names; the parameter state narrows them, open by"
 		+ "default; summary counts them by state"
+		IMPL "brigade/collectors/pr_list.py::def collect(environment: dict, runtime: Runtime,"
+			+ "configuration: Configuration) -> dict:"
+		IMPL "brigade/adapters/forges/github.py::def list_pull_requests(request: dict, runtime:"
+			+ "Runtime) -> dict:"
+		IMPL "brigade/commands/_read_pull_requests.py::environment=read_forge_environment(configuration,"
+			+ "CLI_KEY, runtime),"
+		IMPL "brigade/system/ask_pull_requests.py::def ask_pull_requests(forge, forge_name: str,"
+			+ "query: PullRequestsQuery, runtime: Runtime) -> list[dict]:"
+		IMPL "tests/cli/test_collect.py::class BrigadeCollectPrListTest(PrListTestCase):"
 	SPEC "under FORGE none, pr-list declares itself absent: brigade collectors list prints it"
 		+ "absent naming FORGE none, and brigade collect pr-list exits 1 naming it"
+		IMPL "brigade/collecting/find_absence.py::def find_absence(name: str, project: Entity |"
+			+ "None) -> str | None:"
+		IMPL "brigade/commands/collectors_list.py::def _describe_collector(collector: dict,"
+			+ "project: Entity | None) -> dict:"
+		IMPL "tests/cli/test_collect.py::class"
+			+ "BrigadeCollectPrListUnderNoForgeTest(PrListTestCase):"
 	SPEC "tests prove the document from a recorded answer of the forge adapter, the absence under"
 		+ "FORGE none, and that no model is launched"
+		IMPL "tests/cli/fixtures/recordings/gh-pr-list/open.json::\"headRefName\": \"docs/menu\""
+		IMPL "tests/cli/test_collect.py::def"
+			+ "test_should_spawn_no_process_but_git_awawa_and_gh(self):"
+		IMPL "tests/unit/system/test_ask_pull_requests.py::def"
+			+ "test_should_refuse_an_answer_lacking_the_pull_requests_naming_the_forge(self):"
 	AFTER @TASK.B47
 	AFTER @TASK.B14
 	RATIONALE "split out of @TASK.B47 on 2026-10-13: commit 04e7293 of the brigade repository had"
