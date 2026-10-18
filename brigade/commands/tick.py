@@ -11,12 +11,15 @@ from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
+from brigade.registry.find_project import find_project
+from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
@@ -38,6 +41,7 @@ from brigade.tick.actions import (
     RemoveTaskWorktree,
     ResumeTaskRun,
     ResumeWave,
+    RunPreflight,
     StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
@@ -48,12 +52,15 @@ from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
+from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.waves.start_wave import start_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
 RUNNING_STATE = "running"
+VERIFYING_STATE = "verifying"
+FAILED_VERDICT = "fail"
 TICK_INTERVAL_S = 300
 ROUND_CAP = 10
 LOCK_NAME = "tick.lock"
@@ -128,11 +135,43 @@ def _record_task_state(runtime: Runtime, action: RecordTaskState) -> None:
     )
 
 
+def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPreflight) -> None:
+    findings = preflight_pull_request(
+        runtime,
+        PreflightDemand(
+            project=find_project(read_projects(runtime), action.project),
+            task=action.task,
+            wave_branch=action.branch,
+            pr=action.pr,
+            forge=runtime.resolve_plugin("forge", FORGE_NAME),
+            environment=read_forge_environment(configuration, CLI_KEY, runtime),
+            configuration=configuration,
+        ),
+    )
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskPreflighted(
+            project=action.project,
+            wave=action.wave,
+            task=action.task,
+            pr=action.pr,
+            head=findings["head"],
+            checks=tuple(findings["checks"]),
+        ),
+    )
+    if all(check["verdict"] != FAILED_VERDICT for check in findings["checks"]):
+        _record_task_state(
+            runtime, RecordTaskState(wave=action.wave, task=action.task, state=VERIFYING_STATE, reason=None)
+        )
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         StartWave: lambda action: start_wave(runtime, configuration, action.request),
         RecordTaskState: lambda action: _record_task_state(runtime, action),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
+        RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: append_event(

@@ -266,6 +266,24 @@ class BrigadeVerifyPreflightOfANonCanonicalCorpusTest(VerifyPreflightTestCase):
         )
 
 
+class BrigadeVerifyPreflightOfACorpusFailingItsLintTest(VerifyPreflightTestCase):
+    def setUp(self):
+        super().setUp()
+        self.commit_in_worktree(
+            {"corpus/tasks.awawa": DELIVERED_TASKS.replace("\tSTATUS todo\n", '\tSTATUS todo\n\tOWNER "nobody"\n')},
+            "a field no schema declares",
+        )
+        self.project.run_git("push", "--quiet", "origin", TASK_BRANCH)
+        self.describe_pull_request()
+
+    def test_should_fail_the_corpus_on_the_strict_lint(self):
+        # Act
+        checks = self.read_checks()
+
+        # Assert
+        self.assertEqual(checks["corpus"]["findings"][0], "awawa lint --strict . exited 1")
+
+
 class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPreflightTestCase):
     def deliver(self, tasks: str) -> None:
         self.commit_in_worktree({"corpus/tasks.awawa": tasks}, "another promotion")

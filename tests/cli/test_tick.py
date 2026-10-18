@@ -15,6 +15,12 @@ from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTes
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 from tests.cli.test_collect import install_executable
+from tests.cli.test_verify_preflight import (
+    PULL_REQUEST_BODY,
+    PULL_REQUEST_TITLE,
+    SUCCESSFUL_CHECK_RUN,
+    VerifyPreflightTestCase,
+)
 from tests.process_launcher import ProcessLauncher
 
 INSTANT = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
@@ -739,6 +745,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "worktree": None,
                                     "rate_limit": None,
                                     "stopped_run": None,
+                                    "opened_pull_request": None,
+                                    "preflighted_head": None,
                                 },
                                 {
                                     "task": "S4",
@@ -748,6 +756,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "worktree": None,
                                     "rate_limit": None,
                                     "stopped_run": None,
+                                    "opened_pull_request": None,
+                                    "preflighted_head": None,
                                 },
                                 {
                                     "task": "S5",
@@ -757,6 +767,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "worktree": None,
                                     "rate_limit": None,
                                     "stopped_run": None,
+                                    "opened_pull_request": None,
+                                    "preflighted_head": None,
                                 },
                                 {
                                     "task": "S6",
@@ -766,6 +778,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "worktree": None,
                                     "rate_limit": None,
                                     "stopped_run": None,
+                                    "opened_pull_request": None,
+                                    "preflighted_head": None,
                                 },
                             ],
                             "states": {"S3": "queued"},
@@ -1529,10 +1543,13 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                     "checks": [{"name": "tests", "verdict": "success"}],
                     "review": "review_required",
                     "behind": False,
+                    "head": "0123abc",
                 },
                 "worktree": str(self.worktree),
                 "rate_limit": None,
                 "stopped_run": None,
+                "opened_pull_request": None,
+                "preflighted_head": None,
             },
         )
 
@@ -1570,6 +1587,7 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                 "checks": [{"name": "tests", "verdict": "success"}],
                 "review": "review_required",
                 "behind": True,
+                "head": "0123abc",
             },
         )
 
@@ -1891,3 +1909,146 @@ class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTick
                 },
             ],
         )
+
+
+TICK_FAKE_GH = (
+    "#!/bin/sh\n"
+    'printf \'%s\\n\' "$*" >> "{calls}"\n'
+    'case "$*" in\n'
+    '  "auth token"*) echo token-of-octo-cli ;;\n'
+    '  "pr view"*) cat "{pull_request}" ;;\n'
+    '  "pr list --head task/M1-empty-cart/S3 "*) cat "{listed}" ;;\n'
+    '  "pr list"*) echo [] ;;\n'
+    '  "api repos/{{owner}}/{{repo}}/compare/"*) echo 0 ;;\n'
+    "esac\n"
+)
+PR_OPEN_LINE = (
+    '{"schema_version": 1, "ts": "2026-10-17T12:01:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
+    ' "state": "pr_open"}\n'
+)
+
+
+class TickPreflightTestCase(VerifyPreflightTestCase):
+    def setUp(self):
+        super().setUp()
+        install_executable(
+            Path(self.root.name).resolve() / "tools" / "gh",
+            TICK_FAKE_GH.format(calls=self.gh_calls, pull_request=self.pull_request, listed=self.listed),
+        )
+        with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
+            ledger.write(PR_OPEN_LINE)
+
+    def describe_pull_request(
+        self,
+        title: str = PULL_REQUEST_TITLE,
+        body: str = PULL_REQUEST_BODY,
+        check_runs: tuple = (SUCCESSFUL_CHECK_RUN,),
+    ) -> None:
+        super().describe_pull_request(title, body, check_runs)
+        self.listed = Path(self.root.name).resolve() / "listed.json"
+        self.listed.write_text(
+            json.dumps(
+                [
+                    {
+                        "number": 42,
+                        "state": "OPEN",
+                        "headRefOid": self.read_head(),
+                        "baseRefName": WAVE_BRANCH,
+                        "reviewDecision": "",
+                        "statusCheckRollup": list(check_runs),
+                    }
+                ]
+            )
+        )
+
+    def run_tick(self):
+        return self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "tick", "--once", environment=self.describe_environment(), cwd=self.project.path
+        )
+
+    def read_events(self, name: str) -> list[dict]:
+        lines = (self.state / "ledger" / "2026-10.jsonl").read_text().splitlines()
+        return [event for event in map(json.loads, lines) if event["event"] == name]
+
+    def read_last_state_of_s3(self) -> str:
+        return [event for event in self.read_events("task.state") if event["task"] == "S3"][-1]["state"]
+
+
+class BrigadeTickOnASoundPullRequestTest(TickPreflightTestCase):
+    def test_should_record_the_findings_of_the_preflight_in_the_ledger(self):
+        # Act
+        self.run_tick()
+
+        # Assert
+        self.assertEqual(
+            self.read_events("task.preflighted"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.preflighted",
+                    "project": "shop",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "pr": 42,
+                    "head": self.read_head(),
+                    "checks": [
+                        {"name": "ancestry", "verdict": "pass", "findings": []},
+                        {"name": "checks", "verdict": "pass", "findings": []},
+                        {"name": "corpus", "verdict": "pass", "findings": []},
+                        {"name": "promotion", "verdict": "pass", "findings": []},
+                        {"name": "untouched_files", "verdict": "pass", "findings": []},
+                        {"name": "privacy", "verdict": "pass", "findings": []},
+                        {"name": "body", "verdict": "pass", "findings": []},
+                        {
+                            "name": "size",
+                            "verdict": "info",
+                            "findings": ["3 files", "9 lines", "3 packages: corpus, src/billing, src/cart", "0 layers"],
+                        },
+                    ],
+                }
+            ],
+        )
+
+    def test_should_move_the_task_to_verifying_when_no_check_fails(self):
+        # Act
+        self.run_tick()
+
+        # Assert
+        self.assertEqual(self.read_last_state_of_s3(), "verifying")
+
+
+class BrigadeTickOnAPullRequestWithAFailingCheckTest(TickPreflightTestCase):
+    def setUp(self):
+        super().setUp()
+        self.describe_pull_request(body="Empty the cart\n")
+
+    def test_should_leave_the_task_in_pr_open(self):
+        # Act
+        self.run_tick()
+
+        # Assert
+        self.assertEqual(self.read_last_state_of_s3(), "pr_open")
+
+    def test_should_run_the_preflight_of_a_head_once(self):
+        # Arrange
+        self.run_tick()
+
+        # Act
+        self.run_tick()
+
+        # Assert
+        self.assertEqual(len(self.read_events("task.preflighted")), 1)
+
+
+class BrigadeTickOnAPullRequestNoTaskOpenedTest(TickPreflightTestCase):
+    def setUp(self):
+        super().setUp()
+        self.listed.write_text(self.listed.read_text().replace('"number": 42', '"number": 43'))
+
+    def test_should_not_run_the_preflight_of_a_pull_request_the_task_did_not_open(self):
+        # Act
+        self.run_tick()
+
+        # Assert
+        self.assertEqual(self.read_events("task.preflighted"), [])

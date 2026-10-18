@@ -30,6 +30,15 @@ class RecordTaskState:
 
 
 @dataclass(frozen=True)
+class RunPreflight:
+    project: str
+    wave: str
+    branch: str
+    task: str
+    pr: int
+
+
+@dataclass(frozen=True)
 class RemoveTaskWorktree:
     project: str
     task: str

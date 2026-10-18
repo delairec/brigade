@@ -269,6 +269,7 @@ def find_pull_request(request: dict, runtime: Runtime) -> dict:
             "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
             "review": _describe_review(pull_request["reviewDecision"]),
             "behind": int(behind_by) > 0,
+            "head": pull_request["headRefOid"],
         },
     }
 

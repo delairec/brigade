@@ -1,0 +1,29 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "TASK",
+      "--where",
+      "STATUS==implemented",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD TYPE feat|fix\n\tFIELD COMPONENT string\n\tFIELD MILESTONE @MILESTONE\n\tFIELD SPEC string\n\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/milestones.awawa": "MILESTONE M1\n\tTITLE \"Empty cart\"\n\tSTATUS running\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": "TASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS implemented\n\nTASK S3\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS todo\n\tTYPE feat\n\tCOMPONENT \"cart button\"\n\tMILESTONE @MILESTONE.M1\n\tSPEC \"the button of src/cart/button.py, once pressed, empties the cart\"\n\tSPEC \"the emptying charges nothing\"\n\nTASK S6\n\tTITLE \"Count the emptied carts\"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"implemented\", \"running\", \"todo\"], \"types\": [{\"type\": \"MILESTONE\", \"counts\": {\"implemented\": 0, \"running\": 1, \"todo\": 0}, \"unset\": 0, \"total\": 1}, {\"type\": \"SCHEMA\", \"counts\": {\"implemented\": 0, \"running\": 0, \"todo\": 0}, \"unset\": 2, \"total\": 2}, {\"type\": \"TASK\", \"counts\": {\"implemented\": 1, \"running\": 0, \"todo\": 2}, \"unset\": 0, \"total\": 3}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"TASK\", \"name\": \"S2\", \"target\": \"@TASK.S2\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": \"implemented\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 2, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 3, \"entities\": 6}}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

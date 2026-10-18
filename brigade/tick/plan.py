@@ -12,6 +12,7 @@ from brigade.tick.actions import (
     RemoveTaskWorktree,
     ResumeTaskRun,
     ResumeWave,
+    RunPreflight,
     StartWave,
 )
 from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
@@ -24,6 +25,8 @@ MERGED_STATE = "merged"
 RUNNING_STATE = "running"
 PR_OPEN_STATE = "pr_open"
 PARKED_STATE = "parked"
+OPEN_PULL_REQUEST = "open"
+PENDING_VERDICT = "pending"
 MERGED_PULL_REQUEST = "merged"
 CLOSED_PULL_REQUEST = "closed"
 SETTLED_PULL_REQUESTS = (MERGED_PULL_REQUEST, CLOSED_PULL_REQUEST)
@@ -152,6 +155,16 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             record = _decide_task_state(wave, task)
             if record is not None:
                 actions.append(record)
+            if _is_ready_for_preflight(wave, task):
+                actions.append(
+                    RunPreflight(
+                        project=wave.project,
+                        wave=wave.wave,
+                        branch=wave.branch,
+                        task=task.name,
+                        pr=task.pull_request.number,
+                    )
+                )
             if (
                 task.pull_request.state in SETTLED_PULL_REQUESTS
                 and task.worktree is not None
@@ -159,6 +172,16 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             ):
                 actions.append(RemoveTaskWorktree(project=wave.project, task=task.name, worktree=task.worktree))
     return tuple(actions)
+
+
+def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts) -> bool:
+    return (
+        wave.states.get(task.name) == PR_OPEN_STATE
+        and task.opened_pull_request == task.pull_request.number
+        and task.pull_request.state == OPEN_PULL_REQUEST
+        and all(check.verdict != PENDING_VERDICT for check in task.pull_request.checks)
+        and task.preflighted_head != task.pull_request.head
+    )
 
 
 def _count_free_slots(project: ProjectFacts) -> int:

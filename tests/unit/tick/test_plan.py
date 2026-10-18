@@ -14,6 +14,7 @@ from brigade.tick.actions import (
     RemoveTaskWorktree,
     ResumeTaskRun,
     ResumeWave,
+    RunPreflight,
     StartWave,
 )
 from brigade.tick.build_snapshot import (
@@ -101,9 +102,17 @@ class PlanStartableTasksTest(unittest.TestCase):
 WORKTREE_S3 = "/projects/shop/.brigade/worktrees/S3"
 
 
-def create_pull_request(state: str) -> PullRequestFacts:
+HEAD = "0123abc"
+
+
+def create_pull_request(state: str, verdict: str = "success") -> PullRequestFacts:
     return PullRequestFacts(
-        number=42, state=state, checks=(CheckVerdict(name="tests", verdict="success"),), review=None, behind=False
+        number=42,
+        state=state,
+        checks=(CheckVerdict(name="tests", verdict=verdict),),
+        review=None,
+        behind=False,
+        head=HEAD,
     )
 
 
@@ -185,6 +194,42 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
+
+
+PENDING = create_pull_request("open", "pending")
+FAILED_CHECK_RUN = create_pull_request("open", "failure")
+OPENED_BY_THE_TASK = 42
+OPENED_BY_AN_EARLIER_RUN = 41
+NOT_PREFLIGHTED = None
+PREFLIGHTED_AT_THE_HEAD = HEAD
+PREFLIGHTED_BEFORE_A_PUSH = "fedcba9"
+PREFLIGHT_S3 = RunPreflight(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", pr=42)
+
+
+class PlanPreflightTest(unittest.TestCase):
+    def test_should_run_the_preflight_of_the_pull_request_of_the_task_once_its_check_runs_complete(self):
+        for case, state, pull_request, opened, preflighted, expected in [
+            ("check runs passed", "pr_open", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, (PREFLIGHT_S3,)),
+            ("a check run failed", "pr_open", FAILED_CHECK_RUN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, (PREFLIGHT_S3,)),
+            ("a check run pending", "pr_open", PENDING, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, ()),
+            ("a head pushed", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_BEFORE_A_PUSH, (PREFLIGHT_S3,)),
+            ("a head preflighted", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_AT_THE_HEAD, ()),
+            ("another pull request", "pr_open", OPEN, OPENED_BY_AN_EARLIER_RUN, NOT_PREFLIGHTED, ()),
+            ("a task in review", "verifying", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, ()),
+            ("a pull request merged", "pr_open", MERGED, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, (RECORD_MERGED,)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3", pull_request=pull_request, opened_pull_request=opened, preflighted_head=preflighted
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
 
 
 class PlanSlotsTest(unittest.TestCase):
