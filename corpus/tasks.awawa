@@ -1478,7 +1478,8 @@ TASK B13
 TASK B14
 	TITLE "The tick follows the pull request of each task and moves the task state from its forge"
 		+ "facts"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 153
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
@@ -1487,11 +1488,34 @@ TASK B14
 		+ "request whose head is the task branch task/<slug>/<task>, read through the forge adapter"
 		+ "as the login of the key cli: its number, its state open, merged or closed, the verdict"
 		+ "of each check run, its review state and whether its base moved past its head"
+		IMPL "brigade/adapters/forges/github.py::def find_pull_request(request: dict, runtime:"
+			+ "Runtime) -> dict:"
+		IMPL "brigade/tick/build_snapshot.py::def _follow_task(task: TaskFacts, followed:"
+			+ "FollowedWave) -> TaskFacts:"
+		IMPL "brigade/commands/tick.py::environment = read_forge_environment(configuration,"
+			+ "CLI_KEY, runtime)"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_carry_the_pull_request_of_the_task_and_its_worktree(self):"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_read_the_pull_request_as_the_login_of_the_key_cli(self):"
 	SPEC "the tick records task.state pr_open when it first sees the pull request of a running"
 		+ "task, merged when it sees it merged, and parked with the reason pull request closed when"
 		+ "it sees it closed unmerged"
+		IMPL "brigade/tick/plan.py::def _decide_task_state(wave: WaveFacts, task: TaskFacts) ->"
+			+ "RecordTaskState | None:"
+		IMPL "brigade/ledger/task_state.py::reason: str | None = None"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_record_the_task_with_its_pull_request_open(self):"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_park_the_task_with_the_reason_pull_request_closed_when_it_is_closed_unmerged(self):"
 	SPEC "the worktree the scheduler cut for the task is removed under the lock of the project's"
 		+ "worktrees once its pull request is merged or closed, never while a run holds it"
+		IMPL "brigade/tick/remove_task_worktree.py::def remove_task_worktree(runtime: Runtime,"
+			+ "action: RemoveTaskWorktree) -> None:"
+		IMPL "brigade/tick/plan.py::and task.worktree not in held"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_remove_the_worktree_of_the_task_once_its_pull_request_is_merged(self):"
+		IMPL "tests/cli/test_tick.py::def test_should_keep_the_worktree_while_a_run_holds_it(self):"
 	AFTER @TASK.B142
 	AFTER @TASK.B75
 	RATIONALE "it follows @TASK.B75: the forge facts it reads run as the login of the key cli, F5"
