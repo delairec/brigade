@@ -19,3 +19,18 @@ class LaunchTask:
 @dataclass(frozen=True)
 class LaunchStudy:
     study: str
+
+
+@dataclass(frozen=True)
+class RecordTaskState:
+    wave: str
+    task: str
+    state: str
+    reason: str | None
+
+
+@dataclass(frozen=True)
+class RemoveTaskWorktree:
+    project: str
+    task: str
+    worktree: str

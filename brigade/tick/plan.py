@@ -1,13 +1,20 @@
 from brigade.errors import BrigadeError
 from brigade.studies.read_schedule import read_schedule
 from brigade.tasks.read_task_number import read_task_number
-from brigade.tick.actions import LaunchStudy, LaunchTask, StartWave
-from brigade.tick.build_snapshot import ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.actions import LaunchStudy, LaunchTask, RecordTaskState, RemoveTaskWorktree, StartWave
+from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
 
 AUTOMATIC_PLAN_REVIEW = "auto"
 BUILD_SLOT = "build"
 WAITING_STATE = "queued"
 MERGED_STATE = "merged"
+RUNNING_STATE = "running"
+PR_OPEN_STATE = "pr_open"
+PARKED_STATE = "parked"
+MERGED_PULL_REQUEST = "merged"
+CLOSED_PULL_REQUEST = "closed"
+SETTLED_PULL_REQUESTS = (MERGED_PULL_REQUEST, CLOSED_PULL_REQUEST)
+CLOSED_REASON = "pull request closed"
 ACTIVE_STATUS = "active"
 SCAN_SLOT = "none"
 
@@ -38,7 +45,37 @@ def plan(snapshot: Snapshot) -> tuple:
                     task=task.name,
                 )
             )
-    return starts + tuple(launches) + _plan_studies(snapshot)
+    return starts + _plan_followed_pull_requests(snapshot) + tuple(launches) + _plan_studies(snapshot)
+
+
+def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | None:
+    state = wave.states.get(task.name, WAITING_STATE)
+    if state in SETTLED_STATES:
+        return None
+    if task.pull_request.state == MERGED_PULL_REQUEST:
+        return RecordTaskState(wave=wave.wave, task=task.name, state=MERGED_STATE, reason=None)
+    if task.pull_request.state == CLOSED_PULL_REQUEST:
+        return RecordTaskState(wave=wave.wave, task=task.name, state=PARKED_STATE, reason=CLOSED_REASON)
+    if state == RUNNING_STATE:
+        return RecordTaskState(wave=wave.wave, task=task.name, state=PR_OPEN_STATE, reason=None)
+    return None
+
+
+def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
+    held = {live.worktree for project in snapshot.projects for live in project.live_runs}
+    actions = []
+    for wave in snapshot.waves:
+        for task in (task for task in wave.tasks if task.pull_request is not None):
+            record = _decide_task_state(wave, task)
+            if record is not None:
+                actions.append(record)
+            if (
+                task.pull_request.state in SETTLED_PULL_REQUESTS
+                and task.worktree is not None
+                and task.worktree not in held
+            ):
+                actions.append(RemoveTaskWorktree(project=wave.project, task=task.name, worktree=task.worktree))
+    return tuple(actions)
 
 
 def _count_free_slots(project: ProjectFacts) -> int:

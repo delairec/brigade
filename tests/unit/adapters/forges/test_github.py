@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from brigade.adapters.forges.github import (
     create_milestone,
     describe_account,
+    find_pull_request,
     list_milestones,
     open_pull_request,
     read_login_environment,
@@ -214,4 +215,123 @@ class CreateMilestoneTest(unittest.TestCase):
                 ("gh", "api", "--method", "POST", "repos/{owner}/{repo}/milestones", "-f", "title=Empty cart"),
                 {"GH_TOKEN": "token-of-octo-bot"},
             ),
+        )
+
+
+FIND_REQUEST = {
+    "schema_version": 1,
+    "repository": "/projects/shop",
+    "branch": "task/M1-empty-cart/S3",
+    "environment": {"GH_TOKEN": "token-of-octo-cli"},
+}
+OPEN_PULL_REQUEST = (
+    '[{"number": 42, "state": "OPEN", "headRefOid": "0123abc", "baseRefName": "integration/M1-empty-cart",'
+    ' "reviewDecision": "CHANGES_REQUESTED", "statusCheckRollup": ['
+    '{"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"},'
+    '{"__typename": "CheckRun", "name": "lint", "status": "IN_PROGRESS", "conclusion": ""},'
+    '{"__typename": "StatusContext", "context": "deploy", "state": "SUCCESS"}]}]'
+)
+UNREVIEWED_PULL_REQUEST = (
+    '[{"number": 42, "state": "MERGED", "headRefOid": "0123abc", "baseRefName": "integration/M1-empty-cart",'
+    ' "reviewDecision": "", "statusCheckRollup": []}]'
+)
+
+
+def create_answering_runtime(*stdouts: str) -> SimpleNamespace:
+    requests = []
+
+    def run_gh(request):
+        requests.append(request)
+        return ProcessRecord(
+            argv=request.argv, cwd=request.cwd, exit_code=0, stdout=stdouts[len(requests) - 1], stderr="", duration_ms=0
+        )
+
+    return SimpleNamespace(run_process=run_gh, requests=requests)
+
+
+class FindPullRequestTest(unittest.TestCase):
+    def test_should_describe_the_pull_request_of_the_branch_with_its_check_runs_its_review_and_its_base(self):
+        # Arrange
+        runtime = create_answering_runtime(OPEN_PULL_REQUEST, "3\n")
+
+        # Act
+        answer = find_pull_request(FIND_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            {
+                "schema_version": 1,
+                "pull_request": {
+                    "number": 42,
+                    "state": "open",
+                    "checks": [{"name": "tests", "verdict": "failure"}, {"name": "lint", "verdict": "pending"}],
+                    "review": "changes_requested",
+                    "behind": True,
+                },
+            },
+        )
+
+    def test_should_answer_no_review_and_a_base_not_past_the_head(self):
+        # Arrange
+        runtime = create_answering_runtime(UNREVIEWED_PULL_REQUEST, "0\n")
+
+        # Act
+        answer = find_pull_request(FIND_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer["pull_request"], {"number": 42, "state": "merged", "checks": [], "review": None, "behind": False}
+        )
+
+    def test_should_answer_no_pull_request_for_a_branch_that_has_none(self):
+        # Arrange
+        runtime = create_answering_runtime("[]\n")
+
+        # Act
+        answer = find_pull_request(FIND_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "pull_request": None})
+
+    def test_should_ask_gh_for_the_newest_pull_request_of_the_branch_then_its_base_as_the_login_of_the_request(self):
+        # Arrange
+        runtime = create_answering_runtime(OPEN_PULL_REQUEST, "3\n")
+
+        # Act
+        find_pull_request(FIND_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            [(request.argv, request.cwd, request.environment) for request in runtime.requests],
+            [
+                (
+                    (
+                        "gh",
+                        "pr",
+                        "list",
+                        "--head",
+                        "task/M1-empty-cart/S3",
+                        "--state",
+                        "all",
+                        "--limit",
+                        "1",
+                        "--json",
+                        "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup",
+                    ),
+                    "/projects/shop",
+                    {"GH_TOKEN": "token-of-octo-cli"},
+                ),
+                (
+                    (
+                        "gh",
+                        "api",
+                        "repos/{owner}/{repo}/compare/integration/M1-empty-cart...0123abc",
+                        "--jq",
+                        ".behind_by",
+                    ),
+                    "/projects/shop",
+                    {"GH_TOKEN": "token-of-octo-cli"},
+                ),
+            ],
         )

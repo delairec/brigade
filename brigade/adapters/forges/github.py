@@ -14,6 +14,10 @@ URL_SEPARATOR = "/"
 UNBOUND_ENVIRONMENT = {}
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
+PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+COMPARE_PATH = "repos/{owner}/{repo}/compare"
+CHECK_RUN_TYPE = "CheckRun"
+PENDING_VERDICT = "pending"
 
 
 def _read_active_login(hosts_document: str):
@@ -117,3 +121,62 @@ def list_milestones(request: dict, runtime: Runtime) -> dict:
 def create_milestone(request: dict, runtime: Runtime) -> dict:
     _ask_milestones_api(request, runtime, ("--method", "POST", MILESTONES_PATH, "-f", f"title={request['title']}"))
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+def _ask_gh(request: dict, runtime: Runtime, arguments: tuple[str, ...]) -> str:
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=("gh", *arguments),
+            cwd=request["repository"],
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            environment=request["environment"],
+        )
+    )
+    return record.stdout
+
+
+def _describe_check_run(check_run: dict) -> dict:
+    return {"name": check_run["name"], "verdict": check_run["conclusion"].lower() or PENDING_VERDICT}
+
+
+def find_pull_request(request: dict, runtime: Runtime) -> dict:
+    found = json.loads(
+        _ask_gh(
+            request,
+            runtime,
+            (
+                "pr",
+                "list",
+                "--head",
+                request["branch"],
+                "--state",
+                "all",
+                "--limit",
+                "1",
+                "--json",
+                PULL_REQUEST_FIELDS,
+            ),
+        )
+    )
+    if not found:
+        return {"schema_version": DOCUMENT_SCHEMA_VERSION, "pull_request": None}
+    pull_request = found[0]
+    behind_by = _ask_gh(
+        request,
+        runtime,
+        ("api", f"{COMPARE_PATH}/{pull_request['baseRefName']}...{pull_request['headRefOid']}", "--jq", ".behind_by"),
+    )
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "pull_request": {
+            "number": pull_request["number"],
+            "state": pull_request["state"].lower(),
+            "checks": [
+                _describe_check_run(check)
+                for check in pull_request["statusCheckRollup"]
+                if check["__typename"] == CHECK_RUN_TYPE
+            ],
+            "review": pull_request["reviewDecision"].lower() or None,
+            "behind": int(behind_by) > 0,
+        },
+    }

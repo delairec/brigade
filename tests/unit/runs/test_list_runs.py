@@ -144,6 +144,7 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
                         "slot": "build",
                         "role": "builder",
                         "project": None,
+                        "worktree": "/home/user/tidepool",
                         "state": "dead",
                         "outcome": None,
                     }

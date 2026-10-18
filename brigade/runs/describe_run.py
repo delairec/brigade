@@ -22,6 +22,7 @@ def describe_run(run_directory: Path) -> dict:
         "slot": record.slot,
         "role": record.role,
         "project": record.project,
+        "worktree": record.worktree,
         "state": state,
         "outcome": outcome,
     }

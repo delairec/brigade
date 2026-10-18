@@ -3,7 +3,8 @@ from datetime import UTC, datetime
 
 from brigade.errors import BrigadeError
 from brigade.studies.read_live_study_runs import LiveStudyRun
-from brigade.tick.actions import LaunchStudy, LaunchTask, StartWave
+from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
+from brigade.tick.actions import LaunchStudy, LaunchTask, RecordTaskState, RemoveTaskWorktree, StartWave
 from brigade.tick.build_snapshot import (
     LiveRun,
     PlannedRequest,
@@ -83,6 +84,95 @@ class PlanStartableTasksTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
 
+WORKTREE_S3 = "/projects/shop/.brigade/worktrees/S3"
+
+
+def create_pull_request(state: str) -> PullRequestFacts:
+    return PullRequestFacts(
+        number=42, state=state, checks=(CheckVerdict(name="tests", verdict="success"),), review=None, behind=False
+    )
+
+
+OPEN = create_pull_request("open")
+MERGED = create_pull_request("merged")
+CLOSED = create_pull_request("closed")
+NO_PULL_REQUEST = None
+NO_WORKTREE = None
+RECORD_PR_OPEN = RecordTaskState(wave="shop_w1", task="S3", state="pr_open", reason=None)
+RECORD_MERGED = RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None)
+RECORD_PARKED = RecordTaskState(wave="shop_w1", task="S3", state="parked", reason="pull request closed")
+REMOVE_WORKTREE_S3 = RemoveTaskWorktree(project="shop", task="S3", worktree=WORKTREE_S3)
+
+
+class PlanFollowedPullRequestsTest(unittest.TestCase):
+    def test_should_move_the_task_state_from_the_state_of_its_pull_request(self):
+        for case, state, pull_request, expected in [
+            ("a running task whose pull request opened", "running", OPEN, (RECORD_PR_OPEN,)),
+            ("a running task whose pull request merged", "running", MERGED, (RECORD_MERGED,)),
+            ("a running task whose pull request closed", "running", CLOSED, (RECORD_PARKED,)),
+            ("a running task with no pull request yet", "running", NO_PULL_REQUEST, ()),
+            ("a task whose open pull request is already recorded", "pr_open", OPEN, ()),
+            ("a task in review whose pull request merged", "verifying", MERGED, (RECORD_MERGED,)),
+            ("a task in fixing whose pull request closed", "fixing", CLOSED, (RECORD_PARKED,)),
+            ("a task already merged", "merged", MERGED, ()),
+            ("a task already parked", "parked", CLOSED, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", pull_request=pull_request, worktree=NO_WORKTREE)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_remove_the_worktree_of_a_task_once_its_pull_request_is_merged_or_closed(self):
+        for case, state, pull_request, expected in [
+            ("merged", "merged", MERGED, (REMOVE_WORKTREE_S3,)),
+            ("closed", "parked", CLOSED, (REMOVE_WORKTREE_S3,)),
+            ("still open", "pr_open", OPEN, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", pull_request=pull_request, worktree=WORKTREE_S3)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_keep_the_worktree_of_a_merged_task_while_a_run_holds_it(self):
+        # Arrange
+        holding = ProjectFacts(
+            name="shop",
+            slots=4,
+            live_runs=(LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree=WORKTREE_S3),),
+        )
+        task = TaskFacts(name="S3", pull_request=MERGED, worktree=WORKTREE_S3)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "merged"}),), projects=(holding,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_record_the_merge_and_remove_the_worktree_in_one_plan(self):
+        # Arrange
+        task = TaskFacts(name="S3", pull_request=MERGED, worktree=WORKTREE_S3)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
+
+
 class PlanSlotsTest(unittest.TestCase):
     def test_should_launch_within_the_slots_left_by_the_live_build_runs_in_the_order_of_the_numbers(self):
         # Arrange
@@ -90,8 +180,8 @@ class PlanSlotsTest(unittest.TestCase):
             name="shop",
             slots=3,
             live_runs=(
-                LiveRun(run="20261006T110000Z-a1b2c3", slot="build"),
-                LiveRun(run="20261006T110500Z-d4e5f6", slot="review"),
+                LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree="/projects/shop/.brigade/worktrees/S1"),
+                LiveRun(run="20261006T110500Z-d4e5f6", slot="review", worktree="/projects/shop"),
             ),
         )
         tasks = (TaskFacts(name="S10"), TaskFacts(name="S9"), TaskFacts(name="S11"))
@@ -109,8 +199,8 @@ class PlanSlotsTest(unittest.TestCase):
             name="shop",
             slots=1,
             live_runs=(
-                LiveRun(run="20261006T110000Z-a1b2c3", slot="build"),
-                LiveRun(run="20261006T110500Z-d4e5f6", slot="build"),
+                LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree="/projects/shop/.brigade/worktrees/S1"),
+                LiveRun(run="20261006T110500Z-d4e5f6", slot="build", worktree="/projects/shop/.brigade/worktrees/S2"),
             ),
         )
         snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {}),), projects=(project,))

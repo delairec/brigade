@@ -23,6 +23,7 @@ class TaskState:
     wave: str
     task: str
     state: str
+    reason: str | None = None
 
     def __post_init__(self) -> None:
         if self.state not in TASK_STATES:
@@ -30,7 +31,10 @@ class TaskState:
 
     @classmethod
     def from_document(cls, document: dict) -> "TaskState":
-        return cls(wave=document["wave"], task=document["task"], state=document["state"])
+        return cls(wave=document["wave"], task=document["task"], state=document["state"], reason=document.get("reason"))
 
     def to_document(self) -> dict:
-        return {"wave": self.wave, "task": self.task, "state": self.state}
+        document = {"wave": self.wave, "task": self.task, "state": self.state}
+        if self.reason is None:
+            return document
+        return {**document, "reason": self.reason}
