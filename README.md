@@ -391,8 +391,9 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.jso
 `result.json`, the normalised result of the segment), `journal.jsonl` and, written last, `result.json`, the normalised
 result of the last segment. Each segment appends one `run.finished` to the
 ledger, every null field named in `nulls` with its reason. `--wave`, the name of the wave, and `--task`, the task it
-delivers, both optional, are written in `run.json` and in every `run.finished` of the run as `wave` and `task`, null
-with the reason `not launched by a wave` when absent. A `run.json` without the keys `wave` and `task` is refused,
+delivers, both optional and independent, are written in `run.json` and in every `run.finished` of the run as `wave`
+and `task`; an absent `wave` is null with the reason `not launched by a wave`, an absent `task` with the reason
+`not launched for a task`. A `run.json` without the keys `wave` and `task` is refused,
 naming the file and the key, and never upgraded: `runs list` leaves the run out, names it and the refusal on stderr and
 under `skipped` with `--json`, and exits 0; `runs show` of that run fails on the refusal. `runs list --wave` and
 `--task` keep the runs of that wave or that task. The command prints the run, text or `--json`, and exits

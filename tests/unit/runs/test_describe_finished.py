@@ -18,6 +18,7 @@ NO_WAVE = None
 NO_TASK = None
 NO_WARNINGS = ()
 NOT_IN_A_WAVE = "not launched by a wave"
+NOT_FOR_A_TASK = "not launched for a task"
 CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
 
@@ -112,7 +113,7 @@ class DescribeFinishedTest(unittest.TestCase):
                 task=None,
                 nulls={
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "usage": "the client reported no usage",
                     "error_class": "the run did not fail",
                 },
@@ -236,7 +237,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 exit=None,
                 wave=None,
                 task=None,
-                nulls={"wave": NOT_IN_A_WAVE, "task": NOT_IN_A_WAVE, "error_class": CUT, "exit": CUT},
+                nulls={"wave": NOT_IN_A_WAVE, "task": NOT_FOR_A_TASK, "error_class": CUT, "exit": CUT},
                 cost_usd=None,
                 message="cut at the wall-time limit of 2820 s",
             ),
@@ -251,7 +252,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 "the client names no session at launch",
                 {
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
                     "main_steps": "the client names no session at launch",
                     "total_steps": "the client names no session at launch",
@@ -266,7 +267,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 "the client reads no transcript",
                 {
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
                     "main_steps": "the client reads no transcript",
                     "total_steps": "the client reads no transcript",
@@ -281,7 +282,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 "the transcript could not be read: no transcript of session a47607d0",
                 {
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "main_steps": "the transcript could not be read: no transcript of session a47607d0",
                     "total_steps": "the transcript could not be read: no transcript of session a47607d0",
                     "usage": "the transcript could not be read: no transcript of session a47607d0",
@@ -321,7 +322,7 @@ class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
                 "the client names no session at launch",
                 {
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
                     "main_steps": "the client names no session at launch",
                     "total_steps": "the client names no session at launch",
@@ -336,7 +337,7 @@ class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
                 "the client was never launched",
                 {
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "main_steps": "the client was never launched",
                     "total_steps": "the client was never launched",
                     "usage": "the client was never launched",
@@ -400,7 +401,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToLaunchItsClientTest(unittest
             finished.nulls,
             {
                 "wave": NOT_IN_A_WAVE,
-                "task": NOT_IN_A_WAVE,
+                "task": NOT_FOR_A_TASK,
                 "session": "the client names no session at launch",
                 "main_steps": "the client was never launched",
                 "total_steps": "the client was never launched",
@@ -435,7 +436,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 usage,
                 SessionSteps(main_steps=3, total_steps=5),
                 None,
-                {"wave": NOT_IN_A_WAVE, "task": NOT_IN_A_WAVE, "error_class": parse_failure},
+                {"wave": NOT_IN_A_WAVE, "task": NOT_FOR_A_TASK, "error_class": parse_failure},
             ),
             (
                 "no transcript read",
@@ -445,7 +446,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 "the client reads no transcript",
                 {
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "main_steps": "the client reads no transcript",
                     "total_steps": "the client reads no transcript",
                     "usage": "the client reads no transcript",
@@ -460,7 +461,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 "the client names no session at launch",
                 {
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
                     "main_steps": "the client names no session at launch",
                     "total_steps": "the client names no session at launch",
@@ -510,7 +511,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
             finished.nulls,
             {
                 "wave": NOT_IN_A_WAVE,
-                "task": NOT_IN_A_WAVE,
+                "task": NOT_FOR_A_TASK,
                 "main_steps": "the client reported no step count and the client reads no transcript",
                 "total_steps": "the client reads no transcript",
                 "usage": "the client reported no usage",

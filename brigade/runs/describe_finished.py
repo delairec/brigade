@@ -14,6 +14,7 @@ DONE_OUTCOME = "done"
 NO_FAILURE = "the run did not fail"
 NO_ERROR_CLASS = "the client reported no error class"
 NOT_IN_A_WAVE = "not launched by a wave"
+NOT_FOR_A_TASK = "not launched for a task"
 WALL_LIMIT_CUT = "cut at the wall-time limit"
 NO_NULLS_EXPLAINED = {}
 ENDING_REASONS = {WALL_LIMIT_OUTCOME: WALL_LIMIT_CUT, STOPPED_OUTCOME: STOPPED_BY_A_SIGNAL}
@@ -62,7 +63,7 @@ def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) 
     if finished.wave is None:
         nulls["wave"] = NOT_IN_A_WAVE
     if finished.task is None:
-        nulls["task"] = NOT_IN_A_WAVE
+        nulls["task"] = NOT_FOR_A_TASK
     ending_reason = _choose_ending_reason(record, finished)
     if ending_reason is None:
         return {**nulls, **_explain_client_nulls(plan, record, finished)}
