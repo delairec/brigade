@@ -207,16 +207,20 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
 REPLACING_PROCEDURE = "---\ncapabilities: read, shell\nbudget: 40\n---\nDeliver the task another way.\n"
 SHIPPED_BUILD_PROCEDURE = REPOSITORY_ROOT / "brigade" / "runs" / "data" / "procedures" / "build-task.md"
 TASK_BRANCH = "task/M1-empty-cart/S3"
+TOKENLESS_LOGIN = "octo-tokenless"
+LOCK_WAIT_S = 5
 
 
 FAKE_GH = (
     "#!/bin/sh\n"
     'printf \'%s %s\\n\' "${{GH_TOKEN:-no GH_TOKEN}}" "$*" >> "{calls}"\n'
     'case "$1 $2" in\n'
-    '  "auth token") printf \'token-of-%s\\n\' "$6" ;;\n'
-    '  "pr list") answer="{pull_requests}/$(printf \'%s\' "$4" | tr / -).json"\n'
-    '    if [ -f "$answer" ]; then cat "$answer"; else echo "[]"; fi ;;\n'
-    '  "api repos/{{owner}}/{{repo}}/compare/"*) echo 0 ;;\n'
+    '  "auth token") if [ "$6" = "{tokenless}" ]; then exit 1; fi; printf \'token-of-%s\\n\' "$6" ;;\n'
+    '  "pr list") answer="{pull_requests}/$(printf \'%s\' "$4" | tr / -)"\n'
+    '    if [ -f "$answer.refused" ]; then echo "HTTP 502: Bad Gateway" >&2; exit 1; fi\n'
+    '    if [ -f "$answer.json" ]; then cat "$answer.json"; else echo "[]"; fi ;;\n'
+    '  "api repos/{{owner}}/{{repo}}/compare/"*) if [ -f "{pull_requests}/behind-by" ]; then\n'
+    '    cat "{pull_requests}/behind-by"; else echo 0; fi ;;\n'
     "  *) exit 2 ;;\n"
     "esac\n"
 )
@@ -231,16 +235,14 @@ class WaveTickTestCase(TickTestCase):
     setup_commands = ("touch setup-ran",)
 
     def run_tick(self, *options: str):
-        return self.machine.run_brigade(
-            CLONE_ENTRY_POINT,
-            "tick",
-            *options,
-            environment={
-                **self.machine.describe_environment(),
-                **PINNED_COMMIT_DATES,
-                "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
-            },
-        )
+        return self.machine.run_brigade(CLONE_ENTRY_POINT, "tick", *options, environment=self.describe_environment())
+
+    def describe_environment(self) -> dict:
+        return {
+            **self.machine.describe_environment(),
+            **PINNED_COMMIT_DATES,
+            "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
+        }
 
     def setUp(self):
         super().setUp()
@@ -249,7 +251,10 @@ class WaveTickTestCase(TickTestCase):
         self.gh_calls = root / "gh-calls"
         self.pull_requests = root / "pull-requests"
         self.pull_requests.mkdir()
-        install_executable(self.tools / "gh", FAKE_GH.format(calls=self.gh_calls, pull_requests=self.pull_requests))
+        install_executable(
+            self.tools / "gh",
+            FAKE_GH.format(calls=self.gh_calls, pull_requests=self.pull_requests, tokenless=TOKENLESS_LOGIN),
+        )
         provide_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
@@ -759,6 +764,14 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                 ],
             },
         )
+
+    def test_should_read_no_pull_request_of_a_queued_task(self):
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertFalse(self.gh_calls.exists())
 
 
 class BrigadeTickDryRunOnARunningRequestNoWaveStartedNamesTest(WaveTickTestCase):
@@ -1421,6 +1434,27 @@ RUNNING_S3 = (
     ' "state": "running"}\n'
 )
 CLI_KEYS = '[forge_accounts]\ncli = "octo-cli"\n'
+TOKENLESS_CLI_KEYS = f'forge_attempts = 1\n[forge_accounts]\ncli = "{TOKENLESS_LOGIN}"\n'
+MERGED_S3 = (
+    '{"schema_version": 1, "ts": "2026-10-13T12:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
+    ' "state": "merged"}\n'
+)
+CAFE_BRANCH = "integration/M1-menu"
+CAFE_TASKS = 'TASK S6\n\tTITLE "Print the menu"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
+CAFE_MILESTONES = 'MILESTONE M1\n\tTITLE "Menu"\n\tSTATUS running\n'
+CAFE_RUNNING_REQUEST = (
+    "REQUEST cafe_1\n"
+    "\tPROJECT @PROJECT.cafe\n"
+    '\tTEXT "print the menu"\n'
+    '\tCREATED_AT "2026-10-12T11:30:00Z"\n'
+    "\tSTATUS running\n"
+    '\tMILESTONE "M1"\n'
+    f'\tBRANCH "{CAFE_BRANCH}"\n'
+)
+CAFE_WAVE_STARTED = (
+    '{"schema_version": 2, "ts": "2026-10-13T09:30:00Z", "event": "wave.started", "wave": "cafe_w1",'
+    f' "project": "cafe", "branch": "{CAFE_BRANCH}", "tasks": ["S6"]}}\n'
+)
 
 
 class FollowingTickTestCase(LiveBuildRunTickTestCase):
@@ -1475,6 +1509,41 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
             "token-of-octo-cli pr list --head task/M1-empty-cart/S3 --state all --limit 1"
             " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup",
             self.gh_calls.read_text().splitlines(),
+        )
+
+    def test_should_carry_that_the_base_of_the_pull_request_moved_past_its_head(self):
+        # Arrange
+        self.answer_pull_request_of_s3("OPEN")
+        (self.pull_requests / "behind-by").write_text("3\n")
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["snapshot"]["waves"][0]["tasks"][0]["pull_request"],
+            {
+                "number": 42,
+                "state": "open",
+                "checks": [{"name": "tests", "verdict": "success"}],
+                "review": "review_required",
+                "behind": True,
+            },
+        )
+
+    def test_should_stop_on_the_login_of_the_key_cli_without_a_token(self):
+        # Arrange
+        self.configure(Path(self.root.name) / "recordings", Path(self.root.name) / "instructions", TOKENLESS_CLI_KEYS)
+        self.answer_pull_request_of_s3("OPEN")
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, f"brigade tick: gh printed no token for the login {TOKENLESS_LOGIN}, bound to cli, after 1 attempt\n"),
         )
 
 
@@ -1605,3 +1674,179 @@ class BrigadeTickOnceFollowingThePullRequestOfARunningTaskTest(FollowingTickTest
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertTrue(self.worktree.is_dir())
+
+    def test_should_read_the_token_of_the_login_of_the_key_cli_once_per_tick(self):
+        # Arrange
+        self.configure(Path(self.root.name) / "recordings", Path(self.root.name) / "instructions", CLI_KEYS)
+        self.answer_pull_request_of_s3("OPEN")
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.gh_calls.read_text().splitlines(),
+            [
+                "no GH_TOKEN auth token --hostname github.com --user octo-cli",
+                (
+                    "token-of-octo-cli pr list --head task/M1-empty-cart/S3 --state all --limit 1"
+                    " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+                ),
+                "token-of-octo-cli api repos/{owner}/{repo}/compare/integration/M1-empty-cart...0123abc --jq .behind_by",
+                (
+                    "token-of-octo-cli pr list --head task/M1-empty-cart/S3 --state all --limit 1"
+                    " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+                ),
+                "token-of-octo-cli api repos/{owner}/{repo}/compare/integration/M1-empty-cart...0123abc --jq .behind_by",
+                (
+                    "token-of-octo-cli pr list --head task/M1-empty-cart/S6 --state all --limit 1"
+                    " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+                ),
+            ],
+        )
+
+    def test_should_wait_for_the_lock_of_the_worktrees_of_the_project_before_removing_the_worktree(self):
+        # Arrange
+        self.answer_pull_request_of_s3("MERGED")
+        lock_file = self.state / "locks" / "worktrees-shop.lock"
+        lock_file.parent.mkdir(parents=True, exist_ok=True)
+        with lock_file.open("a") as held_lock:
+            fcntl.flock(held_lock, fcntl.LOCK_EX)
+
+            # Act
+            waiting = self.detect_waiting("--once")
+
+        # Assert
+        self.assertEqual((waiting, self.worktree.is_dir()), (True, True))
+
+    def detect_waiting(self, *options: str) -> bool:
+        try:
+            ProcessLauncher.run(
+                [sys.executable, str(CLONE_ENTRY_POINT), "tick", *options],
+                capture_output=True,
+                env=self.describe_environment(),
+                timeout=LOCK_WAIT_S,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return True
+        return False
+
+
+class BrigadeTickDryRunFollowingAMergedTaskTest(FollowingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
+            ledger.write(MERGED_S3)
+        self.answer_pull_request_of_s3("MERGED")
+
+    def test_should_read_no_pull_request_once_its_worktree_is_removed(self):
+        # Arrange
+        self.project.run_git("worktree", "remove", str(self.worktree))
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertFalse(self.gh_calls.exists())
+
+    def test_should_plan_the_removal_of_the_worktree_the_merge_left(self):
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["plan"],
+            [
+                {"project": "shop", "task": "S3", "worktree": str(self.worktree)},
+                {
+                    "request": "shop_1",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "wave": "shop_w1",
+                    "branch": WAVE_BRANCH,
+                    "task": "S4",
+                },
+                {
+                    "request": "shop_1",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "wave": "shop_w1",
+                    "branch": WAVE_BRANCH,
+                    "task": "S6",
+                },
+            ],
+        )
+
+
+class BrigadeTickDryRunWithTheLoginOfTheKeyCliWithoutATokenTest(LaunchingTickTestCase):
+    def test_should_plan_the_wave_while_it_follows_no_task(self):
+        # Arrange
+        self.configure(Path(self.root.name) / "recordings", Path(self.root.name) / "instructions", TOKENLESS_CLI_KEYS)
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual((completed.returncode, completed.stderr), (0, ""))
+
+
+class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        cafe = TemporaryProject(
+            Path(self.root.name).resolve() / "projects" / "cafe",
+            {**self.machine.describe_environment(), **PINNED_COMMIT_DATES},
+        )
+        cafe.write("corpus/_schema.awawa", PROJECT_SCHEMA)
+        cafe.write("corpus/tasks.awawa", MAIN_TASKS)
+        cafe.track("corpus")
+        cafe.run_git("commit", "--quiet", "-m", "the corpus")
+        cafe.run_git("checkout", "--quiet", "-b", CAFE_BRANCH)
+        cafe.write("corpus/tasks.awawa", CAFE_TASKS)
+        cafe.write("corpus/milestones.awawa", CAFE_MILESTONES)
+        cafe.track("corpus")
+        cafe.run_git("commit", "--quiet", "-m", "the plan of M1")
+        cafe.run_git("checkout", "--quiet", "main")
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(cafe.path))
+        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST + CAFE_RUNNING_REQUEST)
+        with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
+            ledger.write(CAFE_WAVE_STARTED)
+        (self.pull_requests / "task-M1-menu-S6.refused").write_text("")
+
+    def test_should_name_the_request_skip_it_and_plan_the_waves_of_the_others(self):
+        # Arrange
+        self.answer_pull_request_of_s3("OPEN")
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (
+                0,
+                (
+                    "brigade tick: @REQUEST.cafe_1 skipped: gh pr list --head task/M1-menu/S6 --state all --limit 1"
+                    " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup exited 1:"
+                    " HTTP 502: Bad Gateway\n"
+                ),
+            ),
+        )
+        self.assertEqual(
+            json.loads(completed.stdout)["plan"],
+            [
+                {"wave": "shop_w1", "task": "S3", "state": "pr_open", "reason": None},
+                {
+                    "request": "shop_1",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "wave": "shop_w1",
+                    "branch": WAVE_BRANCH,
+                    "task": "S6",
+                },
+            ],
+        )

@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, read_entities
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, CommandFailed
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.find_project import find_project
@@ -43,6 +43,7 @@ TASK_PREFIX = "@TASK."
 PROJECT_SLOTS = 4
 PARKED_OUTCOME = "parked"
 QUEUED_STATE = "queued"
+SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
 
 
@@ -180,13 +181,15 @@ class FollowedWave:
 
 
 def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
-    if followed.states.get(task.name, QUEUED_STATE) == QUEUED_STATE:
-        return task
+    state = followed.states.get(task.name, QUEUED_STATE)
     worktree = locate_scheduled_worktree(followed.repository, followed.worktree_root, task.name)
+    standing = worktree.is_dir()
+    if state == QUEUED_STATE or (state in SETTLED_STATES and not standing):
+        return task
     return dataclasses.replace(
         task,
         pull_request=followed.read_pull_request(str(followed.repository), name_task_branch(followed.branch, task.name)),
-        worktree=str(worktree) if worktree.is_dir() else None,
+        worktree=str(worktree) if standing else None,
     )
 
 
@@ -198,12 +201,24 @@ class WaveReading:
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
 
 
+def _report_skipped_request(request: dict, refusal: BrigadeError) -> None:
+    sys.stderr.write(f"brigade tick: @{REQUEST_TYPE}.{request['name']} skipped: {refusal}\n")
+
+
 def _read_wave_facts(runtime: Runtime, reading: WaveReading, request: dict) -> WaveFacts | None:
     try:
         wave = require_wave_name(reading.events, request)
     except BrigadeError as refusal:
-        sys.stderr.write(f"brigade tick: @{REQUEST_TYPE}.{request['name']} skipped: {refusal}\n")
+        _report_skipped_request(request, refusal)
         return None
+    try:
+        return _collect_wave_facts(runtime, reading, request, wave)
+    except CommandFailed as failure:
+        _report_skipped_request(request, failure)
+        return None
+
+
+def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, wave: str) -> WaveFacts:
     tree = prepare_wave_tree(runtime, reading.configuration, request)
     tasks = read_milestone_tasks(runtime.run_process, tree.root, request["milestone"])
     states = read_task_states(runtime.paths.state_root, wave)

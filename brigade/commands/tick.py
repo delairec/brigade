@@ -100,9 +100,12 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
 
 def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Callable:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
-    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    read_environment = functools.cache(lambda: read_forge_environment(configuration, CLI_KEY, runtime))
     return lambda repository, branch: ask_pull_request(
-        forge, FORGE_NAME, PullRequestQuery(repository=repository, branch=branch, environment=environment), runtime
+        forge,
+        FORGE_NAME,
+        PullRequestQuery(repository=repository, branch=branch, environment=read_environment()),
+        runtime,
     )
 
 

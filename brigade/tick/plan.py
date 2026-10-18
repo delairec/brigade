@@ -2,7 +2,7 @@ from brigade.errors import BrigadeError
 from brigade.studies.read_schedule import read_schedule
 from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import LaunchStudy, LaunchTask, RecordTaskState, RemoveTaskWorktree, StartWave
-from brigade.tick.build_snapshot import ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
 
 AUTOMATIC_PLAN_REVIEW = "auto"
 BUILD_SLOT = "build"
@@ -11,7 +11,6 @@ MERGED_STATE = "merged"
 RUNNING_STATE = "running"
 PR_OPEN_STATE = "pr_open"
 PARKED_STATE = "parked"
-SETTLED_STATES = (MERGED_STATE, PARKED_STATE)
 MERGED_PULL_REQUEST = "merged"
 CLOSED_PULL_REQUEST = "closed"
 SETTLED_PULL_REQUESTS = (MERGED_PULL_REQUEST, CLOSED_PULL_REQUEST)
