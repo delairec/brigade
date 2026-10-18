@@ -952,10 +952,12 @@ class BuiltInCollectorsLaunchNoModelTest(BuiltInCollectorsTestCase):
 GH_ANSWERS = Path(__file__).resolve().parent / "fixtures" / "recordings" / "gh-pr-list"
 FAKE_GH = (
     "#!/bin/sh\n"
-    'printf \'%s %s\\n\' "${{GH_TOKEN:-no GH_TOKEN}}" "$*" >> "{calls}"\n'
-    'case "$1 $2" in\n'
-    '  "auth token") printf \'token-of-%s\\n\' "$6" ;;\n'
-    '  "pr list") cat "{answers}/$4.json" ;;\n'
+    'arguments="$*"\n'
+    'printf \'%s %s\\n\' "${{GH_TOKEN:-no GH_TOKEN}}" "${{arguments%% -f query=*}}" >> "{calls}"\n'
+    'case "$arguments" in\n'
+    '  "auth token "*) printf \'token-of-%s\\n\' "$6" ;;\n'
+    '  "api graphql "*"-f states[]=OPEN -f query="*) cat "{answers}/open.json" ;;\n'
+    '  "api graphql "*"-F name={{repo}} -f query="*) cat "{answers}/all.json" ;;\n'
     "  *) exit 2 ;;\n"
     "esac\n"
 )
@@ -984,7 +986,7 @@ class BrigadeCollectPrListTest(PrListTestCase):
         self.project.run_git("remote", "add", "origin", "https://github.com/octo/app.git")
         self.register_project()
 
-    def test_should_present_the_open_pull_requests_of_the_project(self):
+    def test_should_present_the_open_pull_requests_of_every_page_the_forge_answers(self):
         # Act
         completed = self.collect_pull_requests("--json")
 
@@ -1027,7 +1029,7 @@ class BrigadeCollectPrListTest(PrListTestCase):
         # Assert
         self.assertEqual(json.loads(completed.stdout)["summary"], {"open": 2, "merged": 0, "closed": 0})
 
-    def test_should_read_the_pull_requests_as_the_login_of_the_key_cli(self):
+    def test_should_read_every_page_of_the_open_pull_requests_as_the_login_of_the_key_cli(self):
         # Act
         self.collect_pull_requests()
 
@@ -1036,11 +1038,22 @@ class BrigadeCollectPrListTest(PrListTestCase):
             self.gh_calls.read_text().splitlines(),
             [
                 "no GH_TOKEN auth token --hostname github.com --user octo-cli",
-                (
-                    "token-of-octo-cli pr list --state open --limit 1000"
-                    " --json number,title,headRefName,baseRefName,state,author,isDraft,reviewDecision,statusCheckRollup"
-                ),
+                "token-of-octo-cli api graphql --paginate --slurp -F owner={owner} -F name={repo} -f states[]=OPEN",
             ],
+        )
+
+    def test_should_read_the_pull_requests_as_the_active_account_of_gh_when_the_key_cli_has_no_login(self):
+        # Arrange
+        no_forge_account = ""
+        self.machine.write_configuration(no_forge_account)
+
+        # Act
+        self.collect_pull_requests()
+
+        # Assert
+        self.assertEqual(
+            self.gh_calls.read_text().splitlines(),
+            ["no GH_TOKEN api graphql --paginate --slurp -F owner={owner} -F name={repo} -f states[]=OPEN"],
         )
 
     def test_should_count_the_pull_requests_of_every_state_the_parameter_names(self):
@@ -1052,6 +1065,30 @@ class BrigadeCollectPrListTest(PrListTestCase):
 
         # Assert
         self.assertEqual(json.loads(completed.stdout)["summary"], {"open": 2, "merged": 1, "closed": 1})
+
+    def test_should_present_a_pull_request_of_a_deleted_account_without_author(self):
+        # Arrange
+        every_state = "state=all"
+
+        # Act
+        completed = self.collect_pull_requests(every_state, "--json")
+
+        # Assert
+        self.assertEqual(
+            self.read_document(completed)["items"][3],
+            {
+                "number": 7,
+                "title": "fix: a typo",
+                "head": "fix/typo",
+                "base": "main",
+                "state": "closed",
+                "author": None,
+                "draft": False,
+                "review": None,
+                "checks": [],
+                "task": None,
+            },
+        )
 
     def test_should_refuse_a_state_the_forge_does_not_know(self):
         # Act
