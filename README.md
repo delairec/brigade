@@ -191,8 +191,9 @@ the procedure brigade ships, or of the one the key `build` of the table `[proced
 place, resolved as the argument of `brigade run` is. It follows the pull request of each task past its launch,
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
 `merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
-worktree is removed once its pull request is merged or closed, never while a run holds it. A running REQUEST that no `wave.started` names is skipped, named
-on stderr, and the tick serves the waves of the others.
+worktree is removed once its pull request is merged or closed, never while a run holds it. A running REQUEST that no
+`wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
+the waves of the others.
 
 ```
 brigade tick --once       # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock
