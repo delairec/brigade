@@ -58,7 +58,7 @@ def _locate_trail(runtime: Runtime):
 def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
     worktree = prepare_task_worktree(runtime, configuration, action)
     building = argparse.Namespace(
-        procedure=BUILD_PROCEDURE,
+        procedure=configuration.procedures.get(BUILD_SLOT, BUILD_PROCEDURE),
         slot=BUILD_SLOT,
         project=action.project,
         cwd=str(worktree.path),

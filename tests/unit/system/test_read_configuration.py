@@ -67,6 +67,8 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             'build = "octo-builder"\n'
             "[slot_clients]\n"
             'review = "vibe"\n'
+            "[procedures]\n"
+            'build = "deliver"\n'
         )
 
         # Act
@@ -87,6 +89,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
                 forge_accounts={"cli": "octo-bot", "build": "octo-builder"},
                 forge_attempts=5,
                 slot_clients={"review": "vibe"},
+                procedures={"build": "deliver"},
                 worktree_root="../worktrees",
                 attribution=("Co-Authored-By: Ada <ada@example.org>",),
             ),
@@ -176,6 +179,17 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
                 "clients.fake.recordings is a boolean, not a string,",
             ),
             ("an unknown slot", '[slots]\ncook = "charlie"\n', "unknown key slots.cook"),
+            (
+                "a procedures table of the wrong type",
+                'procedures = "deliver"\n',
+                "procedures is a string, not a table,",
+            ),
+            ("an unknown procedures key", '[procedures]\nreview = "deliver"\n', "unknown key procedures.review"),
+            (
+                "a build procedure of the wrong type",
+                "[procedures]\nbuild = 1\n",
+                "procedures.build is an integer, not a string,",
+            ),
             ("a slot bound to no string", "[slots]\nplan = 1\n", "slots.plan is an integer, not a string,"),
             (
                 "a cache bound of the wrong type",
