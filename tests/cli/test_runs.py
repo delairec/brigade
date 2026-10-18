@@ -912,20 +912,6 @@ class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         return json.loads(completed.stdout)["run"]
 
-    def describe_finished_run(self, run_id: str, wave: str, task: str) -> dict:
-        return {
-            "run": run_id,
-            "procedure": "deliver",
-            "slot": "build",
-            "role": "builder",
-            "project": None,
-            "worktree": str(self.workspace),
-            "state": "finished",
-            "outcome": "done",
-            "wave": wave,
-            "task": task,
-        }
-
     def test_should_keep_the_runs_of_the_wave(self):
         # Act
         completed = self.run_brigade("runs", "list", "--wave", "shop_w1", "--json")
@@ -935,8 +921,30 @@ class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
         self.assertCountEqual(
             json.loads(completed.stdout)["runs"],
             [
-                self.describe_finished_run(self.s3_of_shop, "shop_w1", "S3"),
-                self.describe_finished_run(self.s4_of_shop, "shop_w1", "S4"),
+                {
+                    "run": self.s3_of_shop,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                },
+                {
+                    "run": self.s4_of_shop,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "shop_w1",
+                    "task": "S4",
+                },
             ],
         )
 
@@ -949,8 +957,30 @@ class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
         self.assertCountEqual(
             json.loads(completed.stdout)["runs"],
             [
-                self.describe_finished_run(self.s3_of_shop, "shop_w1", "S3"),
-                self.describe_finished_run(self.s3_of_cafe, "cafe_w1", "S3"),
+                {
+                    "run": self.s3_of_shop,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                },
+                {
+                    "run": self.s3_of_cafe,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "cafe_w1",
+                    "task": "S3",
+                },
             ],
         )
 
@@ -961,7 +991,21 @@ class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            json.loads(completed.stdout)["runs"], [self.describe_finished_run(self.s3_of_cafe, "cafe_w1", "S3")]
+            json.loads(completed.stdout)["runs"],
+            [
+                {
+                    "run": self.s3_of_cafe,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "cafe_w1",
+                    "task": "S3",
+                },
+            ],
         )
 
     def test_should_print_the_runs_of_the_wave_as_a_table(self):
