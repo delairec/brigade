@@ -3,9 +3,9 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with fifteen commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+The entry point exists with sixteen commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
 `brigade adapter`, `brigade project`, `brigade wave`, `brigade plan`, `brigade ledger`, `brigade roles`,
-`brigade tick`, `brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs` and `brigade processes`; every
+`brigade tick`, `brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs`, `brigade processes` and `brigade verify`; every
 other one is a task of the corpus.
 
 ## Install
@@ -133,6 +133,24 @@ verdicts of the check and the attribution. `task promote` sets `STATUS implement
 pull request of the last `task.pr_opened` unless `--pr` names another, formats and lints the corpus, commits with the
 attribution lines and pushes, a second run replacing the `DELIVERED_BY` it wrote; it refuses a corpus whose `TASK`
 schema does not declare them. The three record `task.pr_opened`, `milestone.created` and `task.promoted` in the ledger.
+
+## Preflight
+
+`brigade verify preflight <pr>` runs, from a checkout of a registered project, the deterministic checks of the pull
+request a task opened, before any judgment: it reads the pull request as the login of `forge_accounts.cli`, fetches its
+head and the wave's branch, and prints one entry per check, its verdict `pass`, `fail` or `info` and its findings, text
+or, with `--json`, a JSON document; it exits 1 when a check fails.
+
+| Check             | Fails when                                                                                      |
+|-------------------|-------------------------------------------------------------------------------------------------|
+| `ancestry`        | the head does not descend from the head of the wave's branch                                    |
+| `checks`          | a check run is not completed and successful                                                     |
+| `corpus`          | `awawa fmt --check .` or `awawa lint --strict .` fails on the head, read from the tree cache    |
+| `promotion`       | the task is not `implemented`, its `DELIVERED_BY` is not the pull request, a `SPEC` has no `IMPL` resolving |
+| `untouched_files` | a `.awawa` file of the diff changes while none of its entities does                             |
+| `privacy`         | an added line matches a `PRIVATE` pattern of the project, an e-mail address or a home path      |
+| `body`            | the body does not open on the `TITLE` of the task, or keeps a placeholder of its template       |
+| `size`            | never: it reports the files, lines, packages and layers the diff touches                        |
 
 ## Studies
 

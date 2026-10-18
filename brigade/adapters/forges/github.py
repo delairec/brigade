@@ -15,6 +15,7 @@ UNBOUND_ENVIRONMENT = {}
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
 PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+PULL_REQUEST_DETAIL_FIELDS = "number,title,body,headRefName,headRefOid,statusCheckRollup"
 PULL_REQUESTS_QUERY = """query($owner: String!, $name: String!, $states: [PullRequestState!], $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequests(first: 100, after: $endCursor, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) {
@@ -268,5 +269,22 @@ def find_pull_request(request: dict, runtime: Runtime) -> dict:
             "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
             "review": _describe_review(pull_request["reviewDecision"]),
             "behind": int(behind_by) > 0,
+        },
+    }
+
+
+def read_pull_request(request: dict, runtime: Runtime) -> dict:
+    pull_request = json.loads(
+        _ask_gh(request, runtime, ("pr", "view", str(request["number"]), "--json", PULL_REQUEST_DETAIL_FIELDS))
+    )
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "pull_request": {
+            "number": pull_request["number"],
+            "title": pull_request["title"],
+            "body": pull_request["body"],
+            "head": pull_request["headRefName"],
+            "head_sha": pull_request["headRefOid"],
+            "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
         },
     }

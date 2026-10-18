@@ -8,11 +8,11 @@ ANCESTOR_OR_NOT = (0, 1)
 
 
 def check_ancestor(
-    run_process: Callable[[ProcessRequest], ProcessRecord], worktree: Path, ancestor: str
+    run_process: Callable[[ProcessRequest], ProcessRecord], worktree: Path, ancestor: str, descendant: str
 ) -> ProcessRecord:
     return run_process(
         ProcessRequest(
-            argv=("git", "merge-base", "--is-ancestor", ancestor, "HEAD"),
+            argv=("git", "merge-base", "--is-ancestor", ancestor, descendant),
             cwd=str(worktree),
             timeout_s=GIT_TIMEOUT_S,
             acceptable_exit_codes=ANCESTOR_OR_NOT,

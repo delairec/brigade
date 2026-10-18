@@ -20,6 +20,7 @@ from brigade.tasks.locate_task_worktree import TaskWorktree
 from brigade.tasks.match_glob import match_glob
 from brigade.tasks.reserve_task_number import reserve_task_number
 
+HEAD = "HEAD"
 TRIGGER_TYPE = "TRIGGER"
 PATH_TRIGGERS = "KIND==path"
 GLOB_FIELD = "GLOB"
@@ -42,7 +43,7 @@ def _describe_command(record: ProcessRecord) -> dict:
 
 
 def _describe_ancestry(runtime: Runtime, worktree: TaskWorktree) -> dict:
-    record = check_ancestor(runtime.run_process, worktree.path, worktree.wave["branch"])
+    record = check_ancestor(runtime.run_process, worktree.path, worktree.wave["branch"], HEAD)
     return {"command": " ".join(record.argv), "exit_code": record.exit_code}
 
 
