@@ -21,7 +21,7 @@ def _read_request(options):
 
 
 def _render_text(document: dict) -> str:
-    return f"@REQUEST.{document['request']} planning, run {document['run']}"
+    return f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade runs show {document['run']} --log"
 
 
 def _decide_exit_code(document: dict) -> int:
@@ -41,6 +41,8 @@ def _launch_planner(runtime: Runtime, project: str, name: str) -> dict:
         brief=None,
         arguments=(f"request={name}",),
         run_id=None,
+        wave=None,
+        task=None,
         detach=True,
     )
     return run(planning, runtime)

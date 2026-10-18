@@ -9,6 +9,8 @@ from brigade.system.document_request import DocumentRequest
 from brigade.system.read_configuration import Configuration
 
 NO_ARGUMENTS = {}
+NO_WAVE = None
+NO_TASK = None
 NO_WARNINGS = ()
 PROGRESS_SCHEMA = """SCHEMA STEP
 	DESC "a step the run completed"
@@ -63,6 +65,8 @@ def _create_plan(capabilities: tuple[str, ...]) -> RunPlan:
         capabilities=capabilities,
         wall_limit_s=2820.0,
         arguments=NO_ARGUMENTS,
+        wave=NO_WAVE,
+        task=NO_TASK,
         brief_path=None,
         brief=None,
         counts_steps=True,

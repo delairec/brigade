@@ -70,6 +70,8 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
                         "worktree": str(self.workspace),
                         "state": "finished",
                         "outcome": "done",
+                        "wave": None,
+                        "task": None,
                     }
                 ],
                 "skipped": [],
@@ -155,6 +157,8 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                     "worktree": str(self.workspace),
                     "state": "finished",
                     "outcome": "done",
+                    "wave": None,
+                    "task": None,
                     "message": None,
                 },
                 "segments": [{"segment": 1, "outcome": "done", "steps": 12, "duration_ms": ANY}],
@@ -836,6 +840,186 @@ class BrigadeRunsOfARunWhoseResultIsOfAnOlderShapeTest(RunsTestCase):
                     " schema_version is 1, not one of 2\n"
                 ),
             ),
+        )
+
+
+class BrigadeRunsOfARunRecordWithoutItsWaveAndItsTaskTest(RunsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        self.run_id = self.run_deliver_to_its_end()
+        self.run_record = self.runs / self.run_id / "run.json"
+        older_record = json.loads(self.run_record.read_text())
+        del older_record["wave"]
+        del older_record["task"]
+        self.run_record.write_text(json.dumps(older_record))
+
+    def test_should_leave_it_out_of_the_list_and_name_it_on_stderr(self):
+        # Act
+        completed = self.run_brigade("runs", "list")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (
+                0,
+                "no runs\n",
+                f"brigade runs list: skipped run {self.run_id}: {self.run_record} is not a run record: lacks the key wave\n",
+            ),
+        )
+
+    def test_should_give_the_run_left_out_and_its_reason_in_the_document(self):
+        # Act
+        completed = self.run_brigade("runs", "list", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "runs": [],
+                "skipped": [
+                    {"run": self.run_id, "reason": f"{self.run_record} is not a run record: lacks the key wave"}
+                ],
+            },
+        )
+
+    def test_should_refuse_to_show_it_naming_the_file_and_the_key(self):
+        # Act
+        completed = self.run_brigade("runs", "show", self.run_id)
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stdout, completed.stderr),
+            (1, "", f"brigade runs show: {self.run_record} is not a run record: lacks the key wave\n"),
+        )
+
+
+class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+        self.s3_of_shop = self.run_task_of_wave("shop_w1", "S3")
+        self.s4_of_shop = self.run_task_of_wave("shop_w1", "S4")
+        self.s3_of_cafe = self.run_task_of_wave("cafe_w1", "S3")
+        self.run_deliver_to_its_end()
+
+    def run_task_of_wave(self, wave: str, task: str) -> str:
+        completed = self.run_deliver("--wave", wave, "--task", task, "--json")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        return json.loads(completed.stdout)["run"]
+
+    def test_should_keep_the_runs_of_the_wave(self):
+        # Act
+        completed = self.run_brigade("runs", "list", "--wave", "shop_w1", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertCountEqual(
+            json.loads(completed.stdout)["runs"],
+            [
+                {
+                    "run": self.s3_of_shop,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                },
+                {
+                    "run": self.s4_of_shop,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "shop_w1",
+                    "task": "S4",
+                },
+            ],
+        )
+
+    def test_should_keep_the_runs_of_the_task(self):
+        # Act
+        completed = self.run_brigade("runs", "list", "--task", "S3", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertCountEqual(
+            json.loads(completed.stdout)["runs"],
+            [
+                {
+                    "run": self.s3_of_shop,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                },
+                {
+                    "run": self.s3_of_cafe,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "cafe_w1",
+                    "task": "S3",
+                },
+            ],
+        )
+
+    def test_should_keep_the_run_of_the_task_in_the_wave(self):
+        # Act
+        completed = self.run_brigade("runs", "list", "--wave", "cafe_w1", "--task", "S3", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["runs"],
+            [
+                {
+                    "run": self.s3_of_cafe,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "worktree": str(self.workspace),
+                    "state": "finished",
+                    "outcome": "done",
+                    "wave": "cafe_w1",
+                    "task": "S3",
+                },
+            ],
+        )
+
+    def test_should_print_the_runs_of_the_wave_as_a_table(self):
+        # Act
+        completed = self.run_brigade("runs", "list", "--wave", "cafe_w1")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                "run                      procedure  slot   role     project  state     outcome",
+                f"{self.s3_of_cafe}  deliver    build  builder  -        finished  done",
+            ],
         )
 
 

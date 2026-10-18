@@ -1,4 +1,4 @@
-from brigade.command import Command
+from brigade.command import Argument, Command
 from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
@@ -35,14 +35,29 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
+def _is_selected(listed: dict, request) -> bool:
+    return (request.wave is None or listed["wave"] == request.wave) and (
+        request.task is None or listed["task"] == request.task
+    )
+
+
 def runs_list(request, runtime: Runtime) -> dict:
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **list_runs(runtime.paths.state_root)}
+    listing = list_runs(runtime.paths.state_root)
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "runs": [listed for listed in listing["runs"] if _is_selected(listed, request)],
+        "skipped": listing["skipped"],
+    }
 
 
 COMMAND = Command(
     path=("runs", "list"),
     help="list every run with its state and outcome",
     group_help="list the runs, show one, stop one and prune them",
+    arguments=(
+        Argument(("--wave",), {"help": "keep the runs of this wave"}),
+        Argument(("--task",), {"help": "keep the runs of this task"}),
+    ),
     run=runs_list,
     read_request=_read_request,
     render_text=_render_text,

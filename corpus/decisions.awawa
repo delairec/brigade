@@ -2964,8 +2964,10 @@ DECISION ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
 	TITLE "brigade run takes optional --wave and --task, the tick passes them, and run.json and"
 		+ "every run.finished of the run carry them; brigade run stays generic"
 	STATUS active
-	DESC "brigade run takes --wave <wave>, the name of the wave, and --task <task>, both optional;"
-		+ "a run launched outside a wave carries null in both"
+	DESC "brigade run takes --wave <wave>, the name of the wave, and --task <task>, both optional"
+		+ "and independent; a run launched outside a wave carries wave null with the reason not"
+		+ "launched by a wave, and a run launched for no task carries task null with the reason not"
+		+ "launched for a task"
 	DESC "the tick passes --wave and --task to every build run it launches"
 	DESC "run.json and every run.finished of the run carry wave and task; the cost views and the"
 		+ "wave report read them from run.finished"
@@ -2978,6 +2980,9 @@ DECISION ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
 		REF @TASK.B164
 	DESC "binds @TASK.B164"
 		REF @TASK.B164
+	REJECTED "brigade run refusing --wave without --task or --task without --wave: a task run"
+		+ "launched by hand outside a wave, as the Bootstrap of the project AGENTS.md launches one,"
+		+ "has a task and no wave"
 	REJECTED "task.state carrying the id of the run: the cost per task is then a join of task.state"
 		+ "and run.finished, where the cost views and the report already read run.finished"
 	REJECTED "both, the run carrying its task and task.state carrying the run: one fact written"
@@ -2986,6 +2991,9 @@ DECISION ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
 		+ "legacy while it has no user, as the result.json of B151"
 	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer"
 		+ "\"run.finished carries it (Recommended)\""
+	SOURCE "the user's ruling of 2026-10-18 on the question of the review of pull request #154,"
+		+ "--wave without --task: « Une raison par clé », the missing task null with a reason of"
+		+ "its own"
 	SOURCE "the user's rulings of 2026-10-17 in the refinement of B164 and B165: « B164 AFTER B165"
 		+ "(Recommended) », --wave taking the wave name of @TASK.B165; « Refusé, listé en skipped"
 		+ "(Recommended) »"

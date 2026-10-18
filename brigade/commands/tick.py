@@ -69,6 +69,8 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         brief=str(write_build_brief(runtime.paths.state_root, action, worktree)),
         arguments=(f"task=@TASK.{action.task}", f"base={action.branch}"),
         run_id=None,
+        wave=action.wave,
+        task=action.task,
         detach=True,
     )
     run(building, runtime)

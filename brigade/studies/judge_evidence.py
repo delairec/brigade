@@ -21,6 +21,8 @@ def judge_evidence(context: StudyRunContext) -> dict:
         brief=None,
         arguments=(f"study={study.name}", f"run={context.run_id}"),
         run_id=None,
+        wave=None,
+        task=None,
         detach=False,
     )
     launched = run(judging, context.runtime)

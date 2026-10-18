@@ -89,13 +89,14 @@ brigade wave list [--project P]
 
 `wave new` records the request as `<project>_<n>`, `n` one above the highest its project holds, with the UTC instant
 of its creation and the status `planning`, then launches the planner on it detached, `brigade run wave-plan --slot
-plan --project <project> --detach request=<name>`, and prints the request and the run. A project that is not
+plan --project <project> --detach request=<name>`, and prints the request and the run, then the line `brigade runs
+show <run> --log`, the command that follows the planner. A project that is not
 registered or is paused exits 1. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
 wave number of the project in the ledger, and records `wave.started` with the wave, the project, the branch and the
 tasks of its milestone in the order of their number; that name keys every wave event of the ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
 `brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of
-its milestone read from its branch, each with the last `task.state` of the ledger, `queued` when none, and the pull
-request that delivered it; a request of a project that declares no corpus exits 1. `wave show` and `wave list` print the wave name of a started request, `-` for one that did not start.
+its milestone read from its branch, each with the last `task.state` of the ledger, `queued` when none, its run, the last `run.finished` of the
+project naming the task, blank when none, and the pull request that delivered it; a request of a project that declares no corpus exits 1. `wave show` and `wave list` print the wave name of a started request, `-` for one that did not start.
 `wave list` prints one row per request, those of one project with `--project`. Every write
 goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
 
@@ -188,7 +189,7 @@ A tick builds a snapshot of the facts, plans the actions they call for and appli
 plan is empty or ten rounds have passed. Among those actions, it runs the due studies, as Studies says, and launches
 each startable task of a running wave as a detached build run, in the worktree it cuts for the task, of `build-task`,
 the procedure brigade ships, or of the one the key `build` of the table `[procedures]` of `config.toml` names in its
-place, resolved as the argument of `brigade run` is. It follows the pull request of each task past its launch,
+place, resolved as the argument of `brigade run` is, with the wave and the task as `--wave` and `--task`. It follows the pull request of each task past its launch,
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
 `merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
 worktree is removed once its pull request is merged or closed, never while a run holds it. A running REQUEST that no
@@ -344,8 +345,9 @@ brigade roles lint [--json]                  # the built-in and the machine role
 ## Runs
 
 ```
-brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--detach] [key=value ...]
-brigade runs list [--json]                       # every run: id, procedure, slot, role, project, state, outcome
+brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
+            [--detach] [key=value ...]
+brigade runs list [--wave <wave>] [--task <task>] [--json]  # every run: id, procedure, slot, role, project, state, outcome
 brigade runs show <id> [--log] [--json]          # the summary of a run and its segments; --log adds its journal
 brigade runs show <id> --follow                  # the same with --log, then each record as it is written
 brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
@@ -388,7 +390,13 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`: `run.jso
 `role.md` (the role file passed), `progress.awawa` or `progress.md`, `processes.jsonl` (its trail), `segments/<n>/` (`brief.md`, `stdout.log`, `stderr.log`,
 `result.json`, the normalised result of the segment), `journal.jsonl` and, written last, `result.json`, the normalised
 result of the last segment. Each segment appends one `run.finished` to the
-ledger, every null field named in `nulls` with its reason. The command prints the run, text or `--json`, and exits
+ledger, every null field named in `nulls` with its reason. `--wave`, the name of the wave, and `--task`, the task it
+delivers, both optional and independent, are written in `run.json` and in every `run.finished` of the run as `wave`
+and `task`; an absent `wave` is null with the reason `not launched by a wave`, an absent `task` with the reason
+`not launched for a task`. A `run.json` without the keys `wave` and `task` is refused,
+naming the file and the key, and never upgraded: `runs list` leaves the run out, names it and the refusal on stderr and
+under `skipped` with `--json`, and exits 0; `runs show` of that run fails on the refusal. `runs list --wave` and
+`--task` keep the runs of that wave or that task. The command prints the run, text or `--json`, and exits
 with the code of its outcome, that of its last segment: 0 `done`, 1 `failed`, 3 `undeclared`, 10 `blocked`, 11
 `wall_limit`, 12 `turn_limit` (the last segment reached the client's step cap), 13 `soft_limit`, 20 `handed_over`, 21
 `stopped`. `--detach` prints the run id (or `{"schema_version": 1, "run": ..., "pid": ...}`) and

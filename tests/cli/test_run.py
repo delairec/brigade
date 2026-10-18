@@ -23,6 +23,7 @@ CLAUDE_AFTER_TASK_NOTIFICATION = (
     Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-after-task-notification"
 )
 NOT_IN_A_WAVE = "not launched by a wave"
+NOT_FOR_A_TASK = "not launched for a task"
 CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
 CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
@@ -136,7 +137,7 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
                 "nulls": {
                     "project": "no project given",
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "total_steps": "the client reads no transcript",
                     "error_class": "the run did not fail",
                 },
@@ -220,6 +221,119 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
                 json.loads((run_directory / "result.json").read_text()),
             ),
             (finished, finished),
+        )
+
+
+class BrigadeRunOfATaskOfAWaveTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+
+    def run_deliver(self, *options: str):
+        return self.run_brigade(
+            "run",
+            str(self.procedure),
+            "--slot",
+            "build",
+            "--cwd",
+            str(self.workspace),
+            "--wave",
+            "shop_w3",
+            "--task",
+            "S3",
+            *options,
+        )
+
+    def test_should_record_the_wave_and_the_task_in_the_run_record(self):
+        # Act
+        completed = self.run_deliver("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        run_record = self.read_run_record(json.loads(completed.stdout)["run"])
+        self.assertEqual((run_record["wave"], run_record["task"]), ("shop_w3", "S3"))
+
+    def test_should_carry_the_wave_and_the_task_in_the_finished_run_with_no_reason_for_them(self):
+        # Act
+        completed = self.run_deliver("--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(
+            (finished["wave"], finished["task"], finished["nulls"]),
+            (
+                "shop_w3",
+                "S3",
+                {
+                    "project": "no project given",
+                    "total_steps": "the client reads no transcript",
+                    "error_class": "the run did not fail",
+                },
+            ),
+        )
+
+    def test_should_carry_the_wave_and_the_task_through_a_detached_run(self):
+        # Act
+        completed = self.run_deliver("--detach")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.wait_for_file(self.runs / completed.stdout.strip() / "result.json")
+        [finished] = self.read_events("run.finished")
+        self.assertEqual((finished["wave"], finished["task"]), ("shop_w3", "S3"))
+
+
+class BrigadeRunWithOneOfTheWaveAndTheTaskTest(RunTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("builder", DONE_RESULT)
+
+    def run_deliver(self, *options: str):
+        return self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), *options)
+
+    def test_should_explain_the_missing_task_of_a_run_of_a_wave(self):
+        # Act
+        completed = self.run_deliver("--wave", "shop_w3")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(
+            (finished["wave"], finished["task"], finished["nulls"]),
+            (
+                "shop_w3",
+                None,
+                {
+                    "project": "no project given",
+                    "task": "not launched for a task",
+                    "total_steps": "the client reads no transcript",
+                    "error_class": "the run did not fail",
+                },
+            ),
+        )
+
+    def test_should_explain_the_missing_wave_of_a_run_of_a_task(self):
+        # Act
+        completed = self.run_deliver("--task", "S3")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        [finished] = self.read_events("run.finished")
+        self.assertEqual(
+            (finished["wave"], finished["task"], finished["nulls"]),
+            (
+                None,
+                "S3",
+                {
+                    "project": "no project given",
+                    "wave": "not launched by a wave",
+                    "total_steps": "the client reads no transcript",
+                    "error_class": "the run did not fail",
+                },
+            ),
         )
 
 
@@ -426,6 +540,8 @@ class BrigadeRunOfTheShippedWavePlanProcedureTest(RunTestCase):
                 "budget": 30,
                 "wall_limit_s": 1140,
                 "arguments": {"request": "R1"},
+                "wave": None,
+                "task": None,
             },
         )
 
@@ -580,6 +696,8 @@ class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):
                 "budget": 75,
                 "wall_limit_s": 2820,
                 "arguments": {"task": "B06"},
+                "wave": None,
+                "task": None,
             },
         )
 
@@ -623,6 +741,8 @@ class BrigadeRunOfTheReviewAndRemediateSlotsTest(RunTestCase):
                         "budget": 75,
                         "wall_limit_s": 2820,
                         "arguments": {"task": "B06"},
+                        "wave": None,
+                        "task": None,
                     },
                 )
 
@@ -738,7 +858,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                 {
                     "project": "no project given",
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "main_steps": "the client reads no transcript",
                     "total_steps": "the client reads no transcript",
                     "usage": "the client reads no transcript",
@@ -970,7 +1090,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                 "nulls": {
                     "project": "no project given",
                     "wave": NOT_IN_A_WAVE,
-                    "task": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
                     "main_steps": "the client reads no transcript",
                     "total_steps": "the client reads no transcript",
                     "usage": "the client reads no transcript",

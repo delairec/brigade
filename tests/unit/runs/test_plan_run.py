@@ -7,6 +7,8 @@ from brigade.runs.resolve_procedure import Procedure
 from brigade.system.read_configuration import Configuration
 
 NO_ARGUMENTS = {}
+NO_WAVE = None
+NO_TASK = None
 NO_BRIEF = None
 NO_WARNINGS = ()
 NO_HANDOVER = 0
@@ -46,6 +48,8 @@ class RunPlanOfASlotBoundToALoginTest(unittest.TestCase):
             capabilities=("read", "write"),
             wall_limit_s=1500.0,
             arguments=NO_ARGUMENTS,
+            wave=NO_WAVE,
+            task=NO_TASK,
             brief_path=None,
             brief=NO_BRIEF,
             counts_steps=True,

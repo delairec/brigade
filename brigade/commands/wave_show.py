@@ -6,15 +6,17 @@ from brigade.system.read_optional_configuration import read_optional_configurati
 from brigade.system.render_table import render_table
 from brigade.waves.decide_waits_for import decide_waits_for
 from brigade.waves.describe_request import describe_request
+from brigade.waves.find_last_task_run import find_last_task_run
 from brigade.waves.find_wave_name import find_wave_name
 from brigade.waves.list_wave_tasks import list_wave_tasks
 from brigade.waves.read_wave_request import read_wave_request
 
 DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
+NO_RUN = ""
 FIELD_NAME_WIDTH = 12
 DESCRIBED_FIELDS = (("wave", "wave"), ("milestone", "milestone"), ("branch", "branch"), ("created at", "created_at"))
-TASK_HEADER = ("task", "state", "pull request", "title")
+TASK_HEADER = ("task", "state", "run", "pull request", "title")
 
 
 def _show(value) -> str:
@@ -23,7 +25,10 @@ def _show(value) -> str:
 
 def _render_text(document: dict) -> str:
     fields = [*DESCRIBED_FIELDS, ("waits for", "waits_for")]
-    rows = [(task["task"], task["state"], _show(task["pull_request"]), task["title"]) for task in document["tasks"]]
+    rows = [
+        (task["task"], task["state"], task["run"] or NO_RUN, _show(task["pull_request"]), task["title"])
+        for task in document["tasks"]
+    ]
     return "\n".join(
         [
             f"@REQUEST.{document['request']} of @PROJECT.{document['project']}  {document['status']}",
@@ -63,7 +68,10 @@ def wave_show(request, runtime: Runtime) -> dict:
         "branch": described["branch"],
         "created_at": described["created_at"],
         "waits_for": decide_waits_for(runtime, described),
-        "tasks": list_wave_tasks(runtime, configuration, described),
+        "tasks": [
+            {**listed, "run": find_last_task_run(events, described["project"], listed["task"])}
+            for listed in list_wave_tasks(runtime, configuration, described)
+        ],
     }
 
 

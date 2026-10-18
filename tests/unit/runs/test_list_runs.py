@@ -25,6 +25,8 @@ RUN_RECORD = {
     "budget": 40,
     "wall_limit_s": 1500.0,
     "arguments": {},
+    "wave": None,
+    "task": None,
 }
 RUN_RECORD_WITHOUT_CLIENT = {
     "schema_version": 1,
@@ -41,6 +43,8 @@ RUN_RECORD_WITHOUT_CLIENT = {
     "budget": 40,
     "wall_limit_s": 1500.0,
     "arguments": {},
+    "wave": None,
+    "task": None,
 }
 ANOTHER_START_TIME = 1
 ANOTHER_BOOT_ID = "0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f"
@@ -147,6 +151,8 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
                         "worktree": "/home/user/tidepool",
                         "state": "dead",
                         "outcome": None,
+                        "wave": None,
+                        "task": None,
                     }
                 ],
                 "skipped": [],

@@ -31,6 +31,8 @@ from tests.process_launcher import ProcessLauncher
 FIRST_SEGMENT = 1
 NO_PATH_NEEDED = ""
 NO_ARGUMENTS = {}
+NO_WAVE = None
+NO_TASK = None
 NO_BRIEF = None
 NO_WARNINGS = ()
 NO_HANDOVER = 0
@@ -366,6 +368,8 @@ def _create_plan(
         capabilities=("read", "write"),
         wall_limit_s=wall_limit_s,
         arguments=NO_ARGUMENTS,
+        wave=NO_WAVE,
+        task=NO_TASK,
         brief_path=None,
         brief=NO_BRIEF,
         counts_steps=True,

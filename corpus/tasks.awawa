@@ -8934,7 +8934,10 @@ TASK B147
 TASK B151
 	TITLE "result.json of a segment and of a run is the run.finished document of the segment, the"
 		+ "one the ledger appends, and brigade runs show prints steps and duration per segment"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-18: its SPEC 1, wave and task null on every run, is made false by"
+		+ "@TASK.B164, whose runs carry the wave and the task brigade run is given"
+		REF @TASK.B164
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
@@ -9621,7 +9624,6 @@ TASK B162
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ledger"
 	ROLE ada
-	AFTER @TASK.B151
 	DELIVERED_BY 139
 	DESC "after the merge, on the author's machine and by hand, the run.finished lines of"
 		+ "schema_version 1 are removed from the month files of ~/.local/state/brigade/ledger/ and"
@@ -9765,35 +9767,70 @@ TASK B163
 TASK B164
 	TITLE "brigade run takes --wave and --task, run.json and every run.finished carry them, and"
 		+ "runs list, wave show and wave new follow a run from them"
-	STATUS todo
+	STATUS implemented
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
-	SPEC "brigade run takes --wave <wave>, the name of the wave, and --task <task>, both optional;"
-		+ "run.json and every run.finished of the run carry wave and task, null with the reason not"
-		+ "launched by a wave when they are absent, where today"
-		+ "brigade/runs/describe_finished.py:93-94 writes null for every run"
+	SPEC "brigade run takes --wave <wave>, the name of the wave, and --task <task>, both optional"
+		+ "and independent; run.json and every run.finished of the run carry wave and task, a"
+		+ "missing wave null with the reason not launched by a wave and a missing task null with"
+		+ "the reason not launched for a task, where today brigade/runs/describe_finished.py:93-94"
+		+ "writes null for every run"
+		IMPL "brigade/commands/run.py::Argument((\"--wave\",),"
+		IMPL "brigade/runs/describe_finished.py::wave=plan.wave,"
+		IMPL "brigade/runs/describe_finished.py::if finished.wave is None:"
+		IMPL "brigade/runs/describe_finished.py::nulls[\"task\"] = NOT_FOR_A_TASK"
+		IMPL "tests/cli/test_run.py::class BrigadeRunOfATaskOfAWaveTest(RunTestCase):"
+		IMPL "tests/cli/test_run.py::class BrigadeRunWithOneOfTheWaveAndTheTaskTest(RunTestCase):"
+		IMPL "tests/cli/test_run.py::def test_should_record_the_finished_run_in_the_ledger(self):"
 	SPEC "a run.json without the keys wave and task is refused by brigade/runs/read_run_document.py"
 		+ "naming the file and the key, its schema_version unchanged; brigade runs list leaves such"
 		+ "a run out of the list, names it and the refusal on stderr and under skipped with --json,"
 		+ "brigade/runs/list_runs.py:17-18, and exits 0; brigade runs show of such a run fails on"
 		+ "that refusal; never upgraded"
+		IMPL "brigade/runs/run_record.py::\"wave\": Field(kinds=(str,), nullable=True),"
+		IMPL "tests/cli/test_runs.py::class"
+			+ "BrigadeRunsOfARunRecordWithoutItsWaveAndItsTaskTest(RunsTestCase):"
 	SPEC "the tick launches each build run with wave and task, the Namespace of"
 		+ "brigade/commands/tick.py:57-66 carrying them, so that brigade ledger --wave <wave>"
 		+ "retains the runs of the wave, where today brigade/ledger/describe_wave.py:57 retains"
 		+ "none"
+		IMPL "brigade/commands/tick.py::wave=action.wave,"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_carry_the_wave_and_the_task_in_every_finished_build_run(self):"
 	SPEC "brigade runs list --wave <wave> and --task <task> keep the rows of that wave or task,"
 		+ "text and --json; brigade wave show prints the run of each task in a column, the last run"
 		+ "naming the task in run.finished, blank when none"
+		IMPL "brigade/commands/runs_list.py::def _is_selected(listed: dict, request) -> bool:"
+		IMPL "brigade/waves/find_last_task_run.py::def find_last_task_run(events: tuple, project:"
+			+ "str, task: str) -> str | None:"
+		IMPL "tests/cli/test_runs.py::class"
+			+ "BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):"
+		IMPL "tests/cli/test_wave.py::def"
+			+ "test_should_print_the_request_and_its_tasks_as_text(self):"
 	SPEC "brigade wave new prints, after the request and the run, the line brigade runs show <id>"
 		+ "--log, the command that follows its planner run"
+		IMPL "brigade/commands/wave_new.py::brigade runs show {document['run']} --log"
+		IMPL "tests/cli/test_wave.py::def test_should_print_the_request_and_its_run_as_text(self):"
 	SPEC "TASK B151 is archived at delivery, its SPEC 1, wave and task null on every run, made"
 		+ "false by this task"
+		IMPL "corpus/tasks.awawa::DESC \"archived on 2026-10-18: its SPEC 1, wave and task null on"
+			+ "every run"
 	SPEC "tests/cli prove the two options and the nulls of run.finished on a run of the fake"
 		+ "client, the refusal of a run.json without the two keys in runs list and runs show, the"
 		+ "launch of a build run by the tick with its wave and its task, the filters of runs list"
 		+ "and the column of wave show"
+		IMPL "tests/cli/test_run.py::class BrigadeRunOfATaskOfAWaveTest(RunTestCase):"
+		IMPL "tests/cli/test_runs.py::class"
+			+ "BrigadeRunsOfARunRecordWithoutItsWaveAndItsTaskTest(RunsTestCase):"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_carry_the_wave_and_the_task_in_every_finished_build_run(self):"
+		IMPL "tests/cli/test_runs.py::class"
+			+ "BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):"
+		IMPL "tests/cli/test_wave.py::def"
+			+ "test_should_print_the_request_and_its_tasks_as_text(self):"
+	DELIVERED_BY 154
 	AFTER @TASK.B165
 	RATIONALE "the ruling is @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished;"
 		+ "brigade run stays generic, the two options being optional; after @TASK.B165, the value"
@@ -9803,6 +9840,8 @@ TASK B164
 	RATIONALE "a run.json of the older shape is refused, as @TASK.B151 refuses a result.json of"
 		+ "schema_version 1: brigade keeps no legacy while it has no user"
 		REF @TASK.B151
+	SOURCE "the user's ruling of 2026-10-18 on the question of the review of pull request #154,"
+		+ "--wave without --task: « Une raison par clé »"
 	SOURCE "the user's rulings of 2026-10-17 in the refinement of B164 and B165: « B164 AFTER B165"
 		+ "(Recommended) »; on an older run.json, « Refusé, listé en skipped (Recommended) »; on"
 		+ "what wave new prints, « brigade runs show <id> --log (Recommended) »"
