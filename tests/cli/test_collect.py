@@ -1134,6 +1134,18 @@ class BrigadeCollectPrListUnderNoForgeTest(PrListTestCase):
         # Assert
         self.assertIn("pr-list        built-in  FORGE none", completed.stdout.splitlines())
 
+    def test_should_list_a_project_collector_named_pr_list_present(self):
+        # Arrange
+        install_executable(self.project_collectors / "pr-list", ECHO_COLLECTOR)
+
+        # Act
+        completed = self.run_brigade("collectors", "list", "--json")
+
+        # Assert
+        self.assertIn(
+            {"name": "pr-list", "source": "project", "absent": None}, json.loads(completed.stdout)["collectors"]
+        )
+
 
 class BrigadeCollectorsListWithoutOperationalCorpusTest(CollectTestCase):
     def test_should_list_pr_list_present(self):
