@@ -556,8 +556,9 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "answer no operation; the guard of tests/guards parses every module with ast and fails on"
 		+ "a static import of brigade.adapters, brigade.collectors, brigade.checks or"
 		+ "brigade.outputs from outside their own package, on an import of the package of another"
-		+ "kind from a plugin, and on an import of a module defining its kind's entry point from"
-		+ "another module of that kind, the guard @TASK.B42 asks for, widened"
+		+ "kind from a plugin, on an import of a module defining its kind's entry point from"
+		+ "another module of that kind, the collect function of a collector included, and on an"
+		+ "import of brigade.commands from a plugin, the guard @TASK.B42 asks for, widened"
 		REF @TASK.B42
 	DESC "cli.py builds the runtime, once per command and once per round of tick --loop through a"
 		+ "factory it hands that command: paths, clock, process runner, spawner, resolver; the"
@@ -565,7 +566,9 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "@DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable sets; the"
 		+ "commands resolve the plugins through the runtime's resolver, and a core function"
 		+ "receives resolved plugin objects as arguments and resolves nothing itself, as @TASK.B73"
-		+ "delivers"
+		+ "delivers; a plugin neither imports nor resolves another plugin: a built-in collector"
+		+ "receives the forge resolved by the command in its CollectorEquipment, an executable"
+		+ "collector never receiving it"
 		REF @DECISION.EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 		REF @TASK.B73
 	DESC "binds @TASK.B06, @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B23, @TASK.B24, @TASK.B42,"
@@ -630,6 +633,13 @@ DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 		+ "brigade repository, « un plugin doit être autonome et ne pas dépendre d'un autre plugin"
 		+ "»: DESC 4 amended"
 		REF @TASK.B106
+	REJECTED "a built-in collector reaching the forge through a module of brigade/commands/ that"
+		+ "resolves it: a plugin depending on another plugin one import away, which the guard of"
+		+ "resolver calls does not see"
+	SOURCE "the user's ruling of 2026-10-18 in the review of pull request #155 of the brigade"
+		+ "repository, « Le plugin doit être autonome »: the command passes the forge, a plugin"
+		+ "importing brigade.commands is refused by the guard, DESC 4 and 5 amended"
+		REF @TASK.B146
 
 DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	TITLE "the tick builds one snapshot of the facts, plans its actions as a pure function of that"
@@ -3182,9 +3192,6 @@ DECISION PrListIsReadAfreshAsTheLoginOfTheKeyCliAndIsAbsentUnderForgeNone
 		+ "project, in brigade/collecting/find_absence.py; collectors list sets it on built-in rows"
 		+ "alone, since a project, machine or PATH collector of the same name is resolved first and"
 		+ "answers without the forge"
-	DESC "the forge of pr-list is resolved in brigade/commands/_read_pull_requests.py, the guard of"
-		+ "plugin resolution allowing resolve_plugin in brigade/commands/ and not in"
-		+ "brigade/collectors/"
 	REJECTED "gh api --paginate on the REST pulls endpoint, which reads every pull request: it"
 		+ "carries neither the review decision nor the check runs, a second call per pull request"
 	REJECTED "pr-list cached and keyed on HEAD as the git built-ins are: a pull request merged or"

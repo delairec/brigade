@@ -34,7 +34,7 @@ def collect_evidence(context: StudyRunContext) -> dict:
             CollectionRequest(
                 inputs=CollectorInputs(project=project, since=BEGINNING, parameters=parameters),
                 refresh=False,
-                configuration=context.equipment.configuration,
+                equipment=context.equipment.collector_equipment,
             ),
             dataclasses.replace(runtime, paths=dataclasses.replace(runtime.paths, run_directory=place)),
         )

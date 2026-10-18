@@ -1,8 +1,8 @@
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.describe_collection import describe_collection
 from brigade.collecting.read_collector_environment import read_collector_environment
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 from brigade.system.split_command import split_command
 
@@ -14,7 +14,7 @@ COMPLETE_EXIT_CODE = 0
 FRESH_AT_EACH_CALL = False
 
 
-def collect(environment: dict, runtime: Runtime, configuration: Configuration) -> dict:
+def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
     inputs = read_collector_environment(environment)
     argv = split_command(inputs.parameters.get(COMMAND_PARAMETER, NO_COMMAND))
     if not argv:

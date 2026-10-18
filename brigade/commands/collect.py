@@ -4,7 +4,9 @@ from pathlib import Path
 
 from brigade.collecting.collect_document import CollectionRequest, collect_document
 from brigade.collecting.collector_environment import CollectorInputs
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command
+from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
 from brigade.system.read_optional_configuration import read_optional_configuration
@@ -72,7 +74,11 @@ def collect(request, runtime: Runtime) -> dict:
         CollectionRequest(
             inputs=inputs,
             refresh=request.refresh,
-            configuration=read_optional_configuration(runtime.paths.configuration_file),
+            equipment=CollectorEquipment(
+                configuration=read_optional_configuration(runtime.paths.configuration_file),
+                forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
+                forge_name=FORGE_NAME,
+            ),
         ),
         runtime,
     )

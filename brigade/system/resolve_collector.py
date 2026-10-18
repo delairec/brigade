@@ -24,8 +24,8 @@ from brigade.system.is_executable import is_executable
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 
 if TYPE_CHECKING:
+    from brigade.collecting.collector_equipment import CollectorEquipment
     from brigade.runtime import Runtime
-    from brigade.system.read_configuration import Configuration
 
 COLLECTOR_NAME_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
 COLLECTOR_TIMEOUT_S = 600.0
@@ -48,7 +48,7 @@ class ExecutableCollector:
     source: str
     command: str
 
-    def collect(self, environment: dict, runtime: Runtime, configuration: Configuration) -> CollectorAnswer:
+    def collect(self, environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> CollectorAnswer:
         record = runtime.run_process(
             ProcessRequest(
                 argv=(self.command,),
@@ -74,10 +74,10 @@ class BuiltInCollector:
     command: str
     module: object
 
-    def collect(self, environment: dict, runtime: Runtime, configuration: Configuration) -> CollectorAnswer:
+    def collect(self, environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> CollectorAnswer:
         started = time.monotonic()
         try:
-            document = self.module.collect(environment, runtime, configuration)
+            document = self.module.collect(environment, runtime, equipment)
         except BrigadeError as error:
             return CollectorAnswer(
                 exit_code=FAILED_EXIT_CODE, stdout=NO_OUTPUT, stderr=f"{error}\n", duration_ms=_measure_since(started)

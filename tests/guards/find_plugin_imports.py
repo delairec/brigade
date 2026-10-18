@@ -1,16 +1,24 @@
 import ast
 from pathlib import Path
 
+from brigade.system.collector_places import BUILT_IN_PACKAGE as COLLECTOR_PACKAGE
 from brigade.system.resolve_plugin import (
     BUILT_IN_ENTRY_POINTS,
     BUILT_IN_PLUGIN_PACKAGES,
     CLIENT_ENTRY_POINT,
     CLIENT_PACKAGES,
+    COLLECTOR_KIND,
 )
 
 PLUGIN_PACKAGES = ("adapters", "collectors", "checks", "outputs")
-KIND_PACKAGES = {"client": CLIENT_PACKAGES, **{kind: (package,) for kind, package in BUILT_IN_PLUGIN_PACKAGES.items()}}
-ENTRY_POINTS = {"client": CLIENT_ENTRY_POINT, **BUILT_IN_ENTRY_POINTS}
+COMMANDS_PACKAGE = "commands"
+COLLECTOR_ENTRY_POINT = "collect"
+KIND_PACKAGES = {
+    "client": CLIENT_PACKAGES,
+    COLLECTOR_KIND: (COLLECTOR_PACKAGE,),
+    **{kind: (package,) for kind, package in BUILT_IN_PLUGIN_PACKAGES.items()},
+}
+ENTRY_POINTS = {"client": CLIENT_ENTRY_POINT, COLLECTOR_KIND: COLLECTOR_ENTRY_POINT, **BUILT_IN_ENTRY_POINTS}
 
 
 def _name_module(package_root: Path, module_path: Path) -> list[str]:
@@ -61,6 +69,9 @@ def _answers_entry_point(package_root: Path, name: str, kind: str) -> bool:
 
 
 def _breaks_autonomy(package_root: Path, module_name: str, name: str, plugin_packages: list[str]) -> bool:
+    commands_package = f"{package_root.name}.{COMMANDS_PACKAGE}"
+    if _find_plugin_package(module_name, plugin_packages) is not None and _is_within(name, commands_package):
+        return True
     plugin_package = _find_plugin_package(name, plugin_packages)
     if plugin_package is None:
         return False

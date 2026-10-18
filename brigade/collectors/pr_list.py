@@ -1,12 +1,14 @@
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.describe_collection import describe_collection
 from brigade.collecting.find_absence import find_absence
 from brigade.collecting.read_collector_environment import read_collector_environment
-from brigade.commands._read_pull_requests import read_pull_requests
 from brigade.errors import BrigadeError
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
+from brigade.system.ask_pull_requests import PullRequestsQuery, ask_pull_requests
+from brigade.system.read_account_environment import ForgeAccount, read_account_environment
+from brigade.system.read_configuration import CLI_KEY
 from brigade.tasks.locate_task_worktree import TASK_BRANCH
 
 NAME = "pr-list"
@@ -32,13 +34,23 @@ def _read_task(head: str) -> str | None:
     return parts["task"]
 
 
-def collect(environment: dict, runtime: Runtime, configuration: Configuration) -> dict:
+def _read_pull_requests(inputs, equipment: CollectorEquipment, runtime: Runtime) -> list[dict]:
+    account = ForgeAccount(forge=equipment.forge, forge_name=equipment.forge_name, key=CLI_KEY)
+    query = PullRequestsQuery(
+        repository=str(inputs.project),
+        state=_read_state(inputs.parameters),
+        environment=read_account_environment(account, equipment.configuration, runtime),
+    )
+    return ask_pull_requests(equipment.forge, equipment.forge_name, query, runtime)
+
+
+def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
     inputs = read_collector_environment(environment)
     project = require_project_at(read_projects(runtime), inputs.project)
     absence = find_absence(NAME, project)
     if absence is not None:
         raise BrigadeError(f"{NAME} is absent: {absence}")
-    pull_requests = read_pull_requests(inputs.project, _read_state(inputs.parameters), configuration, runtime)
+    pull_requests = _read_pull_requests(inputs, equipment, runtime)
     items = [{**pull_request, "task": _read_task(pull_request["head"])} for pull_request in pull_requests]
     summary = {counted: sum(item["state"] == counted for item in items) for counted in COUNTED_STATES}
     return {**describe_collection(NAME, runtime, summary, items), "cache": FRESH_AT_EACH_CALL}

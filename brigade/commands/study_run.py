@@ -1,6 +1,8 @@
 import argparse
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command
+from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME
 from brigade.runtime import Runtime
 from brigade.studies.read_study import read_study
 from brigade.studies.run_study import DONE, run_study
@@ -12,7 +14,6 @@ DOCUMENT_SCHEMA_VERSION = 1
 PARKED_EXIT_CODE = 1
 COLLECTOR_KIND = "collector"
 DOCUMENT_KIND = "document"
-FORGE_KIND = "forge"
 ANSWER_DOCUMENT = "awawa"
 
 
@@ -34,7 +35,11 @@ def _decide_exit_code(document: dict) -> int:
 
 def study_run(request, runtime: Runtime) -> dict:
     equipment = StudyEquipment(
-        configuration=read_optional_configuration(runtime.paths.configuration_file),
+        collector_equipment=CollectorEquipment(
+            configuration=read_optional_configuration(runtime.paths.configuration_file),
+            forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
+            forge_name=FORGE_NAME,
+        ),
         resolve_collector=lambda name, project: runtime.resolve_plugin(
             COLLECTOR_KIND, name, places=locate_collectors(project, runtime.paths)
         ),
