@@ -1,0 +1,30 @@
+import unittest
+
+from brigade.errors import BrigadeError
+from brigade.system.ask_pull_requests import PullRequestsQuery, ask_pull_requests
+
+NO_RUNTIME_NEEDED = None
+QUERY = PullRequestsQuery(repository="/projects/shop", state="open", environment={"GH_TOKEN": "token-of-octo-cli"})
+
+
+class ForgeDouble:
+    def __init__(self, answer):
+        self.answer = answer
+
+    def list_pull_requests(self, request, runtime):
+        return self.answer
+
+
+class AskPullRequestsTest(unittest.TestCase):
+    def test_should_refuse_an_answer_lacking_the_pull_requests_naming_the_forge(self):
+        # Arrange
+        forge = ForgeDouble({"schema_version": 1})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            ask_pull_requests(forge, "github", QUERY, NO_RUNTIME_NEEDED)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception), "forge plugin github answered list_pull_requests: lacks the key pull_requests"
+        )

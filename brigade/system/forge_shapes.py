@@ -13,4 +13,8 @@ FORGE_ANSWER_SHAPES = {
         "schema_version": Field(kinds=(int,), values=(1,)),
         "pull_request": Field(kinds=(dict,), nullable=True),
     },
+    "list_pull_requests": {
+        "schema_version": Field(kinds=(int,), values=(1,)),
+        "pull_requests": Field(kinds=(list,), items=Field(kinds=(dict,))),
+    },
 }

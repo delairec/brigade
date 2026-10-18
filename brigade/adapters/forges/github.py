@@ -15,6 +15,8 @@ UNBOUND_ENVIRONMENT = {}
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
 PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+PULL_REQUEST_LIST_FIELDS = "number,title,headRefName,baseRefName,state,author,isDraft,reviewDecision,statusCheckRollup"
+PULL_REQUEST_LIST_LIMIT = "1000"
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
@@ -139,6 +141,47 @@ def _describe_check_run(check_run: dict) -> dict:
     return {"name": check_run["name"], "verdict": check_run["conclusion"].lower() or PENDING_VERDICT}
 
 
+def _describe_check_runs(status_check_rollup: list) -> list[dict]:
+    return [_describe_check_run(check) for check in status_check_rollup if check["__typename"] == CHECK_RUN_TYPE]
+
+
+def _describe_listed_pull_request(pull_request: dict) -> dict:
+    return {
+        "number": pull_request["number"],
+        "title": pull_request["title"],
+        "head": pull_request["headRefName"],
+        "base": pull_request["baseRefName"],
+        "state": pull_request["state"].lower(),
+        "author": pull_request["author"]["login"],
+        "draft": pull_request["isDraft"],
+        "review": pull_request["reviewDecision"].lower() or None,
+        "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
+    }
+
+
+def list_pull_requests(request: dict, runtime: Runtime) -> dict:
+    listed = json.loads(
+        _ask_gh(
+            request,
+            runtime,
+            (
+                "pr",
+                "list",
+                "--state",
+                request["state"],
+                "--limit",
+                PULL_REQUEST_LIST_LIMIT,
+                "--json",
+                PULL_REQUEST_LIST_FIELDS,
+            ),
+        )
+    )
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "pull_requests": [_describe_listed_pull_request(pull_request) for pull_request in listed],
+    }
+
+
 def find_pull_request(request: dict, runtime: Runtime) -> dict:
     found = json.loads(
         _ask_gh(
@@ -171,11 +214,7 @@ def find_pull_request(request: dict, runtime: Runtime) -> dict:
         "pull_request": {
             "number": pull_request["number"],
             "state": pull_request["state"].lower(),
-            "checks": [
-                _describe_check_run(check)
-                for check in pull_request["statusCheckRollup"]
-                if check["__typename"] == CHECK_RUN_TYPE
-            ],
+            "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
             "review": pull_request["reviewDecision"].lower() or None,
             "behind": int(behind_by) > 0,
         },
