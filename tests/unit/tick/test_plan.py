@@ -1,18 +1,31 @@
+import dataclasses
 import unittest
 from datetime import UTC, datetime
 
 from brigade.errors import BrigadeError
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
-from brigade.tick.actions import LaunchStudy, LaunchTask, RecordTaskState, RemoveTaskWorktree, StartWave
+from brigade.system.reset_hour import ResetHour
+from brigade.tick.actions import (
+    LaunchStudy,
+    LaunchTask,
+    PauseWave,
+    RecordTaskState,
+    RemoveTaskWorktree,
+    ResumeTaskRun,
+    ResumeWave,
+    StartWave,
+)
 from brigade.tick.build_snapshot import (
     LiveRun,
     PlannedRequest,
     ProjectFacts,
+    RateLimit,
     Snapshot,
     StudyFacts,
     TaskFacts,
     WaveFacts,
+    WavePause,
 )
 from brigade.tick.plan import plan
 
@@ -37,6 +50,7 @@ def create_wave(tasks: tuple[TaskFacts, ...], states: dict, implemented: tuple[s
 ALONE = (TaskFacts(name="S3"),)
 FOLLOWING = (TaskFacts(name="S3", after=("S2",)),)
 BLOCKED = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided",)),)
+ALONE_S9 = (TaskFacts(name="S9"),)
 
 
 LAUNCH_S3 = LaunchTask(request="shop_1", project="shop", milestone="M1", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
@@ -383,3 +397,123 @@ class PlanStudyRunsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, ())
+
+
+CAFE_WAVE = WaveFacts(request="cafe_1", project="cafe", milestone="M2", wave="cafe_w1", branch="integration/M2-menu")
+CAFE = ProjectFacts(name="cafe", slots=4)
+RATE_LIMITED_UNTIL_15 = (TaskFacts(name="S3", rate_limit=RateLimit(reset=ResetHour(hour="15:00", timezone="UTC"))),)
+RATE_LIMITED_WITHOUT_RESET = (TaskFacts(name="S3", rate_limit=RateLimit(reset=None)),)
+PAUSED_S3 = RecordTaskState(wave="shop_w1", task="S3", state="paused:quota", reason=None)
+QUOTA_UNTIL_13 = WavePause(reason="quota", resume_at=datetime(2026, 10, 6, 13, 0, tzinfo=UTC))
+QUOTA_UNTIL_12 = WavePause(reason="quota", resume_at=NOW)
+FORGE_ACCOUNT = WavePause(reason="forge_account", resume_at=None)
+
+
+class PlanQuotaPauseTest(unittest.TestCase):
+    def test_should_pause_every_running_wave_until_the_reset_and_the_rate_limited_task_on_the_quota(self):
+        for case, tasks, resume_at in [
+            ("with a reset", RATE_LIMITED_UNTIL_15, "2026-10-06T15:00:00Z"),
+            ("without a reset", RATE_LIMITED_WITHOUT_RESET, "2026-10-06T12:30:00Z"),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(
+                    now=NOW,
+                    waves=(create_wave(tasks + ALONE_S9, {"S3": "running"}), CAFE_WAVE),
+                    projects=(SHOP, CAFE),
+                )
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions,
+                    (
+                        PauseWave(wave="shop_w1", reason="quota", resume_at=resume_at),
+                        PauseWave(wave="cafe_w1", reason="quota", resume_at=resume_at),
+                        PAUSED_S3,
+                    ),
+                )
+
+    def test_should_move_a_rate_limited_task_of_a_wave_already_paused_without_pausing_it_again(self):
+        # Arrange
+        wave = dataclasses.replace(create_wave(RATE_LIMITED_UNTIL_15, {"S3": "running"}), pause=QUOTA_UNTIL_13)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PAUSED_S3,))
+
+    def test_should_launch_no_task_of_a_paused_wave(self):
+        for case, pause in [("on the quota", QUOTA_UNTIL_13), ("on the forge account", FORGE_ACCOUNT)]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(create_wave(ALONE, {}), pause=pause)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+
+class PlanQuotaResumeTest(unittest.TestCase):
+    def test_should_resume_a_wave_paused_on_the_quota_and_its_paused_runs_once_resume_at_is_reached(self):
+        # Arrange
+        wave = dataclasses.replace(
+            create_wave(ALONE + ALONE_S9, {"S3": "paused:quota", "S9": "running"}), pause=QUOTA_UNTIL_12
+        )
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeWave(wave="shop_w1", reason="quota"),
+                ResumeTaskRun(project="shop", wave="shop_w1", task="S3"),
+            ),
+        )
+
+    def test_should_keep_a_wave_paused_before_its_resume_at_or_on_the_forge_account(self):
+        for case, pause in [("before resume_at", QUOTA_UNTIL_13), ("on the forge account", FORGE_ACCOUNT)]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(create_wave(ALONE, {"S3": "paused:quota"}), pause=pause)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_resume_the_paused_runs_of_a_wave_the_user_resumed(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {"S3": "paused:quota"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (ResumeTaskRun(project="shop", wave="shop_w1", task="S3"),))
+
+
+class PlanForgeAccountPauseTest(unittest.TestCase):
+    def test_should_pause_every_running_wave_not_paused_on_an_unavailable_forge_account(self):
+        # Arrange
+        shop = dataclasses.replace(create_wave(ALONE, {}), forge_account_unavailable=True)
+        cafe = dataclasses.replace(CAFE_WAVE, forge_account_unavailable=True, pause=QUOTA_UNTIL_13)
+        snapshot = Snapshot(now=NOW, waves=(shop, cafe), projects=(SHOP, CAFE))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PauseWave(wave="shop_w1", reason="forge_account", resume_at=None),))

@@ -2,13 +2,18 @@ import dataclasses
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.errors import BrigadeError, CommandFailed
+from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.wave_resumed import WaveResumed
+from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -21,6 +26,7 @@ from brigade.studies.read_studies import read_studies
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
+from brigade.system.reset_hour import ResetHour
 from brigade.tasks.read_milestone_tasks import read_milestone_tasks
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
@@ -30,6 +36,7 @@ from brigade.waves.describe_request import describe_request
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_plan_review import read_plan_review
 from brigade.waves.read_task_states import read_task_states
+from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.require_wave_name import require_wave_name
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -45,6 +52,18 @@ PARKED_OUTCOME = "parked"
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
+RUNNING_STATE = "running"
+RATE_LIMIT = "rate_limit"
+FORGE_ACCOUNT_REASON = "forge_account"
+BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
+
+
+@dataclass(frozen=True)
+class RateLimit:
+    reset: ResetHour | None
+
+    def to_document(self) -> dict:
+        return {"reset": None if self.reset is None else self.reset.to_document()}
 
 
 @dataclass(frozen=True)
@@ -54,6 +73,7 @@ class TaskFacts:
     blocked_by: tuple[str, ...] = ()
     pull_request: PullRequestFacts | None = None
     worktree: str | None = None
+    rate_limit: RateLimit | None = None
 
     def to_document(self) -> dict:
         return {
@@ -62,6 +82,7 @@ class TaskFacts:
             "blocked_by": list(self.blocked_by),
             "pull_request": None if self.pull_request is None else self.pull_request.to_document(),
             "worktree": self.worktree,
+            "rate_limit": None if self.rate_limit is None else self.rate_limit.to_document(),
         }
 
 
@@ -75,6 +96,8 @@ class WaveFacts:
     tasks: tuple[TaskFacts, ...] = ()
     states: dict = field(default_factory=dict)
     implemented: tuple[str, ...] = ()
+    pause: WavePause | None = None
+    forge_account_unavailable: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -86,6 +109,8 @@ class WaveFacts:
             "tasks": [task.to_document() for task in self.tasks],
             "states": dict(self.states),
             "implemented": list(self.implemented),
+            "pause": None if self.pause is None else self.pause.to_document(),
+            "forge_account_unavailable": self.forge_account_unavailable,
         }
 
 
@@ -196,7 +221,9 @@ def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
 @dataclass(frozen=True)
 class WaveReading:
     configuration: Configuration
+    entries: tuple[LedgerEntry, ...]
     events: tuple
+    live_runs: frozenset[str]
     projects: tuple[Entity, ...]
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
 
@@ -218,6 +245,37 @@ def _read_wave_facts(runtime: Runtime, reading: WaveReading, request: dict) -> W
         return None
 
 
+def _read_rate_limit(reading: WaveReading, wave: str, task: str) -> RateLimit | None:
+    finished = [
+        event
+        for event in reading.events
+        if isinstance(event, RunFinished) and event.wave == wave and event.task == task
+    ]
+    if not finished or finished[-1].error_class != RATE_LIMIT or finished[-1].run in reading.live_runs:
+        return None
+    return RateLimit(reset=finished[-1].reset)
+
+
+def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...], wave: str) -> bool:
+    unavailable = [entry.instant for entry in entries if isinstance(entry.event, ForgeAccountUnavailable)]
+    cleared = [
+        entry.instant
+        for entry in entries
+        if getattr(entry.event, "wave", None) == wave
+        and (
+            isinstance(entry.event, WaveStarted)
+            or (isinstance(entry.event, WaveResumed) and entry.event.reason == FORGE_ACCOUNT_REASON)
+        )
+    ]
+    return bool(unavailable) and max(unavailable) > max(cleared, default=BEFORE_ANY_EVENT)
+
+
+def _note_rate_limit(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
+    if states.get(task.name) != RUNNING_STATE:
+        return task
+    return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
+
+
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, wave: str) -> WaveFacts:
     tree = prepare_wave_tree(runtime, reading.configuration, request)
     tasks = read_milestone_tasks(runtime.run_process, tree.root, request["milestone"])
@@ -235,9 +293,14 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, w
         milestone=request["milestone"],
         wave=wave,
         branch=request["branch"],
-        tasks=tuple(_follow_task(_read_task_facts(runtime, tree.root, task), followed) for task in tasks),
+        tasks=tuple(
+            _note_rate_limit(_follow_task(_read_task_facts(runtime, tree.root, task), followed), reading, wave, states)
+            for task in tasks
+        ),
         states=states,
         implemented=read_implemented_tasks(runtime.run_process, tree.root),
+        pause=read_wave_pause(reading.events, wave),
+        forge_account_unavailable=_is_forge_account_unavailable(reading.entries, wave),
     )
 
 
@@ -277,9 +340,13 @@ def build_snapshot(
         for request in read_entities(runtime.run_process, runtime.paths.config_root, REQUEST_TYPE)
     )
     registered = read_projects(runtime)
+    entries = read_ledger(runtime.paths.state_root).entries
+    runs = list_runs(runtime.paths.state_root)["runs"]
     reading = WaveReading(
         configuration=configuration,
-        events=tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries),
+        entries=entries,
+        events=tuple(entry.event for entry in entries),
+        live_runs=frozenset(run["run"] for run in runs if run["state"] == LIVE_RUN_STATE),
         projects=registered,
         read_pull_request=read_pull_request,
     )
@@ -290,7 +357,6 @@ def build_snapshot(
         )
         if facts is not None
     )
-    runs = list_runs(runtime.paths.state_root)["runs"]
     projects = tuple(
         _read_project_facts(project, registered, runs) for project in dict.fromkeys(wave.project for wave in waves)
     )

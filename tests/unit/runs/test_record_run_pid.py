@@ -28,6 +28,7 @@ RUN_RECORD = {
     "arguments": {},
     "wave": None,
     "task": None,
+    "brief": None,
 }
 WRITE_CALL = "write"
 PID_HELD_BY_NO_PROCESS = 2**31 - 1

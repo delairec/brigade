@@ -421,6 +421,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S3",
+                    "brief": str(self.state / "briefs" / "shop_1-S3.md"),
                 },
                 {
                     "schema_version": 1,
@@ -440,6 +441,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S6",
+                    "brief": str(self.state / "briefs" / "shop_1-S6.md"),
                 },
             ],
         )
@@ -679,6 +681,7 @@ class BrigadeTickOnceWithTheBuildProcedureReplacedTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S3",
+                    "brief": str(self.state / "briefs" / "shop_1-S3.md"),
                 },
                 {
                     "schema_version": 1,
@@ -698,6 +701,7 @@ class BrigadeTickOnceWithTheBuildProcedureReplacedTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S6",
+                    "brief": str(self.state / "briefs" / "shop_1-S6.md"),
                 },
             ],
         )
@@ -733,6 +737,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "blocked_by": [],
                                     "pull_request": None,
                                     "worktree": None,
+                                    "rate_limit": None,
                                 },
                                 {
                                     "task": "S4",
@@ -740,6 +745,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "blocked_by": [],
                                     "pull_request": None,
                                     "worktree": None,
+                                    "rate_limit": None,
                                 },
                                 {
                                     "task": "S5",
@@ -747,6 +753,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "blocked_by": ["OPEN_QUESTION.Undecided"],
                                     "pull_request": None,
                                     "worktree": None,
+                                    "rate_limit": None,
                                 },
                                 {
                                     "task": "S6",
@@ -754,10 +761,13 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "blocked_by": [],
                                     "pull_request": None,
                                     "worktree": None,
+                                    "rate_limit": None,
                                 },
                             ],
                             "states": {"S3": "queued"},
                             "implemented": ["S2"],
+                            "pause": None,
+                            "forge_account_unavailable": False,
                         }
                     ],
                     "projects": [{"project": "shop", "slots": 4, "live_runs": []}],
@@ -1514,6 +1524,7 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                     "behind": False,
                 },
                 "worktree": str(self.worktree),
+                "rate_limit": None,
             },
         )
 

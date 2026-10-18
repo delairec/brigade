@@ -3218,3 +3218,22 @@ DECISION PrListReadsEveryPullRequestAfreshAndIsAbsentOnlyAsABuiltIn
 	SOURCE "the user's ruling of 2026-10-18 in the review of pull request #155 of the brigade"
 		+ "repository, « GraphQL paginé, sans borne »: the bound of 1000 rejected"
 		REF @TASK.B146
+
+DECISION TheRateLimitIsReadFromTheLastRunOfARunningTaskOfARunningWave
+	TITLE "the tick reads a rate limit only from the last run.finished of a running task of a"
+		+ "running wave, keyed by its wave and its task, once no live run holds it"
+	STATUS active
+	DESC "a task carries a rate limit when its state is running, its last run.finished naming its"
+		+ "wave and its task ends on the error_class rate_limit, and that run is no longer live"
+	DESC "binds @TASK.B19"
+		REF @TASK.B19
+	REJECTED "every run.finished of the machine on rate_limit, a study run or a run launched by"
+		+ "hand included: such a run has no task to move to paused:quota nor to resume, and would"
+		+ "pause the waves again at every tick"
+	REJECTED "the last run.finished of the task whatever its state: a task already paused:quota"
+		+ "would pause its wave again after the resume, before its resumed run finishes"
+	RATIONALE "@TASK.B164 keys every run.finished by its wave and its task, so the run a rate limit"
+		+ "stopped is found without reading run.json"
+		REF @TASK.B164
+	SOURCE "the delivery of @TASK.B19"
+		REF @TASK.B19

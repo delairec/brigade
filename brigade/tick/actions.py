@@ -34,3 +34,23 @@ class RemoveTaskWorktree:
     project: str
     task: str
     worktree: str
+
+
+@dataclass(frozen=True)
+class PauseWave:
+    wave: str
+    reason: str
+    resume_at: str | None
+
+
+@dataclass(frozen=True)
+class ResumeWave:
+    wave: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class ResumeTaskRun:
+    project: str
+    wave: str
+    task: str

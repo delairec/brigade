@@ -64,6 +64,7 @@ class RunClientPrecedenceTest(unittest.TestCase):
             wave=None,
             task=None,
             detach=False,
+            resume=False,
         )
 
         # Act

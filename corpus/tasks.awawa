@@ -5499,7 +5499,7 @@ TASK B84
 		+ "naming its reason in nulls when neither names one; the session of a segment cut at the"
 		+ "wall-time limit is the session_id of the launch-argv answer, a null one naming its"
 		+ "reason in nulls"
-		IMPL "brigade/runs/run_segment.py::session_id=str(uuid.uuid4()),"
+		IMPL "brigade/runs/run_segment.py::else str(uuid.uuid4()),"
 		IMPL "brigade/adapters/clients/claude_code.py::return _build_command(request,"
 			+ "[\"--session-id\", request[\"session_id\"]])"
 		IMPL "brigade/adapters/test_clients/fake.py::\"session_id\": request[\"session_id\"],"

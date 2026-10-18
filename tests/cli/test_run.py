@@ -542,6 +542,7 @@ class BrigadeRunOfTheShippedWavePlanProcedureTest(RunTestCase):
                 "arguments": {"request": "R1"},
                 "wave": None,
                 "task": None,
+                "brief": None,
             },
         )
 
@@ -698,6 +699,7 @@ class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):
                 "arguments": {"task": "B06"},
                 "wave": None,
                 "task": None,
+                "brief": None,
             },
         )
 
@@ -743,6 +745,7 @@ class BrigadeRunOfTheReviewAndRemediateSlotsTest(RunTestCase):
                         "arguments": {"task": "B06"},
                         "wave": None,
                         "task": None,
+                        "brief": None,
                     },
                 )
 

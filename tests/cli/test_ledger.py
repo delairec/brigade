@@ -13,10 +13,10 @@ WAVE_SEPTEMBER_LINES = (
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
     ' "error_class": "rate_limit", "main_steps": 50, "total_steps": null}\n'
-    '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.paused", "wave": "tidepool_w16"}\n'
+    '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n'
 )
 WAVE_OCTOBER_LINES = (
-    '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "tidepool_w16"}\n'
+    '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "tidepool_w16", "reason": "quota"}\n'
     '{"schema_version": 2, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
@@ -143,10 +143,10 @@ OLD_WAVE_LINES = (
 REPEATED_PAUSE_LINES = (
     '{"schema_version": 2, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tidepool_w18",'
     ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
-    '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "wave.paused", "wave": "tidepool_w18"}\n'
-    '{"schema_version": 1, "ts": "2026-10-01T09:30:00Z", "event": "wave.paused", "wave": "tidepool_w18"}\n'
-    '{"schema_version": 1, "ts": "2026-10-01T10:00:00Z", "event": "wave.resumed", "wave": "tidepool_w18"}\n'
-    '{"schema_version": 1, "ts": "2026-10-01T10:30:00Z", "event": "wave.resumed", "wave": "tidepool_w18"}\n'
+    '{"schema_version": 1, "ts": "2026-10-01T09:00:00Z", "event": "wave.paused", "wave": "tidepool_w18", "reason": "quota", "resume_at": null}\n'
+    '{"schema_version": 1, "ts": "2026-10-01T09:30:00Z", "event": "wave.paused", "wave": "tidepool_w18", "reason": "quota", "resume_at": null}\n'
+    '{"schema_version": 1, "ts": "2026-10-01T10:00:00Z", "event": "wave.resumed", "wave": "tidepool_w18", "reason": "quota"}\n'
+    '{"schema_version": 1, "ts": "2026-10-01T10:30:00Z", "event": "wave.resumed", "wave": "tidepool_w18", "reason": "quota"}\n'
 )
 UNMEASURED_RUN_LINES = (
     '{"schema_version": 2, "ts": "2026-10-01T08:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'

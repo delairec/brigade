@@ -44,6 +44,7 @@ def _launch_planner(runtime: Runtime, project: str, name: str) -> dict:
         wave=None,
         task=None,
         detach=True,
+        resume=False,
     )
     return run(planning, runtime)
 

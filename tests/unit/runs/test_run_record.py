@@ -20,6 +20,7 @@ RECORD_OF_A_PROJECT_RUN = {
     "arguments": {"task": "@TASK.B74"},
     "wave": None,
     "task": None,
+    "brief": None,
 }
 
 
@@ -49,6 +50,7 @@ class RunRecordTest(unittest.TestCase):
                 "arguments": {"task": "@TASK.B74"},
                 "wave": None,
                 "task": None,
+                "brief": None,
             },
         )
 

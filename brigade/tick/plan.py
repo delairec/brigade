@@ -1,8 +1,19 @@
 from brigade.errors import BrigadeError
+from brigade.ledger.format_instant import format_instant
 from brigade.studies.read_schedule import read_schedule
 from brigade.tasks.read_task_number import read_task_number
-from brigade.tick.actions import LaunchStudy, LaunchTask, RecordTaskState, RemoveTaskWorktree, StartWave
+from brigade.tick.actions import (
+    LaunchStudy,
+    LaunchTask,
+    PauseWave,
+    RecordTaskState,
+    RemoveTaskWorktree,
+    ResumeTaskRun,
+    ResumeWave,
+    StartWave,
+)
 from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.decide_resume_at import decide_resume_at
 
 AUTOMATIC_PLAN_REVIEW = "auto"
 BUILD_SLOT = "build"
@@ -17,6 +28,9 @@ SETTLED_PULL_REQUESTS = (MERGED_PULL_REQUEST, CLOSED_PULL_REQUEST)
 CLOSED_REASON = "pull request closed"
 ACTIVE_STATUS = "active"
 SCAN_SLOT = "none"
+PAUSED_ON_QUOTA_STATE = "paused:quota"
+QUOTA_REASON = "quota"
+FORGE_ACCOUNT_REASON = "forge_account"
 
 
 def plan(snapshot: Snapshot) -> tuple:
@@ -25,9 +39,13 @@ def plan(snapshot: Snapshot) -> tuple:
         for planned in snapshot.planned
         if planned.plan_review == AUTOMATIC_PLAN_REVIEW
     )
+    pauses = _plan_pauses(snapshot)
+    paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
+        pause.wave for pause in pauses if isinstance(pause, PauseWave)
+    }
     free_slots = {project.name: _count_free_slots(project) for project in snapshot.projects}
     launches = []
-    for wave in snapshot.waves:
+    for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
         for task in sorted(
             (task for task in wave.tasks if _is_startable(task, wave)),
             key=lambda task: read_task_number(task.name, wave.milestone),
@@ -45,7 +63,49 @@ def plan(snapshot: Snapshot) -> tuple:
                     task=task.name,
                 )
             )
-    return starts + _plan_followed_pull_requests(snapshot) + tuple(launches) + _plan_studies(snapshot)
+    return (
+        starts
+        + pauses
+        + _plan_resumes(snapshot)
+        + _plan_followed_pull_requests(snapshot)
+        + tuple(launches)
+        + _plan_studies(snapshot)
+    )
+
+
+def _plan_pauses(snapshot: Snapshot) -> tuple:
+    rate_limited = [(wave, task) for wave in snapshot.waves for task in wave.tasks if task.rate_limit is not None]
+    unpaused = [wave for wave in snapshot.waves if wave.pause is None]
+    if not rate_limited:
+        return tuple(
+            PauseWave(wave=wave.wave, reason=FORGE_ACCOUNT_REASON, resume_at=None)
+            for wave in unpaused
+            if wave.forge_account_unavailable
+        )
+    resume_at = format_instant(max(decide_resume_at(snapshot.now, task.rate_limit.reset) for _, task in rate_limited))
+    return tuple(PauseWave(wave=wave.wave, reason=QUOTA_REASON, resume_at=resume_at) for wave in unpaused) + tuple(
+        RecordTaskState(wave=wave.wave, task=task.name, state=PAUSED_ON_QUOTA_STATE, reason=None)
+        for wave, task in rate_limited
+    )
+
+
+def _is_quota_over(wave: WaveFacts, snapshot: Snapshot) -> bool:
+    return wave.pause.reason == QUOTA_REASON and wave.pause.resume_at <= snapshot.now
+
+
+def _plan_resumes(snapshot: Snapshot) -> tuple:
+    actions = []
+    for wave in snapshot.waves:
+        if wave.pause is not None and not _is_quota_over(wave, snapshot):
+            continue
+        if wave.pause is not None:
+            actions.append(ResumeWave(wave=wave.wave, reason=QUOTA_REASON))
+        actions.extend(
+            ResumeTaskRun(project=wave.project, wave=wave.wave, task=task.name)
+            for task in wave.tasks
+            if wave.states.get(task.name) == PAUSED_ON_QUOTA_STATE
+        )
+    return tuple(actions)
 
 
 def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | None:
