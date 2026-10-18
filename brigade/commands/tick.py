@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable
 
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands._read_forge_environment import FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
 from brigade.ledger.append_event import append_event
@@ -15,6 +16,7 @@ from brigade.runtime import Runtime
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
 from brigade.studies.start_study_run import start_study_run
+from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
@@ -23,12 +25,13 @@ from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
-from brigade.tick.actions import LaunchStudy, LaunchTask, StartWave
+from brigade.tick.actions import LaunchStudy, LaunchTask, RecordTaskState, RemoveTaskWorktree, StartWave
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
+from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.waves.start_wave import start_wave
@@ -41,6 +44,7 @@ TICK_INTERVAL_S = 300
 ROUND_CAP = 10
 LOCK_NAME = "tick.lock"
 COMMAND_NAME = "tick"
+CLI_KEY = "cli"
 
 
 def _locate_heartbeat(runtime: Runtime):
@@ -76,12 +80,30 @@ def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
     detach_study_run(runtime, study.name, start_study_run(runtime, study))
 
 
+def _record_task_state(runtime: Runtime, action: RecordTaskState) -> None:
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskState(wave=action.wave, task=action.task, state=action.state, reason=action.reason),
+    )
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         StartWave: lambda action: start_wave(runtime, configuration, action.request),
+        RecordTaskState: lambda action: _record_task_state(runtime, action),
+        RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
     }
+
+
+def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Callable:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    return lambda repository, branch: ask_pull_request(
+        forge, FORGE_NAME, PullRequestQuery(repository=repository, branch=branch, environment=environment), runtime
+    )
 
 
 def _tick(runtime: Runtime) -> Heartbeat | None:
@@ -91,9 +113,10 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
             return None
         runtime.trail.locate(_locate_trail(runtime))
         configuration = read_optional_configuration(runtime.paths.configuration_file)
+        read_pull_request = _follow_pull_requests(runtime, configuration)
         outcome = run_rounds(
             Rounds(
-                build_snapshot=lambda: build_snapshot(runtime, configuration),
+                build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request),
                 plan=plan,
                 apply=functools.partial(apply_actions, executors=_list_executors(runtime, configuration)),
                 cap=ROUND_CAP,
@@ -123,7 +146,8 @@ def _tick_once(runtime: Runtime) -> dict:
 
 
 def _plan_dry(runtime: Runtime) -> dict:
-    snapshot = build_snapshot(runtime, read_optional_configuration(runtime.paths.configuration_file))
+    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    snapshot = build_snapshot(runtime, configuration, _follow_pull_requests(runtime, configuration))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",

@@ -20,10 +20,9 @@ from brigade.system.run_process import ProcessRequest
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
 from brigade.tick.ignore_worktrees import ignore_worktrees
+from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
+from brigade.tick.name_task_branch import name_task_branch
 
-REPOSITORY_WORKTREE_ROOT = ".brigade/worktrees"
-WAVE_BRANCH_PREFIX = "integration/"
-TASK_BRANCH_PREFIX = "task/"
 SETUP_FIELD = "SETUP"
 SETUP_TIMEOUT_S = 1800.0
 SETUP_PROMPT = "$ "
@@ -49,10 +48,9 @@ def _set_up(runtime: Runtime, setup: tuple[str, ...], worktree: BranchWorktree, 
 def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> BranchWorktree:
     project = find_project(read_projects(runtime), action.project)
     repository = Path(read_project_field(project, "PATH"))
-    root = REPOSITORY_WORKTREE_ROOT if configuration.worktree_root is None else configuration.worktree_root
     worktree = BranchWorktree(
-        path=repository / root / action.task,
-        branch=f"{TASK_BRANCH_PREFIX}{action.branch.removeprefix(WAVE_BRANCH_PREFIX)}/{action.task}",
+        path=locate_scheduled_worktree(repository, configuration.worktree_root, action.task),
+        branch=name_task_branch(action.branch, action.task),
         start=action.branch,
     )
     lock = locate_worktrees_lock(runtime.paths.lock_directory, action.project)

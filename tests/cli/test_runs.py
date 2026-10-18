@@ -67,6 +67,7 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
                         "slot": "build",
                         "role": "builder",
                         "project": None,
+                        "worktree": str(self.workspace),
                         "state": "finished",
                         "outcome": "done",
                     }
@@ -151,6 +152,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                     "slot": "build",
                     "role": "builder",
                     "project": None,
+                    "worktree": str(self.workspace),
                     "state": "finished",
                     "outcome": "done",
                     "message": None,

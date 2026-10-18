@@ -188,7 +188,10 @@ A tick builds a snapshot of the facts, plans the actions they call for and appli
 plan is empty or ten rounds have passed. Among those actions, it runs the due studies, as Studies says, and launches
 each startable task of a running wave as a detached build run, in the worktree it cuts for the task, of `build-task`,
 the procedure brigade ships, or of the one the key `build` of the table `[procedures]` of `config.toml` names in its
-place, resolved as the argument of `brigade run` is. A running REQUEST that no `wave.started` names is skipped, named
+place, resolved as the argument of `brigade run` is. It follows the pull request of each task past its launch,
+read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
+`merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
+worktree is removed once its pull request is merged or closed, never while a run holds it. A running REQUEST that no `wave.started` names is skipped, named
 on stderr, and the tick serves the waves of the others.
 
 ```

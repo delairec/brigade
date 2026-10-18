@@ -14,6 +14,7 @@ from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
+from tests.cli.test_collect import install_executable
 from tests.process_launcher import ProcessLauncher
 
 INSTANT = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
@@ -208,6 +209,24 @@ SHIPPED_BUILD_PROCEDURE = REPOSITORY_ROOT / "brigade" / "runs" / "data" / "proce
 TASK_BRANCH = "task/M1-empty-cart/S3"
 
 
+FAKE_GH = (
+    "#!/bin/sh\n"
+    'printf \'%s %s\\n\' "${{GH_TOKEN:-no GH_TOKEN}}" "$*" >> "{calls}"\n'
+    'case "$1 $2" in\n'
+    '  "auth token") printf \'token-of-%s\\n\' "$6" ;;\n'
+    '  "pr list") answer="{pull_requests}/$(printf \'%s\' "$4" | tr / -).json"\n'
+    '    if [ -f "$answer" ]; then cat "$answer"; else echo "[]"; fi ;;\n'
+    '  "api repos/{{owner}}/{{repo}}/compare/"*) echo 0 ;;\n'
+    "  *) exit 2 ;;\n"
+    "esac\n"
+)
+PULL_REQUEST_OF_S3 = (
+    '[{{"number": 42, "state": "{state}", "headRefOid": "0123abc", "baseRefName": "integration/M1-empty-cart",'
+    ' "reviewDecision": "REVIEW_REQUIRED", "statusCheckRollup": [{{"__typename": "CheckRun", "name": "tests",'
+    ' "status": "COMPLETED", "conclusion": "SUCCESS"}}]}}]\n'
+)
+
+
 class WaveTickTestCase(TickTestCase):
     setup_commands = ("touch setup-ran",)
 
@@ -216,11 +235,21 @@ class WaveTickTestCase(TickTestCase):
             CLONE_ENTRY_POINT,
             "tick",
             *options,
-            environment={**self.machine.describe_environment(), **PINNED_COMMIT_DATES},
+            environment={
+                **self.machine.describe_environment(),
+                **PINNED_COMMIT_DATES,
+                "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
+            },
         )
 
     def setUp(self):
         super().setUp()
+        root = Path(self.root.name).resolve()
+        self.tools = root / "tools"
+        self.gh_calls = root / "gh-calls"
+        self.pull_requests = root / "pull-requests"
+        self.pull_requests.mkdir()
+        install_executable(self.tools / "gh", FAKE_GH.format(calls=self.gh_calls, pull_requests=self.pull_requests))
         provide_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
@@ -261,6 +290,7 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
         (instructions / "procedures" / "deliver.md").write_text(REPLACING_PROCEDURE)
         self.configure(recordings, instructions)
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
+        self.worktree_of_s6 = self.project.path / ".brigade" / "worktrees" / "S6"
 
     def configure(self, recordings: Path, instructions: Path, keys: str = "") -> None:
         self.machine.write_configuration(
@@ -670,10 +700,34 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                             "wave": "shop_w1",
                             "branch": WAVE_BRANCH,
                             "tasks": [
-                                {"task": "S3", "after": ["S2"], "blocked_by": []},
-                                {"task": "S4", "after": ["S3"], "blocked_by": []},
-                                {"task": "S5", "after": [], "blocked_by": ["OPEN_QUESTION.Undecided"]},
-                                {"task": "S6", "after": [], "blocked_by": []},
+                                {
+                                    "task": "S3",
+                                    "after": ["S2"],
+                                    "blocked_by": [],
+                                    "pull_request": None,
+                                    "worktree": None,
+                                },
+                                {
+                                    "task": "S4",
+                                    "after": ["S3"],
+                                    "blocked_by": [],
+                                    "pull_request": None,
+                                    "worktree": None,
+                                },
+                                {
+                                    "task": "S5",
+                                    "after": [],
+                                    "blocked_by": ["OPEN_QUESTION.Undecided"],
+                                    "pull_request": None,
+                                    "worktree": None,
+                                },
+                                {
+                                    "task": "S6",
+                                    "after": [],
+                                    "blocked_by": [],
+                                    "pull_request": None,
+                                    "worktree": None,
+                                },
                             ],
                             "states": {"S3": "queued"},
                             "implemented": ["S2"],
@@ -776,7 +830,7 @@ class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
         )
 
 
-class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LaunchingTickTestCase):
+class LiveBuildRunTickTestCase(LaunchingTickTestCase):
     def tearDown(self):
         for record in self.read_run_records():
             self.wait_for_file(self.state / "runs" / record["run"] / "pid")
@@ -791,6 +845,8 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LaunchingTickTestCase):
             f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}{CLIENT_OUTLIVING_THE_TEST}'
         )
 
+
+class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LiveBuildRunTickTestCase):
     def test_should_count_the_live_build_runs_of_the_project(self):
         # Arrange
         self.configure_client_outliving_the_test()
@@ -801,14 +857,11 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LaunchingTickTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["snapshot"]["projects"],
+        self.assertCountEqual(
+            json.loads(completed.stdout)["snapshot"]["projects"][0]["live_runs"],
             [
-                {
-                    "project": "shop",
-                    "slots": 4,
-                    "live_runs": [{"run": ANY, "slot": "build"}, {"run": ANY, "slot": "build"}],
-                }
+                {"run": ANY, "slot": "build", "worktree": str(self.worktree)},
+                {"run": ANY, "slot": "build", "worktree": str(self.worktree_of_s6)},
             ],
         )
 
@@ -1361,3 +1414,194 @@ class BrigadeTickOnceWhileARunOfTheStudyIsLiveTest(LiveStudyRunTestCase):
 
         # Assert
         self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
+
+
+RUNNING_S3 = (
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
+    ' "state": "running"}\n'
+)
+CLI_KEYS = '[forge_accounts]\ncli = "octo-cli"\n'
+
+
+class FollowingTickTestCase(LiveBuildRunTickTestCase):
+    def setUp(self):
+        super().setUp()
+        with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
+            ledger.write(RUNNING_S3)
+        self.project.run_git("worktree", "add", "--quiet", "-b", TASK_BRANCH, str(self.worktree), WAVE_BRANCH)
+
+    def answer_pull_request_of_s3(self, state: str) -> None:
+        (self.pull_requests / "task-M1-empty-cart-S3.json").write_text(PULL_REQUEST_OF_S3.format(state=state))
+
+
+class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTestCase):
+    def test_should_carry_the_pull_request_of_the_task_and_its_worktree(self):
+        # Arrange
+        self.answer_pull_request_of_s3("OPEN")
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["snapshot"]["waves"][0]["tasks"][0],
+            {
+                "task": "S3",
+                "after": ["S2"],
+                "blocked_by": [],
+                "pull_request": {
+                    "number": 42,
+                    "state": "open",
+                    "checks": [{"name": "tests", "verdict": "success"}],
+                    "review": "review_required",
+                    "behind": False,
+                },
+                "worktree": str(self.worktree),
+            },
+        )
+
+    def test_should_read_the_pull_request_as_the_login_of_the_key_cli(self):
+        # Arrange
+        self.configure(Path(self.root.name) / "recordings", Path(self.root.name) / "instructions", CLI_KEYS)
+        self.answer_pull_request_of_s3("OPEN")
+
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            "token-of-octo-cli pr list --head task/M1-empty-cart/S3 --state all --limit 1"
+            " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup",
+            self.gh_calls.read_text().splitlines(),
+        )
+
+
+class BrigadeTickOnceFollowingThePullRequestOfARunningTaskTest(FollowingTickTestCase):
+    def test_should_record_the_task_with_its_pull_request_open(self):
+        # Arrange
+        self.answer_pull_request_of_s3("OPEN")
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.read_events("task.state"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "queued",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:30:00Z",
+                    "event": "task.state",
+                    "wave": "cafe_w1",
+                    "task": "S6",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T11:00:00Z",
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "pr_open",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S6",
+                    "state": "running",
+                },
+            ],
+        )
+
+    def test_should_record_the_task_merged_when_its_pull_request_is(self):
+        # Arrange
+        self.answer_pull_request_of_s3("MERGED")
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.read_events("task.state")[3],
+            {"schema_version": 1, "ts": ANY, "event": "task.state", "wave": "shop_w1", "task": "S3", "state": "merged"},
+        )
+
+    def test_should_park_the_task_with_the_reason_pull_request_closed_when_it_is_closed_unmerged(self):
+        # Arrange
+        self.answer_pull_request_of_s3("CLOSED")
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.read_events("task.state")[3],
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "task.state",
+                "wave": "shop_w1",
+                "task": "S3",
+                "state": "parked",
+                "reason": "pull request closed",
+            },
+        )
+
+    def test_should_remove_the_worktree_of_the_task_once_its_pull_request_is_merged(self):
+        # Arrange
+        self.answer_pull_request_of_s3("MERGED")
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertFalse(self.worktree.exists())
+        self.assertNotIn(str(self.worktree), self.project.run_git("worktree", "list", "--porcelain"))
+
+    def test_should_keep_the_worktree_while_a_run_holds_it(self):
+        # Arrange
+        self.answer_pull_request_of_s3("MERGED")
+        self.configure_client_outliving_the_test()
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT,
+            "run",
+            "build-task",
+            "--slot",
+            "build",
+            "--project",
+            "shop",
+            "--cwd",
+            str(self.worktree),
+            "--detach",
+        )
+
+        # Act
+        completed = self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertTrue(self.worktree.is_dir())
