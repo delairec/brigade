@@ -268,20 +268,20 @@ DECISION BrigadeInstallsFromOneFileWithFourPrerequisites
 
 DECISION ThePortableContractIsTheCommandLineAndNeutralFiles
 	TITLE "the command line with --json is the contract, state lives in language-neutral files and"
-		+ "black-box CLI tests are the acceptance suite, so that a port to another language is a"
-		+ "port and not a redesign"
+		+ "a few black-box CLI smoke tests are what a port must pass, so that a port to another"
+		+ "language is a port and not a redesign"
 	STATUS active
 	DESC "every command prints --json with stable field names and the documented exit codes; the"
-		+ "dashboard and the agents use the command line, never the package; tests/cli is the"
-		+ "acceptance suite a port must pass; tests/unit and tests/integration test the Python and"
-		+ "die with it"
+		+ "dashboard and the agents use the command line, never the package; tests/cli is a few"
+		+ "smoke tests on the critical paths, which a port must pass; behaviour is specified case"
+		+ "by case in tests/unit; tests/unit and tests/integration test the Python and die with it"
 	DESC "state is JSONL, JSON, TOML, Markdown with a flat front matter and awawa corpora; recipes"
 		+ "are TOML; no pickle, shelve or private database; a sqlite file may only be a derived"
 		+ "cache deletable at any time"
 	DESC "every result, event, collector, recipe and config document carries a schema version"
 	DESC "tests/cli drives brigade as a subprocess against fixtures, a sandbox git repository, the"
-		+ "fake client adapter and recorded forge answers; a port passes this suite before"
-		+ "replacing the Python"
+		+ "fake client adapter and recorded forge answers: a few smoke tests on the critical paths,"
+		+ "never a behaviour specified case by case; a port passes them before replacing the Python"
 	DESC "the client, forge and scheduler adapters, the collectors, the checks and the outputs are"
 		+ "process-shaped boundaries: a built-in one is a module, an external one an executable on"
 		+ "PATH, both answering the same JSON documents"
@@ -301,6 +301,14 @@ DECISION ThePortableContractIsTheCommandLineAndNeutralFiles
 	SOURCE "pull request #3 of the brigade repository"
 	SOURCE "DESC 1 amended on the user's ruling of 2026-10-05, pull request #9 of the brigade"
 		+ "repository"
+	REJECTED "tests/cli as the acceptance suite of a port, specifying behaviour case by case"
+		+ "through the subprocess: unit tests stay unit tests, integration tests are a few smoke"
+		+ "tests on the critical paths only and a coverage threshold is the unit tests' alone, as"
+		+ "the rule test_scope_levels of the instructions corpus says"
+	SOURCE "the user's rulings of 2026-10-19, « Les tests unitaires doivent rester unitaires. Les"
+		+ "tests d'intégration doivent se limiter à des smoke tests peu nombreux sur les chemins"
+		+ "critiques uniquement » and « pour moi le 100% de coverage concerne uniquement des tests"
+		+ "unitaires, pas des tests d'intégration », pull request #168 of the brigade repository"
 
 DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 	TITLE "work that is not a wave, a report, a data collection, an audit, a research, is a study:"
@@ -481,10 +489,12 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		REF @TASK.B01
 	DESC "launcher.py and python_floor.py run before the floor check: they use no syntax or"
 		+ "annotation newer than the interpreters they refuse; the CI floor job proves 3.10 only"
-	DESC "tests/cli is the acceptance suite, through the entry points as subprocesses;"
-		+ "tests/integration the gateways, against a real git repository or awawa corpus in a"
-		+ "temporary directory; tests/unit the pure functions; tests/guards the import graph, the"
-		+ "environment reads and the README table"
+	DESC "tests/cli the smoke tests @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles"
+		+ "names, through the entry points as subprocesses; tests/integration the gateways, against"
+		+ "a real git repository or awawa corpus in a temporary directory; tests/unit the"
+		+ "behaviour, case by case; tests/guards the import graph, the environment reads and the"
+		+ "README table"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
 	DESC "public functions, dataclasses and plugin operations carry type annotations read by the"
 		+ "IDE; every parameter named runtime, private functions included, is annotated runtime:"
 		+ "Runtime, which the guard tests/guards/find_unannotated_runtimes.py proves; no checker"
@@ -538,6 +548,11 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		+ "D being faster tests, brigade start-up first: cli.py imports the module of the command"
 		+ "line it runs alone, @TASK.B191"
 		REF @TASK.B191
+	SOURCE "DESC 6 amended on the user's ruling of 2026-10-19 amending"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles: tests/cli a few smoke"
+		+ "tests on the critical paths, behaviour specified in tests/unit, pull request #168 of the"
+		+ "brigade repository"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	TITLE "client, forge, scheduler, collector, check, output and document are plugin kinds"
