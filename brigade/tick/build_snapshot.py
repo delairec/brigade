@@ -18,6 +18,7 @@ from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
+from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
 from brigade.studies.convert_study import Study
@@ -419,7 +420,7 @@ def build_snapshot(
         projects=projects,
         planned=planned,
         studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
-        live_study_runs=read_live_study_runs(runtime.paths.state_root),
+        live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         rate_limits=_read_rate_limits(reading, runtime.now),
     )

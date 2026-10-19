@@ -1,6 +1,5 @@
 import argparse
 
-from brigade.commands.run import run
 from brigade.errors import BrigadeError
 from brigade.studies.study_run_context import ANSWER_FILE, StudyRunContext
 
@@ -26,7 +25,7 @@ def judge_evidence(context: StudyRunContext) -> dict:
         detach=False,
         resume=False,
     )
-    launched = run(judging, context.runtime)
+    launched = context.equipment.launch_run(judging, context.runtime)
     if not (context.run_directory / ANSWER_FILE).is_file():
         raise BrigadeError(f"the judging run {launched['run']} gave no answer")
     return {"run": launched["run"]}

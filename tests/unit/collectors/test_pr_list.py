@@ -1,0 +1,119 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+from brigade.collecting.collector_equipment import CollectorEquipment
+from brigade.collectors.pr_list import collect
+from brigade.errors import BrigadeError
+from brigade.system.read_configuration import Configuration
+from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.scripted_processes import ScriptedProcesses
+
+PULL_REQUESTS = [
+    {"number": 4, "head": "task/f0-parser/B12", "state": "open"},
+    {"number": 3, "head": "docs/readme", "state": "merged"},
+]
+
+
+class ForgeDouble:
+    def __init__(self, answer: dict):
+        self.queries = []
+        self._answer = answer
+
+    def list_pull_requests(self, query: dict, runtime) -> dict:
+        self.queries.append(query)
+        return self._answer
+
+
+def create_environment(parameters: str) -> dict:
+    return {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "2026-10-01", "BRIGADE_PARAMS": parameters}
+
+
+class PrListCollectorTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.processes = ScriptedProcesses()
+        self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
+
+    def register_project(self, forge: str) -> None:
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("FORGE", forge))}
+        )
+
+    def create_equipment(self, forge: ForgeDouble) -> CollectorEquipment:
+        return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github")
+
+    def test_should_list_the_pull_requests_with_the_task_their_branch_delivers(self):
+        # Arrange
+        self.register_project("github")
+        forge = ForgeDouble({"schema_version": 1, "pull_requests": PULL_REQUESTS})
+
+        # Act
+        document = collect(create_environment("{}"), self.runtime, self.create_equipment(forge))
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "collector": "pr-list",
+                "collected_at": "2026-10-19T09:00:00Z",
+                "cache": False,
+                "summary": {"open": 1, "merged": 1, "closed": 0},
+                "items": [
+                    {"number": 4, "head": "task/f0-parser/B12", "state": "open", "task": "B12"},
+                    {"number": 3, "head": "docs/readme", "state": "merged", "task": None},
+                ],
+            },
+        )
+
+    def test_should_ask_the_forge_for_the_open_pull_requests_with_no_account_bound_by_default(self):
+        # Arrange
+        self.register_project("github")
+        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+
+        # Act
+        collect(create_environment("{}"), self.runtime, self.create_equipment(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.queries, [{"schema_version": 1, "repository": "/srv/oak", "state": "open", "environment": {}}]
+        )
+
+    def test_should_ask_the_forge_for_the_state_it_is_given(self):
+        # Arrange
+        self.register_project("github")
+        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+
+        # Act
+        collect(create_environment('{"state": "all"}'), self.runtime, self.create_equipment(forge))
+
+        # Assert
+        self.assertEqual(forge.queries[0]["state"], "all")
+
+    def test_should_refuse_a_state_the_forge_does_not_know(self):
+        # Arrange
+        self.register_project("github")
+        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            collect(create_environment('{"state": "draft"}'), self.runtime, self.create_equipment(forge))
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception), "the parameter state of pr-list takes open, merged, closed or all, not draft"
+        )
+
+    def test_should_refuse_a_project_without_a_forge(self):
+        # Arrange
+        self.register_project("none")
+        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            collect(create_environment("{}"), self.runtime, self.create_equipment(forge))
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "pr-list is absent: FORGE none")

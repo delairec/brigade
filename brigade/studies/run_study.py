@@ -1,5 +1,3 @@
-import os
-
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.order_done import OrderDone
@@ -8,7 +6,6 @@ from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
-from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
 from brigade.studies.collect_evidence import collect_evidence
@@ -41,16 +38,22 @@ def _find_parked_run(runtime: Runtime, study: Study) -> str | None:
     return NO_PARKED_RUN
 
 
-def _refuse_a_live_run(runtime: Runtime, study: Study) -> None:
-    for live in read_live_study_runs(runtime.paths.state_root):
+def _refuse_a_live_run(runtime: Runtime, study: Study, equipment: StudyEquipment) -> None:
+    for live in read_live_study_runs(runtime.paths.state_root, equipment.is_run_alive):
         if live.study == study.name:
             raise BrigadeError(f"@STUDY.{study.name} is running in run {live.run}")
 
 
+def _start_new_run(runtime: Runtime, study: Study, equipment: StudyEquipment) -> str:
+    run_id = equipment.name_run(runtime.now)
+    start_study_run(runtime, study, run_id)
+    return run_id
+
+
 def _start_run(runtime: Runtime, study: Study, equipment: StudyEquipment, started_run: str | None) -> StudyRunContext:
     if started_run is None:
-        _refuse_a_live_run(runtime, study)
-    run_id = started_run or _find_parked_run(runtime, study) or start_study_run(runtime, study)
+        _refuse_a_live_run(runtime, study, equipment)
+    run_id = started_run or _find_parked_run(runtime, study) or _start_new_run(runtime, study, equipment)
     context = StudyRunContext(
         runtime=runtime,
         study=study,
@@ -58,7 +61,7 @@ def _start_run(runtime: Runtime, study: Study, equipment: StudyEquipment, starte
         run_directory=runtime.paths.state_root / RUNS_DIRECTORY / run_id,
         equipment=equipment,
     )
-    record_run_pid(context.run_directory, os.getpid())
+    equipment.record_own_pid(context.run_directory)
     return context
 
 
