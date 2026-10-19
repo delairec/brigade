@@ -1,4 +1,3 @@
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -34,7 +33,7 @@ class CreateDirectoryTest(unittest.TestCase):
     def test_should_name_the_file_standing_where_the_directory_goes(self):
         # Arrange
         self.path.parent.mkdir()
-        self.path.write_text("")
+        self.path.touch()
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
@@ -44,22 +43,20 @@ class CreateDirectoryTest(unittest.TestCase):
         self.assertEqual(str(refusal.exception), f"cannot write {self.path}: File exists")
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
 class CreateDirectoryWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         self.machine = Path(self.root.name) / "machine"
         self.machine.mkdir()
-        self.addCleanup(self.machine.chmod, 0o700)
 
     def test_should_name_the_first_directory_it_cannot_create(self):
         # Arrange
-        self.machine.chmod(0o500)
+        (self.machine / "runs").symlink_to(self.machine / "moved-away")
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
             create_directory(self.machine / "runs" / "20261006T120000Z-b57000")
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.machine / 'runs'}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.machine / 'runs'}: File exists")

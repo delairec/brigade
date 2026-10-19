@@ -1,5 +1,4 @@
 import json
-import os
 import tempfile
 import unittest
 from datetime import UTC, datetime, timedelta, timezone
@@ -53,20 +52,18 @@ class WriteEventLineOfAnInstantWithATimeZoneTest(WriteEventLineTestCase):
 
         # Assert
         self.assertEqual(
-            [json.loads(line) for line in (self.ledger / "2026-10.jsonl").read_text().splitlines()],
-            [
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-06T09:30:00Z",
-                    "event": "signal.recorded",
-                    "signal": "budget_reached",
-                    "project": "tidepool",
-                    "procedure": "deliver",
-                    "run": "20261006T093000Z-b74a01",
-                    "segment": 1,
-                    "budget": 40,
-                }
-            ],
+            json.loads((self.ledger / "2026-10.jsonl").read_text()),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-06T09:30:00Z",
+                "event": "signal.recorded",
+                "signal": "budget_reached",
+                "project": "tidepool",
+                "procedure": "deliver",
+                "run": "20261006T093000Z-b74a01",
+                "segment": 1,
+                "budget": 40,
+            },
         )
 
     def test_should_return_the_line_it_appended(self):
@@ -129,36 +126,30 @@ class WriteEventLineOfAnInstantWithNoTimeZoneTest(WriteEventLineTestCase):
         )
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
 class WriteEventLineWhereTheMachineRefusesTheWriteTest(WriteEventLineTestCase):
     def setUp(self):
         super().setUp()
         self.state_root.mkdir(parents=True)
         self.instant = datetime(2026, 10, 6, 9, 30, tzinfo=UTC)
 
-    def tearDown(self):
-        self.state_root.chmod(0o700)
-        super().tearDown()
-
     def test_should_name_the_ledger_directory_it_cannot_create(self):
         # Arrange
-        self.state_root.chmod(0o500)
+        self.ledger.touch()
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             write_event_line(self.paths, self.instant, BUDGET_SIGNAL)
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.ledger}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.ledger}: File exists")
 
     def test_should_name_the_month_file_it_cannot_open(self):
         # Arrange
-        self.ledger.mkdir()
-        (self.ledger / "2026-10.jsonl").touch(mode=0o400)
+        (self.ledger / "2026-10.jsonl").mkdir(parents=True)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             write_event_line(self.paths, self.instant, BUDGET_SIGNAL)
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.ledger / '2026-10.jsonl'}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.ledger / '2026-10.jsonl'}: Is a directory")

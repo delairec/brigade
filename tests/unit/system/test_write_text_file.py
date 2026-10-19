@@ -1,4 +1,3 @@
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -42,22 +41,19 @@ class WriteTextFileTest(unittest.TestCase):
         self.assertEqual(str(refusal.exception), f"cannot write {self.path}: Is a directory")
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
 class WriteTextFileWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         self.units = Path(self.root.name) / "units"
-        self.units.mkdir()
-        self.addCleanup(self.units.chmod, 0o700)
 
     def test_should_name_the_file_it_cannot_create(self):
         # Arrange
-        self.units.chmod(0o500)
+        self.units.touch()
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
             write_text_file(self.units / "brigade.timer", "[Timer]\n")
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.units / 'brigade.timer'}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.units / 'brigade.timer'}: Not a directory")
