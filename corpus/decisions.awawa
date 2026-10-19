@@ -466,12 +466,14 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		+ "brigade/system/render_json.py; a command module declares only what differs from the"
 		+ "default, its renderers, request reader and exit decision underscored in it;"
 		+ "brigade/cli.py discovers the command modules, builds the parser from their records"
-		+ "through brigade/add_command_parsers.py and keeps the exit mapping; brigade/launcher.py"
-		+ "the floor check; brigade/adapters/clients, forges and schedulers, brigade/collectors/,"
-		+ "brigade/checks/ and brigade/outputs/ the plugins; brigade/system/ the primitives: paths,"
-		+ "clock, processes, locks, atomic files, ids, documents, the JSON rendering; brigade/git/"
-		+ "the git gateway, as brigade/corpus/ is the awawa one"
+		+ "through brigade/add_command_parsers.py, imports the module of the command line it runs"
+		+ "and no other, --version importing none, from @TASK.B191, and keeps the exit mapping;"
+		+ "brigade/launcher.py the floor check; brigade/adapters/clients, forges and schedulers,"
+		+ "brigade/collectors/, brigade/checks/ and brigade/outputs/ the plugins; brigade/system/"
+		+ "the primitives: paths, clock, processes, locks, atomic files, ids, documents, the JSON"
+		+ "rendering; brigade/git/ the git gateway, as brigade/corpus/ is the awawa one"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @TASK.B191
 	DESC "a module exposes one public function named after a verb, no leading underscore, its"
 		+ "helpers underscored, with the constants and frozen dataclasses it declares; its unit"
 		+ "test is tests/unit/<same path>/test_<module>.py, as brigade/python_floor.py and"
@@ -506,6 +508,9 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		+ "reading it, not by listing commands/"
 	REJECTED "a hand-written list of the command modules in cli.py: one more place to touch per"
 		+ "command, which discovery makes useless once commands/ holds commands alone"
+	REJECTED "every command module imported before the parser is built, whatever the command line:"
+		+ "_discover_commands of brigade/cli.py at 482d78e, 0.16 s of the 0.225 s of bin/brigade"
+		+ "--version by cProfile on 2026-10-19, paid by every brigade subprocess of tests/cli"
 	RATIONALE "the user asked on 2026-10-05 for strict foundations before the code of M0 grows; the"
 		+ "layout applies the rules one_exported_function_per_file, yagni, kiss, test_scope_levels"
 		+ "and tool_introduction_is_the_users_call of the instructions corpus"
@@ -529,6 +534,10 @@ DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		+ "brigade/system/render_json.py ; un module de commande ne déclare que ce qui diffère du"
 		+ "défaut. DESC 3 réécrit, la décision prend un SOURCE daté d'aujourd'hui. »"
 		REF @TASK.B153
+	SOURCE "DESC 3 amended on the user's ruling of 2026-10-19, « vas-y pour A + B, mais aussi D »,"
+		+ "D being faster tests, brigade start-up first: cli.py imports the module of the command"
+		+ "line it runs alone, @TASK.B191"
+		REF @TASK.B191
 
 DECISION PluginsAreReachedByNameThroughOneResolverAndNeverImported
 	TITLE "client, forge, scheduler, collector, check, output and document are plugin kinds"
@@ -1471,22 +1480,26 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		REF @TASK.B151
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
-	TITLE "the CI runs zizmor, ruff, semgrep, vulture and coverage.py, each installed by pip from"
-		+ "requirements-ci.txt under dependabot; none is a dependency of brigade, and coverage"
-		+ "fails below a threshold set once the real figure is known"
+	TITLE "the CI runs zizmor, ruff, semgrep, vulture, pytest with pytest-xdist and coverage.py,"
+		+ "each installed by pip from requirements-ci.txt under dependabot; none is a dependency of"
+		+ "brigade, the suite runs in parallel in the test job, and coverage is measured once, in"
+		+ "its 3.11 leg, failing below a threshold never lowered"
 	STATUS active
-	DESC "the CI runs five development tools on every pull request touching a file outside the"
-		+ "paths @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob names, and"
-		+ "on every push to main: zizmor on .github/workflows/, ruff check and ruff format --check,"
-		+ "semgrep scan with the Python and security rule packs, vulture, and coverage.py, failing"
-		+ "below the fail_under of .coveragerc; @TASK.B62 to @TASK.B66 deliver them, one tool per"
-		+ "pull request"
+	DESC "the CI runs six development tools on every pull request touching a file outside the paths"
+		+ "@DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob names, and on"
+		+ "every push to main: zizmor on .github/workflows/, ruff check and ruff format --check,"
+		+ "semgrep scan with the Python and security rule packs, vulture, pytest with pytest-xdist"
+		+ "running the suite in parallel on both legs of the test job, and coverage.py measuring"
+		+ "that run once, in the 3.11 leg, failing below the fail_under of .coveragerc; @TASK.B62"
+		+ "to @TASK.B66 deliver the first five, one tool per pull request, and @TASK.B190 the"
+		+ "parallel run and the move of coverage into the test job, which ends the coverage job"
 		REF @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 		REF @TASK.B62
 		REF @TASK.B63
 		REF @TASK.B64
 		REF @TASK.B65
 		REF @TASK.B66
+		REF @TASK.B190
 	DESC "each tool is installed by pip in its CI job from requirements-ci.txt at the repository"
 		+ "root, every line pinned to one version; .github/dependabot.yml carries a pip entry for"
 		+ "that file next to its github-actions entry, so the pins stay current and covered by"
@@ -1510,10 +1523,11 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @TASK.B95
 	DESC "ruff check and ruff format --check run locally before a push wherever a ruff binary is"
 		+ "present, on the same ruff.toml, the version pinned in requirements-ci.txt giving the"
-		+ "verdict that counts; zizmor, semgrep and vulture run in the CI only; coverage runs in"
-		+ "the CI and, for a task that measures coverage with awawa on PATH, locally in a virtual"
-		+ "environment outside the repository holding coverage at the version requirements-ci.txt"
-		+ "pins, which no file of the repository sets up"
+		+ "verdict that counts; zizmor, semgrep, vulture and pytest with pytest-xdist run in the CI"
+		+ "only, python3 -m unittest staying the local command, which passes on every commit;"
+		+ "coverage runs in the CI and, for a task that measures coverage with awawa on PATH,"
+		+ "locally in a virtual environment outside the repository holding coverage at the version"
+		+ "requirements-ci.txt pins, which no file of the repository sets up"
 	REJECTED "CodeQL and GitHub secret scanning: the repository is private and both need GitHub"
 		+ "Advanced Security, paid; semgrep CE scans a private repository for free"
 	REJECTED "pip-audit or another CVE scan of dependencies: brigade has no dependency to scan, and"
@@ -1523,6 +1537,10 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		+ "known"
 	REJECTED "the versions pinned inline in the run: lines of ci.yml: dependabot reads no pin"
 		+ "there, one requirements file is what it reads"
+	REJECTED "a coverage job of its own running the whole suite a second time: 38 to 42 min per run"
+		+ "against 13 to 19 min for a test leg, the wall clock of the CI"
+	REJECTED "the suite sharded across unittest jobs of the standard library, then a coverage"
+		+ "combine job: more YAML and more runners for a gain close to pytest-xdist's"
 	RATIONALE "the user ruled twice on 2026-10-06 on the proposal tables of the session: \"tout ce"
 		+ "que tu as mis en oui\" adopted the workflow hardening, zizmor, ruff with the S, B, C901"
 		+ "and UP rules, vulture and coverage in report mode; then \"tout ce qui est utile est bon"
@@ -1558,6 +1576,13 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	SOURCE "the user's ruling of 2026-10-09 in the refinement of @TASK.B80, \"Corriger DESC 1\":"
 		+ "DESC 1 read coverage.py in report mode, which DESC 6 had ended"
 		REF @TASK.B80
+	SOURCE "the user's words of 2026-10-19 on the CI durations, « je trouve que notre ci et en"
+		+ "particulier le coverage est super long », then the ruling « vas-y pour A + B, mais aussi"
+		+ "D » on the four options of the session, A pytest-xdist, B coverage in the 3.11 leg of"
+		+ "the test job, C the suite sharded across unittest jobs, D faster tests: TITLE, DESC 1"
+		+ "and DESC 6 amended, C rejected, @TASK.B190 and @TASK.B191 written"
+		REF @TASK.B190
+		REF @TASK.B191
 
 DECISION TestClassNamesCarryTheSuffixTestThatVultureReads
 	TITLE "every unittest.TestCase class of tests/ is named after the behaviour it pins, then the"
