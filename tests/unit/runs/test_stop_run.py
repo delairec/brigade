@@ -7,7 +7,7 @@ from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.runs.stop_run import StopEquipment, stop_run
+from brigade.runs.stop_run import ProcessSignaller, stop_run
 from tests.unit.runs.write_run_record import write_run_record
 from tests.unit.runs.write_run_result import write_run_result
 
@@ -52,8 +52,8 @@ class RunProcessDouble:
     def wait(self, seconds: float) -> None:
         self.calls.append(("wait", seconds))
 
-    def equip(self) -> StopEquipment:
-        return StopEquipment(
+    def create_signaller(self) -> ProcessSignaller:
+        return ProcessSignaller(
             signal_process=self.signal_process,
             read_identity=self.read_identity,
             is_catching_signal=self.is_catching_signal,
@@ -88,7 +88,7 @@ class StopRunOfARunningRunTest(StopRunTestCase):
         )
 
         # Act
-        ended = stop_run(self.state_root, RUN_ID, process.equip())
+        ended = stop_run(self.state_root, RUN_ID, process.create_signaller())
 
         # Assert
         self.assertEqual(
@@ -109,7 +109,7 @@ class StopRunOfARunNotYetReadyTest(StopRunTestCase):
         )
 
         # Act
-        stop_run(self.state_root, RUN_ID, process.equip())
+        stop_run(self.state_root, RUN_ID, process.create_signaller())
 
         # Assert
         self.assertEqual(process.calls, [("wait", 0.1), ("signal", RUN_PID, signal.SIGTERM)])
@@ -124,7 +124,7 @@ class StopRunOfARunWhosePidFileStillNamesTheProcessThatLaunchedItTest(StopRunTes
         )
 
         # Act
-        ended = stop_run(self.state_root, RUN_ID, process.equip())
+        ended = stop_run(self.state_root, RUN_ID, process.create_signaller())
 
         # Assert
         self.assertEqual(
@@ -143,7 +143,7 @@ class StopRunOfARunNeverReadyTest(StopRunTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            stop_run(self.state_root, RUN_ID, process.equip())
+            stop_run(self.state_root, RUN_ID, process.create_signaller())
 
         # Assert
         self.assertEqual(
@@ -165,7 +165,7 @@ class StopRunOfARunWhoseProcessIsGoneTest(StopRunTestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as refusal:
-                    stop_run(self.state_root, RUN_ID, process.equip())
+                    stop_run(self.state_root, RUN_ID, process.create_signaller())
 
                 # Assert
                 self.assertEqual(
@@ -182,7 +182,7 @@ class StopRunOfARunThatEndsOtherwiseThanStoppedTest(StopRunTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            stop_run(self.state_root, RUN_ID, process.equip())
+            stop_run(self.state_root, RUN_ID, process.create_signaller())
 
         # Assert
         self.assertEqual(str(refusal.exception), f"run {RUN_ID} ended finished, not stopped")
@@ -195,7 +195,7 @@ class StopRunOfARunAlreadyFinishedTest(StopRunTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            stop_run(self.state_root, RUN_ID, RunProcessDouble(self.result, {}).equip())
+            stop_run(self.state_root, RUN_ID, RunProcessDouble(self.result, {}).create_signaller())
 
         # Assert
         self.assertEqual(str(refusal.exception), f"run {RUN_ID} has already finished on done")
@@ -205,7 +205,7 @@ class StopRunOfARunHoldingNoPidFileTest(StopRunTestCase):
     def test_should_refuse_the_run_naming_the_missing_pid_file(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            stop_run(self.state_root, RUN_ID, RunProcessDouble(self.result, {}).equip())
+            stop_run(self.state_root, RUN_ID, RunProcessDouble(self.result, {}).create_signaller())
 
         # Assert
         self.assertEqual(str(refusal.exception), f"run {RUN_ID} holds no pid file naming its process")
@@ -219,7 +219,7 @@ class StopRunOfAProcessReapedBeforeItsSignalTest(StopRunTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            stop_run(self.state_root, RUN_ID, reaped_before_its_signal.equip())
+            stop_run(self.state_root, RUN_ID, reaped_before_its_signal.create_signaller())
 
         # Assert
         self.assertEqual(

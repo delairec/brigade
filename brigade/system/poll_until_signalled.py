@@ -16,7 +16,7 @@ def _drain(read_descriptor: int) -> None:
 
 
 @dataclass(frozen=True)
-class _WakeupSignals:
+class _PipedStopSignalWatcher:
     signalled: list
     read_descriptor: int
 
@@ -29,7 +29,7 @@ class _WakeupSignals:
 
 
 @contextlib.contextmanager
-def _receive_stop_signals() -> Iterator[_WakeupSignals]:
+def _receive_stop_signals() -> Iterator[_PipedStopSignalWatcher]:
     signalled = []
     read_descriptor, write_descriptor = os.pipe()
     os.set_blocking(read_descriptor, False)
@@ -39,7 +39,7 @@ def _receive_stop_signals() -> Iterator[_WakeupSignals]:
     try:
         for stop_signal in STOP_SIGNALS:
             signal.signal(stop_signal, lambda received, _frame: signalled.append(received))
-        yield _WakeupSignals(signalled=signalled, read_descriptor=read_descriptor)
+        yield _PipedStopSignalWatcher(signalled=signalled, read_descriptor=read_descriptor)
     finally:
         for stop_signal, handler in previous_handlers.items():
             signal.signal(stop_signal, handler)
@@ -49,5 +49,5 @@ def _receive_stop_signals() -> Iterator[_WakeupSignals]:
 
 
 def poll_until_signalled(poll: Callable[[], bool], interval_s: float) -> bool:
-    with _receive_stop_signals() as signals:
-        return poll_until_stopped(poll, interval_s, signals)
+    with _receive_stop_signals() as watcher:
+        return poll_until_stopped(poll, interval_s, watcher)

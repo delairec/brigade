@@ -2,19 +2,19 @@ from collections.abc import Callable
 from typing import Protocol
 
 
-class StopSignals(Protocol):
+class StopSignalWatcher(Protocol):
     def received(self) -> bool: ...
 
     def wait(self, interval_s: float) -> None: ...
 
 
-def poll_until_stopped(poll: Callable[[], bool], interval_s: float, signals: StopSignals) -> bool:
+def poll_until_stopped(poll: Callable[[], bool], interval_s: float, watcher: StopSignalWatcher) -> bool:
     while True:
         done = poll()
-        if signals.received():
+        if watcher.received():
             return True
         if done:
             return False
-        signals.wait(interval_s)
-        if signals.received():
+        watcher.wait(interval_s)
+        if watcher.received():
             return True
