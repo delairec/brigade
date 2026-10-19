@@ -1414,9 +1414,8 @@ DECISION TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
 		+ "@DECISION.AwawaIsWrappedAsItIs; the fake stands in for it in the tests alone"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 		REF @DECISION.AwawaIsWrappedAsItIs
-	DESC "binds @TASK.B95 and @TASK.B96"
+	DESC "binds @TASK.B95"
 		REF @TASK.B95
-		REF @TASK.B96
 	REJECTED "the CI without awawa, its tests skipped, the ruling of 2026-10-06: pull request #52"
 		+ "merged with two L016 that broke awawa lint --strict on main, and every CI job skipped 70"
 		+ "tests, OK (skipped=70) on main 3deeea2 and on #56"
@@ -1517,10 +1516,11 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC ".github/workflows/ci.yml declares permissions: contents: read at its top level and"
 		+ "persist-credentials: false on every actions/checkout step"
-	DESC "coverage fails the run below the fail_under of .coveragerc: @TASK.B70 set it at the"
-		+ "figure of the CI without awawa, 93, and @TASK.B96 sets it at 100 once @TASK.B95 runs the"
-		+ "tests that need awawa in the CI on recorded outputs; a threshold, once set, is never"
-		+ "lowered"
+	DESC "coverage fails the run below the fail_under of .coveragerc, 100 on the unit tests alone"
+		+ "since @TASK.B190: @TASK.B70 set it at the figure of the CI without awawa, 93, and"
+		+ "@TASK.B96, archived, raised it to 100 on the whole suite once @TASK.B95 ran the tests"
+		+ "that need awawa in the CI on recorded outputs; a threshold, once set, is never lowered"
+		REF @TASK.B190
 		REF @TASK.B70
 		REF @TASK.B96
 		REF @TASK.B95

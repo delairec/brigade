@@ -6275,7 +6275,13 @@ TASK B95
 TASK B96
 	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, its tests that need"
 		+ "awawa replaying the recordings of B95, fails below the figure of B70"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-19: its SPEC, the coverage job of the CI passing at fail_under = 100"
+		+ "with the tests that need awawa on the recordings of B95, is made false by @TASK.B190,"
+		+ "under which coverage measures the unit tests alone and fails until tests/unit reaches"
+		+ "100 %, on the owner's ruling of 2026-10-19 on pull request #159, « archive B96 dans #159"
+		+ "»"
+		REF @TASK.B190
 	MILESTONE @MILESTONE.F0
 	COMPONENT "ci"
 	ROLE ada
@@ -10795,10 +10801,12 @@ TASK B190
 		IMPL "AGENTS.md::python3 -m unittest"
 	SPEC "TASK B66 is archived at delivery, its SPEC 1, 2 and 7, patch = subprocess, a coverage job"
 		+ "of the whole suite and COVERAGE_PROCESS_CONFIG passed to the children, made false by"
-		+ "this task; TASK B70 and TASK B96 stay implemented, the threshold they set enforced by"
-		+ "the job coverage on the unit tests; the SPEC of TASK B95 no longer names the coverage"
-		+ "job"
+		+ "this task; TASK B96 is archived, its SPEC, the coverage job passing at 100 % with the"
+		+ "tests that need awawa on the recordings, made false by this task; TASK B70 stays"
+		+ "implemented, the threshold it set enforced by the job coverage on the unit tests; the"
+		+ "SPEC of TASK B95 no longer names the coverage job"
 		IMPL "corpus/tasks.awawa::archived on 2026-10-19: its SPEC 1, 2 and 7"
+		IMPL "corpus/tasks.awawa::archived on 2026-10-19: its SPEC, the coverage job of the CI"
 		IMPL ".coveragerc::fail_under = 100"
 	DELIVERED_BY 159
 	RATIONALE "the measured facts of 2026-10-19: the coverage job of the runs 39236852839,"
@@ -10840,6 +10848,7 @@ TASK B190
 		+ "nombreux sur les chemins critiques uniquement. », « pour moi le 100% de coverage"
 		+ "concerne uniquement des tests unitaires, pas des tests d'intégration », « on assume que"
 		+ "le coverage va fail temporairement. »"
+	SOURCE "the owner's ruling of 2026-10-19 on pull request #159, « archive B96 dans #159 »"
 
 TASK B191
 	TITLE "brigade imports the module of the command it runs alone: --version imports no module of"
