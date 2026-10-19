@@ -149,7 +149,7 @@ or, with `--json`, a JSON document; it exits 1 when a check fails.
 | `promotion`       | the task is not `implemented`, its `DELIVERED_BY` is not the pull request, a `SPEC` has no `IMPL` resolving |
 | `untouched_files` | a `.awawa` file of the diff changes while none of its entities does                             |
 | `privacy`         | an added line matches a `PRIVATE` pattern of the project, an e-mail address or a home path      |
-| `body`            | the body does not open on the `TITLE` of the task, or keeps a placeholder of its template       |
+| `body`            | the body keeps a placeholder of its template                                                    |
 | `size`            | never: it reports the files, lines, packages and layers the diff touches                        |
 
 ## Studies

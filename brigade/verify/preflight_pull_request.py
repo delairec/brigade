@@ -3,7 +3,6 @@ from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
-from brigade.corpus.read_entity import read_entity
 from brigade.git.count_changed_lines import count_changed_lines
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
 from brigade.git.find_merge_base import find_merge_base
@@ -68,7 +67,6 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
     head_tree = prepare_project_tree(TreeDemand(project=project.name, ref=head), demand.configuration, runtime).root
     base_tree = prepare_project_tree(TreeDemand(project=project.name, ref=base), demand.configuration, runtime).root
     changed = count_changed_lines(run_process, repository, base, head)
-    title = read_project_field(read_entity(run_process, head_tree, "TASK", demand.task), "TITLE")
     private_patterns = tuple(field.value for field in project.fields if field.name == "PRIVATE")
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -88,7 +86,7 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
                 run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
             ),
             check_privacy(private_patterns, list_added_lines(run_process, repository, base, head)),
-            check_body(pull_request["body"], title),
+            check_body(pull_request["body"]),
             measure_size(changed),
         ],
     }

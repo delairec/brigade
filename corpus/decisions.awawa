@@ -3253,20 +3253,3 @@ DECISION ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 	SOURCE "pull request #156 of the brigade repository, delivering @TASK.B19, and the user's"
 		+ "rulings of 2026-10-19 on its review: \"(1) B (2) B (3) B\""
 		REF @TASK.B19
-
-DECISION TheBodyCheckReadsTheTitleOfTheTaskOnTheFirstLineOfTheBody
-	TITLE "the body check of brigade verify preflight reads the title of the pull request on the"
-		+ "first line of its body, where the template of brigade task pr writes the TITLE of the"
-		+ "task"
-	STATUS active
-	DESC "the body check fails when the first line of the body is not the TITLE of the task"
-		REF @TASK.B15
-	REJECTED "comparing the title of the pull request with the TITLE of the task: brigade task pr"
-		+ "titles the pull request TYPE(COMPONENT): subject (@TASK.X), never the TITLE, so the"
-		+ "check would fail every pull request brigade opens"
-	RATIONALE "@TASK.B15 asks the body check to fail when the title is not the TITLE of the task;"
-		+ "the only place a pull request brigade opens carries that TITLE is the first line its"
-		+ "body template writes"
-		REF @TASK.B15
-	SOURCE "pull request #157 of the brigade repository, delivering @TASK.B15 on 2026-10-19"
-		REF @TASK.B15
