@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.collect_anchors import collect_anchors
-from brigade.corpus.run_awawa import AWAWA_TIMEOUT_S
+from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.verify.judge_findings import judge_findings
 
@@ -38,12 +38,7 @@ def _resolves(head_tree: Path, anchor: str) -> bool:
 
 def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> dict:
     target = f"@TASK.{facts.task}"
-    record = run_process(
-        ProcessRequest(
-            argv=("awawa", "show", target, "--json", "."), cwd=str(facts.head_tree), timeout_s=AWAWA_TIMEOUT_S
-        )
-    )
-    fields = json.loads(record.stdout)["fields"]
+    fields = read_awawa_document(run_process, facts.head_tree, ("show", target))["fields"]
     findings = []
     status = _read_value(fields, "STATUS")
     if status != IMPLEMENTED:
