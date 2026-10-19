@@ -8170,7 +8170,7 @@ TASK B136
 			+ "test_should_list_a_run_whose_pid_holds_a_process_of_another_identity_as_dead(self):"
 	SPEC "brigade runs stop refuses a run whose pid does not hold a process of the recorded"
 		+ "identity as it refuses a run holding no pid file, and sends no signal"
-		IMPL "brigade/runs/stop_run.py::if not _holds_its_process(recorded):"
+		IMPL "brigade/runs/stop_run.py::elif recorded == previous:"
 		IMPL "brigade/runs/stop_run.py::except ProcessLookupError:"
 		IMPL "tests/unit/runs/test_stop_run.py::def"
 			+ "test_should_refuse_the_run_as_dead_naming_its_pid(self):"
