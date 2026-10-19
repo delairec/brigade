@@ -29,6 +29,7 @@ def wave_start(request, runtime: Runtime) -> dict:
 COMMAND = Command(
     path=("wave", "start"),
     help="start the wave of a planned request",
+    group_help="start the waves of the planned requests, list and show them",
     arguments=(Argument(("request",), {"help": "the name of a planned REQUEST"}),),
     run=wave_start,
     read_request=_read_request,

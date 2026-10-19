@@ -9924,7 +9924,11 @@ TASK B163
 TASK B164
 	TITLE "brigade run takes --wave and --task, run.json and every run.finished carry them, and"
 		+ "runs list, wave show and wave new follow a run from them"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-19: its SPEC 5, brigade wave new printing the line brigade runs show"
+		+ "<id> --log, is made false by TASK B187, which removes wave new and has brigade request"
+		+ "new print that line"
+		REF @TASK.B187
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
@@ -10199,7 +10203,6 @@ TASK B168
 		+ "each refusal; tests/cli gains one flow of brigade wave requeue, a parked task re-queued"
 		+ "through the fake adapter, as DESC 4 of the decision"
 		+ "ThePortableContractIsTheCommandLineAndNeutralFiles sets"
-	AFTER @TASK.B164
 	AFTER @TASK.B166
 	AFTER @TASK.B187
 	RATIONALE "@TASK.B166 writes task.state running before the spawn, so that a crash between the"
@@ -10400,7 +10403,6 @@ TASK B175
 		+ "brigade/commands/ledger.py:129-132 accepts it with --project alone"
 	SPEC "brigade ledger compare takes a range for each side, where today"
 		+ "brigade/ledger/describe_comparison.py:28-36 cuts at one day with no upper bound"
-	AFTER @TASK.B164
 	SOURCE "use-case map of 2026-10-16, findings C1, C5, C3 and C4"
 
 TASK B176
@@ -10684,7 +10686,6 @@ TASK B187
 		+ "fixture project through the fake adapter, awawa replayed from recorded outputs where it"
 		+ "is not on PATH, as DESC 4 of the decision"
 		+ "ThePortableContractIsTheCommandLineAndNeutralFiles sets"
-	AFTER @TASK.B164
 	RATIONALE "the ruling is @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone:"
 		+ "three names, wave, milestone and request, covered one reality, a REQUEST becoming one"
 		+ "MILESTONE becoming one wave on one branch, brigade/corpus/data/schema.awawa.tpl:149,"

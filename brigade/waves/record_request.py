@@ -48,7 +48,7 @@ def record_request(runtime: Runtime, new_request: NewRequest) -> str:
             repository=root,
             lock=locate_corpus_lock(runtime.paths.lock_directory, root),
             file_names=(REQUESTS_FILE,),
-            describe_message=lambda: f"brigade wave new: @REQUEST.{names[0]} of @PROJECT.{new_request.project}",
+            describe_message=lambda: f"brigade request new: @REQUEST.{names[0]} of @PROJECT.{new_request.project}",
             rewrite=rewrite,
         ),
     )

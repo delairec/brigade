@@ -40,7 +40,9 @@ def wave_list(request, runtime: Runtime) -> dict:
     rows = [{**row, "wave": find_wave_name(events, row["project"], row["branch"])} for row in described]
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "requests": [row for row in rows if request.project in (None, row["project"])],
+        "requests": [
+            {column: row[column] for column in COLUMNS} for row in rows if request.project in (None, row["project"])
+        ],
     }
 
 

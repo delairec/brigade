@@ -3,10 +3,11 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with sixteen commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
-`brigade adapter`, `brigade project`, `brigade wave`, `brigade plan`, `brigade ledger`, `brigade roles`,
-`brigade tick`, `brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs`, `brigade processes` and `brigade verify`; every
-other one is a task of the corpus.
+The entry point exists with twenty-one commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter`, `brigade project`, `brigade request`, `brigade wave`, `brigade plan`, `brigade task`,
+`brigade study`, `brigade collect`, `brigade collectors`, `brigade ledger`, `brigade roles`, `brigade tick`,
+`brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs`, `brigade processes` and `brigade verify`;
+every other one is a task of the corpus.
 
 ## Install
 
@@ -81,18 +82,24 @@ project, in their words. Every command below exits 1 naming `brigade init` until
 or, with `--json`, a JSON document.
 
 ```
-brigade wave new <project> <text>
+brigade request new <project> <text>
+brigade request show <request>
+brigade request list [--project P]
+brigade request cancel <request>
 brigade wave start <request>
 brigade wave show <request>
 brigade wave list [--project P]
 brigade wave resume [<request>]
 ```
 
-`wave new` records the request as `<project>_<n>`, `n` one above the highest its project holds, with the UTC instant
-of its creation and the status `planning`, then launches the planner on it detached, `brigade run wave-plan --slot
-plan --project <project> --detach request=<name>`, and prints the request and the run, then the line `brigade runs
-show <run> --log`, the command that follows the planner. A project that is not
-registered or is paused exits 1. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
+`request new` records the request as `<project>_r<n>`, `n` one above the highest its project holds, under the lock
+of the corpus, with the UTC instant of its creation and the status `planning`, then launches the planner on it
+detached, `brigade run wave-plan --slot plan --project <project> --detach request=<name>`, and prints the request and
+the run, then the line `brigade runs show <run> --log`, the command that follows the planner. A project that is not
+registered or is paused exits 1. `request show` prints a request, its status, its milestone, its pull request and the
+instant of its creation, `-` for a field it does not hold yet; `request list` prints one row per request, those of one
+project with `--project`. `request cancel` moves a `planning` or `planned` request to `cancelled`; a request of
+another status exits 1 naming it. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
 wave number of the project in the ledger, and records `wave.started` with the wave, the project, the branch and the
 tasks of its milestone in the order of their number; that name keys every wave event of the ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
 `brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of

@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
-from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
+from tests.cli.run_test_case import FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 
@@ -62,13 +62,6 @@ UNORDERED_WAVE_TASKS = (
 )
 WAVE_MILESTONES = 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS planned\n'
 WAVE_BRANCH = "integration/M1-empty-cart"
-CLOSED_REQUEST = (
-    "REQUEST shop_1\n"
-    "\tPROJECT @PROJECT.shop\n"
-    '\tTEXT "list the items of the cart"\n'
-    '\tCREATED_AT "2026-10-11T08:00:00Z"\n'
-    "\tSTATUS closed\n"
-)
 PLANNED_REQUEST = (
     "REQUEST shop_1\n"
     "\tPROJECT @PROJECT.shop\n"
@@ -178,126 +171,6 @@ class WaveTestCase(FileWaitingTestCase):
 
     def wait_for_result(self, run_id: str) -> None:
         self.wait_for_file(self.runs / run_id / "result.json")
-
-
-class BrigadeWaveNewTest(WaveTestCase):
-    def setUp(self):
-        super().setUp()
-        recordings = Path(self.root.name) / "recordings"
-        recordings.mkdir()
-        (recordings / "planner.json").write_text(json.dumps(DONE_RESULT))
-        self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
-        )
-
-    def test_should_record_the_request_planning_with_the_instant_of_its_creation(self):
-        # Act
-        completed = self.run_wave("new", "shop", REQUEST_TEXT, "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.wait_for_result(json.loads(completed.stdout)["run"])
-        self.assertRegex(
-            self.read_requests(),
-            r'^REQUEST shop_1\n\tPROJECT @PROJECT\.shop\n\tTEXT "let the customer empty the cart in one click"\n'
-            r'\tCREATED_AT "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"\n\tSTATUS planning\n$',
-        )
-        self.assertEqual(
-            self.machine.read_git("log", "-1", "--format=%s"), "brigade wave new: @REQUEST.shop_1 of @PROJECT.shop\n"
-        )
-
-    def test_should_name_the_request_after_the_last_number_its_project_holds(self):
-        # Arrange
-        self.write_requests(CLOSED_REQUEST)
-
-        # Act
-        completed = self.run_wave("new", "shop", REQUEST_TEXT, "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.wait_for_result(json.loads(completed.stdout)["run"])
-        self.assertEqual(json.loads(completed.stdout)["request"], "shop_2")
-
-    def test_should_launch_the_planner_on_the_request_detached_and_print_its_run(self):
-        # Act
-        completed = self.run_wave("new", "shop", REQUEST_TEXT, "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        document = json.loads(completed.stdout)
-        self.assertRegex(document["run"], RUN_ID_PATTERN)
-        self.assertEqual(document, {"schema_version": 1, "request": "shop_1", "run": document["run"]})
-        self.wait_for_result(document["run"])
-        run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
-        self.assertEqual(
-            (run_record["procedure"], run_record["slot"], run_record["project"], run_record["arguments"]),
-            ("wave-plan", "plan", "shop", {"request": "shop_1"}),
-        )
-
-    def test_should_print_the_request_and_its_run_as_text(self):
-        # Act
-        completed = self.run_wave("new", "shop", REQUEST_TEXT)
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertRegex(
-            completed.stdout,
-            r"^@REQUEST\.shop_1 planning, run (\d{8}T\d{6}Z-[0-9a-f]{6})\nbrigade runs show \1 --log\n$",
-        )
-        self.wait_for_result(completed.stdout.split()[-2])
-
-    def test_should_write_a_quote_of_the_text_escaped(self):
-        # Act
-        completed = self.run_wave("new", "shop", 'let the customer "empty" the cart', "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.wait_for_result(json.loads(completed.stdout)["run"])
-        self.assertIn('\tTEXT "let the customer \\"empty\\" the cart"\n', self.read_requests())
-
-    def test_should_exit_1_naming_a_project_that_is_not_registered(self):
-        # Act
-        completed = self.run_wave("new", "cafe", REQUEST_TEXT)
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr), (1, "brigade wave new: @PROJECT.cafe is not registered\n")
-        )
-        self.assertFalse((self.machine.corpus / "requests.awawa").exists())
-
-    def test_should_exit_1_naming_a_paused_project(self):
-        # Arrange
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "pause", "shop")
-
-        # Act
-        completed = self.run_wave("new", "shop", REQUEST_TEXT)
-
-        # Assert
-        self.assertEqual((completed.returncode, completed.stderr), (1, "brigade wave new: @PROJECT.shop is paused\n"))
-        self.assertFalse((self.machine.corpus / "requests.awawa").exists())
-
-
-class BrigadeWaveNewWithAClientCountingNoStepsTest(WaveTestCase):
-    def test_should_print_the_warning_of_the_planner_run(self):
-        # Arrange
-        recordings = Path(self.root.name) / "recordings"
-        recordings.mkdir()
-        (recordings / "planner.json").write_text(json.dumps(DONE_RESULT))
-        self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n'
-        )
-
-        # Act
-        completed = self.run_wave("new", "shop", REQUEST_TEXT, "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.wait_for_result(json.loads(completed.stdout)["run"])
-        self.assertEqual(
-            completed.stderr,
-            "brigade wave new: fake counts no steps: the budget of 30 steps is held on the clock"
-            " and the run cut at its limit of 1140 s\n",
-        )
 
 
 class BrigadeWaveStartTest(WaveTestCase):
@@ -666,10 +539,6 @@ class BrigadeWaveBeforeInitTest(unittest.TestCase):
 
     def test_should_exit_1_naming_brigade_init(self):
         for arguments, expected_stderr in [
-            (
-                ("new", "shop", REQUEST_TEXT),
-                "brigade wave new: the operational corpus is missing; run brigade init first\n",
-            ),
             (("start", "shop_1"), "brigade wave start: the operational corpus is missing; run brigade init first\n"),
             (("show", "shop_1"), "brigade wave show: the operational corpus is missing; run brigade init first\n"),
             (("list",), "brigade wave list: the operational corpus is missing; run brigade init first\n"),

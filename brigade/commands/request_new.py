@@ -49,7 +49,7 @@ def _launch_planner(runtime: Runtime, project: str, name: str) -> dict:
     return run(planning, runtime)
 
 
-def wave_new(request, runtime: Runtime) -> dict:
+def request_new(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.project)
     if read_project_field(project, "STATUS") == PAUSED_STATUS:
@@ -63,14 +63,14 @@ def wave_new(request, runtime: Runtime) -> dict:
 
 
 COMMAND = Command(
-    path=("wave", "new"),
+    path=("request", "new"),
     help="record a request and launch its planning",
-    group_help="record the requests of the projects, start their waves, list and show them",
+    group_help="record the requests of the projects, list, show and cancel them",
     arguments=(
         Argument(("project",), {"help": "the registered project the request is for"}),
         Argument(("text",), {"help": "what the request asks, in the user's words"}),
     ),
-    run=wave_new,
+    run=request_new,
     read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
