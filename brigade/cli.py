@@ -5,32 +5,37 @@ import importlib
 import json
 import sys
 import traceback
-from importlib.resources import files
 from pathlib import Path
 
 from brigade import VERSION
 from brigade.add_command_parsers import add_command_parsers
 from brigade.errors import BrigadeError, CannotWrite, StandingDown, UsageError
+from brigade.list_command_modules import COMMANDS_PACKAGE, list_command_modules
 from brigade.runtime import Invocation, Runtime, build_runtime
+from brigade.select_command_modules import PASSTHROUGH_SEPARATOR, select_command_modules
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.trail_locations import COMMANDS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 
-COMMANDS_PACKAGE = "brigade.commands"
-MODULE_SUFFIX = ".py"
-PRIVATE_MODULE_PREFIX = "_"
-PASSTHROUGH_SEPARATOR = "--"
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
 JSON_HELP = "print the output as a JSON document"
 VERBOSE_HELP = "print every subprocess the command runs on stderr"
 
 
-def _discover_commands() -> list:
-    return [
-        importlib.import_module(f"{COMMANDS_PACKAGE}.{name.removesuffix(MODULE_SUFFIX)}").COMMAND
-        for name in sorted(entry.name for entry in files(COMMANDS_PACKAGE).iterdir())
-        if name.endswith(MODULE_SUFFIX) and not name.startswith(PRIVATE_MODULE_PREFIX)
-    ]
+class _ParseDeferred(Exception):
+    pass
+
+
+class _DeferringArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise _ParseDeferred(message)
+
+    def print_help(self, file=None):
+        raise _ParseDeferred
+
+
+def _import_commands(module_names: list[str]) -> list:
+    return [importlib.import_module(f"{COMMANDS_PACKAGE}.{name}").COMMAND for name in module_names]
 
 
 def _create_common_options():
@@ -40,8 +45,8 @@ def _create_common_options():
     return common_options
 
 
-def _create_parser(commands):
-    parser = argparse.ArgumentParser(prog="brigade")
+def _create_parser(commands, parser_class):
+    parser = parser_class(prog="brigade")
     parser.add_argument("--version", action="store_true", help="print the version of brigade")
     parser.add_argument("--json", action="store_true", help=JSON_HELP)
     parser.add_argument("--verbose", action="store_true", help=VERBOSE_HELP)
@@ -115,18 +120,33 @@ def _accepts(command, extras: list[str]) -> bool:
     )
 
 
-def main(arguments: list[str]) -> int:
-    commands = _discover_commands()
+def _locate_separator(arguments: list[str], passthrough) -> int:
+    return arguments.index(PASSTHROUGH_SEPARATOR) if passthrough is not None else len(arguments)
+
+
+def _parse(arguments: list[str], module_names: list[str], parser_class):
+    commands = _import_commands(module_names)
     passthroughs = [command for command in commands if command.render_passed_stderr is not None]
-    parser = _create_parser(commands)
+    parser = _create_parser(commands, parser_class)
     passthrough = _find_passthrough(arguments, passthroughs)
-    separator = arguments.index(PASSTHROUGH_SEPARATOR) if passthrough is not None else len(arguments)
-    options, extras = parser.parse_known_args(arguments[:separator])
+    options, extras = parser.parse_known_args(arguments[: _locate_separator(arguments, passthrough)])
     if extras and not _accepts(options.command, extras):
         parser.error(f"unrecognized arguments: {' '.join(extras)}")
+    if options.command is None and not options.version:
+        parser.error("no option given")
+    return options, extras, passthrough
+
+
+def main(arguments: list[str]) -> int:
+    module_names = list_command_modules()
+    try:
+        options, extras, passthrough = _parse(
+            arguments, select_command_modules(arguments, module_names), _DeferringArgumentParser
+        )
+    except _ParseDeferred:
+        options, extras, passthrough = _parse(arguments, module_names, argparse.ArgumentParser)
+    separator = _locate_separator(arguments, passthrough)
     if options.command is None:
-        if not options.version:
-            parser.error("no option given")
         print(_describe_version(options.json))  # noqa: T201 - the module that prints the result of every command
         return 0
     command = options.command if passthrough is None else passthrough

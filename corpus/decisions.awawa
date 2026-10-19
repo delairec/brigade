@@ -3304,3 +3304,38 @@ DECISION ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 	SOURCE "pull request #156 of the brigade repository, delivering @TASK.B19, and the user's"
 		+ "rulings of 2026-10-19 on its review: \"(1) B (2) B (3) B\""
 		REF @TASK.B19
+
+DECISION ACommandModuleIsNamedAfterItsCommandLineSoTheLineImportsItAlone
+	TITLE "a command module is named after its command line, so brigade/cli.py imports the module"
+		+ "of the line it runs alone and parses a help or a usage error again with every record"
+	STATUS active
+	DESC "a module of brigade/commands/ is named after the path of its command line, its words"
+		+ "joined by _ and every - written _: runs_list for brigade runs list, adapter_launch_argv"
+		+ "for brigade adapter launch-argv; a passthrough record is named after the module of its"
+		+ "path, then _ and the tool it passes to, corpus_awawa;"
+		+ "tests/guards/find_misnamed_command_modules.py proves it"
+	DESC "brigade/select_command_modules.py picks, among the words of the arguments before --, the"
+		+ "longest leading run that names a module, and with -- every module opening on that name"
+		+ "and _; brigade/cli.py imports those alone and parses with a parser that raises where"
+		+ "argparse would print, --version selecting none"
+		REF @TASK.B191
+	DESC "a help, a usage error, or arguments that name no module, are parsed again by the parser"
+		+ "built from the records of every module, as before @TASK.B191: one parser prints the"
+		+ "help, the usage errors and the order of the lines"
+		REF @TASK.B191
+	REJECTED "a hand-written table from command paths to modules: one more place to touch per"
+		+ "command, REJECTED 7 of TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents"
+	REJECTED "the records read from the sources with ast before any import: a second reader of the"
+		+ "record, which the import already is"
+	REJECTED "the help spotted by looking for -h or --help in the arguments: argparse takes an"
+		+ "abbreviation, --he, and a usage error lists the sibling lines, so the full parser is"
+		+ "needed wherever argparse prints"
+	REJECTED "the parser built from the records of the whole group of the line: brigade runs list"
+		+ "would import every runs module, and only a help or an error reads the siblings"
+	RATIONALE "the parser needs the record of the line it runs alone, but its help and its usage"
+		+ "errors read every record; parsing first with the one record and again with all when"
+		+ "argparse would print keeps one parser for every message and pays the imports only where"
+		+ "a person reads the output"
+	SOURCE "pull request #160 of the brigade repository, delivering @TASK.B191, which left the"
+		+ "design to its implementer"
+		REF @TASK.B191
