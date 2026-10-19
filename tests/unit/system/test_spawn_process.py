@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY
 
-from brigade.errors import ToolFailure, ToolNotFound
+from brigade.errors import CannotWrite, ToolFailure, ToolNotFound
 from brigade.system.process_trace import ProcessTrace
 from brigade.system.spawn_process import SpawnRequest, spawn_process
 
@@ -158,3 +158,26 @@ class SpawnProcessInAWorkingDirectoryThatDoesNotExistTest(SpawnProcessTestCase):
                 )
             ],
         )
+
+
+class SpawnProcessIntoAnUnwritableLogTest(SpawnProcessTestCase):
+    def test_should_refuse_naming_the_log_it_cannot_open(self):
+        # Arrange
+        unwritable = Path(self.root.name) / "missing" / "stdout.log"
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            spawn_process(
+                SpawnRequest(
+                    argv=("true",),
+                    cwd=self.root.name,
+                    environment={},
+                    stdin=None,
+                    stdout=unwritable,
+                    stderr=self.stderr,
+                ),
+                self.traces.append,
+            )
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {unwritable}: No such file or directory")

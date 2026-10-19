@@ -2,6 +2,7 @@ import unittest
 
 from brigade.errors import BrigadeError
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
+from brigade.system.scheduler_state import SchedulerState
 
 NO_RUNTIME_NEEDED = None
 
@@ -24,3 +25,26 @@ class AskSchedulerWhenTheAnswerBreaksItsShapeTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception), "scheduler plugin systemd answered read_status: lacks the key unit_files"
         )
+
+
+class StatusReaderOfAnInstalledTimer:
+    def read_status(self, request: dict, runtime) -> dict:
+        return {
+            "schema_version": 1,
+            "installed": True,
+            "unit_files": ["/home/ada/.config/systemd/user/brigade.timer"],
+            "cron_line": None,
+            "next_activation": None,
+        }
+
+
+class AskSchedulerForItsStatusTest(unittest.TestCase):
+    def test_should_answer_the_state_of_the_scheduler(self):
+        # Arrange
+        question = SchedulerQuestion(scheduler_name="systemd", operation="read_status", request={})
+
+        # Act
+        state = ask_scheduler(StatusReaderOfAnInstalledTimer(), question, NO_RUNTIME_NEEDED)
+
+        # Assert
+        self.assertIsInstance(state, SchedulerState)

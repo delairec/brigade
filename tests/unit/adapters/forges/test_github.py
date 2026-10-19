@@ -1,3 +1,4 @@
+import json
 import unittest
 from types import SimpleNamespace
 
@@ -7,8 +8,10 @@ from brigade.adapters.forges.github import (
     find_pull_request,
     list_milestones,
     list_pull_requests,
+    open_issue,
     open_pull_request,
     read_login_environment,
+    read_pull_request,
 )
 from brigade.system.run_process import ProcessRecord
 
@@ -350,4 +353,165 @@ class FindPullRequestTest(unittest.TestCase):
                     {"GH_TOKEN": "token-of-octo-cli"},
                 ),
             ],
+        )
+
+
+class DescribeAccountOfAnUnreadableHostsDocumentTest(unittest.TestCase):
+    def test_should_name_no_account(self):
+        # Arrange
+        runtime = create_runtime("not a hosts document")
+
+        # Act
+        account = describe_account(UNBOUND_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(account, {"schema_version": 1, "login": None})
+
+
+class OpenIssueTest(unittest.TestCase):
+    def test_should_answer_the_url_of_the_issue_opened_without_the_account_environment(self):
+        # Arrange
+        runtime = create_runtime("https://github.com/ada/shop/issues/7\n")
+        request = {"repository": "/projects/shop", "title": "the cart forgets", "body": "Steps\n"}
+
+        # Act
+        issue = open_issue(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            (issue, runtime.requests[0].argv, runtime.requests[0].environment),
+            (
+                {"schema_version": 1, "url": "https://github.com/ada/shop/issues/7"},
+                ("gh", "issue", "create", "--title", "the cart forgets", "--body-file", "-"),
+                {},
+            ),
+        )
+
+
+LISTED_PAGE = {
+    "data": {
+        "repository": {
+            "pullRequests": {
+                "nodes": [
+                    {
+                        "number": 7,
+                        "title": "feat: empty the cart",
+                        "headRefName": "task/w1/S3",
+                        "baseRefName": "integration/w1",
+                        "state": "OPEN",
+                        "isDraft": False,
+                        "reviewDecision": None,
+                        "author": None,
+                        "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
+                    },
+                    {
+                        "number": 8,
+                        "title": "fix: keep the cart",
+                        "headRefName": "task/w1/S4",
+                        "baseRefName": "integration/w1",
+                        "state": "OPEN",
+                        "isDraft": True,
+                        "reviewDecision": "APPROVED",
+                        "author": {"login": "Clauche-bot"},
+                        "commits": {
+                            "nodes": [
+                                {
+                                    "commit": {
+                                        "statusCheckRollup": {
+                                            "contexts": {
+                                                "nodes": [
+                                                    {"__typename": "CheckRun", "name": "unit", "conclusion": None},
+                                                    {"__typename": "StatusContext"},
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                    },
+                ]
+            }
+        }
+    }
+}
+
+
+class ListOpenPullRequestsTest(unittest.TestCase):
+    def test_should_describe_each_pull_request_of_the_state_asked(self):
+        # Arrange
+        runtime = create_runtime(json.dumps([LISTED_PAGE]))
+
+        # Act
+        listing = list_pull_requests({**MILESTONES_REQUEST, "state": "open"}, runtime)
+
+        # Assert
+        self.assertEqual(
+            (listing, runtime.requests[0].argv[9:11]),
+            (
+                {
+                    "schema_version": 1,
+                    "pull_requests": [
+                        {
+                            "number": 7,
+                            "title": "feat: empty the cart",
+                            "head": "task/w1/S3",
+                            "base": "integration/w1",
+                            "state": "open",
+                            "author": None,
+                            "draft": False,
+                            "review": None,
+                            "checks": [],
+                        },
+                        {
+                            "number": 8,
+                            "title": "fix: keep the cart",
+                            "head": "task/w1/S4",
+                            "base": "integration/w1",
+                            "state": "open",
+                            "author": "Clauche-bot",
+                            "draft": True,
+                            "review": "approved",
+                            "checks": [{"name": "unit", "verdict": "pending"}],
+                        },
+                    ],
+                },
+                ("-f", "states[]=OPEN"),
+            ),
+        )
+
+
+class ReadPullRequestTest(unittest.TestCase):
+    def test_should_describe_the_pull_request_its_head_and_its_checks(self):
+        # Arrange
+        runtime = create_runtime(
+            json.dumps(
+                {
+                    "number": 160,
+                    "title": "test: cover the rest",
+                    "body": "Coverage\n",
+                    "headRefName": "test/unit-coverage-rest",
+                    "headRefOid": "4f2a9c1",
+                    "statusCheckRollup": [{"__typename": "CheckRun", "name": "unit", "conclusion": "SUCCESS"}],
+                }
+            )
+        )
+
+        # Act
+        details = read_pull_request({**MILESTONES_REQUEST, "number": 160}, runtime)
+
+        # Assert
+        self.assertEqual(
+            details,
+            {
+                "schema_version": 1,
+                "pull_request": {
+                    "number": 160,
+                    "title": "test: cover the rest",
+                    "body": "Coverage\n",
+                    "head": "test/unit-coverage-rest",
+                    "head_sha": "4f2a9c1",
+                    "checks": [{"name": "unit", "verdict": "success"}],
+                },
+            },
         )

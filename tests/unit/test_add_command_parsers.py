@@ -4,7 +4,7 @@ import io
 import unittest
 
 from brigade.add_command_parsers import add_command_parsers
-from brigade.command import Argument, Command
+from brigade.command import Argument, Command, ExclusiveArguments
 
 
 def _run(request, runtime) -> dict:
@@ -246,3 +246,33 @@ class AddCommandParsersWhenTwoPassthroughRecordsDeclareOnePathTest(unittest.Test
 
         # Assert
         self.assertEqual(str(raised.exception), "two passthrough records declare brigade tool")
+
+
+class AddCommandParsersWithExclusiveArgumentsTest(unittest.TestCase):
+    def test_should_refuse_two_arguments_of_an_exclusive_group_together(self):
+        # Arrange
+        command = Command(
+            path=("runs", "show"),
+            help="show a run",
+            run=print,
+            read_request=vars,
+            render_text=str,
+            decide_exit_code=len,
+            arguments=(
+                ExclusiveArguments(
+                    arguments=(
+                        Argument(("--all",), {"action": "store_true"}),
+                        Argument(("--last",), {"action": "store_true"}),
+                    )
+                ),
+            ),
+        )
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, [command], argparse.ArgumentParser(add_help=False))
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
+            parser.parse_args(["runs", "show", "--all", "--last"])
+
+        # Assert
+        self.assertEqual(exit_.exception.code, 2)

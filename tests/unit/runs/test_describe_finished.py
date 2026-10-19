@@ -1,3 +1,4 @@
+import dataclasses
 import unittest
 from pathlib import Path
 
@@ -547,4 +548,37 @@ class DescribeFinishedOfASegmentStoppedByAUsageLimitTest(unittest.TestCase):
         self.assertEqual(
             (finished.message, finished.reset),
             ("You've hit your session limit · resets 11:30pm", ResetHour(hour="23:30", timezone="Europe/Paris")),
+        )
+
+
+class DescribeFinishedOfARunOfNoProjectInAWaveTest(unittest.TestCase):
+    def test_should_explain_the_missing_project_and_keep_the_wave_and_the_task(self):
+        # Arrange
+        plan = dataclasses.replace(_create_plan(), project=None, wave="w1", task="B1")
+        record = SegmentRecord(
+            number=1,
+            **_create_result(steps=None),
+            exit_code=0,
+            measured_ms=900000,
+            cost_usd=None,
+            counted_steps=SessionSteps(main_steps=42, total_steps=54),
+            uncounted=None,
+            adapter_failure=None,
+        )
+
+        # Act
+        finished = describe_finished(plan, record)
+
+        # Assert
+        self.assertEqual(
+            (finished.wave, finished.task, finished.nulls),
+            (
+                "w1",
+                "B1",
+                {
+                    "project": "no project given",
+                    "usage": "the client reported no usage",
+                    "error_class": "the run did not fail",
+                },
+            ),
         )

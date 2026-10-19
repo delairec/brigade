@@ -31,3 +31,14 @@ class ApplyActionsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the tick has no executor for the action LaunchRun")
+
+    def test_should_hand_each_action_to_the_executor_of_its_type_and_count_them(self):
+        # Arrange
+        first, second = LaunchRun(), LaunchRun()
+        executed = []
+
+        # Act
+        actions_applied = apply_actions((first, second), {LaunchRun: executed.append})
+
+        # Assert
+        self.assertEqual((actions_applied, executed), (2, [first, second]))

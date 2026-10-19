@@ -28,3 +28,16 @@ class AskPullRequestsTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception), "forge plugin github answered list_pull_requests: lacks the key pull_requests"
         )
+
+
+class AskPullRequestsAnsweredTest(unittest.TestCase):
+    def test_should_answer_the_pull_requests_the_forge_lists(self):
+        # Arrange
+        forge = ForgeDouble({"schema_version": 1, "pull_requests": [{"number": 7}]})
+        query = PullRequestsQuery(repository="/projects/shop", state="open", environment={})
+
+        # Act
+        pull_requests = ask_pull_requests(forge, "github", query, None)
+
+        # Assert
+        self.assertEqual(pull_requests, [{"number": 7}])
