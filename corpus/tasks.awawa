@@ -5341,7 +5341,7 @@ TASK B82
 		+ "exception-to-exit-code table, and holds no _add_<area>_parser function, no table of"
 		+ "commands and no list of command modules; adding a command touches its command module and"
 		+ "its tests alone"
-		IMPL "brigade/cli.py::def _discover_commands() -> list:"
+		IMPL "brigade/list_command_modules.py::def list_command_modules() -> list[str]:"
 		IMPL "brigade/add_command_parsers.py::def add_command_parsers(parser, commands,"
 			+ "common_options) -> None:"
 		IMPL "tests/unit/test_add_command_parsers.py::def"
@@ -8071,7 +8071,7 @@ TASK B129
 		+ "record; a test of tests/unit/test_add_command_parsers.py proves it on a record of its"
 		+ "own"
 		IMPL "brigade/add_command_parsers.py::epilog=epilogs.get(node)"
-		IMPL "brigade/cli.py::parser = _create_parser(commands)"
+		IMPL "brigade/cli.py::parser = _create_parser(commands, parser_class)"
 		IMPL "tests/unit/test_add_command_parsers.py::class"
 			+ "AddCommandParsersOfAPassthroughRecordTest(unittest.TestCase):"
 	AFTER @TASK.B89
