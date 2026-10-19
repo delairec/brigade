@@ -75,7 +75,13 @@ class WriteJsonAtomicallyWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
 
     def test_should_name_the_target_of_the_temporary_file_it_cannot_create(self):
         # Arrange
-        name_leaving_no_room_for_the_temporary_affixes = "t" * 250 + ".json"
+        name_leaving_no_room_for_the_temporary_affixes = (
+            "tttttttttttttttttttttttttttttttttttttttttttttttttt"
+            "tttttttttttttttttttttttttttttttttttttttttttttttttt"
+            "tttttttttttttttttttttttttttttttttttttttttttttttttt"
+            "tttttttttttttttttttttttttttttttttttttttttttttttttt"
+            "tttttttttttttttttttttttttttttttttttttttttttttttttt.json"
+        )
         path = self.state / name_leaving_no_room_for_the_temporary_affixes
 
         # Act
