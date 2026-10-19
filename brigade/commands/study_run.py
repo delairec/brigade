@@ -1,4 +1,6 @@
 import argparse
+import functools
+import os
 from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
@@ -6,6 +8,8 @@ from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME
 from brigade.commands.run import run
 from brigade.runs.create_run_id import create_run_id
+from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
+from brigade.runs.record_run_pid import record_run_pid
 from brigade.runtime import Runtime
 from brigade.studies.read_study import read_study
 from brigade.studies.run_study import DONE, run_study
@@ -51,6 +55,8 @@ def study_run(request, runtime: Runtime) -> dict:
         launch_run=run,
         name_run=create_run_id,
         working_directory=Path.cwd(),
+        is_run_alive=is_recorded_process_alive,
+        record_own_pid=functools.partial(record_run_pid, pid=os.getpid()),
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

@@ -25,6 +25,8 @@ class StudyEquipment:
     launch_run: Callable[[object, Runtime], dict]
     name_run: Callable[[datetime], str]
     working_directory: Path
+    is_run_alive: Callable[[Path], bool]
+    record_own_pid: Callable[[Path], None]
 
 
 @dataclass(frozen=True)
