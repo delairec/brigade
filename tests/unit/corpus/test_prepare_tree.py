@@ -229,36 +229,51 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
         # Arrange
         cache = create_path_of_length(self.root, LONGEST_PATH - len("/shop") - 7)
 
-        # Act / Assert
-        with self.assertRaises(CannotWrite):
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
             prepare_tree(
                 ArchivingGit("abc", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1", cache=cache)
             )
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {cache}/shop/abc: File name too long")
 
     def test_should_refuse_an_archive_it_cannot_unpack(self):
         # Arrange
         file_under_a_file = ArchivingGit("abc123", [("a", b"x"), ("a/b", b"y")])
 
-        # Act / Assert
-        with self.assertRaises(CannotWrite):
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
             prepare_tree(file_under_a_file, FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.cache}/shop/abc123: Not a directory")
 
     def test_should_refuse_a_tree_place_a_file_holds(self):
         # Arrange
         (self.cache / "shop").mkdir(parents=True)
         (self.cache / "shop" / "abc123").write_text("not a tree")
 
-        # Act / Assert
-        with self.assertRaises(CannotWrite):
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
             prepare_tree(ArchivingGit("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.cache}/shop/abc123: Not a directory")
 
     def test_should_refuse_a_stale_tree_whose_name_leaves_no_room_to_evict_it(self):
         # Arrange
         write_tree(self.cache / "tidepool" / NAME_LONGER_THAN_ITS_EVICTION_ALLOWS, 2048, LONG_AGO)
 
-        # Act / Assert
-        with self.assertRaises(CannotWrite):
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
             prepare_tree(ArchivingGit("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            f"cannot write {self.cache}/tidepool/{NAME_LONGER_THAN_ITS_EVICTION_ALLOWS}: File name too long",
+        )
 
     def test_should_refuse_a_tree_whose_read_it_cannot_mark(self):
         # Arrange

@@ -114,6 +114,9 @@ class ChangeCorpusFileUnwritableTest(ChangeCorpusFileTestCase):
         (self.repository / "blocker").write_text("a file, not a directory\n")
         runner = RecordingProcessRunner()
 
-        # Act / Assert
-        with self.assertRaises(CannotWrite):
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
             change_corpus_file(runner, self.create_change(append_a_task, file_name="blocker/tasks.awawa"))
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.repository}/blocker: File exists")

@@ -23,6 +23,9 @@ class RequireAncestorTest(unittest.TestCase):
         # Arrange
         git = RecordingProcessRunner({IS_ANCESTOR_OF_HEAD: ProcessAnswer(exit_code=1)})
 
-        # Act / Assert
-        with self.assertRaises(CommandFailed):
+        # Act
+        with self.assertRaises(CommandFailed) as refusal:
             require_ancestor(git, Path("/srv/worktrees/b42"), "origin/main")
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "git merge-base --is-ancestor origin/main HEAD exited 1: ")

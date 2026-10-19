@@ -65,9 +65,12 @@ class InstallCronTest(unittest.TestCase):
         # Arrange
         runtime = create_runtime(ProcessAnswer(exit_code=1, stderr="crontab: permission denied\n"))
 
-        # Act / Assert
-        with self.assertRaises(CommandFailed):
+        # Act
+        with self.assertRaises(CommandFailed) as refusal:
             install(REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "crontab -l exited 1: crontab: permission denied")
 
 
 class ReadCronStatusTest(unittest.TestCase):

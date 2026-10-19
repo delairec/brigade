@@ -156,17 +156,23 @@ class PruneRunsLeftByAnEarlierPruneTest(PruneRunsTestCase):
         removed.mkdir(parents=True)
         (removed / OLDEST).symlink_to(self.runs / OLDEST, target_is_directory=True)
 
-        # Act / Assert
-        with self.assertRaises(CannotWrite):
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
             self.prune(10)
+
+        # Assert
+        self.assertIn(f"cannot write {removed}/{OLDEST}: ", str(refusal.exception))
 
     def test_should_refuse_a_removal_place_that_is_a_file(self):
         # Arrange
         (self.paths.state_root / "runs-removed").write_text("not a directory")
 
-        # Act / Assert
-        with self.assertRaises(CannotWrite):
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
             self.prune(0)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.paths.state_root}/runs-removed: File exists")
 
 
 class PruneRunsWithoutRunsTest(unittest.TestCase):
