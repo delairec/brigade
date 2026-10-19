@@ -144,3 +144,19 @@ class RunSegmentsInADisposableWorktreeTest(RunSegmentsTestCase):
                         ("git", "worktree", "remove", "--force", str(worktree)),
                     ],
                 )
+
+
+class RunSegmentsResumedFromItsProgressTest(RunSegmentsTestCase):
+    def test_should_run_a_next_segment_while_the_progress_file_holds_an_entry(self):
+        # Arrange
+        plan = create_run_plan(
+            self.root, client_adapter=ClientAnsweringOutcomesDouble(["handed_over", "done"]), handovers=1
+        )
+        plan.run_directory.mkdir(parents=True)
+        plan.progress_file.write_text("- the test is written\n")
+
+        # Act
+        records = run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual([(record.number, record.outcome) for record in records], [(1, "handed_over"), (2, "done")])

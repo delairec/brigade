@@ -205,9 +205,12 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
             prepare_tree(ArchivingGit("abc123", [README]), self.create_request("v1"))
 
     def test_should_refuse_an_archive_it_cannot_unpack(self):
+        # Arrange
+        file_under_a_file = ArchivingGit("abc123", [("a", b"x"), ("a/b", b"y")])
+
         # Act / Assert
         with self.assertRaises(CannotWrite):
-            prepare_tree(ArchivingGit("abc123", [("a", b"x"), ("a/b", b"y")]), self.create_request("v1"))
+            prepare_tree(file_under_a_file, self.create_request("v1"))
 
     def test_should_refuse_a_tree_place_a_file_holds(self):
         # Arrange
