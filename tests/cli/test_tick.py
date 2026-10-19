@@ -738,6 +738,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "pull_request": None,
                                     "worktree": None,
                                     "rate_limit": None,
+                                    "stopped_run": None,
                                 },
                                 {
                                     "task": "S4",
@@ -746,6 +747,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "pull_request": None,
                                     "worktree": None,
                                     "rate_limit": None,
+                                    "stopped_run": None,
                                 },
                                 {
                                     "task": "S5",
@@ -754,6 +756,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "pull_request": None,
                                     "worktree": None,
                                     "rate_limit": None,
+                                    "stopped_run": None,
                                 },
                                 {
                                     "task": "S6",
@@ -762,6 +765,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "pull_request": None,
                                     "worktree": None,
                                     "rate_limit": None,
+                                    "stopped_run": None,
                                 },
                             ],
                             "states": {"S3": "queued"},
@@ -1525,6 +1529,7 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                 },
                 "worktree": str(self.worktree),
                 "rate_limit": None,
+                "stopped_run": None,
             },
         )
 

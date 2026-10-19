@@ -101,7 +101,7 @@ def _plan_resumes(snapshot: Snapshot) -> tuple:
         if wave.pause is not None:
             actions.append(ResumeWave(wave=wave.wave, reason=QUOTA_REASON))
         actions.extend(
-            ResumeTaskRun(project=wave.project, wave=wave.wave, task=task.name)
+            ResumeTaskRun(wave=wave.wave, task=task.name, run=task.stopped_run)
             for task in wave.tasks
             if wave.states.get(task.name) == PAUSED_ON_QUOTA_STATE
         )

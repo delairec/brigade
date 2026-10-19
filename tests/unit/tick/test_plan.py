@@ -403,6 +403,8 @@ CAFE_WAVE = WaveFacts(request="cafe_1", project="cafe", milestone="M2", wave="ca
 CAFE = ProjectFacts(name="cafe", slots=4)
 RATE_LIMITED_UNTIL_15 = (TaskFacts(name="S3", rate_limit=RateLimit(reset=ResetHour(hour="15:00", timezone="UTC"))),)
 RATE_LIMITED_WITHOUT_RESET = (TaskFacts(name="S3", rate_limit=RateLimit(reset=None)),)
+STOPPED_RUN = "20261006T113000Z-a1b2c3"
+STOPPED_S3 = (TaskFacts(name="S3", stopped_run=STOPPED_RUN),)
 PAUSED_S3 = RecordTaskState(wave="shop_w1", task="S3", state="paused:quota", reason=None)
 QUOTA_UNTIL_13 = WavePause(reason="quota", resume_at=datetime(2026, 10, 6, 13, 0, tzinfo=UTC))
 QUOTA_UNTIL_12 = WavePause(reason="quota", resume_at=NOW)
@@ -465,7 +467,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
     def test_should_resume_a_wave_paused_on_the_quota_and_its_paused_runs_once_resume_at_is_reached(self):
         # Arrange
         wave = dataclasses.replace(
-            create_wave(ALONE + ALONE_S9, {"S3": "paused:quota", "S9": "running"}), pause=QUOTA_UNTIL_12
+            create_wave(STOPPED_S3 + ALONE_S9, {"S3": "paused:quota", "S9": "running"}), pause=QUOTA_UNTIL_12
         )
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
@@ -477,7 +479,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
             actions,
             (
                 ResumeWave(wave="shop_w1", reason="quota"),
-                ResumeTaskRun(project="shop", wave="shop_w1", task="S3"),
+                ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN),
             ),
         )
 
@@ -485,7 +487,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
         for case, pause in [("before resume_at", QUOTA_UNTIL_13), ("on the forge account", FORGE_ACCOUNT)]:
             with self.subTest(case=case):
                 # Arrange
-                wave = dataclasses.replace(create_wave(ALONE, {"S3": "paused:quota"}), pause=pause)
+                wave = dataclasses.replace(create_wave(STOPPED_S3, {"S3": "paused:quota"}), pause=pause)
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
@@ -496,13 +498,13 @@ class PlanQuotaResumeTest(unittest.TestCase):
 
     def test_should_resume_the_paused_runs_of_a_wave_the_user_resumed(self):
         # Arrange
-        snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {"S3": "paused:quota"}),), projects=(SHOP,))
+        snapshot = Snapshot(now=NOW, waves=(create_wave(STOPPED_S3, {"S3": "paused:quota"}),), projects=(SHOP,))
 
         # Act
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, (ResumeTaskRun(project="shop", wave="shop_w1", task="S3"),))
+        self.assertEqual(actions, (ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN),))
 
 
 class PlanForgeAccountPauseTest(unittest.TestCase):

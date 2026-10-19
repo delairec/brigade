@@ -51,6 +51,6 @@ class ResumeWave:
 
 @dataclass(frozen=True)
 class ResumeTaskRun:
-    project: str
     wave: str
     task: str
+    run: str

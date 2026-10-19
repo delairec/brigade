@@ -11,8 +11,6 @@ from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.read_ledger import read_ledger
-from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
@@ -94,19 +92,10 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
 
 
-def _read_last_task_run(runtime: Runtime, action: ResumeTaskRun) -> str:
-    return [
-        entry.event.run
-        for entry in read_ledger(runtime.paths.state_root).entries
-        if isinstance(entry.event, RunFinished) and entry.event.wave == action.wave and entry.event.task == action.task
-    ][-1]
-
-
 def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
-    run_id = _read_last_task_run(runtime, action)
     record = RunRecord.from_document(
         read_run_document(
-            runtime.paths.state_root / RUNS_DIRECTORY / run_id / RUN_RECORD_FILE, "run record", RUN_RECORD_SHAPE
+            runtime.paths.state_root / RUNS_DIRECTORY / action.run / RUN_RECORD_FILE, "run record", RUN_RECORD_SHAPE
         )
     )
     resuming = argparse.Namespace(

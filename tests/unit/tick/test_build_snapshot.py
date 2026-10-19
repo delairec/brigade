@@ -99,6 +99,7 @@ class SnapshotTest(unittest.TestCase):
                             "pull_request": None,
                             "worktree": None,
                             "rate_limit": {"reset": {"hour": "7pm", "timezone": "Europe/Paris"}},
+                            "stopped_run": None,
                         }
                     ],
                     "states": {},

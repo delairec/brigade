@@ -53,6 +53,7 @@ QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
 RUNNING_STATE = "running"
+PAUSED_ON_QUOTA_STATE = "paused:quota"
 RATE_LIMIT = "rate_limit"
 FORGE_ACCOUNT_REASON = "forge_account"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
@@ -74,6 +75,7 @@ class TaskFacts:
     pull_request: PullRequestFacts | None = None
     worktree: str | None = None
     rate_limit: RateLimit | None = None
+    stopped_run: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -83,6 +85,7 @@ class TaskFacts:
             "pull_request": None if self.pull_request is None else self.pull_request.to_document(),
             "worktree": self.worktree,
             "rate_limit": None if self.rate_limit is None else self.rate_limit.to_document(),
+            "stopped_run": self.stopped_run,
         }
 
 
@@ -245,12 +248,16 @@ def _read_wave_facts(runtime: Runtime, reading: WaveReading, request: dict) -> W
         return None
 
 
-def _read_rate_limit(reading: WaveReading, wave: str, task: str) -> RateLimit | None:
-    finished = [
+def _list_task_runs(reading: WaveReading, wave: str, task: str) -> list[RunFinished]:
+    return [
         event
         for event in reading.events
         if isinstance(event, RunFinished) and event.wave == wave and event.task == task
     ]
+
+
+def _read_rate_limit(reading: WaveReading, wave: str, task: str) -> RateLimit | None:
+    finished = _list_task_runs(reading, wave, task)
     if not finished or finished[-1].error_class != RATE_LIMIT or finished[-1].run in reading.live_runs:
         return None
     return RateLimit(reset=finished[-1].reset)
@@ -270,7 +277,9 @@ def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...], wave: str) -
     return bool(unavailable) and max(unavailable) > max(cleared, default=BEFORE_ANY_EVENT)
 
 
-def _note_rate_limit(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
+def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
+    if states.get(task.name) == PAUSED_ON_QUOTA_STATE:
+        return dataclasses.replace(task, stopped_run=_list_task_runs(reading, wave, task.name)[-1].run)
     if states.get(task.name) != RUNNING_STATE:
         return task
     return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
@@ -294,7 +303,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, w
         wave=wave,
         branch=request["branch"],
         tasks=tuple(
-            _note_rate_limit(_follow_task(_read_task_facts(runtime, tree.root, task), followed), reading, wave, states)
+            _note_quota(_follow_task(_read_task_facts(runtime, tree.root, task), followed), reading, wave, states)
             for task in tasks
         ),
         states=states,
