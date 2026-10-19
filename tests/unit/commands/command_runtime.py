@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -10,6 +11,13 @@ from brigade.system.trail_writer import TrailWriter
 NOW = datetime(2026, 10, 19, 9, 0, 0, tzinfo=UTC)
 NO_PATH_NEEDED = ""
 ENTITY_NOT_SHOWN = 1
+
+
+@dataclass(frozen=True)
+class ProcessAnswer:
+    stdout: str = ""
+    exit_code: int = 0
+    stderr: str = ""
 
 
 def _report_nothing(trace) -> None:
@@ -31,6 +39,7 @@ def create_runtime(
     spawn_process=refuse_process,
     resolve_plugin=refuse_resolution,
     run_directory: Path | None = None,
+    executable_search_path: str = NO_PATH_NEEDED,
 ) -> Runtime:
     return Runtime(
         run_process=run_process,
@@ -40,7 +49,7 @@ def create_runtime(
             state_root=root / "state",
             cache_root=root / "cache",
             home=root / "home",
-            executable_search_path=NO_PATH_NEEDED,
+            executable_search_path=executable_search_path,
             run_directory=run_directory,
         ),
         now=NOW,
@@ -55,6 +64,23 @@ def answer(request: ProcessRequest, stdout: str, exit_code: int = 0, stderr: str
     return ProcessRecord(
         argv=request.argv, cwd=request.cwd, exit_code=exit_code, stdout=stdout, stderr=stderr, duration_ms=0
     )
+
+
+class ScriptedProcessRunner:
+    def __init__(self, answers: dict, fallback=refuse_process):
+        self.answers = answers
+        self.fallback = fallback
+        self.argvs = []
+
+    def run(self, request: ProcessRequest) -> ProcessRecord:
+        self.argvs.append(request.argv)
+        prefixes = [prefix for prefix in self.answers if request.argv[: len(prefix)] == prefix]
+        if not prefixes:
+            return self.fallback(request)
+        scripted = self.answers[max(prefixes, key=len)]
+        if isinstance(scripted, Exception):
+            raise scripted
+        return answer(request, scripted.stdout, scripted.exit_code, scripted.stderr)
 
 
 def answer_from_corpus(entities: dict, request: ProcessRequest) -> ProcessRecord:
@@ -75,15 +101,9 @@ def create_corpus_double(entities: dict):
     return lambda request: answer_from_corpus(entities, request)
 
 
-def answer_from_machine(entities: dict, outputs: dict, request: ProcessRequest) -> ProcessRecord:
-    matching = [prefix for prefix in outputs if request.argv[: len(prefix)] == prefix]
-    if not matching:
-        return answer_from_corpus(entities, request)
-    return answer(request, outputs[max(matching, key=len)])
-
-
 def create_machine_double(entities: dict, outputs: dict):
-    return lambda request: answer_from_machine(entities, outputs, request)
+    answers = {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in outputs.items()}
+    return ScriptedProcessRunner(answers, fallback=create_corpus_double(entities)).run
 
 
 def write_operational_corpus(root: Path) -> None:

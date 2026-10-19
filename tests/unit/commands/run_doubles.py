@@ -2,6 +2,7 @@ import os
 from types import SimpleNamespace
 
 from brigade.adapters.documents import markdown
+from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 STEP_COUNTING_PROBE = {
     "schema_version": 1,
@@ -15,17 +16,14 @@ CLOCK_PROBE = {**STEP_COUNTING_PROBE, "features": []}
 CLIENT_AND_DOCUMENT_CONFIGURATION = 'client = "double"\ndocument = "markdown"\n'
 
 
-class ProbedClientDouble:
-    def __init__(self, probe: dict):
-        self.probe = probe
-
-    def answer(self, operation: str, request: dict) -> dict:
-        return self.probe
-
-
 def create_plugin_resolution(probe: dict, forge=None):
-    plugins = {"client": ProbedClientDouble(probe), "document": markdown, "forge": forge or SimpleNamespace()}
-    return lambda kind, name, **places: plugins[kind]
+    return create_plugin_resolver(
+        {
+            ("client", "double"): ScriptedClient({"probe": probe}),
+            ("document", "markdown"): markdown,
+            ("forge", "github"): forge or SimpleNamespace(),
+        }
+    )
 
 
 def spawn_as_this_process(request):

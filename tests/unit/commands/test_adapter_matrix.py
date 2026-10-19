@@ -5,8 +5,8 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.commands.adapter_matrix import adapter_matrix
-from brigade.errors import ToolFailure
+from brigade.commands.adapter_matrix import COMMAND, adapter_matrix
+from brigade.errors import ToolFailure, UsageError
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
@@ -139,3 +139,114 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
                 "error": f"{self.executable} probe timed out after 30 s",
             },
         )
+
+
+MATRIX = {
+    "schema_version": 1,
+    "adapters": [
+        {
+            "name": "claude-code",
+            "audience": "supported_client",
+            "capabilities": {
+                "launch": "full",
+                "result": "full",
+                "resume": "full",
+                "transcripts": "full",
+                "actions": "full",
+                "step_count": "full",
+                "tool_grants": "full",
+                "reset_hour": "full",
+                "graceful_stop": "fallback",
+            },
+            "error": None,
+        },
+        {"name": "broken", "audience": "test_suite", "capabilities": None, "error": "no JSON | answer"},
+    ],
+    "fallbacks": {
+        "resume": "a fresh launch from the progress file",
+        "graceful_stop": "the hard cut at the wall-time limit",
+    },
+}
+
+
+class AdapterMatrixTextTest(unittest.TestCase):
+    def test_should_print_the_grades_of_each_adapter_its_error_and_the_fallbacks(self):
+        # Act
+        text = COMMAND.render_text(MATRIX)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "adapter      audience          launch  result  resume  transcripts  actions  step count  tool grants"
+            "  reset hour  graceful stop\n"
+            "claude-code  supported client  full    full    full    full         full     full        full       "
+            "  full        fallback\n"
+            "broken       test suite        error: no JSON | answer\n"
+            "\n"
+            "fallbacks\n"
+            "  no resume         a fresh launch from the progress file\n"
+            "  no graceful stop  the hard cut at the wall-time limit",
+        )
+
+
+class AdapterMatrixMarkdownTest(unittest.TestCase):
+    def test_should_print_one_table_per_audience_with_the_error_cell_escaped(self):
+        # Act
+        markdown = COMMAND.render_markdown(MATRIX)
+
+        # Assert
+        self.assertEqual(
+            markdown,
+            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants"
+            " | Reset hour | Graceful stop |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| claude-code | full | full | full | full | full | full | full | full | fallback |\n"
+            "\n"
+            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants"
+            " | Reset hour | Graceful stop |\n"
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+            "| broken | error: no JSON \\| answer |  |  |  |  |  |  |  |  |\n"
+            "\n"
+            "Fallbacks:\n"
+            "\n"
+            "- no resume: a fresh launch from the progress file\n"
+            "- no graceful stop: the hard cut at the wall-time limit",
+        )
+
+
+class AdapterMatrixRequestTest(unittest.TestCase):
+    def test_should_refuse_markdown_and_json_together(self):
+        # Arrange
+        options = argparse.Namespace(markdown=True, json=True)
+
+        # Act
+        with self.assertRaises(UsageError) as refusal:
+            COMMAND.read_request(options)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "--markdown and --json exclude each other")
+
+    def test_should_take_markdown_alone(self):
+        # Arrange
+        options = argparse.Namespace(markdown=True, json=False)
+
+        # Act
+        request = COMMAND.read_request(options)
+
+        # Assert
+        self.assertEqual(request, argparse.Namespace(markdown=True, json=False))
+
+
+class AdapterMatrixExitCodeTest(unittest.TestCase):
+    def test_should_exit_1_when_an_adapter_failed_its_probe_and_0_otherwise(self):
+        # Arrange
+        rows = [("broken", "no JSON", 1), ("bare", None, 0)]
+        for name, error, expected in rows:
+            with self.subTest(error=error):
+                document = {"adapters": [{"name": name, "audience": "test_suite", "error": error}]}
+
+                # Act
+                exit_code = COMMAND.decide_exit_code(document)
+
+                # Assert
+                self.assertEqual(exit_code, expected)
