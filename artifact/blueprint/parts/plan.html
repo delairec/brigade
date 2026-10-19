@@ -217,7 +217,7 @@ brigade/                      <span class="dim"># the tool's repository, cloned 
     ledger/  registry/  roles/  runs/  tick/  …   <span class="dim"># one subpackage per component, created by its first task, never ahead of it</span>
     &lt;component&gt;/data/         <span class="dim"># what the component ships: roles/data/*.md, corpus/data/schema.awawa.tpl and config.toml.tpl,</span>
                               <span class="dim">#   adapters/schedulers/data/brigade.service.tpl brigade.timer.tpl crontab-line.tpl, later procedures, recipes, the dashboard page</span>
-  tests/cli  tests/unit  tests/integration  tests/guards   <span class="dim"># acceptance as subprocesses; pure functions; the gateways on real git and awawa; the import graph, the environment reads, the README table</span>
+  tests/cli  tests/unit  tests/integration  tests/guards   <span class="dim"># a few smoke tests as subprocesses; the behaviour, case by case; the gateways on real git and awawa; the import graph, the environment reads, the README table</span>
   build.py  dist/brigade.pyz  <span class="dim"># the one-file build with the zipapp module: python3 dist/brigade.pyz</span>
 
 <span class="dim"># the brigade's own corpus: durable, ratified facts; a git repository, one commit per ratification</span>
