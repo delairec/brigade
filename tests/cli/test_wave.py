@@ -2,14 +2,12 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 
-RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 REQUEST_TEXT = "let the customer empty the cart in one click"
 PROJECT_SCHEMA = (
     "SCHEMA TASK\n"
@@ -44,21 +42,6 @@ WAVE_TASKS = (
     "\tSTATUS implemented\n"
     "\tMILESTONE @MILESTONE.M1\n"
     "\tDELIVERED_BY 12\n"
-)
-UNORDERED_WAVE_TASKS = (
-    "TASK S2\n"
-    '\tTITLE "Remove an item from the cart"\n'
-    "\tSTATUS implemented\n"
-    "\n"
-    "TASK S10\n"
-    '\tTITLE "Show the emptied cart"\n'
-    "\tSTATUS todo\n"
-    "\tMILESTONE @MILESTONE.M1\n"
-    "\n"
-    "TASK S9\n"
-    '\tTITLE "Empty the cart in one click"\n'
-    "\tSTATUS todo\n"
-    "\tMILESTONE @MILESTONE.M1\n"
 )
 WAVE_MILESTONES = 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS planned\n'
 WAVE_BRANCH = "integration/M1-empty-cart"
@@ -118,12 +101,6 @@ WAVE_EVENTS = (
     ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
 )
-EARLIER_WAVES = (
-    '{"schema_version": 2, "ts": "2026-10-10T09:00:00Z", "event": "wave.started", "wave": "shop_w2",'
-    ' "project": "shop", "branch": "integration/M0-cart", "tasks": ["S2"]}\n'
-    '{"schema_version": 2, "ts": "2026-10-11T09:00:00Z", "event": "wave.started", "wave": "cafe_w5",'
-    ' "project": "cafe", "branch": "integration/M3-receipt", "tasks": ["C4"]}\n'
-)
 ASKING_POLICY = "POLICY shop_review\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
 
 
@@ -154,9 +131,6 @@ class WaveTestCase(FileWaitingTestCase):
     def write_requests(self, requests: str) -> None:
         (self.machine.corpus / "requests.awawa").write_text(requests)
 
-    def read_requests(self) -> str:
-        return (self.machine.corpus / "requests.awawa").read_text()
-
     def read_events(self, name: str) -> list:
         lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
         return [event for event in map(json.loads, lines) if event["event"] == name]
@@ -168,99 +142,6 @@ class WaveTestCase(FileWaitingTestCase):
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the plan of M1")
         self.project.run_git("checkout", "--quiet", "main")
-
-    def wait_for_result(self, run_id: str) -> None:
-        self.wait_for_file(self.runs / run_id / "result.json")
-
-
-class BrigadeWaveStartTest(WaveTestCase):
-    def setUp(self):
-        super().setUp()
-        self.cut_wave_branch(UNORDERED_WAVE_TASKS)
-
-    def test_should_move_a_planned_request_to_running(self):
-        # Arrange
-        self.write_requests(PLANNED_REQUEST)
-
-        # Act
-        completed = self.run_wave("start", "shop_1", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout),
-            {
-                "schema_version": 1,
-                "request": "shop_1",
-                "status": "running",
-                "wave": "shop_w1",
-                "milestone": "M1",
-                "project": "shop",
-            },
-        )
-        self.assertEqual(self.read_requests(), PLANNED_REQUEST.replace("STATUS planned", "STATUS running"))
-
-    def test_should_record_the_start_of_the_wave_in_the_ledger(self):
-        # Arrange
-        self.write_requests(PLANNED_REQUEST)
-
-        # Act
-        self.run_wave("start", "shop_1")
-
-        # Assert
-        self.assertEqual(
-            self.read_events("wave.started"),
-            [
-                {
-                    "schema_version": 2,
-                    "ts": ANY,
-                    "event": "wave.started",
-                    "wave": "shop_w1",
-                    "project": "shop",
-                    "branch": WAVE_BRANCH,
-                    "tasks": ["S9", "S10"],
-                }
-            ],
-        )
-
-    def test_should_number_the_wave_one_above_the_highest_wave_of_its_project(self):
-        # Arrange
-        self.write_requests(PLANNED_REQUEST)
-        self.ledger.mkdir(parents=True)
-        (self.ledger / "2026-10.jsonl").write_text(EARLIER_WAVES)
-
-        # Act
-        completed = self.run_wave("start", "shop_1", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["wave"], "shop_w3")
-
-    def test_should_print_the_start_as_text(self):
-        # Arrange
-        self.write_requests(PLANNED_REQUEST)
-
-        # Act
-        completed = self.run_wave("start", "shop_1")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "@REQUEST.shop_1 running, wave shop_w1, @MILESTONE.M1 of @PROJECT.shop\n")
-
-    def test_should_exit_1_naming_the_status_of_a_request_that_is_not_planned(self):
-        # Arrange
-        self.write_requests(PLANNING_REQUEST)
-
-        # Act
-        completed = self.run_wave("start", "shop_2")
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade wave start: @REQUEST.shop_2 is planning, not planned\n"),
-        )
-        self.assertEqual(self.read_requests(), PLANNING_REQUEST)
-        self.assertEqual(self.read_events("wave.started"), [])
 
 
 class BrigadeWaveShowTest(WaveTestCase):
@@ -539,7 +420,6 @@ class BrigadeWaveBeforeInitTest(unittest.TestCase):
 
     def test_should_exit_1_naming_brigade_init(self):
         for arguments, expected_stderr in [
-            (("start", "shop_1"), "brigade wave start: the operational corpus is missing; run brigade init first\n"),
             (("show", "shop_1"), "brigade wave show: the operational corpus is missing; run brigade init first\n"),
             (("list",), "brigade wave list: the operational corpus is missing; run brigade init first\n"),
         ]:
