@@ -10,9 +10,16 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, ResolvedRole, RoleBindings, resolve_role
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_handovers import read_handovers
+from brigade.runs.read_run_finished import read_run_finished
 from brigade.runs.read_run_setting import RunSetting
 from brigade.runs.resolve_procedure import Procedure, ProcedureDirectories, resolve_procedure
-from brigade.runs.run_locations import DISPOSABLE_WORKTREE_DIRECTORY, PROGRESS_STEM, RUNS_DIRECTORY
+from brigade.runs.run_locations import (
+    DISPOSABLE_WORKTREE_DIRECTORY,
+    PROGRESS_STEM,
+    RESULT_FILE,
+    RUNS_DIRECTORY,
+    SEGMENTS_DIRECTORY,
+)
 from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
@@ -25,6 +32,8 @@ STEP_COUNT_FEATURE = "step_count"
 TOOL_GRANTS_FEATURE = "tool_grants"
 ACTIONS_OPERATION = "actions"
 TRANSCRIPTS_OPERATION = "transcripts"
+RESUME_OPERATION = "resume"
+FIRST_SEGMENT = 1
 WRITE_CAPABILITY = "write"
 CAPABILITY_SEPARATOR = ","
 BINDING_SEPARATOR = "="
@@ -44,6 +53,7 @@ class RunRequest:
     run_id: str | None
     wave: str | None
     task: str | None
+    resume: bool = False
 
 
 @dataclass(frozen=True)
@@ -74,6 +84,9 @@ class RunPlan:
     reads_transcripts: bool
     handovers: int
     warnings: tuple[str, ...]
+    resumed: bool = False
+    first_segment: int = FIRST_SEGMENT
+    resumed_session: str | None = None
     forge_environment: dict = field(default_factory=dict, repr=False)
 
 
@@ -148,6 +161,15 @@ def _describe_clock_warning(client: str, budget: int, wall_limit_s: float) -> st
     )
 
 
+def _count_segments(run_directory: Path) -> int:
+    return sum(1 for segment in (run_directory / SEGMENTS_DIRECTORY).iterdir() if segment.is_dir())
+
+
+def _read_session(run_directory: Path, segment: int) -> str | None:
+    path = run_directory / SEGMENTS_DIRECTORY / str(segment) / RESULT_FILE
+    return read_run_finished(path, "segment result").session
+
+
 def plan_run(request: RunRequest, setting: RunSetting, client_adapter, document, runtime: Runtime) -> RunPlan:
     configuration = setting.configuration
     project = setting.project
@@ -194,5 +216,12 @@ def plan_run(request: RunRequest, setting: RunSetting, client_adapter, document,
         reads_actions=ACTIONS_OPERATION in probe.operations,
         reads_transcripts=TRANSCRIPTS_OPERATION in probe.operations,
         handovers=read_handovers(runtime, request.project),
+        resumed=request.resume,
+        first_segment=_count_segments(run_directory) + 1 if request.resume else FIRST_SEGMENT,
+        resumed_session=(
+            _read_session(run_directory, _count_segments(run_directory))
+            if request.resume and RESUME_OPERATION in probe.operations
+            else None
+        ),
         warnings=warnings,
     )

@@ -3218,3 +3218,38 @@ DECISION PrListReadsEveryPullRequestAfreshAndIsAbsentOnlyAsABuiltIn
 	SOURCE "the user's ruling of 2026-10-18 in the review of pull request #155 of the brigade"
 		+ "repository, « GraphQL paginé, sans borne »: the bound of 1000 rejected"
 		REF @TASK.B146
+
+DECISION ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
+	TITLE "a run.finished of any run on rate_limit pauses every running wave until its reset, and a"
+		+ "pause in force binds the waves started during it"
+	STATUS active
+	DESC "a rate limit is in force from a run.finished on the error_class rate_limit, of any run of"
+		+ "the machine, until the reset it names read from the instant of that run.finished, or 30"
+		+ "minutes after it when reset is null, once no live run holds it"
+	DESC "a running wave with no pause is paused on the quota while a running wave is paused on the"
+		+ "quota with a resume_at not reached, with the latest such resume_at; otherwise while a"
+		+ "rate limit is in force, with the resume_at SPEC 1 of @TASK.B19 sets"
+		REF @TASK.B19
+	DESC "a running task moves to paused:quota when its last run.finished, keyed by its wave and"
+		+ "its task, ends on rate_limit and no live run holds it"
+	DESC "a wave started after forge_account.unavailable is paused on the forge account like the"
+		+ "waves running then: only brigade wave resume lifts that pause"
+	REJECTED "the build run of a running task of a running wave alone: the user ruled that any run"
+		+ "on rate_limit pauses the waves, a study run or a run launched by hand included"
+	REJECTED "every run.finished on rate_limit the ledger holds: a rate limit whose reset has"
+		+ "passed, one recorded before the waves paused included, would pause every wave started"
+		+ "later"
+	REJECTED "the reset of a rate limit read from the tick's clock: the rate limit would stay in"
+		+ "force at every tick and pause the waves again after each resume"
+	REJECTED "a wave started during a quota pause left running: the user ruled that it is paused"
+		+ "with the same resume_at, one client serving every project of the machine"
+	REJECTED "a wave.started after forge_account.unavailable clearing the pause of that wave: the"
+		+ "user ruled the clause out, the account being as unavailable as before"
+	REJECTED "the last run.finished of the task whatever its state: a task past its build run, its"
+		+ "pull request open or merged, would move back to paused:quota"
+	RATIONALE "@TASK.B164 keys every run.finished by its wave and its task, so the run a rate limit"
+		+ "stopped is found without reading run.json"
+		REF @TASK.B164
+	SOURCE "pull request #156 of the brigade repository, delivering @TASK.B19, and the user's"
+		+ "rulings of 2026-10-19 on its review: \"(1) B (2) B (3) B\""
+		REF @TASK.B19

@@ -14,6 +14,8 @@ from brigade.ledger.step_failed import StepFailed
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.ledger.write_event_line import write_event_line
 from brigade.system.hold_lock import hold_lock
@@ -36,7 +38,9 @@ def append_event(
     | OrderDone
     | TaskPrOpened
     | MilestoneCreated
-    | TaskPromoted,
+    | TaskPromoted
+    | WavePaused
+    | WaveResumed,
 ) -> dict:
     with hold_lock(paths.lock_directory / LOCK_FILE):
         return write_event_line(paths, instant, event)

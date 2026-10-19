@@ -12,6 +12,11 @@ from brigade.errors import StandingDown, UsageError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_resumed import WaveResumed
+from brigade.runs.read_run_document import read_run_document
+from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
+from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
 from brigade.runtime import Runtime
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
@@ -25,7 +30,16 @@ from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
-from brigade.tick.actions import LaunchStudy, LaunchTask, RecordTaskState, RemoveTaskWorktree, StartWave
+from brigade.tick.actions import (
+    LaunchStudy,
+    LaunchTask,
+    PauseWave,
+    RecordTaskState,
+    RemoveTaskWorktree,
+    ResumeTaskRun,
+    ResumeWave,
+    StartWave,
+)
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
 from brigade.tick.heartbeat import Heartbeat
@@ -72,8 +86,32 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         wave=action.wave,
         task=action.task,
         detach=True,
+        resume=False,
     )
     run(building, runtime)
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
+
+
+def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
+    record = RunRecord.from_document(
+        read_run_document(
+            runtime.paths.state_root / RUNS_DIRECTORY / action.run / RUN_RECORD_FILE, "run record", RUN_RECORD_SHAPE
+        )
+    )
+    resuming = argparse.Namespace(
+        procedure=record.procedure_path,
+        slot=record.slot,
+        project=record.project,
+        cwd=record.cwd,
+        brief=record.brief,
+        arguments=tuple(f"{key}={value}" for key, value in record.arguments.items()),
+        run_id=record.run,
+        wave=record.wave,
+        task=record.task,
+        detach=True,
+        resume=True,
+    )
+    run(resuming, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
 
 
@@ -97,6 +135,15 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
+        PauseWave: lambda action: append_event(
+            runtime.paths,
+            runtime.now,
+            WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at),
+        ),
+        ResumeWave: lambda action: append_event(
+            runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
+        ),
+        ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
     }
 
 

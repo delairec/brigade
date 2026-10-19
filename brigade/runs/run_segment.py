@@ -29,6 +29,7 @@ from brigade.system.parse_result_request import ParseResultRequest
 from brigade.system.paths import RUN_DIRECTORY_VARIABLE
 from brigade.system.process_trace import CUT, EXITED, STOPPED, ProcessTrace
 from brigade.system.reset_hour import ResetHour
+from brigade.system.resume_argv_request import ResumeArgvRequest
 from brigade.system.spawn_process import SpawnRequest
 from brigade.system.stop_process_group import stop_process_group
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
@@ -96,7 +97,11 @@ def _describe_role(plan: RunPlan) -> ClientRole:
     )
 
 
-def _ask_client(plan: RunPlan, runtime: Runtime, request: LaunchArgvRequest | ParseResultRequest | TranscriptsRequest):
+def _ask_client(
+    plan: RunPlan,
+    runtime: Runtime,
+    request: LaunchArgvRequest | ResumeArgvRequest | ParseResultRequest | TranscriptsRequest,
+):
     return ask_named_client(plan.client_adapter, ClientQuestion(plan.client, request), plan.configuration, runtime)
 
 
@@ -152,6 +157,19 @@ def _record_ending_before_launch(number: int, outcome: str, message: str, sessio
     return _describe_ending(number, outcome, message, session_id, NOT_MEASURED_MS)
 
 
+def _describe_launch(plan: RunPlan, number: int, runtime: Runtime, brief: str) -> LaunchArgvRequest | ResumeArgvRequest:
+    resumes_session = number == plan.first_segment and plan.resumed_session is not None
+    request = ResumeArgvRequest if resumes_session else LaunchArgvRequest
+    return request(
+        worktree=str(plan.worktree),
+        brief=brief,
+        role=_describe_role(plan),
+        progress_file=str(plan.progress_file),
+        session_id=plan.resumed_session if resumes_session else str(uuid.uuid4()),
+        stop_at=decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s),
+    )
+
+
 def _wait_for_client(process, limit: WallLimit, on_poll, stop: StopSignalReceiver) -> tuple[int | None, str]:
     try:
         with stop.raising():
@@ -172,14 +190,7 @@ def _run_process(
         launch = _ask_client(
             plan,
             runtime,
-            LaunchArgvRequest(
-                worktree=str(plan.worktree),
-                brief=brief,
-                role=_describe_role(plan),
-                progress_file=progress_file,
-                session_id=str(uuid.uuid4()),
-                stop_at=decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s),
-            ),
+            _describe_launch(plan, number, runtime, brief),
         )
     except BrigadeError as error:
         record = _record_ending_before_launch(number, FAILED_OUTCOME, str(error), None)

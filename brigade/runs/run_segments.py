@@ -73,7 +73,7 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
     records = []
     instant = runtime.now
     while True:
-        record = run_segment(plan, len(records) + 1, runtime, stop)
+        record = run_segment(plan, plan.first_segment + len(records), runtime, stop)
         records.append(record)
         instant += timedelta(milliseconds=record.measured_ms)
         finished = describe_finished(plan, record)

@@ -24,6 +24,7 @@ def judge_evidence(context: StudyRunContext) -> dict:
         wave=None,
         task=None,
         detach=False,
+        resume=False,
     )
     launched = run(judging, context.runtime)
     if not (context.run_directory / ANSWER_FILE).is_file():

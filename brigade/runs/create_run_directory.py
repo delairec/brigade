@@ -1,10 +1,11 @@
 import os
+from pathlib import Path
 
 from brigade.roles.render_role_file import render_role_file
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.record_run_pid import record_run_pid
-from brigade.runs.run_locations import ROLE_FILE, RUN_RECORD_FILE
+from brigade.runs.run_locations import RESULT_FILE, ROLE_FILE, RUN_RECORD_FILE
 from brigade.runs.run_record import RunRecord
 from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
@@ -30,10 +31,19 @@ def _describe_run(plan: RunPlan) -> RunRecord:
         arguments=plan.arguments,
         wave=plan.wave,
         task=plan.task,
+        brief=None if plan.brief_path is None else str(plan.brief_path),
     )
 
 
+def _reopen_run_directory(plan: RunPlan) -> None:
+    Path(plan.run_directory / RESULT_FILE).unlink(missing_ok=True)
+    record_run_pid(plan.run_directory, os.getpid())
+
+
 def create_run_directory(plan: RunPlan, runtime: Runtime) -> None:
+    if plan.resumed:
+        _reopen_run_directory(plan)
+        return
     create_directory(plan.run_directory)
     write_json_atomically(plan.run_directory / RUN_RECORD_FILE, _describe_run(plan).to_document())
     record_run_pid(plan.run_directory, os.getpid())

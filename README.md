@@ -85,6 +85,7 @@ brigade wave new <project> <text>
 brigade wave start <request>
 brigade wave show <request>
 brigade wave list [--project P]
+brigade wave resume [<request>]
 ```
 
 `wave new` records the request as `<project>_<n>`, `n` one above the highest its project holds, with the UTC instant
@@ -99,6 +100,10 @@ its milestone read from its branch, each with the last `task.state` of the ledge
 project naming the task, blank when none, and the pull request that delivered it; a request of a project that declares no corpus exits 1. `wave show` and `wave list` print the wave name of a started request, `-` for one that did not start.
 `wave list` prints one row per request, those of one project with `--project`. Every write
 goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
+
+`wave resume` records `wave.resumed` for the wave of the request named, whatever the reason of its pause, or, without
+one, for every wave paused on the forge account, the tick resuming by itself a wave paused on the quota; it prints each
+wave it resumed, and a request whose wave is not paused exits 1 naming its state.
 
 ## Tasks
 
@@ -201,6 +206,16 @@ read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `
 worktree is removed once its pull request is merged or closed, never while a run holds it. A running REQUEST that no
 `wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
 the waves of the others.
+
+Any run that finished on the `error_class` `rate_limit`, until its `reset` has passed, pauses every running wave of the
+machine: `wave.paused` with the reason `quota` and `resume_at` the first instant after the tick's clock at the hour and
+in the timezone of the result's `reset`, or that clock plus 30 minutes when `reset` is null, and the task of a build
+run moves to `paused:quota`. A wave started during a quota pause is paused until the same `resume_at`. A
+`forge_account.unavailable` of the ledger pauses every running wave, those started after it included, with the reason
+`forge_account` and no `resume_at`, until `brigade wave resume`. The tick launches no run of a paused wave. The first tick past
+`resume_at` records `wave.resumed` for the wave and resumes the run of each `paused:quota` task as its next segment,
+through `resume-argv` with the session of its last segment, or as a fresh launch from its progress file when the
+client adapter declares no resume, and moves the task back to `running`.
 
 ```
 brigade tick --once       # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock

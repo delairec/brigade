@@ -10,7 +10,20 @@ def _repeat_options(plan: RunPlan) -> tuple[str, ...]:
     brief = ("--brief", str(plan.brief_path)) if plan.brief_path is not None else ()
     wave = ("--wave", plan.wave) if plan.wave is not None else ()
     task = ("--task", plan.task) if plan.task is not None else ()
-    return ("--slot", plan.slot, "--cwd", str(plan.cwd), *project, *brief, *wave, *task, "--run-id", plan.run_id)
+    resume = ("--resume",) if plan.resumed else ()
+    return (
+        "--slot",
+        plan.slot,
+        "--cwd",
+        str(plan.cwd),
+        *project,
+        *brief,
+        *wave,
+        *task,
+        "--run-id",
+        plan.run_id,
+        *resume,
+    )
 
 
 def detach_run(plan: RunPlan, runtime: Runtime) -> int:

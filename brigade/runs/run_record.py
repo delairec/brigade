@@ -22,6 +22,7 @@ RUN_RECORD_SHAPE = {
     "arguments": Field(kinds=(dict,)),
     "wave": Field(kinds=(str,), nullable=True),
     "task": Field(kinds=(str,), nullable=True),
+    "brief": Field(kinds=(str,), nullable=True),
 }
 
 
@@ -43,6 +44,7 @@ class RunRecord:
     arguments: dict
     wave: str | None
     task: str | None
+    brief: str | None = None
 
     @classmethod
     def from_document(cls, document: dict) -> "RunRecord":
@@ -63,6 +65,7 @@ class RunRecord:
             arguments=document["arguments"],
             wave=document["wave"],
             task=document["task"],
+            brief=document["brief"],
         )
 
     def to_document(self) -> dict:
@@ -84,4 +87,5 @@ class RunRecord:
             "arguments": self.arguments,
             "wave": self.wave,
             "task": self.task,
+            "brief": self.brief,
         }

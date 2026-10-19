@@ -26,6 +26,7 @@ TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 RESUMED_RECORDING_SUFFIX = ".resumed.json"
 RESUMED_BRIEF_OPENING = f"# {PROGRESS_SECTION}\n"
 ATTRIBUTION_SETTING = "attribution"
+RESUME_OPERATION = "resume"
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
@@ -127,6 +128,8 @@ def answer(operation: str, request: dict) -> dict:
     if operation == "probe":
         return _probe(request)
     if operation == "launch-argv":
+        return _build_launch(request)
+    if operation == "resume-argv" and RESUME_OPERATION in _read_list_setting(request, "operations"):
         return _build_launch(request)
     if operation == "parse-result":
         return _replay_result(request)

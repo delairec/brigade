@@ -27,6 +27,7 @@ RUN_RECORD = {
     "arguments": {},
     "wave": None,
     "task": None,
+    "brief": None,
 }
 RUN_RECORD_WITHOUT_CLIENT = {
     "schema_version": 1,
@@ -45,6 +46,7 @@ RUN_RECORD_WITHOUT_CLIENT = {
     "arguments": {},
     "wave": None,
     "task": None,
+    "brief": None,
 }
 ANOTHER_START_TIME = 1
 ANOTHER_BOOT_ID = "0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f"

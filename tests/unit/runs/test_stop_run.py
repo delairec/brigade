@@ -28,6 +28,7 @@ RUN_RECORD = {
     "arguments": {},
     "wave": None,
     "task": None,
+    "brief": None,
 }
 
 

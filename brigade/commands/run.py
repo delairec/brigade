@@ -31,6 +31,7 @@ def _read_run_request(request) -> RunRequest:
         run_id=request.run_id,
         wave=request.wave,
         task=request.task,
+        resume=request.resume,
     )
 
 
@@ -130,6 +131,7 @@ COMMAND = Command(
         Argument(("--task",), {"help": "the task of the wave the run delivers"}),
         Argument(("--detach",), {"action": "store_true", "help": "run in the background and print the run id"}),
         Argument(("--run-id",), {"help": argparse.SUPPRESS}),
+        Argument(("--resume",), {"action": "store_true", "help": argparse.SUPPRESS}),
     ),
     run=run,
     read_request=_read_request,
