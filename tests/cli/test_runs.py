@@ -25,6 +25,9 @@ LONGER_THAN_THE_DEFAULT_POLL_S = 3
 BLANK_LINE = "\n"
 END_OF_OUTPUT = ""
 ANOTHER_START_TIME = 1
+PROCESS_ENDING_ON_THE_STOP_SIGNAL_WITH_NO_RESULT = (
+    "import signal, sys; signal.signal(signal.SIGTERM, lambda _received, _frame: sys.exit(1)); signal.pause()"
+)
 RESULT_OF_SCHEMA_1 = (
     '{"schema_version": 1, "outcome": "done", "steps": null, "usage": null, "session_id": "fake-session",'
     ' "duration_ms": 700183, "error_class": null, "reset": null, "message": "the client finished the task"}'
@@ -759,7 +762,13 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         # Arrange
         run_id = self.run_deliver_to_its_end()
         orphan = ProcessLauncher.run(
-            ["sh", "-c", "sleep 120 >/dev/null 2>&1 & echo $!"],
+            [
+                "sh",
+                "-c",
+                '"$0" -c "$1" >/dev/null 2>&1 & echo $!',
+                sys.executable,
+                PROCESS_ENDING_ON_THE_STOP_SIGNAL_WITH_NO_RESULT,
+            ],
             capture_output=True,
             text=True,
             check=True,
