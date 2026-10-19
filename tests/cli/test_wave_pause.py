@@ -45,6 +45,15 @@ PAUSED_ON_THE_FORGE_ACCOUNT = (
 )
 RESUME_AT_15 = r"^\d{4}-\d{2}-\d{2}T15:00:00Z$"
 TASK_BRIEF = "Deliver S3 behind the feature flag of the shop.\n"
+MERGED_S3_STOPPED_BY_A_RATE_LIMIT_LONG_AGO = (
+    '{"schema_version": 2, "ts": "2026-10-13T08:00:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
+    ' "run": "20261013T073000Z-a00002", "client": "fake", "project": "shop", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": 1, "nulls": {},'
+    ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
+    ' "error_class": "rate_limit", "main_steps": 50, "total_steps": null}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
+    ' "state": "merged"}\n'
+)
 HANDED_OVER_RESULT = {**DONE_RESULT, "outcome": "handed_over", "session_id": None}
 
 
@@ -195,6 +204,21 @@ class BrigadeTickAfterARateLimitOverTest(LaunchingTickTestCase):
 
         # Assert
         self.assertEqual(self.read_events("wave.paused"), [])
+
+
+class BrigadeTickOnAMergedTaskWhoseLastRunHitARateLimitTest(RateLimitedRunTestCase):
+    wave_arguments = ()
+
+    def setUp(self):
+        super().setUp()
+        self.append_events(MERGED_S3_STOPPED_BY_A_RATE_LIMIT_LONG_AGO)
+
+    def test_should_leave_the_task_merged(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(self.read_task_states("S3"), ["queued", "running", "merged"])
 
 
 class BrigadeTickResumingThroughResumeArgvTest(RateLimitedRunTestCase):

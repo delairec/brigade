@@ -779,6 +779,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                     "studies": [],
                     "live_study_runs": [],
                     "study_runs": 2,
+                    "rate_limits": [],
                 },
                 "plan": [
                     {
@@ -1002,6 +1003,7 @@ class BrigadeTickDryRunTest(TickTestCase):
                     "studies": [],
                     "live_study_runs": [],
                     "study_runs": 2,
+                    "rate_limits": [],
                 },
                 "plan": [],
             },
@@ -1045,6 +1047,7 @@ class BrigadeTickDryRunTest(TickTestCase):
                 "  studies  []",
                 "  live_study_runs  []",
                 "  study_runs  2",
+                "  rate_limits  []",
                 "plan",
                 "  no action",
             ],
