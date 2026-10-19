@@ -26,6 +26,7 @@ WAVE_TASKS = (
 )
 BUTTON_SOURCE = "def empty_cart(cart):\n    cart.clear()\n"
 CHARGE_SOURCE = "def charge(cart):\n    return 0\n"
+PEER_SOURCE = "def weigh(parcel):\n    return 1\n"
 PULL_REQUEST_TITLE = "feat(cart-button): empty the cart in one click (@TASK.S3)"
 PULL_REQUEST_BODY = (
     "Empty the cart in one click\n\n## Acceptance criteria\n\n"
@@ -187,9 +188,14 @@ class BrigadeVerifyPreflightOfASoundPullRequestTest(VerifyPreflightTestCase):
 class BrigadeVerifyPreflightOfAPullRequestBehindItsWaveTest(VerifyPreflightTestCase):
     def setUp(self):
         super().setUp()
-        tree = self.project.run_git("rev-parse", f"{WAVE_BRANCH}^{{tree}}").strip()
-        self.wave_head = self.project.run_git("commit-tree", tree, "-p", WAVE_BRANCH, "-m", "a peer merged").strip()
-        self.project.run_git("push", "--quiet", "origin", f"{self.wave_head}:refs/heads/{WAVE_BRANCH}")
+        peer = Path(self.root.name).resolve() / "peer"
+        self.project.run_git("clone", "--quiet", "--branch", WAVE_BRANCH, str(self.remote), str(peer))
+        (peer / "src" / "shipping").mkdir(parents=True)
+        (peer / "src" / "shipping" / "parcel.py").write_text(PEER_SOURCE)
+        self.project.run_git("-C", str(peer), "add", "--all")
+        self.project.run_git("-C", str(peer), "commit", "--quiet", "-m", "a peer merged")
+        self.project.run_git("-C", str(peer), "push", "--quiet", "origin", WAVE_BRANCH)
+        self.wave_head = self.project.run_git("-C", str(peer), "rev-parse", "HEAD").strip()
 
     def test_should_fail_the_ancestry_naming_the_head_of_the_branch_of_the_wave(self):
         # Act
@@ -202,6 +208,20 @@ class BrigadeVerifyPreflightOfAPullRequestBehindItsWaveTest(VerifyPreflightTestC
                 "name": "ancestry",
                 "verdict": "fail",
                 "findings": [f"{self.read_head()} does not descend from {WAVE_BRANCH} at {self.wave_head}"],
+            },
+        )
+
+    def test_should_measure_the_size_from_the_fork_of_the_branch_of_the_wave(self):
+        # Act
+        checks = self.read_checks()
+
+        # Assert
+        self.assertEqual(
+            checks["size"],
+            {
+                "name": "size",
+                "verdict": "info",
+                "findings": ["3 files", "9 lines", "3 packages: corpus, src/billing, src/cart", "0 layers"],
             },
         )
 
