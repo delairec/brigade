@@ -3615,7 +3615,6 @@ TASK B61
 	AFTER @TASK.B63
 	AFTER @TASK.B64
 	AFTER @TASK.B65
-	AFTER @TASK.B66
 	AFTER @TASK.B67
 	AFTER @TASK.B70
 	RATIONALE "the user ruled on 2026-10-06 that a review by max closes M0, after every other task"
@@ -3777,7 +3776,7 @@ TASK B64
 			+ "python.django.security.injection.command.subprocess-injection.subprocess-injection"
 	SPEC "a fix that changes a behaviour is named in the pull request body with the finding it"
 		+ "answers; python3 -m unittest passes on every commit"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	SPEC "the sentence of README.md on the CI names semgrep"
 		IMPL "README.md::scans the repository with semgrep under its Python and security-audit rule"
 			+ "packs"
@@ -3846,7 +3845,10 @@ TASK B65
 TASK B66
 	TITLE "coverage.py in the CI, report only: the whole suite measured, the subprocesses of"
 		+ "tests/cli included, no threshold"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-19: its SPEC 2, a coverage job of ci.yml of its own, is made false by"
+		+ "@TASK.B190, which measures coverage once, in the 3.11 leg of the test job"
+		REF @TASK.B190
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
 	ROLE ada
@@ -3929,7 +3931,7 @@ TASK B67
 			+ "SubprocessUsesGuardTest(unittest.TestCase):"
 	SPEC "the guard runs with python3 -m unittest, like the plugin-import and environment-read"
 		+ "guards, and the CI job tests runs it"
-		IMPL ".github/workflows/ci.yml::- run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	RATIONALE "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa refuses shell=True"
 		+ "and routes every subprocess through brigade/system, and nothing enforced it: at cfa0635"
 		+ "the only imports of subprocess under brigade/ are brigade/system/run_process.py,"
@@ -4126,7 +4128,6 @@ TASK B70
 		+ "head of the pull request, rounded down to an integer: the job fails when a later pull"
 		+ "request brings the figure below it"
 		IMPL ".coveragerc::fail_under = 100"
-	AFTER @TASK.B66
 	AFTER @TASK.B69
 	RATIONALE "the user ruled on 2026-10-07: « la définition du TDD est: pas de ligne de code sans"
 		+ "qu'un test échoue d'abord, donc une ligne de code doit avoir son test, je suis pas"
@@ -6231,8 +6232,9 @@ TASK B95
 	SPEC "the logs of the test jobs of the matrix and of the coverage job of"
 		+ ".github/workflows/ci.yml show no test skipped for want of awawa, and ci.yml installs no"
 		+ "awawa and runs no awawa command"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
-		IMPL ".github/workflows/ci.yml::run: coverage run -m unittest"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
+		IMPL ".github/workflows/ci.yml::run: coverage run -m pytest -n auto -p no:cacheprovider"
+			+ "tests"
 	SPEC "the Develop section of the README says that the tests run on the recordings where awawa"
 		+ "is not on PATH, and how a recording is made or renewed from the real binary"
 		IMPL "README.md::rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest"
@@ -9616,7 +9618,7 @@ TASK B154
 		IMPL "ruff.toml::\"DTZ\", \"SIM\", \"PERF\", \"RUF\", \"ERA\", \"T20\","
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd; a fix that changes a behaviour"
 		+ "is named in the pull request body with the finding it answers"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; the 14 findings,"
 		+ "by uvx ruff@0.17.0 check . --extend-select <the six> --output-format concise on main at"
 		+ "c3fcbbd on 2026-10-14: T201 brigade/cli.py:101, 103, 105 and 129; RUF036"
@@ -9657,7 +9659,7 @@ TASK B155
 		IMPL "tests/integration/corpus/test_prepare_tree.py::list((self.cache / \"app\").iterdir())"
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd, and python3 build.py builds"
 		+ "dist/brigade.pyz"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 		IMPL "build.py::zipapp.create_archive("
 	AFTER @TASK.B154
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; measured on main"
@@ -9695,7 +9697,7 @@ TASK B156
 		IMPL "brigade/commands/project_add.py::entity: Entity, *, force: bool):"
 		IMPL "tests/unit/runs/test_describe_progress.py::self.assertFalse(request.role_has_shell)"
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	AFTER @TASK.B154
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; measured on main"
 		+ "at c3fcbbd on 2026-10-14 by uvx ruff@0.17.0 check . --select FBT --statistics, the files"

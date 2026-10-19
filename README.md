@@ -586,14 +586,16 @@ awawa fmt --check . && awawa lint --strict .   # the checks of the corpus
 ruff check . && ruff format --check .          # the lint and the format, where ruff is installed
 ```
 
-The CI runs the tests and the zipapp build on Python 3.11 and on the latest Python release, lints and checks the format
-with ruff, configured by `ruff.toml`, scans the repository with semgrep under its Python and security-audit rule packs,
-reports the dead code of `brigade/` and `tests/` with vulture, run in the CI only, measures the line and branch
-coverage of `brigade/` by the whole suite with coverage.py, configured by `.coveragerc`, the brigade subprocesses
-`tests/cli` launches and their own children included, a report read in the job log only, the job failing below the
-`fail_under` threshold of `.coveragerc`, never lowered, and audits its workflows with zizmor, on every pull request;
-ruff, semgrep, vulture, coverage and zizmor are pinned in `requirements-ci.txt`, which dependabot keeps current, and the
-pinned ruff gives the verdict that counts.
+The CI runs the tests in parallel under pytest-xdist, then the zipapp build, on Python 3.11 and on the latest Python
+release, lints and checks the format with ruff, configured by `ruff.toml`,
+scans the repository with semgrep under its Python and security-audit rule packs,
+reports the dead code of `brigade/` and `tests/` with vulture, run in the CI only, measures the line and branch coverage
+of `brigade/` by the whole suite with coverage.py once, in the Python 3.11 leg of the test job, configured by
+`.coveragerc`, the xdist workers, the brigade subprocesses `tests/cli` launches and their own children included, a
+report read in the job log only, the leg failing below the `fail_under` threshold of `.coveragerc`, never lowered,
+and audits its workflows with zizmor, on every pull request; pytest, pytest-xdist, ruff, semgrep, vulture, coverage and
+zizmor are pinned in `requirements-ci.txt`, which dependabot keeps current, and the pinned ruff gives the verdict that
+counts. pytest runs the `unittest` cases as they are, and `python3 -m unittest` stays the local command.
 
 The tests that need awawa run against the real awawa where it is on PATH, and otherwise against a fake that replays
 the recordings of `tests/awawa/recordings/`: what the real awawa printed, its exit code and the files it rewrote, for
