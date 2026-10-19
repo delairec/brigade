@@ -1,4 +1,7 @@
+import argparse
 import functools
+import json
+import os
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -11,6 +14,14 @@ from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.commands.command_runtime import create_runtime
+from tests.unit.commands.run_doubles import (
+    CLIENT_AND_DOCUMENT_CONFIGURATION,
+    CLOCK_PROBE,
+    STEP_COUNTING_PROBE,
+    create_plugin_resolution,
+    spawn_as_this_process,
+)
 
 NO_PATH_NEEDED = ""
 UNKNOWN_CLIENT = "no-such-client"
@@ -112,3 +123,140 @@ class RunExtraArgumentTest(unittest.TestCase):
 
                 # Assert
                 self.assertIs(accepted, expected_acceptance)
+
+
+class RunTextOfOneSegmentTest(unittest.TestCase):
+    def test_should_name_the_single_segment_of_a_run(self):
+        # Arrange
+        document = {
+            "run": "20261007T090000Z-b70a01",
+            "procedure": "deliver",
+            "role": "builder",
+            "slot": "build",
+            "outcome": "failed",
+            "segments": 1,
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, "run 20261007T090000Z-b70a01: deliver as builder (build) failed after 1 segment")
+
+    def test_should_print_the_run_id_alone_for_a_detached_run(self):
+        # Act
+        text = COMMAND.render_text({"schema_version": 1, "run": "20261007T090000Z-b70a01", "pid": 4242})
+
+        # Assert
+        self.assertEqual(text, "20261007T090000Z-b70a01")
+
+
+class RunExitCodeTest(unittest.TestCase):
+    def test_should_exit_on_the_outcome_of_the_run(self):
+        # Arrange
+        rows = [
+            ("a detached run", {"run": "20261007T090000Z-b70a01", "pid": 4242}, 0),
+            ("a run done", {"outcome": "done"}, 0),
+            ("a run stopped", {"outcome": "stopped"}, 21),
+        ]
+        for case, document, expected_exit_code in rows:
+            with self.subTest(case=case):
+                # Act
+                exit_code = COMMAND.decide_exit_code(document)
+
+                # Assert
+                self.assertEqual(exit_code, expected_exit_code)
+
+
+class RunDiagnosticsTest(unittest.TestCase):
+    def test_should_pass_on_the_warnings_of_the_run(self):
+        # Arrange
+        rows = [
+            ("no warning", {"run": "20261007T090000Z-b70a01"}, []),
+            ("a warning", {"run": "20261007T090000Z-b70a01", "warnings": ["no steps"]}, ["no steps"]),
+        ]
+        for case, document, expected_diagnostics in rows:
+            with self.subTest(case=case):
+                # Act
+                diagnostics = COMMAND.describe_diagnostics(document)
+
+                # Assert
+                self.assertEqual(diagnostics, expected_diagnostics)
+
+
+class RunRequestTest(unittest.TestCase):
+    def test_should_hand_the_extra_words_to_the_procedure_as_its_arguments(self):
+        # Arrange
+        options = argparse.Namespace(procedure="deliver", extra_arguments=["task=B06"])
+
+        # Act
+        request = COMMAND.read_request(options)
+
+        # Assert
+        self.assertEqual(
+            request, argparse.Namespace(procedure="deliver", extra_arguments=["task=B06"], arguments=["task=B06"])
+        )
+
+
+class RunDetachedTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        self.request = SimpleNamespace(
+            procedure="wave-plan",
+            slot="plan",
+            project=None,
+            cwd=str(self.root),
+            brief=None,
+            arguments=("request=tidepool_1",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=True,
+            resume=False,
+        )
+
+    def test_should_record_the_run_and_hand_it_to_a_process_of_its_own(self):
+        # Arrange
+        this_process = os.getpid()
+        runtime = create_runtime(
+            self.root,
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+        )
+
+        # Act
+        document = run(self.request, runtime)
+
+        # Assert
+        record = json.loads(
+            (self.root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "run.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            (document, record["procedure"], record["arguments"]),
+            (
+                {"schema_version": 1, "run": "20261019T090000Z-a1b2c3", "pid": this_process},
+                "wave-plan",
+                {"request": "tidepool_1"},
+            ),
+        )
+
+    def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
+        # Arrange
+        runtime = create_runtime(
+            self.root, spawn_process=spawn_as_this_process, resolve_plugin=create_plugin_resolution(CLOCK_PROBE)
+        )
+
+        # Act
+        document = run(self.request, runtime)
+
+        # Assert
+        self.assertEqual(
+            document["warnings"],
+            [
+                "double counts no steps: the budget of 30 steps is held on the clock and the run cut at its limit of 1140 s"
+            ],
+        )
