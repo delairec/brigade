@@ -468,6 +468,37 @@ class BrigadeVerifyPreflightOfAPullRequestAddingPrivateLinesTest(VerifyPreflight
         )
 
 
+class BrigadeVerifyPreflightOfAPullRequestAddingPublicExamplesTest(VerifyPreflightTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.machine.corpus / "projects.awawa").write_text(
+            f'PROJECT shop\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tCORPUS "corpus"\n'
+            '\tACCEPTANCE "python3 -m unittest"\n\tHEAVY "python3 -m unittest discover tests/e2e"\n\tFORGE "none"\n'
+            '\tSTATUS active\n\tPUBLIC "alice@example\\\\.org"\n\tPUBLIC "/home/alice"\n'
+        )
+        self.commit_in_worktree(
+            {
+                "src/cart/notes.py": (
+                    "OWNER = 'alice@example.org'\nCLONE = '/home/alice/shop'\n"
+                    "REVIEWERS = 'alice@example.org, bob@example.org'\nARCHIVE = '/home/alice.old/shop'\n"
+                )
+            },
+            "the notes",
+        )
+        self.project.run_git("push", "--quiet", "origin", TASK_BRANCH)
+        self.describe_pull_request()
+
+    def test_should_fail_the_privacy_only_on_what_no_public_pattern_matches_whole(self):
+        # Act
+        checks = self.read_checks()
+
+        # Assert
+        self.assertEqual(
+            checks["privacy"]["findings"],
+            ["src/cart/notes.py:3: an e-mail address", "src/cart/notes.py:4: a home path"],
+        )
+
+
 class BrigadeVerifyPreflightOfAPullRequestWithAWrongBodyTest(VerifyPreflightTestCase):
     def test_should_fail_a_body_that_keeps_a_placeholder_of_the_template(self):
         for body in ["Empty the cart\n\n$checks\n", "Empty the cart\n\n${checks}\n"]:

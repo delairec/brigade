@@ -16,7 +16,7 @@ from brigade.verify.check_ancestry import AncestryFacts, check_ancestry
 from brigade.verify.check_body import check_body
 from brigade.verify.check_check_runs import check_check_runs
 from brigade.verify.check_corpus_at_head import check_corpus_at_head
-from brigade.verify.check_privacy import check_privacy
+from brigade.verify.check_privacy import PrivacyPatterns, check_privacy
 from brigade.verify.check_promotion import PromotionFacts, check_promotion
 from brigade.verify.check_untouched_files import UntouchedFilesFacts, check_untouched_files
 from brigade.verify.measure_size import measure_size
@@ -67,7 +67,10 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
     head_tree = prepare_project_tree(TreeDemand(project=project.name, ref=head), demand.configuration, runtime).root
     base_tree = prepare_project_tree(TreeDemand(project=project.name, ref=base), demand.configuration, runtime).root
     changed = count_changed_lines(run_process, repository, base, head)
-    private_patterns = tuple(field.value for field in project.fields if field.name == "PRIVATE")
+    privacy_patterns = PrivacyPatterns(
+        private=tuple(field.value for field in project.fields if field.name == "PRIVATE"),
+        public=tuple(field.value for field in project.fields if field.name == "PUBLIC"),
+    )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": project.name,
@@ -85,7 +88,7 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
             check_untouched_files(
                 run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
             ),
-            check_privacy(private_patterns, list_added_lines(run_process, repository, base, head)),
+            check_privacy(privacy_patterns, list_added_lines(run_process, repository, base, head)),
             check_body(pull_request["body"]),
             measure_size(changed),
         ],

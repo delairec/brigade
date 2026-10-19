@@ -148,7 +148,7 @@ or, with `--json`, a JSON document; it exits 1 when a check fails.
 | `corpus`          | `awawa fmt --check .` or `awawa lint --strict .` fails on the head, read from the tree cache    |
 | `promotion`       | the task is not `implemented`, its `DELIVERED_BY` is not the pull request, a `SPEC` has no `IMPL` resolving |
 | `untouched_files` | a `.awawa` file of the diff changes while none of its entities does                             |
-| `privacy`         | an added line matches a `PRIVATE` pattern of the project, an e-mail address or a home path      |
+| `privacy`         | an added line matches a `PRIVATE` pattern of the project, an e-mail address or a home path, where no `PUBLIC` pattern of the project matches the whole of it |
 | `body`            | the body keeps a placeholder of its template                                                    |
 | `size`            | never: it reports the files, lines, packages and layers the diff touches                        |
 
@@ -222,7 +222,8 @@ place, resolved as the argument of `brigade run` is, with the wave and the task 
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
 `merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
 worktree is removed once its pull request is merged or closed, never while a run holds it. On the pull request a task
-in `pr_open` opened, once every check run completed and for each head once, it runs `brigade verify preflight`,
+in `pr_open` opened, once every check run completed, at least one unless the project declares `CHECK_RUNS none`, and
+for each head once, it runs `brigade verify preflight`,
 records its findings in `task.preflighted` and moves the task to `verifying` when no check fails. A running REQUEST that no
 `wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
 the waves of the others.
