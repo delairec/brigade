@@ -23,6 +23,7 @@ from brigade.tasks.read_task_number import TASK_NUMBER
 from brigade.tick.name_task_branch import WAVE_BRANCH_PREFIX
 from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.name_next_wave import name_next_wave
+from brigade.waves.summarize_waves import summarize_waves
 
 TASK_TYPE = "TASK"
 TASK_REFERENCE_PREFIX = f"@{TASK_TYPE}."
@@ -76,9 +77,9 @@ def _read_project_tasks(runtime: Runtime, start: WaveStart, project: Entity) -> 
 
 def _list_open_waves(reading: LedgerReading, project: str) -> tuple[WaveStarted, ...]:
     return tuple(
-        entry.event
-        for entry in reading.entries
-        if isinstance(entry.event, WaveStarted) and entry.event.project == project
+        summary.started
+        for summary in summarize_waves(reading.entries)
+        if summary.is_open and summary.started.project == project
     )
 
 

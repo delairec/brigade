@@ -9993,7 +9993,6 @@ TASK B164
 		IMPL "tests/cli/test_wave.py::def"
 			+ "test_should_print_the_request_and_its_tasks_as_text(self):"
 	DELIVERED_BY 154
-	AFTER @TASK.B165
 	RATIONALE "the ruling is @DECISION.ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished;"
 		+ "brigade run stays generic, the two options being optional; after @TASK.B165, the value"
 		+ "of --wave being the wave name it sets"
@@ -10012,7 +10011,11 @@ TASK B164
 TASK B165
 	TITLE "A wave is named <project>_w<n> when it starts, that name keys every wave event of the"
 		+ "ledger, and wave.started carries its project, its branch and its tasks"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-19: its SPEC 5, brigade wave show and brigade wave list printing the"
+		+ "wave name of a REQUEST, is made false by TASK B187, whose wave show and wave list read"
+		+ "the waves of the ledger alone"
+		REF @TASK.B187
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ledger"

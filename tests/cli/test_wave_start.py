@@ -38,6 +38,13 @@ OPEN_WAVE = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
     ' "project": "shop", "branch": "integration/shop_w1", "tasks": ["S7"]}\n'
 )
+CANCELLED_WAVE = (
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "wave.cancelled", "wave": "shop_w1",'
+    ' "reason": "user"}\n'
+)
+CLOSED_WAVE = (
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "wave.closed", "wave": "shop_w1", "pr": 31}\n'
+)
 STARTED_WAVE = {
     "schema_version": 1,
     "wave": "shop_w2",
@@ -144,6 +151,27 @@ class BrigadeWaveStartTest(WaveStartTestCase):
             (completed.returncode, completed.stdout),
             (0, "wave shop_w3 of @PROJECT.shop on integration/shop_w3: S10\n"),
         )
+
+    def test_should_take_the_tasks_of_a_cancelled_wave_again(self):
+        # Arrange
+        (self.ledger / "2026-10.jsonl").write_text(OPEN_WAVE + CANCELLED_WAVE)
+
+        # Act
+        completed = self.run_wave_start("shop", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["tasks"], ["S3", "S4", "S7", "S10"])
+
+    def test_should_leave_the_missing_branch_of_a_closed_wave_uncut(self):
+        # Arrange
+        (self.ledger / "2026-10.jsonl").write_text(OPEN_WAVE + CLOSED_WAVE)
+
+        # Act
+        self.run_wave_start("shop")
+
+        # Assert
+        self.assertEqual(self.project.run_git("branch", "--list", "integration/shop_w1"), "")
 
     def test_should_take_no_task_of_a_plan_not_yet_in_the_main_branch(self):
         # Arrange

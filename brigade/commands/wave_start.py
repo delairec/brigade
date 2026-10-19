@@ -38,7 +38,7 @@ def wave_start(request, runtime: Runtime) -> dict:
 COMMAND = Command(
     path=("wave", "start"),
     help="compose a wave of the project's startable tasks and start it on its integration branch",
-    group_help="start the waves of the projects, list and show them",
+    group_help="start the waves of the projects, list, show and cancel them",
     arguments=(
         Argument(("project",), {"help": "the name of a registered PROJECT"}),
         Argument(
