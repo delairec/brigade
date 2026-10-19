@@ -26,6 +26,17 @@ FORGE_ACCOUNT_UNAVAILABLE = (
     '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "forge_account.unavailable",'
     ' "login": "octo-bot", "key": "build"}\n'
 )
+FORGE_ACCOUNT_UNAVAILABLE_BEFORE_THE_WAVE_STARTED = (
+    '{"schema_version": 1, "ts": "2026-10-13T08:00:00Z", "event": "forge_account.unavailable",'
+    ' "login": "octo-bot", "key": "build"}\n'
+)
+RATE_LIMITED_WITHOUT_RESET_LONG_AGO = (
+    '{"schema_version": 2, "ts": "2026-10-13T08:00:00Z", "event": "run.finished", "wave": null, "task": null,'
+    ' "run": "20261013T073000Z-a00001", "client": "fake", "project": "shop", "session": null,'
+    ' "duration_ms": 1000, "usage": null, "exit": 1, "nulls": {},'
+    ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
+    ' "error_class": "rate_limit", "main_steps": 50, "total_steps": null}\n'
+)
 PAUSED_ON_THE_FORGE_ACCOUNT = (
     '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.paused", "wave": "shop_w1",'
     ' "reason": "forge_account", "resume_at": null}\n'
@@ -41,6 +52,7 @@ class RateLimitedRunTestCase(LaunchingTickTestCase):
     client_operations = ""
     client_settings = ""
     reset = RESET_AT_15
+    wave_arguments = ("--wave", "shop_w1", "--task", "S3")
 
     def setUp(self):
         super().setUp()
@@ -71,10 +83,7 @@ class RateLimitedRunTestCase(LaunchingTickTestCase):
             "shop",
             "--cwd",
             str(self.project.path),
-            "--wave",
-            "shop_w1",
-            "--task",
-            "S3",
+            *self.wave_arguments,
             "--brief",
             str(brief),
             "task=@TASK.S3",
@@ -148,6 +157,44 @@ class BrigadeTickPausingOnARateLimitWithoutResetTest(RateLimitedRunTestCase):
         resume_at = datetime.fromisoformat(self.read_events("wave.paused")[0]["resume_at"])
         self.assertGreaterEqual(resume_at, before + timedelta(minutes=30))
         self.assertLessEqual(resume_at, after + timedelta(minutes=30))
+
+
+class BrigadeTickPausingOnARateLimitOfARunOutsideAWaveTest(RateLimitedRunTestCase):
+    wave_arguments = ()
+
+    def test_should_pause_every_running_wave_on_the_quota_until_the_hour_of_the_reset(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            self.read_events("wave.paused"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "wave.paused",
+                    "wave": "shop_w1",
+                    "reason": "quota",
+                    "resume_at": ANY,
+                }
+            ],
+        )
+        self.assertRegex(self.read_events("wave.paused")[0]["resume_at"], RESUME_AT_15)
+
+
+class BrigadeTickAfterARateLimitOverTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
+            ledger.write(RATE_LIMITED_WITHOUT_RESET_LONG_AGO)
+
+    def test_should_pause_no_wave_on_a_rate_limit_whose_reset_has_passed(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(self.read_events("wave.paused"), [])
 
 
 class BrigadeTickResumingThroughResumeArgvTest(RateLimitedRunTestCase):
@@ -256,6 +303,23 @@ class BrigadeTickPausingOnAnUnavailableForgeAccountTest(LaunchingTickTestCase):
             ],
         )
         self.assertEqual(self.read_run_records(), [])
+
+
+class BrigadeTickOnAWaveStartedAfterTheForgeAccountBecameUnavailableTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
+            ledger.write(FORGE_ACCOUNT_UNAVAILABLE_BEFORE_THE_WAVE_STARTED)
+
+    def test_should_pause_the_wave_on_the_forge_account(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            [(event["wave"], event["reason"]) for event in self.read_events("wave.paused")],
+            [("shop_w1", "forge_account")],
+        )
 
 
 class BrigadeTickAfterTheForgeAccountResumeTest(LaunchingTickTestCase):

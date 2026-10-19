@@ -177,6 +177,7 @@ class Snapshot:
     studies: tuple[StudyFacts, ...] = ()
     live_study_runs: tuple[LiveStudyRun, ...] = ()
     study_runs: int = STUDY_RUNS_BY_DEFAULT
+    rate_limits: tuple[RateLimit, ...] = ()
 
     def to_document(self) -> dict:
         return {

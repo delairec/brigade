@@ -27,7 +27,21 @@ class SnapshotTest(unittest.TestCase):
                 "studies": [],
                 "live_study_runs": [],
                 "study_runs": 2,
+                "rate_limits": [],
             },
+        )
+
+    def test_should_carry_the_rate_limits_in_force_in_its_document(self):
+        # Arrange
+        rate_limits = (RateLimit(reset=ResetHour(hour="7pm", timezone="Europe/Paris")), RateLimit(reset=None))
+        snapshot = Snapshot(now=datetime(2026, 10, 18, 12, 0, tzinfo=UTC), rate_limits=rate_limits)
+
+        # Act
+        document = snapshot.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["rate_limits"], [{"reset": {"hour": "7pm", "timezone": "Europe/Paris"}}, {"reset": None}]
         )
 
     def test_should_carry_the_studies_and_their_live_runs_in_its_document(self):

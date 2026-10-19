@@ -423,6 +423,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
                     now=NOW,
                     waves=(create_wave(tasks + ALONE_S9, {"S3": "running"}), CAFE_WAVE),
                     projects=(SHOP, CAFE),
+                    rate_limits=(tasks[0].rate_limit,),
                 )
 
                 # Act
@@ -437,6 +438,70 @@ class PlanQuotaPauseTest(unittest.TestCase):
                         PAUSED_S3,
                     ),
                 )
+
+    def test_should_pause_every_running_wave_on_a_rate_limit_of_a_run_of_no_task(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave(ALONE, {}), CAFE_WAVE),
+            projects=(SHOP, CAFE),
+            rate_limits=(RateLimit(reset=ResetHour(hour="15:00", timezone="UTC")),),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T15:00:00Z"),
+                PauseWave(wave="cafe_w1", reason="quota", resume_at="2026-10-06T15:00:00Z"),
+            ),
+        )
+
+    def test_should_move_a_rate_limited_task_to_paused_quota_without_pausing_its_wave_once_the_rate_limit_is_over(
+        self,
+    ):
+        # Arrange
+        snapshot = Snapshot(now=NOW, waves=(create_wave(RATE_LIMITED_UNTIL_15, {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PAUSED_S3,))
+
+    def test_should_pause_a_wave_started_during_a_quota_pause_until_the_same_resume_at(self):
+        for case, rate_limits in [
+            ("with no rate limit in force", ()),
+            ("with a rate limit in force", (RateLimit(reset=ResetHour(hour="15:00", timezone="UTC")),)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                cafe = dataclasses.replace(CAFE_WAVE, pause=QUOTA_UNTIL_13)
+                snapshot = Snapshot(
+                    now=NOW, waves=(create_wave(ALONE, {}), cafe), projects=(SHOP, CAFE), rate_limits=rate_limits
+                )
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions, (PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T13:00:00Z"),)
+                )
+
+    def test_should_pause_no_wave_started_once_the_quota_pause_is_over(self):
+        # Arrange
+        cafe = dataclasses.replace(CAFE_WAVE, pause=QUOTA_UNTIL_12)
+        snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {}), cafe), projects=(SHOP, CAFE))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (ResumeWave(wave="cafe_w1", reason="quota"), LAUNCH_S3))
 
     def test_should_move_a_rate_limited_task_of_a_wave_already_paused_without_pausing_it_again(self):
         # Arrange
@@ -511,7 +576,7 @@ class PlanForgeAccountPauseTest(unittest.TestCase):
     def test_should_pause_every_running_wave_not_paused_on_an_unavailable_forge_account(self):
         # Arrange
         shop = dataclasses.replace(create_wave(ALONE, {}), forge_account_unavailable=True)
-        cafe = dataclasses.replace(CAFE_WAVE, forge_account_unavailable=True, pause=QUOTA_UNTIL_13)
+        cafe = dataclasses.replace(CAFE_WAVE, forge_account_unavailable=True, pause=FORGE_ACCOUNT)
         snapshot = Snapshot(now=NOW, waves=(shop, cafe), projects=(SHOP, CAFE))
 
         # Act
