@@ -1,5 +1,4 @@
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -56,37 +55,32 @@ class WriteJsonAtomicallyTest(unittest.TestCase):
         )
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
 class WriteJsonAtomicallyWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         self.machine = Path(self.root.name) / "machine"
-        self.machine.mkdir()
-        self.addCleanup(self.machine.chmod, 0o700)
         self.state = self.machine / "state"
-        self.path = self.state / "tick.json"
 
     def test_should_name_the_directory_it_cannot_create(self):
         # Arrange
-        self.machine.chmod(0o500)
+        self.machine.write_text("")
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            write_json_atomically(self.path, {"schema_version": 1, "actions_applied": 0})
+            write_json_atomically(self.state / "tick.json", {"schema_version": 1, "actions_applied": 0})
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.state}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.state}: Not a directory")
 
     def test_should_name_the_target_of_the_temporary_file_it_cannot_create(self):
         # Arrange
-        self.state.mkdir()
-        self.state.chmod(0o500)
-        self.addCleanup(self.state.chmod, 0o700)
+        name_leaving_no_room_for_the_temporary_affixes = "t" * 250 + ".json"
+        path = self.state / name_leaving_no_room_for_the_temporary_affixes
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            write_json_atomically(self.path, {"schema_version": 1, "actions_applied": 0})
+            write_json_atomically(path, {"schema_version": 1, "actions_applied": 0})
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.path}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {path}: File name too long")

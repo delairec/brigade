@@ -64,39 +64,35 @@ class HoldLockTest(unittest.TestCase):
         self.assertIs(raised.exception, refused_elsewhere)
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
 class HoldLockWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
-        self.state = Path(self.root.name) / "state"
-        self.state.mkdir()
-        self.addCleanup(self.state.chmod, 0o700)
-        self.locks = self.state / "locks"
+        self.locks = Path(self.root.name) / "state" / "locks"
         self.lock_path = self.locks / "corpus.lock"
 
     def test_should_name_the_directory_it_cannot_create(self):
         # Arrange
-        self.state.chmod(0o500)
+        self.locks.parent.mkdir()
+        self.locks.write_text("")
 
         # Act
         with self.assertRaises(BrigadeError) as refusal, hold_lock(self.lock_path):
             pass
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.locks}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.locks}: File exists")
 
     def test_should_name_the_lock_it_cannot_open(self):
         # Arrange
-        self.locks.mkdir()
-        self.lock_path.touch(mode=0o400)
+        self.lock_path.mkdir(parents=True)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal, hold_lock(self.lock_path):
             pass
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Permission denied")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Is a directory")
 
 
 @unittest.skipUnless(Path("/dev/full").exists(), "no device refusing every write")
