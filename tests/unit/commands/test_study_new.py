@@ -2,8 +2,10 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import ANY
 
 from brigade.commands.study_new import COMMAND
+from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_operational_corpus
 
 TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
@@ -119,4 +121,50 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
                     "\tSTATUS active\n"
                 ),
             ),
+        )
+
+
+HEALTH_STUDY = (
+    ("TITLE", "the health of the machine"),
+    ("COLLECTOR", "runs-list"),
+    ("SLOT", "report"),
+    ("OUTPUT", "file:/home/user/health.md"),
+    ("ANSWER", "ANSWER"),
+    ("STATUS", "active"),
+)
+
+
+def _resolve_no_collector(kind: str, name: str, **places):
+    if kind == "collector":
+        raise BrigadeError(f"no collector {name}")
+    return SimpleNamespace(kind=kind, name=name)
+
+
+class StudyNewOfAStudyOnDemandTest(unittest.TestCase):
+    def test_should_run_a_study_with_no_schedule_at_once(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        run_process = create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, CORPUS_CHANGE_OUTPUTS)
+        on_demand = None
+        request = SimpleNamespace(
+            name="health",
+            title="the health of the machine",
+            question=None,
+            project=MACHINE_WIDE,
+            collector=["runs-list"],
+            slot="report",
+            every=on_demand,
+            output="file:/home/user/health.md",
+            answer="ANSWER",
+        )
+
+        # Act
+        document = COMMAND.run(
+            request, create_runtime(root, run_process=run_process, resolve_plugin=_resolve_no_collector)
+        )
+
+        # Assert
+        self.assertEqual(
+            document, {"schema_version": 1, "study": "health", "every": None, "run": ANY, "state": "parked"}
         )

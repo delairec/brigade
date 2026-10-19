@@ -23,8 +23,8 @@ class ProbedClientDouble:
         return self.probe
 
 
-def create_plugin_resolution(probe: dict):
-    plugins = {"client": ProbedClientDouble(probe), "document": markdown, "forge": SimpleNamespace()}
+def create_plugin_resolution(probe: dict, forge=None):
+    plugins = {"client": ProbedClientDouble(probe), "document": markdown, "forge": forge or SimpleNamespace()}
     return lambda kind, name, **places: plugins[kind]
 
 

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
+from brigade.adapters.documents import markdown
 from brigade.commands.run import COMMAND, run
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
@@ -259,4 +260,91 @@ class RunDetachedTest(unittest.TestCase):
             [
                 "double counts no steps: the budget of 30 steps is held on the clock and the run cut at its limit of 1140 s"
             ],
+        )
+
+
+class ClientDeliveringTheTaskDouble:
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "probe":
+            return STEP_COUNTING_PROBE
+        if operation == "launch-argv":
+            return {
+                "schema_version": 1,
+                "argv": ["double-client", "--print"],
+                "environment": {},
+                "stdin": request["brief"],
+                "session_id": None,
+            }
+        return {
+            "schema_version": 1,
+            "outcome": "done",
+            "steps": 12,
+            "usage": None,
+            "session_id": "session-b74",
+            "duration_ms": 4200,
+            "cost_usd": None,
+            "error_class": None,
+            "reset": None,
+            "message": "the task is delivered",
+        }
+
+
+class ExitedClientDouble:
+    pid = 4242
+
+    def wait(self, **_limit) -> int:
+        return 0
+
+
+def _spawn_a_client_that_exits(request):
+    request.stdout.write_text("the client delivered the task\n", encoding="utf-8")
+    request.stderr.write_text("", encoding="utf-8")
+    return ExitedClientDouble()
+
+
+def _resolve_the_delivering_client(kind: str, name: str, **places):
+    plugins = {"client": ClientDeliveringTheTaskDouble(), "document": markdown, "forge": SimpleNamespace()}
+    return plugins[kind]
+
+
+class RunAttachedTest(unittest.TestCase):
+    def test_should_run_the_client_to_its_end_and_report_its_outcome(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        request = SimpleNamespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_runtime(
+            root, spawn_process=_spawn_a_client_that_exits, resolve_plugin=_resolve_the_delivering_client
+        )
+
+        # Act
+        document = run(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "run": "20261019T090000Z-a1b2c3",
+                "procedure": "build-task",
+                "slot": "build",
+                "role": "builder",
+                "client": "double",
+                "project": None,
+                "segments": 1,
+                "outcome": "done",
+            },
         )

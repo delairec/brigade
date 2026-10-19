@@ -12,12 +12,25 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
+from unittest.mock import ANY
 
 from brigade.commands.tick import COMMAND
 from brigade.errors import StandingDown, UsageError
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.commands.command_runtime import (
+    create_machine_double,
+    create_runtime,
+    write_ledger,
+    write_operational_corpus,
+)
+from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
+from tests.unit.commands.run_doubles import (
+    CLIENT_AND_DOCUMENT_CONFIGURATION,
+    STEP_COUNTING_PROBE,
+    create_plugin_resolution,
+)
 
 LOOP_MODE = "loop"
 NO_PATH_NEEDED = ""
@@ -303,3 +316,291 @@ class TickRequestTest(unittest.TestCase):
 
         # Assert
         self.assertIs(request, options)
+
+
+WAVE = "tidepool_w16"
+WAVE_BRANCH = "integration/M4"
+WAVE_HEAD = "8885daa"
+WAVE_REQUEST = (
+    ("PROJECT", "@PROJECT.tidepool"),
+    ("STATUS", "running"),
+    ("MILESTONE", "M4"),
+    ("BRANCH", "integration/M4"),
+    ("CREATED_AT", "2026-10-18T09:00:00Z"),
+)
+TASK_TO_DELIVER = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"))
+TASK_DELIVERED = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "implemented"), ("DELIVERED_BY", "42"))
+MACHINE_OUTPUTS = {
+    ("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n",
+    ("git", "cat-file", "-p"): ".brigade/worktrees/\n",
+    ("git", "worktree", "add"): "",
+    ("git", "merge-base"): "",
+    ("git", "fetch"): "",
+    ("git", "diff"): "",
+    ("awawa", "status", "TASK", "--where", "STATUS==implemented"): '{"entities": []}',
+    ("awawa", "refs"): '{"incoming": []}',
+    ("awawa", "fmt"): "",
+    ("awawa", "lint"): "",
+    ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
+}
+WAVE_STARTED = {
+    "schema_version": 2,
+    "ts": "2026-10-18T09:00:00Z",
+    "event": "wave.started",
+    "wave": "tidepool_w16",
+    "project": "tidepool",
+    "branch": "integration/M4",
+    "tasks": ["T7"],
+}
+TASK_PR_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:00:00Z",
+    "event": "task.pr_opened",
+    "project": "tidepool",
+    "task": "T7",
+    "wave": "tidepool_w16",
+    "branch": "task/M4/T7",
+    "pr": 42,
+    "login": "tidepool-bot",
+}
+NO_PULL_REQUEST = None
+OPEN_PULL_REQUEST = {
+    "number": 42,
+    "state": "open",
+    "checks": [{"name": "ci", "verdict": "pass"}],
+    "review": None,
+    "behind": False,
+    "head": "8885daa",
+}
+MERGED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "state": "merged"}
+NO_DETAILS_ASKED = None
+PULL_REQUEST_DETAILS = {
+    "head": "task/M4/T7",
+    "head_sha": "8885daa",
+    "checks": [{"name": "ci", "verdict": "success"}],
+    "body": "Delivers @TASK.T7.",
+}
+HEALTH_STUDY = (
+    ("TITLE", "the health of the machine"),
+    ("COLLECTOR", "runs-list"),
+    ("SLOT", "report"),
+    ("EVERY", "daily@06:00"),
+    ("OUTPUT", "file:/home/user/health.md"),
+    ("ANSWER", "ANSWER"),
+    ("STATUS", "active"),
+)
+
+
+def _record_task_state(state: str) -> dict:
+    return {
+        "schema_version": 1,
+        "ts": "2026-10-18T10:00:00Z",
+        "event": "task.state",
+        "wave": "tidepool_w16",
+        "task": "T7",
+        "state": state,
+    }
+
+
+class ForgeDouble:
+    def __init__(self, found: dict | None, details: dict | None):
+        self.found = found
+        self.details = details
+
+    def find_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_request": self.found}
+
+    def read_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_request": self.details}
+
+
+class SpawnRecorderDouble:
+    def __init__(self):
+        self.argvs = []
+
+    def spawn(self, request):
+        self.argvs.append(request.argv[2:])
+        return SimpleNamespace(pid=os.getpid())
+
+
+class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.spawn = SpawnRecorderDouble()
+
+    def _create_runtime(self, task: tuple, forge: ForgeDouble) -> Runtime:
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)),)},
+            "REQUEST": {"tidepool_1": WAVE_REQUEST},
+            "TASK": {"T7": task},
+        }
+        return create_runtime(
+            self.root,
+            run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+        )
+
+    def _read_last_event(self) -> dict:
+        return json.loads(
+            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[-1]
+        )
+
+    def test_should_launch_the_build_run_of_a_task_ready_to_start(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED])
+        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (document["actions_applied"], self.spawn.argvs),
+            (
+                1,
+                [
+                    (
+                        "run",
+                        "build-task",
+                        "task=@TASK.T7",
+                        "base=integration/M4",
+                        "--slot",
+                        "build",
+                        "--cwd",
+                        str(self.worktree),
+                        "--project",
+                        "tidepool",
+                        "--brief",
+                        str(self.root / "state" / "briefs" / "tidepool_1-T7.md"),
+                        "--wave",
+                        "tidepool_w16",
+                        "--task",
+                        "T7",
+                        "--run-id",
+                        ANY,
+                    )
+                ],
+            ),
+        )
+
+    def test_should_resume_the_run_of_a_task_paused_on_the_quota(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        stopped_run = {
+            **create_run_record(FIRST_RUN, WAVE, "T7"),
+            "procedure_path": "build-task",
+            "project": "tidepool",
+            "cwd": str(self.worktree),
+        }
+        write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
+        finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
+        write_ledger(self.root, [WAVE_STARTED, finished, _record_task_state("paused:quota")])
+        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    FIRST_RUN,
+                    "--resume",
+                )
+            ],
+        )
+
+    def test_should_record_the_merge_of_the_pull_request_of_a_running_task(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
+        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "merged",
+            },
+        )
+
+    def test_should_hold_for_verification_a_pull_request_passing_its_preflight(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "verifying",
+            },
+        )
+
+    def test_should_leave_open_a_pull_request_failing_its_preflight(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
+        failing_checks = {**PULL_REQUEST_DETAILS, "checks": [{"name": "ci", "verdict": "failure"}]}
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, failing_checks))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_last_event()["event"], "task.preflighted")
+
+
+class TickLaunchingAStudyTest(unittest.TestCase):
+    def test_should_launch_a_study_whose_schedule_is_due(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        spawn = SpawnRecorderDouble()
+        runtime = create_runtime(
+            root,
+            run_process=create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, MACHINE_OUTPUTS),
+            spawn_process=spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+        )
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])

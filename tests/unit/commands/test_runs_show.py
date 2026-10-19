@@ -2,10 +2,12 @@ import contextlib
 import io
 import json
 import os
+import select
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 from brigade.commands.runs_show import COMMAND
 from brigade.errors import BrigadeError, UsageError
@@ -174,21 +176,20 @@ class RunFinishingOnItsFirstRecordStdout(io.StringIO):
 
 
 JOURNAL_LINE = "2026-10-07T09:01:00Z  1  text  reads the task\n"
+NOTHING_TO_READ = ([], [], [])
 
 
 class RunsShowFollowingARunningRunTest(unittest.TestCase):
     def test_should_print_the_records_until_the_run_ends(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        (root / "config").mkdir()
-        (root / "config" / "config.toml").write_text("journal_poll_s = 0.01\n", encoding="utf-8")
         run_directory = write_run(root / "state", create_run_record(FIRST_RUN, None, None), None)
         record_run_pid(run_directory, os.getpid())
         (run_directory / "journal.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
         printed = RunFinishingOnItsFirstRecordStdout(run_directory)
 
         # Act
-        with contextlib.redirect_stdout(printed):
+        with contextlib.redirect_stdout(printed), mock.patch.object(select, "select", return_value=NOTHING_TO_READ):
             document = COMMAND.run(SimpleNamespace(run=FIRST_RUN, log=False, follow=True), create_runtime(root))
 
         # Assert

@@ -117,3 +117,88 @@ class TaskContextOutsideATaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")
+
+
+TASK_CHECKOUT = {
+    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool-T7\n",
+    ("git", "branch", "--show-current"): "task/M4-tides/T7\n",
+    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/home/user/tidepool/.git\n",
+    ("git", "rev-parse", "--verify"): "8885daa\n",
+    ("git", "merge-base", "--is-ancestor"): "",
+    ("awawa", "context"): "TASK T7\n",
+    ("awawa", "lint", "--closure"): "",
+    ("awawa", "status", "--json"): '{"entities": [{"type": "TASK", "name": "T190"}]}',
+}
+TIDEPOOL_CORPUS = {
+    "PROJECT": {"tidepool": (("PATH", "/home/user/tidepool"), ("ACCEPTANCE", "python3 -m unittest"))},
+    "REQUEST": {
+        "tidepool_1": (
+            ("PROJECT", "@PROJECT.tidepool"),
+            ("STATUS", "running"),
+            ("MILESTONE", "M4"),
+            ("BRANCH", "integration/M4-tides"),
+            ("CREATED_AT", "2026-10-18T09:00:00Z"),
+        )
+    },
+}
+
+
+class TaskContextOfABuildRunTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        (self.root / "config" / "_schema.awawa").write_text("", encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / "8885daa").mkdir(parents=True)
+        self.run_process = create_machine_double(TIDEPOOL_CORPUS, TASK_CHECKOUT)
+
+    def test_should_write_the_package_to_the_directory_of_the_run(self):
+        # Arrange
+        runtime = create_runtime(self.root, run_process=self.run_process, run_directory=self.root / "run")
+
+        # Act
+        COMMAND.run(SimpleNamespace(task=THE_TASK_OF_THE_BRANCH), runtime)
+
+        # Assert
+        self.assertEqual(
+            (self.root / "run" / "context.md").read_text(encoding="utf-8"),
+            "# worktree\n$ git merge-base --is-ancestor integration/M4-tides HEAD\nexit 0\n\n"
+            "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n"
+            "$ awawa lint --closure @TASK.T7 .\nexit 0\n\n"
+            "# acceptance\npython3 -m unittest\n\n"
+            f"# reserved\ntask number 191\ntemporary directory {self.root / 'run' / 'tmp'}\n\n"
+            "# when done\nbrigade task check\nbrigade task pr\nbrigade task promote\n",
+        )
+
+    def test_should_assemble_the_package_of_a_task_worked_on_outside_a_run(self):
+        # Arrange
+        runtime = create_runtime(self.root, run_process=self.run_process)
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(task=THE_TASK_OF_THE_BRANCH), runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "worktree": {
+                    "ancestry": {"command": "git merge-base --is-ancestor integration/M4-tides HEAD", "exit_code": 0},
+                    "setup": None,
+                },
+                "task": [
+                    {
+                        "command": "awawa context @TASK.T7 --with-schema .",
+                        "exit_code": 0,
+                        "stderr": "",
+                        "output": "TASK T7\n",
+                    },
+                    {"command": "awawa lint --closure @TASK.T7 .", "exit_code": 0, "stderr": "", "output": ""},
+                ],
+                "rules": None,
+                "project": None,
+                "acceptance": {"acceptance": ["python3 -m unittest"], "heavy": []},
+                "reserved": {"task_number": 191, "temporary_directory": None, "attribution": []},
+                "when_done": ["brigade task check", "brigade task pr", "brigade task promote"],
+            },
+        )
