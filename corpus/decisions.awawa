@@ -1490,6 +1490,9 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 		REF @TASK.B106
 	SOURCE "DESC 1 amended in pull request #135 of the brigade repository, delivering @TASK.B151"
 		REF @TASK.B151
+	SOURCE "DESC 3 and the last two REJECTED added in pull request #166 of the brigade repository,"
+		+ "delivering @TASK.B192"
+		REF @TASK.B192
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture, pytest with pytest-xdist and coverage.py,"
