@@ -269,7 +269,14 @@ class BrigadeVerifyPreflightOfANonCanonicalCorpusTest(VerifyPreflightTestCase):
         checks = self.read_checks()
 
         # Assert
-        self.assertEqual(checks["corpus"]["findings"][0], "awawa fmt --check . exited 1")
+        self.assertEqual(
+            checks["corpus"],
+            {
+                "name": "corpus",
+                "verdict": "fail",
+                "findings": ["awawa fmt --check . exited 1", "would reformat ./corpus/milestones.awawa"],
+            },
+        )
 
     def test_should_fail_the_untouched_files_on_a_file_whose_entities_did_not_change(self):
         # Act
@@ -306,7 +313,18 @@ class BrigadeVerifyPreflightOfACorpusFailingItsLintTest(VerifyPreflightTestCase)
     def setUp(self):
         super().setUp()
         self.commit_in_worktree(
-            {"corpus/tasks.awawa": DELIVERED_TASKS.replace("\tSTATUS todo\n", '\tSTATUS todo\n\tOWNER "nobody"\n')},
+            {
+                "corpus/tasks.awawa": (
+                    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
+                    'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY 42\n'
+                    '\tTYPE feat\n\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
+                    '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+                    '\t\tIMPL "src/cart/button.py::def empty_cart"\n'
+                    '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n\n'
+                    'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tOWNER "nobody"\n'
+                    "\tMILESTONE @MILESTONE.M1\n"
+                )
+            },
             "a field no schema declares",
         )
         self.project.run_git("push", "--quiet", "origin", TASK_BRANCH)
@@ -317,7 +335,20 @@ class BrigadeVerifyPreflightOfACorpusFailingItsLintTest(VerifyPreflightTestCase)
         checks = self.read_checks()
 
         # Assert
-        self.assertEqual(checks["corpus"]["findings"][0], "awawa lint --strict . exited 1")
+        self.assertEqual(
+            checks["corpus"],
+            {
+                "name": "corpus",
+                "verdict": "fail",
+                "findings": [
+                    "awawa lint --strict . exited 1",
+                    "./corpus/tasks.awawa \u2014 1 error(s), 0 warning(s)",
+                    "L003  error  ./corpus/tasks.awawa:20:2",
+                    "      field OWNER is not declared on TASK",
+                    "",
+                ],
+            },
+        )
 
 
 class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPreflightTestCase):
@@ -328,7 +359,13 @@ class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPrefligh
 
     def test_should_fail_a_task_that_is_not_implemented(self):
         # Arrange
-        self.deliver(DELIVERED_TASKS.replace("STATUS implemented\n\tDELIVERED_BY", "STATUS todo\n\tDELIVERED_BY"))
+        self.deliver(
+            'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tDELIVERED_BY 42\n\tTYPE feat\n'
+            '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
+            '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+            '\t\tIMPL "src/cart/button.py::def empty_cart"\n'
+            '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n'
+        )
 
         # Act
         checks = self.read_checks()
@@ -338,7 +375,13 @@ class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPrefligh
 
     def test_should_fail_a_task_delivered_by_another_pull_request(self):
         # Arrange
-        self.deliver(DELIVERED_TASKS.replace("DELIVERED_BY 42", "DELIVERED_BY 41"))
+        self.deliver(
+            'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY 41\n\tTYPE feat\n'
+            '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
+            '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+            '\t\tIMPL "src/cart/button.py::def empty_cart"\n'
+            '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n'
+        )
 
         # Act
         checks = self.read_checks()
@@ -348,7 +391,13 @@ class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPrefligh
 
     def test_should_fail_a_task_that_names_no_pull_request_delivering_it(self):
         # Arrange
-        self.deliver(DELIVERED_TASKS.replace("\tDELIVERED_BY 42\n", ""))
+        self.deliver(
+            'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tTYPE feat\n'
+            '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
+            '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+            '\t\tIMPL "src/cart/button.py::def empty_cart"\n'
+            '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n'
+        )
 
         # Act
         checks = self.read_checks()
@@ -359,9 +408,10 @@ class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPrefligh
     def test_should_fail_each_spec_without_an_impl_whose_anchor_resolves_at_the_head(self):
         # Arrange
         self.deliver(
-            DELIVERED_TASKS.replace("::def charge", "::def refund").replace(
-                '\t\tIMPL "src/cart/button.py::def empty_cart"\n', ""
-            )
+            'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY 42\n\tTYPE feat\n'
+            '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
+            '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
+            '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def refund"\n'
         )
 
         # Act
@@ -387,9 +437,10 @@ class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPrefligh
 class BrigadeVerifyPreflightOfAPullRequestAddingPrivateLinesTest(VerifyPreflightTestCase):
     def setUp(self):
         super().setUp()
-        projects = self.machine.corpus / "projects.awawa"
-        projects.write_text(
-            projects.read_text().replace("\tSTATUS active\n", '\tSTATUS active\n\tPRIVATE "stn_[0-9a-f]{12}"\n')
+        (self.machine.corpus / "projects.awawa").write_text(
+            f'PROJECT shop\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tCORPUS "corpus"\n'
+            '\tACCEPTANCE "python3 -m unittest"\n\tHEAVY "python3 -m unittest discover tests/e2e"\n\tFORGE "none"\n'
+            '\tSTATUS active\n\tPRIVATE "stn_[0-9a-f]{12}"\n'
         )
         self.commit_in_worktree(
             {

@@ -2044,7 +2044,20 @@ class BrigadeTickOnAPullRequestWithAFailingCheckTest(TickPreflightTestCase):
 class BrigadeTickOnAPullRequestNoTaskOpenedTest(TickPreflightTestCase):
     def setUp(self):
         super().setUp()
-        self.listed.write_text(self.listed.read_text().replace('"number": 42', '"number": 43'))
+        self.listed.write_text(
+            json.dumps(
+                [
+                    {
+                        "number": 43,
+                        "state": "OPEN",
+                        "headRefOid": self.read_head(),
+                        "baseRefName": WAVE_BRANCH,
+                        "reviewDecision": "",
+                        "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
+                    }
+                ]
+            )
+        )
 
     def test_should_not_run_the_preflight_of_a_pull_request_the_task_did_not_open(self):
         # Act
