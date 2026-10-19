@@ -2039,7 +2039,7 @@ class BrigadeTickOnAPullRequestOfAProjectWithoutCheckRunsTest(TickPreflightTestC
 class BrigadeTickOnAPullRequestWithAFailingCheckTest(TickPreflightTestCase):
     def setUp(self):
         super().setUp()
-        self.describe_pull_request(body="Empty the cart\n")
+        self.describe_pull_request(body="Empty the cart in one click\n\n$checks\n")
 
     def test_should_leave_the_task_in_pr_open(self):
         # Act
