@@ -9,4 +9,12 @@ class StopSignals(Protocol):
 
 
 def poll_until_stopped(poll: Callable[[], bool], interval_s: float, signals: StopSignals) -> bool:
-    raise NotImplementedError
+    while True:
+        done = poll()
+        if signals.received():
+            return True
+        if done:
+            return False
+        signals.wait(interval_s)
+        if signals.received():
+            return True
