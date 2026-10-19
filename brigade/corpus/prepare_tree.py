@@ -56,11 +56,11 @@ class ReadTimeKeeper:
 
 
 def _stamp_read(tree: Path, read_ns: int) -> None:
-    raise NotImplementedError
+    os.utime(tree, ns=(read_ns, read_ns))
 
 
 def _read_stamp(tree: Path) -> int:
-    raise NotImplementedError
+    return tree.stat().st_mtime_ns
 
 
 FILESYSTEM_READ_TIME_KEEPER = ReadTimeKeeper(stamp_read=_stamp_read, read_stamp=_read_stamp)
@@ -133,10 +133,10 @@ def _place_tree(staged_tree: Path, root: Path) -> None:
         raise CannotWrite(root, error) from error
 
 
-def _mark_read(root: Path, now: datetime) -> None:
+def _mark_read(root: Path, now: datetime, keeper: ReadTimeKeeper) -> None:
     read_ns = (now - EPOCH) // timedelta(microseconds=1) * NANOSECONDS_PER_MICROSECOND
     try:
-        os.utime(root, ns=(read_ns, read_ns))
+        keeper.stamp_read(root, read_ns)
     except OSError as error:
         raise CannotWrite(root, error) from error
 
@@ -154,10 +154,10 @@ def _list_visible_directories(parent: Path) -> list[Path]:
     return [entry for entry in parent.iterdir() if not entry.name.startswith(HIDDEN_PREFIX) and entry.is_dir()]
 
 
-def _list_cached_trees(cache: Path) -> list[_CachedTree]:
+def _list_cached_trees(cache: Path, keeper: ReadTimeKeeper) -> list[_CachedTree]:
     try:
         return [
-            _CachedTree(path=tree, last_read_ns=tree.stat().st_mtime_ns, size_bytes=_measure_tree(tree))
+            _CachedTree(path=tree, last_read_ns=keeper.read_stamp(tree), size_bytes=_measure_tree(tree))
             for project in _list_visible_directories(cache)
             for tree in _list_visible_directories(project)
         ]
@@ -174,8 +174,8 @@ def _remove_tree(root: Path) -> None:
     shutil.rmtree(doomed, ignore_errors=True)
 
 
-def _prune(cache: Path, bound_bytes: int, kept: Path) -> None:
-    cached_trees = _list_cached_trees(cache)
+def _prune(cache: Path, bound_bytes: int, kept: Path, keeper: ReadTimeKeeper) -> None:
+    cached_trees = _list_cached_trees(cache, keeper)
     total_bytes = sum(tree.size_bytes for tree in cached_trees)
     removable = sorted((tree for tree in cached_trees if tree.path != kept), key=lambda tree: tree.last_read_ns)
     for tree in removable:
@@ -186,7 +186,11 @@ def _prune(cache: Path, bound_bytes: int, kept: Path) -> None:
 
 
 def _extract_tree(
-    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest, sha: str, root: Path
+    run_process: Callable[[ProcessRequest], ProcessRecord],
+    keeper: ReadTimeKeeper,
+    request: TreeRequest,
+    sha: str,
+    root: Path,
 ) -> None:
     create_directory(root.parent)
     staging = _create_staging(root)
@@ -194,27 +198,29 @@ def _extract_tree(
         staged_tree = _stage_tree(run_process, request, sha, staging, root)
         with hold_lock(request.cache_lock):
             _place_tree(staged_tree, root)
-            _mark_read(root, request.now)
-            _prune(request.cache, request.cache_bound_bytes, root)
+            _mark_read(root, request.now, keeper)
+            _prune(request.cache, request.cache_bound_bytes, root, keeper)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
 
 
-def _reuse_cached_tree(root: Path, request: TreeRequest) -> bool:
+def _reuse_cached_tree(root: Path, request: TreeRequest, keeper: ReadTimeKeeper) -> bool:
     with hold_lock(request.cache_lock):
         if not root.is_dir():
             return False
-        _mark_read(root, request.now)
+        _mark_read(root, request.now, keeper)
         return True
 
 
-def _read_archive(run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest) -> Tree:
+def _read_archive(
+    run_process: Callable[[ProcessRequest], ProcessRecord], keeper: ReadTimeKeeper, request: TreeRequest
+) -> Tree:
     sha = resolve_commit(run_process, request.repository, request.ref)
     if sha is None:
         raise BrigadeError(f"the ref {request.ref} is not a commit of @PROJECT.{request.project}")
     root = request.cache / request.project / sha
-    if not _reuse_cached_tree(root, request):
-        _extract_tree(run_process, request, sha, root)
+    if not _reuse_cached_tree(root, request, keeper):
+        _extract_tree(run_process, keeper, request, sha, root)
     return Tree(project=request.project, ref=request.ref, sha=sha, kind=ARCHIVE_KIND, root=root)
 
 
@@ -223,4 +229,4 @@ def prepare_tree(
 ) -> Tree:
     if request.worktree is not None or request.ref.startswith(WORKTREE_PREFIX):
         return _read_worktree(run_process, request)
-    return _read_archive(run_process, request)
+    return _read_archive(run_process, keeper, request)
