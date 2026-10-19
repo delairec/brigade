@@ -21,6 +21,7 @@ class StudyEquipment:
     resolve_collector: Callable[[str, Path], object]
     document: object
     resolve_forge: Callable[[str], object]
+    launch_run: Callable[[object, Runtime], dict]
 
 
 @dataclass(frozen=True)
