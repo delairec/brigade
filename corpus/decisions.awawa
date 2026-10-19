@@ -3259,8 +3259,7 @@ DECISION TheBodyCheckReadsTheTitleOfTheTaskOnTheFirstLineOfTheBody
 		+ "first line of its body, where the template of brigade task pr writes the TITLE of the"
 		+ "task"
 	STATUS active
-	DESC "the body check fails when the first line of the body is not the TITLE of the task, and"
-		+ "when the body keeps a placeholder of the template of brigade task pr"
+	DESC "the body check fails when the first line of the body is not the TITLE of the task"
 		REF @TASK.B15
 	REJECTED "comparing the title of the pull request with the TITLE of the task: brigade task pr"
 		+ "titles the pull request TYPE(COMPONENT): subject (@TASK.X), never the TITLE, so the"
