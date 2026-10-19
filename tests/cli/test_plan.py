@@ -903,6 +903,32 @@ class BrigadePlanRecordReplayedAfterItsPullRequestTest(PlanRecordOnTheGithubForg
         self.assertIn("\tPR 42\n", (self.machine.corpus / "requests.awawa").read_text())
 
 
+class BrigadePlanRecordReplayedBeforeItsPullRequestTest(PlanRecordOnTheGithubForgeTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.machine.corpus / "policies.awawa").write_text(ASKING_POLICY)
+        self.project.run_git("branch", BRANCH)
+        no_pull_request_of_the_plan_branch = []
+        self.listed.write_text(json.dumps(no_pull_request_of_the_plan_branch))
+
+    def test_should_push_the_plan_branch(self):
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.project.run_git("ls-remote", "--heads", "origin").split()[1], f"refs/heads/{BRANCH}")
+
+    def test_should_open_the_pull_request_of_the_plan_branch(self):
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(PLAN_PULL_REQUEST_CREATION, self.read_pull_request_calls())
+        self.assertIn("\tPR 42\n", (self.machine.corpus / "requests.awawa").read_text())
+
+
 class BrigadePlanRecordOfARequestNotPlanningTest(PlanRecordTestCase):
     def test_should_exit_1_naming_the_request_and_its_status(self):
         # Arrange

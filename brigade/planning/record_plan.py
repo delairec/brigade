@@ -193,7 +193,7 @@ def _deliver(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, 
     )
 
 
-def _find_delivery(runtime: Runtime, recording: PlanRecording, branch: str) -> int | None:
+def _find_delivery(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
     forge_name = read_project_field(recording.project, "FORGE")
     if forge_name != GITHUB_FORGE:
         return None
@@ -202,7 +202,10 @@ def _find_delivery(runtime: Runtime, recording: PlanRecording, branch: str) -> i
         branch=branch,
         environment=recording.read_environment(CLI_KEY),
     )
-    return ask_pull_request(recording.forge, forge_name, query, runtime).number
+    pull_request = ask_pull_request(recording.forge, forge_name, query, runtime)
+    if pull_request is None:
+        return _deliver(runtime, recording, milestone, branch)
+    return pull_request.number
 
 
 def _mark_planned(runtime: Runtime, name: str, milestone: str, pr: int | None) -> None:
@@ -232,7 +235,7 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
     branch = f"{PLAN_BRANCH_PREFIX}{name}"
     if find_branch(runtime.run_process, root, branch):
         milestone = _check_plan(plan)
-        pr = _find_delivery(runtime, recording, branch)
+        pr = _find_delivery(runtime, recording, milestone, branch)
     else:
         milestone = _write_plan(runtime, recording, plan, branch, run)
         pr = _deliver(runtime, recording, milestone, branch)

@@ -108,8 +108,8 @@ that commit at once, and under `github` it pushes the branch and opens a pull re
 `PLAN_REVIEW auto`, the default, brigade merges that pull request itself, squash, as the same login, the login of the
 key `review` approving it first when the forge requires an approving review; under `PLAN_REVIEW ask` the merge is
 the user's. The request goes `planned` with its `MILESTONE` and, under `github`, its `PR`. A plan record replayed
-once `plan/<request>` exists writes nothing again: it takes the pull request of that branch and marks the request
-planned. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
+once `plan/<request>` exists commits nothing again: it takes the pull request of that branch, pushes the branch and
+opens it when the forge finds none, and marks the request planned. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
 wave number of the project in the ledger, and records `wave.started` with the wave, the project, the branch and the
 tasks of its milestone in the order of their number; that name keys every wave event of the ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
 `brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of
