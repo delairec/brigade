@@ -86,6 +86,7 @@ brigade request new <project> <text>
 brigade request show <request>
 brigade request list [--project P]
 brigade request cancel <request>
+brigade plan record <request> --file <plan>
 brigade wave start <request>
 brigade wave show <request>
 brigade wave list [--project P]
@@ -99,7 +100,16 @@ the run, then the line `brigade runs show <run> --log`, the command that follows
 registered or is paused exits 1. `request show` prints a request, its status, its milestone, its pull request and the
 instant of its creation, `-` for a field it does not hold yet; `request list` prints one row per request, those of one
 project with `--project`. `request cancel` moves a `planning` or `planned` request to `cancelled`; a request of
-another status exits 1 naming it. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
+another status exits 1 naming it. `plan record` takes the plan of a `planning` request, one `MILESTONE` and its
+tasks, writes it in a detached worktree of the project's main branch, beside the entities of their types, runs
+`awawa lint --strict` and commits it on `plan/<request>`; under the forge `none` it fast-forwards the main branch to
+that commit at once, and under `github` it pushes the branch and opens a pull request to the main branch, titled
+`docs(plan): <milestone title> (@REQUEST.<request>)`, as the login of the key `cli` of `[forge_accounts]`. Under
+`PLAN_REVIEW auto`, the default, brigade merges that pull request itself, squash, as the same login, the login of the
+key `review` approving it first when the forge requires an approving review; under `PLAN_REVIEW ask` the merge is
+the user's. The request goes `planned` with its `MILESTONE` and, under `github`, its `PR`. A plan record replayed
+once `plan/<request>` exists writes nothing again: it takes the pull request of that branch and marks the request
+planned. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
 wave number of the project in the ledger, and records `wave.started` with the wave, the project, the branch and the
 tasks of its milestone in the order of their number; that name keys every wave event of the ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
 `brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of

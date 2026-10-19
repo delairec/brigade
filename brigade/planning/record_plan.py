@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -7,8 +8,10 @@ from brigade.corpus.locate_entity_block import locate_entity_block
 from brigade.errors import BrigadeError, CorpusLintFailed
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.create_branch import create_branch
+from brigade.git.fast_forward_branch import fast_forward_branch
 from brigade.git.find_branch import find_branch
-from brigade.git.push_branch import BranchPush, push_branch
+from brigade.git.list_worktrees import list_worktrees
+from brigade.git.merge_fast_forward import merge_fast_forward
 from brigade.git.remove_worktree import remove_worktree
 from brigade.ledger.append_event import append_event
 from brigade.ledger.plan_lint_failed import PlanLintFailed
@@ -19,19 +22,21 @@ from brigade.planning.locate_entity_files import locate_entity_files
 from brigade.planning.locate_request_file import locate_request_file
 from brigade.planning.mark_request_planned import ENTITY_TYPE as REQUEST_TYPE
 from brigade.planning.mark_request_planned import mark_request_planned
-from brigade.planning.name_integration_branch import name_integration_branch
+from brigade.planning.publish_plan import PlanPublication, publish_plan
 from brigade.planning.read_entity_sites import read_entity_sites
 from brigade.planning.read_plan import PlanEntity, read_plan
 from brigade.planning.read_planning_request import PlanningRequest
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
+from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
+from brigade.system.read_configuration import CLI_KEY
 
 MILESTONE_TYPE = "MILESTONE"
 TASK_TYPE = "TASK"
 GITHUB_FORGE = "github"
-UNBOUND_ENVIRONMENT = {}
 WORKTREES_DIRECTORY = "plans"
 FILE_SUFFIX = "s.awawa"
+PLAN_BRANCH_PREFIX = "plan/"
 
 
 @dataclass(frozen=True)
@@ -39,6 +44,8 @@ class PlanRecording:
     request: PlanningRequest
     project: object
     plan_file: Path
+    forge: object
+    read_environment: Callable[[str], dict]
 
 
 def _read_run(runtime: Runtime) -> str | None:
@@ -128,7 +135,7 @@ def _write_on_branch(
         raise
 
 
-def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: Path, plan) -> tuple[PlanEntity, str]:
+def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: Path, plan) -> PlanEntity:
     collisions = list_name_collisions(read_entity_sites(runtime.run_process, worktree), plan)
     if collisions:
         raise BrigadeError(", ".join(collisions))
@@ -137,18 +144,72 @@ def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: 
         raise BrigadeError(
             f"the schema of the corpus of @PROJECT.{recording.project.name} does not declare {', '.join(undeclared)}"
         )
-    milestone = _check_plan(plan)
-    branch = name_integration_branch(milestone.entity.name, read_project_field(milestone.entity, "TITLE"))
-    if find_branch(runtime.run_process, worktree, branch):
-        raise BrigadeError(f"the branch {branch} already exists")
-    return milestone, branch
+    return _check_plan(plan)
 
 
-def _mark_planned(runtime: Runtime, name: str, milestone: str, branch: str) -> None:
+def _write_plan(runtime: Runtime, recording: PlanRecording, plan, branch: str, run: str | None) -> PlanEntity:
+    root = Path(read_project_field(recording.project, "PATH"))
+    worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / recording.request.name
+    add_detached_worktree(runtime.run_process, root, worktree, read_project_field(recording.project, "MAIN"))
+    try:
+        milestone = _check_against_corpus(runtime, recording, worktree, plan)
+        _write_on_branch(runtime, recording, worktree, plan, branch, run)
+    finally:
+        remove_worktree(runtime.run_process, root, worktree)
+    return milestone
+
+
+def _merge_into_main(runtime: Runtime, recording: PlanRecording, branch: str) -> None:
+    root = Path(read_project_field(recording.project, "PATH"))
+    main = read_project_field(recording.project, "MAIN")
+    holder = next(
+        (worktree.path for worktree in list_worktrees(runtime.run_process, root) if worktree.branch == main), None
+    )
+    if holder is None:
+        fast_forward_branch(runtime.run_process, root, main, branch)
+    else:
+        merge_fast_forward(runtime.run_process, holder, branch)
+
+
+def _deliver(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
+    forge_name = read_project_field(recording.project, "FORGE")
+    if forge_name != GITHUB_FORGE:
+        _merge_into_main(runtime, recording, branch)
+        return None
+    name = recording.request.name
+    return publish_plan(
+        runtime,
+        PlanPublication(
+            repository=Path(read_project_field(recording.project, "PATH")),
+            project=recording.project.name,
+            base=read_project_field(recording.project, "MAIN"),
+            branch=branch,
+            title=f"docs(plan): {read_project_field(milestone.entity, 'TITLE')} (@{REQUEST_TYPE}.{name})",
+            body=recording.request.text,
+            forge=recording.forge,
+            forge_name=forge_name,
+            read_environment=recording.read_environment,
+        ),
+    )
+
+
+def _find_delivery(runtime: Runtime, recording: PlanRecording, branch: str) -> int | None:
+    forge_name = read_project_field(recording.project, "FORGE")
+    if forge_name != GITHUB_FORGE:
+        return None
+    query = PullRequestQuery(
+        repository=read_project_field(recording.project, "PATH"),
+        branch=branch,
+        environment=recording.read_environment(CLI_KEY),
+    )
+    return ask_pull_request(recording.forge, forge_name, query, runtime).number
+
+
+def _mark_planned(runtime: Runtime, name: str, milestone: str, pr: int | None) -> None:
     root = runtime.paths.config_root
 
     def rewrite(texts: tuple[str, ...]) -> tuple[str, ...]:
-        return (mark_request_planned(texts[0], name, milestone, branch),)
+        return (mark_request_planned(texts[0], name, milestone, pr),)
 
     change_corpus_file(
         runtime.run_process,
@@ -156,7 +217,7 @@ def _mark_planned(runtime: Runtime, name: str, milestone: str, branch: str) -> N
             repository=root,
             lock=locate_corpus_lock(runtime.paths.lock_directory, root),
             file_names=(locate_request_file(runtime, name),),
-            describe_message=lambda: f"brigade plan record: @{REQUEST_TYPE}.{name} planned on {branch}",
+            describe_message=lambda: f"brigade plan record: @{REQUEST_TYPE}.{name} planned",
             rewrite=rewrite,
         ),
     )
@@ -168,14 +229,12 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
     _refuse_a_second_round(runtime, name, run)
     root = Path(read_project_field(recording.project, "PATH"))
     plan = read_plan(runtime.run_process, recording.plan_file)
-    worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / name
-    add_detached_worktree(runtime.run_process, root, worktree, read_project_field(recording.project, "MAIN"))
-    try:
-        milestone, branch = _check_against_corpus(runtime, recording, worktree, plan)
-        _write_on_branch(runtime, recording, worktree, plan, branch, run)
-    finally:
-        remove_worktree(runtime.run_process, root, worktree)
-    if read_project_field(recording.project, "FORGE") == GITHUB_FORGE:
-        push_branch(runtime.run_process, BranchPush(repository=root, branch=branch, environment=UNBOUND_ENVIRONMENT))
-    _mark_planned(runtime, name, milestone.entity.name, branch)
-    return {"request": name, "milestone": milestone.entity.name, "branch": branch}
+    branch = f"{PLAN_BRANCH_PREFIX}{name}"
+    if find_branch(runtime.run_process, root, branch):
+        milestone = _check_plan(plan)
+        pr = _find_delivery(runtime, recording, branch)
+    else:
+        milestone = _write_plan(runtime, recording, plan, branch, run)
+        pr = _deliver(runtime, recording, milestone, branch)
+    _mark_planned(runtime, name, milestone.entity.name, pr)
+    return {"request": name, "milestone": milestone.entity.name, "branch": branch, "pr": pr}

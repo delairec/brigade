@@ -155,6 +155,16 @@ def _ask_gh(request: dict, runtime: Runtime, arguments: tuple[str, ...]) -> str:
     return record.stdout
 
 
+def approve_pull_request(request: dict, runtime: Runtime) -> dict:
+    _ask_gh(request, runtime, ("pr", "review", str(request["number"]), "--approve"))
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+def merge_pull_request(request: dict, runtime: Runtime) -> dict:
+    _ask_gh(request, runtime, ("pr", "merge", str(request["number"]), "--squash"))
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
 def _describe_check_run(check_run: dict) -> dict:
     return {"name": check_run["name"], "verdict": (check_run["conclusion"] or PENDING_VERDICT).lower()}
 

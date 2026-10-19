@@ -1107,7 +1107,6 @@ TASK B11
 		+ "the fake adapter, awawa replayed from recorded outputs where it is not on PATH"
 		IMPL "tests/cli/test_wave.py::class WaveTestCase(FileWaitingTestCase):"
 		IMPL "tests/awawa/volatile_value_masker.py::UTC_INSTANT = "
-	AFTER @TASK.B139
 	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, row 1, records the request with"
 		+ "brigade wave new, and its CLI table lists new, show, start and list, start being"
 		+ "implicit under PLAN_REVIEW auto; @TASK.B10 ships the planner's procedure and @TASK.B139"
@@ -3237,7 +3236,6 @@ TASK B55
 		+ "and opens a pull request through the forge adapter"
 	SPEC "awawa lint --strict exits 0 on the installed corpus"
 	AFTER @TASK.B04
-	AFTER @TASK.B139
 	AFTER @TASK.B46
 	RATIONALE "split from @TASK.B04 in its refinement: awawa's binary ships no starter, the WAVE"
 		+ "schema comes with @TASK.B10, and the pull request needs the forge adapter of @TASK.B46"
@@ -8443,7 +8441,11 @@ TASK B138
 TASK B139
 	TITLE "brigade plan record writes a wave's plan, one MILESTONE and its tasks, into the"
 		+ "project's corpus on its integration branch"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-19: its SPEC 6 to 9, the integration branch named, committed, pushed"
+		+ "and written in BRANCH by plan record, are made false by TASK B187, whose plan record"
+		+ "commits the plan on plan/<request> and merges it into PROJECT.MAIN"
+		REF @TASK.B187
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
 	ROLE ada
@@ -8602,7 +8604,6 @@ TASK B140
 	SPEC "brigade project add asks or confirms the corpus folder at registration, not the mode"
 		+ "alone, where today brigade/registry/discover_project.py:26 takes the common path of the"
 		+ "tracked .awawa files"
-	AFTER @TASK.B139
 	RATIONALE "the modes of @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus left after the control"
 		+ "mode @TASK.B10 and @TASK.B139 deliver"
 		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus

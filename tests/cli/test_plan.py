@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +8,7 @@ from unittest import mock
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
+from tests.cli.test_collect import install_executable
 
 TASK_SCHEMA = (
     "SCHEMA TASK\n"
@@ -459,7 +461,26 @@ PLAN_WITH_A_COLOUR = (
     "\tMILESTONE @MILESTONE.W1\n"
     '\tCOLOUR "red"\n'
 )
-BRANCH = "integration/W1-empty-the-cart-in-one-click"
+BRANCH = "plan/R1"
+FAKE_GH = (
+    "#!/bin/sh\n"
+    'printf \'%s %s\\n\' "${{GH_TOKEN:-unbound}}" "$*" >> "{calls}"\n'
+    'case "$1 $2" in\n'
+    '  "auth token") echo "token-of-$6" ;;\n'
+    '  "pr create") cat > /dev/null; echo https://github.com/acme/shop/pull/42 ;;\n'
+    '  "pr list") cat "{listed}" ;;\n'
+    '  "pr view") cat "{viewed}" ;;\n'
+    '  "api repos/"*) echo 0 ;;\n'
+    "esac\n"
+)
+FORGE_ACCOUNTS = '[forge_accounts]\ncli = "octo-cli"\nreview = "octo-review"\n'
+ASKING_POLICY = "POLICY shop_plans\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
+PLAN_PULL_REQUEST_CREATION = (
+    "token-of-octo-cli pr create --base main --head plan/R1"
+    " --title docs(plan): Empty the cart in one click (@REQUEST.R1) --body-file -"
+)
+PLAN_PULL_REQUEST_MERGE = "token-of-octo-cli pr merge 42 --squash"
+PLAN_PULL_REQUEST_APPROVAL = "token-of-octo-review pr review 42 --approve"
 RUN = "20261013T174800Z-cb856f"
 ANOTHER_RUN = "20261013T181500Z-4d9e21"
 
@@ -496,7 +517,7 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "request": "R1", "milestone": "W1", "branch": BRANCH},
+            {"schema_version": 1, "request": "R1", "milestone": "W1", "branch": BRANCH, "pr": None},
         )
 
     def test_should_print_the_request_the_milestone_and_the_branch_as_text(self):
@@ -507,22 +528,23 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stdout, f"recorded @REQUEST.R1 as @MILESTONE.W1 on {BRANCH}\n")
 
-    def test_should_commit_the_tasks_beside_the_tasks_of_the_corpus_on_the_integration_branch(self):
+    def test_should_commit_the_tasks_beside_the_tasks_of_the_corpus_on_the_plan_branch(self):
         # Act
         self.run_plan_record(PLAN)
 
         # Assert
         self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/tasks.awawa"), RECORDED_TASKS)
 
-    def test_should_commit_the_milestone_in_a_file_of_its_type_on_the_integration_branch(self):
+    def test_should_commit_the_milestone_in_a_file_of_its_type_on_the_plan_branch(self):
         # Act
         self.run_plan_record(PLAN)
 
         # Assert
         self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/milestones.awawa"), RECORDED_MILESTONES)
 
-    def test_should_cut_the_integration_branch_from_the_main_branch(self):
+    def test_should_cut_the_plan_branch_from_the_main_branch(self):
         # Arrange
+        main_before_the_plan = self.project.run_git("rev-parse", "main")
         self.project.run_git("switch", "--quiet", "--create", "feat/s3")
         self.project.run_git("commit", "--quiet", "--allow-empty", "--message", "work ahead of main")
 
@@ -530,7 +552,24 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
         self.run_plan_record(PLAN)
 
         # Assert
-        self.assertEqual(self.project.run_git("rev-parse", f"{BRANCH}~1"), self.project.run_git("rev-parse", "main"))
+        self.assertEqual(self.project.run_git("rev-parse", f"{BRANCH}~1"), main_before_the_plan)
+
+    def test_should_merge_the_plan_branch_into_the_main_branch_at_once(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("rev-parse", "main"), self.project.run_git("rev-parse", BRANCH))
+
+    def test_should_merge_the_plan_branch_into_a_main_branch_checked_out_nowhere(self):
+        # Arrange
+        self.project.run_git("switch", "--quiet", "--create", "feat/s3")
+
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(self.project.run_git("rev-parse", "main"), self.project.run_git("rev-parse", BRANCH))
 
     def test_should_leave_the_checkout_of_the_project_on_its_branch_and_clean(self):
         # Act
@@ -583,9 +622,77 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
             "\tAFTER @TASK.S2\n",
         )
 
-    def test_should_mark_the_request_planned_with_its_milestone_and_its_branch(self):
+    def test_should_mark_the_request_planned_with_its_milestone(self):
         # Act
         self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(
+            (self.machine.corpus / "requests.awawa").read_text(),
+            f'REQUEST R1\n\tPROJECT @PROJECT.shop\n\tTEXT "{REQUEST_TEXT}"\n\tSTATUS planned\n\tMILESTONE "W1"\n',
+        )
+
+
+class PlanRecordOnTheGithubForgeTestCase(PlanRecordTestCase):
+    def setUp(self):
+        super().setUp()
+        root = Path(self.root.name).resolve()
+        remote = root / "remote.git"
+        self.project.run_git("init", "--quiet", "--bare", str(remote))
+        projects = self.machine.corpus / "projects.awawa"
+        projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n'))
+        self.project.run_git("remote", "add", "origin", str(remote))
+        self.gh_calls = root / "gh-calls"
+        self.listed = root / "listed-pull-requests.json"
+        self.viewed = root / "viewed-pull-request.json"
+        self.answer_review_decision(None)
+        install_executable(
+            root / "tools" / "gh", FAKE_GH.format(calls=self.gh_calls, listed=self.listed, viewed=self.viewed)
+        )
+        self.machine.write_configuration(FORGE_ACCOUNTS)
+        self.main_before_the_plan = self.project.run_git("rev-parse", "main")
+
+    def answer_review_decision(self, review_decision: str | None) -> None:
+        pull_request = {
+            "number": 42,
+            "state": "OPEN",
+            "headRefOid": "0123456789abcdef",
+            "baseRefName": "main",
+            "reviewDecision": review_decision,
+            "statusCheckRollup": [],
+        }
+        self.listed.write_text(json.dumps([pull_request]))
+        self.viewed.write_text(json.dumps(pull_request))
+
+    def run_plan_record_on_github(self, *options: str):
+        tools = Path(self.root.name).resolve() / "tools"
+        environment = {**self.machine.describe_environment(), "PATH": f"{tools}{os.pathsep}{os.environ['PATH']}"}
+        return self.run_plan_record(PLAN, *options, environment=environment)
+
+    def read_pull_request_calls(self) -> list[str]:
+        return [line for line in self.gh_calls.read_text().splitlines() if line.split(" ")[1] == "pr"]
+
+
+class BrigadePlanRecordOnAProjectOfTheGithubForgeTest(PlanRecordOnTheGithubForgeTestCase):
+    def test_should_push_the_plan_branch(self):
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.project.run_git("ls-remote", "--heads", "origin").split()[1], f"refs/heads/{BRANCH}")
+
+    def test_should_open_the_plan_pull_request_to_the_main_branch_as_the_login_of_the_cli_key(self):
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_pull_request_calls()[0], PLAN_PULL_REQUEST_CREATION)
+
+    def test_should_mark_the_request_planned_with_its_milestone_and_its_pull_request(self):
+        # Act
+        self.run_plan_record_on_github()
 
         # Assert
         self.assertEqual(
@@ -595,25 +702,58 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
             f'\tTEXT "{REQUEST_TEXT}"\n'
             "\tSTATUS planned\n"
             '\tMILESTONE "W1"\n'
-            f'\tBRANCH "{BRANCH}"\n',
+            "\tPR 42\n",
         )
 
-
-class BrigadePlanRecordOnAProjectOfTheGithubForgeTest(PlanRecordTestCase):
-    def test_should_push_the_integration_branch(self):
-        # Arrange
-        remote = Path(self.root.name).resolve() / "remote.git"
-        self.project.run_git("init", "--quiet", "--bare", str(remote))
-        projects = self.machine.corpus / "projects.awawa"
-        projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n'))
-        self.project.run_git("remote", "add", "origin", str(remote))
-
+    def test_should_print_the_pull_request(self):
         # Act
-        completed = self.run_plan_record(PLAN)
+        completed = self.run_plan_record_on_github("--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(self.project.run_git("ls-remote", "--heads", "origin").split()[1], f"refs/heads/{BRANCH}")
+        self.assertEqual(json.loads(completed.stdout)["pr"], 42)
+
+    def test_should_merge_the_plan_pull_request_by_squash_under_plan_review_auto(self):
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_pull_request_calls()[-1], PLAN_PULL_REQUEST_MERGE)
+        self.assertNotIn(PLAN_PULL_REQUEST_APPROVAL, self.read_pull_request_calls())
+
+    def test_should_leave_the_local_main_branch_to_the_forge(self):
+        # Act
+        self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(self.project.run_git("rev-parse", "main"), self.main_before_the_plan)
+
+
+class BrigadePlanRecordUnderPlanReviewAskTest(PlanRecordOnTheGithubForgeTestCase):
+    def test_should_leave_the_merge_of_the_plan_pull_request_to_the_user(self):
+        # Arrange
+        (self.machine.corpus / "policies.awawa").write_text(ASKING_POLICY)
+
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn(PLAN_PULL_REQUEST_MERGE, self.read_pull_request_calls())
+
+
+class BrigadePlanRecordOnAForgeRequiringAnApprovingReviewTest(PlanRecordOnTheGithubForgeTestCase):
+    def test_should_approve_as_the_login_of_the_review_slot_before_merging_as_the_login_of_the_cli_key(self):
+        # Arrange
+        self.answer_review_decision("REVIEW_REQUIRED")
+
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_pull_request_calls()[-2:], [PLAN_PULL_REQUEST_APPROVAL, PLAN_PULL_REQUEST_MERGE])
 
 
 class BrigadePlanRecordOfAPlanTheSchemaDoesNotDeclareTest(PlanRecordTestCase):
@@ -648,7 +788,7 @@ class BrigadePlanRecordOfAPlanReusingNamesOfTheCorpusTest(PlanRecordTestCase):
             "brigade plan record: @MILESTONE.W1 already exists at corpus/milestones.awawa:1,"
             " @TASK.S2 already exists at corpus/tasks.awawa:1\n",
         )
-        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+        self.assertEqual(self.project.run_git("branch", "--list", "plan/*"), "")
 
 
 class BrigadePlanRecordFromACheckoutBehindTheMainBranchTest(PlanRecordTestCase):
@@ -667,7 +807,7 @@ class BrigadePlanRecordFromACheckoutBehindTheMainBranchTest(PlanRecordTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stderr, "brigade plan record: @TASK.S4 already exists at corpus/tasks.awawa:6\n")
-        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+        self.assertEqual(self.project.run_git("branch", "--list", "plan/*"), "")
 
     def test_should_spend_no_lint_round(self):
         # Act
@@ -720,17 +860,47 @@ class BrigadePlanRecordOfAPlanThatIsNotOneMilestoneAndItsTasksTest(PlanRecordTes
                 self.assertEqual(completed.stderr, expected_stderr)
 
 
-class BrigadePlanRecordOnAnExistingIntegrationBranchTest(PlanRecordTestCase):
-    def test_should_exit_1_naming_the_branch_before_any_write(self):
-        # Arrange
-        self.project.run_git("branch", BRANCH)
+class BrigadePlanRecordReplayedAfterItsBranchTest(PlanRecordTestCase):
+    def setUp(self):
+        super().setUp()
+        self.run_plan_record(PLAN)
+        self.write_request("planning")
+        self.recorded_plan = self.project.run_git("rev-parse", BRANCH)
 
+    def test_should_mark_the_request_planned(self):
         # Act
         completed = self.run_plan_record(PLAN)
 
         # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stderr, f"brigade plan record: the branch {BRANCH} already exists\n")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("\tSTATUS planned\n", (self.machine.corpus / "requests.awawa").read_text())
+
+    def test_should_reuse_the_plan_branch_without_a_second_commit(self):
+        # Act
+        self.run_plan_record(PLAN)
+
+        # Assert
+        self.assertEqual(
+            (self.project.run_git("rev-parse", BRANCH), self.project.run_git("rev-parse", "main")),
+            (self.recorded_plan, self.recorded_plan),
+        )
+
+
+class BrigadePlanRecordReplayedAfterItsPullRequestTest(PlanRecordOnTheGithubForgeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.run_plan_record_on_github()
+        self.write_request("planning")
+        self.gh_calls.unlink()
+
+    def test_should_reuse_the_pull_request_of_the_plan_branch(self):
+        # Act
+        completed = self.run_plan_record_on_github()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn(PLAN_PULL_REQUEST_CREATION, self.read_pull_request_calls())
+        self.assertIn("\tPR 42\n", (self.machine.corpus / "requests.awawa").read_text())
 
 
 class BrigadePlanRecordOfARequestNotPlanningTest(PlanRecordTestCase):
@@ -781,7 +951,7 @@ class BrigadePlanRecordOfAPlanFailingLintTest(PlanRecordTestCase):
         self.run_plan_record(PLAN_FAILING_LINT)
 
         # Assert
-        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+        self.assertEqual(self.project.run_git("branch", "--list", "plan/*"), "")
         self.assertEqual(len(self.project.run_git("worktree", "list").splitlines()), 1)
 
     def test_should_leave_the_request_planning(self):
@@ -830,7 +1000,7 @@ class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
             completed.stderr,
             f"brigade plan record: @REQUEST.R1 spent its lint round in run {RUN}; the run ends blocked\n",
         )
-        self.assertEqual(self.project.run_git("branch", "--list", "integration/*"), "")
+        self.assertEqual(self.project.run_git("branch", "--list", "plan/*"), "")
 
     def test_should_record_the_corrected_plan_in_another_run(self):
         # Act
