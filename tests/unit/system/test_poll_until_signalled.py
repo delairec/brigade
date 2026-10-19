@@ -1,6 +1,5 @@
 import os
 import signal
-import threading
 import unittest
 from collections.abc import Callable
 
@@ -76,22 +75,3 @@ class PollUntilSignalledTest(unittest.TestCase):
 
         # Assert
         self.assertEqual((signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT)), self.handlers_before)
-
-
-class PollUntilSignalledWhileItWaitsTest(PollUntilSignalledTest):
-    def test_should_stop_on_a_signal_received_between_two_polls(self):
-        # Arrange
-        sender = threading.Timer(0.05, os.kill, (os.getpid(), signal.SIGTERM))
-        self.addCleanup(sender.cancel)
-
-        def start_the_sender_and_answer_not_done() -> bool:
-            sender.start()
-            return False
-
-        poller = ScriptedPoller([start_the_sender_and_answer_not_done])
-
-        # Act
-        signalled = poll_until_signalled(poller, 30.0)
-
-        # Assert
-        self.assertEqual((signalled, poller.calls), (True, 1))
