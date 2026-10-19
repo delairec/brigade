@@ -13,6 +13,8 @@ from brigade.cli import main
 from brigade.commands.tick import LOCK_NAME
 from brigade.system.hold_lock import hold_lock
 
+TERMINAL_WIDE_ENOUGH_FOR_ONE_LINE_PER_HELP = "200"
+
 ADAPTER_MATRIX = (
     "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
     " | Graceful stop |\n"
@@ -62,6 +64,26 @@ class MainTestCase(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
             main(arguments)
         return exit_.exception.code
+
+    def ask_help(self, arguments: list[str]) -> tuple[int, str]:
+        stdout = io.StringIO()
+        with (
+            mock.patch.dict(os.environ, {"COLUMNS": TERMINAL_WIDE_ENOUGH_FOR_ONE_LINE_PER_HELP}),
+            contextlib.redirect_stdout(stdout),
+            self.assertRaises(SystemExit) as exit_,
+        ):
+            main(arguments)
+        return exit_.exception.code, stdout.getvalue()
+
+
+class MainHelpTest(MainTestCase):
+    def test_should_list_every_command_when_the_line_names_none(self):
+        # Act
+        exit_code, page = self.ask_help(["--help"])
+
+        # Assert
+        self.assertEqual(exit_code, 0)
+        self.assertRegex(page, r"\n    ledger +read the event journal: an overview, a wave or a project\n")
 
 
 class MainVersionTest(MainTestCase):
