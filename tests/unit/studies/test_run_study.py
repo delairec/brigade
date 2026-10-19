@@ -1,4 +1,3 @@
-import os
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -12,7 +11,6 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
-from brigade.runs.record_run_pid import record_run_pid
 from brigade.studies.convert_study import Study
 from brigade.studies.run_study import run_study
 from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
@@ -68,7 +66,14 @@ class RunStudyArrangement:
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
         self.runtime = create_scripted_runtime(self.root, self.processes)
-        self.equipment = create_study_equipment(resolve_collector=refuse_collector)
+        self.live_run_directories = set()
+        self.held_run_directories = []
+        self.equipment = create_study_equipment(
+            resolve_collector=refuse_collector,
+            name_run={RUNTIME_NOW: "20261019T090000Z-c0ffee"}.__getitem__,
+            is_run_alive=self.live_run_directories.__contains__,
+            record_own_pid=self.held_run_directories.append,
+        )
         self.config_root = self.runtime.paths.config_root
         self.processes.answer_corpus_change(
             self.config_root, ("findings.awawa",), "brigade study run: the answer of @STUDY.trees"
@@ -81,7 +86,7 @@ class RunStudyArrangement:
         run_directory = self.root / "state" / "runs" / run
         run_directory.mkdir(parents=True)
         (run_directory / "study.json").write_text(f'{{"study": "{study}"}}', encoding="utf-8")
-        record_run_pid(run_directory, os.getpid())
+        self.live_run_directories.add(run_directory)
 
 
 class RunStudyTest(RunStudyArrangement, unittest.TestCase):
@@ -91,6 +96,13 @@ class RunStudyTest(RunStudyArrangement, unittest.TestCase):
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
+
+    def test_should_hold_the_run_by_the_process_of_brigade(self):
+        # Act
+        run_study(self.runtime, SCAN, self.equipment, RUN_ID)
+
+        # Assert
+        self.assertEqual(self.held_run_directories, [self.root / "state" / "runs" / RUN_ID])
 
     def test_should_write_the_answer_of_the_study(self):
         # Act
@@ -159,12 +171,9 @@ class RunStudyStartTest(RunStudyArrangement, unittest.TestCase):
     def test_should_start_a_new_run_after_a_run_done(self):
         # Arrange
         self.record_order(OrderDone(project=None, kind="study", order="trees", run=RUN_ID))
-        equipment = create_study_equipment(
-            resolve_collector=refuse_collector, name_run={RUNTIME_NOW: "20261019T090000Z-c0ffee"}.__getitem__
-        )
 
         # Act
-        ran = run_study(self.runtime, SCAN, equipment, None)
+        ran = run_study(self.runtime, SCAN, self.equipment, None)
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": "20261019T090000Z-c0ffee", "state": "done"})

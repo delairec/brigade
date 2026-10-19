@@ -1,9 +1,7 @@
-import os
 import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.runs.record_run_pid import record_run_pid
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 
 
@@ -21,11 +19,12 @@ class ReadLiveStudyRunsTest(unittest.TestCase):
 
     def test_should_read_the_study_runs_whose_process_is_alive(self):
         # Arrange
-        record_run_pid(self.create_study_run("r1", "trees"), os.getpid())
+        live_run = self.create_study_run("r1", "trees")
         self.create_study_run("r2", "ash")
+        is_alive = {live_run}.__contains__
 
         # Act
-        live = read_live_study_runs(self.state_root)
+        live = read_live_study_runs(self.state_root, is_alive)
 
         # Assert
         self.assertEqual(live, (LiveStudyRun(study="trees", run="r1"),))

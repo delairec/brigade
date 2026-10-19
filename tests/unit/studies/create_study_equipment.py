@@ -25,6 +25,14 @@ def _refuse_naming(now: datetime) -> str:
     raise AssertionError("the study named a new run")
 
 
+def _refuse_probe(run_directory: Path) -> bool:
+    raise AssertionError(f"the study probed the process of the run {run_directory.name}")
+
+
+def _refuse_holding(run_directory: Path) -> None:
+    raise AssertionError(f"the study held the run {run_directory.name}")
+
+
 def create_study_equipment(**changes) -> StudyEquipment:
     refusing_equipment = StudyEquipment(
         collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
@@ -34,5 +42,7 @@ def create_study_equipment(**changes) -> StudyEquipment:
         launch_run=_refuse_launch,
         name_run=_refuse_naming,
         working_directory=UNUSED_WORKING_DIRECTORY,
+        is_run_alive=_refuse_probe,
+        record_own_pid=_refuse_holding,
     )
     return dataclasses.replace(refusing_equipment, **changes)
