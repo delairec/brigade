@@ -8,8 +8,6 @@ from brigade.errors import BrigadeError, CannotWrite
 from tests.unit.commands.create_command_runtime import create_command_runtime
 from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
 
-GITIGNORE = "config.toml\n"
-
 
 def _create_git_answers(name: ProcessAnswer, email: ProcessAnswer) -> dict:
     return {
