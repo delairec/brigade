@@ -6,8 +6,7 @@ from pathlib import Path
 
 from brigade.commands.project_list import COMMAND, project_list
 from brigade.errors import BrigadeError
-from tests.unit.commands.create_command_runtime import create_command_runtime
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 
 PROJECTS = json.dumps(
     {
@@ -33,7 +32,7 @@ class ProjectListTest(unittest.TestCase):
                 ("awawa", "show", "@PROJECT.lib"): ProcessAnswer(stdout=LIB),
             }
         )
-        self.runtime = create_command_runtime(Path(self.root.name), run_process=runner.run)
+        self.runtime = create_runtime(Path(self.root.name), run_process=runner.run)
 
     def test_should_list_each_project_with_its_status_and_path(self):
         # Arrange

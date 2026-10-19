@@ -5,8 +5,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.project_pause import COMMAND, project_pause
-from tests.unit.commands.create_command_runtime import create_command_runtime
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
 PAUSED_APP = json.dumps(
@@ -24,7 +23,7 @@ class ProjectPauseTest(unittest.TestCase):
                 ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=PAUSED_APP),
             }
         )
-        self.runtime = create_command_runtime(Path(self.root.name), run_process=runner.run)
+        self.runtime = create_runtime(Path(self.root.name), run_process=runner.run)
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
 

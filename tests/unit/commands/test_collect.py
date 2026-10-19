@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from brigade.commands.collect import COMMAND, collect
-from tests.unit.commands.create_command_runtime import create_command_runtime
+from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 
 NOTES_DOCUMENT = (
@@ -38,7 +38,7 @@ class CollectTest(unittest.TestCase):
         self.project.mkdir()
         self.enterContext(contextlib.chdir(self.project))
         self.collector = ScriptedCollector()
-        self.runtime = create_command_runtime(
+        self.runtime = create_runtime(
             root,
             resolve_plugin=create_plugin_resolver(
                 {("collector", "notes"): self.collector, ("forge", "github"): object()}

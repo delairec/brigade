@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.ledger_budgets import COMMAND, ledger_budgets
-from tests.unit.commands.create_command_runtime import create_command_runtime
+from tests.unit.commands.command_runtime import create_runtime
 
 RUN_FINISHED = (
     '{"schema_version": 2, "ts": "2026-10-09T10:33:00Z", "event": "run.finished", "run": "20261009T101817Z-2ee96f",'
@@ -19,7 +19,7 @@ class LedgerBudgetsTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
-        self.runtime = create_command_runtime(Path(self.root.name))
+        self.runtime = create_runtime(Path(self.root.name))
         self.ledger_file = self.runtime.paths.state_root / "ledger" / "2026-10.jsonl"
         self.ledger_file.parent.mkdir(parents=True)
         self.ledger_file.write_text(RUN_FINISHED + "not a document\n")

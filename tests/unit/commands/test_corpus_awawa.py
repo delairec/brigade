@@ -6,8 +6,7 @@ from pathlib import Path
 
 from brigade.commands.corpus_awawa import COMMAND, AwawaPassage, corpus_awawa
 from brigade.system.run_process import ProcessRecord
-from tests.unit.commands.create_command_runtime import create_command_runtime
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
 APP = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}]})
@@ -36,7 +35,7 @@ class CorpusAwawaTest(unittest.TestCase):
                 ),
             }
         )
-        self.runtime = create_command_runtime(Path(self.root.name), run_process=runner.run)
+        self.runtime = create_runtime(Path(self.root.name), run_process=runner.run)
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
 

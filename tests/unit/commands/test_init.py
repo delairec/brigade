@@ -5,8 +5,7 @@ from pathlib import Path
 
 from brigade.commands.init import COMMAND, init
 from brigade.errors import BrigadeError, CannotWrite
-from tests.unit.commands.create_command_runtime import create_command_runtime
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 
 
 def _create_git_answers(name: ProcessAnswer, email: ProcessAnswer) -> dict:
@@ -27,7 +26,7 @@ class InitTest(unittest.TestCase):
         self.runner = ScriptedProcessRunner(
             _create_git_answers(ProcessAnswer(stdout="Ada\n"), ProcessAnswer(stdout="ada@example.org\n"))
         )
-        self.runtime = create_command_runtime(Path(self.root.name), run_process=self.runner.run)
+        self.runtime = create_runtime(Path(self.root.name), run_process=self.runner.run)
         self.config_root = self.runtime.paths.config_root
         self.no_option = argparse.Namespace()
 
@@ -113,13 +112,12 @@ class InitOverAFileWhereTheRepositoryGoesTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
-        root = Path(self.root.name)
+        self.blocking_file = Path(self.root.name) / "machine"
+        self.blocking_file.write_text("")
         runner = ScriptedProcessRunner(
             _create_git_answers(ProcessAnswer(stdout="Ada\n"), ProcessAnswer(stdout="ada@example.org\n"))
         )
-        self.runtime = create_command_runtime(root, run_process=runner.run)
-        self.blocking_file = root / "config"
-        self.blocking_file.write_text("")
+        self.runtime = create_runtime(self.blocking_file, run_process=runner.run)
 
     def test_should_refuse_the_directory_it_cannot_create(self):
         # Arrange
@@ -130,7 +128,7 @@ class InitOverAFileWhereTheRepositoryGoesTest(unittest.TestCase):
             init(no_option, self.runtime)
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"cannot write {self.blocking_file / 'brigade'}: Not a directory")
+        self.assertEqual(str(refusal.exception), f"cannot write {self.blocking_file / 'config'}: Not a directory")
 
 
 class InitWithoutAGitIdentityTest(unittest.TestCase):
@@ -143,7 +141,7 @@ class InitWithoutAGitIdentityTest(unittest.TestCase):
         ]
         for name, email, lacking in rows:
             with self.subTest(lacking=lacking), tempfile.TemporaryDirectory() as root:
-                runtime = create_command_runtime(
+                runtime = create_runtime(
                     Path(root), run_process=ScriptedProcessRunner(_create_git_answers(name, email)).run
                 )
 

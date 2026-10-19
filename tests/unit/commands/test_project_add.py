@@ -6,8 +6,7 @@ from pathlib import Path
 
 from brigade.commands.project_add import COMMAND, project_add
 from brigade.errors import BrigadeError, UsageError
-from tests.unit.commands.create_command_runtime import create_command_runtime
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 
 NO_PROJECT = json.dumps({"entities": []})
 APP_PROJECT = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
@@ -47,7 +46,7 @@ class ProjectAddTest(unittest.TestCase):
             ("git", "diff"): ProcessAnswer(exit_code=1),
             ("git", "commit"): ProcessAnswer(),
         }
-        self.runtime = create_command_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
+        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
         self.registry = self.runtime.paths.config_root / "projects.awawa"

@@ -6,8 +6,7 @@ from pathlib import Path
 
 from brigade.commands.plan_context import COMMAND, plan_context
 from brigade.errors import BrigadeError
-from tests.unit.commands.create_command_runtime import create_command_runtime
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 
 REQUEST = json.dumps(
     {
@@ -72,7 +71,7 @@ class PlanContextTest(unittest.TestCase):
             ("awawa", "show", "TASK", "--json"): ProcessAnswer(stdout=TASK_SCHEMA),
             ("awawa", "show", "MILESTONE"): ProcessAnswer(exit_code=1),
         }
-        self.runtime = create_command_runtime(Path(self.root.name), run_process=ScriptedProcessRunner(self.answers).run)
+        self.runtime = create_runtime(Path(self.root.name), run_process=ScriptedProcessRunner(self.answers).run)
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA REQUEST\n")
 

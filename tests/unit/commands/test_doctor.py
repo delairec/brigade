@@ -2,7 +2,6 @@ import argparse
 import json
 import tempfile
 import unittest
-from datetime import UTC, datetime
 from pathlib import Path
 from unittest import mock
 
@@ -10,18 +9,13 @@ import brigade
 from brigade.commands.doctor import COMMAND, _check_checkout, doctor
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import ToolFailure, ToolNotFound
-from brigade.runtime import Runtime
-from brigade.system.paths import Paths
-from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.system.trail_writer import TrailWriter
-from tests.unit.commands.create_command_runtime import create_command_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
 
 GIT_ANSWERS = {
-    "for-each-ref": "*\tde446f3\torigin/main\n",
-    "rev-parse": "8885daa\n",
-    "rev-list": "1\t0\n",
+    ("git", "for-each-ref"): ProcessAnswer(stdout="*\tde446f3\torigin/main\n"),
+    ("git", "rev-parse"): ProcessAnswer(stdout="8885daa\n"),
+    ("git", "rev-list"): ProcessAnswer(stdout="1\t0\n"),
 }
 CONFIGURATION = (
     'client = "scripted"\ninstructions = "/srv/instructions"\n'
@@ -44,48 +38,6 @@ COMMENT_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.lib"]}, {"name": "REVIEW", "atoms": ["comment"]}]}
 )
 TOKEN = {"GH_TOKEN": "t0k3n"}
-
-
-def _report_nothing(trace) -> None:
-    pass
-
-
-def _refuse_process(request):
-    raise AssertionError(f"the checkout check ran {request.argv}")
-
-
-def _refuse_resolution(kind: str, name: str):
-    raise AssertionError(f"the checkout check resolved the {kind} plugin {name}")
-
-
-def _answer_the_git_of_a_checkout_behind_its_upstream(request: ProcessRequest) -> ProcessRecord:
-    return ProcessRecord(
-        argv=request.argv,
-        cwd=request.cwd,
-        exit_code=0,
-        stdout=GIT_ANSWERS[request.argv[1]],
-        stderr="",
-        duration_ms=0,
-    )
-
-
-def _create_runtime(root: Path) -> Runtime:
-    return Runtime(
-        run_process=_answer_the_git_of_a_checkout_behind_its_upstream,
-        spawn_process=_refuse_process,
-        paths=Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root / "home",
-            executable_search_path="",
-        ),
-        now=datetime(2026, 10, 11, 9, 0, tzinfo=UTC),
-        read_clock=lambda: datetime(2026, 10, 11, 9, 0, tzinfo=UTC),
-        entry_point=root / "bin" / "brigade",
-        trail=TrailWriter(_report_nothing),
-        resolve_plugin=_refuse_resolution,
-    )
 
 
 class ScriptedForge:
@@ -128,7 +80,7 @@ class DoctorTestCase(unittest.TestCase):
         self.probe = dict(PROBE)
         self.forge = ScriptedForge({"ada-bot": TOKEN, "rev-bot": TOKEN}, "ada-bot")
         plugins = {("client", "scripted"): ScriptedClient({"probe": self.probe}), ("forge", "github"): self.forge}
-        self.runtime = create_command_runtime(
+        self.runtime = create_runtime(
             Path(self.root.name),
             run_process=ScriptedProcessRunner(self.answers).run,
             resolve_plugin=create_plugin_resolver(plugins),
@@ -628,7 +580,7 @@ class DoctorCheckOfACheckoutTest(unittest.TestCase):
         root = Path(self.root.name).resolve()
         self.checkout = root / "checkout"
         (self.checkout / "brigade").mkdir(parents=True)
-        self.runtime = _create_runtime(root)
+        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(GIT_ANSWERS).run)
 
     def test_should_warn_that_the_checkout_is_behind_its_upstream(self):
         # Arrange
@@ -675,7 +627,7 @@ class DoctorCheckOfACheckoutGitCannotReadTest(unittest.TestCase):
         self.checkout = root / "checkout"
         (self.checkout / "brigade").mkdir(parents=True)
         self.answers = {}
-        self.runtime = create_command_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
+        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
         self.enterContext(mock.patch.object(brigade, "__file__", str(self.checkout / "brigade" / "__init__.py")))
 
     def test_should_warn_with_the_failure_of_git(self):

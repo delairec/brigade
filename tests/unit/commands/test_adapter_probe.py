@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.commands.adapter_probe import COMMAND, adapter_probe
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
-from tests.unit.commands.create_command_runtime import create_command_runtime
+from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 PROBE_ANSWER = {
@@ -56,7 +56,7 @@ class AdapterProbeOfTheConfiguredClientTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         client = ScriptedClient({"probe": PROBE_ANSWER})
-        self.runtime = create_command_runtime(
+        self.runtime = create_runtime(
             Path(self.root.name), resolve_plugin=create_plugin_resolver({("client", "scripted"): client})
         )
         self.runtime.paths.config_root.mkdir(parents=True)

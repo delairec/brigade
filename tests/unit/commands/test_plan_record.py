@@ -6,8 +6,7 @@ from pathlib import Path
 
 from brigade.commands.plan_record import COMMAND, plan_record
 from brigade.errors import BrigadeError
-from tests.unit.commands.create_command_runtime import create_command_runtime
-from tests.unit.commands.scripted_process_runner import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
 
 REQUEST = json.dumps(
     {
@@ -67,7 +66,7 @@ class PlanRecordTest(unittest.TestCase):
             ("git", "diff"): ProcessAnswer(exit_code=1),
             ("git", "commit"): ProcessAnswer(),
         }
-        self.runtime = create_command_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
+        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
         config_root = self.runtime.paths.config_root
         self.answers["awawa", "status", "--json", str(config_root)] = ProcessAnswer(stdout=REQUEST_SITES)
         config_root.mkdir(parents=True)

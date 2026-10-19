@@ -7,7 +7,7 @@ from unittest import mock
 
 from brigade.commands.adapter_transcripts import COMMAND, adapter_transcripts
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
-from tests.unit.commands.create_command_runtime import create_command_runtime
+from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 TRANSCRIPTS_REQUEST = '{"schema_version": 1, "session_id": "s1", "worktree": "/srv/b42"}'
@@ -66,7 +66,7 @@ class AdapterTranscriptsOfTheConfiguredClientTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         client = ScriptedClient({"transcripts": TRANSCRIPTS_ANSWER})
-        self.runtime = create_command_runtime(
+        self.runtime = create_runtime(
             Path(self.root.name), resolve_plugin=create_plugin_resolver({("client", "scripted"): client})
         )
         self.runtime.paths.config_root.mkdir(parents=True)
