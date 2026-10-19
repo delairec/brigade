@@ -7,7 +7,8 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.runs.read_run_setting import read_run_setting
 from brigade.system.read_configuration import Configuration
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 

@@ -5,7 +5,8 @@ import unittest
 from pathlib import Path
 
 from brigade.runs.read_handovers import read_handovers
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 

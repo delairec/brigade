@@ -5,7 +5,8 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.runs.show_run import show_run
-from tests.unit.runs.run_directory_writer import write_run_record, write_run_result
+from tests.unit.runs.write_run_record import write_run_record
+from tests.unit.runs.write_run_result import write_run_result
 
 RUN_ID = "20261019T090000Z-c0ffee"
 JOURNAL_LINE = (

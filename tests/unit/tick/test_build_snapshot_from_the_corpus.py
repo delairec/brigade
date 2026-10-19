@@ -13,8 +13,17 @@ from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import Configuration
-from brigade.tick.build_snapshot import PlannedRequest, ProjectFacts, RateLimit, Snapshot, TaskFacts, build_snapshot
-from tests.unit.create_test_runtime import FIXED_NOW, create_test_paths, create_test_runtime
+from brigade.tick.build_snapshot import (
+    PlannedRequest,
+    ProjectFacts,
+    RateLimit,
+    Snapshot,
+    StudyFacts,
+    TaskFacts,
+    build_snapshot,
+)
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.ledger.create_run_finished import create_run_finished
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
@@ -156,10 +165,12 @@ class BuildSnapshotOfARunningWaveTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
         self.write_operational_corpus()
-        for wave, branch in [("w1", "integration/w1"), ("w4", "integration/w4")]:
-            self.record(60, WaveStarted(wave=wave, project="shop", branch=branch, tasks=("B1",)))
-        for task, state in [("B1", "running"), ("B2", "paused:quota"), ("B3", "merged"), ("B4", "running")]:
-            self.record(50, TaskState(wave="w1", task=task, state=state))
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B1",)))
+        self.record(50, TaskState(wave="w1", task="B1", state="running"))
+        self.record(50, TaskState(wave="w1", task="B2", state="paused:quota"))
+        self.record(50, TaskState(wave="w1", task="B3", state="merged"))
+        self.record(50, TaskState(wave="w1", task="B4", state="running"))
         self.record(2, create_run_finished("r1", wave="w1", task="B1", outcome="failed", error_class="rate_limit"))
         self.record(1, create_run_finished("r2", wave="w1", task="B2", outcome="failed", error_class="rate_limit"))
         self.record(20, ForgeAccountUnavailable(login="octo-builder", key="build"))
@@ -202,7 +213,7 @@ class BuildSnapshotOfARunningWaveTest(BuildSnapshotTestCase):
                 len(snapshot.rate_limits),
                 snapshot.to_document()["projects"],
                 snapshot.to_document()["planned"],
-                [study.name for study in snapshot.studies],
+                snapshot.studies,
             ),
             (
                 1,
@@ -214,7 +225,11 @@ class BuildSnapshotOfARunningWaveTest(BuildSnapshotTestCase):
                 2,
                 [{"project": "shop", "slots": 2, "live_runs": []}],
                 [{"request": "R2", "project": "shop", "plan_review": "auto"}],
-                ["flakes"],
+                (
+                    StudyFacts(
+                        name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False
+                    ),
+                ),
             ),
         )
 

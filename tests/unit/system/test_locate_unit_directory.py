@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 
 from brigade.system.locate_unit_directory import locate_unit_directory
-from tests.unit.create_test_runtime import create_test_paths
+from tests.unit.create_test_paths import create_test_paths
 
 
 class LocateUnitDirectoryTest(unittest.TestCase):

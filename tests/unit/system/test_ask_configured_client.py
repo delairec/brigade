@@ -8,7 +8,8 @@ from brigade.system.ask_configured_client import ask_configured_client
 from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import Configuration
 from brigade.system.require_configured_client import ConfiguredClient
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class AskConfiguredClientTest(unittest.TestCase):

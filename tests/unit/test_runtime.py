@@ -51,7 +51,7 @@ class BuildRuntimeTest(unittest.TestCase):
         report = self.report(verbose=True)
 
         # Assert
-        self.assertTrue(report.startswith("brigade runs list: "), report)
+        self.assertEqual(report, "brigade runs list: ran git status, exit 0 in 12 ms\n")
 
     def test_should_report_nothing_when_quiet(self):
         # Act

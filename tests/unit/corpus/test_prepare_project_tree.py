@@ -7,7 +7,8 @@ from types import SimpleNamespace
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.system.read_configuration import Configuration
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 

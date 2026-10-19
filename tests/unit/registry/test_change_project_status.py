@@ -6,7 +6,8 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.registry.change_project_status import change_project_status
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 ACTIVE_SHOP = 'PROJECT shop\n\tPATH "/srv/shop"\n\tSTATUS active\n'

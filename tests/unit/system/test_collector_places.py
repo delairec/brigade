@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 
 from brigade.system.collector_places import CollectorPlaces, locate_collectors
-from tests.unit.create_test_runtime import create_test_paths
+from tests.unit.create_test_paths import create_test_paths
 
 
 class LocateCollectorsTest(unittest.TestCase):

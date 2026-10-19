@@ -58,16 +58,16 @@ class ChangeCorpusFileRewrittenTest(ChangeCorpusFileTestCase):
 
         # Assert
         self.assertEqual(
-            (changed, self.tasks.read_text(), [argv for _, argv in runner.commands]),
+            (changed, self.tasks.read_text(), runner.commands),
             (
                 True,
                 "TASK B1\nTASK B2\n",
                 [
-                    ("awawa", "fmt", str(self.tasks)),
-                    self.lint,
-                    ("git", "add", "--", "tasks.awawa"),
-                    self.staged,
-                    ("git", "commit", "--quiet", "-m", "add @TASK.B2"),
+                    (str(self.repository), ("awawa", "fmt", str(self.tasks))),
+                    (str(self.repository), self.lint),
+                    (str(self.repository), ("git", "add", "--", "tasks.awawa")),
+                    (str(self.repository), self.staged),
+                    (str(self.repository), ("git", "commit", "--quiet", "-m", "add @TASK.B2")),
                 ],
             ),
         )

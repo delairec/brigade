@@ -7,7 +7,8 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.read_configuration import Configuration
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
@@ -101,18 +102,26 @@ class PreflightPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (document["head"], [(check["name"], check["verdict"]) for check in document["checks"]]),
-            (
-                HEAD,
-                [
-                    ("ancestry", "pass"),
-                    ("checks", "pass"),
-                    ("corpus", "pass"),
-                    ("promotion", "pass"),
-                    ("untouched_files", "pass"),
-                    ("privacy", "pass"),
-                    ("body", "pass"),
-                    ("size", "info"),
+            document,
+            {
+                "schema_version": 1,
+                "project": "shop",
+                "pr": 160,
+                "task": "B1",
+                "head": HEAD,
+                "checks": [
+                    {"name": "ancestry", "verdict": "pass", "findings": []},
+                    {"name": "checks", "verdict": "pass", "findings": []},
+                    {"name": "corpus", "verdict": "pass", "findings": []},
+                    {"name": "promotion", "verdict": "pass", "findings": []},
+                    {"name": "untouched_files", "verdict": "pass", "findings": []},
+                    {"name": "privacy", "verdict": "pass", "findings": []},
+                    {"name": "body", "verdict": "pass", "findings": []},
+                    {
+                        "name": "size",
+                        "verdict": "info",
+                        "findings": ["1 files", "1 lines", "1 packages: brigade", "0 layers"],
+                    },
                 ],
-            ),
+            },
         )

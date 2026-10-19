@@ -5,7 +5,8 @@ from pathlib import Path
 
 from brigade.tick.actions import RemoveTaskWorktree
 from brigade.tick.remove_task_worktree import remove_task_worktree
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 

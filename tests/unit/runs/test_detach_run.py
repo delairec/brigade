@@ -6,9 +6,10 @@ import unittest
 from pathlib import Path
 
 from brigade.runs.detach_run import detach_run
-from brigade.system.process_trace import SPAWNED
+from brigade.system.process_trace import SPAWNED, ProcessTrace
 from brigade.system.trail_writer import TrailWriter
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.runs.create_run_plan import RUN_ID, create_run_plan
 
 
@@ -93,11 +94,30 @@ class DetachRunWithNoOptionTest(DetachRunTestCase):
         # Assert
         request = self.spawn.requests[0]
         self.assertEqual(
-            (pid, request.argv[2:], request.stdout, [trace.outcome for trace in self.traces]),
+            (pid, request.stdout, self.traces),
             (
                 os.getpid(),
-                ("run", "build-task", "--slot", "build", "--cwd", str(self.root / "project"), "--run-id", RUN_ID),
                 plan.run_directory / "brigade.log",
-                [SPAWNED],
+                [
+                    ProcessTrace(
+                        argv=(
+                            sys.executable,
+                            "/srv/brigade/bin/brigade",
+                            "run",
+                            "build-task",
+                            "--slot",
+                            "build",
+                            "--cwd",
+                            str(self.root / "project"),
+                            "--run-id",
+                            RUN_ID,
+                        ),
+                        cwd=str(self.root / "project"),
+                        outcome=SPAWNED,
+                        exit_code=None,
+                        duration_ms=None,
+                        pid=os.getpid(),
+                    )
+                ],
             ),
         )

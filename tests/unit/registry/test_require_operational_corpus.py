@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.registry.require_operational_corpus import require_operational_corpus
-from tests.unit.create_test_runtime import create_test_paths
+from tests.unit.create_test_paths import create_test_paths
 
 
 class RequireOperationalCorpusTest(unittest.TestCase):

@@ -1,7 +1,8 @@
 import unittest
 from pathlib import Path
 
-from brigade.corpus.check_corpus import check_corpus
+from brigade.corpus.check_corpus import CorpusCheck, check_corpus
+from brigade.system.run_process import ProcessRecord
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 
@@ -15,6 +16,29 @@ class CheckCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(check.command, check.record.exit_code) for check in checks],
-            [("awawa fmt --check .", 0), ("awawa lint --strict .", 1)],
+            checks,
+            (
+                CorpusCheck(
+                    command="awawa fmt --check .",
+                    record=ProcessRecord(
+                        argv=("awawa", "fmt", "--check", "."),
+                        cwd="/srv/shop",
+                        exit_code=0,
+                        stdout="",
+                        stderr="",
+                        duration_ms=0,
+                    ),
+                ),
+                CorpusCheck(
+                    command="awawa lint --strict .",
+                    record=ProcessRecord(
+                        argv=("awawa", "lint", "--strict", "."),
+                        cwd="/srv/shop",
+                        exit_code=1,
+                        stdout="",
+                        stderr="",
+                        duration_ms=0,
+                    ),
+                ),
+            ),
         )

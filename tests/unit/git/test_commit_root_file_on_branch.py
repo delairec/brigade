@@ -32,10 +32,7 @@ class CommitRootFileOnBranchTreeTest(unittest.TestCase):
         commit_root_file_on_branch(git, Path("/srv/shop"), COMMIT)
 
         # Assert
-        self.assertEqual(
-            [request.stdin for request in git.requests if request.argv == ("git", "mktree", "-z")],
-            ["100644 blob keep4\tREADME.md\x00100644 blob blob2\tledger.jsonl\x00"],
-        )
+        self.assertEqual(git.requests[3].stdin, "100644 blob keep4\tREADME.md\x00100644 blob blob2\tledger.jsonl\x00")
 
 
 class CommitRootFileOnBranchReferenceTest(unittest.TestCase):

@@ -13,6 +13,28 @@ from brigade.cli import main
 from brigade.commands.tick import LOCK_NAME
 from brigade.system.hold_lock import hold_lock
 
+ADAPTER_MATRIX = (
+    "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
+    " | Graceful stop |\n"
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+    "| claude-code | full | full | full | full | full | full | full | full | full |\n"
+    "\n"
+    "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
+    " | Graceful stop |\n"
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+    "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
+    "\n"
+    "Fallbacks:\n"
+    "\n"
+    "- no resume: a fresh launch from the progress file\n"
+    "- no transcripts: brigade's journal of the run\n"
+    "- no actions: one raw record per line of the client's output\n"
+    "- no step count: steps null and the run held on the clock alone\n"
+    "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
+    "- no reset hour: now plus thirty minutes\n"
+    "- no graceful stop: the hard cut at the wall-time limit\n"
+)
+
 
 class MainTestCase(unittest.TestCase):
     def setUp(self):
@@ -59,12 +81,12 @@ class MainOfACommandTest(MainTestCase):
         # Assert
         self.assertEqual((exit_code, json.loads(stdout)["schema_version"]), (0, 1))
 
-    def test_should_print_the_text_of_the_command_and_settle_its_trail(self):
+    def test_should_print_the_text_of_the_command(self):
         # Act
-        exit_code, _, _ = self.run_main(["processes", "list"])
+        outcome = self.run_main(["processes", "list"])
 
         # Assert
-        self.assertEqual((exit_code, (self.root / "state" / "brigade" / "commands").is_dir()), (0, False))
+        self.assertEqual(outcome, (0, "kind  id  instant  processes  failed\n", ""))
 
     def test_should_report_a_refusal_of_the_command_on_its_exit_code(self):
         # Act
@@ -135,7 +157,7 @@ class MainOfACommandRenderedAsMarkdownTest(MainTestCase):
             exit_code, stdout, _ = self.run_main(["adapter", "matrix", "--markdown"])
 
         # Assert
-        self.assertEqual((exit_code, stdout.startswith(("|", "#"))), (0, True))
+        self.assertEqual((exit_code, stdout), (0, ADAPTER_MATRIX))
 
 
 class MainRefusalTest(MainTestCase):

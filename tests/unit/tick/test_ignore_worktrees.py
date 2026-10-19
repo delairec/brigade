@@ -32,8 +32,7 @@ class IgnoreWorktreesNotYetIgnoredTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [request.stdin for request in git.requests if request.argv == HASH_OBJECT],
-            ["node_modules/\n.brigade/worktrees/\n"],
+            (git.requests[3].argv, git.requests[3].stdin), (HASH_OBJECT, "node_modules/\n.brigade/worktrees/\n")
         )
 
     def test_should_refuse_a_wave_branch_checked_out_in_a_worktree(self):

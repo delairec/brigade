@@ -33,7 +33,7 @@ class ListCollectorsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [collector for collector in collectors if collector["source"] != "built-in"],
+            collectors[:2],
             [{"name": "coverage", "source": "project"}, {"name": "latency", "source": "PATH"}],
         )
 

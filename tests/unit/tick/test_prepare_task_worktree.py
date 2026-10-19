@@ -10,7 +10,8 @@ from brigade.ledger.task_state import TaskState
 from brigade.system.read_configuration import Configuration
 from brigade.tick.actions import LaunchTask
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
@@ -46,16 +47,19 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
         self.assertEqual(
             (
                 worktree,
-                [argv for _, argv in runner.commands if argv[0] != "awawa"],
+                runner.commands[-4:],
                 (self.paths.setup_directory / "shop" / "B1.log").read_text(),
             ),
             (
                 BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"),
                 [
-                    ("git", "cat-file", "-p", "integration/w1:.gitignore"),
-                    ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1"),
-                    ("make", "deps"),
-                    ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD"),
+                    ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
+                    (
+                        "/srv/shop",
+                        ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1"),
+                    ),
+                    (str(WORKTREE), ("make", "deps")),
+                    (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
                 ],
                 "$ make deps\ndeps installed\n1 warning\n",
             ),
@@ -71,7 +75,21 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
         )
 
         # Assert
-        self.assertNotIn(("git", "cat-file", "-p", "integration/w1:.gitignore"), [argv for _, argv in runner.commands])
+        self.assertEqual(
+            runner.commands[-4:],
+            [
+                (
+                    str(self.paths.config_root),
+                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
+                ),
+                (
+                    "/srv/shop",
+                    ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", "/var/worktrees/B1", "integration/w1"),
+                ),
+                ("/var/worktrees/B1", ("make", "deps")),
+                ("/var/worktrees/B1", ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
+            ],
+        )
 
 
 class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
@@ -87,15 +105,15 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         self.assertEqual(
             (
                 str(refusal.exception),
-                [argv for _, argv in runner.commands][-2:],
-                [entry.event for entry in read_ledger(self.paths.state_root).entries],
+                runner.commands[-2:],
+                read_ledger(self.paths.state_root).entries[0].event,
             ),
             (
                 'the setup of @TASK.B1 failed: the line make "deps splits into no argv: No closing quotation',
                 [
-                    ("git", "worktree", "remove", "--force", str(WORKTREE)),
-                    ("git", "branch", "--quiet", "-D", "task/w1/B1"),
+                    ("/srv/shop", ("git", "worktree", "remove", "--force", str(WORKTREE))),
+                    ("/srv/shop", ("git", "branch", "--quiet", "-D", "task/w1/B1")),
                 ],
-                [TaskState(wave="w1", task="B1", state="parked")],
+                TaskState(wave="w1", task="B1", state="parked"),
             ),
         )

@@ -8,7 +8,8 @@ from pathlib import Path
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.read_run_pid import read_run_pid
 from brigade.system.read_process_identity import read_process_identity
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.runs.create_run_plan import RUN_ID, create_run_plan
 
 
@@ -31,8 +32,7 @@ class CreateRunDirectoryOfANewRunTest(CreateRunDirectoryTestCase):
         self.assertEqual(
             (
                 json.loads((plan.run_directory / "run.json").read_text()),
-                (plan.run_directory / "role.md").exists(),
-                plan.progress_file.exists(),
+                sorted(plan.run_directory.iterdir()),
             ),
             (
                 {
@@ -55,8 +55,12 @@ class CreateRunDirectoryOfANewRunTest(CreateRunDirectoryTestCase):
                     "task": "TP1",
                     "brief": None,
                 },
-                True,
-                True,
+                [
+                    plan.run_directory / "pid",
+                    plan.run_directory / "progress.md",
+                    plan.run_directory / "role.md",
+                    plan.run_directory / "run.json",
+                ],
             ),
         )
 
@@ -84,6 +88,6 @@ class CreateRunDirectoryOfAResumedRunTest(CreateRunDirectoryTestCase):
 
         # Assert
         self.assertEqual(
-            ((plan.run_directory / "result.json").exists(), read_run_pid(plan.run_directory).pid),
-            (False, os.getpid()),
+            (sorted(plan.run_directory.iterdir()), read_run_pid(plan.run_directory).pid),
+            ([plan.run_directory / "pid"], os.getpid()),
         )

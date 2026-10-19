@@ -10,9 +10,10 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.order_done import OrderDone
 from brigade.runs.prune_runs import PruneOutcome, PruneRequest, prune_runs
 from brigade.runs.record_run_pid import record_run_pid
-from tests.unit.create_test_runtime import create_test_paths
+from tests.unit.create_test_paths import create_test_paths
 from tests.unit.ledger.create_run_finished import create_run_finished
-from tests.unit.runs.run_directory_writer import write_run_record, write_run_result
+from tests.unit.runs.write_run_record import write_run_record
+from tests.unit.runs.write_run_result import write_run_result
 
 OLDEST = "20261001T090000Z-aaaaaa"
 OLDER = "20261002T090000Z-bbbbbb"
@@ -54,13 +55,18 @@ class PruneRunsBeyondTheKeptOnesTest(PruneRunsTestCase):
 
         # Assert
         self.assertEqual(
-            (outcome, sorted(path.name for path in self.runs.iterdir())),
+            (outcome, sorted(self.runs.iterdir())),
             (
                 PruneOutcome(
                     removed=[{"run": OLDEST, "state": "finished"}, {"run": OLDER, "state": "finished"}],
-                    skipped=[{"run": UNREADABLE, "reason": outcome.skipped[0]["reason"]}],
+                    skipped=[
+                        {
+                            "run": UNREADABLE,
+                            "reason": f"{self.runs / UNREADABLE / 'run.json'} is not a run record: not a JSON document",
+                        }
+                    ],
                 ),
-                [DEAD, RUNNING, UNREADABLE, "notes"],
+                [self.runs / DEAD, self.runs / RUNNING, self.runs / UNREADABLE, self.runs / "notes"],
             ),
         )
 
@@ -70,10 +76,17 @@ class PruneRunsBeyondTheKeptOnesTest(PruneRunsTestCase):
 
         # Assert
         self.assertEqual(
-            (outcome.removed, sorted(path.name for path in self.runs.iterdir())),
+            (outcome.removed, sorted(self.runs.iterdir())),
             (
                 [{"run": OLDEST, "state": "finished"}, {"run": OLDER, "state": "finished"}],
-                [OLDEST, OLDER, DEAD, RUNNING, UNREADABLE, "notes"],
+                [
+                    self.runs / OLDEST,
+                    self.runs / OLDER,
+                    self.runs / DEAD,
+                    self.runs / RUNNING,
+                    self.runs / UNREADABLE,
+                    self.runs / "notes",
+                ],
             ),
         )
 
@@ -139,10 +152,9 @@ class PruneRunsLeftByAnEarlierPruneTest(PruneRunsTestCase):
 
     def test_should_refuse_an_earlier_removal_it_cannot_delete(self):
         # Arrange
-        locked = self.paths.state_root / "runs-removed" / OLDEST
-        (locked / "segments").mkdir(parents=True)
-        locked.chmod(0o500)
-        self.addCleanup(locked.chmod, 0o700)
+        removed = self.paths.state_root / "runs-removed"
+        removed.mkdir(parents=True)
+        (removed / OLDEST).symlink_to(self.runs / OLDEST, target_is_directory=True)
 
         # Act / Assert
         with self.assertRaises(CannotWrite):

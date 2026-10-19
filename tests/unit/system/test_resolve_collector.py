@@ -6,7 +6,8 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.system.collector_places import CollectorPlaces
 from brigade.system.resolve_collector import BuiltInCollector, CollectorAnswer, ExecutableCollector, resolve_collector
-from tests.unit.create_test_runtime import create_test_paths, create_test_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 NO_EQUIPMENT = None
@@ -39,24 +40,32 @@ class ResolveCollectorFoundTest(ResolveCollectorTestCase):
         write_executable(self.root / "bin" / "brigade-collector-flakes")
         write_executable(self.root / "bin" / "brigade-collector-latency")
 
-        # Act
-        resolved = [resolve_collector(name, self.places) for name in ("coverage", "flakes", "latency")]
-
-        # Assert
-        self.assertEqual(
-            resolved,
-            [
+        for name, expected in [
+            (
+                "coverage",
                 ExecutableCollector(
                     name="coverage", source="project", command=str(self.places.project_directory / "coverage")
                 ),
+            ),
+            (
+                "flakes",
                 ExecutableCollector(
                     name="flakes", source="machine", command=str(self.places.machine_directory / "flakes")
                 ),
+            ),
+            (
+                "latency",
                 ExecutableCollector(
                     name="latency", source="PATH", command=str(self.root / "bin" / "brigade-collector-latency")
                 ),
-            ],
-        )
+            ),
+        ]:
+            with self.subTest(name=name):
+                # Act
+                collector = resolve_collector(name, self.places)
+
+                # Assert
+                self.assertEqual(collector, expected)
 
     def test_should_resolve_a_built_in_collector_by_its_dashed_name(self):
         # Act
