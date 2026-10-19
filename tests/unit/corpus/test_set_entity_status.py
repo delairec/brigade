@@ -12,3 +12,10 @@ class SetEntityStatusTest(unittest.TestCase):
 
         # Assert
         self.assertIsNone(text)
+
+    def test_should_rewrite_the_status_line_of_the_entity(self):
+        # Act
+        text = set_entity_status(REGISTRY, "PROJECT", "shop", "paused")
+
+        # Assert
+        self.assertEqual(text, 'PROJECT shop\n\tPATH "/srv/shop"\n\tSTATUS paused\n')

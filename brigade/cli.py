@@ -15,6 +15,7 @@ from brigade.runtime import Invocation, Runtime, build_runtime
 from brigade.select_command_modules import PASSTHROUGH_SEPARATOR, select_command_modules
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.trail_locations import COMMANDS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
+from brigade.write_command_output import OutputStreams, write_command_output
 
 USAGE_EXIT_CODE = 2
 UNEXPECTED_ERROR_EXIT_CODE = 70
@@ -97,19 +98,7 @@ def _run_and_settle_trail(command, options: argparse.Namespace):
 
 def _run_command(command, options: argparse.Namespace) -> int:
     result = _run_and_settle_trail(command, options)
-    for diagnostic in command.describe_diagnostics(result):
-        sys.stderr.write(f"brigade {_name(command)}: {diagnostic}\n")
-    document = command.select_document(result)
-    if command.render_passed_stderr is not None:
-        sys.stdout.write(command.render_text(document))
-        sys.stderr.write(command.render_passed_stderr(document))
-    elif getattr(options, "json", False):
-        print(json.dumps(document))  # noqa: T201 - the module that prints the result of every command
-    elif getattr(options, "markdown", False):
-        print(command.render_markdown(document))  # noqa: T201 - the module that prints the result of every command
-    else:
-        print(command.render_text(document))  # noqa: T201 - the module that prints the result of every command
-    return command.decide_exit_code(document)
+    return write_command_output(command, result, options, OutputStreams(stdout=sys.stdout, stderr=sys.stderr))
 
 
 def _accepts(command, extras: list[str]) -> bool:

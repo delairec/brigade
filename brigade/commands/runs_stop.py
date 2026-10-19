@@ -1,5 +1,5 @@
 from brigade.command import Argument, Command
-from brigade.runs.stop_run import stop_run
+from brigade.runs.stop_run import SYSTEM_PROCESS_SIGNALLER, stop_run
 from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -19,7 +19,10 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def runs_stop(request, runtime: Runtime) -> dict:
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": stop_run(runtime.paths.state_root, request.run)}
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "run": stop_run(runtime.paths.state_root, request.run, SYSTEM_PROCESS_SIGNALLER),
+    }
 
 
 COMMAND = Command(

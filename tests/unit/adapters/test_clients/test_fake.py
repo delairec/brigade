@@ -453,3 +453,30 @@ class FakeTranscriptsTest(unittest.TestCase):
                 "subagents": [],
             },
         )
+
+
+class FakeResumeArgvTest(unittest.TestCase):
+    def test_should_replay_the_recording_of_the_role_on_the_session_resumed(self):
+        # Arrange
+        request = {
+            "settings": {"operations": "resume", "recordings": "/srv/recordings"},
+            "role": {"name": "builder"},
+            "brief": "Deliver the task.",
+            "stop_at": None,
+            "session_id": "s1",
+        }
+
+        # Act
+        launch = answer("resume-argv", request)
+
+        # Assert
+        self.assertEqual(
+            launch,
+            {
+                "schema_version": 1,
+                "argv": ["cat", "--", "/srv/recordings/builder.json"],
+                "environment": {},
+                "stdin": None,
+                "session_id": "s1",
+            },
+        )

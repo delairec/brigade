@@ -93,3 +93,12 @@ class PathsSharedBySeveralComponentsTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(path, expected_path)
+
+
+class BuildPathsInsideARunTest(unittest.TestCase):
+    def test_should_hold_the_run_directory_brigade_run_exported(self):
+        # Act
+        paths = build_paths_under({"HOME": "/home/ada", "BRIGADE_RUN_DIR": "/srv/state/brigade/runs/r1"})
+
+        # Assert
+        self.assertEqual(paths.run_directory, Path("/srv/state/brigade/runs/r1"))

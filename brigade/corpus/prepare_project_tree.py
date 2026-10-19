@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from brigade.corpus.prepare_tree import Tree, TreeRequest, prepare_tree
+from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, Tree, TreeRequest, prepare_tree
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
@@ -20,6 +20,7 @@ def prepare_project_tree(request, configuration: Configuration, runtime: Runtime
     worktree = request.worktree.absolute() if request.worktree is not None else None
     return prepare_tree(
         runtime.run_process,
+        FILESYSTEM_READ_TIME_KEEPER,
         TreeRequest(
             project=project.name,
             repository=Path(repository),

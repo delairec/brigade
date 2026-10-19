@@ -12,3 +12,13 @@ class RemoveProjectEntityTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(text, 'PROJECT shop\n\tPATH "/srv/shop"\n\tSTATUS active\n')
+
+    def test_should_remove_the_block_of_the_project_and_keep_the_others(self):
+        # Arrange
+        registry = 'PROJECT shop\n\tPATH "/srv/shop"\n\nPROJECT tidepool\n\tPATH "/srv/tidepool"\n'
+
+        # Act
+        text = remove_project_entity(registry, "shop")
+
+        # Assert
+        self.assertEqual(text, 'PROJECT tidepool\n\tPATH "/srv/tidepool"\n')

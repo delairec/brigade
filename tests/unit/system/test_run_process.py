@@ -168,3 +168,15 @@ class RunProcessOfACommandOffThePathTest(unittest.TestCase):
                 )
             ],
         )
+
+
+class RunProcessWithAnInputTest(unittest.TestCase):
+    def test_should_hand_the_input_to_the_process(self):
+        # Arrange
+        request = ProcessRequest(argv=("cat",), cwd="/", timeout_s=10, stdin="the brief\n")
+
+        # Act
+        record = run_process(request, [].append)
+
+        # Assert
+        self.assertEqual(record.stdout, "the brief\n")

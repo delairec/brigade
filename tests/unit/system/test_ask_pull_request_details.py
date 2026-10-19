@@ -28,3 +28,31 @@ class AskPullRequestDetailsTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception), "forge plugin github answered read_pull_request: lacks the key pull_request"
         )
+
+    def test_should_answer_the_pull_request_the_forge_describes(self):
+        # Arrange
+        pull_request = {
+            "number": 12,
+            "title": "feat: empty the cart",
+            "body": "Empty the cart\n",
+            "head": "task/w1/S3",
+            "head_sha": "4f2a9c1",
+            "checks": [],
+        }
+        forge = ForgeDouble({"schema_version": 1, "pull_request": pull_request})
+
+        # Act
+        answered = ask_pull_request_details(forge, "github", QUERY, NO_RUNTIME_NEEDED)
+
+        # Assert
+        self.assertEqual(
+            answered,
+            {
+                "number": 12,
+                "title": "feat: empty the cart",
+                "body": "Empty the cart\n",
+                "head": "task/w1/S3",
+                "head_sha": "4f2a9c1",
+                "checks": [],
+            },
+        )

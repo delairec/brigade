@@ -125,3 +125,29 @@ class ResolveProcedureGivenByPathTest(ResolveProcedureByNameTestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_refusal)
+
+
+class ResolveProcedureOfAnIncompleteFileTest(ResolveProcedureByNameTestCase):
+    def test_should_refuse_a_procedure_without_front_matter(self):
+        # Arrange
+        procedure = Path(self.root.name) / "deliver.md"
+        procedure.write_text("Deliver the task.\n")
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure(str(procedure), self.directories)
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"the procedure {procedure} has no front matter between two --- lines")
+
+    def test_should_refuse_a_procedure_lacking_its_budget(self):
+        # Arrange
+        procedure = Path(self.root.name) / "deliver.md"
+        procedure.write_text("---\ncapabilities: read\n---\nDeliver the task.\n")
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure(str(procedure), self.directories)
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"the procedure {procedure} lacks budget in its front matter")

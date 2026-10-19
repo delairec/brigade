@@ -39,3 +39,30 @@ class ListClientAdaptersOnAPathWithStrayEntriesTest(unittest.TestCase):
                 ClientAdapter(name="fake", audience="test_suite"),
             ),
         )
+
+
+class ListClientAdaptersOnAPathWithUnfitExecutablesTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.search_directory = Path(self.root.name)
+        badly_named = self.search_directory / "brigade-client-Local_One"
+        badly_named.write_text("#!/bin/sh\n")
+        badly_named.chmod(0o755)
+        (self.search_directory / "brigade-client-notes").write_text("not executable\n")
+
+    def test_should_list_neither_a_name_off_the_pattern_nor_a_file_it_cannot_run(self):
+        # Arrange
+        runtime = SimpleNamespace(paths=SimpleNamespace(executable_search_path=str(self.search_directory)))
+
+        # Act
+        adapters = list_client_adapters(runtime)
+
+        # Assert
+        self.assertEqual(
+            adapters,
+            (
+                ClientAdapter(name="claude-code", audience="supported_client"),
+                ClientAdapter(name="fake", audience="test_suite"),
+            ),
+        )

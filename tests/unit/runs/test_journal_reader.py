@@ -158,3 +158,17 @@ class JournalReaderTest(unittest.TestCase):
         self.assertEqual(
             str(raised.exception), f"line 3 of {self.journal_path} is not a journal record: not a JSON document"
         )
+
+    def test_should_name_the_line_of_the_journal_off_the_record_shape(self):
+        # Arrange
+        self.append('{"schema_version": 1, "at": "2026-10-09T14:00:00Z", "segment": 1, "kind": "text"}\n')
+        reader = JournalReader(self.journal_path)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            reader.read_whole_records()
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), f"line 1 of {self.journal_path} is not a journal record: lacks the key summary"
+        )
