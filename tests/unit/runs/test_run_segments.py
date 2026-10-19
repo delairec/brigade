@@ -190,7 +190,7 @@ class RunSegmentsInADisposableWorktreeTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(
-            list(self.paths.lock_directory.iterdir()),
+        self.assertCountEqual(
+            self.paths.lock_directory.iterdir(),
             [self.paths.lock_directory / "ledger.lock", self.paths.lock_directory / "worktrees-shop.lock"],
         )
