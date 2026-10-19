@@ -5,7 +5,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.corpus.prepare_tree import Tree, TreeRequest, prepare_tree
+from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, Tree, TreeRequest, prepare_tree
 from brigade.errors import BrigadeError, CannotWrite
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
@@ -82,7 +82,7 @@ class PrepareTreeAtABranchOrAShaTest(PrepareTreeTestCase):
 
     def test_should_extract_the_whole_committed_tree_into_the_cache_of_the_project(self):
         # Act
-        tree = prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+        tree = prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         root = self.cache / "app" / self.sha
@@ -97,25 +97,29 @@ class PrepareTreeAtABranchOrAShaTest(PrepareTreeTestCase):
 
     def test_should_resolve_an_abbreviated_sha_to_the_whole_sha(self):
         # Act
-        tree = prepare_tree(run_process_without_trail, self.create_request(ref=self.sha[:7]))
+        tree = prepare_tree(
+            run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref=self.sha[:7])
+        )
 
         # Assert
         self.assertEqual(tree.sha, self.sha)
 
     def test_should_leave_the_tree_alone_in_the_cache_of_the_project(self):
         # Act
-        prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+        prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual(list((self.cache / "app").iterdir()), [self.cache / "app" / self.sha])
 
     def test_should_read_a_tree_already_in_the_cache_without_extracting_it_again(self):
         # Arrange
-        prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+        prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
         (self.cache / "app" / self.sha / "corpus" / "tasks.awawa").write_text("left in the cache\n")
 
         # Act
-        tree = prepare_tree(run_process_without_trail, self.create_request(ref="main", now=SECOND_READ))
+        tree = prepare_tree(
+            run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main", now=SECOND_READ)
+        )
 
         # Assert
         self.assertEqual((tree.root / "corpus" / "tasks.awawa").read_text(), "left in the cache\n")
@@ -123,7 +127,7 @@ class PrepareTreeAtABranchOrAShaTest(PrepareTreeTestCase):
     def test_should_refuse_a_ref_the_repository_does_not_resolve_naming_it(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="nowhere"))
+            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="nowhere"))
 
         # Assert
         self.assertEqual(str(raised.exception), "the ref nowhere is not a commit of @PROJECT.app")
@@ -137,7 +141,7 @@ class PrepareTreeOfACommitHoldingALinkInsideItsTreeTest(PrepareTreeTestCase):
 
     def test_should_extract_the_link_reading_through_it_to_the_file_of_the_tree(self):
         # Act
-        tree = prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+        tree = prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual((tree.root / "docs" / "app.py").read_text(), "print('app')\n")
@@ -152,7 +156,9 @@ class PrepareTreeOfACommitHoldingALinkOutsideItsTreeTest(PrepareTreeTestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+                    prepare_tree(
+                        run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main")
+                    )
 
                 # Assert
                 self.assertEqual(
@@ -166,7 +172,7 @@ class PrepareTreeOfACommitHoldingALinkOutsideItsTreeTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(BrigadeError):
-            prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual(list((self.cache / "app").iterdir()), [])
@@ -187,7 +193,9 @@ class PrepareTreeWhenAnotherExtractionWinsTheRaceTest(PrepareTreeTestCase):
 
     def test_should_read_the_tree_the_winner_renamed_into_place_and_leave_it_alone(self):
         # Act
-        tree = prepare_tree(self.run_process_extracting_first, self.create_request(ref="main"))
+        tree = prepare_tree(
+            self.run_process_extracting_first, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main")
+        )
 
         # Assert
         self.assertEqual(
@@ -212,7 +220,9 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
 
     def test_should_read_the_worktree_of_the_branch_in_place_uncommitted_edits_visible(self):
         # Act
-        tree = prepare_tree(run_process_without_trail, self.create_request(ref="worktree:feature"))
+        tree = prepare_tree(
+            run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="worktree:feature")
+        )
 
         # Assert
         self.assertEqual(
@@ -231,7 +241,9 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
         run_git(self.repository, "worktree", "add", "--quiet", "--detach", str(detached_tree), "feature")
 
         # Act
-        tree = prepare_tree(run_process_without_trail, self.create_request(worktree=detached_tree))
+        tree = prepare_tree(
+            run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(worktree=detached_tree)
+        )
 
         # Assert
         self.assertEqual(tree, Tree(project="app", ref=None, sha=self.feature_sha, kind="worktree", root=detached_tree))
@@ -242,7 +254,9 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="worktree:ghost"))
+            prepare_tree(
+                run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="worktree:ghost")
+            )
 
         # Assert
         self.assertEqual(str(raised.exception), "no worktree of @PROJECT.app has the branch ghost checked out")
@@ -253,7 +267,9 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(worktree=elsewhere))
+            prepare_tree(
+                run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(worktree=elsewhere)
+            )
 
         # Assert
         self.assertEqual(str(raised.exception), f"no worktree of @PROJECT.app is at {elsewhere}")
@@ -269,18 +285,26 @@ class PrepareTreeOverTheCacheBoundTest(PrepareTreeTestCase):
     def test_should_remove_the_least_recently_read_trees_until_the_cache_is_under_the_bound(self):
         # Arrange
         prepare_tree(
-            run_process_without_trail, self.create_request(ref=self.sha_a, cache_bound_bytes=2500, now=FIRST_READ)
+            run_process_without_trail,
+            FILESYSTEM_READ_TIME_KEEPER,
+            self.create_request(ref=self.sha_a, cache_bound_bytes=2500, now=FIRST_READ),
         )
         prepare_tree(
-            run_process_without_trail, self.create_request(ref=self.sha_b, cache_bound_bytes=2500, now=SECOND_READ)
+            run_process_without_trail,
+            FILESYSTEM_READ_TIME_KEEPER,
+            self.create_request(ref=self.sha_b, cache_bound_bytes=2500, now=SECOND_READ),
         )
         prepare_tree(
-            run_process_without_trail, self.create_request(ref=self.sha_a, cache_bound_bytes=2500, now=THIRD_READ)
+            run_process_without_trail,
+            FILESYSTEM_READ_TIME_KEEPER,
+            self.create_request(ref=self.sha_a, cache_bound_bytes=2500, now=THIRD_READ),
         )
 
         # Act
         prepare_tree(
-            run_process_without_trail, self.create_request(ref=self.sha_c, cache_bound_bytes=2500, now=FOURTH_READ)
+            run_process_without_trail,
+            FILESYSTEM_READ_TIME_KEEPER,
+            self.create_request(ref=self.sha_c, cache_bound_bytes=2500, now=FOURTH_READ),
         )
 
         # Assert
@@ -292,12 +316,16 @@ class PrepareTreeOverTheCacheBoundTest(PrepareTreeTestCase):
         # Arrange
         no_room = 0
         prepare_tree(
-            run_process_without_trail, self.create_request(ref=self.sha_a, cache_bound_bytes=no_room, now=FIRST_READ)
+            run_process_without_trail,
+            FILESYSTEM_READ_TIME_KEEPER,
+            self.create_request(ref=self.sha_a, cache_bound_bytes=no_room, now=FIRST_READ),
         )
 
         # Act
         prepare_tree(
-            run_process_without_trail, self.create_request(ref=self.sha_b, cache_bound_bytes=no_room, now=SECOND_READ)
+            run_process_without_trail,
+            FILESYSTEM_READ_TIME_KEEPER,
+            self.create_request(ref=self.sha_b, cache_bound_bytes=no_room, now=SECOND_READ),
         )
 
         # Assert
@@ -331,7 +359,7 @@ class PrepareTreeWhereTheMachineRefusesAWriteTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.cache}: Permission denied")
@@ -342,7 +370,7 @@ class PrepareTreeWhereTheMachineRefusesAWriteTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Permission denied")
@@ -350,7 +378,9 @@ class PrepareTreeWhereTheMachineRefusesAWriteTest(PrepareTreeTestCase):
     def test_should_name_the_tree_it_cannot_extract(self):
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(self.run_process_refusing_the_extraction, self.create_request(ref="main"))
+            prepare_tree(
+                self.run_process_refusing_the_extraction, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main")
+            )
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Permission denied")
@@ -380,7 +410,11 @@ class PrepareTreeWhereTheMachineRefusesThePruningTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="main", cache_bound_bytes=0))
+            prepare_tree(
+                run_process_without_trail,
+                FILESYSTEM_READ_TIME_KEEPER,
+                self.create_request(ref="main", cache_bound_bytes=0),
+            )
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.stale_tree}: Permission denied")
@@ -391,7 +425,11 @@ class PrepareTreeWhereTheMachineRefusesThePruningTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="main", cache_bound_bytes=0))
+            prepare_tree(
+                run_process_without_trail,
+                FILESYSTEM_READ_TIME_KEEPER,
+                self.create_request(ref="main", cache_bound_bytes=0),
+            )
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.stale_project}: Permission denied")
@@ -402,7 +440,11 @@ class PrepareTreeWhereTheMachineRefusesThePruningTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="main", cache_bound_bytes=0))
+            prepare_tree(
+                run_process_without_trail,
+                FILESYSTEM_READ_TIME_KEEPER,
+                self.create_request(ref="main", cache_bound_bytes=0),
+            )
 
         # Assert
         self.assertEqual(
@@ -423,7 +465,7 @@ class PrepareTreeOverAnEntryOfTheCacheItCannotUseTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.tree_root}: Not a directory")
@@ -435,7 +477,7 @@ class PrepareTreeOverAnEntryOfTheCacheItCannotUseTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, self.create_request(ref="main"))
+            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.tree_root}: Operation not permitted")

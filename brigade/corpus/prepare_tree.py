@@ -50,6 +50,23 @@ class Tree:
 
 
 @dataclass(frozen=True)
+class ReadTimeKeeper:
+    stamp_read: Callable[[Path, int], None]
+    read_stamp: Callable[[Path], int]
+
+
+def _stamp_read(tree: Path, read_ns: int) -> None:
+    raise NotImplementedError
+
+
+def _read_stamp(tree: Path) -> int:
+    raise NotImplementedError
+
+
+FILESYSTEM_READ_TIME_KEEPER = ReadTimeKeeper(stamp_read=_stamp_read, read_stamp=_read_stamp)
+
+
+@dataclass(frozen=True)
 class _CachedTree:
     path: Path
     last_read_ns: int
@@ -201,7 +218,9 @@ def _read_archive(run_process: Callable[[ProcessRequest], ProcessRecord], reques
     return Tree(project=request.project, ref=request.ref, sha=sha, kind=ARCHIVE_KIND, root=root)
 
 
-def prepare_tree(run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest) -> Tree:
+def prepare_tree(
+    run_process: Callable[[ProcessRequest], ProcessRecord], keeper: ReadTimeKeeper, request: TreeRequest
+) -> Tree:
     if request.worktree is not None or request.ref.startswith(WORKTREE_PREFIX):
         return _read_worktree(run_process, request)
     return _read_archive(run_process, request)
