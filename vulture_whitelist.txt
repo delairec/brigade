@@ -1,2 +1,3 @@
 install  # getattr(scheduler, question.operation) in brigade/system/ask_scheduler.py, operation "install"
 read_status  # getattr(scheduler, question.operation) in brigade/system/ask_scheduler.py, operation "read_status"
+print_help  # argparse calls it on -h and --help: the override of _DeferringArgumentParser in brigade/cli.py
