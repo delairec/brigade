@@ -49,7 +49,7 @@ class WriteTextFileWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
 
     def test_should_name_the_file_it_cannot_create(self):
         # Arrange
-        self.units.write_text("")
+        self.units.touch()
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:

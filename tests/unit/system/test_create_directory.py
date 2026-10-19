@@ -33,7 +33,7 @@ class CreateDirectoryTest(unittest.TestCase):
     def test_should_name_the_file_standing_where_the_directory_goes(self):
         # Arrange
         self.path.parent.mkdir()
-        self.path.write_text("")
+        self.path.touch()
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:

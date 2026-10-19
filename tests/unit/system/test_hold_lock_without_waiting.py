@@ -67,7 +67,7 @@ class HoldLockWithoutWaitingWhereTheMachineRefusesTheWriteTest(unittest.TestCase
     def test_should_name_the_directory_it_cannot_create(self):
         # Arrange
         self.locks.parent.mkdir()
-        self.locks.write_text("")
+        self.locks.touch()
 
         # Act
         with self.assertRaises(BrigadeError) as refusal, hold_lock_without_waiting(self.lock_path):

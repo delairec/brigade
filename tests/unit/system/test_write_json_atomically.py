@@ -64,7 +64,7 @@ class WriteJsonAtomicallyWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
 
     def test_should_name_the_directory_it_cannot_create(self):
         # Arrange
-        self.machine.write_text("")
+        self.machine.touch()
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:

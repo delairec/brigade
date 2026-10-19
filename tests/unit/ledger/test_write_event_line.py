@@ -136,7 +136,7 @@ class WriteEventLineWhereTheMachineRefusesTheWriteTest(WriteEventLineTestCase):
 
     def test_should_name_the_ledger_directory_it_cannot_create(self):
         # Arrange
-        self.ledger.write_text("")
+        self.ledger.touch()
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
