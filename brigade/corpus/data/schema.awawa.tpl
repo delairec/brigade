@@ -46,6 +46,10 @@ SCHEMA PROJECT
 		DESC "a regular expression the privacy scan and the scrubber refuse, e.g. stn_[0-9a-f]{12}"
 	FIELD FORGE string
 		DESC "github or none"
+	FIELD CHECK_RUNS required|none
+		DEFAULT required
+		DESC "whether the tick waits for a first check run of a pull request before its preflight;"
+			+ "none for a project without continuous integration"
 	FIELD STATUS active|paused
 		REQUIRED
 

@@ -198,6 +198,8 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
 
 PENDING = create_pull_request("open", "pending")
 FAILED_CHECK_RUN = create_pull_request("open", "failure")
+NO_CHECK_RUN = PullRequestFacts(number=42, state="open", checks=(), review=None, behind=False, head=HEAD)
+SHOP_WITHOUT_CHECK_RUNS = ProjectFacts(name="shop", slots=4, awaits_check_runs=False)
 OPENED_BY_THE_TASK = 42
 OPENED_BY_AN_EARLIER_RUN = 41
 NOT_PREFLIGHTED = None
@@ -208,22 +210,40 @@ PREFLIGHT_S3 = RunPreflight(project="shop", wave="shop_w1", branch=WAVE_BRANCH, 
 
 class PlanPreflightTest(unittest.TestCase):
     def test_should_run_the_preflight_of_the_pull_request_of_the_task_once_its_check_runs_complete(self):
-        for case, state, pull_request, opened, preflighted, expected in [
-            ("check runs passed", "pr_open", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, (PREFLIGHT_S3,)),
-            ("a check run failed", "pr_open", FAILED_CHECK_RUN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, (PREFLIGHT_S3,)),
-            ("a check run pending", "pr_open", PENDING, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, ()),
-            ("a head pushed", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_BEFORE_A_PUSH, (PREFLIGHT_S3,)),
-            ("a head preflighted", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_AT_THE_HEAD, ()),
-            ("another pull request", "pr_open", OPEN, OPENED_BY_AN_EARLIER_RUN, NOT_PREFLIGHTED, ()),
-            ("a task in review", "verifying", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, ()),
-            ("a pull request merged", "pr_open", MERGED, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, (RECORD_MERGED,)),
+        for case, state, pull_request, opened, preflighted, project, expected in [
+            ("check runs passed", "pr_open", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, (PREFLIGHT_S3,)),
+            (
+                "a check run failed",
+                "pr_open",
+                FAILED_CHECK_RUN,
+                OPENED_BY_THE_TASK,
+                NOT_PREFLIGHTED,
+                SHOP,
+                (PREFLIGHT_S3,),
+            ),
+            ("a check run pending", "pr_open", PENDING, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
+            ("no check run yet", "pr_open", NO_CHECK_RUN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
+            (
+                "no check run in a project without continuous integration",
+                "pr_open",
+                NO_CHECK_RUN,
+                OPENED_BY_THE_TASK,
+                NOT_PREFLIGHTED,
+                SHOP_WITHOUT_CHECK_RUNS,
+                (PREFLIGHT_S3,),
+            ),
+            ("a head pushed", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_BEFORE_A_PUSH, SHOP, (PREFLIGHT_S3,)),
+            ("a head preflighted", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_AT_THE_HEAD, SHOP, ()),
+            ("another pull request", "pr_open", OPEN, OPENED_BY_AN_EARLIER_RUN, NOT_PREFLIGHTED, SHOP, ()),
+            ("a task in review", "verifying", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
+            ("a pull request merged", "pr_open", MERGED, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, (RECORD_MERGED,)),
         ]:
             with self.subTest(case=case):
                 # Arrange
                 task = TaskFacts(
                     name="S3", pull_request=pull_request, opened_pull_request=opened, preflighted_head=preflighted
                 )
-                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
 
                 # Act
                 actions = plan(snapshot)

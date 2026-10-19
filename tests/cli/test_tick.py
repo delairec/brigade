@@ -2018,6 +2018,24 @@ class BrigadeTickOnASoundPullRequestTest(TickPreflightTestCase):
         self.assertEqual(self.read_last_state_of_s3(), "verifying")
 
 
+class BrigadeTickOnAPullRequestOfAProjectWithoutCheckRunsTest(TickPreflightTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.machine.corpus / "projects.awawa").write_text(
+            f'PROJECT shop\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tCORPUS "corpus"\n'
+            '\tACCEPTANCE "python3 -m unittest"\n\tHEAVY "python3 -m unittest discover tests/e2e"\n\tFORGE "none"\n'
+            "\tCHECK_RUNS none\n\tSTATUS active\n"
+        )
+        self.describe_pull_request(check_runs=())
+
+    def test_should_move_the_task_to_verifying_with_no_check_run(self):
+        # Act
+        self.run_tick()
+
+        # Assert
+        self.assertEqual(self.read_last_state_of_s3(), "verifying")
+
+
 class BrigadeTickOnAPullRequestWithAFailingCheckTest(TickPreflightTestCase):
     def setUp(self):
         super().setUp()

@@ -47,6 +47,8 @@ RUNNING_STATUS = "running"
 PLANNED_STATUS = "planned"
 LIVE_RUN_STATE = "running"
 SLOTS_FIELD = "SLOTS"
+CHECK_RUNS_FIELD = "CHECK_RUNS"
+NO_CHECK_RUNS = "none"
 AFTER_FIELD = "AFTER"
 TASK_PREFIX = "@TASK."
 PROJECT_SLOTS = 4
@@ -135,6 +137,7 @@ class ProjectFacts:
     name: str
     slots: int
     live_runs: tuple[LiveRun, ...] = ()
+    awaits_check_runs: bool = True
 
     def to_document(self) -> dict:
         return {
@@ -343,10 +346,12 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, w
 
 
 def _read_project_facts(name: str, projects: tuple[Entity, ...], runs: list[dict]) -> ProjectFacts:
-    slots = read_project_field(find_project(projects, name), SLOTS_FIELD)
+    project = find_project(projects, name)
+    slots = read_project_field(project, SLOTS_FIELD)
     return ProjectFacts(
         name=name,
         slots=PROJECT_SLOTS if slots is None else int(slots),
+        awaits_check_runs=read_project_field(project, CHECK_RUNS_FIELD) != NO_CHECK_RUNS,
         live_runs=tuple(
             LiveRun(run=run["run"], slot=run["slot"], worktree=run["worktree"])
             for run in runs
