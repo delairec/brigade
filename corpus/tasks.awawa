@@ -3615,7 +3615,6 @@ TASK B61
 	AFTER @TASK.B63
 	AFTER @TASK.B64
 	AFTER @TASK.B65
-	AFTER @TASK.B66
 	AFTER @TASK.B67
 	AFTER @TASK.B70
 	RATIONALE "the user ruled on 2026-10-06 that a review by max closes M0, after every other task"
@@ -3777,7 +3776,7 @@ TASK B64
 			+ "python.django.security.injection.command.subprocess-injection.subprocess-injection"
 	SPEC "a fix that changes a behaviour is named in the pull request body with the finding it"
 		+ "answers; python3 -m unittest passes on every commit"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	SPEC "the sentence of README.md on the CI names semgrep"
 		IMPL "README.md::scans the repository with semgrep under its Python and security-audit rule"
 			+ "packs"
@@ -3846,7 +3845,11 @@ TASK B65
 TASK B66
 	TITLE "coverage.py in the CI, report only: the whole suite measured, the subprocesses of"
 		+ "tests/cli included, no threshold"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-19: its SPEC 1, 2 and 7, patch = subprocess, a coverage job of the"
+		+ "whole suite and COVERAGE_PROCESS_CONFIG passed to the children, are made false by"
+		+ "@TASK.B190, under which coverage measures the unit tests alone, in a job of its own"
+		REF @TASK.B190
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ci"
 	ROLE ada
@@ -3929,7 +3932,7 @@ TASK B67
 			+ "SubprocessUsesGuardTest(unittest.TestCase):"
 	SPEC "the guard runs with python3 -m unittest, like the plugin-import and environment-read"
 		+ "guards, and the CI job tests runs it"
-		IMPL ".github/workflows/ci.yml::- run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	RATIONALE "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa refuses shell=True"
 		+ "and routes every subprocess through brigade/system, and nothing enforced it: at cfa0635"
 		+ "the only imports of subprocess under brigade/ are brigade/system/run_process.py,"
@@ -4126,7 +4129,6 @@ TASK B70
 		+ "head of the pull request, rounded down to an integer: the job fails when a later pull"
 		+ "request brings the figure below it"
 		IMPL ".coveragerc::fail_under = 100"
-	AFTER @TASK.B66
 	AFTER @TASK.B69
 	RATIONALE "the user ruled on 2026-10-07: « la définition du TDD est: pas de ligne de code sans"
 		+ "qu'un test échoue d'abord, donc une ligne de code doit avoir son test, je suis pas"
@@ -6228,11 +6230,9 @@ TASK B95
 			+ "test_should_answer_every_recorded_call_as_it_was_recorded(self):"
 		IMPL "tests/awawa/replay_recording.py::def replay_recording(test_case: unittest.TestCase,"
 			+ "recording: dict) -> dict:"
-	SPEC "the logs of the test jobs of the matrix and of the coverage job of"
-		+ ".github/workflows/ci.yml show no test skipped for want of awawa, and ci.yml installs no"
-		+ "awawa and runs no awawa command"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
-		IMPL ".github/workflows/ci.yml::run: coverage run -m unittest"
+	SPEC "the logs of the test jobs of the matrix of .github/workflows/ci.yml show no test skipped"
+		+ "for want of awawa, and ci.yml installs no awawa and runs no awawa command"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	SPEC "the Develop section of the README says that the tests run on the recordings where awawa"
 		+ "is not on PATH, and how a recording is made or renewed from the real binary"
 		IMPL "README.md::rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest"
@@ -6275,7 +6275,13 @@ TASK B95
 TASK B96
 	TITLE ".coveragerc sets fail_under to 100: the coverage job of the CI, its tests that need"
 		+ "awawa replaying the recordings of B95, fails below the figure of B70"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-19: its SPEC, the coverage job of the CI passing at fail_under = 100"
+		+ "with the tests that need awawa on the recordings of B95, is made false by @TASK.B190,"
+		+ "under which coverage measures the unit tests alone and fails until tests/unit reaches"
+		+ "100 %, on the owner's ruling of 2026-10-19 on pull request #159, « archive B96 dans #159"
+		+ "»"
+		REF @TASK.B190
 	MILESTONE @MILESTONE.F0
 	COMPONENT "ci"
 	ROLE ada
@@ -9616,7 +9622,7 @@ TASK B154
 		IMPL "ruff.toml::\"DTZ\", \"SIM\", \"PERF\", \"RUF\", \"ERA\", \"T20\","
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd; a fix that changes a behaviour"
 		+ "is named in the pull request body with the finding it answers"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; the 14 findings,"
 		+ "by uvx ruff@0.17.0 check . --extend-select <the six> --output-format concise on main at"
 		+ "c3fcbbd on 2026-10-14: T201 brigade/cli.py:101, 103, 105 and 129; RUF036"
@@ -9657,7 +9663,7 @@ TASK B155
 		IMPL "tests/integration/corpus/test_prepare_tree.py::list((self.cache / \"app\").iterdir())"
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd, and python3 build.py builds"
 		+ "dist/brigade.pyz"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 		IMPL "build.py::zipapp.create_archive("
 	AFTER @TASK.B154
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; measured on main"
@@ -9695,7 +9701,7 @@ TASK B156
 		IMPL "brigade/commands/project_add.py::entity: Entity, *, force: bool):"
 		IMPL "tests/unit/runs/test_describe_progress.py::self.assertFalse(request.role_has_shell)"
 	SPEC "python3 -m unittest passes, 1011 tests on main at c3fcbbd"
-		IMPL ".github/workflows/ci.yml::run: python3 -m unittest -v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
 	AFTER @TASK.B154
 	RATIONALE "binds @DECISION.TheRuffFamiliesBrigadeSelectsAndTheOnesItRefuses; measured on main"
 		+ "at c3fcbbd on 2026-10-14 by uvx ruff@0.17.0 check . --select FBT --statistics, the files"
@@ -10733,42 +10739,76 @@ TASK B189
 		+ "cinq autres. La décision reste telle quelle. »"
 
 TASK B190
-	TITLE "the CI runs the suite in parallel under pytest-xdist on both legs of the test job and"
-		+ "measures coverage once, in the 3.11 leg, the coverage job removed"
-	STATUS todo
+	TITLE "the CI runs the suite in parallel under pytest-xdist on both legs of the test job,"
+		+ "without coverage, and coverage.py measures the unit tests alone, in a job of its own"
+	STATUS implemented
 	TYPE ci
 	MILESTONE @MILESTONE.M1
 	COMPONENT "ci"
 	ROLE ada
 	SPEC "requirements-ci.txt pins pytest and pytest-xdist, one version each, under the pip entry"
-		+ "of .github/dependabot.yml as the other lines; nothing under brigade/ imports either,"
-		+ "dist/brigade.pyz ships neither, and no module of tests/ imports pytest: grep -rn"
-		+ "'pytest' brigade tests prints nothing, so that the tests stay unittest cases and python3"
-		+ "-m unittest, the local command of README.md and AGENTS.md, passes on every commit"
+		+ "of .github/dependabot.yml as the other lines; nothing under brigade/ or tests/ imports"
+		+ "either and dist/brigade.pyz ships neither: grep -rnE"
+		+ "'^[[:space:]]*(import|from)[[:space:]]+(pytest|xdist)' brigade tests prints nothing, so"
+		+ "that the tests stay unittest cases and python3 -m unittest, the local command of"
+		+ "README.md and AGENTS.md, passes on every commit"
+		IMPL "requirements-ci.txt::pytest=="
+		IMPL "requirements-ci.txt::pytest-xdist=="
+		IMPL ".github/dependabot.yml::package-ecosystem: pip"
 	SPEC "the test job of .github/workflows/ci.yml runs the suite as python3 -m pytest -n auto -p"
-		+ "no:cacheprovider tests on its 3.x leg and as coverage run -m pytest -n auto -p"
-		+ "no:cacheprovider tests, then coverage combine, then coverage report on its 3.11 leg, in"
-		+ "place of python3 -m unittest -v on both; the job coverage is removed; no other job of"
-		+ "ci.yml changes"
-	SPEC "the report of the 3.11 leg prints TOTAL at 100% with .coveragerc unchanged, source ="
-		+ "brigade, patch = subprocess, branch = True and fail_under = 100: the xdist workers and"
-		+ "the brigade subprocesses tests/cli launches from them are collected and combined as the"
-		+ "serial run collected them; the pull request body quotes the TOTAL line of the leg next"
-		+ "to the one of the coverage job of the last run of main"
+		+ "no:cacheprovider tests on both legs, without coverage, in place of python3 -m unittest"
+		+ "-v"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
+	SPEC "the job coverage of ci.yml, on Python 3.11, runs coverage run -m unittest discover -s"
+		+ "tests/unit -t . then coverage report: brigade/ measured by the unit tests alone,"
+		+ ".coveragerc keeping source = brigade, branch = True and fail_under = 100 and losing"
+		+ "patch = subprocess; the job fails while tests/unit covers less than 100 %, which the"
+		+ "owner accepts until the runs that complete tests/unit land; the pull request body quotes"
+		+ "its TOTAL line"
+		IMPL ".github/workflows/ci.yml::name: Coverage of the unit tests by coverage.py"
+		IMPL ".github/workflows/ci.yml::run: coverage run -m unittest discover -s tests/unit -t ."
+		IMPL ".github/workflows/ci.yml::run: coverage report"
+		IMPL ".coveragerc::branch = True"
+		IMPL ".coveragerc::fail_under = 100"
+	SPEC "no subprocess is measured: build_process_environment no longer passes"
+		+ "COVERAGE_PROCESS_CONFIG to the children, the environments tests/cli builds for a brigade"
+		+ "subprocess carry no coverage variable, and tests/cli/forward_coverage_environment.py is"
+		+ "removed"
+		IMPL "brigade/system/build_process_environment.py::INHERITED_VARIABLES = (\"PATH\","
+			+ "\"HOME\", \"LANG\")"
+		IMPL "tests/unit/system/test_build_process_environment.py::def"
+			+ "test_should_keep_only_the_whitelisted_variables"
+		IMPL "tests/cli/temporary_machine.py::def describe_environment"
 	SPEC "the longest job of the CI run of the pull request lasts under 15 min, where the runs"
 		+ "39236852839, 39232107093 and 39228786752 of 2026-10-19 lasted 38 to 42 min, set by their"
-		+ "coverage job, their test legs 13 to 19 min each; the pull request body quotes the"
-		+ "duration of each leg of its run next to them"
+		+ "coverage job of the whole suite, and the run 39248768527 of the first form of this pull"
+		+ "request 21 min 34 s, set by coverage of the whole suite under pytest-xdist in the 3.11"
+		+ "leg; the pull request body quotes the duration of each job of its run next to them"
+		IMPL ".github/workflows/ci.yml::run: python3 -m pytest -n auto -p no:cacheprovider tests"
+		IMPL ".github/workflows/ci.yml::name: Coverage of the unit tests by coverage.py"
 	SPEC "the pytest run leaves no file in the checkout: git status --porcelain prints nothing"
 		+ "after python3 -m pytest -n auto -p no:cacheprovider tests, as it prints nothing after"
 		+ "python3 -m unittest"
+		IMPL ".github/workflows/ci.yml::-p no:cacheprovider tests"
 	SPEC "the paragraph of README.md on the CI names the parallel run under pytest-xdist on both"
-		+ "Pythons and the coverage measured once, in the 3.11 leg of the test job, read in the job"
-		+ "log only; the Develop block of README.md and the Commands section of AGENTS.md keep"
-		+ "python3 -m unittest as the local command"
-	SPEC "TASK B66 is archived at delivery, its SPEC 2, a coverage job of ci.yml of its own, made"
-		+ "false by this task; TASK B70 and TASK B96 stay implemented, the threshold they set"
-		+ "enforced by the 3.11 leg"
+		+ "Pythons and the coverage of brigade/ by tests/unit alone, in a job of its own, read in"
+		+ "the job log only; the Develop block of README.md and the Commands section of AGENTS.md"
+		+ "keep python3 -m unittest as the local command"
+		IMPL "README.md::The CI runs the tests in parallel under pytest-xdist"
+		IMPL "README.md::by the unit tests of `tests/unit` alone with coverage.py, in a job of its"
+			+ "own on Python 3.11"
+		IMPL "README.md::python3 -m unittest                            # the tests"
+		IMPL "AGENTS.md::python3 -m unittest"
+	SPEC "TASK B66 is archived at delivery, its SPEC 1, 2 and 7, patch = subprocess, a coverage job"
+		+ "of the whole suite and COVERAGE_PROCESS_CONFIG passed to the children, made false by"
+		+ "this task; TASK B96 is archived, its SPEC, the coverage job passing at 100 % with the"
+		+ "tests that need awawa on the recordings, made false by this task; TASK B70 stays"
+		+ "implemented, the threshold it set enforced by the job coverage on the unit tests; the"
+		+ "SPEC of TASK B95 no longer names the coverage job"
+		IMPL "corpus/tasks.awawa::archived on 2026-10-19: its SPEC 1, 2 and 7"
+		IMPL "corpus/tasks.awawa::archived on 2026-10-19: its SPEC, the coverage job of the CI"
+		IMPL ".coveragerc::fail_under = 100"
+	DELIVERED_BY 159
 	RATIONALE "the measured facts of 2026-10-19: the coverage job of the runs 39236852839,"
 		+ "39232107093 and 39228786752 lasted 38 to 42 min, coverage run -m unittest 2295 to 2513 s"
 		+ "of them and coverage combine 10 s, the test legs 13 to 19 min each and every other job"
@@ -10797,6 +10837,18 @@ TASK B190
 		+ "est super long », then the ruling « vas-y pour A + B, mais aussi D » on the four options"
 		+ "of the session, A pytest-xdist, B coverage in the 3.11 leg of the test job, C sharding,"
 		+ "D faster tests"
+	RATIONALE "the first form of pull request #159 measured the whole suite under pytest-xdist in"
+		+ "the 3.11 leg: run 39248768527 lasted 21 min 34 s against 7 min 15 s for the 3.x leg,"
+		+ "coverage of the ten thousand Python subprocesses of tests/cli costing three times the"
+		+ "plain run; the owner then ruled that 100 % coverage concerns the unit tests alone, which"
+		+ "coverage run -m unittest discover -s tests/unit -t . measured at 55 % in 2.3 s on"
+		+ "9e1968b"
+	SOURCE "the owner's words of 2026-10-19 on pull request #159, « Les tests unitaires doivent"
+		+ "rester unitaires. Les tests d'intégration doivent se limiter à des smoke tests peu"
+		+ "nombreux sur les chemins critiques uniquement. », « pour moi le 100% de coverage"
+		+ "concerne uniquement des tests unitaires, pas des tests d'intégration », « on assume que"
+		+ "le coverage va fail temporairement. »"
+	SOURCE "the owner's ruling of 2026-10-19 on pull request #159, « archive B96 dans #159 »"
 
 TASK B191
 	TITLE "brigade imports the module of the command it runs alone: --version imports no module of"

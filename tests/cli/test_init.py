@@ -6,7 +6,6 @@ import unittest
 from pathlib import Path
 
 from tests.awawa.provide_awawa import provide_awawa
-from tests.cli.forward_coverage_environment import forward_coverage_environment
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 from tests.process_launcher import ProcessLauncher
 
@@ -168,7 +167,6 @@ class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
         home_only = {
             "PATH": self.machine.describe_environment()["PATH"],
             "HOME": str(self.machine.home),
-            **forward_coverage_environment(),
         }
 
         # Act

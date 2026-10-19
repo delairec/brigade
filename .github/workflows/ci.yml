@@ -29,7 +29,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python3 --version
-      - run: python3 -m unittest -v
+      - run: python3 -m pip install -r requirements-ci.txt
+      - run: python3 -m pytest -n auto -p no:cacheprovider tests
       - run: python3 build.py
       - run: python3 dist/brigade.pyz --version
 
@@ -113,7 +114,7 @@ jobs:
       - run: vulture brigade/ tests/ vulture_whitelist.txt
 
   coverage:
-    name: Coverage report by coverage.py
+    name: Coverage of the unit tests by coverage.py
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -123,6 +124,5 @@ jobs:
         with:
           python-version: "3.11"
       - run: python3 -m pip install -r requirements-ci.txt
-      - run: coverage run -m unittest
-      - run: coverage combine
+      - run: coverage run -m unittest discover -s tests/unit -t .
       - run: coverage report

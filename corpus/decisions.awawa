@@ -970,11 +970,10 @@ DECISION OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	STATUS active
 	DESC "every subprocess goes through one function of brigade/system: an argv list, never a shell"
 		+ "string, an explicit cwd, an environment built from a whitelist, PATH, HOME, LANG, LC_*,"
-		+ "XDG_*, the BRIGADE_* variables of collectors, COVERAGE_PROCESS_CONFIG when brigade's own"
-		+ "environment carries it, and what the adapter adds, a timeout on every call, UTF-8 text"
-		+ "with replacement; it returns a record, argv, cwd, exit code, stdout, stderr and"
-		+ "duration, and raises ToolFailure on an exit code the caller did not declare acceptable,"
-		+ "awawa lint 1 or gh pr view 1 on not found"
+		+ "XDG_*, the BRIGADE_* variables of collectors, and what the adapter adds, a timeout on"
+		+ "every call, UTF-8 text with replacement; it returns a record, argv, cwd, exit code,"
+		+ "stdout, stderr and duration, and raises ToolFailure on an exit code the caller did not"
+		+ "declare acceptable, awawa lint 1 or gh pr view 1 on not found"
 	DESC "the runner builds that environment through brigade/system/build_process_environment, its"
 		+ "environment module, exported alone: run_process and build_process_environment are, with"
 		+ "paths, the modules the environment-read guard of"
@@ -1000,24 +999,26 @@ DECISION OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
 	REJECTED "subprocess calls scattered where needed: no timeout policy, no environment policy,"
 		+ "and a port must find them all"
 	REJECTED "shell=True anywhere: quoting defects and a dependency on the user's shell"
-	REJECTED "a COVERAGE_ prefix in the whitelist: patch = subprocess of coverage.py needs"
-		+ "COVERAGE_PROCESS_CONFIG alone, and a prefix would pass the coverage settings of the"
-		+ "user's shell to every tool"
+	REJECTED "COVERAGE_PROCESS_CONFIG or any COVERAGE_ variable in the whitelist: coverage measures"
+		+ "the unit tests alone, in process, so no child is measured, and a coverage variable would"
+		+ "pass the coverage settings of the user's shell to every tool"
 	RATIONALE "the rule test_doubles of the instructions corpus prefers a real implementation when"
 		+ "fast, deterministic and isolated, and repository_facts_proven_by_command wants the"
 		+ "command that proves a fact: one runner records every call, and real git and awawa in a"
 		+ "temporary directory answer the gateway tests"
-	RATIONALE "COVERAGE_PROCESS_CONFIG is how coverage.py, under patch = subprocess, reaches a"
-		+ "child; without it a detached run or an external adapter launched by brigade under the"
-		+ "coverage job of @TASK.B66 is never measured, and outside that job the variable is unset,"
-		+ "so the whitelist passes nothing more"
+	RATIONALE "the whitelist carried COVERAGE_PROCESS_CONFIG from @TASK.B66 so that coverage.py,"
+		+ "under patch = subprocess, measured the children of brigade; @TASK.B190 removes both once"
+		+ "the owner ruled that 100 % coverage concerns the unit tests alone"
 		REF @TASK.B66
+		REF @TASK.B190
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "the user's ruling of 2026-10-06 on pull request #24 of the brigade repository: one"
 		+ "export per module, the environment of the runner in a module of its own"
-	SOURCE "the user's ruling of 2026-10-06 on pull request #44 of the brigade repository, \"je"
-		+ "veux que ça soit fait dans la même pr\": COVERAGE_PROCESS_CONFIG passed to the children"
-		+ "when brigade's own environment carries it"
+	SOURCE "the owner's words of 2026-10-19 on pull request #159, « Les tests unitaires doivent"
+		+ "rester unitaires. Les tests d'intégration doivent se limiter à des smoke tests peu"
+		+ "nombreux sur les chemins critiques uniquement. », « pour moi le 100% de coverage"
+		+ "concerne uniquement des tests unitaires, pas des tests d'intégration », « on assume que"
+		+ "le coverage va fail temporairement. »"
 
 DECISION TheClockIsReadOnceAndCarriedAsAFact
 	TITLE "now is read once per command, or per tick of a loop, in UTC, and carried as a fact in"
@@ -1413,9 +1414,8 @@ DECISION TheTestsThatNeedAwawaReplayRecordedOutputsAndNoTestSkipsInTheCi
 		+ "@DECISION.AwawaIsWrappedAsItIs; the fake stands in for it in the tests alone"
 		REF @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites
 		REF @DECISION.AwawaIsWrappedAsItIs
-	DESC "binds @TASK.B95 and @TASK.B96"
+	DESC "binds @TASK.B95"
 		REF @TASK.B95
-		REF @TASK.B96
 	REJECTED "the CI without awawa, its tests skipped, the ruling of 2026-10-06: pull request #52"
 		+ "merged with two L016 that broke awawa lint --strict on main, and every CI job skipped 70"
 		+ "tests, OK (skipped=70) on main 3deeea2 and on #56"
@@ -1482,17 +1482,19 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture, pytest with pytest-xdist and coverage.py,"
 		+ "each installed by pip from requirements-ci.txt under dependabot; none is a dependency of"
-		+ "brigade, the suite runs in parallel in the test job, and coverage is measured once, in"
-		+ "its 3.11 leg, failing below a threshold never lowered"
+		+ "brigade, the suite runs in parallel in the test job without coverage, and coverage"
+		+ "measures the unit tests alone, in a job of its own, failing below a threshold never"
+		+ "lowered"
 	STATUS active
 	DESC "the CI runs six development tools on every pull request touching a file outside the paths"
 		+ "@DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob names, and on"
 		+ "every push to main: zizmor on .github/workflows/, ruff check and ruff format --check,"
 		+ "semgrep scan with the Python and security rule packs, vulture, pytest with pytest-xdist"
-		+ "running the suite in parallel on both legs of the test job, and coverage.py measuring"
-		+ "that run once, in the 3.11 leg, failing below the fail_under of .coveragerc; @TASK.B62"
-		+ "to @TASK.B66 deliver the first five, one tool per pull request, and @TASK.B190 the"
-		+ "parallel run and the move of coverage into the test job, which ends the coverage job"
+		+ "running the suite in parallel on both legs of the test job, without coverage, and"
+		+ "coverage.py measuring brigade/ by tests/unit alone in a job of its own on Python 3.11,"
+		+ "failing below the fail_under of .coveragerc; @TASK.B62 to @TASK.B66 deliver the first"
+		+ "five, one tool per pull request, and @TASK.B190 the parallel run and the coverage of the"
+		+ "unit tests alone"
 		REF @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 		REF @TASK.B62
 		REF @TASK.B63
@@ -1514,10 +1516,11 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	DESC ".github/workflows/ci.yml declares permissions: contents: read at its top level and"
 		+ "persist-credentials: false on every actions/checkout step"
-	DESC "coverage fails the run below the fail_under of .coveragerc: @TASK.B70 set it at the"
-		+ "figure of the CI without awawa, 93, and @TASK.B96 sets it at 100 once @TASK.B95 runs the"
-		+ "tests that need awawa in the CI on recorded outputs; a threshold, once set, is never"
-		+ "lowered"
+	DESC "coverage fails the run below the fail_under of .coveragerc, 100 on the unit tests alone"
+		+ "since @TASK.B190: @TASK.B70 set it at the figure of the CI without awawa, 93, and"
+		+ "@TASK.B96, archived, raised it to 100 on the whole suite once @TASK.B95 ran the tests"
+		+ "that need awawa in the CI on recorded outputs; a threshold, once set, is never lowered"
+		REF @TASK.B190
 		REF @TASK.B70
 		REF @TASK.B96
 		REF @TASK.B95
@@ -1539,6 +1542,9 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		+ "there, one requirements file is what it reads"
 	REJECTED "a coverage job of its own running the whole suite a second time: 38 to 42 min per run"
 		+ "against 13 to 19 min for a test leg, the wall clock of the CI"
+	REJECTED "coverage of the whole suite under pytest-xdist in the 3.11 leg of the test job: 21"
+		+ "min 34 s in run 39248768527 of pull request #159 against 7 min 15 s for the 3.x leg, and"
+		+ "100 % coverage concerns the unit tests alone, never the integration tests"
 	REJECTED "the suite sharded across unittest jobs of the standard library, then a coverage"
 		+ "combine job: more YAML and more runners for a gain close to pytest-xdist's"
 	RATIONALE "the user ruled twice on 2026-10-06 on the proposal tables of the session: \"tout ce"
@@ -1583,6 +1589,11 @@ DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 		+ "and DESC 6 amended, C rejected, @TASK.B190 and @TASK.B191 written"
 		REF @TASK.B190
 		REF @TASK.B191
+	SOURCE "the owner's words of 2026-10-19 on pull request #159, « Les tests unitaires doivent"
+		+ "rester unitaires. Les tests d'intégration doivent se limiter à des smoke tests peu"
+		+ "nombreux sur les chemins critiques uniquement. », « pour moi le 100% de coverage"
+		+ "concerne uniquement des tests unitaires, pas des tests d'intégration », « on assume que"
+		+ "le coverage va fail temporairement. »"
 
 DECISION TestClassNamesCarryTheSuffixTestThatVultureReads
 	TITLE "every unittest.TestCase class of tests/ is named after the behaviour it pins, then the"

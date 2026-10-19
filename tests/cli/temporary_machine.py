@@ -2,7 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-from tests.cli.forward_coverage_environment import forward_coverage_environment
 from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -28,7 +27,6 @@ class TemporaryMachine:
             "XDG_CONFIG_HOME": str(self.config_home),
             "XDG_STATE_HOME": str(self.state_home),
             "XDG_CACHE_HOME": str(self.cache_home),
-            **forward_coverage_environment(),
         }
 
     def write_configuration(self, content: str) -> Path:
