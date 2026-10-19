@@ -8,7 +8,6 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
-from tests.cli.forward_coverage_environment import forward_coverage_environment
 from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -75,7 +74,6 @@ class DoctorTestCase(unittest.TestCase):
             "XDG_CONFIG_HOME": self.config_home.name,
             "XDG_STATE_HOME": str(self.state_home),
             "BRIGADE_GH_RECORD": str(self.gh_record),
-            **forward_coverage_environment(),
         }
         return ProcessLauncher.run(
             [sys.executable, entry_point, "doctor", *options],
