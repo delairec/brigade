@@ -5,10 +5,12 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
+from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_promoted import TaskPromoted
 from brigade.tasks.promote_task import TaskPromotionDemand, promote_task
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 TASKS = 'TASK B12\n\tTITLE "The parser"\n\tSTATUS todo\n\tDELIVERED_BY 40\n\nTASK B13\n\tSTATUS todo\n'
@@ -106,8 +108,8 @@ class PromoteTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.root / "state").entries[-1].event.to_document(),
-            {"project": "oak", "task": "B12", "pr": 42, "commit": "d00d"},
+            read_ledger(self.root / "state").entries,
+            (LedgerEntry(instant=RUNTIME_NOW, event=TaskPromoted(project="oak", task="B12", pr=42, commit="d00d")),),
         )
 
     def test_should_promote_on_the_last_pull_request_the_ledger_records_for_the_task(self):

@@ -12,6 +12,7 @@ from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 REQUEST = {"project": "oak", "branch": "integration/F0-parser", "milestone": "F0", "wave": "oak_w1"}
+REQUEST_NOT_PLANNED = {"project": "oak", "branch": None, "milestone": None, "wave": None}
 
 
 class ListWaveTasksTest(unittest.TestCase):
@@ -36,10 +37,7 @@ class ListWaveTasksTest(unittest.TestCase):
         self.processes.answer_entities(
             tree,
             "TASK",
-            {
-                "B12": (("TITLE", "the parser"), ("DELIVERED_BY", "41")),
-                "B13": (("TITLE", "the printer"),),
-            },
+            {"B12": (("TITLE", "the parser"), ("DELIVERED_BY", "41")), "B13": (("TITLE", "the printer"),)},
             ("MILESTONE==@MILESTONE.F0",),
         )
         append_event(
@@ -67,7 +65,7 @@ class ListWaveTasksTest(unittest.TestCase):
 
     def test_should_list_no_task_for_a_request_not_planned_on_a_branch(self):
         # Act
-        tasks = list_wave_tasks(self.runtime, Configuration(), {**REQUEST, "branch": None})
+        tasks = list_wave_tasks(self.runtime, Configuration(), REQUEST_NOT_PLANNED)
 
         # Assert
         self.assertEqual(tasks, [])

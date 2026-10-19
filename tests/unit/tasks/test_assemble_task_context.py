@@ -75,10 +75,14 @@ class AssembleTaskContextTest(unittest.TestCase):
             stdout="RULE python\n",
         )
 
+    def create_runtime(self, run_directory: Path | None = None):
+        runtime = create_scripted_runtime(self.root, self.processes, run_directory=run_directory)
+        self.script_wave_tree(runtime)
+        return runtime
+
     def test_should_assemble_what_a_run_needs_to_deliver_the_task(self):
         # Arrange
-        runtime = create_scripted_runtime(self.root, self.processes)
-        self.script_wave_tree(runtime)
+        runtime = self.create_runtime()
 
         # Act
         context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
@@ -110,8 +114,7 @@ class AssembleTaskContextTest(unittest.TestCase):
 
     def test_should_carry_the_rules_of_the_path_triggers_matching_a_path_the_task_names(self):
         # Arrange
-        runtime = create_scripted_runtime(self.root, self.processes)
-        self.script_wave_tree(runtime)
+        runtime = self.create_runtime()
         self.script_rules()
         configuration = Configuration(instructions=str(self.instructions))
 
@@ -132,34 +135,49 @@ class AssembleTaskContextTest(unittest.TestCase):
             ],
         )
 
-    def test_should_carry_the_setup_log_and_the_project_instructions_of_the_worktree(self):
+    def test_should_carry_the_setup_log_of_the_worktree(self):
         # Arrange
-        runtime = create_scripted_runtime(self.root, self.processes)
-        self.script_wave_tree(runtime)
+        runtime = self.create_runtime()
         setup_log = self.root / "state" / "setups" / "oak" / "B12.log"
         setup_log.parent.mkdir(parents=True)
         setup_log.write_text("npm ci\n", encoding="utf-8")
+
+        # Act
+        context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+
+        # Assert
+        self.assertEqual(context["worktree"]["setup"], "npm ci\n")
+
+    def test_should_carry_the_project_instructions_of_the_worktree(self):
+        # Arrange
+        runtime = self.create_runtime()
         (self.worktree_path / "AGENTS.md").write_text("# oak\n", encoding="utf-8")
 
         # Act
         context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
 
         # Assert
-        self.assertEqual((context["worktree"]["setup"], context["project"]), ("npm ci\n", "# oak\n"))
+        self.assertEqual(context["project"], "# oak\n")
 
-    def test_should_reserve_a_temporary_directory_in_the_run_directory_of_a_run(self):
+    def test_should_name_the_temporary_directory_of_a_run(self):
         # Arrange
-        runtime = create_scripted_runtime(self.root, self.processes, run_directory=self.root / "run")
-        self.script_wave_tree(runtime)
+        runtime = self.create_runtime(self.root / "run")
 
         # Act
         context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
 
         # Assert
-        self.assertEqual(
-            (context["reserved"]["temporary_directory"], (self.root / "run" / "tmp").is_dir()),
-            (str(self.root / "run" / "tmp"), True),
-        )
+        self.assertEqual(context["reserved"]["temporary_directory"], str(self.root / "run" / "tmp"))
+
+    def test_should_create_the_temporary_directory_of_a_run_empty(self):
+        # Arrange
+        runtime = self.create_runtime(self.root / "run")
+
+        # Act
+        assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+
+        # Assert
+        self.assertEqual(list((self.root / "run" / "tmp").iterdir()), [])
 
     def test_should_fail_when_the_context_of_the_task_cannot_be_read(self):
         # Arrange

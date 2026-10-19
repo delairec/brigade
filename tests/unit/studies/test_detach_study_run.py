@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from brigade.studies.detach_study_run import detach_study_run
+from brigade.system.spawn_process import SpawnRequest
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
@@ -20,7 +21,7 @@ class DetachStudyRunTest(unittest.TestCase):
         self.spawned = []
         self.runtime = create_scripted_runtime(self.root, ScriptedProcesses(), spawn_process=self.spawn)
 
-    def spawn(self, request) -> SimpleNamespace:
+    def spawn(self, request: SpawnRequest) -> SimpleNamespace:
         self.spawned.append(request)
         return SimpleNamespace(pid=os.getpid())
 
@@ -30,15 +31,26 @@ class DetachStudyRunTest(unittest.TestCase):
 
         # Assert
         log = self.root / "state" / "runs" / RUN_ID / "brigade.log"
-        request = self.spawned[0]
         self.assertEqual(
-            (request.argv, request.cwd, request.stdout, request.stderr),
-            (
-                (sys.executable, str(self.root / "bin" / "brigade"), "study", "run", "trees", "--run-id", RUN_ID),
-                str(self.root / "config"),
-                log,
-                log,
-            ),
+            self.spawned,
+            [
+                SpawnRequest(
+                    argv=(
+                        sys.executable,
+                        str(self.root / "bin" / "brigade"),
+                        "study",
+                        "run",
+                        "trees",
+                        "--run-id",
+                        RUN_ID,
+                    ),
+                    cwd=str(self.root / "config"),
+                    environment={},
+                    stdin=None,
+                    stdout=log,
+                    stderr=log,
+                )
+            ],
         )
 
     def test_should_answer_the_pid_of_the_detached_brigade(self):

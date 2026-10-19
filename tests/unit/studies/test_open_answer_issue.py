@@ -52,19 +52,14 @@ class OpenAnswerIssueTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
         self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
-        self.forge = ForgeDouble()
-        self.resolved = []
-
-    def resolve_forge(self, name: str) -> ForgeDouble:
-        self.resolved.append(name)
-        return self.forge
+        self.forges = {"github": ForgeDouble()}
 
     def create_context(self, project: str | None) -> StudyRunContext:
         equipment = StudyEquipment(
             collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
             resolve_collector=refuse_collector,
             document=None,
-            resolve_forge=self.resolve_forge,
+            resolve_forge=self.forges.__getitem__,
             launch_run=refuse_launch,
         )
         return StudyRunContext(
@@ -80,7 +75,7 @@ class OpenAnswerIssueTest(unittest.TestCase):
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("FORGE", forge))}
         )
 
-    def test_should_open_an_issue_holding_the_answer_on_the_forge_of_the_project(self):
+    def test_should_answer_the_issue_it_opened(self):
         # Arrange
         self.register_project("github")
 
@@ -88,13 +83,19 @@ class OpenAnswerIssueTest(unittest.TestCase):
         opened = open_answer_issue(self.create_context("oak"), PUBLICATION)
 
         # Assert
+        self.assertEqual(opened, {"issue": "https://github.com/acme/oak/issues/3"})
+
+    def test_should_open_an_issue_holding_the_answer_on_the_forge_of_the_project(self):
+        # Arrange
+        self.register_project("github")
+
+        # Act
+        open_answer_issue(self.create_context("oak"), PUBLICATION)
+
+        # Assert
         self.assertEqual(
-            (opened, self.resolved, self.forge.issues),
-            (
-                {"issue": "https://github.com/acme/oak/issues/3"},
-                ["github"],
-                [{"repository": "/srv/oak", "title": "Study trees, run 1", "body": "# FINDING trees_1\n"}],
-            ),
+            self.forges["github"].issues,
+            [{"repository": "/srv/oak", "title": "Study trees, run 1", "body": "# FINDING trees_1\n"}],
         )
 
     def test_should_refuse_a_project_without_a_forge(self):

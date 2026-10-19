@@ -8,10 +8,8 @@ from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 STUDIES = "STUDY trees\n\tSLOT none\n\tSTATUS active\n"
-
-
-def create_study_fields(status: str) -> tuple:
-    return (("SLOT", "none"), ("OUTPUT", "entity:FINDING"), ("ANSWER", "FINDING"), ("STATUS", status))
+ACTIVE_STUDY = (("SLOT", "none"), ("OUTPUT", "entity:FINDING"), ("ANSWER", "FINDING"), ("STATUS", "active"))
+ARCHIVED_STUDY = (("SLOT", "none"), ("OUTPUT", "entity:FINDING"), ("ANSWER", "FINDING"), ("STATUS", "archived"))
 
 
 class ChangeStudyStatusTest(unittest.TestCase):
@@ -24,26 +22,33 @@ class ChangeStudyStatusTest(unittest.TestCase):
         self.studies = self.config_root / "studies.awawa"
         self.studies.write_text(STUDIES, encoding="utf-8")
 
-    def test_should_pause_an_active_study(self):
-        # Arrange
-        self.processes.answer_entity(self.config_root, "STUDY", "trees", create_study_fields("active"))
+    def script_pause(self) -> None:
+        self.processes.answer_entity(self.config_root, "STUDY", "trees", ACTIVE_STUDY)
         self.processes.answer_corpus_change(self.config_root, ("studies.awawa",), "brigade study pause: trees")
+
+    def test_should_report_the_pause_of_an_active_study(self):
+        # Arrange
+        self.script_pause()
 
         # Act
         changed = change_study_status(self.runtime, "trees", "paused")
 
         # Assert
-        self.assertEqual(
-            (changed, self.studies.read_text(encoding="utf-8")),
-            (
-                {"schema_version": 1, "study": "trees", "status": "paused", "changed": True},
-                "STUDY trees\n\tSLOT none\n\tSTATUS paused\n",
-            ),
-        )
+        self.assertEqual(changed, {"schema_version": 1, "study": "trees", "status": "paused", "changed": True})
+
+    def test_should_write_the_pause_of_an_active_study_in_the_studies_file(self):
+        # Arrange
+        self.script_pause()
+
+        # Act
+        change_study_status(self.runtime, "trees", "paused")
+
+        # Assert
+        self.assertEqual(self.studies.read_text(encoding="utf-8"), "STUDY trees\n\tSLOT none\n\tSTATUS paused\n")
 
     def test_should_change_nothing_for_a_study_already_in_the_status(self):
         # Arrange
-        self.processes.answer_entity(self.config_root, "STUDY", "trees", create_study_fields("active"))
+        self.processes.answer_entity(self.config_root, "STUDY", "trees", ACTIVE_STUDY)
 
         # Act
         changed = change_study_status(self.runtime, "trees", "active")
@@ -53,7 +58,7 @@ class ChangeStudyStatusTest(unittest.TestCase):
 
     def test_should_refuse_to_pause_or_resume_an_archived_study(self):
         # Arrange
-        self.processes.answer_entity(self.config_root, "STUDY", "trees", create_study_fields("archived"))
+        self.processes.answer_entity(self.config_root, "STUDY", "trees", ARCHIVED_STUDY)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -64,7 +69,7 @@ class ChangeStudyStatusTest(unittest.TestCase):
 
     def test_should_refuse_a_study_written_elsewhere_than_the_studies_file(self):
         # Arrange
-        self.processes.answer_entity(self.config_root, "STUDY", "ash", create_study_fields("active"))
+        self.processes.answer_entity(self.config_root, "STUDY", "ash", ACTIVE_STUDY)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:

@@ -21,11 +21,22 @@ STUDY = Study(
     answer_type="FINDING",
     status="active",
 )
-FILLED_FIELDS = [
-    {"name": "STUDY", "atoms": ['"trees"']},
-    {"name": "RUN", "atoms": [f'"{RUN_ID}"']},
-]
+FILLED_FIELDS = {
+    "fields": [
+        {"name": "STUDY", "atoms": ['"trees"']},
+        {"name": "RUN", "atoms": ['"20261019T090000Z-aaaaaa"']},
+        {"name": "VERDICT", "atoms": ['"two"']},
+    ]
+}
+CHANGED_FIELDS = {
+    "fields": [
+        {"name": "STUDY", "atoms": ['"trees"']},
+        {"name": "RUN", "atoms": ['"another"']},
+        {"name": "VERDICT", "atoms": ['"two"']},
+    ]
+}
 SUBMITTED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n\tVERDICT "two"\n'
+DIAGNOSTICS = "answer.awawa:4: L003 unknown field VERDIKT\n"
 
 
 class ValidateAnswerTest(unittest.TestCase):
@@ -41,32 +52,34 @@ class ValidateAnswerTest(unittest.TestCase):
         self.submitted = self.run_directory / "validation" / "submitted"
         self.filled = self.run_directory / "validation" / "filled"
 
-    def script_lint(self, exit_code: int, stdout: str = "") -> None:
-        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)), exit_code=exit_code, stdout=stdout)
-
-    def script_shown_fields(self, directory: Path, fields: list[dict]) -> None:
-        self.processes.answer_json(
-            ("awawa", "show", TARGET, "--json", str(directory)),
-            {"fields": [*fields, {"name": "VERDICT", "atoms": ['"two"']}]},
-        )
+    def script_conforming_answer(self, submitted_fields: dict) -> None:
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
+        self.processes.answer_json(("awawa", "show", TARGET, "--json", str(self.submitted)), submitted_fields)
+        self.processes.answer_json(("awawa", "show", TARGET, "--json", str(self.filled)), FILLED_FIELDS)
 
     def test_should_accept_an_answer_keeping_the_fields_brigade_filled(self):
         # Arrange
-        self.script_lint(0)
-        self.script_shown_fields(self.submitted, FILLED_FIELDS)
-        self.script_shown_fields(self.filled, FILLED_FIELDS)
+        self.script_conforming_answer(FILLED_FIELDS)
+
+        # Act
+        accepted = validate_answer(self.runtime, STUDY, self.run_directory, SUBMITTED)
+
+        # Assert
+        self.assertIsNone(accepted)
+
+    def test_should_remove_the_corpora_it_validated_in(self):
+        # Arrange
+        self.script_conforming_answer(FILLED_FIELDS)
 
         # Act
         validate_answer(self.runtime, STUDY, self.run_directory, SUBMITTED)
 
         # Assert
-        self.assertFalse((self.run_directory / "validation").exists())
+        self.assertEqual(list(self.run_directory.iterdir()), [self.run_directory / "steps"])
 
     def test_should_refuse_an_answer_that_changed_a_field_brigade_filled(self):
         # Arrange
-        self.script_lint(0)
-        self.script_shown_fields(self.submitted, [FILLED_FIELDS[0], {"name": "RUN", "atoms": ['"another"']}])
-        self.script_shown_fields(self.filled, FILLED_FIELDS)
+        self.script_conforming_answer(CHANGED_FIELDS)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -77,7 +90,7 @@ class ValidateAnswerTest(unittest.TestCase):
 
     def test_should_refuse_an_answer_the_schema_rejects_with_its_diagnostics(self):
         # Arrange
-        self.script_lint(1, "answer.awawa:4: L003 unknown field VERDIKT\n")
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)), exit_code=1, stdout=DIAGNOSTICS)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -85,13 +98,24 @@ class ValidateAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (str(refusal.exception), (self.run_directory / "validation").exists()),
-            ("the schema of FINDING rejects the answer\nanswer.awawa:4: L003 unknown field VERDIKT", False),
+            str(refusal.exception),
+            "the schema of FINDING rejects the answer\nanswer.awawa:4: L003 unknown field VERDIKT",
         )
+
+    def test_should_remove_the_corpora_of_a_refused_answer(self):
+        # Arrange
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)), exit_code=1, stdout=DIAGNOSTICS)
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            validate_answer(self.runtime, STUDY, self.run_directory, SUBMITTED)
+
+        # Assert
+        self.assertEqual(list(self.run_directory.iterdir()), [self.run_directory / "steps"])
 
     def test_should_refuse_an_answer_that_holds_no_entity_of_the_run(self):
         # Arrange
-        self.script_lint(0)
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
         self.processes.answer(("awawa", "show", TARGET, "--json", str(self.submitted)), exit_code=1)
 
         # Act
@@ -104,11 +128,11 @@ class ValidateAnswerTest(unittest.TestCase):
     def test_should_check_the_submitted_answer_against_the_operational_schema(self):
         # Arrange
         (self.root / "config" / "_schema.awawa").write_text("SCHEMA FINDING\n", encoding="utf-8")
-        copies = []
+        linted = []
 
         def read_the_linted_corpus(request) -> tuple[int, str, str]:
             schema = (self.submitted / "_schema.awawa").read_text(encoding="utf-8")
-            copies.append((schema, (self.submitted / "answer.awawa").read_text(encoding="utf-8")))
+            linted.append((schema, (self.submitted / "answer.awawa").read_text(encoding="utf-8")))
             return 1, "", ""
 
         self.processes.answer_by(("awawa", "lint", "--strict", str(self.submitted)), read_the_linted_corpus)
@@ -118,4 +142,4 @@ class ValidateAnswerTest(unittest.TestCase):
             validate_answer(self.runtime, STUDY, self.run_directory, SUBMITTED)
 
         # Assert
-        self.assertEqual(copies, [("SCHEMA FINDING\n", SUBMITTED)])
+        self.assertEqual(linted, [("SCHEMA FINDING\n", SUBMITTED)])

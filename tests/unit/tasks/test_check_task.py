@@ -22,6 +22,18 @@ WORKTREE = TaskWorktree(
     path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave={"branch": "integration/f0-parser"}
 )
 STATUS_ARGV = ("git", "status", "--porcelain", "-z", "--no-renames", "--untracked-files=all")
+CHECK = {
+    "schema_version": 1,
+    "project": "oak",
+    "task": "B12",
+    "head": "c0ffee",
+    "checks": [
+        {"command": "python3 -m unittest", "passed": True, "duration_ms": 7, "tail": []},
+        {"command": "ruff check .", "passed": False, "duration_ms": 7, "tail": ["F401 unused import", "1 error"]},
+        {"command": "awawa fmt --check .", "passed": True, "duration_ms": 7, "tail": []},
+        {"command": "awawa lint --strict .", "passed": True, "duration_ms": 7, "tail": []},
+    ],
+}
 
 
 class CheckTaskTest(unittest.TestCase):
@@ -41,39 +53,26 @@ class CheckTaskTest(unittest.TestCase):
         self.processes.answer(("awawa", "fmt", "--check", "."))
         self.processes.answer(("awawa", "lint", "--strict", "."))
 
-    def test_should_record_the_verdict_of_each_acceptance_command_and_corpus_check_at_head(self):
+    def test_should_answer_the_verdict_of_each_acceptance_command_and_corpus_check_at_head(self):
         # Arrange
         self.script_checks()
-        runtime = create_scripted_runtime(self.root, self.processes)
 
         # Act
-        document = check_task(runtime, WORKTREE)
+        document = check_task(create_scripted_runtime(self.root, self.processes), WORKTREE)
 
         # Assert
-        recorded = json.loads((self.root / "state" / "checks" / "oak" / "B12.json").read_text(encoding="utf-8"))
-        self.assertEqual(
-            (document, recorded),
-            (
-                {
-                    "schema_version": 1,
-                    "project": "oak",
-                    "task": "B12",
-                    "head": "c0ffee",
-                    "checks": [
-                        {"command": "python3 -m unittest", "passed": True, "duration_ms": 7, "tail": []},
-                        {
-                            "command": "ruff check .",
-                            "passed": False,
-                            "duration_ms": 7,
-                            "tail": ["F401 unused import", "1 error"],
-                        },
-                        {"command": "awawa fmt --check .", "passed": True, "duration_ms": 7, "tail": []},
-                        {"command": "awawa lint --strict .", "passed": True, "duration_ms": 7, "tail": []},
-                    ],
-                },
-                document,
-            ),
-        )
+        self.assertEqual(document, CHECK)
+
+    def test_should_record_the_check_of_the_task(self):
+        # Arrange
+        self.script_checks()
+
+        # Act
+        check_task(create_scripted_runtime(self.root, self.processes), WORKTREE)
+
+        # Assert
+        record = self.root / "state" / "checks" / "oak" / "B12.json"
+        self.assertEqual(json.loads(record.read_text(encoding="utf-8")), CHECK)
 
     def test_should_keep_the_output_of_each_check_in_the_run_directory_of_a_run(self):
         # Arrange
@@ -91,11 +90,10 @@ class CheckTaskTest(unittest.TestCase):
     def test_should_refuse_a_worktree_holding_changes_head_does_not(self):
         # Arrange
         self.processes.answer(STATUS_ARGV, stdout=" M src/parse.py\0?? notes.md\0")
-        runtime = create_scripted_runtime(self.root, self.processes)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            check_task(runtime, WORKTREE)
+            check_task(create_scripted_runtime(self.root, self.processes), WORKTREE)
 
         # Assert
         self.assertEqual(

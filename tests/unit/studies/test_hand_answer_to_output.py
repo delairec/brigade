@@ -33,31 +33,50 @@ class HandAnswerToOutputTest(unittest.TestCase):
         self.root = Path(directory.name)
         self.bin = self.root / "bin"
         self.bin.mkdir()
+        self.executable = self.bin / "brigade-output-slack"
         self.processes = ScriptedProcesses()
         runtime = create_scripted_runtime(self.root, self.processes, executable_search_path=str(self.bin))
         self.context = StudyRunContext(
             runtime=runtime, study=STUDY, run_id=RUN_ID, run_directory=self.root / "run", equipment=None
         )
 
-    def test_should_hand_the_answer_to_the_output_executable_on_the_search_path(self):
+    def install_output(self) -> None:
+        self.executable.write_text("#!/bin/sh\n", encoding="utf-8")
+        self.executable.chmod(0o755)
+        self.processes.answer((str(self.executable),))
+
+    def test_should_answer_the_output_executable_found_on_the_search_path(self):
         # Arrange
-        executable = self.bin / "brigade-output-slack"
-        executable.write_text("#!/bin/sh\n", encoding="utf-8")
-        executable.chmod(0o755)
-        self.processes.answer((str(executable),))
+        self.install_output()
 
         # Act
         handed = hand_answer_to_output(self.context, PUBLICATION)
 
         # Assert
+        self.assertEqual(handed, {"executable": str(self.executable)})
+
+    def test_should_hand_the_answer_to_the_output_executable_on_its_input(self):
+        # Arrange
+        self.install_output()
+
+        # Act
+        hand_answer_to_output(self.context, PUBLICATION)
+
+        # Assert
         self.assertEqual(
-            (handed, json.loads(self.processes.requests[0].stdin), self.processes.requests[0].cwd),
-            (
-                {"executable": str(executable)},
-                {"schema_version": 1, "study": "trees", "run": RUN_ID, "markdown": "# FINDING trees_1\n"},
-                str(self.root / "run"),
-            ),
+            json.loads(self.processes.requests[0].stdin),
+            {"schema_version": 1, "study": "trees", "run": RUN_ID, "markdown": "# FINDING trees_1\n"},
         )
+
+    def test_should_run_the_output_executable_in_the_run_directory(self):
+        # Arrange
+        self.install_output()
+
+        # Act
+        hand_answer_to_output(self.context, PUBLICATION)
+
+        # Assert
+        self.assertEqual(self.processes.requests[0].cwd, str(self.root / "run"))
 
     def test_should_refuse_an_output_no_executable_provides(self):
         # Act

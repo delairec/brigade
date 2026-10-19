@@ -1,4 +1,3 @@
-import json
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -6,12 +5,17 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.wave_started import WaveStarted
 from brigade.tasks.open_task_pull_request import TaskPullRequestDemand, open_task_pull_request
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
+WAVE_START = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
+WAVE_STARTED = WaveStarted(wave="oak_w1", project="oak", branch="integration/f0-parser", tasks=("B12",))
 TASK_FIELDS = (
     ("TYPE", "feat"),
     ("COMPONENT", "the parser"),
@@ -19,13 +23,18 @@ TASK_FIELDS = (
     ("SPEC", "parses a line"),
     ("MILESTONE", "@MILESTONE.F0"),
 )
-PASSING_CHECK = {
-    "schema_version": 1,
-    "project": "oak",
-    "task": "B12",
-    "head": "c0ffee",
-    "checks": [{"command": "python3 -m unittest", "passed": True, "duration_ms": 1200, "tail": []}],
-}
+PASSING_CHECK = (
+    '{"schema_version": 1, "project": "oak", "task": "B12", "head": "c0ffee",'
+    ' "checks": [{"command": "python3 -m unittest", "passed": true, "duration_ms": 1200, "tail": []}]}'
+)
+CHECK_OF_ANOTHER_COMMIT = (
+    '{"schema_version": 1, "project": "oak", "task": "B12", "head": "bead",'
+    ' "checks": [{"command": "python3 -m unittest", "passed": true, "duration_ms": 1200, "tail": []}]}'
+)
+FAILED_CHECK = (
+    '{"schema_version": 1, "project": "oak", "task": "B12", "head": "c0ffee",'
+    ' "checks": [{"command": "ruff check .", "passed": false, "duration_ms": 30, "tail": []}]}'
+)
 
 
 class ForgeDouble:
@@ -45,7 +54,7 @@ class ForgeDouble:
         return {"number": 42, "url": "https://github.com/acme/oak/pull/42"}
 
 
-class OpenTaskPullRequestFixture(unittest.TestCase):
+class OpenTaskPullRequestArrangement:
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -70,22 +79,18 @@ class OpenTaskPullRequestFixture(unittest.TestCase):
         )
         self.processes.answer(("git", "push", "--quiet", "origin", "task/f0-parser/B12"))
         self.processes.answer_entity(Path("/srv/oak-b12"), "MILESTONE", "F0", (("TITLE", "Parser"),))
-        append_event(
-            self.runtime.paths,
-            datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-            WaveStarted(wave="oak_w1", project="oak", branch="integration/f0-parser", tasks=("B12",)),
-        )
+        append_event(self.runtime.paths, WAVE_START, WAVE_STARTED)
 
-    def record_check(self, check: dict) -> None:
+    def record_check(self, check: str) -> None:
         record = self.root / "state" / "checks" / "oak" / "B12.json"
         record.parent.mkdir(parents=True)
-        record.write_text(json.dumps(check), encoding="utf-8")
+        record.write_text(check, encoding="utf-8")
 
-    def create_demand(self, forge: ForgeDouble, subject: str | None = "add the parser") -> TaskPullRequestDemand:
+    def create_demand(self, forge: ForgeDouble) -> TaskPullRequestDemand:
         return TaskPullRequestDemand(
             path=Path("/srv/oak-b12"),
             task=None,
-            subject=subject,
+            subject="add the parser",
             forge=forge,
             environment={"GH_TOKEN": "t0ken"},
             login="clauche-bot",
@@ -93,10 +98,13 @@ class OpenTaskPullRequestFixture(unittest.TestCase):
         )
 
 
-class OpenTaskPullRequestTest(OpenTaskPullRequestFixture):
+class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.record_check(PASSING_CHECK)
+
     def test_should_open_the_pull_request_of_the_task_on_the_branch_of_its_wave(self):
         # Arrange
-        self.record_check(PASSING_CHECK)
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
 
         # Act
@@ -121,7 +129,6 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestFixture):
 
     def test_should_describe_the_task_and_its_checks_in_the_body_of_the_pull_request(self):
         # Arrange
-        self.record_check(PASSING_CHECK)
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
         forge = ForgeDouble(["Parser"])
 
@@ -137,7 +144,6 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestFixture):
 
     def test_should_record_the_opened_pull_request_in_the_ledger(self):
         # Arrange
-        self.record_check(PASSING_CHECK)
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
 
         # Act
@@ -145,20 +151,25 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestFixture):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.root / "state").entries[-1].event.to_document(),
-            {
-                "project": "oak",
-                "task": "B12",
-                "wave": "oak_w1",
-                "branch": "task/f0-parser/B12",
-                "pr": 42,
-                "login": "clauche-bot",
-            },
+            read_ledger(self.root / "state").entries,
+            (
+                LedgerEntry(instant=WAVE_START, event=WAVE_STARTED),
+                LedgerEntry(
+                    instant=RUNTIME_NOW,
+                    event=TaskPrOpened(
+                        project="oak",
+                        task="B12",
+                        wave="oak_w1",
+                        branch="task/f0-parser/B12",
+                        pr=42,
+                        login="clauche-bot",
+                    ),
+                ),
+            ),
         )
 
-    def test_should_create_the_milestone_the_forge_lacks_and_record_it(self):
+    def test_should_create_the_milestone_the_forge_lacks(self):
         # Arrange
-        self.record_check(PASSING_CHECK)
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
         forge = ForgeDouble(["Printer"])
 
@@ -167,16 +178,26 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestFixture):
 
         # Assert
         self.assertEqual(
-            (forge.created, read_ledger(self.root / "state").entries[1].event.to_document()),
-            (
-                [{"repository": "/srv/oak-b12", "environment": {"GH_TOKEN": "t0ken"}, "title": "Parser"}],
-                {"project": "oak", "title": "Parser", "login": "clauche-bot"},
+            forge.created, [{"repository": "/srv/oak-b12", "environment": {"GH_TOKEN": "t0ken"}, "title": "Parser"}]
+        )
+
+    def test_should_record_the_milestone_it_created(self):
+        # Arrange
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Printer"])))
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.root / "state").entries[1],
+            LedgerEntry(
+                instant=RUNTIME_NOW, event=MilestoneCreated(project="oak", title="Parser", login="clauche-bot")
             ),
         )
 
     def test_should_open_the_title_on_the_type_alone_for_a_task_with_no_component(self):
         # Arrange
-        self.record_check(PASSING_CHECK)
         self.processes.answer_entity(
             Path("/srv/oak-b12"),
             "TASK",
@@ -191,40 +212,41 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestFixture):
         self.assertEqual(opened["title"], "fix: add the parser (@TASK.B12)")
 
 
-class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestFixture):
-    def read_refusal(self) -> str:
-        with self.assertRaises(BrigadeError) as refusal:
-            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
-        return str(refusal.exception)
-
+class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestArrangement, unittest.TestCase):
     def test_should_refuse_a_task_whose_check_is_not_recorded(self):
         # Act
-        message = self.read_refusal()
+        with self.assertRaises(BrigadeError) as refusal:
+            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
 
         # Assert
-        self.assertEqual(message, "no check of @TASK.B12 is recorded; run brigade task check")
+        self.assertEqual(str(refusal.exception), "no check of @TASK.B12 is recorded; run brigade task check")
 
     def test_should_refuse_a_check_of_another_commit_than_head(self):
         # Arrange
-        self.record_check({**PASSING_CHECK, "head": "bead"})
+        self.record_check(CHECK_OF_ANOTHER_COMMIT)
 
         # Act
-        message = self.read_refusal()
+        with self.assertRaises(BrigadeError) as refusal:
+            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
 
         # Assert
-        self.assertEqual(message, "the last check of @TASK.B12 is of bead, not of HEAD c0ffee; run brigade task check")
+        self.assertEqual(
+            str(refusal.exception),
+            "the last check of @TASK.B12 is of bead, not of HEAD c0ffee; run brigade task check",
+        )
 
     def test_should_refuse_a_failed_check(self):
         # Arrange
-        self.record_check(
-            {**PASSING_CHECK, "checks": [{"command": "ruff check .", "passed": False, "duration_ms": 30, "tail": []}]}
-        )
+        self.record_check(FAILED_CHECK)
 
         # Act
-        message = self.read_refusal()
+        with self.assertRaises(BrigadeError) as refusal:
+            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
 
         # Assert
-        self.assertEqual(message, "the last check of @TASK.B12 failed on ruff check .; run brigade task check")
+        self.assertEqual(
+            str(refusal.exception), "the last check of @TASK.B12 failed on ruff check .; run brigade task check"
+        )
 
     def test_should_refuse_a_task_with_no_type(self):
         # Arrange
@@ -232,10 +254,13 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestFixture):
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TITLE", "The parser"),))
 
         # Act
-        message = self.read_refusal()
+        with self.assertRaises(BrigadeError) as refusal:
+            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
 
         # Assert
-        self.assertEqual(message, "@TASK.B12 carries no TYPE, which the title of its pull request opens on")
+        self.assertEqual(
+            str(refusal.exception), "@TASK.B12 carries no TYPE, which the title of its pull request opens on"
+        )
 
     def test_should_refuse_a_task_with_no_milestone(self):
         # Arrange
@@ -243,7 +268,11 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestFixture):
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "feat"), ("TITLE", "The parser")))
 
         # Act
-        message = self.read_refusal()
+        with self.assertRaises(BrigadeError) as refusal:
+            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
 
         # Assert
-        self.assertEqual(message, "@TASK.B12 carries no MILESTONE, whose TITLE names the milestone of its pull request")
+        self.assertEqual(
+            str(refusal.exception),
+            "@TASK.B12 carries no MILESTONE, whose TITLE names the milestone of its pull request",
+        )

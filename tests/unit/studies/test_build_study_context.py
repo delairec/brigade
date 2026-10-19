@@ -16,15 +16,24 @@ STUDY_FIELDS = (
     ("ANSWER", "FINDING"),
     ("STATUS", "active"),
 )
-ANSWER = (
-    "FINDING trees_20261019T090000Z_aaaaaa\n"
-    '\tSTUDY "trees"\n'
-    '\tRUN "20261019T090000Z-aaaaaa"\n'
-    '\tCOLLECTED "weather"\n'
-    '\t\tSUMMARY "{\\"days\\": 1}"\n'
-    '\t\tDOCUMENT "/srv/collected/document.json"\n'
-)
-COLLECTED = [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/collected/document.json"}]
+COLLECTED = '{"collected": [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/document.json"}]}'
+PACKAGE = {
+    "schema_version": 1,
+    "study": "trees",
+    "run": RUN_ID,
+    "question": "how many trees?",
+    "collected": [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/document.json"}],
+    "answer": (
+        "FINDING trees_20261019T090000Z_aaaaaa\n"
+        '\tSTUDY "trees"\n'
+        '\tRUN "20261019T090000Z-aaaaaa"\n'
+        '\tCOLLECTED "weather"\n'
+        '\t\tSUMMARY "{\\"days\\": 1}"\n'
+        '\t\tDOCUMENT "/srv/document.json"\n'
+    ),
+    "prose_fields": ["VERDICT"],
+    "schema": "SCHEMA FINDING\n",
+}
 
 
 class BuildStudyContextTest(unittest.TestCase):
@@ -37,13 +46,10 @@ class BuildStudyContextTest(unittest.TestCase):
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         (self.run_directory / "steps").mkdir(parents=True)
 
-    def test_should_package_the_question_the_evidence_and_the_answer_to_complete(self):
-        # Arrange
+    def script_study_run(self) -> None:
         config_root = self.runtime.paths.config_root
         (self.run_directory / "study.json").write_text('{"study": "trees"}', encoding="utf-8")
-        (self.run_directory / "steps" / "collect.json").write_text(
-            json.dumps({"collected": COLLECTED}), encoding="utf-8"
-        )
+        (self.run_directory / "steps" / "collect.json").write_text(COLLECTED, encoding="utf-8")
         self.processes.answer_entity(config_root, "STUDY", "trees", STUDY_FIELDS)
         self.processes.answer_json(
             ("awawa", "show", "FINDING", "--json", str(config_root)),
@@ -57,27 +63,25 @@ class BuildStudyContextTest(unittest.TestCase):
         )
         self.processes.answer(("awawa", "show", "FINDING", str(config_root)), stdout="SCHEMA FINDING\n")
 
+    def test_should_package_the_question_the_evidence_and_the_answer_to_complete(self):
+        # Arrange
+        self.script_study_run()
+
         # Act
         package = build_study_context(self.runtime, RUN_ID)
 
         # Assert
-        written = json.loads((self.run_directory / "context.json").read_text(encoding="utf-8"))
-        self.assertEqual(
-            (package, written),
-            (
-                {
-                    "schema_version": 1,
-                    "study": "trees",
-                    "run": RUN_ID,
-                    "question": "how many trees?",
-                    "collected": COLLECTED,
-                    "answer": ANSWER,
-                    "prose_fields": ["VERDICT"],
-                    "schema": "SCHEMA FINDING\n",
-                },
-                package,
-            ),
-        )
+        self.assertEqual(package, PACKAGE)
+
+    def test_should_keep_the_package_in_the_run(self):
+        # Arrange
+        self.script_study_run()
+
+        # Act
+        build_study_context(self.runtime, RUN_ID)
+
+        # Assert
+        self.assertEqual(json.loads((self.run_directory / "context.json").read_text(encoding="utf-8")), PACKAGE)
 
     def test_should_refuse_a_run_that_is_not_a_run_of_a_study(self):
         # Act

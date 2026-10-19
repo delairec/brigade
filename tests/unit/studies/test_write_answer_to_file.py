@@ -14,6 +14,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 RUN_ID = "20261019T090000Z-aaaaaa"
 BRANCH = f"brigade/study-trees-{RUN_ID}"
 RELATIVE_PATH = f"docs/studies/{RUN_ID}.md"
+FORCED_PUSH = ("git", "push", "--quiet", "--force", "origin", BRANCH)
 PUBLICATION = AnswerPublication(title=f"Study trees, run {RUN_ID}", markdown="# FINDING trees_1\n")
 STUDY = Study(
     name="trees",
@@ -64,7 +65,7 @@ class WriteAnswerToFileTest(unittest.TestCase):
         self.processes.answer(("git", "add", "--", RELATIVE_PATH))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", RELATIVE_PATH), exit_code=1)
         self.processes.answer(("git", "commit", "--quiet", "-m", message))
-        self.processes.answer(("git", "push", "--quiet", "--force", "origin", BRANCH))
+        self.processes.answer(FORCED_PUSH)
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
 
     def create_context(self, forge: str) -> StudyRunContext:
@@ -75,34 +76,38 @@ class WriteAnswerToFileTest(unittest.TestCase):
             collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
             resolve_collector=refuse_collector,
             document=None,
-            resolve_forge=lambda name: self.forge,
+            resolve_forge={"github": self.forge}.__getitem__,
             launch_run=refuse_launch,
         )
         return StudyRunContext(
             runtime=self.runtime, study=STUDY, run_id=RUN_ID, run_directory=self.run_directory, equipment=equipment
         )
 
-    def test_should_commit_the_answer_on_a_branch_of_the_study_run_and_open_its_pull_request(self):
+    def test_should_answer_the_branch_and_the_pull_request_of_the_answer(self):
         # Act
         written = write_answer_to_file(self.create_context("github"), PUBLICATION)
 
         # Assert
+        self.assertEqual(written, {"branch": BRANCH, "pull_request": "https://github.com/acme/oak/pull/7"})
+
+    def test_should_open_the_pull_request_of_the_answer_on_the_main_branch(self):
+        # Act
+        write_answer_to_file(self.create_context("github"), PUBLICATION)
+
+        # Assert
         self.assertEqual(
-            (written, self.forge.opened),
-            (
-                {"branch": BRANCH, "pull_request": "https://github.com/acme/oak/pull/7"},
-                [
-                    {
-                        "repository": str(self.checkout),
-                        "base": "main",
-                        "branch": BRANCH,
-                        "title": f"Study trees, run {RUN_ID}",
-                        "body": "# FINDING trees_1\n",
-                        "milestone": None,
-                        "environment": {},
-                    }
-                ],
-            ),
+            self.forge.opened,
+            [
+                {
+                    "repository": str(self.checkout),
+                    "base": "main",
+                    "branch": BRANCH,
+                    "title": f"Study trees, run {RUN_ID}",
+                    "body": "# FINDING trees_1\n",
+                    "milestone": None,
+                    "environment": {},
+                }
+            ],
         )
 
     def test_should_write_the_answer_at_the_path_the_output_names_for_the_run(self):
@@ -112,15 +117,19 @@ class WriteAnswerToFileTest(unittest.TestCase):
         # Assert
         self.assertEqual((self.checkout / RELATIVE_PATH).read_text(encoding="utf-8"), "# FINDING trees_1\n")
 
-    def test_should_keep_the_branch_of_a_project_without_a_forge_local(self):
+    def test_should_answer_no_pull_request_for_a_project_without_a_forge(self):
         # Act
         written = write_answer_to_file(self.create_context("none"), PUBLICATION)
 
         # Assert
-        self.assertEqual(
-            (written, ("git", "push", "--quiet", "--force", "origin", BRANCH) in self.processes.list_argvs()),
-            ({"branch": BRANCH, "pull_request": None}, False),
-        )
+        self.assertEqual(written, {"branch": BRANCH, "pull_request": None})
+
+    def test_should_keep_the_branch_of_a_project_without_a_forge_local(self):
+        # Act
+        write_answer_to_file(self.create_context("none"), PUBLICATION)
+
+        # Assert
+        self.assertNotIn(FORCED_PUSH, self.processes.list_argvs())
 
     def test_should_remove_the_checkout_once_the_answer_is_committed(self):
         # Act

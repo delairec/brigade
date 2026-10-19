@@ -66,7 +66,7 @@ class WriteAnswerTest(unittest.TestCase):
             collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
             resolve_collector=refuse_collector,
             document=DocumentDouble(),
-            resolve_forge=lambda name: ForgeDouble(),
+            resolve_forge={"github": ForgeDouble()}.__getitem__,
             launch_run=refuse_launch,
         )
         return StudyRunContext(
@@ -77,30 +77,38 @@ class WriteAnswerTest(unittest.TestCase):
             equipment=equipment,
         )
 
-    def test_should_append_the_answer_brigade_rendered_to_the_entities_of_its_type(self):
-        # Arrange
-        (self.config_root / "findings.awawa").write_text("FINDING ash_1\n", encoding="utf-8")
+    def script_entity_output(self) -> None:
         self.processes.answer_corpus_change(
             self.config_root, ("findings.awawa",), "brigade study run: the answer of @STUDY.trees"
         )
+
+    def test_should_answer_where_the_answer_went(self):
+        # Arrange
+        self.script_entity_output()
 
         # Act
         written = write_answer(self.create_context("entity:FINDING"))
 
         # Assert
+        self.assertEqual(written, {"output": "entity:FINDING", "answer": str(self.run_directory / "answer.awawa")})
+
+    def test_should_append_the_answer_brigade_rendered_to_the_entities_of_its_type(self):
+        # Arrange
+        (self.config_root / "findings.awawa").write_text("FINDING ash_1\n", encoding="utf-8")
+        self.script_entity_output()
+
+        # Act
+        write_answer(self.create_context("entity:FINDING"))
+
+        # Assert
         self.assertEqual(
-            (written, (self.config_root / "findings.awawa").read_text(encoding="utf-8")),
-            (
-                {"output": "entity:FINDING", "answer": str(self.run_directory / "answer.awawa")},
-                f"FINDING ash_1\n\n{RENDERED}",
-            ),
+            (self.config_root / "findings.awawa").read_text(encoding="utf-8"),
+            'FINDING ash_1\n\nFINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n',
         )
 
     def test_should_keep_the_answer_brigade_rendered_in_the_run(self):
         # Arrange
-        self.processes.answer_corpus_change(
-            self.config_root, ("findings.awawa",), "brigade study run: the answer of @STUDY.trees"
-        )
+        self.script_entity_output()
 
         # Act
         write_answer(self.create_context("entity:FINDING"))
@@ -111,9 +119,7 @@ class WriteAnswerTest(unittest.TestCase):
     def test_should_write_the_answer_the_judging_run_gave(self):
         # Arrange
         (self.run_directory / "answer.awawa").write_text(JUDGED, encoding="utf-8")
-        self.processes.answer_corpus_change(
-            self.config_root, ("findings.awawa",), "brigade study run: the answer of @STUDY.trees"
-        )
+        self.script_entity_output()
 
         # Act
         write_answer(self.create_context("entity:FINDING"))

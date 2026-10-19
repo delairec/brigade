@@ -23,7 +23,7 @@ class ShellCollectorTest(unittest.TestCase):
         self.processes = ScriptedProcesses()
         self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
 
-    def test_should_collect_the_lines_the_command_printed_in_the_project(self):
+    def test_should_collect_the_lines_the_command_printed(self):
         # Arrange
         self.processes.answer(("printf", "oak\\nelm\\n"), stdout="oak\nelm\n")
 
@@ -32,19 +32,26 @@ class ShellCollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (document, self.processes.requests[0].cwd),
-            (
-                {
-                    "schema_version": 1,
-                    "collector": "shell",
-                    "collected_at": "2026-10-19T09:00:00Z",
-                    "cache": False,
-                    "summary": {"lines": 2},
-                    "items": ["oak", "elm"],
-                },
-                "/srv/oak",
-            ),
+            document,
+            {
+                "schema_version": 1,
+                "collector": "shell",
+                "collected_at": "2026-10-19T09:00:00Z",
+                "cache": False,
+                "summary": {"lines": 2},
+                "items": ["oak", "elm"],
+            },
         )
+
+    def test_should_run_the_command_in_the_project(self):
+        # Arrange
+        self.processes.answer(("ls",), stdout="README.md\n")
+
+        # Act
+        collect(create_environment('{"command": "ls"}'), self.runtime, EQUIPMENT)
+
+        # Assert
+        self.assertEqual(self.processes.requests[0].cwd, "/srv/oak")
 
     def test_should_report_a_command_that_failed_with_its_errors(self):
         # Arrange
