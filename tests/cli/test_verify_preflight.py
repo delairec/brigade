@@ -420,7 +420,7 @@ class BrigadeVerifyPreflightOfAPullRequestAddingPrivateLinesTest(VerifyPreflight
 class BrigadeVerifyPreflightOfAPullRequestWithAWrongBodyTest(VerifyPreflightTestCase):
     def test_should_fail_a_body_that_does_not_open_on_the_title_of_the_task(self):
         # Arrange
-        self.describe_pull_request(body=PULL_REQUEST_BODY.replace("Empty the cart in one click", "Empty the cart"))
+        self.describe_pull_request(body="Empty the cart\n\n## Acceptance criteria\n")
 
         # Act
         checks = self.read_checks()
@@ -432,14 +432,16 @@ class BrigadeVerifyPreflightOfAPullRequestWithAWrongBodyTest(VerifyPreflightTest
         )
 
     def test_should_fail_a_body_that_keeps_a_placeholder_of_the_template(self):
-        # Arrange
-        self.describe_pull_request(body=PULL_REQUEST_BODY.replace("- pass `python3 -m unittest` 1.0 s", "$checks"))
+        for body in ["Empty the cart in one click\n\n$checks\n", "Empty the cart in one click\n\n${checks}\n"]:
+            with self.subTest(body=body):
+                # Arrange
+                self.describe_pull_request(body=body)
 
-        # Act
-        checks = self.read_checks()
+                # Act
+                checks = self.read_checks()
 
-        # Assert
-        self.assertEqual(checks["body"]["findings"], ["the body keeps the placeholder $checks"])
+                # Assert
+                self.assertEqual(checks["body"]["findings"], ["the body keeps the placeholder $checks"])
 
 
 class BrigadeVerifyPreflightOfALayeredPullRequestTest(VerifyPreflightTestCase):
