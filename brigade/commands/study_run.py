@@ -4,6 +4,7 @@ from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME
 from brigade.commands.run import run
+from brigade.runs.create_run_id import create_run_id
 from brigade.runtime import Runtime
 from brigade.studies.read_study import read_study
 from brigade.studies.run_study import DONE, run_study
@@ -47,6 +48,7 @@ def study_run(request, runtime: Runtime) -> dict:
         document=runtime.resolve_plugin(DOCUMENT_KIND, ANSWER_DOCUMENT),
         resolve_forge=lambda name: runtime.resolve_plugin(FORGE_KIND, name),
         launch_run=run,
+        name_run=create_run_id,
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

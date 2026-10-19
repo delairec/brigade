@@ -17,6 +17,7 @@ from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
+from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
@@ -124,7 +125,9 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
 
 def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
     study = read_study(runtime, action.study)
-    detach_study_run(runtime, study.name, start_study_run(runtime, study))
+    run_id = create_run_id(runtime.now)
+    start_study_run(runtime, study, run_id)
+    detach_study_run(runtime, study.name, run_id)
 
 
 def _record_task_state(runtime: Runtime, action: RecordTaskState) -> None:

@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
@@ -22,6 +23,7 @@ class StudyEquipment:
     document: object
     resolve_forge: Callable[[str], object]
     launch_run: Callable[[object, Runtime], dict]
+    name_run: Callable[[datetime], str]
 
 
 @dataclass(frozen=True)

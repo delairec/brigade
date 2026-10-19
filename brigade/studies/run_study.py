@@ -47,10 +47,16 @@ def _refuse_a_live_run(runtime: Runtime, study: Study) -> None:
             raise BrigadeError(f"@STUDY.{study.name} is running in run {live.run}")
 
 
+def _start_new_run(runtime: Runtime, study: Study, equipment: StudyEquipment) -> str:
+    run_id = equipment.name_run(runtime.now)
+    start_study_run(runtime, study, run_id)
+    return run_id
+
+
 def _start_run(runtime: Runtime, study: Study, equipment: StudyEquipment, started_run: str | None) -> StudyRunContext:
     if started_run is None:
         _refuse_a_live_run(runtime, study)
-    run_id = started_run or _find_parked_run(runtime, study) or start_study_run(runtime, study)
+    run_id = started_run or _find_parked_run(runtime, study) or _start_new_run(runtime, study, equipment)
     context = StudyRunContext(
         runtime=runtime,
         study=study,
