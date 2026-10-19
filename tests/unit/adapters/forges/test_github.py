@@ -282,6 +282,7 @@ class FindPullRequestTest(unittest.TestCase):
                     "checks": [{"name": "tests", "verdict": "failure"}, {"name": "lint", "verdict": "pending"}],
                     "review": "changes_requested",
                     "behind": True,
+                    "head": "0123abc",
                 },
             },
         )
@@ -295,7 +296,8 @@ class FindPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            answer["pull_request"], {"number": 42, "state": "merged", "checks": [], "review": None, "behind": False}
+            answer["pull_request"],
+            {"number": 42, "state": "merged", "checks": [], "review": None, "behind": False, "head": "0123abc"},
         )
 
     def test_should_answer_no_pull_request_for_a_branch_that_has_none(self):

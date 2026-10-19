@@ -12,6 +12,7 @@ from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_paused import WavePaused
@@ -40,7 +41,8 @@ def append_event(
     | MilestoneCreated
     | TaskPromoted
     | WavePaused
-    | WaveResumed,
+    | WaveResumed
+    | TaskPreflighted,
 ) -> dict:
     with hold_lock(paths.lock_directory / LOCK_FILE):
         return write_event_line(paths, instant, event)

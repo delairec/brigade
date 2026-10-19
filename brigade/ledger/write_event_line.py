@@ -16,6 +16,7 @@ from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
@@ -44,7 +45,8 @@ def write_event_line(
     | OrderDone
     | TaskPrOpened
     | MilestoneCreated
-    | TaskPromoted,
+    | TaskPromoted
+    | TaskPreflighted,
 ) -> dict:
     if instant.utcoffset() is None:
         raise LedgerEventRefused(f"the instant of the event {event.name} carries no time zone")

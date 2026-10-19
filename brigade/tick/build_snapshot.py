@@ -12,6 +12,8 @@ from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
@@ -45,6 +47,8 @@ RUNNING_STATUS = "running"
 PLANNED_STATUS = "planned"
 LIVE_RUN_STATE = "running"
 SLOTS_FIELD = "SLOTS"
+CHECK_RUNS_FIELD = "CHECK_RUNS"
+NO_CHECK_RUNS = "none"
 AFTER_FIELD = "AFTER"
 TASK_PREFIX = "@TASK."
 PROJECT_SLOTS = 4
@@ -76,6 +80,8 @@ class TaskFacts:
     worktree: str | None = None
     rate_limit: RateLimit | None = None
     stopped_run: str | None = None
+    opened_pull_request: int | None = None
+    preflighted_head: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -86,6 +92,8 @@ class TaskFacts:
             "worktree": self.worktree,
             "rate_limit": None if self.rate_limit is None else self.rate_limit.to_document(),
             "stopped_run": self.stopped_run,
+            "opened_pull_request": self.opened_pull_request,
+            "preflighted_head": self.preflighted_head,
         }
 
 
@@ -129,6 +137,7 @@ class ProjectFacts:
     name: str
     slots: int
     live_runs: tuple[LiveRun, ...] = ()
+    awaits_check_runs: bool = True
 
     def to_document(self) -> dict:
         return {
@@ -207,6 +216,8 @@ class FollowedWave:
     worktree_root: str | None
     branch: str
     states: dict
+    opened_pull_requests: dict
+    preflighted_heads: dict
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
 
 
@@ -220,6 +231,8 @@ def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
         task,
         pull_request=followed.read_pull_request(str(followed.repository), name_task_branch(followed.branch, task.name)),
         worktree=str(worktree) if standing else None,
+        opened_pull_request=followed.opened_pull_requests.get(task.name),
+        preflighted_head=followed.preflighted_heads.get(task.name),
     )
 
 
@@ -305,6 +318,14 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, w
         worktree_root=reading.configuration.worktree_root,
         branch=request["branch"],
         states=states,
+        opened_pull_requests={
+            event.task: event.pr for event in reading.events if isinstance(event, TaskPrOpened) and event.wave == wave
+        },
+        preflighted_heads={
+            event.task: event.head
+            for event in reading.events
+            if isinstance(event, TaskPreflighted) and event.wave == wave
+        },
         read_pull_request=reading.read_pull_request,
     )
     return WaveFacts(
@@ -325,10 +346,12 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, w
 
 
 def _read_project_facts(name: str, projects: tuple[Entity, ...], runs: list[dict]) -> ProjectFacts:
-    slots = read_project_field(find_project(projects, name), SLOTS_FIELD)
+    project = find_project(projects, name)
+    slots = read_project_field(project, SLOTS_FIELD)
     return ProjectFacts(
         name=name,
         slots=PROJECT_SLOTS if slots is None else int(slots),
+        awaits_check_runs=read_project_field(project, CHECK_RUNS_FIELD) != NO_CHECK_RUNS,
         live_runs=tuple(
             LiveRun(run=run["run"], slot=run["slot"], worktree=run["worktree"])
             for run in runs

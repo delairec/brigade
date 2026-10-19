@@ -114,6 +114,8 @@ class SnapshotTest(unittest.TestCase):
                             "worktree": None,
                             "rate_limit": {"reset": {"hour": "7pm", "timezone": "Europe/Paris"}},
                             "stopped_run": None,
+                            "opened_pull_request": None,
+                            "preflighted_head": None,
                         }
                     ],
                     "states": {},

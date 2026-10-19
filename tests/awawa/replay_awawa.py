@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -7,11 +8,18 @@ from tests.awawa.volatile_value_masker import VolatileValueMasker
 from tests.process_launcher import ProcessLauncher
 
 MISSING_RECORDING_EXIT_CODE = 70
+IMPL_ANCHOR_PATH = re.compile(r'\bIMPL\s+"([^"]+?)::')
+
+
+def _list_anchored_files(root: Path, corpus_files: list[Path]) -> list[Path]:
+    paths = {root / match for file in corpus_files for match in IMPL_ANCHOR_PATH.findall(_read_input(file) or "")}
+    return sorted(path for path in paths if path.is_file())
 
 
 def _list_input_files(path: Path) -> list[Path]:
     if path.is_dir():
-        return sorted(path.rglob("*.awawa"))
+        corpus_files = sorted(path.rglob("*.awawa"))
+        return corpus_files + _list_anchored_files(path, corpus_files)
     return [path]
 
 

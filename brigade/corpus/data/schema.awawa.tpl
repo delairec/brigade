@@ -44,8 +44,16 @@ SCHEMA PROJECT
 	FIELD PRIVATE string
 		REPEATABLE
 		DESC "a regular expression the privacy scan and the scrubber refuse, e.g. stn_[0-9a-f]{12}"
+	FIELD PUBLIC string
+		REPEATABLE
+		DESC "a regular expression the privacy scan lets through where it matches the whole of what"
+			+ "a pattern found, e.g. alice@example\\.org for an example value a test uses"
 	FIELD FORGE string
 		DESC "github or none"
+	FIELD CHECK_RUNS required|none
+		DEFAULT required
+		DESC "whether the tick waits for a first check run of a pull request before its preflight;"
+			+ "none for a project without continuous integration"
 	FIELD STATUS active|paused
 		REQUIRED
 

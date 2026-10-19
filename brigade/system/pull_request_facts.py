@@ -14,6 +14,7 @@ class PullRequestFacts:
     checks: tuple[CheckVerdict, ...]
     review: str | None
     behind: bool
+    head: str
 
     @classmethod
     def from_document(cls, document: dict) -> "PullRequestFacts":
@@ -23,6 +24,7 @@ class PullRequestFacts:
             checks=tuple(CheckVerdict(name=check["name"], verdict=check["verdict"]) for check in document["checks"]),
             review=document["review"],
             behind=document["behind"],
+            head=document["head"],
         )
 
     def to_document(self) -> dict:
@@ -32,4 +34,5 @@ class PullRequestFacts:
             "checks": [{"name": check.name, "verdict": check.verdict} for check in self.checks],
             "review": self.review,
             "behind": self.behind,
+            "head": self.head,
         }

@@ -32,6 +32,7 @@ class AskPullRequestTest(unittest.TestCase):
                     "checks": [{"name": "tests", "verdict": "success"}],
                     "review": "approved",
                     "behind": False,
+                    "head": "0123abc",
                 },
             }
         )
@@ -57,6 +58,7 @@ class AskPullRequestTest(unittest.TestCase):
                     checks=(CheckVerdict(name="tests", verdict="success"),),
                     review="approved",
                     behind=False,
+                    head="0123abc",
                 ),
             ),
         )
