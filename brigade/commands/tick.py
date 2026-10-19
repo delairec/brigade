@@ -15,11 +15,11 @@ from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.registry.find_project import find_project
+from brigade.registry.read_projects import read_projects
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
-from brigade.registry.find_project import find_project
-from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
