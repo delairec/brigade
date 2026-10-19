@@ -3,7 +3,6 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest import mock
 
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
@@ -157,18 +156,15 @@ class RunStudyTest(RunStudyArrangement, unittest.TestCase):
 
 
 class RunStudyStartTest(RunStudyArrangement, unittest.TestCase):
-    def setUp(self):
-        super().setUp()
-        token = mock.patch("secrets.token_hex", return_value="c0ffee")
-        token.start()
-        self.addCleanup(token.stop)
-
     def test_should_start_a_new_run_after_a_run_done(self):
         # Arrange
         self.record_order(OrderDone(project=None, kind="study", order="trees", run=RUN_ID))
+        equipment = create_study_equipment(
+            resolve_collector=refuse_collector, name_run={RUNTIME_NOW: "20261019T090000Z-c0ffee"}.__getitem__
+        )
 
         # Act
-        ran = run_study(self.runtime, SCAN, self.equipment, None)
+        ran = run_study(self.runtime, SCAN, equipment, None)
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": "20261019T090000Z-c0ffee", "state": "done"})

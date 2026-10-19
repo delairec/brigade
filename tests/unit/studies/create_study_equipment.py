@@ -1,4 +1,5 @@
 import dataclasses
+from datetime import datetime
 from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
@@ -18,6 +19,10 @@ def _refuse_launch(request, runtime):
     raise AssertionError("the study launched a judging run")
 
 
+def _refuse_naming(now: datetime) -> str:
+    raise AssertionError("the study named a new run")
+
+
 def create_study_equipment(**changes) -> StudyEquipment:
     refusing_equipment = StudyEquipment(
         collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
@@ -25,5 +30,6 @@ def create_study_equipment(**changes) -> StudyEquipment:
         document=None,
         resolve_forge=_refuse_forge,
         launch_run=_refuse_launch,
+        name_run=_refuse_naming,
     )
     return dataclasses.replace(refusing_equipment, **changes)
