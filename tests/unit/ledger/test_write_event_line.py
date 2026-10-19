@@ -52,20 +52,18 @@ class WriteEventLineOfAnInstantWithATimeZoneTest(WriteEventLineTestCase):
 
         # Assert
         self.assertEqual(
-            [json.loads(line) for line in (self.ledger / "2026-10.jsonl").read_text().splitlines()],
-            [
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-06T09:30:00Z",
-                    "event": "signal.recorded",
-                    "signal": "budget_reached",
-                    "project": "tidepool",
-                    "procedure": "deliver",
-                    "run": "20261006T093000Z-b74a01",
-                    "segment": 1,
-                    "budget": 40,
-                }
-            ],
+            json.loads((self.ledger / "2026-10.jsonl").read_text()),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-06T09:30:00Z",
+                "event": "signal.recorded",
+                "signal": "budget_reached",
+                "project": "tidepool",
+                "procedure": "deliver",
+                "run": "20261006T093000Z-b74a01",
+                "segment": 1,
+                "budget": 40,
+            },
         )
 
     def test_should_return_the_line_it_appended(self):

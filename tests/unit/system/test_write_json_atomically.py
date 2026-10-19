@@ -38,7 +38,7 @@ class WriteJsonAtomicallyTest(unittest.TestCase):
         write_json_atomically(self.path, {"schema_version": 1, "actions_applied": 0})
 
         # Assert
-        self.assertEqual([path.name for path in self.state.iterdir()], ["tick.json"])
+        self.assertEqual(list(self.state.iterdir()), [self.path])
 
     def test_should_name_the_target_it_cannot_replace_and_leave_no_temporary_file(self):
         # Arrange
@@ -50,8 +50,8 @@ class WriteJsonAtomicallyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (str(refusal.exception), [path.name for path in self.state.iterdir()]),
-            (f"cannot write {self.path}: Is a directory", ["tick.json"]),
+            (str(refusal.exception), list(self.state.iterdir())),
+            (f"cannot write {self.path}: Is a directory", [self.path]),
         )
 
 
