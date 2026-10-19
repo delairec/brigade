@@ -16,7 +16,7 @@ FIRST_COLLECTOR = 1
 
 def _locate_project(context: StudyRunContext) -> Path:
     if context.study.project is None:
-        return Path.cwd()
+        return context.equipment.working_directory
     project = find_project(read_projects(context.runtime), context.study.project)
     return Path(read_project_field(project, "PATH"))
 

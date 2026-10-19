@@ -24,6 +24,7 @@ class StudyEquipment:
     resolve_forge: Callable[[str], object]
     launch_run: Callable[[object, Runtime], dict]
     name_run: Callable[[datetime], str]
+    working_directory: Path
 
 
 @dataclass(frozen=True)

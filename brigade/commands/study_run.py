@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command
@@ -49,6 +50,7 @@ def study_run(request, runtime: Runtime) -> dict:
         resolve_forge=lambda name: runtime.resolve_plugin(FORGE_KIND, name),
         launch_run=run,
         name_run=create_run_id,
+        working_directory=Path.cwd(),
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
