@@ -286,6 +286,22 @@ class BrigadeVerifyPreflightOfANonCanonicalCorpusTest(VerifyPreflightTestCase):
         )
 
 
+class BrigadeVerifyPreflightOfAPullRequestRemovingTheEntitiesOfAFileTest(VerifyPreflightTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.run_git("-C", str(self.worktree), "rm", "--quiet", "corpus/milestones.awawa")
+        self.project.run_git("-C", str(self.worktree), "commit", "--quiet", "-m", "the milestones removed")
+        self.project.run_git("push", "--quiet", "origin", TASK_BRANCH)
+        self.describe_pull_request()
+
+    def test_should_pass_the_untouched_files_on_a_file_whose_entities_are_removed(self):
+        # Act
+        checks = self.read_checks()
+
+        # Assert
+        self.assertEqual(checks["untouched_files"], {"name": "untouched_files", "verdict": "pass", "findings": []})
+
+
 class BrigadeVerifyPreflightOfACorpusFailingItsLintTest(VerifyPreflightTestCase):
     def setUp(self):
         super().setUp()
