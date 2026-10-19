@@ -1,5 +1,4 @@
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +12,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
 RUN_ID = "20261019T090000Z-aaaaaa"
+WORKING_DIRECTORY = Path("/srv/elm")
 DOCUMENT = {
     "schema_version": 1,
     "collector": "weather",
@@ -64,7 +64,9 @@ class CollectEvidenceTest(unittest.TestCase):
         return self.collector
 
     def create_context(self, project: str | None) -> StudyRunContext:
-        equipment = create_study_equipment(resolve_collector=self.resolve_collector)
+        equipment = create_study_equipment(
+            resolve_collector=self.resolve_collector, working_directory=WORKING_DIRECTORY
+        )
         return StudyRunContext(
             runtime=self.runtime,
             study=create_study(project),
@@ -122,15 +124,9 @@ class CollectEvidenceTest(unittest.TestCase):
             [{"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "1970-01-01", "BRIGADE_PARAMS": '{"city": "Lyon"}'}],
         )
 
-    def test_should_collect_in_the_current_directory_for_a_study_of_no_project(self):
-        # Arrange
-        working_directory = self.root / "work"
-        working_directory.mkdir()
-        self.addCleanup(os.chdir, Path.cwd())
-        os.chdir(working_directory)
-
+    def test_should_collect_in_the_working_directory_of_brigade_for_a_study_of_no_project(self):
         # Act
         collect_evidence(self.create_context(None))
 
         # Assert
-        self.assertEqual(self.resolved, [("weather", working_directory)])
+        self.assertEqual(self.resolved, [("weather", Path("/srv/elm"))])

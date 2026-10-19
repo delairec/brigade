@@ -6,6 +6,8 @@ from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.studies.study_run_context import StudyEquipment
 from brigade.system.read_configuration import Configuration
 
+UNUSED_WORKING_DIRECTORY = Path("/the/study/reads/no/working/directory")
+
 
 def _refuse_collector(name: str, project: Path):
     raise AssertionError(f"the study resolved the collector {name}")
@@ -31,5 +33,6 @@ def create_study_equipment(**changes) -> StudyEquipment:
         resolve_forge=_refuse_forge,
         launch_run=_refuse_launch,
         name_run=_refuse_naming,
+        working_directory=UNUSED_WORKING_DIRECTORY,
     )
     return dataclasses.replace(refusing_equipment, **changes)
