@@ -38,7 +38,7 @@ TASK B01
 		+ "and install brigade"
 		IMPL "AGENTS.md::## Commands"
 	RATIONALE "every other task of M0 adds a command to the entry point this task delivers, and the"
-		+ "tests/cli harness it starts is the acceptance suite"
+		+ "tests/cli harness it starts holds the smoke tests"
 		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles sets"
 		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
 	RATIONALE "the standard library and the 3.11 floor follow @DECISION.PythonStandardLibraryOnly;"
