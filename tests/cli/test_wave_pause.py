@@ -384,7 +384,7 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         lines = (self.state / "ledger" / "2026-10.jsonl").read_text().splitlines()
         return [event for event in map(json.loads, lines) if event["event"] == name]
 
-    def test_should_resume_every_wave_paused_on_the_forge_account_without_a_request(self):
+    def test_should_resume_every_wave_paused_on_the_forge_account_without_a_wave_named(self):
         # Act
         completed = self.run_wave_resume()
 
@@ -405,9 +405,9 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         # Assert
         self.assertEqual(completed.stdout, "no wave is paused on the forge account\n")
 
-    def test_should_resume_the_wave_of_the_request_named(self):
+    def test_should_resume_the_wave_named(self):
         # Act
-        completed = self.run_wave_resume("shop_1")
+        completed = self.run_wave_resume("shop_w1")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -416,11 +416,21 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
 
     def test_should_exit_1_naming_the_state_of_a_wave_that_is_not_paused(self):
         # Arrange
-        self.run_wave_resume("shop_1")
+        self.run_wave_resume("shop_w1")
 
         # Act
-        completed = self.run_wave_resume("shop_1")
+        completed = self.run_wave_resume("shop_w1")
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertRegex(completed.stderr, re.escape("the wave shop_w1 of @REQUEST.shop_1 is running, not paused"))
+        self.assertRegex(completed.stderr, re.escape("the wave shop_w1 is running, not paused"))
+
+    def test_should_exit_1_naming_a_wave_no_wave_started_names(self):
+        # Act
+        completed = self.run_wave_resume("shop_w9")
+
+        # Assert
+        self.assertEqual(
+            (completed.returncode, completed.stderr),
+            (1, "brigade wave resume: no wave.started names the wave shop_w9\n"),
+        )

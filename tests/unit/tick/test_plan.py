@@ -16,11 +16,9 @@ from brigade.tick.actions import (
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
-    StartWave,
 )
 from brigade.tick.build_snapshot import (
     LiveRun,
-    PlannedRequest,
     ProjectFacts,
     RateLimit,
     RecordedVerdict,
@@ -39,9 +37,7 @@ WAVE_BRANCH = "integration/M1-empty-cart"
 
 def create_wave(tasks: tuple[TaskFacts, ...], states: dict, implemented: tuple[str, ...] = ()) -> WaveFacts:
     return WaveFacts(
-        request="shop_1",
         project="shop",
-        milestone="M1",
         wave="shop_w1",
         branch=WAVE_BRANCH,
         tasks=tasks,
@@ -56,11 +52,9 @@ BLOCKED = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided",)),)
 ALONE_S9 = (TaskFacts(name="S9"),)
 
 
-LAUNCH_S3 = LaunchTask(request="shop_1", project="shop", milestone="M1", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
-LAUNCH_S9 = LaunchTask(request="shop_1", project="shop", milestone="M1", wave="shop_w1", branch=WAVE_BRANCH, task="S9")
-LAUNCH_S10 = LaunchTask(
-    request="shop_1", project="shop", milestone="M1", wave="shop_w1", branch=WAVE_BRANCH, task="S10"
-)
+LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
+LAUNCH_S9 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S9")
+LAUNCH_S10 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S10")
 
 
 class PlanTest(unittest.TestCase):
@@ -435,9 +429,7 @@ class PlanSlotsTest(unittest.TestCase):
         project = ProjectFacts(name="shop", slots=1)
         first = create_wave((TaskFacts(name="S3"),), {})
         second = WaveFacts(
-            request="shop_2",
             project="shop",
-            milestone="M2",
             wave="shop_w2",
             branch="integration/M2-total",
             tasks=(TaskFacts(name="S7"),),
@@ -461,25 +453,7 @@ class PlanTaskOrderTest(unittest.TestCase):
             plan(snapshot)
 
         # Assert
-        self.assertEqual(str(raised.exception), "@TASK.Login of the wave M1 carries no number to be ordered by")
-
-
-class PlanPlannedRequestsTest(unittest.TestCase):
-    def test_should_start_a_planned_request_only_under_an_automatic_plan_review(self):
-        for plan_review, expected in [
-            ("auto", (StartWave(request="shop_2"),)),
-            ("ask", ()),
-        ]:
-            with self.subTest(plan_review=plan_review):
-                # Arrange
-                planned = PlannedRequest(request="shop_2", project="shop", plan_review=plan_review)
-                snapshot = Snapshot(now=NOW, projects=(SHOP,), planned=(planned,))
-
-                # Act
-                actions = plan(snapshot)
-
-                # Assert
-                self.assertEqual(actions, expected)
+        self.assertEqual(str(raised.exception), "@TASK.Login of the wave shop_w1 carries no number to be ordered by")
 
 
 def create_study(
@@ -604,7 +578,7 @@ class PlanStudyRunsTest(unittest.TestCase):
         self.assertEqual(actions, ())
 
 
-CAFE_WAVE = WaveFacts(request="cafe_1", project="cafe", milestone="M2", wave="cafe_w1", branch="integration/M2-menu")
+CAFE_WAVE = WaveFacts(project="cafe", wave="cafe_w1", branch="integration/M2-menu")
 CAFE = ProjectFacts(name="cafe", slots=4)
 RATE_LIMITED_UNTIL_15 = (TaskFacts(name="S3", rate_limit=RateLimit(reset=ResetHour(hour="15:00", timezone="UTC"))),)
 RATE_LIMITED_WITHOUT_RESET = (TaskFacts(name="S3", rate_limit=RateLimit(reset=None)),)

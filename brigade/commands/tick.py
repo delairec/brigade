@@ -45,7 +45,6 @@ from brigade.tick.actions import (
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
-    StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
@@ -57,7 +56,6 @@ from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
-from brigade.waves.start_wave import start_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
@@ -192,7 +190,6 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
 
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
-        StartWave: lambda action: start_wave(runtime, configuration, action.request),
         RecordTaskState: lambda action: _record_task_state(runtime, action),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),

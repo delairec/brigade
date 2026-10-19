@@ -31,7 +31,7 @@ WHEN_DONE = ["brigade task check", "brigade task pr", "brigade task promote"]
 
 
 def _describe_ancestry(runtime: Runtime, worktree: TaskWorktree) -> dict:
-    record = check_ancestor(runtime.run_process, worktree.path, worktree.wave["branch"], HEAD)
+    record = check_ancestor(runtime.run_process, worktree.path, worktree.wave_branch, HEAD)
     return {"command": " ".join(record.argv), "exit_code": record.exit_code}
 
 
@@ -79,7 +79,7 @@ def _read_commands(project: Entity, field_name: str) -> list[str]:
 
 
 def _count_next_wave_number(runtime: Runtime, configuration: Configuration, worktree: TaskWorktree) -> int:
-    query = argparse.Namespace(project=worktree.project.name, ref=worktree.wave["branch"], worktree=None)
+    query = argparse.Namespace(project=worktree.project.name, ref=worktree.wave_branch, worktree=None)
     tree = prepare_project_tree(query, configuration, runtime)
     return count_next_task_number(read_awawa_document(runtime.run_process, tree.root, ("status",))["entities"])
 

@@ -14,12 +14,10 @@ from brigade.tick.actions import (
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
-    StartWave,
 )
 from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
 from brigade.tick.decide_resume_at import decide_resume_at
 
-AUTOMATIC_PLAN_REVIEW = "auto"
 BUILD_SLOT = "build"
 WAITING_STATE = "queued"
 MERGED_STATE = "merged"
@@ -44,11 +42,6 @@ FORGE_ACCOUNT_REASON = "forge_account"
 
 
 def plan(snapshot: Snapshot) -> tuple:
-    starts = tuple(
-        StartWave(request=planned.request)
-        for planned in snapshot.planned
-        if planned.plan_review == AUTOMATIC_PLAN_REVIEW
-    )
     pauses = _plan_pauses(snapshot)
     paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
         pause.wave for pause in pauses if isinstance(pause, PauseWave)
@@ -58,24 +51,14 @@ def plan(snapshot: Snapshot) -> tuple:
     for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
         for task in sorted(
             (task for task in wave.tasks if _is_startable(task, wave)),
-            key=lambda task: read_task_number(task.name, wave.milestone),
+            key=lambda task: read_task_number(task.name, wave.wave),
         ):
             if free_slots[wave.project] <= 0:
                 break
             free_slots[wave.project] -= 1
-            launches.append(
-                LaunchTask(
-                    request=wave.request,
-                    project=wave.project,
-                    milestone=wave.milestone,
-                    wave=wave.wave,
-                    branch=wave.branch,
-                    task=task.name,
-                )
-            )
+            launches.append(LaunchTask(project=wave.project, wave=wave.wave, branch=wave.branch, task=task.name))
     return (
-        starts
-        + pauses
+        pauses
         + _plan_resumes(snapshot)
         + _plan_followed_pull_requests(snapshot)
         + tuple(launches)

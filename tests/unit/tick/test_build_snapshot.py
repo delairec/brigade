@@ -23,7 +23,6 @@ class SnapshotTest(unittest.TestCase):
                 "now": "2026-10-06T12:00:07Z",
                 "waves": [],
                 "projects": [],
-                "planned": [],
                 "studies": [],
                 "live_study_runs": [],
                 "study_runs": 2,
@@ -82,9 +81,7 @@ class SnapshotTest(unittest.TestCase):
         # Arrange
         task = TaskFacts(name="@TASK.B19", rate_limit=RateLimit(reset=ResetHour(hour="7pm", timezone="Europe/Paris")))
         wave = WaveFacts(
-            request="r1",
             project="brigade",
-            milestone="@MILESTONE.F0",
             wave="w1",
             branch="main",
             tasks=(task,),
@@ -100,9 +97,7 @@ class SnapshotTest(unittest.TestCase):
             document["waves"],
             [
                 {
-                    "request": "r1",
                     "project": "brigade",
-                    "milestone": "@MILESTONE.F0",
                     "wave": "w1",
                     "branch": "main",
                     "tasks": [

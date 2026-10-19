@@ -34,14 +34,9 @@ WAVE_MILESTONES = 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS running\n'
 REPEATED_MILESTONE = 'MILESTONE M1\n\tTITLE "Empty cart again"\n\tSTATUS running\n'
 WAVE_BRANCH = "integration/M1-empty-cart"
 TASK_BRANCH = "task/M1-empty-cart/S3"
-RUNNING_REQUEST = (
-    "REQUEST shop_1\n"
-    "\tPROJECT @PROJECT.shop\n"
-    '\tTEXT "let the customer empty the cart in one click"\n'
-    '\tCREATED_AT "2026-10-12T09:30:00Z"\n'
-    "\tSTATUS running\n"
-    '\tMILESTONE "M1"\n'
-    f'\tBRANCH "{WAVE_BRANCH}"\n'
+WAVE_STARTED = (
+    '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3", "S6"]}}\n'
 )
 ACCEPTANCE_COMMAND = "python3 -m unittest"
 HEAVY_COMMAND = "python3 -m unittest discover tests/e2e"
@@ -106,7 +101,9 @@ class TaskContextTestCase(unittest.TestCase):
             str(self.project.path),
             *self.describe_project_commands(),
         )
-        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST)
+        self.wave_started = self.state / "ledger" / "2026-10.jsonl"
+        self.wave_started.parent.mkdir(parents=True)
+        self.wave_started.write_text(WAVE_STARTED)
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
         self.project.run_git("worktree", "add", "--quiet", "-b", TASK_BRANCH, str(self.worktree), WAVE_BRANCH)
         self.setup_log = self.state / "setups" / "shop" / "S3.log"
@@ -300,20 +297,20 @@ class BrigadeTaskContextOfAWorktreeWhoseCorpusRepeatsAMilestoneTest(TaskContextT
         self.assertRegex(completed.stdout, r"\$ awawa context @TASK\.S3 --with-schema \.\nexit 0\nL005 ")
 
 
-class BrigadeTaskContextOfAWaveNoRequestStartedTest(TaskContextTestCase):
+class BrigadeTaskContextOfABranchNoWaveStartedTest(TaskContextTestCase):
     def setUp(self):
         super().setUp()
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S6"
         self.project.run_git("worktree", "add", "--quiet", "-b", "task/M2-gift-wrap/S6", str(self.worktree), "main")
 
-    def test_should_exit_1_naming_the_wave_branch_no_request_carries(self):
+    def test_should_exit_1_naming_the_wave_branch_no_wave_started_names(self):
         # Act
         completed = self.run_task_context()
 
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade task context: no REQUEST of @PROJECT.shop has the BRANCH integration/M2-gift-wrap\n"),
+            (1, "", "brigade task context: no wave.started of @PROJECT.shop has the branch integration/M2-gift-wrap\n"),
         )
 
 

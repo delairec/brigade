@@ -77,6 +77,10 @@ class RequestTestCase(FileWaitingTestCase):
     def write_requests(self, requests: str) -> None:
         (self.machine.corpus / "requests.awawa").write_text(requests)
 
+    def commit_requests(self) -> None:
+        self.machine.read_git("add", "requests.awawa")
+        self.machine.read_git("commit", "--quiet", "-m", "the requests of an older brigade")
+
     def read_requests(self) -> str:
         return (self.machine.corpus / "requests.awawa").read_text()
 
@@ -464,6 +468,30 @@ class BrigadeRequestBeforeInitTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual((completed.returncode, completed.stderr), (1, expected_stderr))
+
+
+RUNNING_REQUEST_OF_THE_OLDER_SCHEMA = (
+    "REQUEST shop_r3\n"
+    "\tPROJECT @PROJECT.shop\n"
+    '\tTEXT "print the cart"\n'
+    '\tCREATED_AT "2026-10-14T09:00:00Z"\n'
+    "\tSTATUS running\n"
+    '\tBRANCH "integration/M1-empty-cart"\n'
+)
+
+
+class BrigadeRequestCancelOnACorpusOfTheOlderSchemaTest(RequestTestCase):
+    def test_should_exit_1_on_the_running_request_the_schema_no_longer_declares(self):
+        # Arrange
+        self.write_requests(f"{PLANNING_REQUEST}\n{RUNNING_REQUEST_OF_THE_OLDER_SCHEMA}")
+        self.commit_requests()
+
+        # Act
+        completed = self.run_request("cancel", "shop_r2")
+
+        # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("\tSTATUS planning\n", self.read_requests())
 
 
 if __name__ == "__main__":

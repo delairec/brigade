@@ -16,6 +16,5 @@ def describe_request(request: Entity) -> dict:
         "status": read_project_field(request, "STATUS"),
         "milestone": read_project_field(request, "MILESTONE"),
         "pr": _read_pull_request(request),
-        "branch": read_project_field(request, "BRANCH"),
         "created_at": read_project_field(request, "CREATED_AT"),
     }

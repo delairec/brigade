@@ -154,21 +154,18 @@ SCHEMA ORDER
 		GATE suppressed
 
 SCHEMA REQUEST
-	DESC "what the user wants for one project, in their words; it becomes one wave"
+	DESC "what the user wants for one project, in their words, and the plan it receives"
 	FIELD PROJECT @PROJECT
 		REQUIRED
 	FIELD TEXT string
 		REQUIRED
 	FIELD CREATED_AT string
 		DESC "the UTC instant the request was recorded, YYYY-MM-DDTHH:MM:SSZ"
-	FIELD STATUS planning|planned|running|paused|reporting|delivered|closed|cancelled
+	FIELD STATUS planning|planned|cancelled
 		REQUIRED
 	FIELD MILESTONE string
-	FIELD BRANCH string
 	FIELD PR uint
 	FIELD FROM @PATTERN
-	WHEN STATUS closed
-		GATE suppressed
 	WHEN STATUS cancelled
 		GATE suppressed
 

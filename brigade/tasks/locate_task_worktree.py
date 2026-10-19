@@ -2,19 +2,19 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from brigade.corpus.read_entities import Entity, read_entities
+from brigade.corpus.read_entity import Entity
 from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.git.read_current_branch import read_current_branch
+from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
-from brigade.waves.describe_request import describe_request
+from brigade.waves.find_wave_name import find_wave_name
 
 TASK_BRANCH = re.compile(r"task/(?P<slug>.+)/(?P<task>[^/]+)")
 WAVE_BRANCH_PREFIX = "integration/"
-REQUEST_TYPE = "REQUEST"
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,8 @@ class TaskWorktree:
     path: Path
     task: str
     project: Entity
-    wave: dict
+    wave: str
+    wave_branch: str
 
 
 def locate_task_worktree(runtime: Runtime, path: Path, named_task: str | None) -> TaskWorktree:
@@ -35,13 +36,8 @@ def locate_task_worktree(runtime: Runtime, path: Path, named_task: str | None) -
         raise BrigadeError(f"@TASK.{named_task} is not the task of the branch {branch}")
     project = require_project_at(read_projects(runtime), locate_main_checkout(runtime.run_process, root))
     wave_branch = f"{WAVE_BRANCH_PREFIX}{parts['slug']}"
-    requests = read_entities(
-        runtime.run_process,
-        runtime.paths.config_root,
-        REQUEST_TYPE,
-        f"PROJECT==@PROJECT.{project.name}",
-        f"BRANCH=={wave_branch}",
-    )
-    if not requests:
-        raise BrigadeError(f"no {REQUEST_TYPE} of @PROJECT.{project.name} has the BRANCH {wave_branch}")
-    return TaskWorktree(path=root, task=parts["task"], project=project, wave=describe_request(requests[0]))
+    events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
+    wave = find_wave_name(events, project.name, wave_branch)
+    if wave is None:
+        raise BrigadeError(f"no wave.started of @PROJECT.{project.name} has the branch {wave_branch}")
+    return TaskWorktree(path=root, task=parts["task"], project=project, wave=wave, wave_branch=wave_branch)

@@ -5,10 +5,8 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.runtime import Runtime
-from brigade.waves.describe_request import describe_request
 from brigade.waves.read_wave_pause import read_wave_pause
-from brigade.waves.read_wave_request import read_wave_request
-from brigade.waves.require_wave_name import require_wave_name
+from brigade.waves.require_wave_summary import require_wave_summary
 
 DOCUMENT_SCHEMA_VERSION = 1
 FORGE_ACCOUNT_REASON = "forge_account"
@@ -36,20 +34,20 @@ def _list_forge_account_pauses(events: tuple) -> list[tuple[str, str]]:
     ]
 
 
-def _find_request_pause(runtime: Runtime, events: tuple, name: str) -> list[tuple[str, str]]:
-    wave = require_wave_name(events, describe_request(read_wave_request(runtime, name)))
-    pause = read_wave_pause(events, wave)
+def _find_wave_pause(entries: tuple, wave: str) -> list[tuple[str, str]]:
+    require_wave_summary(entries, wave)
+    pause = read_wave_pause(tuple(entry.event for entry in entries), wave)
     if pause is None:
-        raise BrigadeError(f"the wave {wave} of @REQUEST.{name} is running, not paused")
+        raise BrigadeError(f"the wave {wave} is running, not paused")
     return [(wave, pause.reason)]
 
 
 def wave_resume(request, runtime: Runtime) -> dict:
-    events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
-    if request.request is None:
-        paused = _list_forge_account_pauses(events)
+    entries = read_ledger(runtime.paths.state_root).entries
+    if request.wave is None:
+        paused = _list_forge_account_pauses(tuple(entry.event for entry in entries))
     else:
-        paused = _find_request_pause(runtime, events, request.request)
+        paused = _find_wave_pause(entries, request.wave)
     for wave, reason in paused:
         append_event(runtime.paths, runtime.now, WaveResumed(wave=wave, reason=reason))
     return {
@@ -60,8 +58,8 @@ def wave_resume(request, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("wave", "resume"),
-    help="resume the wave of a request, or every wave paused on the forge account",
-    arguments=(Argument(("request",), {"nargs": "?", "help": "the name of the REQUEST whose wave resumes"}),),
+    help="resume the wave named, or every wave paused on the forge account",
+    arguments=(Argument(("wave",), {"nargs": "?", "help": "the name of the wave to resume"}),),
     run=wave_resume,
     read_request=_read_request,
     render_text=_render_text,

@@ -77,10 +77,10 @@ These commands need awawa on `PATH`.
 
 ## Waves
 
-A wave starts as a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one
-project, in their words. Every command below but `wave show`, `wave list` and `wave cancel`, which read the ledger
-alone, exits 1 naming `brigade init` until the corpus exists, and each prints text or, with `--json`, a JSON
-document.
+A request is a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one
+project, in their words, and the plan it receives. Every command below but `wave show`, `wave list`, `wave cancel` and
+`wave resume`, which read the ledger alone, exits 1 naming `brigade init` until the corpus exists, and each prints text
+or, with `--json`, a JSON document.
 
 ```
 brigade request new <project> <text>
@@ -92,7 +92,7 @@ brigade wave start <project> [--task T ...]
 brigade wave show <wave>
 brigade wave list [--project P]
 brigade wave cancel <wave>
-brigade wave resume [<request>]
+brigade wave resume [<wave>]
 ```
 
 `request new` records the request as `<project>_r<n>`, `n` one above the highest its project holds, under the lock
@@ -131,9 +131,9 @@ live run of each task of the wave as `brigade runs stop` does and lists, per tas
 its last run, and the branch and the pull request it opened, all left in place; a wave already closed or cancelled
 exits 1 naming that event. The tasks of a cancelled wave are candidates of the next wave.
 
-`wave resume` records `wave.resumed` for the wave of the request named, whatever the reason of its pause, or, without
-one, for every wave paused on the forge account, the tick resuming by itself a wave paused on the quota; it prints each
-wave it resumed, and a request whose wave is not paused exits 1 naming its state.
+`wave resume` records `wave.resumed` for the wave named, whatever the reason of its pause, or, without one, for every
+wave paused on the forge account, the tick resuming by itself a wave paused on the quota; it prints each wave it
+resumed, and a wave no `wave.started` names, or one that is not paused, exits 1 naming it.
 
 ## Tasks
 
@@ -267,7 +267,7 @@ Every output but `entity:` hands a person the Markdown rendered from the answer 
 
 A tick builds a snapshot of the facts, plans the actions they call for and applies them, round after round until the
 plan is empty or ten rounds have passed. Among those actions, it runs the due studies, as Studies says, and launches
-each startable task of a running wave as a detached build run, in the worktree it cuts for the task, of `build-task`,
+each startable task of an open wave as a detached build run, in the worktree it cuts for the task, of `build-task`,
 the procedure brigade ships, or of the one the key `build` of the table `[procedures]` of `config.toml` names in its
 place, resolved as the argument of `brigade run` is, with the wave and the task as `--wave` and `--task`. It follows the pull request of each task past its launch,
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
@@ -282,9 +282,10 @@ as its arguments, unless a run holds the worktree or a review run of the task al
 a rate limit; once a `task.verdict` is recorded at the head of the pull request, it moves the task to `verified` on
 `pass` and to `changes_requested` on `changes`. A task in `verifying` whose pull request head is no longer the head of
 its last `task.preflighted` moves back to `pr_open`, where the preflight of the new head opens the next verification.
-A running REQUEST that no
-`wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
-the waves of the others.
+The waves are the
+open waves of the ledger, each with the tasks its `wave.started` names, in that order, read from the project corpus
+at the wave's branch; a wave whose pull requests the forge fails to read is skipped, named on stderr, and the tick
+serves the others.
 
 Any run that finished on the `error_class` `rate_limit`, until its `reset` has passed, pauses every running wave of the
 machine: `wave.paused` with the reason `quota` and `resume_at` the first instant after the tick's clock at the hour and
