@@ -7,12 +7,11 @@ from brigade.verify.judge_findings import judge_findings
 
 NAME = "corpus"
 CORPUS_CHECKS = (("fmt", "--check", "."), ("lint", "--strict", "."))
-TAIL_LINES = 20
 
 
 def _describe_failure(record: ProcessRecord) -> list[str]:
     output = (record.stdout + record.stderr).splitlines()
-    return [f"{' '.join(record.argv)} exited {record.exit_code}", *output[-TAIL_LINES:]]
+    return [f"{' '.join(record.argv)} exited {record.exit_code}", *output]
 
 
 def check_corpus_at_head(run_process: Callable[[ProcessRequest], ProcessRecord], head_tree: Path) -> dict:
