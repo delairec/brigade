@@ -72,13 +72,11 @@ def end_the_run(_received, _frame):
     sys.exit(0)
 
 
-def get_ready(_received, _frame):
-    signal.signal(signal.SIGTERM, end_the_run)
-    print("ready", flush=True)
-
-
-signal.signal(signal.SIGUSR1, get_ready)
+signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
 print("started", flush=True)
+signal.sigwait({signal.SIGUSR1})
+signal.signal(signal.SIGTERM, end_the_run)
+print("ready", flush=True)
 while True:
     signal.pause()
 """
