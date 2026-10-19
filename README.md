@@ -207,11 +207,12 @@ worktree is removed once its pull request is merged or closed, never while a run
 `wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
 the waves of the others.
 
-A build run of a running task that finished on the `error_class` `rate_limit` pauses every running wave of the
+Any run that finished on the `error_class` `rate_limit`, until its `reset` has passed, pauses every running wave of the
 machine: `wave.paused` with the reason `quota` and `resume_at` the first instant after the tick's clock at the hour and
-in the timezone of the result's `reset`, or that clock plus 30 minutes when `reset` is null, and the task moves to
-`paused:quota`. A `forge_account.unavailable` of the ledger pauses every running wave with the reason `forge_account`
-and no `resume_at`, until `brigade wave resume`. The tick launches no run of a paused wave. The first tick past
+in the timezone of the result's `reset`, or that clock plus 30 minutes when `reset` is null, and the task of a build
+run moves to `paused:quota`. A wave started during a quota pause is paused until the same `resume_at`. A
+`forge_account.unavailable` of the ledger pauses every running wave, those started after it included, with the reason
+`forge_account` and no `resume_at`, until `brigade wave resume`. The tick launches no run of a paused wave. The first tick past
 `resume_at` records `wave.resumed` for the wave and resumes the run of each `paused:quota` task as its next segment,
 through `resume-argv` with the session of its last segment, or as a fresh launch from its progress file when the
 client adapter declares no resume, and moves the task back to `running`.

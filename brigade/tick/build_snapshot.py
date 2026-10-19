@@ -13,7 +13,6 @@ from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.wave_resumed import WaveResumed
-from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -28,6 +27,7 @@ from brigade.system.read_configuration import Configuration
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.reset_hour import ResetHour
 from brigade.tasks.read_milestone_tasks import read_milestone_tasks
+from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
@@ -189,6 +189,7 @@ class Snapshot:
             "studies": [study.to_document() for study in self.studies],
             "live_study_runs": [live.to_document() for live in self.live_study_runs],
             "study_runs": self.study_runs,
+            "rate_limits": [rate_limit.to_document() for rate_limit in self.rate_limits],
         }
 
 
@@ -264,16 +265,25 @@ def _read_rate_limit(reading: WaveReading, wave: str, task: str) -> RateLimit | 
     return RateLimit(reset=finished[-1].reset)
 
 
+def _read_rate_limits(reading: WaveReading, now: datetime) -> tuple[RateLimit, ...]:
+    return tuple(
+        RateLimit(reset=entry.event.reset)
+        for entry in reading.entries
+        if isinstance(entry.event, RunFinished)
+        and entry.event.error_class == RATE_LIMIT
+        and entry.event.run not in reading.live_runs
+        and decide_resume_at(entry.instant, entry.event.reset) > now
+    )
+
+
 def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...], wave: str) -> bool:
     unavailable = [entry.instant for entry in entries if isinstance(entry.event, ForgeAccountUnavailable)]
     cleared = [
         entry.instant
         for entry in entries
-        if getattr(entry.event, "wave", None) == wave
-        and (
-            isinstance(entry.event, WaveStarted)
-            or (isinstance(entry.event, WaveResumed) and entry.event.reason == FORGE_ACCOUNT_REASON)
-        )
+        if isinstance(entry.event, WaveResumed)
+        and entry.event.wave == wave
+        and entry.event.reason == FORGE_ACCOUNT_REASON
     ]
     return bool(unavailable) and max(unavailable) > max(cleared, default=BEFORE_ANY_EVENT)
 
@@ -388,4 +398,5 @@ def build_snapshot(
         studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
         live_study_runs=read_live_study_runs(runtime.paths.state_root),
         study_runs=configuration.study_runs,
+        rate_limits=_read_rate_limits(reading, runtime.now),
     )

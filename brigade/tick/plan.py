@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from brigade.errors import BrigadeError
 from brigade.ledger.format_instant import format_instant
 from brigade.studies.read_schedule import read_schedule
@@ -73,19 +75,40 @@ def plan(snapshot: Snapshot) -> tuple:
     )
 
 
+def _decide_quota_resume_at(snapshot: Snapshot) -> datetime | None:
+    pauses_in_force = [
+        wave.pause.resume_at
+        for wave in snapshot.waves
+        if wave.pause is not None and wave.pause.reason == QUOTA_REASON and wave.pause.resume_at > snapshot.now
+    ]
+    if pauses_in_force:
+        return max(pauses_in_force)
+    if snapshot.rate_limits:
+        return max(decide_resume_at(snapshot.now, rate_limit.reset) for rate_limit in snapshot.rate_limits)
+    return None
+
+
 def _plan_pauses(snapshot: Snapshot) -> tuple:
-    rate_limited = [(wave, task) for wave in snapshot.waves for task in wave.tasks if task.rate_limit is not None]
     unpaused = [wave for wave in snapshot.waves if wave.pause is None]
-    if not rate_limited:
-        return tuple(
-            PauseWave(wave=wave.wave, reason=FORGE_ACCOUNT_REASON, resume_at=None)
-            for wave in unpaused
-            if wave.forge_account_unavailable
-        )
-    resume_at = format_instant(max(decide_resume_at(snapshot.now, task.rate_limit.reset) for _, task in rate_limited))
-    return tuple(PauseWave(wave=wave.wave, reason=QUOTA_REASON, resume_at=resume_at) for wave in unpaused) + tuple(
+    stopped_tasks = tuple(
         RecordTaskState(wave=wave.wave, task=task.name, state=PAUSED_ON_QUOTA_STATE, reason=None)
-        for wave, task in rate_limited
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if task.rate_limit is not None
+    )
+    resume_at = _decide_quota_resume_at(snapshot)
+    if resume_at is None:
+        return (
+            tuple(
+                PauseWave(wave=wave.wave, reason=FORGE_ACCOUNT_REASON, resume_at=None)
+                for wave in unpaused
+                if wave.forge_account_unavailable
+            )
+            + stopped_tasks
+        )
+    return (
+        tuple(PauseWave(wave=wave.wave, reason=QUOTA_REASON, resume_at=format_instant(resume_at)) for wave in unpaused)
+        + stopped_tasks
     )
 
 
