@@ -2,13 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.studies.convert_study import Study
-from brigade.studies.study_run_context import StudyEquipment, StudyRunContext
+from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer import write_answer
-from brigade.system.read_configuration import Configuration
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.create_study_equipment import create_study_equipment
 
 RUN_ID = "20261019T090000Z-aaaaaa"
 RENDERED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n'
@@ -39,14 +38,6 @@ class ForgeDouble:
         return {"url": "https://github.com/acme/oak/issues/3"}
 
 
-def refuse_collector(name: str, project: Path):
-    raise AssertionError(f"the output resolved the collector {name}")
-
-
-def refuse_launch(request, runtime):
-    raise AssertionError("the output launched a run")
-
-
 class WriteAnswerTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -62,12 +53,8 @@ class WriteAnswerTest(unittest.TestCase):
         (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
 
     def create_context(self, output: str) -> StudyRunContext:
-        equipment = StudyEquipment(
-            collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
-            resolve_collector=refuse_collector,
-            document=DocumentDouble(),
-            resolve_forge={"github": ForgeDouble()}.__getitem__,
-            launch_run=refuse_launch,
+        equipment = create_study_equipment(
+            document=DocumentDouble(), resolve_forge={"github": ForgeDouble()}.__getitem__
         )
         return StudyRunContext(
             runtime=self.runtime,

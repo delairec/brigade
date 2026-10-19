@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest import mock
 
-from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -17,10 +16,9 @@ from brigade.ledger.step_failed import StepFailed
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.studies.convert_study import Study
 from brigade.studies.run_study import run_study
-from brigade.studies.study_run_context import StudyEquipment
-from brigade.system.read_configuration import Configuration
 from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.create_study_equipment import create_study_equipment
 
 RUN_ID = "20261019T090000Z-aaaaaa"
 ANSWER = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n'
@@ -64,23 +62,6 @@ def refuse_collector(name: str, project: Path):
     raise BrigadeError(f"no collector {name}")
 
 
-def refuse_forge(name: str):
-    raise AssertionError(f"the study resolved the forge {name}")
-
-
-def refuse_launch(request, runtime):
-    raise AssertionError("the scan launched a judging run")
-
-
-EQUIPMENT = StudyEquipment(
-    collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
-    resolve_collector=refuse_collector,
-    document=None,
-    resolve_forge=refuse_forge,
-    launch_run=refuse_launch,
-)
-
-
 class RunStudyArrangement:
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -88,6 +69,7 @@ class RunStudyArrangement:
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
         self.runtime = create_scripted_runtime(self.root, self.processes)
+        self.equipment = create_study_equipment(resolve_collector=refuse_collector)
         self.config_root = self.runtime.paths.config_root
         self.processes.answer_corpus_change(
             self.config_root, ("findings.awawa",), "brigade study run: the answer of @STUDY.trees"
@@ -106,21 +88,21 @@ class RunStudyArrangement:
 class RunStudyTest(RunStudyArrangement, unittest.TestCase):
     def test_should_answer_the_run_done(self):
         # Act
-        ran = run_study(self.runtime, SCAN, EQUIPMENT, RUN_ID)
+        ran = run_study(self.runtime, SCAN, self.equipment, RUN_ID)
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
 
     def test_should_write_the_answer_of_the_study(self):
         # Act
-        run_study(self.runtime, SCAN, EQUIPMENT, RUN_ID)
+        run_study(self.runtime, SCAN, self.equipment, RUN_ID)
 
         # Assert
         self.assertEqual((self.config_root / "findings.awawa").read_text(encoding="utf-8"), ANSWER)
 
     def test_should_record_each_step_and_the_order_done(self):
         # Act
-        run_study(self.runtime, SCAN, EQUIPMENT, RUN_ID)
+        run_study(self.runtime, SCAN, self.equipment, RUN_ID)
 
         # Assert
         self.assertEqual(
@@ -142,7 +124,7 @@ class RunStudyTest(RunStudyArrangement, unittest.TestCase):
         (steps / "collect.json").write_text('{"collected": []}', encoding="utf-8")
 
         # Act
-        ran = run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, EQUIPMENT, RUN_ID)
+        ran = run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, self.equipment, RUN_ID)
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
@@ -155,7 +137,7 @@ class RunStudyTest(RunStudyArrangement, unittest.TestCase):
         self.record_order(OrderDone(project=None, kind="study", order="ash", run="20261018T070000Z-bbbbbb"))
 
         # Act
-        ran = run_study(self.runtime, SCAN, EQUIPMENT, None)
+        ran = run_study(self.runtime, SCAN, self.equipment, None)
 
         # Assert
         self.assertEqual(ran["run"], RUN_ID)
@@ -168,7 +150,7 @@ class RunStudyTest(RunStudyArrangement, unittest.TestCase):
         )
 
         # Act
-        ran = run_study(self.runtime, SCAN, EQUIPMENT, None)
+        ran = run_study(self.runtime, SCAN, self.equipment, None)
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
@@ -186,7 +168,7 @@ class RunStudyStartTest(RunStudyArrangement, unittest.TestCase):
         self.record_order(OrderDone(project=None, kind="study", order="trees", run=RUN_ID))
 
         # Act
-        ran = run_study(self.runtime, SCAN, EQUIPMENT, None)
+        ran = run_study(self.runtime, SCAN, self.equipment, None)
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": "20261019T090000Z-c0ffee", "state": "done"})
@@ -195,7 +177,7 @@ class RunStudyStartTest(RunStudyArrangement, unittest.TestCase):
 class RunStudyParkingTest(RunStudyArrangement, unittest.TestCase):
     def test_should_park_the_run_at_the_step_that_failed(self):
         # Act
-        ran = run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, EQUIPMENT, RUN_ID)
+        ran = run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, self.equipment, RUN_ID)
 
         # Assert
         self.assertEqual(
@@ -205,7 +187,7 @@ class RunStudyParkingTest(RunStudyArrangement, unittest.TestCase):
 
     def test_should_record_the_failed_step_and_the_order_parked(self):
         # Act
-        run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, EQUIPMENT, RUN_ID)
+        run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, self.equipment, RUN_ID)
 
         # Assert
         self.assertEqual(
@@ -235,7 +217,7 @@ class RunStudyParkingTest(RunStudyArrangement, unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            run_study(self.runtime, SCAN, EQUIPMENT, None)
+            run_study(self.runtime, SCAN, self.equipment, None)
 
         # Assert
         self.assertEqual(str(refusal.exception), f"@STUDY.trees is running in run {RUN_ID}")
@@ -243,7 +225,7 @@ class RunStudyParkingTest(RunStudyArrangement, unittest.TestCase):
     def test_should_refuse_a_study_whose_output_is_the_inbox(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            run_study(self.runtime, SCAN_INTO_THE_INBOX, EQUIPMENT, RUN_ID)
+            run_study(self.runtime, SCAN_INTO_THE_INBOX, self.equipment, RUN_ID)
 
         # Assert
         self.assertEqual(str(refusal.exception), "the output inbox is refused: the inbox has no store until @TASK.B22")

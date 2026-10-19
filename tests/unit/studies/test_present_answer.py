@@ -3,7 +3,8 @@ from pathlib import Path
 
 from brigade.studies.convert_study import Study
 from brigade.studies.present_answer import AnswerPublication, present_answer
-from brigade.studies.study_run_context import StudyEquipment, StudyRunContext
+from brigade.studies.study_run_context import StudyRunContext
+from tests.unit.studies.create_study_equipment import create_study_equipment
 
 STUDY = Study(
     name="trees",
@@ -38,9 +39,7 @@ class DocumentDouble:
 
 
 def create_context(document: DocumentDouble) -> StudyRunContext:
-    equipment = StudyEquipment(
-        collector_equipment=None, resolve_collector=None, document=document, resolve_forge=None, launch_run=None
-    )
+    equipment = create_study_equipment(document=document)
     return StudyRunContext(
         runtime=None, study=STUDY, run_id="r1", run_directory=Path("/srv/runs/r1"), equipment=equipment
     )

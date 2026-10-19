@@ -5,13 +5,12 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.studies.collect_evidence import collect_evidence
 from brigade.studies.convert_study import Study
-from brigade.studies.study_run_context import StudyEquipment, StudyRunContext
-from brigade.system.read_configuration import Configuration
+from brigade.studies.study_run_context import StudyRunContext
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.create_study_equipment import create_study_equipment
 
 RUN_ID = "20261019T090000Z-aaaaaa"
 DOCUMENT = {
@@ -49,14 +48,6 @@ def create_study(project: str | None) -> Study:
     )
 
 
-def refuse_forge(name: str):
-    raise AssertionError(f"the collection resolved the forge {name}")
-
-
-def refuse_launch(request, runtime):
-    raise AssertionError("the collection launched a run")
-
-
 class CollectEvidenceTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -73,13 +64,7 @@ class CollectEvidenceTest(unittest.TestCase):
         return self.collector
 
     def create_context(self, project: str | None) -> StudyRunContext:
-        equipment = StudyEquipment(
-            collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
-            resolve_collector=self.resolve_collector,
-            document=None,
-            resolve_forge=refuse_forge,
-            launch_run=refuse_launch,
-        )
+        equipment = create_study_equipment(resolve_collector=self.resolve_collector)
         return StudyRunContext(
             runtime=self.runtime,
             study=create_study(project),

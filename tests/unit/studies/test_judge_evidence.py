@@ -3,14 +3,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
 from brigade.studies.convert_study import Study
 from brigade.studies.judge_evidence import judge_evidence
-from brigade.studies.study_run_context import StudyEquipment, StudyRunContext
-from brigade.system.read_configuration import Configuration
+from brigade.studies.study_run_context import StudyRunContext
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.create_study_equipment import create_study_equipment
 
 RUN_ID = "20261019T090000Z-aaaaaa"
 
@@ -27,14 +26,6 @@ def create_study(slot: str) -> Study:
         answer_type="FINDING",
         status="active",
     )
-
-
-def refuse_collector(name: str, project: Path):
-    raise AssertionError(f"the judging resolved the collector {name}")
-
-
-def refuse_forge(name: str):
-    raise AssertionError(f"the judging resolved the forge {name}")
 
 
 class RunLauncherDouble:
@@ -60,13 +51,7 @@ class JudgeEvidenceTest(unittest.TestCase):
         self.run_directory.mkdir(parents=True)
 
     def create_context(self, slot: str, launcher: RunLauncherDouble) -> StudyRunContext:
-        equipment = StudyEquipment(
-            collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github"),
-            resolve_collector=refuse_collector,
-            document=None,
-            resolve_forge=refuse_forge,
-            launch_run=launcher.launch,
-        )
+        equipment = create_study_equipment(launch_run=launcher.launch)
         return StudyRunContext(
             runtime=self.runtime,
             study=create_study(slot),
