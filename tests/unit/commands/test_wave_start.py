@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from brigade.commands.wave_start import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.waves.test_start_project_wave import StartProjectWaveTestCase
 
 NO_PROJECTS = {"PROJECT": {}}
 
@@ -47,6 +48,18 @@ class WaveStartRequestTest(unittest.TestCase):
 
         # Assert
         self.assertIs(request, options)
+
+
+class WaveStartOfNamedTasksTest(StartProjectWaveTestCase):
+    def test_should_start_the_wave_on_the_tasks_the_command_line_names(self):
+        # Arrange
+        options = SimpleNamespace(project="shop", tasks=["S10"])
+
+        # Act
+        document = COMMAND.run(options, self.runtime)
+
+        # Assert
+        self.assertEqual(document["tasks"], ["S10"])
 
 
 class WaveStartOfAnUnknownProjectTest(unittest.TestCase):
