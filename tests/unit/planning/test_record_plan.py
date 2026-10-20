@@ -15,9 +15,58 @@ from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runt
 from tests.unit.scripted_processes import ScriptedProcesses
 
 PLAN = 'MILESTONE F1\n\tTITLE "Printer"\n\nTASK B20\n\tTITLE "the printer"\n\tMILESTONE @MILESTONE.F1\n'
-BRANCH = "integration/F1-printer"
+BRANCH = "plan/oak_r1"
 PUSH = ("git", "push", "--quiet", "origin", BRANCH)
 PLANNED_FILES = ("corpus/milestones.awawa", "corpus/tasks.awawa")
+BRANCH_FOUND = 0
+BRANCH_NOT_FOUND = 1
+NO_PULL_REQUEST = {"schema_version": 1, "pull_request": None}
+NO_REVIEW_REQUIRED = None
+NO_POLICY = {}
+ASKING_POLICY = {"oak_plans": (("PROJECT", "@PROJECT.oak"), ("PLAN_REVIEW", "ask"))}
+MAIN_HELD_BY_NO_WORKTREE = "worktree /srv/oak\0HEAD c0ffee\0branch refs/heads/feature\0\0"
+MAIN_HELD_BY_THE_CHECKOUT = "worktree /srv/oak\0HEAD c0ffee\0branch refs/heads/main\0\0"
+
+
+def create_found_pull_request(review: str | None) -> dict:
+    return {
+        "schema_version": 1,
+        "pull_request": {
+            "number": 42,
+            "state": "open",
+            "checks": [],
+            "review": review,
+            "behind": False,
+            "head": "c0ffee",
+        },
+    }
+
+
+def read_environment(key: str) -> dict:
+    return {"GH_TOKEN": f"token-of-{key}"}
+
+
+class ForgeDouble:
+    def __init__(self, found_pull_requests: list[dict]):
+        self.found_pull_requests = found_pull_requests
+        self.calls = []
+
+    def find_pull_request(self, request: dict, runtime) -> dict:
+        self.calls.append(("find_pull_request", request))
+        return self.found_pull_requests.pop(0)
+
+    def open_pull_request(self, request: dict, runtime) -> dict:
+        self.calls.append(("open_pull_request", request))
+        return {"number": 42}
+
+    def approve_pull_request(self, request: dict, runtime) -> None:
+        self.calls.append(("approve_pull_request", request))
+
+    def merge_pull_request(self, request: dict, runtime) -> None:
+        self.calls.append(("merge_pull_request", request))
+
+    def list_operations(self) -> list[str]:
+        return [operation for operation, request in self.calls]
 
 
 class RecordPlanArrangement:
@@ -29,13 +78,14 @@ class RecordPlanArrangement:
         self.plan_file.write_text(PLAN, encoding="utf-8")
         self.processes = ScriptedProcesses()
         self.runtime = create_scripted_runtime(self.root, self.processes, run_directory=self.root / "runs" / "r1")
-        self.worktree = self.root / "cache" / "plans" / "oak_1"
+        self.worktree = self.root / "cache" / "plans" / "oak_r1"
         (self.worktree / "corpus").mkdir(parents=True)
         (self.worktree / "corpus" / "tasks.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
         self.config_root = self.runtime.paths.config_root
-        (self.config_root / "requests.awawa").write_text("REQUEST oak_1\n\tSTATUS planning\n", encoding="utf-8")
+        (self.config_root / "requests.awawa").write_text("REQUEST oak_r1\n\tSTATUS planning\n", encoding="utf-8")
         self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.worktree)))
+        self.forge = ForgeDouble([create_found_pull_request(NO_REVIEW_REQUIRED)])
 
     def script_plan_entities(self, entities: list[dict]) -> None:
         plan_file = str(self.plan_file)
@@ -66,20 +116,30 @@ class RecordPlanArrangement:
         )
         self.script_corpus_sites([{"type": "TASK", "name": "B19", "file": "corpus/tasks.awawa", "line": 1}])
         self.script_skeletons()
-        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{BRANCH}"), exit_code=1)
+        self.script_plan_branch(BRANCH_NOT_FOUND)
+
+    def script_plan_branch(self, exit_code: int) -> None:
+        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{BRANCH}"), exit_code=exit_code)
+
+    def script_marking(self) -> None:
+        self.processes.answer_json(
+            ("awawa", "status", "--json", str(self.config_root)),
+            {"entities": [{"type": "REQUEST", "name": "oak_r1", "file": "requests.awawa", "line": 1}]},
+        )
+        self.processes.answer_corpus_change(
+            self.config_root, ("requests.awawa",), "brigade plan record: @REQUEST.oak_r1 planned"
+        )
+
+    def script_policies(self, policies: dict) -> None:
+        self.processes.answer_entities(self.config_root, "POLICY", policies)
 
     def script_recording(self) -> None:
         self.script_valid_plan()
         self.processes.answer_corpus_change(self.worktree, PLANNED_FILES, f"brigade plan record: {BRANCH}")
         self.processes.answer(("git", "switch", "--quiet", "--create", BRANCH))
         self.processes.answer(PUSH)
-        self.processes.answer_json(
-            ("awawa", "status", "--json", str(self.config_root)),
-            {"entities": [{"type": "REQUEST", "name": "oak_1", "file": "requests.awawa", "line": 1}]},
-        )
-        self.processes.answer_corpus_change(
-            self.config_root, ("requests.awawa",), f"brigade plan record: @REQUEST.oak_1 planned on {BRANCH}"
-        )
+        self.script_policies(NO_POLICY)
+        self.script_marking()
 
     def script_refused_lint(self) -> None:
         self.script_valid_plan()
@@ -102,14 +162,16 @@ class RecordPlanArrangement:
             ),
         )
         return PlanRecording(
-            request=PlanningRequest(name="oak_1", project="oak", text="print"),
+            request=PlanningRequest(name="oak_r1", project="oak", text="print"),
             project=project,
             plan_file=self.plan_file,
+            forge=self.forge,
+            read_environment=read_environment,
         )
 
 
 class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
-    def test_should_record_the_plan_on_the_integration_branch_of_its_milestone(self):
+    def test_should_record_the_plan_on_its_plan_branch_and_its_pull_request(self):
         # Arrange
         self.script_recording()
 
@@ -117,7 +179,7 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         recorded = record_plan(self.runtime, self.create_recording())
 
         # Assert
-        self.assertEqual(recorded, {"request": "oak_1", "milestone": "F1", "branch": BRANCH})
+        self.assertEqual(recorded, {"request": "oak_r1", "milestone": "F1", "branch": BRANCH, "pr": 42})
 
     def test_should_write_the_planned_milestone_in_a_new_file_of_its_type(self):
         # Arrange
@@ -145,7 +207,7 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
             'TASK B19\n\tTITLE "the parser"\n\nTASK B20\n\tTITLE "the printer"\n\tMILESTONE @MILESTONE.F1\n',
         )
 
-    def test_should_mark_the_request_planned_on_the_branch(self):
+    def test_should_mark_the_request_planned_on_its_milestone_and_its_pull_request(self):
         # Arrange
         self.script_recording()
 
@@ -155,28 +217,83 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertEqual(
             (self.config_root / "requests.awawa").read_text(encoding="utf-8"),
-            f'REQUEST oak_1\n\tSTATUS planned\n\tMILESTONE "F1"\n\tBRANCH "{BRANCH}"\n',
+            'REQUEST oak_r1\n\tSTATUS planned\n\tMILESTONE "F1"\n\tPR 42\n',
         )
 
-    def test_should_push_the_branch_of_a_project_on_github(self):
+    def test_should_push_the_plan_branch_and_open_its_pull_request_to_the_main_branch(self):
         # Arrange
         self.script_recording()
 
         # Act
-        record_plan(self.runtime, self.create_recording("github"))
+        record_plan(self.runtime, self.create_recording())
 
         # Assert
         self.assertIn(PUSH, self.processes.list_argvs())
+        self.assertEqual(
+            self.forge.calls[0],
+            (
+                "open_pull_request",
+                {
+                    "repository": "/srv/oak",
+                    "base": "main",
+                    "branch": BRANCH,
+                    "title": "docs(plan): Printer (@REQUEST.oak_r1)",
+                    "body": "print",
+                    "milestone": None,
+                    "environment": {"GH_TOKEN": "token-of-cli"},
+                },
+            ),
+        )
 
-    def test_should_keep_the_branch_of_a_project_without_a_forge_local(self):
+    def test_should_merge_the_plan_pull_request_itself_under_the_automatic_review(self):
         # Arrange
         self.script_recording()
 
         # Act
-        record_plan(self.runtime, self.create_recording("none"))
+        record_plan(self.runtime, self.create_recording())
 
         # Assert
-        self.assertNotIn(PUSH, self.processes.list_argvs())
+        self.assertEqual(
+            self.forge.calls[-1],
+            (
+                "merge_pull_request",
+                {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-cli"}},
+            ),
+        )
+
+    def test_should_leave_the_plan_pull_request_to_the_user_under_the_asking_review(self):
+        # Arrange
+        self.script_recording()
+        self.script_policies(ASKING_POLICY)
+
+        # Act
+        record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(self.forge.list_operations(), ["open_pull_request"])
+
+    def test_should_approve_with_the_review_login_before_merging_where_the_forge_requires_a_review(self):
+        # Arrange
+        self.script_recording()
+        self.forge.found_pull_requests = [create_found_pull_request("review_required")]
+
+        # Act
+        record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(
+            self.forge.calls[2:],
+            [
+                (
+                    "approve_pull_request",
+                    {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-review"}},
+                ),
+                (
+                    "merge_pull_request",
+                    {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-cli"}},
+                ),
+            ],
+        )
 
     def test_should_remove_the_worktree_the_plan_was_checked_in(self):
         # Arrange
@@ -187,6 +304,99 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
 
         # Assert
         self.assertIn(("git", "worktree", "remove", "--force", str(self.worktree)), self.processes.list_argvs())
+
+
+class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.script_recording()
+
+    def test_should_merge_the_plan_branch_into_the_main_branch_no_worktree_holds(self):
+        # Arrange
+        self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=MAIN_HELD_BY_NO_WORKTREE)
+        self.processes.answer(("git", "fetch", "--quiet", ".", f"{BRANCH}:main"))
+
+        # Act
+        recorded = record_plan(self.runtime, self.create_recording("none"))
+
+        # Assert
+        self.assertEqual(recorded, {"request": "oak_r1", "milestone": "F1", "branch": BRANCH, "pr": None})
+        self.assertIn(("git", "fetch", "--quiet", ".", f"{BRANCH}:main"), self.processes.list_argvs())
+
+    def test_should_merge_the_plan_branch_in_the_worktree_holding_the_main_branch(self):
+        # Arrange
+        self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=MAIN_HELD_BY_THE_CHECKOUT)
+        self.processes.answer(("git", "merge", "--quiet", "--ff-only", BRANCH))
+
+        # Act
+        record_plan(self.runtime, self.create_recording("none"))
+
+        # Assert
+        merge = next(request for request in self.processes.requests if request.argv[:2] == ("git", "merge"))
+        self.assertEqual(merge.cwd, "/srv/oak")
+
+    def test_should_mark_the_request_planned_with_no_pull_request_and_push_nothing(self):
+        # Arrange
+        self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=MAIN_HELD_BY_NO_WORKTREE)
+        self.processes.answer(("git", "fetch", "--quiet", ".", f"{BRANCH}:main"))
+
+        # Act
+        record_plan(self.runtime, self.create_recording("none"))
+
+        # Assert
+        self.assertEqual(
+            (self.config_root / "requests.awawa").read_text(encoding="utf-8"),
+            'REQUEST oak_r1\n\tSTATUS planned\n\tMILESTONE "F1"\n',
+        )
+        self.assertNotIn(PUSH, self.processes.list_argvs())
+
+
+class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}, {"type": "TASK", "name": "B20"}])
+        self.script_plan_entity("@MILESTONE.F1", [{"name": "TITLE", "atoms": ['"Printer"']}])
+        self.script_plan_entity(
+            "@TASK.B20",
+            [{"name": "TITLE", "atoms": ['"the printer"']}, {"name": "MILESTONE", "atoms": ["@MILESTONE.F1"]}],
+        )
+        self.script_plan_branch(BRANCH_FOUND)
+        self.script_marking()
+
+    def test_should_reuse_the_pull_request_of_the_plan_branch_and_mark_the_request_planned_alone(self):
+        # Act
+        recorded = record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(recorded, {"request": "oak_r1", "milestone": "F1", "branch": BRANCH, "pr": 42})
+        self.assertEqual(self.forge.list_operations(), ["find_pull_request"])
+        self.assertEqual(
+            (self.config_root / "requests.awawa").read_text(encoding="utf-8"),
+            'REQUEST oak_r1\n\tSTATUS planned\n\tMILESTONE "F1"\n\tPR 42\n',
+        )
+
+    def test_should_open_the_pull_request_the_plan_branch_lacks(self):
+        # Arrange
+        self.forge.found_pull_requests = [NO_PULL_REQUEST, create_found_pull_request(NO_REVIEW_REQUIRED)]
+        self.processes.answer(PUSH)
+        self.script_policies(NO_POLICY)
+
+        # Act
+        record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(
+            self.forge.list_operations(),
+            ["find_pull_request", "open_pull_request", "find_pull_request", "merge_pull_request"],
+        )
+
+    def test_should_mark_the_request_planned_alone_without_a_forge(self):
+        # Act
+        recorded = record_plan(self.runtime, self.create_recording("none"))
+
+        # Assert
+        self.assertEqual(recorded, {"request": "oak_r1", "milestone": "F1", "branch": BRANCH, "pr": None})
+        self.assertEqual(self.forge.list_operations(), [])
 
 
 class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
@@ -201,7 +411,7 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries,
-            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_1", run="r1")),),
+            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_r1", run="r1")),),
         )
 
     def test_should_record_the_lint_round_of_a_recording_outside_a_run_with_no_run(self):
@@ -216,13 +426,13 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries,
-            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_1", run=None)),),
+            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_r1", run=None)),),
         )
 
     def test_should_refuse_a_second_lint_round_in_the_same_run(self):
         # Arrange
         append_event(
-            self.runtime.paths, datetime(2026, 10, 19, 8, 0, tzinfo=UTC), PlanLintFailed(request="oak_1", run="r1")
+            self.runtime.paths, datetime(2026, 10, 19, 8, 0, tzinfo=UTC), PlanLintFailed(request="oak_r1", run="r1")
         )
 
         # Act
@@ -230,10 +440,14 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
             record_plan(self.runtime, self.create_recording())
 
         # Assert
-        self.assertEqual(str(refusal.exception), "@REQUEST.oak_1 spent its lint round in run r1; the run ends blocked")
+        self.assertEqual(str(refusal.exception), "@REQUEST.oak_r1 spent its lint round in run r1; the run ends blocked")
 
 
 class RecordPlanRefusalTest(RecordPlanArrangement, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.script_plan_branch(BRANCH_NOT_FOUND)
+
     def test_should_refuse_a_planned_entity_the_corpus_already_holds(self):
         # Arrange
         self.script_plan_entities([{"type": "TASK", "name": "B19"}])
@@ -311,15 +525,3 @@ class RecordPlanRefusalTest(RecordPlanArrangement, unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the plan holds @TASK.B20, whose MILESTONE is not @MILESTONE.F1")
-
-    def test_should_refuse_a_milestone_whose_branch_already_exists(self):
-        # Arrange
-        self.script_valid_plan()
-        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{BRANCH}"), stdout="c0ffee\n")
-
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            record_plan(self.runtime, self.create_recording())
-
-        # Assert
-        self.assertEqual(str(refusal.exception), f"the branch {BRANCH} already exists")

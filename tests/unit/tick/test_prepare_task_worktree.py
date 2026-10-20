@@ -15,7 +15,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
-ACTION = LaunchTask(request="R1", project="shop", milestone="M1", wave="w1", branch="integration/w1", task="B1")
+ACTION = LaunchTask(project="shop", wave="w1", branch="integration/w1", task="B1")
 WORKTREE = Path("/srv/shop/.brigade/worktrees/B1")
 
 

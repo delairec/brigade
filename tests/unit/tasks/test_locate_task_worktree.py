@@ -5,17 +5,19 @@ from pathlib import Path
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
+from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
-REQUEST_FIELDS = (
-    ("PROJECT", "@PROJECT.oak"),
-    ("STATUS", "running"),
-    ("MILESTONE", "F0"),
-    ("BRANCH", "integration/f0-parser"),
-    ("CREATED_AT", "2026-10-19T08:00:00Z"),
-)
-REQUEST_CONDITIONS = ("PROJECT==@PROJECT.oak", "BRANCH==integration/f0-parser")
+OAK_WAVE_STARTED = {
+    "schema_version": 2,
+    "ts": "2026-10-19T08:00:00Z",
+    "event": "wave.started",
+    "wave": "oak_w1",
+    "project": "oak",
+    "branch": "integration/oak_w1",
+    "tasks": ["B12"],
+}
 
 
 class LocateTaskWorktreeTest(unittest.TestCase):
@@ -23,7 +25,8 @@ class LocateTaskWorktreeTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
+        self.root = Path(directory.name)
+        self.runtime = create_scripted_runtime(self.root, self.processes)
         self.config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout="/srv/oak-b12\n")
 
@@ -36,8 +39,8 @@ class LocateTaskWorktreeTest(unittest.TestCase):
 
     def test_should_locate_the_task_its_project_and_its_wave_from_the_branch_of_the_worktree(self):
         # Arrange
-        self.check_out("task/f0-parser/B12")
-        self.processes.answer_entities(self.config_root, "REQUEST", {"oak_1": REQUEST_FIELDS}, REQUEST_CONDITIONS)
+        self.check_out("task/oak_w1/B12")
+        write_ledger(self.root, [OAK_WAVE_STARTED])
 
         # Act
         worktree = locate_task_worktree(self.runtime, Path("/srv/oak-b12/src"), None)
@@ -49,14 +52,8 @@ class LocateTaskWorktreeTest(unittest.TestCase):
                 path=Path("/srv/oak-b12"),
                 task="B12",
                 project=Entity(name="oak", fields=(EntityField(name="PATH", value="/srv/oak"),)),
-                wave={
-                    "name": "oak_1",
-                    "project": "oak",
-                    "status": "running",
-                    "milestone": "F0",
-                    "branch": "integration/f0-parser",
-                    "created_at": "2026-10-19T08:00:00Z",
-                },
+                wave="oak_w1",
+                wave_branch="integration/oak_w1",
             ),
         )
 
@@ -73,23 +70,23 @@ class LocateTaskWorktreeTest(unittest.TestCase):
 
     def test_should_refuse_a_task_other_than_the_task_of_the_branch(self):
         # Arrange
-        self.check_out("task/f0-parser/B12")
+        self.check_out("task/oak_w1/B12")
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             locate_task_worktree(self.runtime, Path("/srv/oak-b12"), "B13")
 
         # Assert
-        self.assertEqual(str(refusal.exception), "@TASK.B13 is not the task of the branch task/f0-parser/B12")
+        self.assertEqual(str(refusal.exception), "@TASK.B13 is not the task of the branch task/oak_w1/B12")
 
-    def test_should_refuse_a_task_branch_no_request_of_the_project_plans(self):
+    def test_should_refuse_a_task_branch_no_wave_of_the_project_started(self):
         # Arrange
-        self.check_out("task/f0-parser/B12")
-        self.processes.answer_entities(self.config_root, "REQUEST", {}, REQUEST_CONDITIONS)
+        self.check_out("task/oak_w1/B12")
+        write_ledger(self.root, [{**OAK_WAVE_STARTED, "project": "elm"}])
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             locate_task_worktree(self.runtime, Path("/srv/oak-b12"), "B12")
 
         # Assert
-        self.assertEqual(str(refusal.exception), "no REQUEST of @PROJECT.oak has the BRANCH integration/f0-parser")
+        self.assertEqual(str(refusal.exception), "no wave.started of @PROJECT.oak has the branch integration/oak_w1")

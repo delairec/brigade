@@ -19,7 +19,7 @@ PROJECT = Entity(
     ),
 )
 WORKTREE = TaskWorktree(
-    path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave={"branch": "integration/f0-parser"}
+    path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave="oak_w1", wave_branch="integration/oak_w1"
 )
 STATUS_ARGV = ("git", "status", "--porcelain", "-z", "--no-renames", "--untracked-files=all")
 CHECK = {

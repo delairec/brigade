@@ -8,7 +8,7 @@ from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.runs.list_runs import list_runs
-from brigade.runs.stop_run import stop_run
+from brigade.runs.stop_run import SYSTEM_PROCESS_SIGNALLER, stop_run
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
 from brigade.waves.find_last_task_event import find_last_task_event
@@ -48,7 +48,7 @@ def _derive_cancellation(wave: str, reading: LedgerReading) -> WaveCancelled:
 
 def _stop_live_run(state_root: Path, task_runs: list[dict]) -> dict | None:
     live = next((run for run in task_runs if run["state"] == LIVE_STATE), None)
-    return None if live is None else stop_run(state_root, live["run"])
+    return None if live is None else stop_run(state_root, live["run"], SYSTEM_PROCESS_SIGNALLER)
 
 
 def _cancel_task(state_root: Path, runs: list[dict], events: tuple, wave: str, task: str) -> dict:
