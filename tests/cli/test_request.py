@@ -77,13 +77,6 @@ class RequestTestCase(FileWaitingTestCase):
     def write_requests(self, requests: str) -> None:
         (self.machine.corpus / "requests.awawa").write_text(requests)
 
-    def commit_requests(self) -> None:
-        self.machine.read_git("add", "requests.awawa")
-        self.machine.read_git("commit", "--quiet", "-m", "the requests of an older brigade")
-
-    def read_requests(self) -> str:
-        return (self.machine.corpus / "requests.awawa").read_text()
-
     def wait_for_result(self, run_id: str) -> None:
         self.wait_for_file(self.runs / run_id / "result.json")
 
