@@ -947,7 +947,12 @@ TASK B09
 
 TASK B10
 	TITLE "Procedure wave-plan.md, brigade plan context, and a planner that writes its plan"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-20: its SPEC 3, the procedure wave-plan.md cutting one request into a"
+		+ "wave, is made false by TASK B187, where a request becomes one plan merged into"
+		+ "PROJECT.MAIN and a wave is a batch of ratified tasks that wave start or the tick"
+		+ "composes"
+		REF @TASK.B187
 	MILESTONE @MILESTONE.M1
 	COMPONENT "planning"
 	ROLE ada
@@ -1311,7 +1316,12 @@ TASK B12
 TASK B13
 	TITLE "brigade task context prints in one read the starting package of a build run in the"
 		+ "worktree of its task"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-20: its SPEC 1, the wave read from integration/<slug> naming the"
+		+ "REQUEST, is made false by TASK B187, whose brigade task context reads the wave of a"
+		+ "worktree from the wave.started of the ledger whose branch names the slug of"
+		+ "task/<slug>/<task>"
+		REF @TASK.B187
 	MILESTONE @MILESTONE.M1
 	COMPONENT "agent side"
 	ROLE ada
@@ -1718,7 +1728,6 @@ TASK B16
 			+ "approving else None,"
 		IMPL "tests/cli/test_verify_verdict.py::def"
 			+ "test_should_record_the_login_the_review_ran_as(self):"
-	AFTER @TASK.B13
 	AFTER @TASK.B15
 	AFTER @TASK.B75
 	AFTER @TASK.B99
@@ -1976,7 +1985,6 @@ TASK B21
 		+ "front matter of each built-in procedure the wave ran, and quoted in the pull request"
 		+ "body with the output of brigade ledger budgets"
 	SPEC "the same rehearsal runs on the fake adapter as the test suite's end-to-end case"
-	AFTER @TASK.B13
 	AFTER @TASK.B142
 	AFTER @TASK.B18
 	AFTER @TASK.B143
@@ -8536,7 +8544,6 @@ TASK B139
 		IMPL "tests/cli/test_plan.py::class PlanRecordTestCase(PlanContextTestCase):"
 		IMPL "tests/awawa/provide_awawa.py::def provide_awawa(test_case: unittest.TestCase) ->"
 			+ "None:"
-	AFTER @TASK.B10
 	RATIONALE "split from @TASK.B10 in its refinement: the Blueprint, plan section 5, row 3, has"
 		+ "the CLI record the plan; change_corpus_file writes one file per transaction and no"
 		+ "gateway of the git package creates or pushes a branch"
@@ -8638,7 +8645,6 @@ TASK B141
 			+ "test_should_resolve_it_with_no_instructions_corpus_set"
 		IMPL "tests/cli/test_tick.py::def"
 			+ "test_should_launch_the_procedure_the_key_build_of_procedures_names_in_place_of_build_task"
-	AFTER @TASK.B13
 	AFTER @TASK.B142
 	RATIONALE "split from @TASK.B12 in its refinement: the tick launches a build run and brigade"
 		+ "ships no procedure, awawa-task.md living in the instructions corpus, which is optional"
@@ -8735,7 +8741,6 @@ TASK B142
 		IMPL "tests/cli/test_task_promote.py::class BrigadeTaskPromoteRefusalTest"
 		IMPL "tests/unit/tasks/test_compose_pull_request_title.py::def"
 			+ "test_should_refuse_a_missing_subject_naming_the_cause"
-	AFTER @TASK.B13
 	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
 		+ "lifecycle of the Blueprint, brigade task check, brigade task pr, brigade task promote"
 		+ "--pr N in artifact/blueprint/parts/plan.html; the forge adapter answers no push nor pull"
