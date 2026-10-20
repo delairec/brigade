@@ -347,6 +347,13 @@ WAVE_STARTED = {
     "branch": "integration/M4",
     "tasks": ["T7"],
 }
+WAVE_REPORTED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:00:00Z",
+    "event": "wave.reported",
+    "wave": "tidepool_w16",
+    "run": None,
+}
 TASK_PR_OPENED = {
     "schema_version": 1,
     "ts": "2026-10-18T11:00:00Z",
@@ -666,6 +673,46 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self._read_last_event()["event"], "task.preflighted")
+
+    def test_should_report_a_wave_whose_tasks_are_merged_or_parked(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.reported",
+                "wave": "tidepool_w16",
+                "run": None,
+            },
+        )
+
+    def test_should_close_a_reported_wave_once_its_integration_pull_request_is_merged(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), WAVE_REPORTED])
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.closed",
+                "wave": "tidepool_w16",
+                "pr": 42,
+            },
+        )
 
 
 class TickStartingAndCuttingWavesTest(unittest.TestCase):

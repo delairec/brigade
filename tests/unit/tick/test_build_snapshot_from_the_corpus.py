@@ -14,6 +14,9 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.wave_cancelled import WaveCancelled
+from brigade.ledger.wave_closed import WaveClosed
+from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import Configuration
@@ -216,6 +219,29 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             (wave.wave, wave.implemented, wave.forge_account_unavailable, wave.reported),
             ("w1", ("B0",), True, False),
         )
+
+    def test_should_follow_no_wave_closed_or_cancelled(self):
+        # Arrange
+        self.record(40, WaveStarted(wave="w2", project="shop", branch="integration/w2", tasks=("B9",)))
+        self.record(30, WaveClosed(wave="w2", pr=31))
+        self.record(40, WaveStarted(wave="w3", project="shop", branch="integration/w3", tasks=("B10",)))
+        self.record(30, WaveCancelled(wave="w3", reason="user"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(len(snapshot.waves), 2)
+
+    def test_should_carry_the_integration_pull_request_of_a_reported_wave(self):
+        # Arrange
+        self.record(10, WaveReported(wave="w1", run=None))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].integration_pull_request, PULL_REQUEST)
 
     def test_should_mark_a_wave_whose_branch_is_gone(self):
         # Act
