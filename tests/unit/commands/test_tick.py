@@ -221,12 +221,11 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "schema_version": 1,
                     "now": "2026-10-07T09:00:00Z",
                     "waves": [],
-                    "planned": [],
                     "projects": [],
-                    "rate_limits": [],
                     "studies": [],
                     "live_study_runs": [],
                     "study_runs": 2,
+                    "rate_limits": [],
                 },
                 "plan": [],
             },
@@ -321,13 +320,6 @@ class TickRequestTest(unittest.TestCase):
 WAVE = "tidepool_w16"
 WAVE_BRANCH = "integration/M4"
 WAVE_HEAD = "8885daa"
-WAVE_REQUEST = (
-    ("PROJECT", "@PROJECT.tidepool"),
-    ("STATUS", "running"),
-    ("MILESTONE", "M4"),
-    ("BRANCH", "integration/M4"),
-    ("CREATED_AT", "2026-10-18T09:00:00Z"),
-)
 TASK_TO_DELIVER = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"))
 TASK_DELIVERED = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "implemented"), ("DELIVERED_BY", "42"))
 MACHINE_OUTPUTS = {
@@ -446,8 +438,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
     def _create_runtime(self, task: tuple, forge: ForgeDouble) -> Runtime:
         corpus = {
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)),)},
-            "REQUEST": {"tidepool_1": WAVE_REQUEST},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": task},
         }
         return create_runtime(
@@ -457,10 +448,13 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
         )
 
-    def _read_last_event(self) -> dict:
+    def _read_event(self, rank: int) -> dict:
         return json.loads(
-            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[-1]
+            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[rank]
         )
+
+    def _read_last_event(self) -> dict:
+        return self._read_event(-1)
 
     def test_should_launch_the_build_run_of_a_task_ready_to_start(self):
         # Arrange
@@ -489,7 +483,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                         "--project",
                         "tidepool",
                         "--brief",
-                        str(self.root / "state" / "briefs" / "tidepool_1-T7.md"),
+                        str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
                         "--wave",
                         "tidepool_w16",
                         "--task",
@@ -545,14 +539,15 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_record_the_merge_of_the_pull_request_of_a_running_task(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
-        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+        first_event_of_the_tick = 2
 
         # Act
         COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_last_event(),
+            self._read_event(first_event_of_the_tick),
             {
                 "schema_version": 1,
                 "ts": "2026-10-19T09:00:00Z",

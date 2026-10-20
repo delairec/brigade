@@ -891,8 +891,8 @@ class PlanWaveReportTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
 
-INTEGRATION_MERGED = PullRequestFacts(number=77, state="merged", checks=(), review=None, behind=False)
-INTEGRATION_OPEN = PullRequestFacts(number=77, state="open", checks=(), review=None, behind=False)
+INTEGRATION_MERGED = PullRequestFacts(number=77, state="merged", checks=(), review=None, behind=False, head=HEAD)
+INTEGRATION_OPEN = PullRequestFacts(number=77, state="open", checks=(), review=None, behind=False, head=HEAD)
 NO_INTEGRATION_PULL_REQUEST = None
 
 
