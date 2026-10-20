@@ -6,7 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, read_entities
-from brigade.errors import CommandFailed
+from brigade.errors import CommandFailed, ToolFailure
+from brigade.git.find_branch import find_branch
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -15,6 +16,7 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
@@ -36,9 +38,13 @@ from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
+from brigade.waves.admit_candidates import admit_candidates
+from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
+from brigade.waves.read_project_tasks import read_project_tasks
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
+from brigade.waves.read_wave_start import read_wave_start
 from brigade.waves.summarize_waves import summarize_waves
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -59,6 +65,8 @@ PAUSED_ON_QUOTA_STATE = "paused:quota"
 RATE_LIMIT = "rate_limit"
 REVIEW_SLOT = "review"
 FORGE_ACCOUNT_REASON = "forge_account"
+PROJECT_STATUS_FIELD = "STATUS"
+PAUSED_PROJECT_STATUS = "paused"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
 
@@ -116,6 +124,9 @@ class WaveFacts:
     implemented: tuple[str, ...] = ()
     pause: WavePause | None = None
     forge_account_unavailable: bool = False
+    branch_missing: bool = False
+    reported: bool = False
+    integration_pull_request: PullRequestFacts | None = None
 
     def to_document(self) -> dict:
         return {
@@ -127,6 +138,11 @@ class WaveFacts:
             "implemented": list(self.implemented),
             "pause": None if self.pause is None else self.pause.to_document(),
             "forge_account_unavailable": self.forge_account_unavailable,
+            "branch_missing": self.branch_missing,
+            "reported": self.reported,
+            "integration_pull_request": (
+                None if self.integration_pull_request is None else self.integration_pull_request.to_document()
+            ),
         }
 
 
@@ -145,12 +161,16 @@ class ProjectFacts:
     slots: int
     live_runs: tuple[LiveRun, ...] = ()
     awaits_check_runs: bool = True
+    wave_start: str = "auto"
+    candidates: tuple[str, ...] = ()
 
     def to_document(self) -> dict:
         return {
             "project": self.name,
             "slots": self.slots,
             "live_runs": [{"run": live.run, "slot": live.slot, "worktree": live.worktree} for live in self.live_runs],
+            "wave_start": self.wave_start,
+            "candidates": list(self.candidates),
         }
 
 
@@ -320,13 +340,21 @@ def _read_reviewed_heads(events: tuple, wave: str) -> dict:
     return reviewed
 
 
+def _is_reported(reading: WaveReading, wave: str) -> bool:
+    return any(isinstance(event, WaveReported) and event.wave == wave for event in reading.events)
+
+
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
     wave = started.wave
+    repository = Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD))
+    if not find_branch(runtime.run_process, repository, started.branch):
+        return WaveFacts(project=started.project, wave=wave, branch=started.branch, branch_missing=True)
     tree = prepare_wave_tree(runtime, reading.configuration, started)
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
     states = read_task_states(runtime.paths.state_root, wave)
+    reported = _is_reported(reading, wave)
     followed = FollowedWave(
-        repository=Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD)),
+        repository=repository,
         worktree_root=reading.configuration.worktree_root,
         branch=started.branch,
         states=states,
@@ -360,22 +388,42 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         implemented=read_implemented_tasks(runtime.run_process, tree.root),
         pause=read_wave_pause(reading.events, wave),
         forge_account_unavailable=_is_forge_account_unavailable(reading.entries, wave),
+        reported=reported,
+        integration_pull_request=(reading.read_pull_request(str(repository), started.branch) if reported else None),
     )
 
 
-def _read_project_facts(name: str, projects: tuple[Entity, ...], runs: list[dict]) -> ProjectFacts:
-    project = find_project(projects, name)
+def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[str, ...]:
+    if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
+        return ()
+    tasks = read_project_tasks(runtime, reading.configuration, project)
+    return admit_candidates(runtime.run_process, tasks, map_open_tasks(reading.entries, project.name))
+
+
+def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
     slots = read_project_field(project, SLOTS_FIELD)
     return ProjectFacts(
-        name=name,
+        name=project.name,
         slots=PROJECT_SLOTS if slots is None else int(slots),
         awaits_check_runs=read_project_field(project, CHECK_RUNS_FIELD) != NO_CHECK_RUNS,
         live_runs=tuple(
             LiveRun(run=run["run"], slot=run["slot"], worktree=run["worktree"], wave=run["wave"], task=run["task"])
             for run in runs
-            if run["project"] == name and run["state"] == LIVE_RUN_STATE
+            if run["project"] == project.name and run["state"] == LIVE_RUN_STATE
         ),
+        wave_start=read_wave_start(runtime, project.name),
+        candidates=_read_candidates(runtime, reading, project),
     )
+
+
+def _read_readable_project_facts(
+    runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]
+) -> ProjectFacts | None:
+    try:
+        return _read_project_facts(runtime, reading, project, runs)
+    except ToolFailure as failure:
+        sys.stderr.write(f"brigade tick: the project {project.name} skipped: {failure}\n")
+        return None
 
 
 def _describe_study(study: Study, last_order: LastStudyOrder | None) -> StudyFacts:
@@ -417,7 +465,9 @@ def build_snapshot(
         if facts is not None
     )
     projects = tuple(
-        _read_project_facts(project, registered, runs) for project in dict.fromkeys(wave.project for wave in waves)
+        facts
+        for facts in (_read_readable_project_facts(runtime, reading, project, runs) for project in registered)
+        if facts is not None
     )
     last_orders = read_last_study_orders(runtime.paths.state_root)
     return Snapshot(

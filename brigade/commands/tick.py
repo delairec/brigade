@@ -13,7 +13,9 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
@@ -36,15 +38,19 @@ from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
+    CloseWave,
+    CutWaveBranch,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
+    ReportWave,
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
@@ -56,6 +62,8 @@ from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
+from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
+from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
@@ -188,6 +196,21 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
         )
 
 
+def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
+    read_environment = functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
+    start = WaveStart(project=action.project, tasks=(), configuration=configuration, read_environment=read_environment)
+    start_project_wave(runtime, start)
+
+
+def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: CutWaveBranch) -> None:
+    cut = WaveBranchCut(
+        project=find_project(read_projects(runtime), action.project),
+        branch=action.branch,
+        read_environment=lambda key: read_forge_environment(configuration, key, runtime),
+    )
+    cut_wave_branch(runtime.run_process, cut)
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
@@ -205,6 +228,10 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
         ),
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
+        StartWave: lambda action: _start_wave(runtime, configuration, action),
+        CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
+        ReportWave: lambda action: append_event(runtime.paths, runtime.now, WaveReported(wave=action.wave, run=None)),
+        CloseWave: lambda action: append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr)),
     }
 
 

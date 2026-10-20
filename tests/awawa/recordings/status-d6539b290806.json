@@ -1,0 +1,28 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "TASK",
+      "--where",
+      "STATUS==implemented",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running\n\t\tREQUIRED\n\nSCHEMA OPEN_QUESTION\n\tDESC \"a fact left undecided\"\n\tFIELD STATUS open|closed\n\t\tREQUIRED\n\tFIELD BLOCKS @TASK\n\t\tREPEATABLE\n\t\tCONVERSE BLOCKED_BY\n\tWHEN STATUS closed\n\t\tGATE suppressed\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": "TASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS implemented\n\nTASK S7\n\tTITLE \"Save the cart for later\"\n\tSTATUS todo\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"implemented\", \"todo\"], \"types\": [{\"type\": \"MILESTONE\", \"counts\": {\"implemented\": 0, \"todo\": 0}, \"unset\": 0, \"total\": 0}, {\"type\": \"OPEN_QUESTION\", \"counts\": {\"implemented\": 0, \"todo\": 0}, \"unset\": 0, \"total\": 0}, {\"type\": \"SCHEMA\", \"counts\": {\"implemented\": 0, \"todo\": 0}, \"unset\": 3, \"total\": 3}, {\"type\": \"TASK\", \"counts\": {\"implemented\": 1, \"todo\": 1}, \"unset\": 0, \"total\": 2}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"TASK\", \"name\": \"S2\", \"target\": \"@TASK.S2\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": \"implemented\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 2, \"entities\": 5}}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

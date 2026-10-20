@@ -287,6 +287,15 @@ open waves of the ledger, each with the tasks its `wave.started` names, in that 
 at the wave's branch; a wave whose pull requests the forge fails to read is skipped, named on stderr, and the tick
 serves the others.
 
+The tick starts a wave, as `brigade wave start <project>` does, for each registered project not `paused` whose
+`POLICY` sets `WAVE_START` to `auto`, the default when no `POLICY` names the project, when at least one candidate lies
+outside every open wave; the wave takes every candidate, `SLOTS` bounding the live build runs alone, and `ask` leaves
+the start to the user. A project whose tasks cannot be read is skipped, named on stderr. An open wave whose branch is
+missing has it cut again from the main branch, with no second `wave.started`. A queued task of an open wave that a
+live blocker cites is recorded `parked` with the reason `blocked by` and the citing entity. Once every task of a wave
+is `merged` or `parked`, the tick records `wave.reported`, its `run` null until the wave-report study exists, and once
+the integration pull request of a reported wave is merged, `wave.closed` with its number.
+
 Any run that finished on the `error_class` `rate_limit`, until its `reset` has passed, pauses every running wave of the
 machine: `wave.paused` with the reason `quota` and `resume_at` the first instant after the tick's clock at the hour and
 in the timezone of the result's `reset`, or that clock plus 30 minutes when `reset` is null, and the task of a build

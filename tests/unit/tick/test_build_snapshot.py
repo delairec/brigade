@@ -3,7 +3,15 @@ from datetime import UTC, datetime
 
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.reset_hour import ResetHour
-from brigade.tick.build_snapshot import RateLimit, RecordedVerdict, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.build_snapshot import (
+    ProjectFacts,
+    RateLimit,
+    RecordedVerdict,
+    Snapshot,
+    StudyFacts,
+    TaskFacts,
+    WaveFacts,
+)
 from brigade.waves.read_wave_pause import WavePause
 
 
@@ -119,10 +127,26 @@ class SnapshotTest(unittest.TestCase):
                     "implemented": [],
                     "pause": {"reason": "quota", "resume_at": "2026-10-18T17:00:00Z"},
                     "forge_account_unavailable": False,
+                    "branch_missing": False,
+                    "reported": False,
+                    "integration_pull_request": None,
                 }
             ],
         )
 
+    def test_should_carry_the_wave_start_policy_and_the_candidates_of_a_project_in_its_document(self):
+        # Arrange
+        project = ProjectFacts(name="brigade", slots=4, wave_start="ask", candidates=("B188", "B189"))
+        snapshot = Snapshot(now=datetime(2026, 10, 20, 12, 0, tzinfo=UTC), projects=(project,))
+
+        # Act
+        document = snapshot.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["projects"],
+            [{"project": "brigade", "slots": 4, "live_runs": [], "wave_start": "ask", "candidates": ["B188", "B189"]}],
+        )
 
 class TaskFactsTest(unittest.TestCase):
     def test_should_carry_the_last_verdict_and_the_head_its_verification_ended_on_in_its_document(self):

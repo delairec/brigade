@@ -7,15 +7,19 @@ from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
+    CloseWave,
+    CutWaveBranch,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
+    ReportWave,
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    StartWave,
 )
 from brigade.tick.build_snapshot import (
     LiveRun,
@@ -55,6 +59,10 @@ ALONE_S9 = (TaskFacts(name="S9"),)
 LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
 LAUNCH_S9 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S9")
 LAUNCH_S10 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S10")
+REPORT_SHOP_W1 = ReportWave(wave="shop_w1")
+PARK_BLOCKED_S3 = RecordTaskState(
+    wave="shop_w1", task="S3", state="parked", reason="blocked by @OPEN_QUESTION.Undecided"
+)
 
 
 class PlanTest(unittest.TestCase):
@@ -76,12 +84,12 @@ class PlanStartableTasksTest(unittest.TestCase):
             ("queued", ALONE, {"S3": "queued"}, (), (LAUNCH_S3,)),
             ("already running", ALONE, {"S3": "running"}, (), ()),
             ("with its pull request open", ALONE, {"S3": "pr_open"}, (), ()),
-            ("parked", ALONE, {"S3": "parked"}, (), ()),
+            ("parked", ALONE, {"S3": "parked"}, (), (REPORT_SHOP_W1,)),
             ("after a task merged in the wave", FOLLOWING, {"S2": "merged"}, (), (LAUNCH_S3,)),
             ("after a task implemented in the corpus", FOLLOWING, {}, ("S2",), (LAUNCH_S3,)),
             ("after a task still running", FOLLOWING, {"S2": "running"}, (), ()),
             ("after a task neither merged nor implemented", FOLLOWING, {}, (), ()),
-            ("blocked by a live question", BLOCKED, {}, (), ()),
+            ("blocked by a live question", BLOCKED, {}, (), (PARK_BLOCKED_S3,)),
             ("implemented at the branch of the wave with no state", ALONE, {}, ("S3",), ()),
         ]:
             with self.subTest(case=case):
@@ -133,8 +141,8 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
             ("a task whose open pull request is already recorded", "pr_open", OPEN, ()),
             ("a task in review whose pull request merged", "verifying", MERGED, (RECORD_MERGED,)),
             ("a task in fixing whose pull request closed", "fixing", CLOSED, (RECORD_PARKED,)),
-            ("a task already merged", "merged", MERGED, ()),
-            ("a task already parked", "parked", CLOSED, ()),
+            ("a task already merged", "merged", MERGED, (REPORT_SHOP_W1,)),
+            ("a task already parked", "parked", CLOSED, (REPORT_SHOP_W1,)),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -149,8 +157,8 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
 
     def test_should_remove_the_worktree_of_a_task_once_its_pull_request_is_merged_or_closed(self):
         for case, state, pull_request, expected in [
-            ("merged", "merged", MERGED, (REMOVE_WORKTREE_S3,)),
-            ("closed", "parked", CLOSED, (REMOVE_WORKTREE_S3,)),
+            ("merged", "merged", MERGED, (REMOVE_WORKTREE_S3, REPORT_SHOP_W1)),
+            ("closed", "parked", CLOSED, (REMOVE_WORKTREE_S3, REPORT_SHOP_W1)),
             ("still open", "pr_open", OPEN, ()),
         ]:
             with self.subTest(case=case):
@@ -178,7 +186,7 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, ())
+        self.assertEqual(actions, (REPORT_SHOP_W1,))
 
     def test_should_record_the_merge_and_remove_the_worktree_in_one_plan(self):
         # Arrange
@@ -763,3 +771,147 @@ class PlanForgeAccountPauseTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (PauseWave(wave="shop_w1", reason="forge_account", resume_at=None),))
+
+
+PROJECT_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, candidates=("S7", "S8"))
+PROJECT_ASKING_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, wave_start="ask", candidates=("S7", "S8"))
+PROJECT_WITHOUT_CANDIDATES = ProjectFacts(name="shop", slots=4)
+
+
+class PlanWaveStartTest(unittest.TestCase):
+    def test_should_start_a_wave_only_under_auto_and_with_a_candidate(self):
+        for case, project, expected in [
+            ("under auto with candidates", PROJECT_WITH_CANDIDATES, (StartWave(project="shop"),)),
+            ("under ask with candidates", PROJECT_ASKING_WITH_CANDIDATES, ()),
+            ("under auto without candidates", PROJECT_WITHOUT_CANDIDATES, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+class PlanMissingWaveBranchTest(unittest.TestCase):
+    def test_should_cut_the_missing_branch_of_an_open_wave_and_launch_nothing_in_it(self):
+        # Arrange
+        wave = WaveFacts(project="shop", wave="shop_w1", branch=WAVE_BRANCH, branch_missing=True)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (CutWaveBranch(project="shop", wave="shop_w1", branch=WAVE_BRANCH),))
+
+
+BLOCKED_TWICE = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided", "OPEN_QUESTION.Unsettled")),)
+
+
+class PlanBlockedTaskParkingTest(unittest.TestCase):
+    def test_should_park_a_queued_task_a_live_blocker_cites(self):
+        for case, tasks, states, expected in [
+            (
+                "with no state yet",
+                BLOCKED,
+                {},
+                (
+                    RecordTaskState(
+                        wave="shop_w1", task="S3", state="parked", reason="blocked by @OPEN_QUESTION.Undecided"
+                    ),
+                ),
+            ),
+            (
+                "queued",
+                BLOCKED,
+                {"S3": "queued"},
+                (
+                    RecordTaskState(
+                        wave="shop_w1", task="S3", state="parked", reason="blocked by @OPEN_QUESTION.Undecided"
+                    ),
+                ),
+            ),
+            (
+                "cited by two blockers",
+                BLOCKED_TWICE,
+                {},
+                (
+                    RecordTaskState(
+                        wave="shop_w1",
+                        task="S3",
+                        state="parked",
+                        reason="blocked by @OPEN_QUESTION.Undecided, @OPEN_QUESTION.Unsettled",
+                    ),
+                ),
+            ),
+            ("already running", BLOCKED, {"S3": "running"}, ()),
+            ("with its pull request open", BLOCKED, {"S3": "pr_open"}, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, waves=(create_wave(tasks, states),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+TWO_TASKS = (TaskFacts(name="S3"), TaskFacts(name="S4"))
+
+
+class PlanWaveReportTest(unittest.TestCase):
+    def test_should_report_a_wave_once_every_task_is_merged_or_parked(self):
+        for case, states, reported, expected in [
+            ("every task merged or parked", {"S3": "merged", "S4": "parked"}, False, (ReportWave(wave="shop_w1"),)),
+            (
+                "a task still queued",
+                {"S3": "merged", "S4": "queued"},
+                False,
+                (LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S4"),),
+            ),
+            ("a task still running", {"S3": "merged", "S4": "running"}, False, ()),
+            ("a task with its pull request open", {"S3": "parked", "S4": "pr_open"}, False, ()),
+            ("already reported", {"S3": "merged", "S4": "parked"}, True, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(create_wave(TWO_TASKS, states), reported=reported)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+INTEGRATION_MERGED = PullRequestFacts(number=77, state="merged", checks=(), review=None, behind=False)
+INTEGRATION_OPEN = PullRequestFacts(number=77, state="open", checks=(), review=None, behind=False)
+NO_INTEGRATION_PULL_REQUEST = None
+
+
+class PlanWaveCloseTest(unittest.TestCase):
+    def test_should_close_a_wave_once_its_integration_pull_request_is_merged(self):
+        for case, integration, expected in [
+            ("merged", INTEGRATION_MERGED, (CloseWave(wave="shop_w1", pr=77),)),
+            ("still open", INTEGRATION_OPEN, ()),
+            ("not opened yet", NO_INTEGRATION_PULL_REQUEST, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(
+                    create_wave(TWO_TASKS, {"S3": "running", "S4": "running"}), integration_pull_request=integration
+                )
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)

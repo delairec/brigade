@@ -141,7 +141,7 @@ class BrigadeTickPausingOnARateLimitTest(RateLimitedRunTestCase):
         self.run_tick("--once")
 
         # Assert
-        self.assertEqual(self.read_events("task.state")[-1]["state"], "paused:quota")
+        self.assertEqual(self.read_task_states("S3")[-1], "paused:quota")
 
     def test_should_launch_no_task_of_the_paused_wave(self):
         # Act

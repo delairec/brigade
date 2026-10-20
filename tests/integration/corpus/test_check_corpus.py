@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,9 @@ SCHEMA = 'SCHEMA TASK\n\tDESC "a change"\n\tFIELD STATUS todo|implemented\n\t\tR
 CANONICAL_TASKS = "TASK S2\n\tSTATUS implemented\n"
 UNFORMATTED_TASKS = "TASK S2\n    STATUS implemented\n"
 UNDECLARED_STATUS_TASKS = "TASK S2\n\tSTATUS shipped\n"
+SHIPPED_SCHEMA = Path(__file__).resolve().parents[3] / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
+SHOP_PROJECT = 'PROJECT shop\n\tPATH "/srv/shop"\n\tMAIN "main"\n\tSTATUS active\n'
+POLICY_ASKING_FOR_WAVE_STARTS = "POLICY shop_waves\n\tPROJECT @PROJECT.shop\n\tWAVE_START ask\n"
 
 
 class CheckCorpusTest(unittest.TestCase):
@@ -79,3 +83,15 @@ class CheckCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(checks[1].record.exit_code, 1)
+
+    def test_should_lint_clean_a_policy_asking_for_the_wave_starts_of_its_project_under_the_shipped_schema(self):
+        # Arrange
+        shutil.copyfile(SHIPPED_SCHEMA, self.corpus / "_schema.awawa")
+        (self.corpus / "projects.awawa").write_text(SHOP_PROJECT)
+        (self.corpus / "policies.awawa").write_text(POLICY_ASKING_FOR_WAVE_STARTS)
+
+        # Act
+        checks = check_corpus(run_process_without_trail, self.corpus)
+
+        # Assert
+        self.assertEqual(checks[1].record.exit_code, 0, checks[1].record.stdout)

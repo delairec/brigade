@@ -65,3 +65,26 @@ class ResumeTaskRun:
     wave: str
     task: str
     run: str
+
+
+@dataclass(frozen=True)
+class StartWave:
+    project: str
+
+
+@dataclass(frozen=True)
+class CutWaveBranch:
+    project: str
+    wave: str
+    branch: str
+
+
+@dataclass(frozen=True)
+class ReportWave:
+    wave: str
+
+
+@dataclass(frozen=True)
+class CloseWave:
+    wave: str
+    pr: int

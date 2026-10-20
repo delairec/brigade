@@ -6,7 +6,7 @@ from typing import ClassVar
 class WaveReported:
     name: ClassVar[str] = "wave.reported"
     wave: str
-    run: str
+    run: str | None
 
     @classmethod
     def from_document(cls, document: dict) -> "WaveReported":

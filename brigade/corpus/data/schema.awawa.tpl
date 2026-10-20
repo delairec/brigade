@@ -63,6 +63,8 @@ SCHEMA POLICY
 		REQUIRED
 	FIELD PLAN_REVIEW ask|auto
 		DEFAULT auto
+	FIELD WAVE_START ask|auto
+		DEFAULT auto
 	FIELD REVIEW approval|verdict
 		DEFAULT verdict
 	FIELD VERIFY_ROUNDS uint
