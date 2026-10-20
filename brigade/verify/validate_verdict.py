@@ -4,6 +4,7 @@ from brigade.verify.assemble_verify_context import GRADES
 PASSING_VERDICT = "pass"
 CHANGES_VERDICT = "changes"
 VERDICT_SHAPE = {
+    "head": Field(kinds=(str,)),
     "verdict": Field(kinds=(str,), values=(PASSING_VERDICT, CHANGES_VERDICT)),
     "findings": Field(
         kinds=(list,),

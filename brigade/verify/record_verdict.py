@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_verdict import TaskVerdict
@@ -41,7 +42,7 @@ def _render_review_body(verdict: dict) -> str:
     return f"verdict {verdict['verdict']}\n{findings}"
 
 
-def _post_review(runtime: Runtime, demand: VerdictDemand) -> str | None:
+def _post_review(runtime: Runtime, demand: VerdictDemand, head: str) -> str | None:
     environment = _read_environment(runtime, demand, REVIEW_SLOT)
     demand.forge.post_review(
         {
@@ -49,6 +50,7 @@ def _post_review(runtime: Runtime, demand: VerdictDemand) -> str | None:
             "repository": demand.project_path,
             "number": demand.opened.pr,
             "event": APPROVING_REVIEW if demand.verdict["verdict"] == PASSING_VERDICT else REQUESTING_REVIEW,
+            "commit": head,
             "body": _render_review_body(demand.verdict),
             "environment": environment,
         },
@@ -69,16 +71,19 @@ def record_verdict(runtime: Runtime, demand: VerdictDemand) -> dict:
         ),
         runtime,
     )
+    judged, head = demand.verdict["head"], pull_request["head_sha"]
+    if judged != head:
+        raise BrigadeError(f"the verdict judged {judged}, no longer the head of #{opened.pr}, now {head}")
     approving = read_review_mode(runtime, opened.project) == APPROVAL_REVIEW
     event = TaskVerdict(
         project=opened.project,
         wave=opened.wave,
         task=opened.task,
         pr=opened.pr,
-        head=pull_request["head_sha"],
+        head=head,
         verdict=demand.verdict["verdict"],
         findings=tuple(demand.verdict["findings"]),
-        login=_post_review(runtime, demand) if approving else None,
+        login=_post_review(runtime, demand, head) if approving else None,
     )
     append_event(runtime.paths, runtime.now, event)
     return event.to_document()

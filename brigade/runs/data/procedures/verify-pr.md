@@ -38,13 +38,15 @@ rule it breaks, by its entity name.
 
 ## 4. Hand back the verdict
 
-Write the verdict as a JSON document in a file under `$BRIGADE_RUN_DIR`:
+Write the verdict as a JSON document in a file under `$BRIGADE_RUN_DIR`, `head` the commit under `# head` of the
+package, the one you judged:
 
 ```json
-{"verdict": "changes", "findings": [{"grade": "high", "file": "src/cart.py", "line": 12, "broken": "@RULE.x"}]}
+{"head": "8885daa", "verdict": "changes", "findings": [{"grade": "high", "file": "src/cart.py", "line": 12, "broken": "@RULE.x"}]}
 ```
 
 `pass` when every criterion is met and no finding asks for a change; `changes` otherwise, with at least one finding.
 Then `brigade verify verdict <pr> --file <path>`. It validates the verdict and records it, and posts it as a review of
 the pull request when the project's review policy asks for one. A refusal names what to correct: correct the file and
-hand it back again. The verdict it accepts is your result; end there.
+hand it back again. A refusal naming a head no longer the head of the pull request ends the run without a verdict: the
+tick verifies the new head once its preflight has run. The verdict it accepts is your result; end there.

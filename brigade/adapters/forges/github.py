@@ -37,7 +37,7 @@ LISTING_TIMEOUT_S = 600.0
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
-REVIEW_FLAGS = {"approve": "--approve", "request_changes": "--request-changes"}
+REVIEW_EVENTS = {"approve": "APPROVE", "request_changes": "REQUEST_CHANGES"}
 
 
 def _read_active_login(hosts_document: str):
@@ -297,12 +297,16 @@ def post_review(request: dict, runtime: Runtime) -> dict:
         ProcessRequest(
             argv=(
                 "gh",
-                "pr",
-                "review",
-                str(request["number"]),
-                REVIEW_FLAGS[request["event"]],
-                "--body-file",
-                BODY_FROM_STDIN,
+                "api",
+                f"repos/{{owner}}/{{repo}}/pulls/{request['number']}/reviews",
+                "--method",
+                "POST",
+                "-f",
+                f"event={REVIEW_EVENTS[request['event']]}",
+                "-f",
+                f"commit_id={request['commit']}",
+                "-F",
+                "body=@-",
             ),
             cwd=request["repository"],
             timeout_s=PUBLICATION_TIMEOUT_S,

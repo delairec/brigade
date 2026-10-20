@@ -10,7 +10,7 @@ from tests.unit.commands.command_runtime import create_machine_double, create_ru
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.verify.test_record_verdict import ForgeDouble
 
-PASS = {"verdict": "pass", "findings": []}
+PASS = {"head": "8885daa", "verdict": "pass", "findings": []}
 
 
 def create_document(login: str | None) -> dict:
@@ -88,7 +88,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
             ("a file holding no JSON", "verdict: pass\n", f"the verdict file {self.verdict} holds no JSON document"),
             (
                 "changes without a finding",
-                json.dumps({"verdict": "changes", "findings": []}),
+                json.dumps({"head": "8885daa", "verdict": "changes", "findings": []}),
                 f"the verdict file {self.verdict}: a verdict changes names no finding",
             ),
         ]

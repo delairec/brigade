@@ -57,6 +57,7 @@ class VerifyContextTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
+            "# head\n8885daa\n\n"
             "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"

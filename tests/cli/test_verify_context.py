@@ -113,10 +113,13 @@ class BrigadeVerifyContextOfAPullRequestTest(VerifyContextTestCase):
         completed = self.run_verify_context("42")
 
         # Assert
-        self.assertTrue(completed.stdout.startswith("# task\n$ awawa context @TASK.S3 --with-schema .\nexit 0\n"))
+        self.assertRegex(
+            completed.stdout,
+            f"^# head\n{self.read_head()}\n\n# task\n\\$ awawa context @TASK.S3 --with-schema \\.\nexit 0\n",
+        )
         self.assertIn(f"\n# diff\n$ git diff {self.read_wave_head()} {self.read_head()}\nexit 0\n", completed.stdout)
         self.assertIn("\n# preflight\npass  ancestry\n", completed.stdout)
-        self.assertTrue(completed.stdout.endswith("\n# grades\ncritical\nhigh\nmedium\nlow\n"))
+        self.assertRegex(completed.stdout, "\n# grades\ncritical\nhigh\nmedium\nlow\n\\Z")
 
 
 class BrigadeVerifyContextWithAnInstructionsCorpusTest(VerifyContextTestCase):

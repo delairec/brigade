@@ -159,17 +159,19 @@ brigade verify context <pr>
 brigade verify verdict <pr> --file <verdict.json>
 ```
 
-Both run from the worktree of the task whose pull request they judge. `verify context` prints in one read the task
-with its `awawa context` and its closure, the diff of the pull request against its base, the findings of the
-preflight, the rules of the path triggers of the files the diff touches when `config.toml` names an instructions
-corpus, and the grades of a finding: `critical`, `high`, `medium` and `low`.
+Both run from the worktree of the task whose pull request they judge. `verify context` prints in one read the head
+it judges, the task with its `awawa context` and its closure, the diff of the pull request against its base, the
+findings of the preflight, the rules of the path triggers of the files the diff touches when `config.toml` names an
+instructions corpus, and the grades of a finding: `critical`, `high`, `medium` and `low`.
 
-`verify verdict` reads `{"verdict": "pass" | "changes", "findings": [{"grade", "file", "line", "broken"}]}`, where
-`broken` names the `SPEC` or the rule the finding breaks; it refuses a document of another shape, a grade outside the
-four, and `changes` without a finding, exit 1 naming what to correct. It records the ledger event `task.verdict` with
-the head of the pull request. Under `REVIEW approval` of the project's `POLICY` it also posts the verdict as a GitHub
-review, approving or requesting changes, as the login of the key `review` of `[forge_accounts]`, and the event
-carries that login; under `REVIEW verdict`, the default, the event alone is the verdict and its login is null.
+`verify verdict` reads `{"head", "verdict": "pass" | "changes", "findings": [{"grade", "file", "line", "broken"}]}`,
+where `head` is the commit `verify context` printed and `broken` names the `SPEC` or the rule the finding breaks; it
+refuses a document of another shape, a grade outside the four, `changes` without a finding, and a `head` that is no
+longer the head of the pull request, exit 1 naming what to correct, and records nothing. It records the ledger event
+`task.verdict` at that head. Under `REVIEW approval` of the project's `POLICY` it also posts the verdict as a GitHub
+review of that commit, approving or requesting changes, as the login of the key `review` of `[forge_accounts]`, and
+the event carries that login; under `REVIEW verdict`, the default, the event alone is the verdict and its login is
+null.
 
 ## Studies
 

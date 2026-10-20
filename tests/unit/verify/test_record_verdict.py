@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.system.read_configuration import Configuration
 from brigade.verify.record_verdict import VerdictDemand, record_verdict
@@ -13,7 +14,7 @@ OPENED = TaskPrOpened(
     project=TIDEPOOL, task="T7", wave="tidepool_w16", branch="task/M4-tides/T7", pr=42, login="tidepool-bot"
 )
 BROKEN_SPEC = {"grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}
-CHANGES = {"verdict": "changes", "findings": [BROKEN_SPEC]}
+CHANGES = {"head": "8885daa", "verdict": "changes", "findings": [BROKEN_SPEC]}
 REVIEW_ACCOUNTS = Configuration(forge_accounts={"review": "tidepool-review"})
 POLICY_UNDER_APPROVAL = {"tidepool_policy": (("PROJECT", "@PROJECT.tidepool"), ("REVIEW", "approval"))}
 
@@ -121,7 +122,7 @@ class RecordVerdictUnderTheVerdictModeTest(RecordVerdictTestCase):
         no_policy = {}
 
         # Act
-        document = self.record(no_policy, {"verdict": "pass", "findings": []})
+        document = self.record(no_policy, {"head": "8885daa", "verdict": "pass", "findings": []})
 
         # Assert
         self.assertEqual(
@@ -153,6 +154,7 @@ class RecordVerdictUnderTheApprovalModeTest(RecordVerdictTestCase):
                     "repository": "/home/user/tidepool",
                     "number": 42,
                     "event": "request_changes",
+                    "commit": "8885daa",
                     "body": "verdict changes\n- high src/tides.py:12: SPEC 2 of @TASK.T7\n",
                     "environment": {"GH_TOKEN": "token-of-tidepool-review"},
                 }
@@ -161,7 +163,7 @@ class RecordVerdictUnderTheApprovalModeTest(RecordVerdictTestCase):
 
     def test_should_approve_on_a_pass(self):
         # Act
-        self.record(POLICY_UNDER_APPROVAL, {"verdict": "pass", "findings": []})
+        self.record(POLICY_UNDER_APPROVAL, {"head": "8885daa", "verdict": "pass", "findings": []})
 
         # Assert
         self.assertEqual(self.list_posted_reviews()[0]["event"], "approve")
@@ -172,3 +174,26 @@ class RecordVerdictUnderTheApprovalModeTest(RecordVerdictTestCase):
 
         # Assert
         self.assertEqual(self.read_ledger()[0]["login"], "tidepool-review")
+
+
+class RecordVerdictOfAHeadNoLongerTheHeadTest(RecordVerdictTestCase):
+    def setUp(self):
+        super().setUp()
+        self.judged_before_a_push = {"head": "fedcba9", "verdict": "pass", "findings": []}
+
+    def test_should_refuse_the_verdict_naming_both_heads(self):
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            self.record(POLICY_UNDER_APPROVAL, self.judged_before_a_push)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "the verdict judged fedcba9, no longer the head of #42, now 8885daa")
+
+    def test_should_record_nothing_and_post_no_review(self):
+        # Act
+        with self.assertRaises(BrigadeError):
+            self.record(POLICY_UNDER_APPROVAL, self.judged_before_a_push)
+
+        # Assert
+        self.assertEqual(self.list_posted_reviews(), [])
+        self.assertFalse((self.root / "state" / "ledger" / "2026-10.jsonl").exists())

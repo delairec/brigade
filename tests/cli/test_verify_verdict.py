@@ -54,7 +54,7 @@ class VerifyVerdictTestCase(VerifyPreflightTestCase):
 class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
     def test_should_record_the_verdict_on_the_head_of_the_pull_request(self):
         # Act
-        completed = self.run_verify_verdict({"verdict": "changes", "findings": [BROKEN_SPEC]})
+        completed = self.run_verify_verdict({"head": self.read_head(), "verdict": "changes", "findings": [BROKEN_SPEC]})
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -81,7 +81,7 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
 
     def test_should_refuse_changes_without_a_finding_and_record_nothing(self):
         # Act
-        completed = self.run_verify_verdict({"verdict": "changes", "findings": []})
+        completed = self.run_verify_verdict({"head": self.read_head(), "verdict": "changes", "findings": []})
 
         # Assert
         self.assertEqual(completed.returncode, 1)
@@ -97,15 +97,19 @@ class BrigadeVerifyVerdictUnderTheApprovalModeTest(VerifyVerdictTestCase):
 
     def test_should_post_a_review_requesting_changes(self):
         # Act
-        completed = self.run_verify_verdict({"verdict": "changes", "findings": [BROKEN_SPEC]})
+        completed = self.run_verify_verdict({"head": self.read_head(), "verdict": "changes", "findings": [BROKEN_SPEC]})
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertIn("pr review 42 --request-changes --body-file -\n", self.gh_calls.read_text())
+        self.assertIn(
+            "api repos/{owner}/{repo}/pulls/42/reviews --method POST -f event=REQUEST_CHANGES "
+            f"-f commit_id={self.read_head()} -F body=@-\n",
+            self.gh_calls.read_text(),
+        )
 
     def test_should_record_the_login_the_review_ran_as(self):
         # Act
-        self.run_verify_verdict({"verdict": "pass", "findings": []})
+        self.run_verify_verdict({"head": self.read_head(), "verdict": "pass", "findings": []})
 
         # Assert
         self.assertEqual(self.read_verdicts()[0]["login"], "review-bot")

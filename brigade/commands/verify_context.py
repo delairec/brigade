@@ -35,6 +35,7 @@ def _render_preflight(checks: list[dict]) -> str:
 
 def _render_text(document: dict) -> str:
     sections = [
+        f"# head\n{document['head']}\n",
         f"# task\n{_render_commands(document['context'])}",
         f"# diff\n{_render_commands([document['diff']])}",
         f"# preflight\n{_render_preflight(document['preflight'])}",

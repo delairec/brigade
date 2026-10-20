@@ -1715,8 +1715,8 @@ TASK B16
 		IMPL "tests/unit/verify/test_record_verdict.py::class"
 			+ "RecordVerdictUnderTheVerdictModeTest(RecordVerdictTestCase):"
 	SPEC "the ledger event of a review posted carries the login the review ran as"
-		IMPL "brigade/verify/record_verdict.py::login=_post_review(runtime, demand) if approving"
-			+ "else None,"
+		IMPL "brigade/verify/record_verdict.py::login=_post_review(runtime, demand, head) if"
+			+ "approving else None,"
 		IMPL "tests/cli/test_verify_verdict.py::def"
 			+ "test_should_record_the_login_the_review_ran_as(self):"
 	AFTER @TASK.B13
