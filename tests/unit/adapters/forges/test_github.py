@@ -10,6 +10,7 @@ from brigade.adapters.forges.github import (
     list_pull_requests,
     open_issue,
     open_pull_request,
+    post_review,
     read_login_environment,
     read_pull_request,
 )
@@ -515,3 +516,38 @@ class ReadPullRequestTest(unittest.TestCase):
                 },
             },
         )
+
+
+class PostReviewTest(unittest.TestCase):
+    def test_should_post_the_review_of_the_pull_request_its_body_on_stdin_under_the_login_of_the_review(self):
+        # Arrange
+        rows = [("approve", "--approve"), ("request_changes", "--request-changes")]
+        for event, expected_flag in rows:
+            with self.subTest(event=event):
+                runtime = create_runtime("")
+
+                # Act
+                answer = post_review(
+                    {
+                        "schema_version": 1,
+                        "repository": "/projects/shop",
+                        "number": 42,
+                        "event": event,
+                        "body": "verdict pass\n",
+                        "environment": BOT_ENVIRONMENT,
+                    },
+                    runtime,
+                )
+
+                # Assert
+                request = runtime.requests[0]
+                self.assertEqual(
+                    (answer, request.argv, request.cwd, request.stdin, request.environment),
+                    (
+                        {"schema_version": 1},
+                        ("gh", "pr", "review", "42", expected_flag, "--body-file", "-"),
+                        "/projects/shop",
+                        "verdict pass\n",
+                        {"GH_TOKEN": "token-of-octo-bot"},
+                    ),
+                )

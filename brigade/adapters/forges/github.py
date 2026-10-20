@@ -37,6 +37,7 @@ LISTING_TIMEOUT_S = 600.0
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
+REVIEW_FLAGS = {"approve": "--approve", "request_changes": "--request-changes"}
 
 
 def _read_active_login(hosts_document: str):
@@ -289,3 +290,24 @@ def read_pull_request(request: dict, runtime: Runtime) -> dict:
             "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
         },
     }
+
+
+def post_review(request: dict, runtime: Runtime) -> dict:
+    runtime.run_process(
+        ProcessRequest(
+            argv=(
+                "gh",
+                "pr",
+                "review",
+                str(request["number"]),
+                REVIEW_FLAGS[request["event"]],
+                "--body-file",
+                BODY_FROM_STDIN,
+            ),
+            cwd=request["repository"],
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            stdin=request["body"],
+            environment=request["environment"],
+        )
+    )
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}
