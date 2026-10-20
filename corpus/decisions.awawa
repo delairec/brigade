@@ -3375,3 +3375,5 @@ DECISION AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead
 	SOURCE "the run of @TASK.B16 of 2026-10-20, whose SPEC starts a fresh review run on a task in"
 		+ "verifying and leaves open what follows a run that records no verdict"
 		REF @TASK.B16
+	SOURCE "pull request #172 of the brigade repository, delivering @TASK.B16"
+		REF @TASK.B16
