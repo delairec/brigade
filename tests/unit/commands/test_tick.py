@@ -20,6 +20,9 @@ from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
 from tests.unit.commands.command_runtime import (
+    ProcessAnswer,
+    ScriptedProcessRunner,
+    create_corpus_double,
     create_machine_double,
     create_runtime,
     write_ledger,
@@ -663,6 +666,69 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self._read_last_event()["event"], "task.preflighted")
+
+
+class TickStartingAndCuttingWavesTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        outputs = {
+            **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()},
+            ("git", "branch", "--quiet"): ProcessAnswer(),
+        }
+        self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
+        self.runtime = create_runtime(
+            self.root,
+            run_process=self.machine.run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+
+    def _miss_the_branch(self, branch: str) -> None:
+        verify = ("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}")
+        self.machine.answers[verify] = ProcessAnswer(exit_code=1)
+
+    def test_should_start_a_wave_of_the_candidates_of_a_project_without_one(self):
+        # Arrange
+        self._miss_the_branch("integration/tidepool_w1")
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[0]),
+            {
+                "schema_version": 2,
+                "ts": ANY,
+                "event": "wave.started",
+                "wave": "tidepool_w1",
+                "project": "tidepool",
+                "branch": "integration/tidepool_w1",
+                "tasks": ["T7"],
+            },
+        )
+        self.assertIn(("git", "branch", "--quiet", "integration/tidepool_w1", "main"), self.machine.argvs)
+
+    def test_should_cut_the_missing_branch_of_an_open_wave(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED])
+        self._miss_the_branch("integration/M4")
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(("git", "branch", "--quiet", "integration/M4", "main"), self.machine.argvs)
 
 
 class TickLaunchingAStudyTest(unittest.TestCase):
