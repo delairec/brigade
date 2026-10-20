@@ -848,6 +848,8 @@ class BrigadeTickDryRunOnAWaveOfSomeTasksOfTheMilestoneTest(WaveTickTestCase):
                     "worktree": None,
                     "rate_limit": None,
                     "stopped_run": None,
+                    "opened_pull_request": None,
+                    "preflighted_head": None,
                 },
                 {
                     "task": "S6",
@@ -857,6 +859,8 @@ class BrigadeTickDryRunOnAWaveOfSomeTasksOfTheMilestoneTest(WaveTickTestCase):
                     "worktree": None,
                     "rate_limit": None,
                     "stopped_run": None,
+                    "opened_pull_request": None,
+                    "preflighted_head": None,
                 },
             ],
         )
