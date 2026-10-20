@@ -2536,9 +2536,6 @@ DECISION ThePlanOfAWaveIsWrittenInADetachedWorktreeAndItsBranchCreatedAfterTheCo
 		+ "names plan/<request> on that commit, then the branch is pushed when PROJECT.FORGE is"
 		+ "github and a pull request to PROJECT.MAIN opened on it, merged by brigade under"
 		+ "POLICY.PLAN_REVIEW auto and by the user under ask"
-	DESC "until @TASK.B187 the branch created is the integration branch of the wave,"
-		+ "integration/<NAME>-<slug>, and no pull request opens"
-		REF @TASK.B187
 	DESC "binds @TASK.B139 and @TASK.B187"
 		REF @TASK.B139
 		REF @TASK.B187
@@ -2553,6 +2550,8 @@ DECISION ThePlanOfAWaveIsWrittenInADetachedWorktreeAndItsBranchCreatedAfterTheCo
 	SOURCE "the user's ruling of 2026-10-17 in the refinement of B164 and B165: « son plan est"
 		+ "mergé dans MAIN par une PR plan/<request> avant toute vague », « Oui, ce modèle"
 		+ "(Recommended) »"
+	SOURCE "pull request #173 of the brigade repository, delivering @TASK.B187"
+		REF @TASK.B187
 
 DECISION EachEntityOfAPlanGoesToTheCorpusFileAlreadyHoldingItsType
 	TITLE "each entity of a plan goes to the first file, in path order, of its type lying under the"
@@ -3123,6 +3122,8 @@ DECISION EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
 	SOURCE "the user's rulings of 2026-10-17 in the refinement of B166 with B187 and B168 to B171:"
 		+ "« Arrête les runs vivants (Recommended) »; « Parquer « blocked » (Recommended) »; «"
 		+ "Événement wave.pr_opened »"
+	SOURCE "pull request #173 of the brigade repository, delivering @TASK.B187"
+		REF @TASK.B187
 
 DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 	TITLE "a MILESTONE is a goal grouping of the project corpus, a REQUEST the user's text and its"
@@ -3203,6 +3204,8 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "politique WAVE_START vaut auto (Recommended) »"
 	SOURCE "the user's rulings of 2026-10-17 in the refinement of B166 with B187 and B168 to B171:"
 		+ "« wave.started d'abord (Recommended) »; « Non bornée (Recommended) »"
+	SOURCE "pull request #173 of the brigade repository, delivering @TASK.B187"
+		REF @TASK.B187
 
 DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 	TITLE "the tick runs an active study that is due and not parked, and counts against study_runs"
