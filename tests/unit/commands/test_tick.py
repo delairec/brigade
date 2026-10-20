@@ -365,6 +365,22 @@ TASK_PR_OPENED = {
     "pr": 42,
     "login": "tidepool-bot",
 }
+BLOCKING_QUESTION_OUTPUTS = {
+    ("awawa", "refs"): json.dumps(
+        {"incoming": [{"from": {"type": "OPEN_QUESTION", "name": "Undecided", "status": "open"}, "field_path": ["BLOCKS"]}]}
+    ),
+    ("awawa", "show", "OPEN_QUESTION"): json.dumps(
+        {
+            "fields": [
+                {
+                    "name": "FIELD",
+                    "atoms": ["BLOCKS", "reference"],
+                    "fields": [{"name": "CONVERSE", "atoms": ["BLOCKED_BY"], "fields": []}],
+                }
+            ]
+        }
+    ),
+}
 NO_PULL_REQUEST = None
 OPEN_PULL_REQUEST = {
     "number": 42,
@@ -661,6 +677,42 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 "state": "verified",
             },
         )
+
+    def test_should_park_a_queued_task_a_live_blocker_cites(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        runtime = create_runtime(
+            self.root,
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+
+        first_event_of_the_tick = 2
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_event(first_event_of_the_tick),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.parked",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "reason": "blocked",
+                "blockers": ["OPEN_QUESTION.Undecided"],
+            },
+        )
+
 
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange

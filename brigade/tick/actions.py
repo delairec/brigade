@@ -23,6 +23,14 @@ class RecordTaskState:
 
 
 @dataclass(frozen=True)
+class ParkTask:
+    wave: str
+    task: str
+    reason: str
+    blockers: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class RunPreflight:
     project: str
     wave: str

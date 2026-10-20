@@ -42,6 +42,16 @@ T7_RUN_FINISHED = {
     "task": "T7",
 }
 T7_PR_OPEN = {**T7_RUNNING, "ts": "2026-10-01T22:00:00Z", "state": "pr_open"}
+T8_QUEUED = {**T7_RUNNING, "task": "T8", "state": "queued"}
+T8_PARKED = {
+    "schema_version": 1,
+    "ts": "2026-10-01T10:00:00Z",
+    "event": "task.parked",
+    "wave": "tidepool_w16",
+    "task": "T8",
+    "reason": "blocked",
+    "blockers": ["OPEN_QUESTION.Undecided"],
+}
 
 
 class WaveShowTextTest(unittest.TestCase):
@@ -122,6 +132,16 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 ],
             },
         )
+
+    def test_should_show_a_task_its_blockers_parked_as_parked(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED])
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), create_runtime(self.root))
+
+        # Assert
+        self.assertEqual(document["tasks"][1], {"task": "T8", "state": "parked", "pull_request": None, "run": None})
 
     def test_should_refuse_a_wave_no_wave_started_names(self):
         # Arrange

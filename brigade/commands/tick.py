@@ -11,6 +11,7 @@ from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_closed import WaveClosed
@@ -43,6 +44,7 @@ from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    ParkTask,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -214,6 +216,11 @@ def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: Cut
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
+        ParkTask: lambda action: append_event(
+            runtime.paths,
+            runtime.now,
+            TaskParked(wave=action.wave, task=action.task, reason=action.reason, blockers=action.blockers),
+        ),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),

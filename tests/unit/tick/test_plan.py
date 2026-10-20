@@ -12,6 +12,7 @@ from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    ParkTask,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -60,9 +61,7 @@ LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task=
 LAUNCH_S9 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S9")
 LAUNCH_S10 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S10")
 REPORT_SHOP_W1 = ReportWave(wave="shop_w1")
-PARK_BLOCKED_S3 = RecordTaskState(
-    wave="shop_w1", task="S3", state="parked", reason="blocked by @OPEN_QUESTION.Undecided"
-)
+PARK_BLOCKED_S3 = ParkTask(wave="shop_w1", task="S3", reason="blocked", blockers=("OPEN_QUESTION.Undecided",))
 
 
 class PlanTest(unittest.TestCase):
@@ -819,32 +818,24 @@ class PlanBlockedTaskParkingTest(unittest.TestCase):
                 "with no state yet",
                 BLOCKED,
                 {},
-                (
-                    RecordTaskState(
-                        wave="shop_w1", task="S3", state="parked", reason="blocked by @OPEN_QUESTION.Undecided"
-                    ),
-                ),
+                (PARK_BLOCKED_S3,),
             ),
             (
                 "queued",
                 BLOCKED,
                 {"S3": "queued"},
-                (
-                    RecordTaskState(
-                        wave="shop_w1", task="S3", state="parked", reason="blocked by @OPEN_QUESTION.Undecided"
-                    ),
-                ),
+                (PARK_BLOCKED_S3,),
             ),
             (
                 "cited by two blockers",
                 BLOCKED_TWICE,
                 {},
                 (
-                    RecordTaskState(
+                    ParkTask(
                         wave="shop_w1",
                         task="S3",
-                        state="parked",
-                        reason="blocked by @OPEN_QUESTION.Undecided, @OPEN_QUESTION.Unsettled",
+                        reason="blocked",
+                        blockers=("OPEN_QUESTION.Undecided", "OPEN_QUESTION.Unsettled"),
                     ),
                 ),
             ),

@@ -12,6 +12,7 @@ from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
@@ -35,6 +36,7 @@ def append_event(
     | PlanLintFailed
     | WaveStarted
     | TaskState
+    | TaskParked
     | OrderStarted
     | StepDone
     | StepFailed

@@ -346,15 +346,6 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "ts": ANY,
                     "event": "task.state",
                     "wave": "shop_w1",
-                    "task": "S5",
-                    "state": "parked",
-                    "reason": "blocked by @OPEN_QUESTION.Undecided",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": ANY,
-                    "event": "task.state",
-                    "wave": "shop_w1",
                     "task": "S3",
                     "state": "running",
                 },
@@ -498,15 +489,6 @@ class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
                     "wave": "cafe_w1",
                     "task": "S6",
                     "state": "running",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": ANY,
-                    "event": "task.state",
-                    "wave": "shop_w1",
-                    "task": "S5",
-                    "state": "parked",
-                    "reason": "blocked by @OPEN_QUESTION.Undecided",
                 },
                 {
                     "schema_version": 1,
@@ -786,8 +768,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                     {
                         "wave": "shop_w1",
                         "task": "S5",
-                        "state": "parked",
-                        "reason": "blocked by @OPEN_QUESTION.Undecided",
+                        "reason": "blocked",
+                        "blockers": ["OPEN_QUESTION.Undecided"],
                     },
                     {
                         "project": "shop",
@@ -1549,15 +1531,6 @@ class BrigadeTickOnceFollowingThePullRequestOfARunningTaskTest(FollowingTickTest
                     "ts": ANY,
                     "event": "task.state",
                     "wave": "shop_w1",
-                    "task": "S5",
-                    "state": "parked",
-                    "reason": "blocked by @OPEN_QUESTION.Undecided",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": ANY,
-                    "event": "task.state",
-                    "wave": "shop_w1",
                     "task": "S6",
                     "state": "running",
                 },
@@ -1723,7 +1696,7 @@ class BrigadeTickDryRunFollowingAMergedTaskTest(FollowingTickTestCase):
             json.loads(completed.stdout)["plan"],
             [
                 {"project": "shop", "task": "S3", "worktree": str(self.worktree)},
-                {"wave": "shop_w1", "task": "S5", "state": "parked", "reason": "blocked by @OPEN_QUESTION.Undecided"},
+                {"wave": "shop_w1", "task": "S5", "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]},
                 {
                     "project": "shop",
                     "wave": "shop_w1",
@@ -1797,7 +1770,7 @@ class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTick
             json.loads(completed.stdout)["plan"],
             [
                 {"wave": "shop_w1", "task": "S3", "state": "pr_open", "reason": None},
-                {"wave": "shop_w1", "task": "S5", "state": "parked", "reason": "blocked by @OPEN_QUESTION.Undecided"},
+                {"wave": "shop_w1", "task": "S5", "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]},
                 {
                     "project": "shop",
                     "wave": "shop_w1",

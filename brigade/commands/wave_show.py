@@ -3,10 +3,10 @@ from brigade.ledger.format_instant import format_instant
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
-from brigade.ledger.task_state import TaskState
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
 from brigade.waves.find_last_task_event import find_last_task_event
+from brigade.waves.read_task_states import read_task_states
 from brigade.waves.require_wave_summary import require_wave_summary
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -36,13 +36,12 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def _describe_task(events: tuple, wave: str, task: str) -> dict:
-    state = find_last_task_event(events, TaskState, wave, task)
+def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) -> dict:
     opened = find_last_task_event(events, TaskPrOpened, wave, task)
     finished = find_last_task_event(events, RunFinished, wave, task)
     return {
         "task": task,
-        "state": None if state is None else state.state,
+        "state": states.get(task),
         "pull_request": None if opened is None else opened.pr,
         "run": None if finished is None else finished.run,
     }
@@ -53,6 +52,7 @@ def wave_show(request, runtime: Runtime) -> dict:
     summary = require_wave_summary(entries, request.wave)
     events = tuple(entry.event for entry in entries)
     started = summary.started
+    states = read_task_states(runtime.paths.state_root, started.wave)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "wave": started.wave,
@@ -60,7 +60,7 @@ def wave_show(request, runtime: Runtime) -> dict:
         "branch": started.branch,
         "started_at": format_instant(summary.started_at),
         "last_event": summary.last_event,
-        "tasks": [_describe_task(events, started.wave, task) for task in started.tasks],
+        "tasks": [_describe_task(events, states, started.wave, task) for task in started.tasks],
     }
 
 

@@ -10,6 +10,7 @@ from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    ParkTask,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -44,7 +45,7 @@ PAUSED_ON_QUOTA_STATE = "paused:quota"
 QUOTA_REASON = "quota"
 FORGE_ACCOUNT_REASON = "forge_account"
 AUTOMATIC_WAVE_START = "auto"
-BLOCKED_REASON_PREFIX = "blocked by "
+BLOCKED_REASON = "blocked"
 
 
 def plan(snapshot: Snapshot) -> tuple:
@@ -219,13 +220,9 @@ def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFa
     )
 
 
-def _describe_blockers(task: TaskFacts) -> str:
-    return BLOCKED_REASON_PREFIX + ", ".join(f"@{blocker}" for blocker in task.blocked_by)
-
-
 def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
     return tuple(
-        RecordTaskState(wave=wave.wave, task=task.name, state=PARKED_STATE, reason=_describe_blockers(task))
+        ParkTask(wave=wave.wave, task=task.name, reason=BLOCKED_REASON, blockers=task.blocked_by)
         for wave in snapshot.waves
         for task in wave.tasks
         if wave.states.get(task.name, WAITING_STATE) == WAITING_STATE and task.blocked_by
