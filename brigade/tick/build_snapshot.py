@@ -14,6 +14,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
+from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
@@ -60,6 +61,7 @@ PATH_FIELD = "PATH"
 RUNNING_STATE = "running"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
 RATE_LIMIT = "rate_limit"
+REVIEW_SLOT = "review"
 FORGE_ACCOUNT_REASON = "forge_account"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
@@ -73,6 +75,12 @@ class RateLimit:
 
 
 @dataclass(frozen=True)
+class RecordedVerdict:
+    head: str
+    verdict: str
+
+
+@dataclass(frozen=True)
 class TaskFacts:
     name: str
     after: tuple[str, ...] = ()
@@ -83,6 +91,8 @@ class TaskFacts:
     stopped_run: str | None = None
     opened_pull_request: int | None = None
     preflighted_head: str | None = None
+    verdict: RecordedVerdict | None = None
+    reviewed_head: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -95,6 +105,8 @@ class TaskFacts:
             "stopped_run": self.stopped_run,
             "opened_pull_request": self.opened_pull_request,
             "preflighted_head": self.preflighted_head,
+            "verdict": None if self.verdict is None else {"head": self.verdict.head, "verdict": self.verdict.verdict},
+            "reviewed_head": self.reviewed_head,
         }
 
 
@@ -131,6 +143,8 @@ class LiveRun:
     run: str
     slot: str
     worktree: str
+    wave: str | None = None
+    task: str | None = None
 
 
 @dataclass(frozen=True)
@@ -219,6 +233,8 @@ class FollowedWave:
     states: dict
     opened_pull_requests: dict
     preflighted_heads: dict
+    verdicts: dict
+    reviewed_heads: dict
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
 
 
@@ -234,6 +250,8 @@ def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
         worktree=str(worktree) if standing else None,
         opened_pull_request=followed.opened_pull_requests.get(task.name),
         preflighted_head=followed.preflighted_heads.get(task.name),
+        verdict=followed.verdicts.get(task.name),
+        reviewed_head=followed.reviewed_heads.get(task.name),
     )
 
 
@@ -310,6 +328,27 @@ def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) 
     return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
 
 
+def _is_review_ended_within_quota(event, wave: str) -> bool:
+    return (
+        isinstance(event, RunFinished)
+        and event.slot == REVIEW_SLOT
+        and event.wave == wave
+        and event.error_class != RATE_LIMIT
+    )
+
+
+def _read_reviewed_heads(events: tuple, wave: str) -> dict:
+    preflighted = {}
+    reviewed = {}
+    for event in events:
+        if isinstance(event, TaskPreflighted) and event.wave == wave:
+            preflighted[event.task] = event.head
+            reviewed.pop(event.task, None)
+        if _is_review_ended_within_quota(event, wave):
+            reviewed[event.task] = preflighted.get(event.task)
+    return reviewed
+
+
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, wave: str) -> WaveFacts:
     tree = prepare_wave_tree(runtime, reading.configuration, request)
     tasks = read_milestone_tasks(runtime.run_process, tree.root, request["milestone"])
@@ -327,6 +366,12 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, request: dict, w
             for event in reading.events
             if isinstance(event, TaskPreflighted) and event.wave == wave
         },
+        verdicts={
+            event.task: RecordedVerdict(head=event.head, verdict=event.verdict)
+            for event in reading.events
+            if isinstance(event, TaskVerdict) and event.wave == wave
+        },
+        reviewed_heads=_read_reviewed_heads(reading.events, wave),
         read_pull_request=reading.read_pull_request,
     )
     return WaveFacts(
@@ -354,7 +399,7 @@ def _read_project_facts(name: str, projects: tuple[Entity, ...], runs: list[dict
         slots=PROJECT_SLOTS if slots is None else int(slots),
         awaits_check_runs=read_project_field(project, CHECK_RUNS_FIELD) != NO_CHECK_RUNS,
         live_runs=tuple(
-            LiveRun(run=run["run"], slot=run["slot"], worktree=run["worktree"])
+            LiveRun(run=run["run"], slot=run["slot"], worktree=run["worktree"], wave=run["wave"], task=run["task"])
             for run in runs
             if run["project"] == name and run["state"] == LIVE_RUN_STATE
         ),

@@ -39,6 +39,15 @@ class RunPreflight:
 
 
 @dataclass(frozen=True)
+class LaunchVerification:
+    project: str
+    wave: str
+    task: str
+    pr: int
+    worktree: str
+
+
+@dataclass(frozen=True)
 class RemoveTaskWorktree:
     project: str
     task: str

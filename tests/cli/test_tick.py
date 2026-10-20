@@ -747,6 +747,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "stopped_run": None,
                                     "opened_pull_request": None,
                                     "preflighted_head": None,
+                                    "verdict": None,
+                                    "reviewed_head": None,
                                 },
                                 {
                                     "task": "S4",
@@ -758,6 +760,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "stopped_run": None,
                                     "opened_pull_request": None,
                                     "preflighted_head": None,
+                                    "verdict": None,
+                                    "reviewed_head": None,
                                 },
                                 {
                                     "task": "S5",
@@ -769,6 +773,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "stopped_run": None,
                                     "opened_pull_request": None,
                                     "preflighted_head": None,
+                                    "verdict": None,
+                                    "reviewed_head": None,
                                 },
                                 {
                                     "task": "S6",
@@ -780,6 +786,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "stopped_run": None,
                                     "opened_pull_request": None,
                                     "preflighted_head": None,
+                                    "verdict": None,
+                                    "reviewed_head": None,
                                 },
                             ],
                             "states": {"S3": "queued"},
@@ -895,6 +903,9 @@ class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
 
 
 class LiveBuildRunTickTestCase(LaunchingTickTestCase):
+    def read_review_run_record(self) -> dict:
+        return next(record for record in self.read_run_records() if record["slot"] == "review")
+
     def tearDown(self):
         for record in self.read_run_records():
             self.wait_for_file(self.state / "runs" / record["run"] / "pid")
@@ -1550,6 +1561,8 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                 "stopped_run": None,
                 "opened_pull_request": None,
                 "preflighted_head": None,
+                "verdict": None,
+                "reviewed_head": None,
             },
         )
 
@@ -1928,7 +1941,7 @@ PR_OPEN_LINE = (
 )
 
 
-class TickPreflightTestCase(VerifyPreflightTestCase):
+class TickPreflightTestCase(VerifyPreflightTestCase, FileWaitingTestCase):
     def setUp(self):
         super().setUp()
         install_executable(
@@ -1973,6 +1986,17 @@ class TickPreflightTestCase(VerifyPreflightTestCase):
     def read_last_state_of_s3(self) -> str:
         return [event for event in self.read_events("task.state") if event["task"] == "S3"][-1]["state"]
 
+    def read_run_records(self) -> list:
+        return [json.loads(path.read_text()) for path in sorted((self.state / "runs").glob("*/run.json"))]
+
+    def read_review_run_record(self) -> dict:
+        return next(record for record in self.read_run_records() if record["slot"] == "review")
+
+    def tearDown(self):
+        for record in self.read_run_records():
+            self.wait_for_file(self.state / "runs" / record["run"] / "result.json")
+        super().tearDown()
+
 
 class BrigadeTickOnASoundPullRequestTest(TickPreflightTestCase):
     def test_should_record_the_findings_of_the_preflight_in_the_ledger(self):
@@ -2016,6 +2040,35 @@ class BrigadeTickOnASoundPullRequestTest(TickPreflightTestCase):
 
         # Assert
         self.assertEqual(self.read_last_state_of_s3(), "verifying")
+
+    def test_should_launch_the_verification_of_the_pull_request_on_the_review_slot(self):
+        # Act
+        self.run_tick()
+
+        # Assert
+        self.assertEqual(
+            self.read_review_run_record(),
+            {
+                "schema_version": 1,
+                "run": ANY,
+                "procedure": "verify-pr",
+                "procedure_path": str(REPOSITORY_ROOT / "brigade" / "runs" / "data" / "procedures" / "verify-pr.md"),
+                "slot": "review",
+                "role": "reviewer",
+                "role_source": "built-in",
+                "client": "fake",
+                "project": "shop",
+                "cwd": str(self.worktree),
+                "worktree": ANY,
+                "capabilities": ["read", "shell"],
+                "budget": 40,
+                "wall_limit_s": 1500,
+                "arguments": {"pr": "42", "task": "@TASK.S3"},
+                "wave": "shop_w1",
+                "task": "S3",
+                "brief": None,
+            },
+        )
 
 
 class BrigadeTickOnAPullRequestOfAProjectWithoutCheckRunsTest(TickPreflightTestCase):

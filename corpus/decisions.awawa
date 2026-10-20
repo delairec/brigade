@@ -3354,3 +3354,24 @@ DECISION ACommandModuleIsNamedAfterItsCommandLineSoTheLineImportsItAlone
 	SOURCE "pull request #160 of the brigade repository, delivering @TASK.B191, which left the"
 		+ "design to its implementer"
 		REF @TASK.B191
+
+DECISION AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead
+	TITLE "the tick starts no second verification of a head whose review run ended without a"
+		+ "verdict, unless that run ended on a rate limit"
+	STATUS active
+	DESC "a task in verifying gets a run of the slot review while no task.verdict is recorded at"
+		+ "the head of its pull request, no live run holds its worktree, and no run.finished of the"
+		+ "slot review for the task, other than with the error_class rate_limit, follows its last"
+		+ "task.preflighted"
+	DESC "binds @TASK.B16"
+		REF @TASK.B16
+	REJECTED "relaunching while no verdict is recorded at the head: a run that ends without a"
+		+ "verdict, on a broken procedure or a refused verdict, would start again at every tick and"
+		+ "spend a review run every five minutes, unattended"
+	REJECTED "a ledger event of its own written at the launch: run.finished already carries the"
+		+ "slot, the wave and the task, and the live run already tells a verification in progress"
+	RATIONALE "a new push is preflighted again and so opens a new verification; a rate-limited run"
+		+ "is relaunched once the quota pause ends, as the build runs are resumed"
+	SOURCE "the run of @TASK.B16 of 2026-10-20, whose SPEC starts a fresh review run on a task in"
+		+ "verifying and leaves open what follows a run that records no verdict"
+		REF @TASK.B16

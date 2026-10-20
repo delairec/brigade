@@ -152,6 +152,25 @@ or, with `--json`, a JSON document; it exits 1 when a check fails.
 | `body`            | the body keeps a placeholder of its template                                                    |
 | `size`            | never: it reports the files, lines, packages and layers the diff touches                        |
 
+## Verification
+
+```
+brigade verify context <pr>
+brigade verify verdict <pr> --file <verdict.json>
+```
+
+Both run from the worktree of the task whose pull request they judge. `verify context` prints in one read the task
+with its `awawa context` and its closure, the diff of the pull request against its base, the findings of the
+preflight, the rules of the path triggers of the files the diff touches when `config.toml` names an instructions
+corpus, and the grades of a finding: `critical`, `high`, `medium` and `low`.
+
+`verify verdict` reads `{"verdict": "pass" | "changes", "findings": [{"grade", "file", "line", "broken"}]}`, where
+`broken` names the `SPEC` or the rule the finding breaks; it refuses a document of another shape, a grade outside the
+four, and `changes` without a finding, exit 1 naming what to correct. It records the ledger event `task.verdict` with
+the head of the pull request. Under `REVIEW approval` of the project's `POLICY` it also posts the verdict as a GitHub
+review, approving or requesting changes, as the login of the key `review` of `[forge_accounts]`, and the event
+carries that login; under `REVIEW verdict`, the default, the event alone is the verdict and its login is null.
+
 ## Studies
 
 A study is a `STUDY` entity of `studies.awawa` in the operational corpus: deterministic collectors, then at most one
@@ -224,7 +243,12 @@ read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `
 worktree is removed once its pull request is merged or closed, never while a run holds it. On the pull request a task
 in `pr_open` opened, once every check run completed, at least one unless the project declares `CHECK_RUNS none`, and
 for each head once, it runs `brigade verify preflight`,
-records its findings in `task.preflighted` and moves the task to `verifying` when no check fails. A running REQUEST that no
+records its findings in `task.preflighted` and moves the task to `verifying` when no check fails. On a task in
+`verifying` whose pull request is open, it starts a fresh detached run of the slot `review` in the task's worktree, of
+`verify-pr`, the procedure brigade ships, or of the one the key `review` of `[procedures]` names, with `pr` and `task`
+as its arguments, unless a run holds the worktree or a review run of the task already ended at that head other than on
+a rate limit; once a `task.verdict` is recorded at the head of the pull request, it moves the task to `verified` on
+`pass` and to `changes_requested` on `changes`. A running REQUEST that no
 `wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
 the waves of the others.
 
