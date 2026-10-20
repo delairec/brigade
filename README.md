@@ -248,7 +248,9 @@ records its findings in `task.preflighted` and moves the task to `verifying` whe
 `verify-pr`, the procedure brigade ships, or of the one the key `review` of `[procedures]` names, with `pr` and `task`
 as its arguments, unless a run holds the worktree or a review run of the task already ended at that head other than on
 a rate limit; once a `task.verdict` is recorded at the head of the pull request, it moves the task to `verified` on
-`pass` and to `changes_requested` on `changes`. A running REQUEST that no
+`pass` and to `changes_requested` on `changes`. A task in `verifying` whose pull request head is no longer the head of
+its last `task.preflighted` moves back to `pr_open`, where the preflight of the new head opens the next verification.
+A running REQUEST that no
 `wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
 the waves of the others.
 

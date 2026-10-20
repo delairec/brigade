@@ -373,6 +373,17 @@ OPEN_PULL_REQUEST = {
     "head": "8885daa",
 }
 MERGED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "state": "merged"}
+TASK_PREFLIGHTED_AT_THE_HEAD = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:30:00Z",
+    "event": "task.preflighted",
+    "project": "tidepool",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "pr": 42,
+    "head": "8885daa",
+    "checks": [],
+}
 NO_DETAILS_ASKED = None
 PULL_REQUEST_DETAILS = {
     "head": "task/M4/T7",
@@ -576,7 +587,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_launch_the_verification_of_a_task_in_verifying(self):
         # Arrange
         self.worktree.mkdir(parents=True)
-        write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED, _record_task_state("verifying")])
+        write_ledger(
+            self.root, [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("verifying")]
+        )
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
@@ -622,7 +635,10 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             "findings": [],
             "login": None,
         }
-        write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED, _record_task_state("verifying"), verdict])
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("verifying"), verdict],
+        )
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act

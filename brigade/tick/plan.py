@@ -147,9 +147,13 @@ def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | No
         return RecordTaskState(wave=wave.wave, task=task.name, state=MERGED_STATE, reason=None)
     if task.pull_request.state == CLOSED_PULL_REQUEST:
         return RecordTaskState(wave=wave.wave, task=task.name, state=PARKED_STATE, reason=CLOSED_REASON)
-    if state == RUNNING_STATE:
+    if state == RUNNING_STATE or _is_pushed_since_preflight(state, task):
         return RecordTaskState(wave=wave.wave, task=task.name, state=PR_OPEN_STATE, reason=None)
     return None
+
+
+def _is_pushed_since_preflight(state: str, task: TaskFacts) -> bool:
+    return state == VERIFYING_STATE and task.preflighted_head != task.pull_request.head
 
 
 def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
@@ -187,7 +191,12 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
 def _decide_verification(
     wave: WaveFacts, task: TaskFacts, held: set, live_tasks: set
 ) -> RecordTaskState | LaunchVerification | None:
-    if wave.states.get(task.name) != VERIFYING_STATE or task.pull_request.state != OPEN_PULL_REQUEST:
+    state = wave.states.get(task.name)
+    if (
+        state != VERIFYING_STATE
+        or task.pull_request.state != OPEN_PULL_REQUEST
+        or _is_pushed_since_preflight(state, task)
+    ):
         return None
     if task.verdict is not None and task.verdict.head == task.pull_request.head:
         return RecordTaskState(

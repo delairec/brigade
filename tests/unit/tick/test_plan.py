@@ -237,7 +237,7 @@ class PlanPreflightTest(unittest.TestCase):
             ("a head pushed", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_BEFORE_A_PUSH, SHOP, (PREFLIGHT_S3,)),
             ("a head preflighted", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_AT_THE_HEAD, SHOP, ()),
             ("another pull request", "pr_open", OPEN, OPENED_BY_AN_EARLIER_RUN, NOT_PREFLIGHTED, SHOP, ()),
-            ("a task in review", "verifying", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
+            ("a task in review", "verifying", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_AT_THE_HEAD, SHOP, ()),
             ("a pull request merged", "pr_open", MERGED, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, (RECORD_MERGED,)),
         ]:
             with self.subTest(case=case):
@@ -287,14 +287,6 @@ class PlanVerificationTest(unittest.TestCase):
                 WORKTREE_S3,
                 (RECORD_CHANGES_REQUESTED,),
             ),
-            (
-                "passed before a push",
-                "verifying",
-                PASS_BEFORE_A_PUSH,
-                REVIEWED_BEFORE_A_PUSH,
-                WORKTREE_S3,
-                (VERIFY_S3,),
-            ),
             ("reviewed at the head without a verdict", "verifying", NO_VERDICT, REVIEWED_AT_THE_HEAD, WORKTREE_S3, ()),
             ("without its worktree", "verifying", NO_VERDICT, NOT_REVIEWED, NO_WORKTREE, ()),
             ("not yet preflighted", "pr_open", NO_VERDICT, NOT_REVIEWED, WORKTREE_S3, ()),
@@ -303,7 +295,12 @@ class PlanVerificationTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 task = TaskFacts(
-                    name="S3", pull_request=OPEN, worktree=worktree, verdict=verdict, reviewed_head=reviewed
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=worktree,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    verdict=verdict,
+                    reviewed_head=reviewed,
                 )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
@@ -312,6 +309,30 @@ class PlanVerificationTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+    def test_should_move_back_to_pr_open_a_task_in_verifying_whose_head_moved_since_its_preflight(self):
+        for case, verdict, reviewed in [
+            ("passed before a push", PASS_BEFORE_A_PUSH, REVIEWED_BEFORE_A_PUSH),
+            ("reviewed without a verdict before a push", NO_VERDICT, REVIEWED_BEFORE_A_PUSH),
+            ("pushed during its first review run", NO_VERDICT, NOT_REVIEWED),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=WORKTREE_S3,
+                    preflighted_head=PREFLIGHTED_BEFORE_A_PUSH,
+                    verdict=verdict,
+                    reviewed_head=reviewed,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (RECORD_PR_OPEN,))
 
     def test_should_start_no_verification_while_a_run_of_the_task_is_live(self):
         for case, live in [
@@ -333,7 +354,9 @@ class PlanVerificationTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 holding = ProjectFacts(name="shop", slots=4, live_runs=(live,))
-                task = TaskFacts(name="S3", pull_request=OPEN, worktree=WORKTREE_S3)
+                task = TaskFacts(
+                    name="S3", pull_request=OPEN, worktree=WORKTREE_S3, preflighted_head=PREFLIGHTED_AT_THE_HEAD
+                )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
 
                 # Act
@@ -359,7 +382,7 @@ class PlanVerificationTest(unittest.TestCase):
             run="20261006T110000Z-d4e5f6", slot="review", worktree=DISPOSABLE_WORKTREE, wave="shop_w1", task="S9"
         )
         holding = ProjectFacts(name="shop", slots=4, live_runs=(other,))
-        task = TaskFacts(name="S3", pull_request=OPEN, worktree=WORKTREE_S3)
+        task = TaskFacts(name="S3", pull_request=OPEN, worktree=WORKTREE_S3, preflighted_head=PREFLIGHTED_AT_THE_HEAD)
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
 
         # Act
