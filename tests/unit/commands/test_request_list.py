@@ -54,6 +54,16 @@ class RequestListTest(unittest.TestCase):
         # Assert
         self.assertEqual(document, {"schema_version": 1, "requests": [DEPOT_ROW]})
 
+    def test_should_list_no_row_of_a_corpus_holding_no_request(self):
+        # Arrange
+        runtime = create_runtime(self.root, run_process=create_corpus_double({"REQUEST": {}}))
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), runtime)
+
+        # Assert
+        self.assertEqual(document, {"schema_version": 1, "requests": []})
+
 
 class RequestListTextTest(unittest.TestCase):
     def test_should_print_a_table_with_a_dash_for_what_is_absent(self):
