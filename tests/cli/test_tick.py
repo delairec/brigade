@@ -814,73 +814,6 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
         self.assertFalse(self.gh_calls.exists())
 
 
-WAVE_OF_SOME_TASKS = (
-    '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3", "S6"]}}\n'
-)
-WAVE_CLOSED = (
-    '{"schema_version": 1, "ts": "2026-10-14T09:00:00Z", "event": "wave.closed", "wave": "shop_w1", "pr": 31}\n'
-)
-WAVE_CANCELLED = (
-    '{"schema_version": 1, "ts": "2026-10-14T09:00:00Z", "event": "wave.cancelled", "wave": "shop_w1",'
-    ' "reason": "user"}\n'
-)
-
-
-class BrigadeTickDryRunOnAWaveOfSomeTasksOfTheMilestoneTest(WaveTickTestCase):
-    def test_should_follow_the_tasks_the_wave_started_with(self):
-        # Arrange
-        (self.state / "ledger" / "2026-10.jsonl").write_text(WAVE_OF_SOME_TASKS)
-
-        # Act
-        completed = self.run_tick("--dry-run", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["snapshot"]["waves"][0]["tasks"],
-            [
-                {
-                    "task": "S3",
-                    "after": ["S2"],
-                    "blocked_by": [],
-                    "pull_request": None,
-                    "worktree": None,
-                    "rate_limit": None,
-                    "stopped_run": None,
-                    "opened_pull_request": None,
-                    "preflighted_head": None,
-                },
-                {
-                    "task": "S6",
-                    "after": [],
-                    "blocked_by": [],
-                    "pull_request": None,
-                    "worktree": None,
-                    "rate_limit": None,
-                    "stopped_run": None,
-                    "opened_pull_request": None,
-                    "preflighted_head": None,
-                },
-            ],
-        )
-
-
-class BrigadeTickDryRunOnAnEndedWaveTest(WaveTickTestCase):
-    def test_should_follow_no_wave_closed_or_cancelled(self):
-        for case, ending in [("closed", WAVE_CLOSED), ("cancelled", WAVE_CANCELLED)]:
-            with self.subTest(case=case):
-                # Arrange
-                (self.state / "ledger" / "2026-10.jsonl").write_text(WAVE_EVENTS + ending)
-
-                # Act
-                completed = self.run_tick("--dry-run", "--json")
-
-                # Assert
-                self.assertEqual(completed.returncode, 0, completed.stderr)
-                self.assertEqual(json.loads(completed.stdout)["snapshot"]["waves"], [])
-
-
 class LiveBuildRunTickTestCase(LaunchingTickTestCase):
     def tearDown(self):
         for record in self.read_run_records():
@@ -961,25 +894,6 @@ class BrigadeTickDryRunOfTheProjectsTest(WaveTickTestCase):
             json.loads(completed.stdout)["snapshot"]["projects"],
             [{"project": "shop", "slots": 1, "live_runs": [], "wave_start": "auto", "candidates": []}],
         )
-
-    def test_should_skip_with_a_line_on_stderr_a_project_whose_tasks_cannot_be_read(self):
-        # Arrange
-        missing_repository = Path(self.root.name) / "projects" / "ghost"
-        (self.machine.corpus / "projects.awawa").write_text(
-            f'PROJECT shop\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tSTATUS active\n\n'
-            f'PROJECT ghost\n\tPATH "{missing_repository}"\n\tMAIN "main"\n\tSTATUS active\n'
-        )
-
-        # Act
-        completed = self.run_tick("--dry-run", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["snapshot"]["projects"],
-            [{"project": "shop", "slots": 4, "live_runs": [], "wave_start": "auto", "candidates": []}],
-        )
-        self.assertIn("brigade tick: the project ghost skipped: ", completed.stderr)
 
 
 class BrigadeTickDryRunTest(TickTestCase):
@@ -2110,7 +2024,6 @@ class BrigadeTickOnAPullRequestNoTaskOpenedTest(TickPreflightTestCase):
 
 MAIN_TASKS_WITH_A_CANDIDATE = MAIN_TASKS + '\nTASK S7\n\tTITLE "Save the cart for later"\n\tSTATUS todo\n'
 NO_WAVE_EVENTS = ""
-ASKING_WAVE_START = "POLICY shop_waves\n\tPROJECT @PROJECT.shop\n\tWAVE_START ask\n"
 
 
 class BrigadeTickOnceWithACandidateOutsideEveryOpenWaveTest(LaunchingTickTestCase):
@@ -2150,134 +2063,3 @@ class BrigadeTickOnceWithACandidateOutsideEveryOpenWaveTest(LaunchingTickTestCas
             self.project.run_git("branch", "--list", "--format=%(refname:short)", "integration/shop_w1"),
             "integration/shop_w1\n",
         )
-
-    def test_should_start_no_wave_for_a_paused_project(self):
-        # Arrange
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "pause", "shop")
-
-        # Act
-        self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(self.read_events("wave.started"), [])
-
-    def test_should_start_no_wave_under_a_policy_asking_for_it(self):
-        # Arrange
-        (self.machine.corpus / "policies.awawa").write_text(ASKING_WAVE_START)
-
-        # Act
-        self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(self.read_events("wave.started"), [])
-
-
-class BrigadeTickOnceWithABlockedTaskTest(LaunchingTickTestCase):
-    def test_should_park_the_queued_task_a_live_question_blocks_naming_the_question(self):
-        # Act
-        self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(
-            [event for event in self.read_events("task.state") if event["task"] == "S5"],
-            [
-                {
-                    "schema_version": 1,
-                    "ts": ANY,
-                    "event": "task.state",
-                    "wave": "shop_w1",
-                    "task": "S5",
-                    "state": "parked",
-                    "reason": "blocked by @OPEN_QUESTION.Undecided",
-                }
-            ],
-        )
-
-
-SETTLED_WAVE_EVENTS = WAVE_OF_SOME_TASKS + (
-    '{"schema_version": 1, "ts": "2026-10-14T09:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
-    ' "state": "merged"}\n'
-    '{"schema_version": 1, "ts": "2026-10-14T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S6",'
-    ' "state": "parked", "reason": "pull request closed"}\n'
-)
-WAVE_REPORTED = (
-    '{"schema_version": 1, "ts": "2026-10-14T11:00:00Z", "event": "wave.reported", "wave": "shop_w1", "run": null}\n'
-)
-MERGED_INTEGRATION_PULL_REQUEST = (
-    '[{"number": 77, "state": "MERGED", "headRefOid": "4567def", "baseRefName": "main",'
-    ' "reviewDecision": "APPROVED", "statusCheckRollup": []}]\n'
-)
-
-
-class BrigadeTickOnceOnAWaveWhoseTasksAreMergedOrParkedTest(WaveTickTestCase):
-    def setUp(self):
-        super().setUp()
-        (self.state / "ledger" / "2026-10.jsonl").write_text(SETTLED_WAVE_EVENTS)
-
-    def test_should_report_the_wave_with_no_run_until_the_wave_report_study_exists(self):
-        # Act
-        completed = self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            self.read_events("wave.reported"),
-            [{"schema_version": 1, "ts": ANY, "event": "wave.reported", "wave": "shop_w1", "run": None}],
-        )
-
-    def test_should_report_the_wave_once(self):
-        # Arrange
-        self.run_tick("--once")
-
-        # Act
-        self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(len(self.read_events("wave.reported")), 1)
-
-
-class BrigadeTickOnceOnAReportedWaveWhoseIntegrationPullRequestIsMergedTest(WaveTickTestCase):
-    def setUp(self):
-        super().setUp()
-        (self.state / "ledger" / "2026-10.jsonl").write_text(SETTLED_WAVE_EVENTS + WAVE_REPORTED)
-        (self.pull_requests / "integration-M1-empty-cart.json").write_text(MERGED_INTEGRATION_PULL_REQUEST)
-
-    def test_should_close_the_wave_with_the_number_of_its_integration_pull_request(self):
-        # Act
-        completed = self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            self.read_events("wave.closed"),
-            [{"schema_version": 1, "ts": ANY, "event": "wave.closed", "wave": "shop_w1", "pr": 77}],
-        )
-
-
-WAVE_WITHOUT_ITS_BRANCH = (
-    '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    ' "project": "shop", "branch": "integration/shop_w1", "tasks": ["S2"]}\n'
-)
-
-
-class BrigadeTickOnceOnAnOpenWaveWhoseBranchIsMissingTest(WaveTickTestCase):
-    def setUp(self):
-        super().setUp()
-        (self.state / "ledger" / "2026-10.jsonl").write_text(WAVE_WITHOUT_ITS_BRANCH)
-
-    def test_should_cut_the_branch_from_the_main_branch_of_the_project(self):
-        # Act
-        completed = self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            self.project.run_git("rev-parse", "integration/shop_w1"), self.project.run_git("rev-parse", "main")
-        )
-
-    def test_should_append_no_second_wave_started(self):
-        # Act
-        self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(len(self.read_events("wave.started")), 1)

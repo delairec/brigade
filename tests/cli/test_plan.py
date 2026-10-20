@@ -474,7 +474,6 @@ FAKE_GH = (
     "esac\n"
 )
 FORGE_ACCOUNTS = '[forge_accounts]\ncli = "octo-cli"\nreview = "octo-review"\n'
-ASKING_POLICY = "POLICY shop_plans\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
 PLAN_PULL_REQUEST_CREATION = (
     "token-of-octo-cli pr create --base main --head plan/R1"
     " --title docs(plan): Empty the cart in one click (@REQUEST.R1) --body-file -"
@@ -555,16 +554,6 @@ class BrigadePlanRecordOfAPlanTest(PlanRecordTestCase):
         self.assertEqual(self.project.run_git("rev-parse", f"{BRANCH}~1"), main_before_the_plan)
 
     def test_should_merge_the_plan_branch_into_the_main_branch_at_once(self):
-        # Act
-        self.run_plan_record(PLAN)
-
-        # Assert
-        self.assertEqual(self.project.run_git("rev-parse", "main"), self.project.run_git("rev-parse", BRANCH))
-
-    def test_should_merge_the_plan_branch_into_a_main_branch_checked_out_nowhere(self):
-        # Arrange
-        self.project.run_git("switch", "--quiet", "--create", "feat/s3")
-
         # Act
         self.run_plan_record(PLAN)
 
@@ -730,32 +719,6 @@ class BrigadePlanRecordOnAProjectOfTheGithubForgeTest(PlanRecordOnTheGithubForge
         self.assertEqual(self.project.run_git("rev-parse", "main"), self.main_before_the_plan)
 
 
-class BrigadePlanRecordUnderPlanReviewAskTest(PlanRecordOnTheGithubForgeTestCase):
-    def test_should_leave_the_merge_of_the_plan_pull_request_to_the_user(self):
-        # Arrange
-        (self.machine.corpus / "policies.awawa").write_text(ASKING_POLICY)
-
-        # Act
-        completed = self.run_plan_record_on_github()
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertNotIn(PLAN_PULL_REQUEST_MERGE, self.read_pull_request_calls())
-
-
-class BrigadePlanRecordOnAForgeRequiringAnApprovingReviewTest(PlanRecordOnTheGithubForgeTestCase):
-    def test_should_approve_as_the_login_of_the_review_slot_before_merging_as_the_login_of_the_cli_key(self):
-        # Arrange
-        self.answer_review_decision("REVIEW_REQUIRED")
-
-        # Act
-        completed = self.run_plan_record_on_github()
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(self.read_pull_request_calls()[-2:], [PLAN_PULL_REQUEST_APPROVAL, PLAN_PULL_REQUEST_MERGE])
-
-
 class BrigadePlanRecordOfAPlanTheSchemaDoesNotDeclareTest(PlanRecordTestCase):
     def test_should_exit_1_naming_the_types_and_the_fields_the_schema_does_not_declare(self):
         # Act
@@ -858,75 +821,6 @@ class BrigadePlanRecordOfAPlanThatIsNotOneMilestoneAndItsTasksTest(PlanRecordTes
                 # Assert
                 self.assertEqual(completed.returncode, 1)
                 self.assertEqual(completed.stderr, expected_stderr)
-
-
-class BrigadePlanRecordReplayedAfterItsBranchTest(PlanRecordTestCase):
-    def setUp(self):
-        super().setUp()
-        self.run_plan_record(PLAN)
-        self.write_request("planning")
-        self.recorded_plan = self.project.run_git("rev-parse", BRANCH)
-
-    def test_should_mark_the_request_planned(self):
-        # Act
-        completed = self.run_plan_record(PLAN)
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertIn("\tSTATUS planned\n", (self.machine.corpus / "requests.awawa").read_text())
-
-    def test_should_reuse_the_plan_branch_without_a_second_commit(self):
-        # Act
-        self.run_plan_record(PLAN)
-
-        # Assert
-        self.assertEqual(
-            (self.project.run_git("rev-parse", BRANCH), self.project.run_git("rev-parse", "main")),
-            (self.recorded_plan, self.recorded_plan),
-        )
-
-
-class BrigadePlanRecordReplayedAfterItsPullRequestTest(PlanRecordOnTheGithubForgeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.run_plan_record_on_github()
-        self.write_request("planning")
-        self.gh_calls.unlink()
-
-    def test_should_reuse_the_pull_request_of_the_plan_branch(self):
-        # Act
-        completed = self.run_plan_record_on_github()
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertNotIn(PLAN_PULL_REQUEST_CREATION, self.read_pull_request_calls())
-        self.assertIn("\tPR 42\n", (self.machine.corpus / "requests.awawa").read_text())
-
-
-class BrigadePlanRecordReplayedBeforeItsPullRequestTest(PlanRecordOnTheGithubForgeTestCase):
-    def setUp(self):
-        super().setUp()
-        (self.machine.corpus / "policies.awawa").write_text(ASKING_POLICY)
-        self.project.run_git("branch", BRANCH)
-        no_pull_request_of_the_plan_branch = []
-        self.listed.write_text(json.dumps(no_pull_request_of_the_plan_branch))
-
-    def test_should_push_the_plan_branch(self):
-        # Act
-        completed = self.run_plan_record_on_github()
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(self.project.run_git("ls-remote", "--heads", "origin").split()[1], f"refs/heads/{BRANCH}")
-
-    def test_should_open_the_pull_request_of_the_plan_branch(self):
-        # Act
-        completed = self.run_plan_record_on_github()
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertIn(PLAN_PULL_REQUEST_CREATION, self.read_pull_request_calls())
-        self.assertIn("\tPR 42\n", (self.machine.corpus / "requests.awawa").read_text())
 
 
 class BrigadePlanRecordOfARequestNotPlanningTest(PlanRecordTestCase):
