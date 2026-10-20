@@ -7,7 +7,6 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.errors import CommandFailed, ToolFailure
-from brigade.git.find_branch import find_branch
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -39,6 +38,8 @@ from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.admit_candidates import admit_candidates
+from brigade.waves.cut_wave_branch import WaveBranchCut
+from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_project_tasks import read_project_tasks
@@ -263,6 +264,7 @@ class WaveReading:
     live_runs: frozenset[str]
     projects: tuple[Entity, ...]
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
+    read_environment: Callable[[str], dict]
 
 
 def _read_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts | None:
@@ -346,8 +348,10 @@ def _is_reported(reading: WaveReading, wave: str) -> bool:
 
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
     wave = started.wave
-    repository = Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD))
-    if not find_branch(runtime.run_process, repository, started.branch):
+    project = find_project(reading.projects, started.project)
+    repository = Path(read_project_field(project, PATH_FIELD))
+    cut = WaveBranchCut(project=project, branch=started.branch, read_environment=reading.read_environment)
+    if is_wave_branch_missing(runtime.run_process, cut):
         return WaveFacts(project=started.project, wave=wave, branch=started.branch, branch_missing=True)
     tree = prepare_wave_tree(runtime, reading.configuration, started)
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
@@ -441,6 +445,7 @@ def build_snapshot(
     runtime: Runtime,
     configuration: Configuration,
     read_pull_request: Callable[[str, str], PullRequestFacts | None],
+    read_environment: Callable[[str], dict],
 ) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
@@ -454,6 +459,7 @@ def build_snapshot(
         live_runs=frozenset(run["run"] for run in runs if run["state"] == LIVE_RUN_STATE),
         projects=registered,
         read_pull_request=read_pull_request,
+        read_environment=read_environment,
     )
     waves = tuple(
         facts

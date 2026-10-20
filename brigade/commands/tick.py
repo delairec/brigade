@@ -198,8 +198,12 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
         )
 
 
+def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
+    return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
+
+
 def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
-    read_environment = functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
+    read_environment = _cache_forge_environment(runtime, configuration)
     start = WaveStart(project=action.project, tasks=(), configuration=configuration, read_environment=read_environment)
     start_project_wave(runtime, start)
 
@@ -208,7 +212,7 @@ def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: Cut
     cut = WaveBranchCut(
         project=find_project(read_projects(runtime), action.project),
         branch=action.branch,
-        read_environment=lambda key: read_forge_environment(configuration, key, runtime),
+        read_environment=_cache_forge_environment(runtime, configuration),
     )
     cut_wave_branch(runtime.run_process, cut)
 
@@ -261,9 +265,10 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
         runtime.trail.locate(_locate_trail(runtime))
         configuration = read_optional_configuration(runtime.paths.configuration_file)
         read_pull_request = _follow_pull_requests(runtime, configuration)
+        read_environment = _cache_forge_environment(runtime, configuration)
         outcome = run_rounds(
             Rounds(
-                build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request),
+                build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
                 plan=plan,
                 apply=functools.partial(apply_actions, executors=_list_executors(runtime, configuration)),
                 cap=ROUND_CAP,
@@ -294,7 +299,12 @@ def _tick_once(runtime: Runtime) -> dict:
 
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
-    snapshot = build_snapshot(runtime, configuration, _follow_pull_requests(runtime, configuration))
+    snapshot = build_snapshot(
+        runtime,
+        configuration,
+        _follow_pull_requests(runtime, configuration),
+        _cache_forge_environment(runtime, configuration),
+    )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",

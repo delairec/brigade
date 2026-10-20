@@ -21,6 +21,7 @@ from brigade.tasks.read_task_after import read_task_after
 from brigade.tick.name_task_branch import WAVE_BRANCH_PREFIX
 from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
+from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_open_waves import list_open_waves
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.name_next_wave import name_next_wave
@@ -75,14 +76,10 @@ def _find_branch_anywhere(runtime: Runtime, start: WaveStart, project: Entity, b
 
 
 def _cut_missing_branches(runtime: Runtime, start: WaveStart, project: Entity) -> None:
-    repository = Path(read_project_field(project, "PATH"))
     for wave in list_open_waves(read_ledger(runtime.paths.state_root).entries, start.project):
-        if find_branch(runtime.run_process, repository, wave.branch):
-            continue
-        cut_wave_branch(
-            runtime.run_process,
-            WaveBranchCut(project=project, branch=wave.branch, read_environment=start.read_environment),
-        )
+        cut = WaveBranchCut(project=project, branch=wave.branch, read_environment=start.read_environment)
+        if is_wave_branch_missing(runtime.run_process, cut):
+            cut_wave_branch(runtime.run_process, cut)
 
 
 def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:

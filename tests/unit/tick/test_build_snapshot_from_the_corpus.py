@@ -38,6 +38,7 @@ from tests.unit.registry_answers import create_registry_answers
 
 WAVE_SHA = "abc123"
 MAIN_SHA = "def456"
+FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
 PULL_REQUEST = PullRequestFacts(number=7, state="open", checks=(), review=None, behind=False, head="4f2a9c1")
 
 
@@ -76,6 +77,10 @@ def answer_no_incoming_refs(root: Path, *tasks: str) -> dict:
     }
 
 
+def _read_forge_environment(slot: str) -> dict:
+    return FORGE_ENVIRONMENT
+
+
 class PullRequestReader:
     def __init__(self):
         self.branches = []
@@ -97,6 +102,8 @@ class BuildSnapshotTestCase(unittest.TestCase):
         self.main_tree = self.paths.cache_root / "refs" / "shop" / MAIN_SHA
         self.main_tree.mkdir(parents=True)
         self.reader = PullRequestReader()
+        self.shop_forge = "none"
+        self.remote_answers = {}
 
     def write_operational_corpus(self) -> None:
         self.paths.config_root.mkdir(parents=True)
@@ -112,7 +119,13 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 **create_registry_answers(
                     config_root,
                     {
-                        "shop": {"PATH": str(self.repository), "SLOTS": "2", "CHECK_RUNS": "none", "MAIN": "main"},
+                        "shop": {
+                            "PATH": str(self.repository),
+                            "SLOTS": "2",
+                            "CHECK_RUNS": "none",
+                            "MAIN": "main",
+                            "FORGE": self.shop_forge,
+                        },
                         "depot": {"PATH": str(self.root / "depot"), "STATUS": "paused"},
                         "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk"},
                     },
@@ -153,6 +166,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 ),
                 **answer_no_incoming_refs(self.main_tree, "B5"),
                 **answer_unreadable_tree("trunk"),
+                **self.remote_answers,
             }
         )
 
@@ -160,7 +174,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
         runtime = create_test_runtime(self.paths, run_process=self.create_runner())
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            snapshot = build_snapshot(runtime, Configuration(), self.reader)
+            snapshot = build_snapshot(runtime, Configuration(), self.reader, _read_forge_environment)
         return snapshot, stderr.getvalue()
 
 
@@ -251,6 +265,21 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(
             snapshot.waves[1],
             WaveFacts(project="shop", wave="w4", branch="integration/w4", branch_missing=True),
+        )
+
+    def test_should_mark_a_wave_whose_branch_the_remote_lacks_on_the_github_forge(self):
+        # Arrange
+        self.shop_forge = "github"
+        argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
+        self.remote_answers = {argv: ProcessAnswer(exit_code=2)}
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0],
+            WaveFacts(project="shop", wave="w1", branch="integration/w1", branch_missing=True),
         )
 
     def test_should_describe_each_readable_project_with_the_tasks_a_wave_may_take(self):

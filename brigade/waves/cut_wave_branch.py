@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.git.cut_branch import BranchCut, cut_branch
+from brigade.git.find_branch import find_branch
 from brigade.git.push_branch import BranchPush, push_branch
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
@@ -20,9 +21,9 @@ class WaveBranchCut:
 
 def cut_wave_branch(run_process: Callable[[ProcessRequest], ProcessRecord], cut: WaveBranchCut) -> None:
     repository = Path(read_project_field(cut.project, "PATH"))
-    cut_branch(
-        run_process, BranchCut(repository=repository, branch=cut.branch, start=read_project_field(cut.project, "MAIN"))
-    )
+    if not find_branch(run_process, repository, cut.branch):
+        start = read_project_field(cut.project, "MAIN")
+        cut_branch(run_process, BranchCut(repository=repository, branch=cut.branch, start=start))
     if is_on_github(cut.project):
         push = BranchPush(repository=repository, branch=cut.branch, environment=cut.read_environment(CLI_KEY))
         push_branch(run_process, push)
