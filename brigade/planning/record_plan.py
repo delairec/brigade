@@ -7,6 +7,7 @@ from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.locate_entity_block import locate_entity_block
 from brigade.errors import BrigadeError, CorpusLintFailed
 from brigade.git.add_detached_worktree import add_detached_worktree
+from brigade.git.check_ancestor import check_ancestor
 from brigade.git.create_branch import create_branch
 from brigade.git.fast_forward_branch import fast_forward_branch
 from brigade.git.find_branch import find_branch
@@ -22,10 +23,12 @@ from brigade.planning.locate_entity_files import locate_entity_files
 from brigade.planning.locate_request_file import locate_request_file
 from brigade.planning.mark_request_planned import ENTITY_TYPE as REQUEST_TYPE
 from brigade.planning.mark_request_planned import mark_request_planned
-from brigade.planning.publish_plan import PlanPublication, publish_plan
+from brigade.planning.plan_publication import PlanPublication
+from brigade.planning.publish_plan import publish_plan
 from brigade.planning.read_entity_sites import read_entity_sites
 from brigade.planning.read_plan import PlanEntity, read_plan
 from brigade.planning.read_planning_request import PlanningRequest
+from brigade.planning.review_plan_pull_request import review_plan_pull_request
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
@@ -37,6 +40,8 @@ GITHUB_FORGE = "github"
 WORKTREES_DIRECTORY = "plans"
 FILE_SUFFIX = "s.awawa"
 PLAN_BRANCH_PREFIX = "plan/"
+OPEN_PULL_REQUEST = "open"
+ANCESTOR = 0
 
 
 @dataclass(frozen=True)
@@ -171,31 +176,38 @@ def _merge_into_main(runtime: Runtime, recording: PlanRecording, branch: str) ->
         merge_fast_forward(runtime.run_process, holder, branch)
 
 
-def _deliver(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
-    forge_name = read_project_field(recording.project, "FORGE")
-    if forge_name != GITHUB_FORGE:
-        _merge_into_main(runtime, recording, branch)
-        return None
-    name = recording.request.name
-    return publish_plan(
-        runtime,
-        PlanPublication(
-            repository=Path(read_project_field(recording.project, "PATH")),
-            project=recording.project.name,
-            base=read_project_field(recording.project, "MAIN"),
-            branch=branch,
-            title=f"docs(plan): {read_project_field(milestone.entity, 'TITLE')} (@{REQUEST_TYPE}.{name})",
-            body=recording.request.text,
-            forge=recording.forge,
-            forge_name=forge_name,
-            read_environment=recording.read_environment,
-        ),
+def _describe_publication(recording: PlanRecording, milestone: PlanEntity, branch: str) -> PlanPublication:
+    return PlanPublication(
+        repository=Path(read_project_field(recording.project, "PATH")),
+        project=recording.project.name,
+        base=read_project_field(recording.project, "MAIN"),
+        branch=branch,
+        title=f"docs(plan): {read_project_field(milestone.entity, 'TITLE')} (@{REQUEST_TYPE}.{recording.request.name})",
+        body=recording.request.text,
+        forge=recording.forge,
+        forge_name=read_project_field(recording.project, "FORGE"),
+        read_environment=recording.read_environment,
     )
 
 
-def _find_delivery(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
+def _deliver(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
+    if read_project_field(recording.project, "FORGE") != GITHUB_FORGE:
+        _merge_into_main(runtime, recording, branch)
+        return None
+    return publish_plan(runtime, _describe_publication(recording, milestone, branch))
+
+
+def _holds_the_plan(runtime: Runtime, recording: PlanRecording, branch: str) -> bool:
+    root = Path(read_project_field(recording.project, "PATH"))
+    main = read_project_field(recording.project, "MAIN")
+    return check_ancestor(runtime.run_process, root, branch, main).exit_code == ANCESTOR
+
+
+def _complete_delivery(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
     forge_name = read_project_field(recording.project, "FORGE")
     if forge_name != GITHUB_FORGE:
+        if not _holds_the_plan(runtime, recording, branch):
+            _merge_into_main(runtime, recording, branch)
         return None
     query = PullRequestQuery(
         repository=read_project_field(recording.project, "PATH"),
@@ -205,6 +217,8 @@ def _find_delivery(runtime: Runtime, recording: PlanRecording, milestone: PlanEn
     pull_request = ask_pull_request(recording.forge, forge_name, query, runtime)
     if pull_request is None:
         return _deliver(runtime, recording, milestone, branch)
+    if pull_request.state == OPEN_PULL_REQUEST:
+        review_plan_pull_request(runtime, _describe_publication(recording, milestone, branch), pull_request.number)
     return pull_request.number
 
 
@@ -235,7 +249,7 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
     branch = f"{PLAN_BRANCH_PREFIX}{name}"
     if find_branch(runtime.run_process, root, branch):
         milestone = _check_plan(plan)
-        pr = _find_delivery(runtime, recording, milestone, branch)
+        pr = _complete_delivery(runtime, recording, milestone, branch)
     else:
         milestone = _write_plan(runtime, recording, plan, branch, run)
         pr = _deliver(runtime, recording, milestone, branch)
