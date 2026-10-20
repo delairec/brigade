@@ -11,7 +11,9 @@ INSTANT = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
 CLOSED_WAVE = WaveStarted(wave="shop_w1", project="shop", branch="integration/shop_w1", tasks=("S3",))
 CANCELLED_WAVE = WaveStarted(wave="shop_w2", project="shop", branch="integration/shop_w2", tasks=("S4",))
 OPEN_WAVE = WaveStarted(wave="shop_w3", project="shop", branch="integration/shop_w3", tasks=("S5",))
-OPEN_WAVE_OF_ANOTHER_PROJECT = WaveStarted(wave="depot_w1", project="depot", branch="integration/depot_w1", tasks=("D1",))
+OPEN_WAVE_OF_ANOTHER_PROJECT = WaveStarted(
+    wave="depot_w1", project="depot", branch="integration/depot_w1", tasks=("D1",)
+)
 
 
 class ListOpenWavesTest(unittest.TestCase):

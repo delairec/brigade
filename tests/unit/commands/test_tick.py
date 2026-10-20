@@ -367,7 +367,11 @@ TASK_PR_OPENED = {
 }
 BLOCKING_QUESTION_OUTPUTS = {
     ("awawa", "refs"): json.dumps(
-        {"incoming": [{"from": {"type": "OPEN_QUESTION", "name": "Undecided", "status": "open"}, "field_path": ["BLOCKS"]}]}
+        {
+            "incoming": [
+                {"from": {"type": "OPEN_QUESTION", "name": "Undecided", "status": "open"}, "field_path": ["BLOCKS"]}
+            ]
+        }
     ),
     ("awawa", "show", "OPEN_QUESTION"): json.dumps(
         {
