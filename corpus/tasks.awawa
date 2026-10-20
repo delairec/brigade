@@ -1350,7 +1350,7 @@ TASK B13
 		+ "@TASK.<task> run in the worktree through the awawa gateway, each under its command line"
 		+ "with its exit code and its stderr"
 		IMPL "brigade/tasks/assemble_task_context.py::def assemble_task_context("
-		IMPL "brigade/tasks/assemble_task_context.py::def _describe_command("
+		IMPL "brigade/tasks/describe_command.py::def describe_command("
 		IMPL "brigade/commands/task_context.py::def _render_commands("
 		IMPL "tests/cli/test_task.py::class"
 			+ "BrigadeTaskContextOfAWorktreeWhoseCorpusRepeatsAMilestoneTest(TaskContextTestCase):"
