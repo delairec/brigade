@@ -102,3 +102,14 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(document, {"schema_version": 1, "waves": expected_waves})
+
+    def test_should_list_no_wave_of_a_ledger_holding_none(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        runtime = create_runtime(root)
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), runtime)
+
+        # Assert
+        self.assertEqual(document, {"schema_version": 1, "waves": []})
