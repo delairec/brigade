@@ -903,9 +903,6 @@ class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
 
 
 class LiveBuildRunTickTestCase(LaunchingTickTestCase):
-    def read_review_run_record(self) -> dict:
-        return next(record for record in self.read_run_records() if record["slot"] == "review")
-
     def tearDown(self):
         for record in self.read_run_records():
             self.wait_for_file(self.state / "runs" / record["run"] / "pid")
