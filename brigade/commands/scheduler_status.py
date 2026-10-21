@@ -3,8 +3,6 @@ from datetime import datetime, timedelta
 from brigade.command import Command
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
-from brigade.ledger.task_parked import TaskParked
-from brigade.ledger.task_state import TaskState
 from brigade.runtime import Runtime
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
@@ -12,7 +10,7 @@ from brigade.system.read_optional_configuration import read_optional_configurati
 from brigade.system.scheduler_state import SchedulerState
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.read_heartbeat import read_heartbeat
-from brigade.waves.read_task_states import PARKED_STATE
+from brigade.waves.read_task_state import PARKED_STATE, TASK_EVENTS, read_task_state
 from brigade.waves.read_wave_pause import read_wave_pause
 from brigade.waves.summarize_waves import summarize_waves
 
@@ -21,7 +19,6 @@ SCHEDULERS_ASKED = ("systemd", "cron")
 NO_SCHEDULER = "none"
 NOT_INSTALLED = SchedulerState(installed=False, unit_files=(), cron_line=None, next_activation=None)
 STALE_EXIT_CODE = 1
-TASK_EVENTS = (TaskState, TaskParked)
 
 
 def _find_installed(runtime: Runtime):
@@ -56,12 +53,6 @@ def _list_paused_waves(events: tuple, waves: list[str]) -> list[dict]:
     return [{"wave": wave, **pause.to_document()} for wave, pause in pauses if pause is not None]
 
 
-def _read_task_state(event: TaskState | TaskParked) -> str:
-    if isinstance(event, TaskParked):
-        return PARKED_STATE
-    return event.state
-
-
 def _list_parked_tasks(events: tuple, waves: list[str]) -> list[dict]:
     last_events = {
         (event.wave, event.task): event for event in events if isinstance(event, TASK_EVENTS) and event.wave in waves
@@ -69,7 +60,7 @@ def _list_parked_tasks(events: tuple, waves: list[str]) -> list[dict]:
     return [
         {"task": task, "wave": wave, "reason": event.reason}
         for (wave, task), event in last_events.items()
-        if _read_task_state(event) == PARKED_STATE
+        if read_task_state(event) == PARKED_STATE
     ]
 
 
