@@ -1,0 +1,24 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "VERDICT",
+      "<tmp:0>"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [
+      "<tmp:0>"
+    ],
+    "inputs": {
+      "<tmp:0>/_schema.awawa": "SCHEMA FINDING\n\tDESC \"what a study found\"\n\tFIELD TITLE string\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 1,
+    "rewritten": {},
+    "stderr": "awawa show: @SCHEMA.VERDICT is not defined in the workspace\n",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

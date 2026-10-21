@@ -1,7 +1,9 @@
 import argparse
+from functools import partial
 
 from brigade.command import Argument, Command
 from brigade.commands.study_run import study_run
+from brigade.corpus.check_type_declared import check_type_declared
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
@@ -39,7 +41,7 @@ def study_new(request, runtime: Runtime) -> dict:
         find_project(read_projects(runtime), request.project)
     for line in request.collector:
         read_collector_line(line)
-    require_answer_type(runtime, runtime.paths.config_root, request.answer)
+    require_answer_type(partial(check_type_declared, runtime.run_process), runtime.paths.config_root, request.answer)
     refuse_inbox_output(request.output)
     if request.every is not None:
         read_schedule(request.every)

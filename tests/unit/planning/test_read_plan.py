@@ -3,29 +3,25 @@ from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.planning.read_plan import PlanEntity, read_plan
-from tests.unit.scripted_processes import ScriptedProcesses
+
+PLAN_FILE = Path("/srv/runs/r1/plan.awawa")
+DOCUMENTS = {
+    (PLAN_FILE, ("show", "/srv/runs/r1/plan.awawa")): {
+        "entities": [{"type": "MILESTONE", "name": "F1"}, {"type": "TASK", "name": "B20"}]
+    },
+    (PLAN_FILE, ("show", "@MILESTONE.F1")): {"fields": [{"name": "TITLE", "atoms": ['"the "', '"printer"']}]},
+    (PLAN_FILE, ("show", "@TASK.B20")): {"fields": [{"name": "MILESTONE", "atoms": ["@MILESTONE.F1"]}]},
+}
+
+
+def read_awawa_file_document(file: Path, arguments: tuple[str, ...]) -> dict:
+    return DOCUMENTS[(file, arguments)]
 
 
 class ReadPlanTest(unittest.TestCase):
     def test_should_read_each_entity_of_the_plan_file_with_its_fields(self):
-        # Arrange
-        processes = ScriptedProcesses()
-        plan_file = "/srv/runs/r1/plan.awawa"
-        processes.answer_json(
-            ("awawa", "show", plan_file, "--json", plan_file),
-            {"entities": [{"type": "MILESTONE", "name": "F1"}, {"type": "TASK", "name": "B20"}]},
-        )
-        processes.answer_json(
-            ("awawa", "show", "@MILESTONE.F1", "--json", plan_file),
-            {"fields": [{"name": "TITLE", "atoms": ['"the "', '"printer"']}]},
-        )
-        processes.answer_json(
-            ("awawa", "show", "@TASK.B20", "--json", plan_file),
-            {"fields": [{"name": "MILESTONE", "atoms": ["@MILESTONE.F1"]}]},
-        )
-
         # Act
-        plan = read_plan(processes, Path(plan_file))
+        plan = read_plan(read_awawa_file_document, PLAN_FILE)
 
         # Assert
         self.assertEqual(

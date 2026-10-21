@@ -1,0 +1,23 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@TASK.B12",
+      "--json",
+      "<tmp:0>/plan.awawa"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/plan.awawa": "TASK B12\n\tTITLE \"the parser\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"B12\", \"file\": \"<tmp:0>/plan.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"the parser\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

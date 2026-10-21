@@ -5,9 +5,7 @@ from pathlib import Path
 from brigade.corpus.collect_anchors import collect_anchors
 from brigade.errors import BrigadeError
 from brigade.planning.count_next_task_number import count_next_task_number
-from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-AWAWA_TIMEOUT_S = 30.0
 SCHEMA_TYPE = "SCHEMA"
 DECISION_TYPE = "DECISION"
 TASK_TYPE = "TASK"
@@ -19,40 +17,16 @@ TITLE_FIELD = "TITLE"
 MILESTONE_FIELD = "MILESTONE"
 FIELD_DECLARATION = "FIELD"
 ANCHOR_SEPARATOR = "::"
-SCHEMA_NOT_DEFINED = 1
-SHOWN = (0,)
-SHOWN_OR_NOT_DEFINED = (0, SCHEMA_NOT_DEFINED)
 
 
-def _run_awawa(
-    run_process: Callable[[ProcessRequest], ProcessRecord],
-    root: Path,
-    arguments: tuple[str, ...],
-    acceptable_exit_codes: tuple[int, ...] = SHOWN,
-) -> ProcessRecord:
-    return run_process(
-        ProcessRequest(
-            argv=("awawa", *arguments, str(root)),
-            cwd=str(root),
-            timeout_s=AWAWA_TIMEOUT_S,
-            acceptable_exit_codes=acceptable_exit_codes,
-        )
-    )
-
-
-def _read_schema(run_process, root: Path, entity_type: str) -> str | None:
-    record = _run_awawa(run_process, root, ("show", entity_type), SHOWN_OR_NOT_DEFINED)
-    return None if record.exit_code == SCHEMA_NOT_DEFINED else record.stdout
-
-
-def _read_declared_fields(run_process, root: Path, entity_type: str) -> list[str]:
-    schema = json.loads(_run_awawa(run_process, root, ("show", entity_type, "--json")).stdout)
+def _read_declared_fields(read_awawa_document, root: Path, entity_type: str) -> list[str]:
+    schema = read_awawa_document(root, ("show", entity_type))
     return [field["atoms"][0] for field in schema["fields"] if field["name"] == FIELD_DECLARATION]
 
 
-def _list_missing(run_process, root: Path, schemas: dict) -> list[dict]:
+def _list_missing(read_awawa_document, root: Path, schemas: dict) -> list[dict]:
     missing_types = [{"type": entity_type} for entity_type, text in schemas.items() if text is None]
-    if schemas[TASK_TYPE] is None or MILESTONE_FIELD in _read_declared_fields(run_process, root, TASK_TYPE):
+    if schemas[TASK_TYPE] is None or MILESTONE_FIELD in _read_declared_fields(read_awawa_document, root, TASK_TYPE):
         return missing_types
     return [*missing_types, {"type": TASK_TYPE, "field": MILESTONE_FIELD}]
 
@@ -88,13 +62,15 @@ def _index_anchors(shown: list[dict]) -> dict:
     return anchors
 
 
-def assemble_plan_context(run_process: Callable[[ProcessRequest], ProcessRecord], root: Path) -> dict:
-    status = json.loads(_run_awawa(run_process, root, ("status", "--json")).stdout)
+def assemble_plan_context(
+    read_awawa_document: Callable[[Path, tuple[str, ...]], dict],
+    read_schema: Callable[[Path, str], str | None],
+    root: Path,
+) -> dict:
+    status = read_awawa_document(root, ("status",))
     entities = [entity for entity in status["entities"] if entity["type"] != SCHEMA_TYPE]
-    shown = [
-        json.loads(_run_awawa(run_process, root, ("show", entity["target"], "--json")).stdout) for entity in entities
-    ]
-    schemas = {entity_type: _read_schema(run_process, root, entity_type) for entity_type in PLANNED_SCHEMAS}
+    shown = [read_awawa_document(root, ("show", entity["target"])) for entity in entities]
+    schemas = {entity_type: read_schema(root, entity_type) for entity_type in PLANNED_SCHEMAS}
     return {
         "status": _summarise_status(status["types"]),
         "decisions": [
@@ -108,7 +84,7 @@ def assemble_plan_context(run_process: Callable[[ProcessRequest], ProcessRecord]
             if entity["type"] == TASK_TYPE and entity["status"] in OPEN_TASK_STATUSES
         ],
         "schemas": {entity_type: text for entity_type, text in schemas.items() if text is not None},
-        "missing": _list_missing(run_process, root, schemas),
+        "missing": _list_missing(read_awawa_document, root, schemas),
         "next_task_number": count_next_task_number(entities),
         "anchors": _index_anchors(shown),
     }

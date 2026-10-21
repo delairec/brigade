@@ -1,6 +1,9 @@
+from functools import partial
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.corpus.read_awawa_document import read_awawa_document
+from brigade.corpus.read_schema import read_schema
 from brigade.errors import BrigadeError
 from brigade.planning.assemble_plan_context import assemble_plan_context
 from brigade.planning.read_planning_request import read_planning_request
@@ -87,7 +90,9 @@ def plan_context(request, runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "request": {"name": planning_request.name, "project": project.name, "text": planning_request.text},
         "corpus": str(root),
-        **assemble_plan_context(runtime.run_process, root),
+        **assemble_plan_context(
+            partial(read_awawa_document, runtime.run_process), partial(read_schema, runtime.run_process), root
+        ),
     }
 
 
