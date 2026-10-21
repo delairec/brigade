@@ -1,7 +1,5 @@
-import argparse
-
 from brigade.command import Argument, Command
-from brigade.commands.run import run
+from brigade.commands._launch_planner import launch_planner
 from brigade.errors import BrigadeError
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
@@ -12,8 +10,6 @@ from brigade.waves.record_request import NewRequest, record_request
 
 DOCUMENT_SCHEMA_VERSION = 1
 PAUSED_STATUS = "paused"
-PLANNER_PROCEDURE = "wave-plan"
-PLANNER_SLOT = "plan"
 
 
 def _read_request(options):
@@ -32,34 +28,13 @@ def _describe_diagnostics(document: dict) -> list[str]:
     return document.get("warnings", [])
 
 
-def _launch_planner(runtime: Runtime, project: str, name: str) -> dict:
-    planning = argparse.Namespace(
-        procedure=PLANNER_PROCEDURE,
-        slot=PLANNER_SLOT,
-        project=project,
-        cwd=None,
-        brief=None,
-        arguments=(f"request={name}",),
-        run_id=None,
-        wave=None,
-        task=None,
-        detach=True,
-        resume=False,
-    )
-    return run(planning, runtime)
-
-
 def request_new(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.project)
     if read_project_field(project, "STATUS") == PAUSED_STATUS:
         raise BrigadeError(f"@PROJECT.{project.name} is {PAUSED_STATUS}")
     name = record_request(runtime, NewRequest(project=project.name, text=request.text))
-    launched = _launch_planner(runtime, project.name, name)
-    document = {"schema_version": DOCUMENT_SCHEMA_VERSION, "request": name, "run": launched["run"]}
-    if "warnings" not in launched:
-        return document
-    return {**document, "warnings": launched["warnings"]}
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "request": name, **launch_planner(runtime, project.name, name)}
 
 
 COMMAND = Command(
