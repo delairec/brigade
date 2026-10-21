@@ -717,7 +717,6 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             },
         )
 
-
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])

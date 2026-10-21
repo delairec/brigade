@@ -148,6 +148,7 @@ class SnapshotTest(unittest.TestCase):
             [{"project": "brigade", "slots": 4, "live_runs": [], "wave_start": "ask", "candidates": ["B188", "B189"]}],
         )
 
+
 class TaskFactsTest(unittest.TestCase):
     def test_should_carry_the_last_verdict_and_the_head_its_verification_ended_on_in_its_document(self):
         # Arrange

@@ -350,7 +350,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
         self.write_operational_corpus()
-        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1", "B2", "B3", "B4")))
         self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B1",)))
         self.record(50, TaskState(wave="w1", task="B1", state="verifying"))
         self.record(50, TaskState(wave="w1", task="B2", state="verifying"))
