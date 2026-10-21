@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.reset_hour import ResetHour
-from brigade.tick.build_snapshot import RateLimit, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.build_snapshot import RateLimit, RecordedVerdict, Snapshot, StudyFacts, TaskFacts, WaveFacts
 from brigade.waves.read_wave_pause import WavePause
 
 
@@ -116,6 +116,8 @@ class SnapshotTest(unittest.TestCase):
                             "stopped_run": None,
                             "opened_pull_request": None,
                             "preflighted_head": None,
+                            "verdict": None,
+                            "reviewed_head": None,
                         }
                     ],
                     "states": {},
@@ -124,4 +126,18 @@ class SnapshotTest(unittest.TestCase):
                     "forge_account_unavailable": False,
                 }
             ],
+        )
+
+
+class TaskFactsTest(unittest.TestCase):
+    def test_should_carry_the_last_verdict_and_the_head_its_verification_ended_on_in_its_document(self):
+        # Arrange
+        task = TaskFacts(name="B16", verdict=RecordedVerdict(head="4f2a9c1", verdict="pass"), reviewed_head="4f2a9c1")
+
+        # Act
+        document = task.to_document()
+
+        # Assert
+        self.assertEqual(
+            (document["verdict"], document["reviewed_head"]), ({"head": "4f2a9c1", "verdict": "pass"}, "4f2a9c1")
         )

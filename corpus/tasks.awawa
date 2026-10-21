@@ -1350,7 +1350,7 @@ TASK B13
 		+ "@TASK.<task> run in the worktree through the awawa gateway, each under its command line"
 		+ "with its exit code and its stderr"
 		IMPL "brigade/tasks/assemble_task_context.py::def assemble_task_context("
-		IMPL "brigade/tasks/assemble_task_context.py::def _describe_command("
+		IMPL "brigade/tasks/describe_command.py::def describe_command("
 		IMPL "brigade/commands/task_context.py::def _render_commands("
 		IMPL "tests/cli/test_task.py::class"
 			+ "BrigadeTaskContextOfAWorktreeWhoseCorpusRepeatsAMilestoneTest(TaskContextTestCase):"
@@ -1667,7 +1667,8 @@ TASK B15
 
 TASK B16
 	TITLE "Procedure verify-pr.md and brigade verify context|verdict"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 172
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "the pass"
@@ -1677,15 +1678,47 @@ TASK B16
 		+ "of the pull request against its base, the findings of the preflight, the rules of the"
 		+ "path triggers of the files the diff touches and the grades of a finding, critical, high,"
 		+ "medium and low"
+		IMPL "brigade/verify/assemble_verify_context.py::def assemble_verify_context("
+		IMPL "brigade/commands/verify_context.py::def _render_text("
+		IMPL "tests/cli/test_verify_context.py::class"
+			+ "BrigadeVerifyContextOfAPullRequestTest(VerifyContextTestCase):"
+		IMPL "tests/cli/test_verify_context.py::class"
+			+ "BrigadeVerifyContextWithAnInstructionsCorpusTest(VerifyContextTestCase):"
 	SPEC "brigade verify verdict <pr> --file <verdict> validates a verdict pass or changes whose"
 		+ "findings each carry a grade, a file, a line and the SPEC or rule broken, refuses changes"
 		+ "without a finding, and records the ledger event of the verdict"
+		IMPL "brigade/verify/validate_verdict.py::def validate_verdict("
+		IMPL "brigade/verify/record_verdict.py::def record_verdict("
+		IMPL "brigade/ledger/task_verdict.py::class TaskVerdict:"
+		IMPL "tests/unit/verify/test_validate_verdict.py::class"
+			+ "ValidateVerdictTest(unittest.TestCase):"
+		IMPL "tests/cli/test_verify_verdict.py::def"
+			+ "test_should_refuse_changes_without_a_finding_and_record_nothing(self):"
 	SPEC "the tick starts a fresh run of the review slot on a task in verifying, with the procedure"
 		+ "verify-pr.md shipped in the package, and moves the task to verified on pass and to"
 		+ "changes_requested on changes"
+		IMPL "brigade/tick/plan.py::def _decide_verification("
+		IMPL "brigade/tick/build_snapshot.py::def _read_reviewed_heads("
+		IMPL "brigade/commands/tick.py::def _launch_verification("
+		IMPL "brigade/runs/data/procedures/verify-pr.md::# Procedure — verify one pull request of a"
+			+ "wave"
+		IMPL "tests/unit/tick/test_plan.py::class PlanVerificationTest(unittest.TestCase):"
+		IMPL "tests/cli/test_tick.py::def"
+			+ "test_should_launch_the_verification_of_the_pull_request_on_the_review_slot(self):"
 	SPEC "under POLICY.REVIEW approval the verdict is a GitHub review approving or requesting"
 		+ "changes under the login of the review slot; under verdict it is the ledger event alone"
+		IMPL "brigade/verify/record_verdict.py::def _post_review("
+		IMPL "brigade/adapters/forges/github.py::def post_review("
+		IMPL "brigade/verify/read_review_mode.py::def read_review_mode("
+		IMPL "tests/cli/test_verify_verdict.py::def"
+			+ "test_should_post_a_review_requesting_changes(self):"
+		IMPL "tests/unit/verify/test_record_verdict.py::class"
+			+ "RecordVerdictUnderTheVerdictModeTest(RecordVerdictTestCase):"
 	SPEC "the ledger event of a review posted carries the login the review ran as"
+		IMPL "brigade/verify/record_verdict.py::login=_post_review(runtime, demand, head) if"
+			+ "approving else None,"
+		IMPL "tests/cli/test_verify_verdict.py::def"
+			+ "test_should_record_the_login_the_review_ran_as(self):"
 	AFTER @TASK.B13
 	AFTER @TASK.B15
 	AFTER @TASK.B75

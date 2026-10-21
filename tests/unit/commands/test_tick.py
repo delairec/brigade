@@ -373,6 +373,17 @@ OPEN_PULL_REQUEST = {
     "head": "8885daa",
 }
 MERGED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "state": "merged"}
+TASK_PREFLIGHTED_AT_THE_HEAD = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:30:00Z",
+    "event": "task.preflighted",
+    "project": "tidepool",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "pr": 42,
+    "head": "8885daa",
+    "checks": [],
+}
 NO_DETAILS_ASKED = None
 PULL_REQUEST_DETAILS = {
     "head": "task/M4/T7",
@@ -570,6 +581,79 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 "wave": "tidepool_w16",
                 "task": "T7",
                 "state": "verifying",
+            },
+        )
+
+    def test_should_launch_the_verification_of_a_task_in_verifying(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(
+            self.root, [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("verifying")]
+        )
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "verify-pr",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "review",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_record_the_verdict_passed_at_the_head_of_the_pull_request(self):
+        # Arrange
+        verdict = {
+            "schema_version": 1,
+            "ts": "2026-10-18T12:00:00Z",
+            "event": "task.verdict",
+            "project": "tidepool",
+            "wave": "tidepool_w16",
+            "task": "T7",
+            "pr": 42,
+            "head": "8885daa",
+            "verdict": "pass",
+            "findings": [],
+            "login": None,
+        }
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("verifying"), verdict],
+        )
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "verified",
             },
         )
 

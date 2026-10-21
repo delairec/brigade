@@ -7,6 +7,7 @@ from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
+    LaunchVerification,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -25,6 +26,10 @@ MERGED_STATE = "merged"
 RUNNING_STATE = "running"
 PR_OPEN_STATE = "pr_open"
 PARKED_STATE = "parked"
+VERIFYING_STATE = "verifying"
+VERIFIED_STATE = "verified"
+CHANGES_REQUESTED_STATE = "changes_requested"
+STATES_BY_VERDICT = {"pass": VERIFIED_STATE, "changes": CHANGES_REQUESTED_STATE}
 OPEN_PULL_REQUEST = "open"
 PENDING_VERDICT = "pending"
 MERGED_PULL_REQUEST = "merged"
@@ -142,13 +147,18 @@ def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | No
         return RecordTaskState(wave=wave.wave, task=task.name, state=MERGED_STATE, reason=None)
     if task.pull_request.state == CLOSED_PULL_REQUEST:
         return RecordTaskState(wave=wave.wave, task=task.name, state=PARKED_STATE, reason=CLOSED_REASON)
-    if state == RUNNING_STATE:
+    if state == RUNNING_STATE or _is_pushed_since_preflight(state, task):
         return RecordTaskState(wave=wave.wave, task=task.name, state=PR_OPEN_STATE, reason=None)
     return None
 
 
+def _is_pushed_since_preflight(state: str, task: TaskFacts) -> bool:
+    return state == VERIFYING_STATE and task.preflighted_head != task.pull_request.head
+
+
 def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
     held = {live.worktree for project in snapshot.projects for live in project.live_runs}
+    live_tasks = {(live.wave, live.task) for project in snapshot.projects for live in project.live_runs}
     projects = {project.name: project for project in snapshot.projects}
     actions = []
     for wave in snapshot.waves:
@@ -166,6 +176,9 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
                         pr=task.pull_request.number,
                     )
                 )
+            verification = _decide_verification(wave, task, held, live_tasks)
+            if verification is not None:
+                actions.append(verification)
             if (
                 task.pull_request.state in SETTLED_PULL_REQUESTS
                 and task.worktree is not None
@@ -173,6 +186,32 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             ):
                 actions.append(RemoveTaskWorktree(project=wave.project, task=task.name, worktree=task.worktree))
     return tuple(actions)
+
+
+def _decide_verification(
+    wave: WaveFacts, task: TaskFacts, held: set, live_tasks: set
+) -> RecordTaskState | LaunchVerification | None:
+    state = wave.states.get(task.name)
+    if (
+        state != VERIFYING_STATE
+        or task.pull_request.state != OPEN_PULL_REQUEST
+        or _is_pushed_since_preflight(state, task)
+    ):
+        return None
+    if task.verdict is not None and task.verdict.head == task.pull_request.head:
+        return RecordTaskState(
+            wave=wave.wave, task=task.name, state=STATES_BY_VERDICT[task.verdict.verdict], reason=None
+        )
+    if (
+        task.reviewed_head != task.pull_request.head
+        and task.worktree is not None
+        and task.worktree not in held
+        and (wave.wave, task.name) not in live_tasks
+    ):
+        return LaunchVerification(
+            project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree
+        )
+    return None
 
 
 def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> bool:

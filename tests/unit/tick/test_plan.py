@@ -9,6 +9,7 @@ from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
+    LaunchVerification,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -22,6 +23,7 @@ from brigade.tick.build_snapshot import (
     PlannedRequest,
     ProjectFacts,
     RateLimit,
+    RecordedVerdict,
     Snapshot,
     StudyFacts,
     TaskFacts,
@@ -235,7 +237,7 @@ class PlanPreflightTest(unittest.TestCase):
             ("a head pushed", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_BEFORE_A_PUSH, SHOP, (PREFLIGHT_S3,)),
             ("a head preflighted", "pr_open", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_AT_THE_HEAD, SHOP, ()),
             ("another pull request", "pr_open", OPEN, OPENED_BY_AN_EARLIER_RUN, NOT_PREFLIGHTED, SHOP, ()),
-            ("a task in review", "verifying", OPEN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
+            ("a task in review", "verifying", OPEN, OPENED_BY_THE_TASK, PREFLIGHTED_AT_THE_HEAD, SHOP, ()),
             ("a pull request merged", "pr_open", MERGED, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, (RECORD_MERGED,)),
         ]:
             with self.subTest(case=case):
@@ -250,6 +252,144 @@ class PlanPreflightTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+
+NO_VERDICT = None
+PASS_AT_THE_HEAD = RecordedVerdict(head=HEAD, verdict="pass")
+CHANGES_AT_THE_HEAD = RecordedVerdict(head=HEAD, verdict="changes")
+PASS_BEFORE_A_PUSH = RecordedVerdict(head="fedcba9", verdict="pass")
+NOT_REVIEWED = None
+REVIEWED_AT_THE_HEAD = HEAD
+REVIEWED_BEFORE_A_PUSH = "fedcba9"
+DISPOSABLE_WORKTREE = "/state/brigade/runs/20261006T110000Z-d4e5f6/worktree"
+VERIFY_S3 = LaunchVerification(project="shop", wave="shop_w1", task="S3", pr=42, worktree=WORKTREE_S3)
+RECORD_VERIFIED = RecordTaskState(wave="shop_w1", task="S3", state="verified", reason=None)
+RECORD_CHANGES_REQUESTED = RecordTaskState(wave="shop_w1", task="S3", state="changes_requested", reason=None)
+
+
+class PlanVerificationTest(unittest.TestCase):
+    def test_should_verify_the_head_of_the_pull_request_of_a_task_in_verifying(self):
+        for case, state, verdict, reviewed, worktree, expected in [
+            ("with no verdict yet", "verifying", NO_VERDICT, NOT_REVIEWED, WORKTREE_S3, (VERIFY_S3,)),
+            (
+                "passed at the head",
+                "verifying",
+                PASS_AT_THE_HEAD,
+                REVIEWED_AT_THE_HEAD,
+                WORKTREE_S3,
+                (RECORD_VERIFIED,),
+            ),
+            (
+                "with changes asked at the head",
+                "verifying",
+                CHANGES_AT_THE_HEAD,
+                REVIEWED_AT_THE_HEAD,
+                WORKTREE_S3,
+                (RECORD_CHANGES_REQUESTED,),
+            ),
+            ("reviewed at the head without a verdict", "verifying", NO_VERDICT, REVIEWED_AT_THE_HEAD, WORKTREE_S3, ()),
+            ("without its worktree", "verifying", NO_VERDICT, NOT_REVIEWED, NO_WORKTREE, ()),
+            ("not yet preflighted", "pr_open", NO_VERDICT, NOT_REVIEWED, WORKTREE_S3, ()),
+            ("already verified", "verified", PASS_AT_THE_HEAD, REVIEWED_AT_THE_HEAD, WORKTREE_S3, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=worktree,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    verdict=verdict,
+                    reviewed_head=reviewed,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_move_back_to_pr_open_a_task_in_verifying_whose_head_moved_since_its_preflight(self):
+        for case, verdict, reviewed in [
+            ("passed before a push", PASS_BEFORE_A_PUSH, REVIEWED_BEFORE_A_PUSH),
+            ("reviewed without a verdict before a push", NO_VERDICT, REVIEWED_BEFORE_A_PUSH),
+            ("pushed during its first review run", NO_VERDICT, NOT_REVIEWED),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=WORKTREE_S3,
+                    preflighted_head=PREFLIGHTED_BEFORE_A_PUSH,
+                    verdict=verdict,
+                    reviewed_head=reviewed,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (RECORD_PR_OPEN,))
+
+    def test_should_start_no_verification_while_a_run_of_the_task_is_live(self):
+        for case, live in [
+            (
+                "a build run holding its worktree",
+                LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree=WORKTREE_S3),
+            ),
+            (
+                "a review run of the task in a disposable worktree",
+                LiveRun(
+                    run="20261006T110000Z-d4e5f6",
+                    slot="review",
+                    worktree=DISPOSABLE_WORKTREE,
+                    wave="shop_w1",
+                    task="S3",
+                ),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                holding = ProjectFacts(name="shop", slots=4, live_runs=(live,))
+                task = TaskFacts(
+                    name="S3", pull_request=OPEN, worktree=WORKTREE_S3, preflighted_head=PREFLIGHTED_AT_THE_HEAD
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_record_the_merge_of_a_task_in_verifying_rather_than_its_verdict(self):
+        # Arrange
+        task = TaskFacts(name="S3", pull_request=MERGED, worktree=WORKTREE_S3, verdict=PASS_AT_THE_HEAD)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
+
+    def test_should_verify_a_task_while_a_review_run_of_another_task_is_live(self):
+        # Arrange
+        other = LiveRun(
+            run="20261006T110000Z-d4e5f6", slot="review", worktree=DISPOSABLE_WORKTREE, wave="shop_w1", task="S9"
+        )
+        holding = ProjectFacts(name="shop", slots=4, live_runs=(other,))
+        task = TaskFacts(name="S3", pull_request=OPEN, worktree=WORKTREE_S3, preflighted_head=PREFLIGHTED_AT_THE_HEAD)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (VERIFY_S3,))
 
 
 class PlanSlotsTest(unittest.TestCase):

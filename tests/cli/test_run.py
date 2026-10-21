@@ -547,6 +547,45 @@ class BrigadeRunOfTheShippedWavePlanProcedureTest(RunTestCase):
         )
 
 
+class BrigadeRunOfTheShippedVerifyPrProcedureTest(RunTestCase):
+    def test_should_resolve_it_for_the_reviewer_with_the_capabilities_to_read_and_judge(self):
+        # Arrange
+        self.configure_fake(COUNTING_CLIENT)
+        self.record("reviewer", DONE_RESULT)
+
+        # Act
+        completed = self.run_brigade(
+            "run", "verify-pr", "--slot", "review", "--cwd", str(self.workspace), "pr=42", "task=@TASK.S3", "--json"
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        run_id = json.loads(completed.stdout)["run"]
+        self.assertEqual(
+            self.read_run_record(run_id),
+            {
+                "schema_version": 1,
+                "run": run_id,
+                "procedure": "verify-pr",
+                "procedure_path": str(REPOSITORY_ROOT / "brigade" / "runs" / "data" / "procedures" / "verify-pr.md"),
+                "slot": "review",
+                "role": "reviewer",
+                "role_source": "built-in",
+                "client": "fake",
+                "project": None,
+                "cwd": str(self.workspace),
+                "worktree": str(self.workspace),
+                "capabilities": ["read", "shell"],
+                "budget": 40,
+                "wall_limit_s": 1500,
+                "arguments": {"pr": "42", "task": "@TASK.S3"},
+                "wave": None,
+                "task": None,
+                "brief": None,
+            },
+        )
+
+
 class BrigadeRunOfAProcedureOffItsDeclarationTest(RunTestCase):
     def test_should_exit_1_naming_the_procedure_and_what_it_lacks(self):
         # Arrange

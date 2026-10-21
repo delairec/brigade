@@ -38,6 +38,7 @@ from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
+    LaunchVerification,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -55,11 +56,13 @@ from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
+from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.start_wave import start_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
+VERIFY_PROCEDURE = "verify-pr"
 RUNNING_STATE = "running"
 VERIFYING_STATE = "verifying"
 FAILED_VERDICT = "fail"
@@ -99,6 +102,23 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
     )
     run(building, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
+
+
+def _launch_verification(runtime: Runtime, configuration: Configuration, action: LaunchVerification) -> None:
+    verifying = argparse.Namespace(
+        procedure=configuration.procedures.get(REVIEW_SLOT, VERIFY_PROCEDURE),
+        slot=REVIEW_SLOT,
+        project=action.project,
+        cwd=action.worktree,
+        brief=None,
+        arguments=(f"pr={action.pr}", f"task=@TASK.{action.task}"),
+        run_id=None,
+        wave=action.wave,
+        task=action.task,
+        detach=True,
+        resume=False,
+    )
+    run(verifying, runtime)
 
 
 def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
@@ -177,6 +197,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
+        LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: append_event(
             runtime.paths,

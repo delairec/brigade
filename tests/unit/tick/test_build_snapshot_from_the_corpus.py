@@ -1,4 +1,5 @@
 import contextlib
+import dataclasses
 import io
 import json
 import shutil
@@ -9,7 +10,10 @@ from pathlib import Path
 
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
+from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import Configuration
@@ -17,6 +21,7 @@ from brigade.tick.build_snapshot import (
     PlannedRequest,
     ProjectFacts,
     RateLimit,
+    RecordedVerdict,
     Snapshot,
     StudyFacts,
     TaskFacts,
@@ -250,4 +255,66 @@ class BuildSnapshotOfARunningWaveTest(BuildSnapshotTestCase):
                     " integration/w4^{commit} exited 128: fatal: bad revision"
                 ),
             ],
+        )
+
+
+def create_review_run_finished(run: str, task: str, error_class: str | None = None) -> RunFinished:
+    return dataclasses.replace(
+        create_run_finished(run, procedure="verify-pr", wave="w1", task=task, error_class=error_class), slot="review"
+    )
+
+
+def create_verdict(task: str, head: str, verdict: str) -> TaskVerdict:
+    return TaskVerdict(project="shop", wave="w1", task=task, pr=7, head=head, verdict=verdict, findings=(), login=None)
+
+
+def create_preflight(task: str) -> TaskPreflighted:
+    return TaskPreflighted(project="shop", wave="w1", task=task, pr=7, head="4f2a9c1", checks=())
+
+
+class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B1",)))
+        self.record(50, TaskState(wave="w1", task="B1", state="verifying"))
+        self.record(50, TaskState(wave="w1", task="B2", state="verifying"))
+        self.record(50, TaskState(wave="w1", task="B4", state="verifying"))
+        self.record(45, create_verdict("B1", "0e1d2c3", "pass"))
+        self.record(45, create_preflight("B2"))
+        self.record(42, create_review_run_finished("r0", "B2"))
+        self.record(40, create_preflight("B1"))
+        self.record(40, create_preflight("B2"))
+        self.record(40, create_preflight("B4"))
+        self.record(31, create_verdict("B1", "4f2a9c1", "changes"))
+        self.record(30, create_review_run_finished("r1", "B1"))
+        self.record(30, create_review_run_finished("r2", "B2", error_class="rate_limit"))
+        self.record(30, create_run_finished("r4", wave="w1", task="B4"))
+        self.record(
+            29,
+            dataclasses.replace(create_run_finished("r5", procedure="verify-pr", wave="w4", task="B4"), slot="review"),
+        )
+
+    def test_should_carry_the_last_verdict_of_each_task_and_the_head_its_verification_ended_on(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks,
+            (
+                TaskFacts(
+                    name="B1",
+                    after=("B0",),
+                    pull_request=PULL_REQUEST,
+                    worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                    preflighted_head="4f2a9c1",
+                    verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
+                    reviewed_head="4f2a9c1",
+                ),
+                TaskFacts(name="B2", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(name="B3"),
+                TaskFacts(name="B4", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+            ),
         )
