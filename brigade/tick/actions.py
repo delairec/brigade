@@ -2,15 +2,8 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class StartWave:
-    request: str
-
-
-@dataclass(frozen=True)
 class LaunchTask:
-    request: str
     project: str
-    milestone: str
     wave: str
     branch: str
     task: str
@@ -27,6 +20,14 @@ class RecordTaskState:
     task: str
     state: str
     reason: str | None
+
+
+@dataclass(frozen=True)
+class ParkTask:
+    wave: str
+    task: str
+    reason: str
+    blockers: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -72,3 +73,26 @@ class ResumeTaskRun:
     wave: str
     task: str
     run: str
+
+
+@dataclass(frozen=True)
+class StartWave:
+    project: str
+
+
+@dataclass(frozen=True)
+class CutWaveBranch:
+    project: str
+    wave: str
+    branch: str
+
+
+@dataclass(frozen=True)
+class ReportWave:
+    wave: str
+
+
+@dataclass(frozen=True)
+class CloseWave:
+    wave: str
+    pr: int

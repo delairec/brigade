@@ -12,13 +12,11 @@ BRIEFS_DIRECTORY = "briefs"
 
 
 def write_build_brief(state_root: Path, action: LaunchTask, worktree: BranchWorktree) -> Path:
-    path = state_root / BRIEFS_DIRECTORY / f"{action.request}-{action.task}.md"
+    path = state_root / BRIEFS_DIRECTORY / f"{action.wave}-{action.task}.md"
     brief = Template(BRIEF_TEMPLATE.read_text(encoding="utf-8")).substitute(
         task=action.task,
         project=action.project,
-        milestone=action.milestone,
         wave=action.wave,
-        request=action.request,
         branch=action.branch,
         worktree=worktree.path,
         task_branch=worktree.branch,

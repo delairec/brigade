@@ -4,39 +4,69 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from brigade.commands.wave_show import COMMAND
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from brigade.errors import BrigadeError
+from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.run_directories import create_run_result
 
-PLANNING_REQUEST = (
-    ("PROJECT", "@PROJECT.tidepool"),
-    ("TEXT", "add the tides"),
-    ("STATUS", "planning"),
-    ("CREATED_AT", "2026-09-30T21:00:00Z"),
-)
+WAVE_STARTED = {
+    "schema_version": 2,
+    "ts": "2026-09-30T22:00:00Z",
+    "event": "wave.started",
+    "wave": "tidepool_w16",
+    "project": "tidepool",
+    "branch": "integration/tidepool_w16",
+    "tasks": ["T7", "T8"],
+}
+T7_RUNNING = {
+    "schema_version": 1,
+    "ts": "2026-10-01T09:00:00Z",
+    "event": "task.state",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "state": "running",
+}
+T7_PR_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-01T21:00:00Z",
+    "event": "task.pr_opened",
+    "project": "tidepool",
+    "task": "T7",
+    "wave": "tidepool_w16",
+    "branch": "task/tidepool_w16/T7",
+    "pr": 42,
+    "login": "tidepool-bot",
+}
+T7_RUN_FINISHED = {
+    **create_run_result("20261001T090000Z-a1", "done", "2026-10-01T21:30:00Z"),
+    "wave": "tidepool_w16",
+    "task": "T7",
+}
+T7_PR_OPEN = {**T7_RUNNING, "ts": "2026-10-01T22:00:00Z", "state": "pr_open"}
+T8_QUEUED = {**T7_RUNNING, "task": "T8", "state": "queued"}
+T8_PARKED = {
+    "schema_version": 1,
+    "ts": "2026-10-01T10:00:00Z",
+    "event": "task.parked",
+    "wave": "tidepool_w16",
+    "task": "T8",
+    "reason": "blocked",
+    "blockers": ["OPEN_QUESTION.Undecided"],
+}
 
 
 class WaveShowTextTest(unittest.TestCase):
-    def test_should_print_the_request_and_the_tasks_of_its_wave(self):
+    def test_should_print_the_wave_and_one_row_per_task(self):
         # Arrange
         document = {
             "schema_version": 1,
-            "request": "R1",
-            "project": "tidepool",
-            "text": "add the tides",
-            "status": "running",
             "wave": "tidepool_w16",
-            "milestone": "M4",
-            "branch": "integration/M4-tides",
-            "created_at": "2026-09-30T21:00:00Z",
-            "waits_for": None,
+            "project": "tidepool",
+            "branch": "integration/tidepool_w16",
+            "started_at": "2026-09-30T22:00:00Z",
+            "last_event": "wave.started",
             "tasks": [
-                {
-                    "task": "T7",
-                    "state": "running",
-                    "run": "20261001T090000Z-a1",
-                    "pull_request": None,
-                    "title": "tides",
-                },
-                {"task": "T8", "state": "queued", "run": None, "pull_request": 42, "title": "moons"},
+                {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1"},
+                {"task": "T8", "state": None, "pull_request": None, "run": None},
             ],
         }
 
@@ -46,17 +76,11 @@ class WaveShowTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "@REQUEST.R1 of @PROJECT.tidepool  running\n"
-            "add the tides\n"
-            "wave        tidepool_w16\n"
-            "milestone   M4\n"
-            "branch      integration/M4-tides\n"
-            "created at  2026-09-30T21:00:00Z\n"
-            "waits for   -\n"
-            "\n"
-            "task  state    run                  pull request  title\n"
-            "T7    running  20261001T090000Z-a1  -             tides\n"
-            "T8    queued                        42            moons",
+            "wave tidepool_w16 of @PROJECT.tidepool on integration/tidepool_w16,"
+            " started 2026-09-30T22:00:00Z, last event wave.started\n"
+            "task  state    pull request  run\n"
+            "T7    pr_open  42            20261001T090000Z-a1\n"
+            "T8    -        -             -",
         )
 
 
@@ -72,7 +96,7 @@ class WaveShowExitCodeTest(unittest.TestCase):
 class WaveShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(request="R1")
+        options = SimpleNamespace(wave="tidepool_w16")
 
         # Act
         request = COMMAND.read_request(options)
@@ -81,30 +105,51 @@ class WaveShowRequestTest(unittest.TestCase):
         self.assertIs(request, options)
 
 
-class WaveShowOfARequestBeingPlannedTest(unittest.TestCase):
-    def test_should_show_a_request_with_no_wave_yet(self):
+class WaveShowOfTheLedgerTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+
+    def test_should_show_each_task_with_its_last_state_its_pull_request_and_its_run(self):
         # Arrange
-        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        write_operational_corpus(root)
-        runtime = create_runtime(root, run_process=create_corpus_double({"REQUEST": {"R1": PLANNING_REQUEST}}))
+        write_ledger(self.root, [WAVE_STARTED, T7_RUNNING, T7_PR_OPENED, T7_RUN_FINISHED, T7_PR_OPEN])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="R1"), runtime)
+        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), create_runtime(self.root))
 
         # Assert
         self.assertEqual(
             document,
             {
                 "schema_version": 1,
-                "request": "R1",
+                "wave": "tidepool_w16",
                 "project": "tidepool",
-                "text": "add the tides",
-                "status": "planning",
-                "wave": None,
-                "milestone": None,
-                "branch": None,
-                "created_at": "2026-09-30T21:00:00Z",
-                "waits_for": None,
-                "tasks": [],
+                "branch": "integration/tidepool_w16",
+                "started_at": "2026-09-30T22:00:00Z",
+                "last_event": "wave.started",
+                "tasks": [
+                    {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1"},
+                    {"task": "T8", "state": None, "pull_request": None, "run": None},
+                ],
             },
         )
+
+    def test_should_show_a_task_its_blockers_parked_as_parked(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED])
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), create_runtime(self.root))
+
+        # Assert
+        self.assertEqual(document["tasks"][1], {"task": "T8", "state": "parked", "pull_request": None, "run": None})
+
+    def test_should_refuse_a_wave_no_wave_started_names(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED])
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(SimpleNamespace(wave="tidepool_w17"), create_runtime(self.root))
+
+        # Assert
+        self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")

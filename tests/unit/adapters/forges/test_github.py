@@ -3,11 +3,13 @@ import unittest
 from types import SimpleNamespace
 
 from brigade.adapters.forges.github import (
+    approve_pull_request,
     create_milestone,
     describe_account,
     find_pull_request,
     list_milestones,
     list_pull_requests,
+    merge_pull_request,
     open_issue,
     open_pull_request,
     post_review,
@@ -41,6 +43,28 @@ def create_runtime(stdout: str, exit_code: int = 0) -> SimpleNamespace:
         )
 
     return SimpleNamespace(run_process=run_gh, requests=requests)
+
+
+class DecidePullRequestTest(unittest.TestCase):
+    def test_should_ask_gh_to_approve_or_squash_merge_the_pull_request_as_the_login_of_the_environment(self):
+        for decide, expected_argv in [
+            (approve_pull_request, ("gh", "pr", "review", "12", "--approve")),
+            (merge_pull_request, ("gh", "pr", "merge", "12", "--squash")),
+        ]:
+            with self.subTest(decision=decide.__name__):
+                # Arrange
+                runtime = create_runtime("")
+                request = {"repository": "/projects/shop", "number": 12, "environment": BOT_ENVIRONMENT}
+
+                # Act
+                answer = decide(request, runtime)
+
+                # Assert
+                [asked] = runtime.requests
+                self.assertEqual(
+                    (answer, asked.argv, asked.cwd, asked.environment),
+                    ({"schema_version": 1}, expected_argv, "/projects/shop", BOT_ENVIRONMENT),
+                )
 
 
 class DescribeAccountTest(unittest.TestCase):

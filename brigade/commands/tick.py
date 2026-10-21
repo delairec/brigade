@@ -11,9 +11,12 @@ from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
@@ -36,12 +39,16 @@ from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
+    CloseWave,
+    CutWaveBranch,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    ParkTask,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
+    ReportWave,
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
@@ -57,7 +64,8 @@ from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
-from brigade.waves.start_wave import start_wave
+from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
+from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
@@ -190,10 +198,33 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
         )
 
 
+def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
+    return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
+
+
+def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
+    read_environment = _cache_forge_environment(runtime, configuration)
+    start = WaveStart(project=action.project, tasks=(), configuration=configuration, read_environment=read_environment)
+    start_project_wave(runtime, start)
+
+
+def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: CutWaveBranch) -> None:
+    cut = WaveBranchCut(
+        project=find_project(read_projects(runtime), action.project),
+        branch=action.branch,
+        read_environment=_cache_forge_environment(runtime, configuration),
+    )
+    cut_wave_branch(runtime.run_process, cut)
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
-        StartWave: lambda action: start_wave(runtime, configuration, action.request),
         RecordTaskState: lambda action: _record_task_state(runtime, action),
+        ParkTask: lambda action: append_event(
+            runtime.paths,
+            runtime.now,
+            TaskParked(wave=action.wave, task=action.task, reason=action.reason, blockers=action.blockers),
+        ),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
@@ -208,6 +239,10 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
         ),
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
+        StartWave: lambda action: _start_wave(runtime, configuration, action),
+        CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
+        ReportWave: lambda action: append_event(runtime.paths, runtime.now, WaveReported(wave=action.wave, run=None)),
+        CloseWave: lambda action: append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr)),
     }
 
 
@@ -230,9 +265,10 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
         runtime.trail.locate(_locate_trail(runtime))
         configuration = read_optional_configuration(runtime.paths.configuration_file)
         read_pull_request = _follow_pull_requests(runtime, configuration)
+        read_environment = _cache_forge_environment(runtime, configuration)
         outcome = run_rounds(
             Rounds(
-                build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request),
+                build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
                 plan=plan,
                 apply=functools.partial(apply_actions, executors=_list_executors(runtime, configuration)),
                 cap=ROUND_CAP,
@@ -263,7 +299,12 @@ def _tick_once(runtime: Runtime) -> dict:
 
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
-    snapshot = build_snapshot(runtime, configuration, _follow_pull_requests(runtime, configuration))
+    snapshot = build_snapshot(
+        runtime,
+        configuration,
+        _follow_pull_requests(runtime, configuration),
+        _cache_forge_environment(runtime, configuration),
+    )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",

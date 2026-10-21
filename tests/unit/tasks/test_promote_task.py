@@ -9,6 +9,7 @@ from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_promoted import TaskPromoted
+from brigade.ledger.wave_started import WaveStarted
 from brigade.tasks.promote_task import TaskPromotionDemand, promote_task
 from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
@@ -36,23 +37,22 @@ class PromoteTaskTest(unittest.TestCase):
         self.runtime = create_scripted_runtime(self.root, self.processes)
         config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout=f"{self.worktree}\n")
-        self.processes.answer(("git", "branch", "--show-current"), stdout="task/f0-parser/B12\n")
+        self.processes.answer(("git", "branch", "--show-current"), stdout="task/oak_w1/B12\n")
         self.processes.answer(
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
         self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
-        self.processes.answer_entities(
-            config_root,
-            "REQUEST",
-            {"oak_1": (("PROJECT", "@PROJECT.oak"), ("BRANCH", "integration/f0-parser"))},
-            ("PROJECT==@PROJECT.oak", "BRANCH==integration/f0-parser"),
+        append_event(
+            self.runtime.paths,
+            datetime(2026, 10, 19, 7, 0, tzinfo=UTC),
+            WaveStarted(wave="oak_w1", project="oak", branch="integration/oak_w1", tasks=("B12",)),
         )
         self.processes.answer_json(
             ("awawa", "show", "@TASK.B12", "--json", str(self.worktree)),
             {"file": str(self.worktree / "corpus" / "tasks.awawa")},
         )
         self.processes.answer_corpus_change(self.worktree, ("corpus/tasks.awawa",), MESSAGE)
-        self.processes.answer(("git", "push", "--quiet", "origin", "task/f0-parser/B12"))
+        self.processes.answer(("git", "push", "--quiet", "origin", "task/oak_w1/B12"))
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="d00d\n"
         )
@@ -73,7 +73,7 @@ class PromoteTaskTest(unittest.TestCase):
         append_event(
             self.runtime.paths,
             datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-            TaskPrOpened(project="oak", task="B12", wave="oak_w1", branch="task/f0-parser/B12", pr=pr, login="bot"),
+            TaskPrOpened(project="oak", task="B12", wave="oak_w1", branch="task/oak_w1/B12", pr=pr, login="bot"),
         )
 
     def test_should_mark_the_task_implemented_and_delivered_by_its_pull_request(self):
@@ -108,8 +108,8 @@ class PromoteTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.root / "state").entries,
-            (LedgerEntry(instant=RUNTIME_NOW, event=TaskPromoted(project="oak", task="B12", pr=42, commit="d00d")),),
+            read_ledger(self.root / "state").entries[-1],
+            LedgerEntry(instant=RUNTIME_NOW, event=TaskPromoted(project="oak", task="B12", pr=42, commit="d00d")),
         )
 
     def test_should_promote_on_the_last_pull_request_the_ledger_records_for_the_task(self):

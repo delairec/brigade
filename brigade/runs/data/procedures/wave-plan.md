@@ -2,9 +2,9 @@
 capabilities: read, write, shell
 budget: 30
 ---
-# Procedure — cut one request into a wave
+# Procedure — cut one request into a plan
 
-Cut one request of a project into a wave: one MILESTONE entity and the TASK entities whose MILESTONE names it,
+Cut one request of a project into a plan: one MILESTONE entity and the TASK entities whose MILESTONE names it,
 written against the project's own schema in one plan file, then handed to brigade to record. You plan; you deliver
 nothing, and the plan file is the only file you write.
 
@@ -66,5 +66,5 @@ Any other failure is reported verbatim, with the path of the plan file, and neve
 
 ## 5. Report
 
-The verdict first, in one line: the wave planned and recorded, or what stopped it. Then one line per task: its id,
+The verdict first, in one line: the plan recorded, or what stopped it. Then one line per task: its id,
 its title and its `AFTER` edges; then the path of the plan file; then each question left out of the plan.

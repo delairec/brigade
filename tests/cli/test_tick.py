@@ -60,46 +60,6 @@ WAVE_QUESTIONS = (
     "OPEN_QUESTION Ruled\n\tSTATUS closed\n\tBLOCKS @TASK.S6\n"
 )
 WAVE_BRANCH = "integration/M1-empty-cart"
-RUNNING_REQUEST = (
-    "REQUEST shop_1\n"
-    "\tPROJECT @PROJECT.shop\n"
-    '\tTEXT "let the customer empty the cart in one click"\n'
-    '\tCREATED_AT "2026-10-12T09:30:00Z"\n'
-    "\tSTATUS running\n"
-    '\tMILESTONE "M1"\n'
-    f'\tBRANCH "{WAVE_BRANCH}"\n'
-)
-PLANNED_WAVE_REQUEST = (
-    "REQUEST shop_1\n"
-    "\tPROJECT @PROJECT.shop\n"
-    '\tTEXT "let the customer empty the cart in one click"\n'
-    '\tCREATED_AT "2026-10-12T09:30:00Z"\n'
-    "\tSTATUS planned\n"
-    '\tMILESTONE "M1"\n'
-    f'\tBRANCH "{WAVE_BRANCH}"\n'
-)
-PLANNED_REQUEST = (
-    "REQUEST shop_2\n"
-    "\tPROJECT @PROJECT.shop\n"
-    '\tTEXT "let the customer undo the emptying"\n'
-    '\tCREATED_AT "2026-10-12T10:30:00Z"\n'
-    "\tSTATUS planned\n"
-    '\tMILESTONE "M2"\n'
-    '\tBRANCH "integration/M2-undo"\n'
-)
-UNSTARTED_RUNNING_REQUEST = (
-    "REQUEST shop_2\n"
-    "\tPROJECT @PROJECT.shop\n"
-    '\tTEXT "let the customer undo the emptying"\n'
-    '\tCREATED_AT "2026-10-12T10:30:00Z"\n'
-    "\tSTATUS running\n"
-    '\tMILESTONE "M2"\n'
-    '\tBRANCH "integration/M2-undo"\n'
-)
-QUEUED_S3 = (
-    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
-    ' "state": "queued"}\n'
-)
 WAVE_EVENTS = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
     f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3", "S4", "S5", "S6"]}}\n'
@@ -243,6 +203,10 @@ class WaveTickTestCase(TickTestCase):
     def run_tick(self, *options: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "tick", *options, environment=self.describe_environment())
 
+    def read_events(self, name: str) -> list:
+        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
+        return [event for event in map(json.loads, lines) if event["event"] == name]
+
     def describe_environment(self) -> dict:
         return {
             **self.machine.describe_environment(),
@@ -285,7 +249,6 @@ class WaveTickTestCase(TickTestCase):
             str(self.project.path),
             *(argument for command in self.setup_commands for argument in ("--setup", command)),
         )
-        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST)
         (self.state / "ledger").mkdir(parents=True)
         (self.state / "ledger" / "2026-10.jsonl").write_text(WAVE_EVENTS)
 
@@ -308,10 +271,6 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
             f'client = "fake"\ndocument = "markdown"\ninstructions = "{instructions}"\n{keys}'
             f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
-
-    def read_events(self, name: str) -> list:
-        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
-        return [event for event in map(json.loads, lines) if event["event"] == name]
 
     def tearDown(self):
         self.wait_for_the_runs()
@@ -427,7 +386,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S3",
-                    "brief": str(self.state / "briefs" / "shop_1-S3.md"),
+                    "brief": str(self.state / "briefs" / "shop_w1-S3.md"),
                 },
                 {
                     "schema_version": 1,
@@ -447,7 +406,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S6",
-                    "brief": str(self.state / "briefs" / "shop_1-S6.md"),
+                    "brief": str(self.state / "briefs" / "shop_w1-S6.md"),
                 },
             ],
         )
@@ -469,8 +428,8 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
 
         # Assert
         self.assertEqual(
-            (self.state / "briefs" / "shop_1-S3.md").read_text(),
-            "Deliver @TASK.S3 of @PROJECT.shop, in the wave shop_w1, @MILESTONE.M1 of @REQUEST.shop_1.\n"
+            (self.state / "briefs" / "shop_w1-S3.md").read_text(),
+            "Deliver @TASK.S3 of @PROJECT.shop, in the wave shop_w1.\n"
             "\n"
             f"- Base branch: {WAVE_BRANCH}.\n"
             f"- Worktree: {self.worktree}, on the branch {TASK_BRANCH}, cut from the head of {WAVE_BRANCH}.\n",
@@ -687,7 +646,7 @@ class BrigadeTickOnceWithTheBuildProcedureReplacedTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S3", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S3",
-                    "brief": str(self.state / "briefs" / "shop_1-S3.md"),
+                    "brief": str(self.state / "briefs" / "shop_w1-S3.md"),
                 },
                 {
                     "schema_version": 1,
@@ -707,7 +666,7 @@ class BrigadeTickOnceWithTheBuildProcedureReplacedTest(LaunchingTickTestCase):
                     "arguments": {"task": "@TASK.S6", "base": WAVE_BRANCH},
                     "wave": "shop_w1",
                     "task": "S6",
-                    "brief": str(self.state / "briefs" / "shop_1-S6.md"),
+                    "brief": str(self.state / "briefs" / "shop_w1-S6.md"),
                 },
             ],
         )
@@ -731,9 +690,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                     "now": ANY,
                     "waves": [
                         {
-                            "request": "shop_1",
                             "project": "shop",
-                            "milestone": "M1",
                             "wave": "shop_w1",
                             "branch": WAVE_BRANCH,
                             "tasks": [
@@ -794,10 +751,14 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                             "implemented": ["S2"],
                             "pause": None,
                             "forge_account_unavailable": False,
+                            "branch_missing": False,
+                            "reported": False,
+                            "integration_pull_request": None,
                         }
                     ],
-                    "projects": [{"project": "shop", "slots": 4, "live_runs": []}],
-                    "planned": [],
+                    "projects": [
+                        {"project": "shop", "slots": 4, "live_runs": [], "wave_start": "auto", "candidates": []}
+                    ],
                     "studies": [],
                     "live_study_runs": [],
                     "study_runs": 2,
@@ -805,17 +766,19 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                 },
                 "plan": [
                     {
-                        "request": "shop_1",
+                        "wave": "shop_w1",
+                        "task": "S5",
+                        "reason": "blocked",
+                        "blockers": ["OPEN_QUESTION.Undecided"],
+                    },
+                    {
                         "project": "shop",
-                        "milestone": "M1",
                         "wave": "shop_w1",
                         "branch": WAVE_BRANCH,
                         "task": "S3",
                     },
                     {
-                        "request": "shop_1",
                         "project": "shop",
-                        "milestone": "M1",
                         "wave": "shop_w1",
                         "branch": WAVE_BRANCH,
                         "task": "S6",
@@ -831,75 +794,6 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertFalse(self.gh_calls.exists())
-
-
-class BrigadeTickDryRunOnARunningRequestNoWaveStartedNamesTest(WaveTickTestCase):
-    def test_should_name_the_request_skip_it_and_plan_the_waves_of_the_others(self):
-        # Arrange
-        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST + UNSTARTED_RUNNING_REQUEST)
-
-        # Act
-        completed = self.run_tick("--dry-run", "--json")
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (
-                0,
-                (
-                    "brigade tick: @REQUEST.shop_2 skipped: no wave.started of @PROJECT.shop names integration/M2-undo,"
-                    " the BRANCH of @REQUEST.shop_2\n"
-                ),
-            ),
-        )
-        self.assertEqual(
-            json.loads(completed.stdout)["plan"],
-            [
-                {
-                    "request": "shop_1",
-                    "project": "shop",
-                    "milestone": "M1",
-                    "wave": "shop_w1",
-                    "branch": WAVE_BRANCH,
-                    "task": "S3",
-                },
-                {
-                    "request": "shop_1",
-                    "project": "shop",
-                    "milestone": "M1",
-                    "wave": "shop_w1",
-                    "branch": WAVE_BRANCH,
-                    "task": "S6",
-                },
-            ],
-        )
-
-
-class BrigadeTickOnceOnAPlannedRequestTest(LaunchingTickTestCase):
-    def test_should_start_the_planned_request_under_the_automatic_plan_review_of_the_project(self):
-        # Arrange
-        (self.machine.corpus / "requests.awawa").write_text(PLANNED_WAVE_REQUEST)
-        (self.state / "ledger" / "2026-10.jsonl").write_text(QUEUED_S3)
-
-        # Act
-        completed = self.run_tick("--once")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            self.read_events("wave.started"),
-            [
-                {
-                    "schema_version": 2,
-                    "ts": ANY,
-                    "event": "wave.started",
-                    "wave": "shop_w1",
-                    "project": "shop",
-                    "branch": WAVE_BRANCH,
-                    "tasks": ["S3", "S4", "S5", "S6"],
-                }
-            ],
-        )
 
 
 class LiveBuildRunTickTestCase(LaunchingTickTestCase):
@@ -961,14 +855,12 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LiveBuildRunTickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            json.loads(completed.stdout)["snapshot"]["projects"], [{"project": "shop", "slots": 4, "live_runs": []}]
+            json.loads(completed.stdout)["snapshot"]["projects"],
+            [{"project": "shop", "slots": 4, "live_runs": [], "wave_start": "auto", "candidates": []}],
         )
 
 
-ASKING_POLICY = "POLICY shop_review\n\tPROJECT @PROJECT.shop\n\tPLAN_REVIEW ask\n"
-
-
-class BrigadeTickDryRunOfTheProjectsAndThePlannedRequestsTest(WaveTickTestCase):
+class BrigadeTickDryRunOfTheProjectsTest(WaveTickTestCase):
     def test_should_read_the_slots_of_the_project(self):
         # Arrange
         (self.machine.corpus / "projects.awawa").write_text(
@@ -981,25 +873,9 @@ class BrigadeTickDryRunOfTheProjectsAndThePlannedRequestsTest(WaveTickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            json.loads(completed.stdout)["snapshot"]["projects"], [{"project": "shop", "slots": 1, "live_runs": []}]
+            json.loads(completed.stdout)["snapshot"]["projects"],
+            [{"project": "shop", "slots": 1, "live_runs": [], "wave_start": "auto", "candidates": []}],
         )
-
-    def test_should_hold_each_planned_request_with_the_plan_review_of_its_project(self):
-        for case, policies, expected in [
-            ("no policy", "", [{"request": "shop_2", "project": "shop", "plan_review": "auto"}]),
-            ("a policy asking", ASKING_POLICY, [{"request": "shop_2", "project": "shop", "plan_review": "ask"}]),
-        ]:
-            with self.subTest(case=case):
-                # Arrange
-                (self.machine.corpus / "policies.awawa").write_text(policies)
-                (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST + "\n" + PLANNED_REQUEST)
-
-                # Act
-                completed = self.run_tick("--dry-run", "--json")
-
-                # Assert
-                self.assertEqual(completed.returncode, 0, completed.stderr)
-                self.assertEqual(json.loads(completed.stdout)["snapshot"]["planned"], expected)
 
 
 class BrigadeTickDryRunTest(TickTestCase):
@@ -1021,7 +897,6 @@ class BrigadeTickDryRunTest(TickTestCase):
                     "now": document["snapshot"]["now"],
                     "waves": [],
                     "projects": [],
-                    "planned": [],
                     "studies": [],
                     "live_study_runs": [],
                     "study_runs": 2,
@@ -1065,7 +940,6 @@ class BrigadeTickDryRunTest(TickTestCase):
                 report_lines[1],
                 "  waves  []",
                 "  projects  []",
-                "  planned  []",
                 "  studies  []",
                 "  live_study_runs  []",
                 "  study_runs  2",
@@ -1503,15 +1377,6 @@ MERGED_S3 = (
 CAFE_BRANCH = "integration/M1-menu"
 CAFE_TASKS = 'TASK S6\n\tTITLE "Print the menu"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
 CAFE_MILESTONES = 'MILESTONE M1\n\tTITLE "Menu"\n\tSTATUS running\n'
-CAFE_RUNNING_REQUEST = (
-    "REQUEST cafe_1\n"
-    "\tPROJECT @PROJECT.cafe\n"
-    '\tTEXT "print the menu"\n'
-    '\tCREATED_AT "2026-10-12T11:30:00Z"\n'
-    "\tSTATUS running\n"
-    '\tMILESTONE "M1"\n'
-    f'\tBRANCH "{CAFE_BRANCH}"\n'
-)
 CAFE_WAVE_STARTED = (
     '{"schema_version": 2, "ts": "2026-10-13T09:30:00Z", "event": "wave.started", "wave": "cafe_w1",'
     f' "project": "cafe", "branch": "{CAFE_BRANCH}", "tasks": ["S6"]}}\n'
@@ -1831,18 +1696,15 @@ class BrigadeTickDryRunFollowingAMergedTaskTest(FollowingTickTestCase):
             json.loads(completed.stdout)["plan"],
             [
                 {"project": "shop", "task": "S3", "worktree": str(self.worktree)},
+                {"wave": "shop_w1", "task": "S5", "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]},
                 {
-                    "request": "shop_1",
                     "project": "shop",
-                    "milestone": "M1",
                     "wave": "shop_w1",
                     "branch": WAVE_BRANCH,
                     "task": "S4",
                 },
                 {
-                    "request": "shop_1",
                     "project": "shop",
-                    "milestone": "M1",
                     "wave": "shop_w1",
                     "branch": WAVE_BRANCH,
                     "task": "S6",
@@ -1881,12 +1743,11 @@ class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTick
         cafe.run_git("commit", "--quiet", "-m", "the plan of M1")
         cafe.run_git("checkout", "--quiet", "main")
         self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(cafe.path))
-        (self.machine.corpus / "requests.awawa").write_text(RUNNING_REQUEST + CAFE_RUNNING_REQUEST)
         with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
             ledger.write(CAFE_WAVE_STARTED)
         (self.pull_requests / "task-M1-menu-S6.refused").write_text("")
 
-    def test_should_name_the_request_skip_it_and_plan_the_waves_of_the_others(self):
+    def test_should_name_the_wave_skip_it_and_plan_the_others(self):
         # Arrange
         self.answer_pull_request_of_s3("OPEN")
 
@@ -1899,7 +1760,7 @@ class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTick
             (
                 0,
                 (
-                    "brigade tick: @REQUEST.cafe_1 skipped: gh pr list --head task/M1-menu/S6 --state all --limit 1"
+                    "brigade tick: the wave cafe_w1 skipped: gh pr list --head task/M1-menu/S6 --state all --limit 1"
                     " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup exited 1:"
                     " HTTP 502: Bad Gateway\n"
                 ),
@@ -1909,10 +1770,9 @@ class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTick
             json.loads(completed.stdout)["plan"],
             [
                 {"wave": "shop_w1", "task": "S3", "state": "pr_open", "reason": None},
+                {"wave": "shop_w1", "task": "S5", "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]},
                 {
-                    "request": "shop_1",
                     "project": "shop",
-                    "milestone": "M1",
                     "wave": "shop_w1",
                     "branch": WAVE_BRANCH,
                     "task": "S6",
@@ -2133,3 +1993,46 @@ class BrigadeTickOnAPullRequestNoTaskOpenedTest(TickPreflightTestCase):
 
         # Assert
         self.assertEqual(self.read_events("task.preflighted"), [])
+
+
+MAIN_TASKS_WITH_A_CANDIDATE = MAIN_TASKS + '\nTASK S7\n\tTITLE "Save the cart for later"\n\tSTATUS todo\n'
+NO_WAVE_EVENTS = ""
+
+
+class BrigadeTickOnceWithACandidateOutsideEveryOpenWaveTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.write("corpus/tasks.awawa", MAIN_TASKS_WITH_A_CANDIDATE)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "-m", "a task to deliver")
+        (self.state / "ledger" / "2026-10.jsonl").write_text(NO_WAVE_EVENTS)
+
+    def test_should_start_a_wave_of_the_candidate_under_no_policy(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            self.read_events("wave.started"),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": ANY,
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": "integration/shop_w1",
+                    "tasks": ["S7"],
+                }
+            ],
+        )
+
+    def test_should_cut_the_branch_of_the_wave_it_starts(self):
+        # Act
+        self.run_tick("--once")
+
+        # Assert
+        self.assertEqual(
+            self.project.run_git("branch", "--list", "--format=%(refname:short)", "integration/shop_w1"),
+            "integration/shop_w1\n",
+        )

@@ -5,28 +5,16 @@ from types import SimpleNamespace
 
 from brigade.commands.wave_resume import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import (
-    create_corpus_double,
-    create_runtime,
-    write_ledger,
-    write_operational_corpus,
-)
+from tests.unit.commands.command_runtime import create_runtime, write_ledger
 
 EVERY_PAUSE = None
-TIDES_REQUEST = (
-    ("PROJECT", "@PROJECT.tidepool"),
-    ("STATUS", "running"),
-    ("MILESTONE", "M4"),
-    ("BRANCH", "integration/M4-tides"),
-    ("CREATED_AT", "2026-09-30T21:00:00Z"),
-)
 WAVE_STARTED = {
     "schema_version": 2,
     "ts": "2026-09-30T22:00:00Z",
     "event": "wave.started",
     "wave": "tidepool_w16",
     "project": "tidepool",
-    "branch": "integration/M4-tides",
+    "branch": "integration/tidepool_w16",
     "tasks": ["T7"],
 }
 
@@ -74,7 +62,7 @@ class WaveResumeExitCodeTest(unittest.TestCase):
 class WaveResumeRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(request=None)
+        options = SimpleNamespace(wave=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -88,8 +76,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        write_operational_corpus(self.root)
-        self.runtime = create_runtime(self.root, run_process=create_corpus_double({"REQUEST": {"R1": TIDES_REQUEST}}))
+        self.runtime = create_runtime(self.root)
 
     def test_should_resume_every_wave_paused_on_the_forge_account_only(self):
         # Arrange
@@ -99,30 +86,41 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request=EVERY_PAUSE), self.runtime)
+        document = COMMAND.run(SimpleNamespace(wave=EVERY_PAUSE), self.runtime)
 
         # Assert
         self.assertEqual(
             document, {"schema_version": 1, "resumed": [{"wave": "tidepool_w16", "reason": "forge_account"}]}
         )
 
-    def test_should_resume_the_wave_of_a_request_whatever_its_pause(self):
+    def test_should_resume_the_wave_named_whatever_its_pause(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _pause("tidepool_w16", "quota")])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="R1"), self.runtime)
+        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "resumed": [{"wave": "tidepool_w16", "reason": "quota"}]})
 
-    def test_should_refuse_to_resume_the_running_wave_of_a_request(self):
+    def test_should_refuse_to_resume_a_running_wave(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED])
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(request="R1"), self.runtime)
+            COMMAND.run(SimpleNamespace(wave="tidepool_w16"), self.runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "the wave tidepool_w16 of @REQUEST.R1 is running, not paused")
+        self.assertEqual(str(raised.exception), "the wave tidepool_w16 is running, not paused")
+
+    def test_should_refuse_to_resume_a_wave_no_wave_started_names(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED])
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(SimpleNamespace(wave="tidepool_w17"), self.runtime)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")

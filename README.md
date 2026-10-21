@@ -3,10 +3,11 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with sixteen commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
-`brigade adapter`, `brigade project`, `brigade wave`, `brigade plan`, `brigade ledger`, `brigade roles`,
-`brigade tick`, `brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs`, `brigade processes` and `brigade verify`; every
-other one is a task of the corpus.
+The entry point exists with twenty-one commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+`brigade adapter`, `brigade project`, `brigade request`, `brigade wave`, `brigade plan`, `brigade task`,
+`brigade study`, `brigade collect`, `brigade collectors`, `brigade ledger`, `brigade roles`, `brigade tick`,
+`brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs`, `brigade processes` and `brigade verify`;
+every other one is a task of the corpus.
 
 ## Install
 
@@ -76,34 +77,63 @@ These commands need awawa on `PATH`.
 
 ## Waves
 
-A wave starts as a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one
-project, in their words. Every command below exits 1 naming `brigade init` until the corpus exists, and prints text
+A request is a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one
+project, in their words, and the plan it receives. Every command below but `wave show`, `wave list`, `wave cancel` and
+`wave resume`, which read the ledger alone, exits 1 naming `brigade init` until the corpus exists, and each prints text
 or, with `--json`, a JSON document.
 
 ```
-brigade wave new <project> <text>
-brigade wave start <request>
-brigade wave show <request>
+brigade request new <project> <text>
+brigade request show <request>
+brigade request list [--project P]
+brigade request cancel <request>
+brigade plan record <request> --file <plan>
+brigade wave start <project> [--task T ...]
+brigade wave show <wave>
 brigade wave list [--project P]
-brigade wave resume [<request>]
+brigade wave cancel <wave>
+brigade wave resume [<wave>]
 ```
 
-`wave new` records the request as `<project>_<n>`, `n` one above the highest its project holds, with the UTC instant
-of its creation and the status `planning`, then launches the planner on it detached, `brigade run wave-plan --slot
-plan --project <project> --detach request=<name>`, and prints the request and the run, then the line `brigade runs
-show <run> --log`, the command that follows the planner. A project that is not
-registered or is paused exits 1. `wave start` moves a `planned` request to `running`, names its wave `<project>_w<n>`, `n` one above the highest
-wave number of the project in the ledger, and records `wave.started` with the wave, the project, the branch and the
-tasks of its milestone in the order of their number; that name keys every wave event of the ledger; a request of another status exits 1 naming it. `wave show` prints a request, what a planned one waits for,
-`brigade wave start` when a `POLICY` of its project sets `PLAN_REVIEW ask`, the next tick otherwise, and the tasks of
-its milestone read from its branch, each with the last `task.state` of the ledger, `queued` when none, its run, the last `run.finished` of the
-project naming the task, blank when none, and the pull request that delivered it; a request of a project that declares no corpus exits 1. `wave show` and `wave list` print the wave name of a started request, `-` for one that did not start.
-`wave list` prints one row per request, those of one project with `--project`. Every write
-goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
+`request new` records the request as `<project>_r<n>`, `n` one above the highest its project holds, under the lock
+of the corpus, with the UTC instant of its creation and the status `planning`, then launches the planner on it
+detached, `brigade run wave-plan --slot plan --project <project> --detach request=<name>`, and prints the request and
+the run, then the line `brigade runs show <run> --log`, the command that follows the planner. A project that is not
+registered or is paused exits 1. `request show` prints a request, its status, its milestone, its pull request and the
+instant of its creation, `-` for a field it does not hold yet; `request list` prints one row per request, those of one
+project with `--project`. `request cancel` moves a `planning` or `planned` request to `cancelled`; a request of
+another status exits 1 naming it. `plan record` takes the plan of a `planning` request, one `MILESTONE` and its
+tasks, writes it in a detached worktree of the project's main branch, beside the entities of their types, runs
+`awawa lint --strict` and commits it on `plan/<request>`; under the forge `none` it fast-forwards the main branch to
+that commit at once, and under `github` it pushes the branch and opens a pull request to the main branch, titled
+`docs(plan): <milestone title> (@REQUEST.<request>)`, as the login of the key `cli` of `[forge_accounts]`. Under
+`PLAN_REVIEW auto`, the default, brigade merges that pull request itself, squash, as the same login, the login of the
+key `review` approving it first when the forge requires an approving review; under `PLAN_REVIEW ask` the merge is
+the user's. The request goes `planned` with its `MILESTONE` and, under `github`, its `PR`. A plan record replayed
+once `plan/<request>` exists commits nothing again: it takes the pull request of that branch, pushes the branch and
+opens it when the forge finds none, and marks the request planned. Every write to the operational corpus goes
+through the lock, `awawa fmt`, `awawa lint --strict` and the commit of the registry's writes.
 
-`wave resume` records `wave.resumed` for the wave of the request named, whatever the reason of its pause, or, without
-one, for every wave paused on the forge account, the tick resuming by itself a wave paused on the quota; it prints each
-wave it resumed, and a request whose wave is not paused exits 1 naming its state.
+A wave is a batch of ratified tasks started together, recorded in the ledger alone. `wave start` composes it without a
+model from the tasks `todo` of the project corpus at the main branch that hold a number in their name, belong to no
+open wave and have no live blocker, admitting a task once every task of its `AFTER` is implemented or in the wave, in
+the order of their number; `--task` takes exactly the tasks named and exits 1 on a task in an open wave, a task with no
+number in its name, a task the corpus does not define or one whose `AFTER` is neither implemented nor named, and an
+empty wave exits 1 naming the project. It names the wave `<project>_w<n>`, `n` one above the highest wave number of
+the project in the ledger, records `wave.started` with the wave, the project, the branch and the tasks under the lock
+of the ledger, then cuts `integration/<project>_w<n>` from the main branch and pushes it under the forge `github`; the
+missing branch of an open wave is cut again, and a branch of the name that no `wave.started` names, local or remote,
+exits 1. A wave is open until `wave.closed` or `wave.cancelled`. `wave show` prints a wave, its branch, the instant it
+started and its last wave event, then each task with its last `task.state`, its pull request and its last run in the
+wave, `-` when none; `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task
+count, the open waves first, those of one project with `--project`. `wave cancel` records `wave.cancelled`, stops the
+live run of each task of the wave as `brigade runs stop` does and lists, per task, the run it stopped, the worktree of
+its last run, and the branch and the pull request it opened, all left in place; a wave already closed or cancelled
+exits 1 naming that event. The tasks of a cancelled wave are candidates of the next wave.
+
+`wave resume` records `wave.resumed` for the wave named, whatever the reason of its pause, or, without one, for every
+wave paused on the forge account, the tick resuming by itself a wave paused on the quota; it prints each wave it
+resumed, and a wave no `wave.started` names, or one that is not paused, exits 1 naming it.
 
 ## Tasks
 
@@ -237,7 +267,7 @@ Every output but `entity:` hands a person the Markdown rendered from the answer 
 
 A tick builds a snapshot of the facts, plans the actions they call for and applies them, round after round until the
 plan is empty or ten rounds have passed. Among those actions, it runs the due studies, as Studies says, and launches
-each startable task of a running wave as a detached build run, in the worktree it cuts for the task, of `build-task`,
+each startable task of an open wave as a detached build run, in the worktree it cuts for the task, of `build-task`,
 the procedure brigade ships, or of the one the key `build` of the table `[procedures]` of `config.toml` names in its
 place, resolved as the argument of `brigade run` is, with the wave and the task as `--wave` and `--task`. It follows the pull request of each task past its launch,
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
@@ -252,9 +282,19 @@ as its arguments, unless a run holds the worktree or a review run of the task al
 a rate limit; once a `task.verdict` is recorded at the head of the pull request, it moves the task to `verified` on
 `pass` and to `changes_requested` on `changes`. A task in `verifying` whose pull request head is no longer the head of
 its last `task.preflighted` moves back to `pr_open`, where the preflight of the new head opens the next verification.
-A running REQUEST that no
-`wave.started` names, or whose pull requests the forge fails to read, is skipped, named on stderr, and the tick serves
-the waves of the others.
+The waves are the
+open waves of the ledger, each with the tasks its `wave.started` names, in that order, read from the project corpus
+at the wave's branch; a wave whose pull requests the forge fails to read is skipped, named on stderr, and the tick
+serves the others.
+
+The tick starts a wave, as `brigade wave start <project>` does, for each registered project not `paused` whose
+`POLICY` sets `WAVE_START` to `auto`, the default when no `POLICY` names the project, when at least one candidate lies
+outside every open wave; the wave takes every candidate, `SLOTS` bounding the live build runs alone, and `ask` leaves
+the start to the user. A project whose tasks cannot be read is skipped, named on stderr. An open wave whose branch is
+missing has it cut again from the main branch, with no second `wave.started`. A queued task of an open wave that a
+live blocker cites is recorded `parked` with the reason `blocked by` and the citing entity. Once every task of a wave
+is `merged` or `parked`, the tick records `wave.reported`, its `run` null until the wave-report study exists, and once
+the integration pull request of a reported wave is merged, `wave.closed` with its number.
 
 Any run that finished on the `error_class` `rate_limit`, until its `reset` has passed, pauses every running wave of the
 machine: `wave.paused` with the reason `quota` and `resume_at` the first instant after the tick's clock at the hour and

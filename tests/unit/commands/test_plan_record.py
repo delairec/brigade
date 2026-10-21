@@ -37,6 +37,13 @@ TASK_T9 = json.dumps(
 )
 CORPUS_SITES = json.dumps({"entities": [{"type": "TASK", "name": "T1", "file": "corpus/tasks.awawa", "line": 1}]})
 REQUEST_SITES = json.dumps({"entities": [{"type": "REQUEST", "name": "r1", "file": "requests.awawa", "line": 1}]})
+FORGE = object()
+
+
+def resolve_forge(kind: str, name: str, **places):
+    return FORGE
+
+
 REQUESTS = 'REQUEST r1\n\tPROJECT @PROJECT.app\n\tTEXT "Let the tides be planned"\n\tSTATUS planning\n'
 
 
@@ -65,15 +72,19 @@ class PlanRecordTest(unittest.TestCase):
             ("git", "add"): ProcessAnswer(),
             ("git", "diff"): ProcessAnswer(exit_code=1),
             ("git", "commit"): ProcessAnswer(),
+            ("git", "fetch"): ProcessAnswer(),
         }
-        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
+        self.runtime = create_runtime(
+            root, run_process=ScriptedProcessRunner(self.answers).run, resolve_plugin=resolve_forge
+        )
         config_root = self.runtime.paths.config_root
         self.answers["awawa", "status", "--json", str(config_root)] = ProcessAnswer(stdout=REQUEST_SITES)
         config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA REQUEST\n")
+        self.runtime.paths.configuration_file.write_text("")
         (config_root / "requests.awawa").write_text(REQUESTS)
 
-    def test_should_record_the_plan_on_its_integration_branch(self):
+    def test_should_record_the_plan_on_its_plan_branch_merged_at_once_without_a_forge(self):
         # Arrange
         request = argparse.Namespace(request="r1", file=str(self.plan_file))
 
@@ -82,7 +93,8 @@ class PlanRecordTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document, {"schema_version": 1, "request": "r1", "milestone": "M4", "branch": "integration/M4-tides"}
+            document,
+            {"schema_version": 1, "request": "r1", "milestone": "M4", "branch": "plan/r1", "pr": None},
         )
 
     def test_should_refuse_a_project_that_declares_no_corpus(self):
@@ -113,7 +125,7 @@ class PlanRecordRequestTest(unittest.TestCase):
 class PlanRecordExitCodeTest(unittest.TestCase):
     def test_should_exit_0_once_the_plan_is_recorded(self):
         # Arrange
-        document = {"request": "r1", "milestone": "M4", "branch": "integration/M4-tides"}
+        document = {"request": "r1", "milestone": "M4", "branch": "plan/r1"}
 
         # Act
         exit_code = COMMAND.decide_exit_code(document)
@@ -125,10 +137,10 @@ class PlanRecordExitCodeTest(unittest.TestCase):
 class PlanRecordTextTest(unittest.TestCase):
     def test_should_name_the_request_the_milestone_and_the_branch(self):
         # Arrange
-        document = {"request": "r1", "milestone": "M4", "branch": "integration/M4-tides"}
+        document = {"request": "r1", "milestone": "M4", "branch": "plan/r1"}
 
         # Act
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "recorded @REQUEST.r1 as @MILESTONE.M4 on integration/M4-tides")
+        self.assertEqual(text, "recorded @REQUEST.r1 as @MILESTONE.M4 on plan/r1")

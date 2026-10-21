@@ -20,6 +20,9 @@ from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
 from tests.unit.commands.command_runtime import (
+    ProcessAnswer,
+    ScriptedProcessRunner,
+    create_corpus_double,
     create_machine_double,
     create_runtime,
     write_ledger,
@@ -221,12 +224,11 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "schema_version": 1,
                     "now": "2026-10-07T09:00:00Z",
                     "waves": [],
-                    "planned": [],
                     "projects": [],
-                    "rate_limits": [],
                     "studies": [],
                     "live_study_runs": [],
                     "study_runs": 2,
+                    "rate_limits": [],
                 },
                 "plan": [],
             },
@@ -321,13 +323,6 @@ class TickRequestTest(unittest.TestCase):
 WAVE = "tidepool_w16"
 WAVE_BRANCH = "integration/M4"
 WAVE_HEAD = "8885daa"
-WAVE_REQUEST = (
-    ("PROJECT", "@PROJECT.tidepool"),
-    ("STATUS", "running"),
-    ("MILESTONE", "M4"),
-    ("BRANCH", "integration/M4"),
-    ("CREATED_AT", "2026-10-18T09:00:00Z"),
-)
 TASK_TO_DELIVER = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"))
 TASK_DELIVERED = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "implemented"), ("DELIVERED_BY", "42"))
 MACHINE_OUTPUTS = {
@@ -352,6 +347,13 @@ WAVE_STARTED = {
     "branch": "integration/M4",
     "tasks": ["T7"],
 }
+WAVE_REPORTED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:00:00Z",
+    "event": "wave.reported",
+    "wave": "tidepool_w16",
+    "run": None,
+}
 TASK_PR_OPENED = {
     "schema_version": 1,
     "ts": "2026-10-18T11:00:00Z",
@@ -362,6 +364,26 @@ TASK_PR_OPENED = {
     "branch": "task/M4/T7",
     "pr": 42,
     "login": "tidepool-bot",
+}
+BLOCKING_QUESTION_OUTPUTS = {
+    ("awawa", "refs"): json.dumps(
+        {
+            "incoming": [
+                {"from": {"type": "OPEN_QUESTION", "name": "Undecided", "status": "open"}, "field_path": ["BLOCKS"]}
+            ]
+        }
+    ),
+    ("awawa", "show", "OPEN_QUESTION"): json.dumps(
+        {
+            "fields": [
+                {
+                    "name": "FIELD",
+                    "atoms": ["BLOCKS", "reference"],
+                    "fields": [{"name": "CONVERSE", "atoms": ["BLOCKED_BY"], "fields": []}],
+                }
+            ]
+        }
+    ),
 }
 NO_PULL_REQUEST = None
 OPEN_PULL_REQUEST = {
@@ -446,8 +468,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
     def _create_runtime(self, task: tuple, forge: ForgeDouble) -> Runtime:
         corpus = {
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)),)},
-            "REQUEST": {"tidepool_1": WAVE_REQUEST},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": task},
         }
         return create_runtime(
@@ -457,10 +478,13 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
         )
 
-    def _read_last_event(self) -> dict:
+    def _read_event(self, rank: int) -> dict:
         return json.loads(
-            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[-1]
+            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[rank]
         )
+
+    def _read_last_event(self) -> dict:
+        return self._read_event(-1)
 
     def test_should_launch_the_build_run_of_a_task_ready_to_start(self):
         # Arrange
@@ -489,7 +513,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                         "--project",
                         "tidepool",
                         "--brief",
-                        str(self.root / "state" / "briefs" / "tidepool_1-T7.md"),
+                        str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
                         "--wave",
                         "tidepool_w16",
                         "--task",
@@ -545,14 +569,15 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_record_the_merge_of_the_pull_request_of_a_running_task(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
-        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+        first_event_of_the_tick = 2
 
         # Act
         COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_last_event(),
+            self._read_event(first_event_of_the_tick),
             {
                 "schema_version": 1,
                 "ts": "2026-10-19T09:00:00Z",
@@ -657,6 +682,41 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             },
         )
 
+    def test_should_park_a_queued_task_a_live_blocker_cites(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        runtime = create_runtime(
+            self.root,
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+
+        first_event_of_the_tick = 2
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_event(first_event_of_the_tick),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.parked",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "reason": "blocked",
+                "blockers": ["OPEN_QUESTION.Undecided"],
+            },
+        )
+
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
@@ -668,6 +728,109 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self._read_last_event()["event"], "task.preflighted")
+
+    def test_should_report_a_wave_whose_tasks_are_merged_or_parked(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.reported",
+                "wave": "tidepool_w16",
+                "run": None,
+            },
+        )
+
+    def test_should_close_a_reported_wave_once_its_integration_pull_request_is_merged(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), WAVE_REPORTED])
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.closed",
+                "wave": "tidepool_w16",
+                "pr": 42,
+            },
+        )
+
+
+class TickStartingAndCuttingWavesTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        outputs = {
+            **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()},
+            ("git", "branch", "--quiet"): ProcessAnswer(),
+        }
+        self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
+        self.runtime = create_runtime(
+            self.root,
+            run_process=self.machine.run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+
+    def _miss_the_branch(self, branch: str) -> None:
+        verify = ("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}")
+        self.machine.answers[verify] = ProcessAnswer(exit_code=1)
+
+    def test_should_start_a_wave_of_the_candidates_of_a_project_without_one(self):
+        # Arrange
+        self._miss_the_branch("integration/tidepool_w1")
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[0]),
+            {
+                "schema_version": 2,
+                "ts": ANY,
+                "event": "wave.started",
+                "wave": "tidepool_w1",
+                "project": "tidepool",
+                "branch": "integration/tidepool_w1",
+                "tasks": ["T7"],
+            },
+        )
+        self.assertIn(("git", "branch", "--quiet", "integration/tidepool_w1", "main"), self.machine.argvs)
+
+    def test_should_cut_the_missing_branch_of_an_open_wave(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED])
+        self._miss_the_branch("integration/M4")
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(("git", "branch", "--quiet", "integration/M4", "main"), self.machine.argvs)
 
 
 class TickLaunchingAStudyTest(unittest.TestCase):

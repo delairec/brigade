@@ -5,12 +5,16 @@ from brigade.ledger.format_instant import format_instant
 from brigade.studies.read_schedule import read_schedule
 from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
+    CloseWave,
+    CutWaveBranch,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    ParkTask,
     PauseWave,
     RecordTaskState,
     RemoveTaskWorktree,
+    ReportWave,
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
@@ -19,7 +23,6 @@ from brigade.tick.actions import (
 from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
 from brigade.tick.decide_resume_at import decide_resume_at
 
-AUTOMATIC_PLAN_REVIEW = "auto"
 BUILD_SLOT = "build"
 WAITING_STATE = "queued"
 MERGED_STATE = "merged"
@@ -41,14 +44,11 @@ SCAN_SLOT = "none"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
 QUOTA_REASON = "quota"
 FORGE_ACCOUNT_REASON = "forge_account"
+AUTOMATIC_WAVE_START = "auto"
+BLOCKED_REASON = "blocked"
 
 
 def plan(snapshot: Snapshot) -> tuple:
-    starts = tuple(
-        StartWave(request=planned.request)
-        for planned in snapshot.planned
-        if planned.plan_review == AUTOMATIC_PLAN_REVIEW
-    )
     pauses = _plan_pauses(snapshot)
     paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
         pause.wave for pause in pauses if isinstance(pause, PauseWave)
@@ -58,27 +58,22 @@ def plan(snapshot: Snapshot) -> tuple:
     for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
         for task in sorted(
             (task for task in wave.tasks if _is_startable(task, wave)),
-            key=lambda task: read_task_number(task.name, wave.milestone),
+            key=lambda task: read_task_number(task.name, wave.wave),
         ):
             if free_slots[wave.project] <= 0:
                 break
             free_slots[wave.project] -= 1
-            launches.append(
-                LaunchTask(
-                    request=wave.request,
-                    project=wave.project,
-                    milestone=wave.milestone,
-                    wave=wave.wave,
-                    branch=wave.branch,
-                    task=task.name,
-                )
-            )
+            launches.append(LaunchTask(project=wave.project, wave=wave.wave, branch=wave.branch, task=task.name))
     return (
-        starts
-        + pauses
+        pauses
         + _plan_resumes(snapshot)
         + _plan_followed_pull_requests(snapshot)
+        + _plan_blocked_task_parkings(snapshot)
+        + _plan_branch_cuts(snapshot)
+        + _plan_reports(snapshot)
+        + _plan_closes(snapshot)
         + tuple(launches)
+        + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
     )
 
@@ -222,6 +217,47 @@ def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFa
         and (bool(task.pull_request.checks) or not project.awaits_check_runs)
         and all(check.verdict != PENDING_VERDICT for check in task.pull_request.checks)
         and task.preflighted_head != task.pull_request.head
+    )
+
+
+def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
+    return tuple(
+        ParkTask(wave=wave.wave, task=task.name, reason=BLOCKED_REASON, blockers=task.blocked_by)
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if wave.states.get(task.name, WAITING_STATE) == WAITING_STATE and task.blocked_by
+    )
+
+
+def _plan_branch_cuts(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CutWaveBranch(project=wave.project, wave=wave.wave, branch=wave.branch)
+        for wave in snapshot.waves
+        if wave.branch_missing
+    )
+
+
+def _is_settled(wave: WaveFacts) -> bool:
+    return bool(wave.tasks) and all(wave.states.get(task.name) in SETTLED_STATES for task in wave.tasks)
+
+
+def _plan_reports(snapshot: Snapshot) -> tuple:
+    return tuple(ReportWave(wave=wave.wave) for wave in snapshot.waves if _is_settled(wave) and not wave.reported)
+
+
+def _plan_closes(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CloseWave(wave=wave.wave, pr=wave.integration_pull_request.number)
+        for wave in snapshot.waves
+        if wave.integration_pull_request is not None and wave.integration_pull_request.state == MERGED_PULL_REQUEST
+    )
+
+
+def _plan_wave_starts(snapshot: Snapshot) -> tuple:
+    return tuple(
+        StartWave(project=project.name)
+        for project in snapshot.projects
+        if project.wave_start == AUTOMATIC_WAVE_START and project.candidates
     )
 
 

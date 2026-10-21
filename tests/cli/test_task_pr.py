@@ -65,10 +65,6 @@ PULL_REQUEST_CREATION = (
     f" --title feat(cart-button): {SUBJECT} (@TASK.S3) --body-file -\n"
 )
 RECEIVING_HOOK = '#!/bin/sh\nprintf "%s\\n" "$GH_TOKEN" >> "{pushes}"\n'
-WAVE_STARTED = (
-    '{"schema_version": 2, "ts": "2026-09-30T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3"]}}\n'
-)
 MILESTONE_CREATION = "api --method POST repos/{owner}/{repo}/milestones -f title=Empty cart\n"
 
 
@@ -87,9 +83,6 @@ class TaskPrTestCase(TaskCheckTestCase):
         self.project.run_git("remote", "add", "origin", str(self.remote))
         self.configure(keys=PR_KEYS)
         self.write_task(TYPED_TASKS)
-        self.wave_started = self.state / "ledger" / "2026-09.jsonl"
-        self.wave_started.parent.mkdir(parents=True, exist_ok=True)
-        self.wave_started.write_text(WAVE_STARTED)
 
     def describe_environment(self) -> dict:
         tools = Path(self.root.name).resolve() / "tools"
@@ -245,9 +238,7 @@ class BrigadeTaskPrRefusalTest(TaskPrTestCase):
         completed = self.run_task_pr("--subject", SUBJECT)
 
         # Assert
-        self.assert_refused(
-            completed, f"no wave.started of @PROJECT.shop names {WAVE_BRANCH}, the BRANCH of @REQUEST.shop_1"
-        )
+        self.assert_refused(completed, f"no wave.started of @PROJECT.shop has the branch {WAVE_BRANCH}")
 
     def test_should_refuse_a_task_no_check_was_recorded_for(self):
         # Act

@@ -11,12 +11,15 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
+from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.ledger.write_event_line import write_event_line
@@ -33,6 +36,7 @@ def append_event(
     | PlanLintFailed
     | WaveStarted
     | TaskState
+    | TaskParked
     | OrderStarted
     | StepDone
     | StepFailed
@@ -44,7 +48,9 @@ def append_event(
     | WavePaused
     | WaveResumed
     | TaskPreflighted
-    | TaskVerdict,
+    | TaskVerdict
+    | WaveReported
+    | WaveClosed,
 ) -> dict:
     with hold_lock(paths.lock_directory / LOCK_FILE):
         return write_event_line(paths, instant, event)

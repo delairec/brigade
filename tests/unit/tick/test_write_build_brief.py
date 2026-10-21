@@ -13,9 +13,9 @@ class WriteBuildBriefTest(unittest.TestCase):
         # Arrange
         state_root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, state_root)
-        action = LaunchTask(request="R1", project="shop", milestone="M1", wave="w1", branch="integration/w1", task="B1")
+        action = LaunchTask(project="shop", wave="shop_w1", branch="integration/shop_w1", task="B1")
         worktree = BranchWorktree(
-            path=Path("/srv/shop/.brigade/worktrees/B1"), branch="task/w1/B1", start="integration/w1"
+            path=Path("/srv/shop/.brigade/worktrees/B1"), branch="task/shop_w1/B1", start="integration/shop_w1"
         )
 
         # Act
@@ -23,7 +23,7 @@ class WriteBuildBriefTest(unittest.TestCase):
 
         # Assert
         brief = path.read_text()
-        self.assertEqual(
-            (path, "/srv/shop/.brigade/worktrees/B1" in brief, "task/w1/B1" in brief, "$" in brief),
-            (state_root / "briefs" / "R1-B1.md", True, True, False),
-        )
+        self.assertEqual(path, state_root / "briefs" / "shop_w1-B1.md")
+        self.assertIn("/srv/shop/.brigade/worktrees/B1", brief)
+        self.assertIn("task/shop_w1/B1", brief)
+        self.assertNotIn("$", brief)
