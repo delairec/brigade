@@ -10916,24 +10916,40 @@ TASK B187
 
 TASK B189
 	TITLE "the five modules of studies/ and planning/ that call awawa go through named operations"
-		+ "of brigade/corpus/, and a guard keeps awawa inside the gateway"
-	STATUS draft
+		+ "of brigade/corpus/, and a guard keeps awawa and git inside their gateways"
+	STATUS todo
 	TYPE refactor
 	MILESTONE @MILESTONE.M1
 	COMPONENT "corpus"
 	ROLE ada
-	DESC "found by the review of pull request #149: brigade/studies/require_answer_type.py:14,"
+	SPEC "no module outside brigade/corpus/ builds an argv opening on awawa: each of the five calls"
+		+ "goes through a named operation of brigade/corpus/, the output of each command that"
+		+ "reaches them unchanged"
+	SPEC "an operation brigade/corpus/ gains for these calls is tested in tests/integration against"
+		+ "a real corpus in a temporary directory, one test per operation; an operation it already"
+		+ "has is reused with the test it already has"
+	SPEC "tests/unit prove each of the five modules through a double of the operation it calls"
+	SPEC "a guard of tests/guards refuses, in brigade/ outside brigade/corpus/ and brigade/git/, a"
+		+ "tuple or list literal whose first element is the string awawa or git, naming the file"
+		+ "and the line; its own test proves it flags a tuple and a list opening on each tool and"
+		+ "leaves a call taking either name as a label, as brigade/commands/doctor.py does"
+	RATIONALE "found by the review of pull request #149: brigade/studies/require_answer_type.py:14,"
 		+ "brigade/planning/list_undeclared.py:18, brigade/planning/assemble_plan_context.py:35,"
 		+ "brigade/planning/read_plan.py:22 and brigade/planning/read_entity_sites.py:21 build an"
 		+ "argv opening on awawa and run it through the runner, where"
 		+ "@DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa rules that nothing but"
-		+ "brigade/corpus/ calls awawa"
+		+ "brigade/corpus/ calls awawa; no argv opens on git outside brigade/git/ on main d24c99e"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
-	SPEC "no module outside brigade/corpus/ builds an argv opening on awawa: each of the five calls"
-		+ "goes through a named operation of brigade/corpus/, tested in tests/integration against a"
-		+ "real corpus, the output of each command unchanged"
-	SPEC "a guard of tests/guards, wired into the quality gate, refuses an argv opening on awawa or"
-		+ "git outside brigade/corpus/ and brigade/git/, naming the file and the line"
+	RATIONALE "DESC 6 of @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa tests a"
+		+ "gateway against a real corpus, and the REJECTED of"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles keeps integration tests"
+		+ "few: a new operation alone gains an integration test, read_awawa_document and"
+		+ "read_entity keeping theirs"
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+	RATIONALE "the tests job of the CI runs pytest on tests/, so a guard of tests/guards is part of"
+		+ "the quality gate without further wiring; gh stays out of the guard, its own ruling in"
+		+ "DESC 3 of the decision unchanged"
 	RATIONALE "@TASK.B142 moved its own two calls into brigade/corpus/ with check_corpus; the five"
 		+ "merged ones were left to a task of their own so that #149 changes no merged module"
 		REF @TASK.B142
@@ -10941,6 +10957,8 @@ TASK B189
 		+ "tâche pour le reste (Recommandé) — Les deux appels de check_task passent par"
 		+ "brigade/corpus/ dans #149, et le round ouvre une tâche draft M1 (B189) pour déplacer les"
 		+ "cinq autres. La décision reste telle quelle. »"
+	SOURCE "the user's rulings of 2026-10-22 in the refinement of B189: « Une par opération neuve"
+		+ "(Recommandé) »; « awawa et git (Recommandé) »"
 
 TASK B190
 	TITLE "the CI runs the suite in parallel under pytest-xdist on both legs of the test job,"
