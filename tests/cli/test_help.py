@@ -76,7 +76,11 @@ class BrigadeGroupHelpTest(HelpTestCase):
             ("runs", "list", "list every run with its state and outcome"),
             ("runs", "show", "print the summary of a run and its segments, and with --log its journal"),
             ("scheduler", "install", "install the scheduler config.toml names, or the default"),
-            ("scheduler", "status", "report the scheduler installed"),
+            (
+                "scheduler",
+                "status",
+                "report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
+            ),
         ]
         for group, action, expected_help in rows:
             with self.subTest(group=group, action=action):

@@ -46,6 +46,9 @@
 # no cap, and the tick never launches a study while a run of it is live.
 # study_runs = 2
 
+# The minutes past which brigade scheduler status reports the last tick as stale and exits 1, 1 or more.
+# tick_stale_after = 15
+
 # The seconds between two reads of a running segment's output into the journal of its run, a positive number.
 # journal_poll_s = 2
 

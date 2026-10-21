@@ -461,6 +461,10 @@ class BrigadeSchedulerStatusWhenNothingIsInstalledTest(SchedulerTestCase):
                         "cron_line": None,
                         "next_activation": None,
                         "last_tick": None,
+                        "tick_stale_after": 15,
+                        "stale": False,
+                        "paused_waves": [],
+                        "parked_tasks": [],
                     },
                 )
 
@@ -487,7 +491,7 @@ class BrigadeSchedulerStatusWithSystemdInstalledTest(SchedulerTestCase):
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "status", "--json")
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
             {
@@ -497,6 +501,10 @@ class BrigadeSchedulerStatusWithSystemdInstalledTest(SchedulerTestCase):
                 "cron_line": None,
                 "next_activation": NEXT_ACTIVATION,
                 "last_tick": {"ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 0},
+                "tick_stale_after": 15,
+                "stale": True,
+                "paused_waves": [],
+                "parked_tasks": [],
             },
         )
 
@@ -505,7 +513,7 @@ class BrigadeSchedulerStatusWithSystemdInstalledTest(SchedulerTestCase):
         completed = self.run_scheduler([CRONTAB], "status", "--json")
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertIsNone(json.loads(completed.stdout)["next_activation"])
 
     def test_should_print_the_status_as_text(self):
@@ -513,7 +521,7 @@ class BrigadeSchedulerStatusWithSystemdInstalledTest(SchedulerTestCase):
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "status")
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertEqual(
             completed.stdout.splitlines(),
             [
@@ -522,6 +530,7 @@ class BrigadeSchedulerStatusWithSystemdInstalledTest(SchedulerTestCase):
                 f"unit       {self.timer}",
                 f"next       {NEXT_ACTIVATION}",
                 "last tick  2026-10-06T12:00:00Z, 0 actions applied in 4 ms",
+                "stale      the last tick is older than 15 minutes",
             ],
         )
 
@@ -538,7 +547,7 @@ class BrigadeSchedulerStatusWithCronInstalledTest(SchedulerTestCase):
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "status", "--json")
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
             {
@@ -548,6 +557,10 @@ class BrigadeSchedulerStatusWithCronInstalledTest(SchedulerTestCase):
                 "cron_line": self.describe_cron_line(CRONTAB),
                 "next_activation": None,
                 "last_tick": None,
+                "tick_stale_after": 15,
+                "stale": True,
+                "paused_waves": [],
+                "parked_tasks": [],
             },
         )
 
@@ -556,8 +569,13 @@ class BrigadeSchedulerStatusWithCronInstalledTest(SchedulerTestCase):
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "status")
 
         # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertEqual(
             completed.stdout.splitlines(),
-            ["scheduler  cron", f"cron line  {self.describe_cron_line(CRONTAB)}", "last tick  never"],
+            [
+                "scheduler  cron",
+                f"cron line  {self.describe_cron_line(CRONTAB)}",
+                "last tick  never",
+                "stale      no tick ran while a scheduler is installed",
+            ],
         )

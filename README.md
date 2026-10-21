@@ -329,8 +329,10 @@ tick to `$XDG_STATE_HOME/brigade/tick.log` and discards its stdout, the heartbea
 nothing and names the `brigade tick --loop` command to keep running. The unit and the cron line run the brigade that
 installed them with the `PATH`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CACHE_HOME` of the install, escaped for
 systemd or quoted for the shell and cron. Run again, it leaves one pair of units or one line. `scheduler status` reports
-the scheduler installed or `none`, its unit files or cron line, the next activation of the timer and the last tick read
-from the heartbeat, and exits 0.
+the scheduler installed or `none`, its unit files or cron line, the next activation of the timer, the last tick read
+from the heartbeat, the paused waves with their reason and their `resume_at`, and the parked tasks of the open waves
+with their wave and their reason; it resumes no wave. It exits 1 when the last tick is older than `tick_stale_after` of
+`config.toml`, in minutes, 15 by default, or when no tick ever ran while a scheduler is installed, and 0 otherwise.
 
 ## A project's tree at a ref
 
