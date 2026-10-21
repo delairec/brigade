@@ -3392,3 +3392,25 @@ DECISION AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead
 		REF @TASK.B16
 	SOURCE "pull request #172 of the brigade repository, delivering @TASK.B16"
 		REF @TASK.B16
+
+DECISION RequestReplanRefusesOnlyALivePlannerARequestNotPlanningAndAPausedProject
+	TITLE "brigade request replan refuses a REQUEST not planning, a planner run still live and a"
+		+ "paused project, and relaunches every other planning REQUEST, its last planner run dead,"
+		+ "ended in any outcome or absent"
+	STATUS active
+	DESC "the planner run of a REQUEST is its last run of procedure wave-plan whose argument"
+		+ "request names it; its state is live, dead or the outcome of the finished run"
+	DESC "brigade request replan exits 1 on a REQUEST in another STATUS, on a live planner run and"
+		+ "on a paused project, as brigade request new refuses a paused project; any other planning"
+		+ "REQUEST has its planner launched"
+	REJECTED "relaunching only after a dead or a blocked planner run: a planner ended failed or"
+		+ "done without a plan, or whose run was pruned, would leave a planning REQUEST that only"
+		+ "request cancel moves"
+	REJECTED "letting a paused project be replanned: a paused project starts no run, whatever"
+		+ "command asks"
+	RATIONALE "@TASK.B169 SPEC 1 relaunches after a dead or a blocked planner run and lists as"
+		+ "refusals only another STATUS and a live planner run; the refusals are taken as the"
+		+ "complete list"
+		REF @TASK.B169
+	SOURCE "pull request #174 of the brigade repository, delivering @TASK.B169"
+		REF @TASK.B169
