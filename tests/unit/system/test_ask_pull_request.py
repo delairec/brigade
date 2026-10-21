@@ -33,6 +33,7 @@ class AskPullRequestTest(unittest.TestCase):
                     "review": "approved",
                     "behind": False,
                     "head": "0123abc",
+                    "base": "integration/M1-empty-cart",
                 },
             }
         )
@@ -59,6 +60,7 @@ class AskPullRequestTest(unittest.TestCase):
                     review="approved",
                     behind=False,
                     head="0123abc",
+                    base="integration/M1-empty-cart",
                 ),
             ),
         )

@@ -13,6 +13,7 @@ class PullRequestFactsTest(unittest.TestCase):
             "review": None,
             "behind": False,
             "head": "4f2a9c1",
+            "base": "integration/M1",
         }
 
         # Act
@@ -28,5 +29,6 @@ class PullRequestFactsTest(unittest.TestCase):
                 "review": None,
                 "behind": False,
                 "head": "4f2a9c1",
+                "base": "integration/M1",
             },
         )

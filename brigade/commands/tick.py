@@ -11,14 +11,18 @@ from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.pr_merged import PrMerged
+from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
+from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_run_document import read_run_document
@@ -29,6 +33,7 @@ from brigade.runtime import Runtime
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
 from brigade.studies.start_study_run import start_study_run
+from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.read_configuration import Configuration
@@ -44,6 +49,7 @@ from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    MergePullRequest,
     ParkTask,
     PauseWave,
     RecordTaskState,
@@ -73,6 +79,8 @@ BUILD_SLOT = "build"
 VERIFY_PROCEDURE = "verify-pr"
 RUNNING_STATE = "running"
 VERIFYING_STATE = "verifying"
+MERGED_STATE = "merged"
+PATH_FIELD = "PATH"
 FAILED_VERDICT = "fail"
 TICK_INTERVAL_S = 300
 ROUND_CAP = 10
@@ -198,6 +206,42 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
         )
 
 
+def _count_review_rounds(runtime: Runtime, action: MergePullRequest) -> int:
+    return sum(
+        1
+        for entry in read_ledger(runtime.paths.state_root).entries
+        if isinstance(entry.event, TaskVerdict) and entry.event.wave == action.wave and entry.event.task == action.task
+    )
+
+
+def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: MergePullRequest) -> None:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    project = find_project(read_projects(runtime), action.project)
+    forge.merge_pull_request(
+        {
+            "repository": read_project_field(project, PATH_FIELD),
+            "number": action.pr,
+            "method": action.method,
+            "environment": environment,
+        },
+        runtime,
+    )
+    append_event(
+        runtime.paths,
+        runtime.now,
+        PrMerged(
+            project=action.project,
+            wave=action.wave,
+            task=action.task,
+            pr=action.pr,
+            rounds=_count_review_rounds(runtime, action),
+            login=ask_forge_account(forge, FORGE_NAME, environment, runtime).login,
+        ),
+    )
+    _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
+
+
 def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
     return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
 
@@ -227,6 +271,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         ),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
+        MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),

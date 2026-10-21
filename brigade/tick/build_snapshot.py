@@ -68,6 +68,13 @@ REVIEW_SLOT = "review"
 FORGE_ACCOUNT_REASON = "forge_account"
 PROJECT_STATUS_FIELD = "STATUS"
 PAUSED_PROJECT_STATUS = "paused"
+MERGE_FIELD = "MERGE"
+REBASE_MERGE = "rebase"
+POLICY_TYPE = "POLICY"
+REVIEW_FIELD = "REVIEW"
+VERDICT_REVIEW = "verdict"
+AUTO_MERGE_FIELD = "AUTO_MERGE"
+MERGE_INTO_INTEGRATION = "integration"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
 
@@ -164,6 +171,9 @@ class ProjectFacts:
     awaits_check_runs: bool = True
     wave_start: str = "auto"
     candidates: tuple[str, ...] = ()
+    merge: str = REBASE_MERGE
+    review: str = VERDICT_REVIEW
+    auto_merge: str = MERGE_INTO_INTEGRATION
 
     def to_document(self) -> dict:
         return {
@@ -172,6 +182,9 @@ class ProjectFacts:
             "live_runs": [{"run": live.run, "slot": live.slot, "worktree": live.worktree} for live in self.live_runs],
             "wave_start": self.wave_start,
             "candidates": list(self.candidates),
+            "merge": self.merge,
+            "review": self.review,
+            "auto_merge": self.auto_merge,
         }
 
 
@@ -404,8 +417,18 @@ def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) ->
     return admit_candidates(runtime.run_process, tasks, map_open_tasks(reading.entries, project.name))
 
 
+def _read_policy_field(policies: list[Entity], project: str, field_name: str, neutral: str) -> str:
+    values = [
+        read_project_field(policy, field_name)
+        for policy in policies
+        if read_project_field(policy, "PROJECT") == f"@PROJECT.{project}"
+    ]
+    return next((value for value in values if value is not None), neutral)
+
+
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
     slots = read_project_field(project, SLOTS_FIELD)
+    policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
     return ProjectFacts(
         name=project.name,
         slots=PROJECT_SLOTS if slots is None else int(slots),
@@ -417,6 +440,9 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         ),
         wave_start=read_wave_start(runtime, project.name),
         candidates=_read_candidates(runtime, reading, project),
+        merge=read_project_field(project, MERGE_FIELD) or REBASE_MERGE,
+        review=_read_policy_field(policies, project.name, REVIEW_FIELD, VERDICT_REVIEW),
+        auto_merge=_read_policy_field(policies, project.name, AUTO_MERGE_FIELD, MERGE_INTO_INTEGRATION),
     )
 
 

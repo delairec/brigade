@@ -46,15 +46,22 @@ def create_runtime(stdout: str, exit_code: int = 0) -> SimpleNamespace:
 
 
 class DecidePullRequestTest(unittest.TestCase):
-    def test_should_ask_gh_to_approve_or_squash_merge_the_pull_request_as_the_login_of_the_environment(self):
-        for decide, expected_argv in [
-            (approve_pull_request, ("gh", "pr", "review", "12", "--approve")),
-            (merge_pull_request, ("gh", "pr", "merge", "12", "--squash")),
+    def test_should_ask_gh_to_approve_or_merge_the_pull_request_by_its_method_as_the_login_of_the_environment(self):
+        for decide, method, expected_argv in [
+            (approve_pull_request, None, ("gh", "pr", "review", "12", "--approve")),
+            (merge_pull_request, "squash", ("gh", "pr", "merge", "12", "--squash")),
+            (merge_pull_request, "rebase", ("gh", "pr", "merge", "12", "--rebase")),
+            (merge_pull_request, "merge", ("gh", "pr", "merge", "12", "--merge")),
         ]:
-            with self.subTest(decision=decide.__name__):
+            with self.subTest(decision=decide.__name__, method=method):
                 # Arrange
                 runtime = create_runtime("")
-                request = {"repository": "/projects/shop", "number": 12, "environment": BOT_ENVIRONMENT}
+                request = {
+                    "repository": "/projects/shop",
+                    "number": 12,
+                    "method": method,
+                    "environment": BOT_ENVIRONMENT,
+                }
 
                 # Act
                 answer = decide(request, runtime)
@@ -311,6 +318,7 @@ class FindPullRequestTest(unittest.TestCase):
                     "review": "changes_requested",
                     "behind": True,
                     "head": "0123abc",
+                    "base": "integration/M1-empty-cart",
                 },
             },
         )
@@ -325,7 +333,15 @@ class FindPullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             answer["pull_request"],
-            {"number": 42, "state": "merged", "checks": [], "review": None, "behind": False, "head": "0123abc"},
+            {
+                "number": 42,
+                "state": "merged",
+                "checks": [],
+                "review": None,
+                "behind": False,
+                "head": "0123abc",
+                "base": "integration/M1-empty-cart",
+            },
         )
 
     def test_should_answer_no_pull_request_for_a_branch_that_has_none(self):

@@ -14,8 +14,12 @@ class PrMergedTest(unittest.TestCase):
                 "task": "TP146",
                 "pr": 291,
                 "rounds": 1,
+                "login": "tidepool-cli",
             }
         )
 
         # Assert
-        self.assertEqual(event, PrMerged(project="tidepool", wave="tidepool_w16", task="TP146", pr=291, rounds=1))
+        self.assertEqual(
+            event,
+            PrMerged(project="tidepool", wave="tidepool_w16", task="TP146", pr=291, rounds=1, login="tidepool-cli"),
+        )

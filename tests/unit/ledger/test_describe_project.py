@@ -28,7 +28,9 @@ class DescribeProjectTest(unittest.TestCase):
             LedgerEntry(instant=LATER, event=OrderDone(project="shop", kind="study")),
             LedgerEntry(instant=LATER, event=OrderDone(project="tidepool", kind="sweep")),
             LedgerEntry(instant=LATER, event=WaveStarted(wave="w1", project="shop", branch="main", tasks=("B1",))),
-            LedgerEntry(instant=LATER, event=PrMerged(project="shop", wave="w1", task="B1", pr=7, rounds=1)),
+            LedgerEntry(
+                instant=LATER, event=PrMerged(project="shop", wave="w1", task="B1", pr=7, rounds=1, login=None)
+            ),
             LedgerEntry(
                 instant=LATER,
                 event=SignalRecorded(

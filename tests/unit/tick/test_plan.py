@@ -12,6 +12,7 @@ from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    MergePullRequest,
     ParkTask,
     PauseWave,
     RecordTaskState,
@@ -108,7 +109,7 @@ WORKTREE_S3 = "/projects/shop/.brigade/worktrees/S3"
 HEAD = "0123abc"
 
 
-def create_pull_request(state: str, verdict: str = "success") -> PullRequestFacts:
+def create_pull_request(state: str, verdict: str = "success", base: str = WAVE_BRANCH) -> PullRequestFacts:
     return PullRequestFacts(
         number=42,
         state=state,
@@ -116,6 +117,7 @@ def create_pull_request(state: str, verdict: str = "success") -> PullRequestFact
         review=None,
         behind=False,
         head=HEAD,
+        base=base,
     )
 
 
@@ -201,7 +203,9 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
 
 PENDING = create_pull_request("open", "pending")
 FAILED_CHECK_RUN = create_pull_request("open", "failure")
-NO_CHECK_RUN = PullRequestFacts(number=42, state="open", checks=(), review=None, behind=False, head=HEAD)
+NO_CHECK_RUN = PullRequestFacts(
+    number=42, state="open", checks=(), review=None, behind=False, head=HEAD, base=WAVE_BRANCH
+)
 SHOP_WITHOUT_CHECK_RUNS = ProjectFacts(name="shop", slots=4, awaits_check_runs=False)
 OPENED_BY_THE_TASK = 42
 OPENED_BY_AN_EARLIER_RUN = 41
@@ -266,6 +270,7 @@ DISPOSABLE_WORKTREE = "/state/brigade/runs/20261006T110000Z-d4e5f6/worktree"
 VERIFY_S3 = LaunchVerification(project="shop", wave="shop_w1", task="S3", pr=42, worktree=WORKTREE_S3)
 RECORD_VERIFIED = RecordTaskState(wave="shop_w1", task="S3", state="verified", reason=None)
 RECORD_CHANGES_REQUESTED = RecordTaskState(wave="shop_w1", task="S3", state="changes_requested", reason=None)
+MERGE_S3 = MergePullRequest(project="shop", wave="shop_w1", task="S3", pr=42, method="rebase")
 
 
 class PlanVerificationTest(unittest.TestCase):
@@ -291,7 +296,7 @@ class PlanVerificationTest(unittest.TestCase):
             ("reviewed at the head without a verdict", "verifying", NO_VERDICT, REVIEWED_AT_THE_HEAD, WORKTREE_S3, ()),
             ("without its worktree", "verifying", NO_VERDICT, NOT_REVIEWED, NO_WORKTREE, ()),
             ("not yet preflighted", "pr_open", NO_VERDICT, NOT_REVIEWED, WORKTREE_S3, ()),
-            ("already verified", "verified", PASS_AT_THE_HEAD, REVIEWED_AT_THE_HEAD, WORKTREE_S3, ()),
+            ("already verified", "verified", PASS_AT_THE_HEAD, REVIEWED_AT_THE_HEAD, WORKTREE_S3, (MERGE_S3,)),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -391,6 +396,95 @@ class PlanVerificationTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (VERIFY_S3,))
+
+
+SHOP_UNDER_APPROVAL = ProjectFacts(name="shop", slots=4, review="approval")
+SHOP_MERGING_BY_SQUASH = ProjectFacts(name="shop", slots=4, merge="squash")
+SHOP_WITHOUT_AUTO_MERGE = ProjectFacts(name="shop", slots=4, auto_merge="none")
+APPROVED = dataclasses.replace(OPEN, review="approved")
+OPEN_ON_MAIN = create_pull_request("open", base="main")
+MERGE_S3_BY_SQUASH = MergePullRequest(project="shop", wave="shop_w1", task="S3", pr=42, method="squash")
+PARK_S3_ON_ANOTHER_BASE = ParkTask(
+    wave="shop_w1", task="S3", reason="pull request base is not the wave branch", blockers=()
+)
+
+
+class PlanMergeTest(unittest.TestCase):
+    def test_should_merge_a_verified_task_once_its_checks_pass_and_the_review_mode_accepts_its_verdict(self):
+        for case, project, pull_request, verdict, expected in [
+            ("under verdict, passed at the head", SHOP, OPEN, PASS_AT_THE_HEAD, (MERGE_S3,)),
+            (
+                "with the merge method of the project",
+                SHOP_MERGING_BY_SQUASH,
+                OPEN,
+                PASS_AT_THE_HEAD,
+                (MERGE_S3_BY_SQUASH,),
+            ),
+            ("under approval, approved", SHOP_UNDER_APPROVAL, APPROVED, PASS_BEFORE_A_PUSH, (MERGE_S3,)),
+            ("a check run failed", SHOP, FAILED_CHECK_RUN, PASS_AT_THE_HEAD, ()),
+            ("a check run pending", SHOP, PENDING, PASS_AT_THE_HEAD, ()),
+            ("no check run yet", SHOP, NO_CHECK_RUN, PASS_AT_THE_HEAD, ()),
+            (
+                "no check run in a project without continuous integration",
+                SHOP_WITHOUT_CHECK_RUNS,
+                NO_CHECK_RUN,
+                PASS_AT_THE_HEAD,
+                (MERGE_S3,),
+            ),
+            ("under verdict, passed before a push", SHOP, OPEN, PASS_BEFORE_A_PUSH, ()),
+            ("under verdict, with no verdict", SHOP, OPEN, NO_VERDICT, ()),
+            ("under approval, not approved", SHOP_UNDER_APPROVAL, OPEN, PASS_AT_THE_HEAD, ()),
+            ("under AUTO_MERGE none", SHOP_WITHOUT_AUTO_MERGE, OPEN, PASS_AT_THE_HEAD, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", pull_request=pull_request, verdict=verdict)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_merge_no_task_short_of_verified(self):
+        for state in ["pr_open", "verifying", "changes_requested"]:
+            with self.subTest(state=state):
+                # Arrange
+                task = TaskFacts(
+                    name="S3", pull_request=OPEN, preflighted_head=PREFLIGHTED_AT_THE_HEAD, verdict=CHANGES_AT_THE_HEAD
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertNotIn(MERGE_S3, actions)
+
+    def test_should_park_rather_than_merge_a_task_whose_pull_request_is_based_on_another_branch(self):
+        # Arrange
+        task = TaskFacts(name="S3", pull_request=OPEN_ON_MAIN, verdict=PASS_AT_THE_HEAD)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PARK_S3_ON_ANOTHER_BASE,))
+
+    def test_should_record_the_merge_of_a_verified_task_whose_pull_request_was_merged_by_hand(self):
+        # Arrange
+        task = TaskFacts(name="S3", pull_request=MERGED, verdict=PASS_AT_THE_HEAD)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RECORD_MERGED,))
 
 
 class PlanSlotsTest(unittest.TestCase):
@@ -882,8 +976,12 @@ class PlanWaveReportTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
 
-INTEGRATION_MERGED = PullRequestFacts(number=77, state="merged", checks=(), review=None, behind=False, head=HEAD)
-INTEGRATION_OPEN = PullRequestFacts(number=77, state="open", checks=(), review=None, behind=False, head=HEAD)
+INTEGRATION_MERGED = PullRequestFacts(
+    number=77, state="merged", checks=(), review=None, behind=False, head=HEAD, base="main"
+)
+INTEGRATION_OPEN = PullRequestFacts(
+    number=77, state="open", checks=(), review=None, behind=False, head=HEAD, base="main"
+)
 NO_INTEGRATION_PULL_REQUEST = None
 
 

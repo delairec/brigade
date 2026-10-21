@@ -26,7 +26,7 @@ WAVE_W1 = LedgerReading(
         LedgerEntry(at_minute(4), WavePaused(wave="w1", reason="quota again", resume_at=None)),
         LedgerEntry(at_minute(5), WaveResumed(wave="w1", reason="quota reset")),
         LedgerEntry(at_minute(6), create_run_finished("r1", segment=2, main_steps=5, wave="w1", task="TP1")),
-        LedgerEntry(at_minute(7), PrMerged(project="tidepool", wave="w1", task="TP1", pr=7, rounds=2)),
+        LedgerEntry(at_minute(7), PrMerged(project="tidepool", wave="w1", task="TP1", pr=7, rounds=2, login=None)),
         LedgerEntry(at_minute(8), TaskParked(wave="w1", task="TP2", reason="blocked", blockers=("OPEN_QUESTION.Q1",))),
         LedgerEntry(at_minute(9), WavePaused(wave="w1", reason="forge account", resume_at=None)),
         LedgerEntry(at_minute(30), WaveStarted(wave="w2", project="tidepool", branch="main", tasks=("TP3",))),

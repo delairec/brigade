@@ -15,6 +15,7 @@ class PullRequestFacts:
     review: str | None
     behind: bool
     head: str
+    base: str
 
     @classmethod
     def from_document(cls, document: dict) -> "PullRequestFacts":
@@ -25,6 +26,7 @@ class PullRequestFacts:
             review=document["review"],
             behind=document["behind"],
             head=document["head"],
+            base=document["base"],
         )
 
     def to_document(self) -> dict:
@@ -35,4 +37,5 @@ class PullRequestFacts:
             "review": self.review,
             "behind": self.behind,
             "head": self.head,
+            "base": self.base,
         }

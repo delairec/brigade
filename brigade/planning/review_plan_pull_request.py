@@ -6,6 +6,7 @@ from brigade.waves.read_plan_review import AUTOMATIC_REVIEW, read_plan_review
 
 REVIEW_SLOT = "review"
 REVIEW_REQUIRED = "review_required"
+PLAN_MERGE_METHOD = "squash"
 
 
 def _ask_review(runtime: Runtime, publication: PlanPublication) -> str | None:
@@ -25,4 +26,6 @@ def review_plan_pull_request(runtime: Runtime, publication: PlanPublication, num
         publication.forge.approve_pull_request(
             {**request, "environment": publication.read_environment(REVIEW_SLOT)}, runtime
         )
-    publication.forge.merge_pull_request({**request, "environment": publication.read_environment(CLI_KEY)}, runtime)
+    publication.forge.merge_pull_request(
+        {**request, "method": PLAN_MERGE_METHOD, "environment": publication.read_environment(CLI_KEY)}, runtime
+    )
