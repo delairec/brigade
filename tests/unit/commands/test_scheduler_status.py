@@ -375,6 +375,23 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                 },
                 {
                     "schema_version": 1,
+                    "ts": "2026-10-19T07:12:30Z",
+                    "event": "task.state",
+                    "wave": "brigade_w2",
+                    "task": "B14",
+                    "state": "parked",
+                    "reason": "pull request closed",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T07:12:40Z",
+                    "event": "task.state",
+                    "wave": "brigade_w3",
+                    "task": "B15",
+                    "state": "parked",
+                },
+                {
+                    "schema_version": 1,
                     "ts": "2026-10-19T07:13:00Z",
                     "event": "task.parked",
                     "wave": "brigade_w4",
@@ -443,6 +460,10 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                     {"wave": "brigade_w1", "reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
                     {"wave": "brigade_w2", "reason": "forge_account", "resume_at": None},
                 ],
-                "parked_tasks": [{"task": "B12", "wave": "brigade_w1", "reason": "blocked"}],
+                "parked_tasks": [
+                    {"task": "B12", "wave": "brigade_w1", "reason": "blocked"},
+                    {"task": "B14", "wave": "brigade_w2", "reason": "pull request closed"},
+                    {"task": "B15", "wave": "brigade_w3", "reason": None},
+                ],
             },
         )
