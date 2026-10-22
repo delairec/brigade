@@ -49,6 +49,26 @@ class LaunchVerification:
 
 
 @dataclass(frozen=True)
+class LaunchRemediation:
+    project: str
+    wave: str
+    task: str
+    pr: int
+    worktree: str
+
+
+@dataclass(frozen=True)
+class LaunchCheckRepair:
+    project: str
+    wave: str
+    branch: str
+    task: str
+    pr: int
+    worktree: str
+    checks: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class MergePullRequest:
     project: str
     wave: str

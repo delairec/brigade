@@ -8,6 +8,8 @@ from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
     CloseWave,
     CutWaveBranch,
+    LaunchCheckRepair,
+    LaunchRemediation,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
@@ -34,6 +36,11 @@ PR_OPEN_STATE = "pr_open"
 VERIFYING_STATE = "verifying"
 VERIFIED_STATE = "verified"
 CHANGES_REQUESTED_STATE = "changes_requested"
+FIXING_STATE = "fixing"
+AWAITING_PUSH_STATES = (VERIFYING_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
+REPAIRED_STATES = (PR_OPEN_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
+CHECKS_FINDING = "checks"
+UNREQUESTED_FINDINGS = ("ancestry", CHECKS_FINDING)
 STATES_BY_VERDICT = {"pass": VERIFIED_STATE, "changes": CHANGES_REQUESTED_STATE}
 OPEN_PULL_REQUEST = "open"
 PENDING_VERDICT = "pending"
@@ -156,7 +163,7 @@ def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | No
 
 
 def _is_pushed_since_preflight(state: str, task: TaskFacts) -> bool:
-    return state == VERIFYING_STATE and task.preflighted_head != task.pull_request.head
+    return state in AWAITING_PUSH_STATES and task.preflighted_head != task.pull_request.head
 
 
 def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
@@ -182,6 +189,9 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             verification = _decide_verification(wave, task, held, live_tasks)
             if verification is not None:
                 actions.append(verification)
+            repair = _decide_repair(wave, task, projects[wave.project], held, live_tasks)
+            if repair is not None:
+                actions.append(repair)
             merge = _decide_merge(wave, task, projects[wave.project])
             if merge is not None:
                 actions.append(merge)
@@ -218,6 +228,58 @@ def _decide_verification(
             project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree
         )
     return None
+
+
+def _describe_request(task: TaskFacts) -> str:
+    return "; ".join(
+        f"{failure.name}: {finding}"
+        for failure in task.preflight_failures
+        if failure.name not in UNREQUESTED_FINDINGS
+        for finding in failure.findings
+    )
+
+
+def _launch_repair(wave: WaveFacts, task: TaskFacts) -> LaunchRemediation | LaunchCheckRepair:
+    if CHECKS_FINDING in {failure.name for failure in task.preflight_failures}:
+        return LaunchCheckRepair(
+            project=wave.project,
+            wave=wave.wave,
+            branch=wave.branch,
+            task=task.name,
+            pr=task.pull_request.number,
+            worktree=task.worktree,
+            checks=tuple(check.name for check in task.pull_request.checks if check.verdict != SUCCESSFUL_CHECK),
+        )
+    return LaunchRemediation(
+        project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree
+    )
+
+
+def _decide_repair(
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, held: set, live_tasks: set
+) -> RecordTaskState | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
+    state = wave.states.get(task.name)
+    if (
+        state not in REPAIRED_STATES
+        or task.pull_request.state != OPEN_PULL_REQUEST
+        or task.preflighted_head != task.pull_request.head
+        or task.worktree in held
+        or (wave.wave, task.name) in live_tasks
+    ):
+        return None
+    failed = {failure.name for failure in task.preflight_failures}
+    if state == PR_OPEN_STATE and CHECKS_FINDING not in failed:
+        request = _describe_request(task)
+        if not request:
+            return None
+        return RecordTaskState(wave=wave.wave, task=task.name, state=CHANGES_REQUESTED_STATE, reason=request)
+    if task.repair_rounds >= project.verify_rounds:
+        return ParkTask(
+            wave=wave.wave, task=task.name, reason=f"past {project.verify_rounds} repair rounds", blockers=()
+        )
+    if task.worktree is None:
+        return None
+    return _launch_repair(wave, task)
 
 
 def _are_checks_passed(pull_request: PullRequestFacts, project: ProjectFacts) -> bool:

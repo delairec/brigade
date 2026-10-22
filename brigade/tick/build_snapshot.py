@@ -76,6 +76,7 @@ REVIEW_FIELD = "REVIEW"
 VERDICT_REVIEW = "verdict"
 AUTO_MERGE_FIELD = "AUTO_MERGE"
 MERGE_INTO_INTEGRATION = "integration"
+VERIFY_ROUNDS_BY_DEFAULT = 2
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
 
@@ -94,6 +95,12 @@ class RecordedVerdict:
 
 
 @dataclass(frozen=True)
+class PreflightFailure:
+    name: str
+    findings: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class TaskFacts:
     name: str
     after: tuple[str, ...] = ()
@@ -106,6 +113,8 @@ class TaskFacts:
     preflighted_head: str | None = None
     verdict: RecordedVerdict | None = None
     reviewed_head: str | None = None
+    preflight_failures: tuple[PreflightFailure, ...] = ()
+    repair_rounds: int = 0
 
     def to_document(self) -> dict:
         return {
@@ -175,6 +184,7 @@ class ProjectFacts:
     merge: str = REBASE_MERGE
     review: str = VERDICT_REVIEW
     auto_merge: str = MERGE_INTO_INTEGRATION
+    verify_rounds: int = VERIFY_ROUNDS_BY_DEFAULT
 
     def to_document(self) -> dict:
         return {
