@@ -59,9 +59,7 @@ class PublishWaveReportTest(unittest.TestCase):
             WaveStarted(wave="oak_w2", project="oak", branch=BRANCH, tasks=("B17",)),
         )
         self.processes.answer(("git", "fetch", "--quiet", "origin", BRANCH))
-        self.processes.answer(
-            ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}")
-        )
+        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"))
         self.processes.answer(("git", "switch", "--quiet", "--force-create", BRANCH))
         self.processes.answer(("git", "add", "--", REPORT_PATH))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", REPORT_PATH), exit_code=1)
@@ -75,9 +73,7 @@ class PublishWaveReportTest(unittest.TestCase):
             "PROJECT",
             {"oak": (("PATH", "/srv/oak"), ("FORGE", forge), ("CORPUS", "corpus"))},
         )
-        equipment = create_study_equipment(
-            document=DocumentDouble(), resolve_forge={"github": self.forge}.__getitem__
-        )
+        equipment = create_study_equipment(document=DocumentDouble(), resolve_forge={"github": self.forge}.__getitem__)
         return StudyRunContext(
             runtime=self.runtime, study=STUDY, run_id=RUN_ID, run_directory=self.run_directory, equipment=equipment
         )

@@ -8,16 +8,13 @@ from brigade.runtime import Runtime
 from brigade.studies.describe_wave_report import describe_wave_report
 from brigade.studies.read_study import Study, read_study
 from brigade.studies.study_run_context import STUDY_RECORD_FILE
+from brigade.waves.find_wave_started import find_wave_started
 
 WAVE_KEY = "wave"
 
 
 def _read_wave_started(runtime: Runtime, wave: str) -> WaveStarted:
-    return next(
-        entry.event
-        for entry in read_ledger(runtime.paths.state_root).entries
-        if isinstance(entry.event, WaveStarted) and entry.event.wave == wave
-    )
+    return find_wave_started(tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), wave)
 
 
 def read_study_of_run(runtime: Runtime, run_directory: Path) -> Study:

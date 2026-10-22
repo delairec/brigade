@@ -10,8 +10,10 @@ from brigade.commands.run import run
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.record_run_pid import record_run_pid
+from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
-from brigade.studies.read_study import read_study
+from brigade.studies.read_study import Study, read_study
+from brigade.studies.read_study_of_run import read_study_of_run
 from brigade.studies.run_study import DONE, run_study
 from brigade.studies.study_run_context import StudyEquipment
 from brigade.system.collector_places import locate_collectors
@@ -40,6 +42,12 @@ def _decide_exit_code(document: dict) -> int:
     return PARKED_EXIT_CODE
 
 
+def _read_study_of_request(request, runtime: Runtime) -> Study:
+    if request.run_id is None:
+        return read_study(runtime, request.name)
+    return read_study_of_run(runtime, runtime.paths.state_root / RUNS_DIRECTORY / request.run_id)
+
+
 def study_run(request, runtime: Runtime) -> dict:
     equipment = StudyEquipment(
         collector_equipment=CollectorEquipment(
@@ -60,7 +68,7 @@ def study_run(request, runtime: Runtime) -> dict:
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **run_study(runtime, read_study(runtime, request.name), equipment, request.run_id),
+        **run_study(runtime, _read_study_of_request(request, runtime), equipment, request.run_id),
     }
 
 

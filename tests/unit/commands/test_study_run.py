@@ -5,7 +5,12 @@ from types import SimpleNamespace
 
 from brigade.commands.study_run import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import (
+    create_corpus_double,
+    create_runtime,
+    write_ledger,
+    write_operational_corpus,
+)
 
 RUN_ID = "20261019T090000Z-e10d04"
 NO_STUDY_RECORDED = {}
@@ -75,3 +80,39 @@ class StudyRunOfAStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the operational corpus")
+
+    def test_should_resume_the_run_of_a_wave_report_from_the_wave_its_run_records(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        write_ledger(
+            root,
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T08:00:00Z",
+                    "event": "wave.started",
+                    "wave": "oak_w2",
+                    "project": "oak",
+                    "branch": "integration/oak_w2",
+                    "tasks": ["B17"],
+                }
+            ],
+        )
+        steps = root / "state" / "runs" / RUN_ID / "steps"
+        steps.mkdir(parents=True)
+        (steps.parent / "study.json").write_text(
+            '{"schema_version": 1, "study": "wave-report", "project": "oak", "wave": "oak_w2"}', encoding="utf-8"
+        )
+        (steps / "collect.json").write_text("{}", encoding="utf-8")
+        (steps / "judge.json").write_text("{}", encoding="utf-8")
+        (steps / "output.json").write_text("{}", encoding="utf-8")
+        runtime = create_runtime(
+            root, run_process=create_corpus_double(NO_STUDY_RECORDED), resolve_plugin=_resolve_any_plugin
+        )
+
+        # Act
+        ending = COMMAND.run(SimpleNamespace(name="wave-report", run_id=RUN_ID), runtime)
+
+        # Assert
+        self.assertEqual(ending, {"schema_version": 1, "study": "wave-report", "run": RUN_ID, "state": "done"})

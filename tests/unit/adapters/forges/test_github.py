@@ -94,7 +94,12 @@ class RewritePullRequestBodyTest(unittest.TestCase):
     def test_should_ask_gh_to_replace_the_body_of_the_pull_request_as_the_login_of_the_environment(self):
         # Arrange
         runtime = create_runtime("")
-        request = {"repository": "/projects/shop", "number": 12, "body": "# REPORT shop_w1\n", "environment": BOT_ENVIRONMENT}
+        request = {
+            "repository": "/projects/shop",
+            "number": 12,
+            "body": "# REPORT shop_w1\n",
+            "environment": BOT_ENVIRONMENT,
+        }
 
         # Act
         answer = rewrite_pull_request_body(request, runtime)
