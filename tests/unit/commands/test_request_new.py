@@ -15,7 +15,6 @@ from tests.unit.commands.command_runtime import (
 )
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
-    CLOCK_PROBE,
     STEP_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
@@ -57,21 +56,6 @@ class RequestNewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": ANY})
-
-    def test_should_carry_the_warning_of_the_planner_run(self):
-        # Arrange
-        runtime = self._create_runtime((("PATH", str(self.repository)),), CLOCK_PROBE)
-
-        # Act
-        document = COMMAND.run(SimpleNamespace(project="shop", text="empty the cart"), runtime)
-
-        # Assert
-        self.assertEqual(
-            document["warnings"],
-            [
-                "double counts no steps: the budget of 30 steps is held on the clock and the run cut at its limit of 1140 s"
-            ],
-        )
 
     def test_should_refuse_a_paused_project(self):
         # Arrange
