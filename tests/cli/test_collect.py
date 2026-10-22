@@ -782,7 +782,30 @@ class BrigadeCollectLedgerTest(CollectTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             self.read_document(completed)["items"],
-            [{"ts": "2026-10-02T10:00:00Z", "event": "run.finished", "project": "app"}],
+            [
+                {
+                    "ts": "2026-10-02T10:00:00Z",
+                    "event": "run.finished",
+                    "run": "20261002T100000Z-a00001",
+                    "segment": 1,
+                    "procedure": "awawa-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "claude-code",
+                    "project": "app",
+                    "session": None,
+                    "main_steps": 40,
+                    "total_steps": None,
+                    "duration_ms": 1000,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": "app_w1",
+                    "task": "B1",
+                    "nulls": {},
+                }
+            ],
         )
 
     def test_should_aggregate_every_event_since_the_day_outside_a_registered_project(self):

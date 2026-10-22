@@ -13,23 +13,37 @@ from brigade.runtime import Runtime
 
 NAME = "ledger"
 PROJECT_ATTRIBUTE = "project"
+WAVE_ATTRIBUTE = "wave"
+WAVE_PARAMETER = "wave"
 
 
 def _read_project(event) -> str | None:
     return getattr(event, PROJECT_ATTRIBUTE, None)
 
 
+def _select_by_project(inputs, runtime: Runtime):
+    project = find_project_at(read_projects(runtime), inputs.project)
+    return lambda event: project is None or _read_project(event) == project.name
+
+
+def _select_by_wave(wave: str):
+    return lambda event: getattr(event, WAVE_ATTRIBUTE, None) == wave
+
+
 def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
     inputs = read_collector_environment(environment)
     start = datetime.combine(inputs.since, time(), tzinfo=UTC)
-    project = find_project_at(read_projects(runtime), inputs.project)
+    if WAVE_PARAMETER in inputs.parameters:
+        is_selected = _select_by_wave(inputs.parameters[WAVE_PARAMETER])
+    else:
+        is_selected = _select_by_project(inputs, runtime)
     entries = [
         entry
         for entry in read_ledger(runtime.paths.state_root).entries
-        if entry.instant >= start and (project is None or _read_project(entry.event) == project.name)
+        if entry.instant >= start and is_selected(entry.event)
     ]
     items = [
-        {"ts": format_instant(entry.instant), "event": entry.event.name, "project": _read_project(entry.event)}
+        {"ts": format_instant(entry.instant), "event": entry.event.name, **entry.event.to_document()}
         for entry in entries
     ]
     summary = {
