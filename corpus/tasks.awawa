@@ -1980,7 +1980,8 @@ TASK B19
 
 TASK B20
 	TITLE "Built-in study wave-report"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 183
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
@@ -1991,11 +1992,24 @@ TASK B20
 		+ "INSTRUCTIONS_CHANGE and PARKED_QUESTION; the prose fields the report slot fills,"
 		+ "NARRATIVE, REASON, TESTER_STEP and SAMPLING; brigade init installs it as it upgrades the"
 		+ "installed schema"
+		IMPL "brigade/corpus/data/schema.awawa.tpl::SCHEMA REPORT"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_install_a_schema_accepting_the_report_of_a_wave(self):"
 	SPEC "the report of a wave is one REPORT entity of the operational corpus, written and read"
 		+ "through the document kind; the collectors ledger, pr-list, corpus and git-diff-stat fill"
 		+ "the CLI fields, the task table, the statistics, the dependency graph, the manual-test"
 		+ "table from SPEC lines, the instructions-corpus change list and the parked questions, one"
 		+ "field each"
+		IMPL "brigade/studies/describe_wave_report.py::def describe_wave_report("
+		IMPL "brigade/studies/render_wave_report.py::def render_wave_report("
+		IMPL "tests/unit/studies/test_describe_wave_report.py::def"
+			+ "test_should_collect_the_events_the_pull_requests_the_tasks_and_the_changes_of_the_wave(self):"
+		IMPL "tests/unit/studies/test_render_wave_report.py::def"
+			+ "test_should_fill_the_report_of_the_wave_with_what_the_collectors_gave(self):"
+		IMPL "tests/unit/collectors/test_ledger.py::def"
+			+ "test_should_keep_the_events_of_the_wave_it_names_whatever_their_project(self):"
+		IMPL "tests/unit/collectors/test_corpus.py::def"
+			+ "test_should_list_each_entity_it_is_given_whole(self):"
 	SPEC "the report slot completes the prose fields, the narrative, the reasons, the manual tests"
 		+ "in a tester's words and the sampling suggestions; study answer validates the answer by"
 		+ "awawa lint against the schema, refuses an answer that changed a field the CLI filled,"
@@ -2004,9 +2018,25 @@ TASK B20
 		+ "updates the integration pull request it reads from wave.pr_opened; the Markdown is"
 		+ "rendered from the entity for the person and for the dashboard, and brigade reads it back"
 		+ "nowhere"
+		IMPL "brigade/studies/choose_answer_form.py::REPORT_FIELDS_THE_CLI_FILLS = ("
+		IMPL "brigade/studies/publish_wave_report.py::def publish_wave_report("
+		IMPL "brigade/adapters/forges/github.py::def rewrite_pull_request_body("
+		IMPL "tests/unit/studies/test_build_study_context.py::def"
+			+ "test_should_package_the_report_of_the_wave_to_complete(self):"
+		IMPL "tests/unit/studies/test_validate_answer.py::def"
+			+ "test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):"
+		IMPL "tests/unit/studies/test_publish_wave_report.py::def"
+			+ "test_should_rewrite_the_body_of_the_integration_pull_request_with_the_report(self):"
+		IMPL "tests/unit/studies/test_write_answer.py::def"
+			+ "test_should_publish_the_report_of_a_wave_on_its_integration_branch_once_its_entity_is_written(self):"
 	SPEC "the tick runs it when every task of the wave is merged or parked, and writes the run in"
 		+ "the wave.reported it records, where today brigade/commands/tick.py records wave.reported"
 		+ "with no run"
+		IMPL "brigade/commands/tick.py::def _report_wave("
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_detach_the_wave_report_run_the_wave_reported_names(self):"
+		IMPL "tests/unit/commands/test_study_run.py::def"
+			+ "test_should_resume_the_run_of_a_wave_report_from_the_wave_its_run_records(self):"
 	AFTER @TASK.B17
 	AFTER @TASK.B48
 	AFTER @TASK.B106

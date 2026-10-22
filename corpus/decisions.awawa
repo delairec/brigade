@@ -3519,3 +3519,5 @@ DECISION TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBr
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
 		+ "sets"
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+	SOURCE "pull request #183 of the brigade repository, delivering @TASK.B20"
+		REF @TASK.B20
