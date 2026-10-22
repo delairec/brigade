@@ -15,6 +15,7 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
     RecordTaskState,
@@ -1303,3 +1304,43 @@ class PlanRepairTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (RECORD_PR_OPEN,))
+
+
+SHOP_ON_GITHUB = dataclasses.replace(SHOP, on_github=True)
+SHOP_ON_GITHUB_UNDER_APPROVAL = dataclasses.replace(SHOP_ON_GITHUB, review="approval")
+SHOP_ON_GITHUB_DELIVERED_LOCALLY = dataclasses.replace(SHOP_ON_GITHUB, review="local")
+FIRST_TASK_MERGED = {"S3": "merged", "S4": "running"}
+NO_TASK_MERGED = {"S3": "running", "S4": "running"}
+NOT_OPENED = None
+OPENED_AS_77 = 77
+OPEN_INTEGRATION_OF_SHOP_W1 = OpenIntegrationPullRequest(
+    project="shop", wave="shop_w1", branch=WAVE_BRANCH, tasks=("S3", "S4")
+)
+
+
+class PlanIntegrationPullRequestTest(unittest.TestCase):
+    def test_should_open_the_integration_pull_request_once_the_first_task_of_the_wave_is_merged(self):
+        for case, project, states, opened, expected in [
+            ("at the first merged task", SHOP_ON_GITHUB, FIRST_TASK_MERGED, NOT_OPENED, (OPEN_INTEGRATION_OF_SHOP_W1,)),
+            (
+                "under the approval review",
+                SHOP_ON_GITHUB_UNDER_APPROVAL,
+                FIRST_TASK_MERGED,
+                NOT_OPENED,
+                (OPEN_INTEGRATION_OF_SHOP_W1,),
+            ),
+            ("before any task is merged", SHOP_ON_GITHUB, NO_TASK_MERGED, NOT_OPENED, ()),
+            ("already opened", SHOP_ON_GITHUB, FIRST_TASK_MERGED, OPENED_AS_77, ()),
+            ("under the local review", SHOP_ON_GITHUB_DELIVERED_LOCALLY, FIRST_TASK_MERGED, NOT_OPENED, ()),
+            ("without a forge", SHOP, FIRST_TASK_MERGED, NOT_OPENED, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(create_wave(TWO_TASKS, states), opened_integration_pull_request=opened)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)

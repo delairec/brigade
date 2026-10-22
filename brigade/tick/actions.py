@@ -122,6 +122,14 @@ class ReportWave:
 
 
 @dataclass(frozen=True)
+class OpenIntegrationPullRequest:
+    project: str
+    wave: str
+    branch: str
+    tasks: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class CloseWave:
     wave: str
     pr: int

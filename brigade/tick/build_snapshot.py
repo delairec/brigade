@@ -20,6 +20,7 @@ from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
+from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -41,6 +42,7 @@ from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.cut_wave_branch import WaveBranchCut
+from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
@@ -153,6 +155,7 @@ class WaveFacts:
     branch_missing: bool = False
     reported: bool = False
     integration_pull_request: PullRequestFacts | None = None
+    opened_integration_pull_request: int | None = None
 
     def to_document(self) -> dict:
         return {
@@ -193,6 +196,7 @@ class ProjectFacts:
     review: str = VERDICT_REVIEW
     auto_merge: str = MERGE_INTO_INTEGRATION
     verify_rounds: int = VERIFY_ROUNDS_BY_DEFAULT
+    on_github: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -453,6 +457,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         forge_account_unavailable=_is_forge_account_unavailable(reading.entries, wave),
         reported=reported,
         integration_pull_request=(reading.read_pull_request(str(repository), started.branch) if reported else None),
+        opened_integration_pull_request=find_integration_pull_request(reading.events, wave),
     )
 
 
@@ -483,6 +488,7 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         verify_rounds=int(
             read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
         ),
+        on_github=is_on_github(project),
     )
 
 

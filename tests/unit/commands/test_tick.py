@@ -1080,6 +1080,93 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         )
 
 
+class OpeningForgeDouble:
+    def __init__(self):
+        self.opened = []
+
+    def find_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_request": None}
+
+    def open_pull_request(self, request: dict, runtime) -> dict:
+        self.opened.append(request)
+        return {"schema_version": 1, "url": "https://github.com/octo/tidepool/pull/77", "number": 77}
+
+    def describe_account(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "login": "tidepool-cli"}
+
+
+class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.forge = OpeningForgeDouble()
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": {"T7": TASK_DELIVERED},
+        }
+        self.runtime = create_runtime(
+            self.root,
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, self.forge),
+        )
+
+    def _read_last_event(self) -> dict:
+        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        return json.loads(lines[-1])
+
+    def test_should_open_the_pull_request_from_the_wave_branch_to_the_main_branch(self):
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.forge.opened,
+            [
+                {
+                    "repository": str(self.repository),
+                    "base": "main",
+                    "branch": "integration/M4",
+                    "title": "chore(wave): merge the wave tidepool_w16 into main",
+                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
+                    "milestone": None,
+                    "environment": {},
+                }
+            ],
+        )
+
+    def test_should_record_the_opening_with_the_login_it_ran_as(self):
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.pr_opened",
+                "wave": "tidepool_w16",
+                "pr": 77,
+                "login": "tidepool-cli",
+            },
+        )
+
+    def test_should_open_none_at_a_second_tick(self):
+        # Arrange
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(len(self.forge.opened), 1)
+
+
 class TickStartingAndCuttingWavesTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))

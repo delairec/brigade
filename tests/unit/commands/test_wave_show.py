@@ -53,6 +53,15 @@ T8_PARKED = {
     "blockers": ["OPEN_QUESTION.Undecided"],
 }
 
+WAVE_PR_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-02T09:00:00Z",
+    "event": "wave.pr_opened",
+    "wave": "tidepool_w16",
+    "pr": 77,
+    "login": "tidepool-cli",
+}
+
 
 class WaveShowTextTest(unittest.TestCase):
     def test_should_print_the_wave_and_one_row_per_task(self):
@@ -64,6 +73,7 @@ class WaveShowTextTest(unittest.TestCase):
             "branch": "integration/tidepool_w16",
             "started_at": "2026-09-30T22:00:00Z",
             "last_event": "wave.started",
+            "pull_request": 77,
             "tasks": [
                 {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1"},
                 {"task": "T8", "state": None, "pull_request": None, "run": None},
@@ -77,7 +87,7 @@ class WaveShowTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "wave tidepool_w16 of @PROJECT.tidepool on integration/tidepool_w16,"
-            " started 2026-09-30T22:00:00Z, last event wave.started\n"
+            " started 2026-09-30T22:00:00Z, last event wave.started, pull request 77\n"
             "task  state    pull request  run\n"
             "T7    pr_open  42            20261001T090000Z-a1\n"
             "T8    -        -             -",
@@ -126,12 +136,23 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "branch": "integration/tidepool_w16",
                 "started_at": "2026-09-30T22:00:00Z",
                 "last_event": "wave.started",
+                "pull_request": None,
                 "tasks": [
                     {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1"},
                     {"task": "T8", "state": None, "pull_request": None, "run": None},
                 ],
             },
         )
+
+    def test_should_show_the_integration_pull_request_the_tick_opened(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, WAVE_PR_OPENED])
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), create_runtime(self.root))
+
+        # Assert
+        self.assertEqual(document["pull_request"], 77)
 
     def test_should_show_a_task_its_blockers_parked_as_parked(self):
         # Arrange

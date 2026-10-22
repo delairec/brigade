@@ -14,6 +14,7 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
     RecordTaskState,
@@ -57,6 +58,7 @@ AUTOMATIC_WAVE_START = "auto"
 BLOCKED_REASON = "blocked"
 APPROVAL_REVIEW = "approval"
 APPROVED_REVIEW = "approved"
+LOCAL_REVIEW = "local"
 NO_AUTO_MERGE = "none"
 PASSING_VERDICT = "pass"
 SUCCESSFUL_CHECK = "success"
@@ -87,6 +89,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_branch_cuts(snapshot)
         + _plan_reports(snapshot)
         + _plan_closes(snapshot)
+        + _plan_integration_pull_requests(snapshot)
         + tuple(launches)
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
@@ -355,6 +358,26 @@ def _plan_closes(snapshot: Snapshot) -> tuple:
         CloseWave(wave=wave.wave, pr=wave.integration_pull_request.number)
         for wave in snapshot.waves
         if wave.integration_pull_request is not None and wave.integration_pull_request.state == MERGED_PULL_REQUEST
+    )
+
+
+def _is_integration_pull_request_due(wave: WaveFacts, project: ProjectFacts) -> bool:
+    return (
+        project.on_github
+        and project.review != LOCAL_REVIEW
+        and wave.opened_integration_pull_request is None
+        and any(wave.states.get(task.name) == MERGED_STATE for task in wave.tasks)
+    )
+
+
+def _plan_integration_pull_requests(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    return tuple(
+        OpenIntegrationPullRequest(
+            project=wave.project, wave=wave.wave, branch=wave.branch, tasks=tuple(task.name for task in wave.tasks)
+        )
+        for wave in snapshot.waves
+        if _is_integration_pull_request_due(wave, projects[wave.project])
     )
 
 

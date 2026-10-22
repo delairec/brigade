@@ -16,6 +16,7 @@ from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
+from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.pull_request_facts import PullRequestFacts
@@ -271,6 +272,40 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot.waves[0].integration_pull_request, PULL_REQUEST)
+
+    def test_should_carry_the_integration_pull_request_the_ledger_records_as_opened(self):
+        # Arrange
+        self.record(10, WavePrOpened(wave="w1", pr=77, login="shop-cli"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].opened_integration_pull_request, 77)
+
+    def test_should_describe_a_project_on_the_github_forge(self):
+        # Arrange
+        self.shop_forge = "github"
+        argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
+        self.remote_answers = {argv: ProcessAnswer()}
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1],
+            ProjectFacts(
+                name="shop",
+                slots=2,
+                awaits_check_runs=False,
+                candidates=("B5",),
+                merge="squash",
+                review="approval",
+                auto_merge="none",
+                on_github=True,
+            ),
+        )
 
     def test_should_mark_a_wave_whose_branch_is_gone(self):
         # Act
