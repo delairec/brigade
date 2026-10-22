@@ -19,6 +19,7 @@ from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
+from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
@@ -417,15 +418,6 @@ def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) ->
     return admit_candidates(runtime.run_process, tasks, map_open_tasks(reading.entries, project.name))
 
 
-def _read_policy_field(policies: list[Entity], project: str, field_name: str, neutral: str) -> str:
-    values = [
-        read_project_field(policy, field_name)
-        for policy in policies
-        if read_project_field(policy, "PROJECT") == f"@PROJECT.{project}"
-    ]
-    return next((value for value in values if value is not None), neutral)
-
-
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
     slots = read_project_field(project, SLOTS_FIELD)
     policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
@@ -441,8 +433,8 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         wave_start=read_wave_start(runtime, project.name),
         candidates=_read_candidates(runtime, reading, project),
         merge=read_project_field(project, MERGE_FIELD) or REBASE_MERGE,
-        review=_read_policy_field(policies, project.name, REVIEW_FIELD, VERDICT_REVIEW),
-        auto_merge=_read_policy_field(policies, project.name, AUTO_MERGE_FIELD, MERGE_INTO_INTEGRATION),
+        review=read_policy_field(policies, project.name, REVIEW_FIELD, VERDICT_REVIEW),
+        auto_merge=read_policy_field(policies, project.name, AUTO_MERGE_FIELD, MERGE_INTO_INTEGRATION),
     )
 
 

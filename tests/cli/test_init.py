@@ -153,6 +153,30 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(completed.returncode, expected_exit_code, completed.stdout + completed.stderr)
 
+    def test_should_install_a_schema_whose_project_merges_by_rebase_by_default(self):
+        # Arrange
+        provide_awawa(self)
+        self.machine.run_init()
+
+        # Act
+        completed = ProcessLauncher.run(
+            ["awawa", "show", "PROJECT", "--json", str(self.machine.corpus)],
+            cwd=self.machine.corpus,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "FIELD",
+                "atoms": ["MERGE", "squash|rebase|merge"],
+                "fields": [{"name": "DEFAULT", "atoms": ["rebase"], "fields": []}],
+            },
+            json.loads(completed.stdout)["fields"],
+        )
+
 
 class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
     def setUp(self):
