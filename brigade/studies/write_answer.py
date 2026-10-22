@@ -1,5 +1,6 @@
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
+from brigade.studies.choose_answer_form import choose_answer_form
 from brigade.studies.hand_answer_to_output import hand_answer_to_output
 from brigade.studies.open_answer_issue import open_answer_issue
 from brigade.studies.present_answer import present_answer
@@ -55,5 +56,5 @@ def write_answer(context: StudyRunContext) -> dict:
     written = {"output": output, "answer": str(context.run_directory / ANSWER_FILE)}
     if output.startswith(ENTITY_OUTPUT_PREFIX):
         _write_entity(context, answer)
-        return written
+        return {**written, **choose_answer_form(context.study.answer_type).publish(context)}
     return {**written, **_choose_publisher(output)(context, present_answer(context))}

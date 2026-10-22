@@ -18,6 +18,7 @@ from brigade.adapters.forges.github import (
     read_login_environment,
     read_pull_request,
     reply_review_thread,
+    rewrite_pull_request_body,
 )
 from brigade.system.run_process import ProcessRecord
 
@@ -87,6 +88,29 @@ class DecidePullRequestTest(unittest.TestCase):
                     (answer, asked.argv, asked.cwd, asked.environment),
                     ({"schema_version": 1}, expected_argv, "/projects/shop", BOT_ENVIRONMENT),
                 )
+
+
+class RewritePullRequestBodyTest(unittest.TestCase):
+    def test_should_ask_gh_to_replace_the_body_of_the_pull_request_as_the_login_of_the_environment(self):
+        # Arrange
+        runtime = create_runtime("")
+        request = {"repository": "/projects/shop", "number": 12, "body": "# REPORT shop_w1\n", "environment": BOT_ENVIRONMENT}
+
+        # Act
+        answer = rewrite_pull_request_body(request, runtime)
+
+        # Assert
+        [asked] = runtime.requests
+        self.assertEqual(
+            (answer, asked.argv, asked.cwd, asked.stdin, asked.environment),
+            (
+                {"schema_version": 1},
+                ("gh", "pr", "edit", "12", "--body-file", "-"),
+                "/projects/shop",
+                "# REPORT shop_w1\n",
+                BOT_ENVIRONMENT,
+            ),
+        )
 
 
 class DescribeAccountTest(unittest.TestCase):
