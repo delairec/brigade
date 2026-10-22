@@ -8908,7 +8908,7 @@ TASK B143
 		IMPL "tests/unit/commands/test_tick.py::def"
 			+ "test_should_rebase_under_the_lock_of_the_worktrees_of_the_project(self):"
 		IMPL "tests/unit/tick/test_plan.py::def"
-			+ "test_should_wait_for_the_next_tick_to_rebase_a_task_whose_worktree_a_run_holds(self):"
+			+ "test_should_wait_for_the_next_tick_to_rebase_a_task_while_a_run_holds_its_worktree_or_works_on_it(self):"
 	SPEC "the ledger event task.rebased carries the task, the head before and after the rebase and"
 		+ "the login the push ran as"
 		IMPL "brigade/ledger/task_rebased.py::name: ClassVar[str] = \"task.rebased\""

@@ -1308,6 +1308,8 @@ class PlanRepairTest(unittest.TestCase):
 
 
 BEHIND = dataclasses.replace(OPEN, behind=True)
+BEHIND_AND_MERGED = dataclasses.replace(MERGED, behind=True)
+BEHIND_AND_CLOSED = dataclasses.replace(CLOSED, behind=True)
 REBASE_S3 = RebaseTask(
     project="shop",
     wave="shop_w1",
@@ -1342,10 +1344,11 @@ class PlanRebaseTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, (REBASE_S3,))
 
-    def test_should_wait_for_the_next_tick_to_rebase_a_task_whose_worktree_a_run_holds(self):
+    def test_should_wait_for_the_next_tick_to_rebase_a_task_while_a_run_holds_its_worktree_or_works_on_it(self):
         for case, live_run in [
             ("a run of the task", REMEDIATION_RUN_OF_S3),
             ("a run of no task in its worktree", RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3),
+            ("a run of the task in another checkout", REVIEW_RUN_OF_S3_IN_THE_MAIN_CHECKOUT),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -1366,10 +1369,15 @@ class PlanRebaseTest(unittest.TestCase):
                 self.assertEqual(actions, ())
 
     def test_should_rebase_no_task_whose_run_has_not_ended_or_whose_worktree_is_removed(self):
-        for case, state, worktree in [
-            ("a task still running", "running", WORKTREE_S3),
-            ("a task paused on the quota", "paused:quota", WORKTREE_S3),
-            ("a task whose worktree is removed", "pr_open", NO_WORKTREE),
+        for case, state, worktree, expected in [
+            ("a task still running", "running", WORKTREE_S3, (RECORD_PR_OPEN,)),
+            (
+                "a task paused on the quota",
+                "paused:quota",
+                WORKTREE_S3,
+                (ResumeTaskRun(wave="shop_w1", task="S3", run=None),),
+            ),
+            ("a task whose worktree is removed", "pr_open", NO_WORKTREE, ()),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -1380,7 +1388,23 @@ class PlanRebaseTest(unittest.TestCase):
                 actions = plan(snapshot)
 
                 # Assert
-                self.assertNotIn(REBASE_S3, actions)
+                self.assertEqual(actions, expected)
+
+    def test_should_rebase_no_pull_request_seen_merged_or_closed_before_its_state_is_recorded(self):
+        for case, pull_request, expected in [
+            ("merged", BEHIND_AND_MERGED, (RECORD_MERGED, REMOVE_WORKTREE_S3)),
+            ("closed", BEHIND_AND_CLOSED, (RECORD_PARKED, REMOVE_WORKTREE_S3)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", pull_request=pull_request, worktree=WORKTREE_S3)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
 
     def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):
         for case, rounds, expected in [

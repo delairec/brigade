@@ -1254,6 +1254,9 @@ BEHIND_PULL_REQUEST = {**OPEN_PULL_REQUEST, "behind": True}
 REBASED_HEAD = "9a9a9a9"
 REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "verdict": "pending"}]}
 REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "origin/integration/M4")
+FETCH_OF_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/M4")
+CLI_BOUND_TO_A_FORGE_ACCOUNT = '[forge_accounts]\ncli = "tidepool-cli"\n'
+ENVIRONMENT_OF_THE_CLI_ACCOUNT = {"GH_TOKEN": "t0k3n"}
 REBASE_OUTPUTS = {
     **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()},
     REBASE_ONTO_THE_WAVE_BRANCH: ProcessAnswer(),
@@ -1287,6 +1290,9 @@ class RebasingForgeDouble:
     def describe_account(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "login": "tidepool-cli"}
 
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "environment": ENVIRONMENT_OF_THE_CLI_ACCOUNT}
+
 
 class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
     def setUp(self):
@@ -1299,6 +1305,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.worktree.mkdir(parents=True)
         self.spawn = SpawnRecorderDouble()
         self.lock_free_at_the_rebase = []
+        self.environments_of_the_fetch = []
 
     def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
         corpus = {
@@ -1316,6 +1323,8 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
     def _observe_the_lock(self, run_process):
         def run(request):
+            if request.argv == FETCH_OF_THE_WAVE_BRANCH:
+                self.environments_of_the_fetch.append(request.environment)
             if request.argv == REBASE_ONTO_THE_WAVE_BRANCH:
                 lock = self.root / "state" / "locks" / "worktrees-tidepool.lock"
                 with contextlib.ExitStack() as stack:
@@ -1396,6 +1405,20 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.lock_free_at_the_rebase, [False])
+
+    def test_should_fetch_the_wave_branch_as_the_forge_account_of_the_cli(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(
+            CLIENT_AND_DOCUMENT_CONFIGURATION + CLI_BOUND_TO_A_FORGE_ACCOUNT, encoding="utf-8"
+        )
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.environments_of_the_fetch, [ENVIRONMENT_OF_THE_CLI_ACCOUNT])
 
     def test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):
         # Arrange
