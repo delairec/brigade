@@ -1,0 +1,27 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@TASK.FIX7",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS draft|todo|implemented|archived\n\t\tREQUIRED\n\tFIELD SPEC string\n\t\tREPEATABLE\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\nSCHEMA DECISION\n\tDESC \"a ruling of the project\"\n\tFIELD STATUS active|archived\n\t\tREQUIRED\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running|delivered\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/decisions.awawa": "DECISION CartLivesInMemory\n\tSTATUS active\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": "TASK FIX7\n\tTITLE \"Round the total to the cent\"\n\tSTATUS draft\n\tSPEC \"the total is rounded to the cent\"\n\nTASK S1\n\tTITLE \"Add an item to the cart\"\n\tSTATUS implemented\n\tSPEC \"an item added appears in the cart\"\n\t\tIMPL \"src/cart.py::def add_item\"\n\nTASK S2\n\tTITLE \"Remove an item from the cart\"\n\tSTATUS todo\n\tSPEC \"a removed item leaves the cart\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"FIX7\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": \"draft\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Round the total to the cent\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"draft\"], \"fields\": []}, {\"name\": \"SPEC\", \"atoms\": [\"\\\"the total is rounded to the cent\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

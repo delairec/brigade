@@ -1,0 +1,26 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@TASK.S0",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD TYPE feat|fix|test|docs\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|running|reached\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": "TASK S0\n\tTITLE \"Show the cart\"\n\tSTATUS implemented\n\tTYPE feat\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S0\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": \"implemented\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Show the cart\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"implemented\"], \"fields\": []}, {\"name\": \"TYPE\", \"atoms\": [\"feat\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

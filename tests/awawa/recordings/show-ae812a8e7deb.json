@@ -1,0 +1,24 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "MILESTONE",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": ""
+    }
+  },
+  "outcome": {
+    "exit_code": 1,
+    "rewritten": {},
+    "stderr": "awawa show: @SCHEMA.MILESTONE is not defined in the workspace\n",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
