@@ -1,10 +1,14 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.locate_entity_block import locate_entity_block
+from brigade.corpus.read_awawa_document import read_awawa_document
+from brigade.corpus.read_awawa_file_document import read_awawa_file_document
+from brigade.corpus.read_entity_template import read_entity_template
 from brigade.errors import BrigadeError, CorpusLintFailed
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.check_ancestor import check_ancestor
@@ -102,7 +106,7 @@ def _append_blocks(text: str, blocks: list[str]) -> str:
 
 def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, plan, message: str) -> CorpusChange:
     corpus = read_project_field(recording.project, "CORPUS")
-    files = locate_entity_files(read_entity_sites(runtime.run_process, worktree), corpus)
+    files = locate_entity_files(read_entity_sites(partial(read_awawa_document, runtime.run_process), worktree), corpus)
     destinations = [
         files.get(plan_entity.type, f"{corpus}/{plan_entity.type.lower()}{FILE_SUFFIX}") for plan_entity in plan
     ]
@@ -141,10 +145,12 @@ def _write_on_branch(
 
 
 def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: Path, plan) -> PlanEntity:
-    collisions = list_name_collisions(read_entity_sites(runtime.run_process, worktree), plan)
+    collisions = list_name_collisions(
+        read_entity_sites(partial(read_awawa_document, runtime.run_process), worktree), plan
+    )
     if collisions:
         raise BrigadeError(", ".join(collisions))
-    undeclared = list_undeclared(runtime.run_process, worktree, plan)
+    undeclared = list_undeclared(partial(read_entity_template, runtime.run_process), worktree, plan)
     if undeclared:
         raise BrigadeError(
             f"the schema of the corpus of @PROJECT.{recording.project.name} does not declare {', '.join(undeclared)}"
@@ -245,7 +251,7 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
     run = _read_run(runtime)
     _refuse_a_second_round(runtime, name, run)
     root = Path(read_project_field(recording.project, "PATH"))
-    plan = read_plan(runtime.run_process, recording.plan_file)
+    plan = read_plan(partial(read_awawa_file_document, runtime.run_process), recording.plan_file)
     branch = f"{PLAN_BRANCH_PREFIX}{name}"
     if find_branch(runtime.run_process, root, branch):
         milestone = _check_plan(plan)

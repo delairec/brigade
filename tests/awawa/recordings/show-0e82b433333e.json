@@ -1,0 +1,24 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "TASK",
+      "<tmp:0>"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [
+      "<tmp:0>"
+    ],
+    "inputs": {
+      "<tmp:0>/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD SPEC string\n\t\tREPEATABLE\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "SCHEMA TASK\n\tDESC \"a change\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD SPEC string\n\t\tREPEATABLE\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
