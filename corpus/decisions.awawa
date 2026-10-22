@@ -3446,9 +3446,9 @@ DECISION ARepairRoundIsOneFixingStateOfTheTask
 	TITLE "a repair round is one task.state fixing of the task in its wave, recorded by the tick"
 		+ "after each launch of a repair run; a run that ends without a push is launched again"
 	STATUS active
-	DESC "the tick records task.state fixing after it launches a run of the remediate or the build"
-		+ "slot on a task in changes_requested or with a failing check; the rounds of a task are"
-		+ "the count of those events of the task in its wave"
+	DESC "the tick records task.state fixing after it launches a run of the remediate, the build or"
+		+ "the rebase slot on a task in changes_requested, with a failing check or whose git rebase"
+		+ "conflicted; the rounds of a task are the count of those events of the task in its wave"
 	DESC "a task left fixing whose pull request head is still the head of its last preflight, with"
 		+ "no run holding its worktree, is launched again, one more round; past the VERIFY_ROUNDS"
 		+ "of the project's POLICY it is parked"
@@ -3464,3 +3464,21 @@ DECISION ARepairRoundIsOneFixingStateOfTheTask
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	SOURCE "taken in the delivery of @TASK.B18, pull request #180"
 		REF @TASK.B18
+	SOURCE "the rebase slot counted in the delivery of @TASK.B143, pull request #182"
+		REF @TASK.B143
+
+DECISION ACleanRebaseSendsTheTaskBackToItsPreflight
+	TITLE "a task the tick rebased by git without a conflict moves back to pr_open, whatever state"
+		+ "it was in, so the new head goes through preflight and verification again"
+	STATUS active
+	DESC "after the push of a clean rebase the tick records task.rebased, then task.state pr_open;"
+		+ "a verified task is verified again at its new head before the merge"
+	DESC "binds @TASK.B143"
+		REF @TASK.B143
+	REJECTED "a verified task kept verified after a clean rebase: the verdict judged a head the"
+		+ "merge no longer carries, and the rebased head may fail its checks against the new base"
+	RATIONALE "the head of the pull request moved, and every judgment of the wave is bound to a"
+		+ "head; pr_open is the one state from which the preflight of the new head opens the next"
+		+ "verification"
+	SOURCE "taken in the delivery of @TASK.B143, pull request #182"
+		REF @TASK.B143
