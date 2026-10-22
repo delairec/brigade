@@ -1265,6 +1265,11 @@ REBASE_OUTPUTS = {
     ("git", "push"): ProcessAnswer(),
 }
 CONFLICTING_REBASE = ProcessAnswer(exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py")
+OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT = {
+    **REBASE_OUTPUTS,
+    REBASE_ONTO_THE_WAVE_BRANCH: CONFLICTING_REBASE,
+    ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
+}
 LEDGER_OF_A_TASK_IN_VERIFYING = [
     WAVE_STARTED,
     TASK_PR_OPENED,
@@ -1423,9 +1428,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
     def test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):
         # Arrange
         write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
-        runtime = self._create_runtime(
-            {**REBASE_OUTPUTS, REBASE_ONTO_THE_WAVE_BRANCH: CONFLICTING_REBASE}, [BEHIND_PULL_REQUEST]
-        )
+        runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
 
         # Act
         COMMAND.run(SimpleNamespace(mode="once"), runtime)
@@ -1475,9 +1478,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
     def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):
         # Arrange
         write_ledger(self.root, LEDGER_OF_A_TASK_PAST_ITS_ROUNDS)
-        runtime = self._create_runtime(
-            {**REBASE_OUTPUTS, REBASE_ONTO_THE_WAVE_BRANCH: CONFLICTING_REBASE}, [BEHIND_PULL_REQUEST]
-        )
+        runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
 
         # Act
         COMMAND.run(SimpleNamespace(mode="once"), runtime)
