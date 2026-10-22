@@ -303,6 +303,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 merge="squash",
                 review="approval",
                 auto_merge="none",
+                verify_rounds=3,
                 on_github=True,
             ),
         )
