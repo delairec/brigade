@@ -497,6 +497,7 @@ class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
                     "wave": "shop_w1",
                     "task": "S3",
                     "state": "parked",
+                    "reason": "setup failed",
                 },
             ],
         )

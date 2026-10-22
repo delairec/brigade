@@ -3414,3 +3414,30 @@ DECISION RequestReplanRefusesOnlyALivePlannerARequestNotPlanningAndAPausedProjec
 		REF @TASK.B169
 	SOURCE "pull request #174 of the brigade repository, delivering @TASK.B169"
 		REF @TASK.B169
+
+DECISION SchedulerStatusJudgesTheTickStaleStrictlyPastItsMinutesAndSummarisesTheOpenWavesAlone
+	TITLE "brigade scheduler status judges the last tick stale once strictly older than"
+		+ "tick_stale_after minutes, an integer of 1 or more, and lists the paused waves and the"
+		+ "parked tasks of the open waves alone"
+	STATUS active
+	DESC "a heartbeat exactly tick_stale_after minutes old is fresh; one second more is stale"
+	DESC "tick_stale_after is an integer of 1 or more; any other value is an error naming the key"
+		+ "and the file, as runs_kept and study_runs are"
+	DESC "a heartbeat without any scheduler installed is still judged on its age"
+	DESC "a parked task is one whose last task.parked or task.state of its wave leaves it parked,"
+		+ "in a wave neither closed nor cancelled"
+	DESC "every task.state parked brigade writes carries its reason, pull request closed or setup"
+		+ "failed; a parked task whose event holds no reason, from a ledger written before, is"
+		+ "printed without one in text and with reason null in --json"
+	DESC "binds @TASK.B170"
+		REF @TASK.B170
+	REJECTED "listing the parked tasks and paused waves of closed or cancelled waves: nothing"
+		+ "resumes them, and the summary is what the user acts on"
+	REJECTED "a placeholder word printed for a parked task with no reason: the ledger holds none,"
+		+ "and a made-up word reads as a cause"
+	REJECTED "a fractional number of minutes: the tick fires every five minutes, a threshold finer"
+		+ "than a minute tells nothing more"
+	RATIONALE "the tick runs every five minutes; strictly older keeps a threshold of three"
+		+ "intervals from reporting the tick that is merely due"
+	SOURCE "pull request #176 of the brigade repository, delivering @TASK.B170"
+		REF @TASK.B170

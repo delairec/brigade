@@ -10298,7 +10298,7 @@ TASK B169
 TASK B170
 	TITLE "brigade scheduler status exits non-zero when the last tick is older than the interval"
 		+ "allows, and summarises the paused waves and the parked tasks"
-	STATUS todo
+	STATUS implemented
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "scheduler"
@@ -10307,15 +10307,25 @@ TASK B170
 		+ "key tick_stale_after of config.toml, in minutes, 15 when the key is absent, or when no"
 		+ "tick ever ran while a scheduler is installed, where today"
 		+ "brigade/commands/scheduler_status.py:59-60 exits 0 on none and on last tick never"
+		IMPL "brigade/commands/scheduler_status.py::def _is_stale("
+		IMPL "brigade/system/read_tick_stale_after.py::def read_tick_stale_after(document: dict,"
+			+ "path: Path) -> int:"
 	SPEC "it prints the paused waves by their name with their reason, quota or forge_account, and"
 		+ "their resume_at, and the parked tasks with their wave and their reason, text and --json"
+		IMPL "brigade/commands/scheduler_status.py::def _list_paused_waves("
+		IMPL "brigade/commands/scheduler_status.py::def _list_parked_tasks("
 	SPEC "it resumes no wave: SPEC 4 of TASK B19, brigade wave resume run by the user after"
 		+ "forge_account.unavailable, stays true"
+		IMPL "brigade/commands/wave_resume.py::def wave_resume("
 	SPEC "tests/unit prove the exit 1 on a heartbeat older than the default and than a configured"
 		+ "tick_stale_after, the exit 0 on a fresh one, the exit 1 with a scheduler installed and"
 		+ "no tick, and the summary of paused waves and parked tasks, on heartbeats and ledgers"
 		+ "dated by the test; tests/cli gains no case, as DESC 4 of the decision"
 		+ "ThePortableContractIsTheCommandLineAndNeutralFiles sets"
+		IMPL "tests/unit/commands/test_scheduler_status.py::class"
+			+ "SchedulerStatusOfTheMachineTest(unittest.TestCase):"
+		IMPL "tests/unit/system/test_read_tick_stale_after.py::class"
+			+ "ReadTickStaleAfterTest(unittest.TestCase):"
 	AFTER @TASK.B19
 	AFTER @TASK.B187
 	RATIONALE "the tick runs every five minutes, OnCalendar=*:0/5 and */5; 15 minutes, three"
@@ -10327,6 +10337,7 @@ TASK B170
 	SOURCE "use-case map of 2026-10-16, findings G8, G5 and A9"
 	SOURCE "the user's ruling of 2026-10-17 in the refinement of B166 with B187 and B168 to B171: «"
 		+ "Clé de config.toml », the threshold set by a key"
+	DELIVERED_BY 176
 
 TASK B171
 	TITLE "The pull request from the integration branch of a wave to main is opened in forge mode,"

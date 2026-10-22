@@ -22,13 +22,13 @@ from brigade.tick.actions import (
 )
 from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
 from brigade.tick.decide_resume_at import decide_resume_at
+from brigade.waves.read_task_state import PARKED_STATE
 
 BUILD_SLOT = "build"
 WAITING_STATE = "queued"
 MERGED_STATE = "merged"
 RUNNING_STATE = "running"
 PR_OPEN_STATE = "pr_open"
-PARKED_STATE = "parked"
 VERIFYING_STATE = "verifying"
 VERIFIED_STATE = "verified"
 CHANGES_REQUESTED_STATE = "changes_requested"

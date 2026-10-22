@@ -314,6 +314,18 @@ class ReadConfigurationOfTheStudyRunsTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.study_runs, 3)
 
 
+class ReadConfigurationOfTheTickStaleAfterTest(ReadConfigurationTestCase):
+    def test_should_answer_the_minutes_the_key_sets(self):
+        # Arrange
+        self.path.write_text("tick_stale_after = 30\n")
+
+        # Act
+        configuration = read_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.tick_stale_after, 30)
+
+
 class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
     def test_should_answer_2_and_no_finding_when_the_key_is_absent(self):
         # Arrange
