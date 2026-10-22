@@ -2,7 +2,13 @@ import unittest
 
 from brigade.tick.heartbeat import Heartbeat
 
-HEARTBEAT_DOCUMENT = {"schema_version": 1, "ts": "2026-10-08T09:00:00Z", "duration_ms": 412, "actions_applied": 3}
+HEARTBEAT_DOCUMENT = {
+    "schema_version": 1,
+    "ts": "2026-10-08T09:00:00Z",
+    "duration_ms": 412,
+    "actions_applied": 3,
+    "actions_failed": 1,
+}
 
 
 class HeartbeatTest(unittest.TestCase):
@@ -12,5 +18,12 @@ class HeartbeatTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document, {"schema_version": 1, "ts": "2026-10-08T09:00:00Z", "duration_ms": 412, "actions_applied": 3}
+            document,
+            {
+                "schema_version": 1,
+                "ts": "2026-10-08T09:00:00Z",
+                "duration_ms": 412,
+                "actions_applied": 3,
+                "actions_failed": 1,
+            },
         )

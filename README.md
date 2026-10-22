@@ -305,8 +305,12 @@ the procedure brigade ships, or of the one the key `build` of the table `[proced
 place, resolved as the argument of `brigade run` is, with the wave and the task as `--wave` and `--task`. It follows the pull request of each task past its launch,
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
 `merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
-worktree is removed once its pull request is merged or closed, never while a run holds it. A task whose setup fails is
-recorded `parked` with the reason `setup failed`, its worktree and branch removed. On the pull request a task
+worktree is removed once its pull request is merged or closed, never while a run holds it. A task is recorded `running`
+before its run is spawned, and its launch reuses the branch `task/<slug>/<task>` and its worktree when they exist. A
+task whose setup fails is recorded `parked` with the reason `setup failed`, its worktree and branch left in place. An
+action that fails is recorded as `tick.action_failed`, with the action, its project, wave and task where it names
+them, and the error; the tick applies the actions that follow it, never applies it again in the same tick and undoes
+nothing, the next tick planning again from the facts. On the pull request a task
 in `pr_open` opened, once every check run completed, at least one unless the project declares `CHECK_RUNS none`, and
 for each head once, it runs `brigade verify preflight`,
 records its findings in `task.preflighted` and moves the task to `verifying` when no check fails. On a task in
@@ -367,7 +371,7 @@ brigade scheduler status
 
 `tick --once` takes the lock without waiting: when another tick holds it, it writes one line naming the lock on stderr,
 writes nothing and exits 0. Otherwise it writes the heartbeat `$XDG_STATE_HOME/brigade/tick.json` atomically:
-`schema_version`, `ts`, `duration_ms` and `actions_applied`. `--dry-run` takes no lock and writes neither the heartbeat nor a tick trail, its records going to the trail of a command. `--loop`
+`schema_version`, `ts`, `duration_ms`, `actions_applied` and `actions_failed`. `--dry-run` takes no lock and writes neither the heartbeat nor a tick trail, its records going to the trail of a command. `--loop`
 reports each tick on stderr; a signal lets the tick under way finish, then the loop exits 0 with the number of ticks
 attempted, stand-downs included. Every mode prints text or, with `--json`, a JSON document.
 
