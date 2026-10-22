@@ -27,6 +27,7 @@ RESUMED_RECORDING_SUFFIX = ".resumed.json"
 RESUMED_BRIEF_OPENING = f"# {PROGRESS_SECTION}\n"
 ATTRIBUTION_SETTING = "attribution"
 RESUME_OPERATION = "resume"
+PLAYS_SETTING = "plays"
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
@@ -82,15 +83,29 @@ def _choose_recording(recordings: str, request: dict) -> str:
     return f"{recordings}/{role}.json"
 
 
+def _find_play(request: dict) -> Path | None:
+    plays = request["settings"].get(PLAYS_SETTING)
+    if plays is None:
+        return None
+    play = Path(plays) / request["role"]["name"]
+    return play if play.exists() else None
+
+
 def _build_launch(request: dict) -> dict:
     recordings = request["settings"].get("recordings")
     if recordings is None:
         raise BrigadeError("the fake client adapter needs recordings in the table [clients.fake] of config.toml")
+    recording = _choose_recording(recordings, request)
+    play = _find_play(request)
+    if play is not None:
+        argv, stdin = [str(play), recording], request["brief"]
+    else:
+        argv, stdin = _build_argv(request["settings"], recording, _read_soft_limit(request)), None
     return {
         "schema_version": SCHEMA_VERSION,
-        "argv": _build_argv(request["settings"], _choose_recording(recordings, request), _read_soft_limit(request)),
+        "argv": argv,
         "environment": {},
-        "stdin": None,
+        "stdin": stdin,
         "session_id": request["session_id"],
     }
 
