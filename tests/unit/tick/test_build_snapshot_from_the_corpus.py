@@ -69,6 +69,10 @@ def answer_tree(ref: str, sha: str) -> dict:
     return {argv: ProcessAnswer(stdout=f"{sha}\n")}
 
 
+def answer_main_of_the_forge(sha: str) -> dict:
+    return {("git", "fetch", "--quiet", "origin", "main"): ProcessAnswer(), **answer_tree("origin/main", sha)}
+
+
 def answer_unreadable_tree(ref: str) -> dict:
     argv = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
     return {argv: ProcessAnswer(exit_code=128, stderr="fatal: bad revision")}
@@ -287,7 +291,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         # Arrange
         self.shop_forge = "github"
         argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
-        self.remote_answers = {argv: ProcessAnswer()}
+        self.remote_answers = {argv: ProcessAnswer(), **answer_main_of_the_forge(MAIN_SHA)}
 
         # Act
         snapshot, _ = self.build()
@@ -322,7 +326,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         # Arrange
         self.shop_forge = "github"
         argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
-        self.remote_answers = {argv: ProcessAnswer(exit_code=2)}
+        self.remote_answers = {argv: ProcessAnswer(exit_code=2), **answer_main_of_the_forge(MAIN_SHA)}
 
         # Act
         snapshot, _ = self.build()

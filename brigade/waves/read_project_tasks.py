@@ -1,13 +1,14 @@
 import argparse
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
-from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import Configuration
 from brigade.tasks.read_task_field import read_task_field
+from brigade.waves.locate_project_main import locate_project_main
 
 TASK_TYPE = "TASK"
 STATUS_FIELD = "STATUS"
@@ -21,8 +22,11 @@ class ProjectTasks:
     implemented: frozenset[str]
 
 
-def read_project_tasks(runtime: Runtime, configuration: Configuration, project: Entity) -> ProjectTasks:
-    query = argparse.Namespace(project=project.name, ref=read_project_field(project, "MAIN"), worktree=None)
+def read_project_tasks(
+    runtime: Runtime, configuration: Configuration, project: Entity, read_environment: Callable[[str], dict]
+) -> ProjectTasks:
+    main = locate_project_main(runtime.run_process, project, read_environment)
+    query = argparse.Namespace(project=project.name, ref=main, worktree=None)
     root = prepare_project_tree(query, configuration, runtime).root
     tasks = read_entities(runtime.run_process, root, TASK_TYPE)
     return ProjectTasks(

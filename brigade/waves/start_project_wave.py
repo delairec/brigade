@@ -85,7 +85,7 @@ def _cut_missing_branches(runtime: Runtime, start: WaveStart, project: Entity) -
 def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), start.project)
-    tasks = read_project_tasks(runtime, start.configuration, project)
+    tasks = read_project_tasks(runtime, start.configuration, project, start.read_environment)
 
     def name_wave(reading: LedgerReading) -> WaveStarted:
         chosen = _compose_tasks(runtime, start, tasks, reading)

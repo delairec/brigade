@@ -12,6 +12,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 
 REPOSITORY = "/srv/shop"
 MAIN_SHA = "4f1c2a9"
+FORGE_MAIN_SHA = "9b0d3e7"
 BRANCH_NOT_FOUND = 1
 REMOTE_BRANCH_NOT_FOUND = 2
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
@@ -77,6 +78,16 @@ class StartProjectWaveTestCase(unittest.TestCase):
         self.processes.answer_entities(
             self.root / "config", "PROJECT", {"shop": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", forge))}
         )
+
+    def register_github_project(self) -> None:
+        self.register_project("github")
+        self.processes.answer(("git", "fetch", "--quiet", "origin", "main"))
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"),
+            stdout=f"{MAIN_SHA}\n",
+        )
+        for wave in ("shop_w1", "shop_w2"):
+            self.processes.answer(("git", "branch", "--quiet", f"integration/{wave}", "origin/main"))
 
     def answer_local_branch(self, wave: str, exit_code: int) -> None:
         self.processes.answer(
@@ -191,7 +202,7 @@ class StartProjectWaveOnABranchNoWaveStartedNamesTest(StartProjectWaveTestCase):
 
     def test_should_refuse_a_remote_branch_of_the_name_on_the_github_forge(self):
         # Arrange
-        self.register_project("github")
+        self.register_github_project()
         self.answer_remote_branch("shop_w2", 0)
 
         # Act
@@ -203,9 +214,49 @@ class StartProjectWaveOnABranchNoWaveStartedNamesTest(StartProjectWaveTestCase):
 
 
 class StartProjectWaveOnTheGithubForgeTest(StartProjectWaveTestCase):
+    def test_should_compose_the_wave_from_the_main_branch_of_the_forge(self):
+        # Arrange
+        self.register_github_project()
+        forge_tree = self.root / "cache" / "refs" / "shop" / FORGE_MAIN_SHA
+        forge_tree.mkdir(parents=True)
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"),
+            stdout=f"{FORGE_MAIN_SHA}\n",
+        )
+        self.processes.answer_entities(forge_tree, "TASK", {"S11": (("STATUS", "todo"),)})
+        self.processes.answer_json(("awawa", "refs", "@TASK.S11", "--json", str(forge_tree)), NO_INCOMING_REFERENCE)
+        self.answer_remote_branch("shop_w2", REMOTE_BRANCH_NOT_FOUND)
+        self.processes.answer(("git", "push", "--quiet", "origin", "integration/shop_w2"))
+        self.answer_local_branch("shop_w1", 0)
+        self.answer_remote_branch("shop_w1", 0)
+
+        # Act
+        started = self.start_wave(EVERY_STARTABLE_TASK)
+
+        # Assert
+        self.assertEqual(started["tasks"], ["S11"])
+
+    def test_should_fetch_the_main_branch_with_the_environment_of_the_forge(self):
+        # Arrange
+        self.register_github_project()
+        self.answer_local_branch("shop_w1", 0)
+        self.answer_remote_branch("shop_w1", 0)
+        self.answer_remote_branch("shop_w2", REMOTE_BRANCH_NOT_FOUND)
+        self.processes.answer(("git", "push", "--quiet", "origin", "integration/shop_w2"))
+
+        # Act
+        self.start_wave(EVERY_STARTABLE_TASK)
+
+        # Assert
+        fetches = [request for request in self.processes.requests if request.argv[:2] == ("git", "fetch")]
+        self.assertEqual(
+            [(request.argv, request.cwd, request.environment) for request in fetches[:1]],
+            [(("git", "fetch", "--quiet", "origin", "main"), REPOSITORY, FORGE_ENVIRONMENT)],
+        )
+
     def test_should_push_the_integration_branch_with_the_environment_of_the_forge(self):
         # Arrange
-        self.register_project("github")
+        self.register_github_project()
         for wave in ("shop_w1", "shop_w2"):
             self.answer_remote_branch(wave, REMOTE_BRANCH_NOT_FOUND)
             self.processes.answer(("git", "push", "--quiet", "origin", f"integration/{wave}"))
@@ -225,7 +276,7 @@ class StartProjectWaveOnTheGithubForgeTest(StartProjectWaveTestCase):
 
     def test_should_push_the_branch_of_an_open_wave_the_remote_lacks_without_cutting_it_again(self):
         # Arrange
-        self.register_project("github")
+        self.register_github_project()
         self.answer_local_branch("shop_w1", 0)
         for wave in ("shop_w1", "shop_w2"):
             self.answer_remote_branch(wave, REMOTE_BRANCH_NOT_FOUND)
@@ -239,14 +290,14 @@ class StartProjectWaveOnTheGithubForgeTest(StartProjectWaveTestCase):
             [argv for argv in self.processes.list_argvs() if argv[:2] in {("git", "branch"), ("git", "push")}],
             [
                 ("git", "push", "--quiet", "origin", "integration/shop_w1"),
-                ("git", "branch", "--quiet", "integration/shop_w2", "main"),
+                ("git", "branch", "--quiet", "integration/shop_w2", "origin/main"),
                 ("git", "push", "--quiet", "origin", "integration/shop_w2"),
             ],
         )
 
     def test_should_leave_the_branch_of_an_open_wave_the_remote_holds(self):
         # Arrange
-        self.register_project("github")
+        self.register_github_project()
         self.answer_local_branch("shop_w1", 0)
         self.answer_remote_branch("shop_w1", 0)
         self.answer_remote_branch("shop_w2", REMOTE_BRANCH_NOT_FOUND)
