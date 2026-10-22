@@ -222,6 +222,20 @@ correct, and records nothing. It records the ledger event `task.review_answered`
 Under `REVIEW approval` it also replies each answer on its thread as the login of the key `remediate` of
 `[forge_accounts]`, and the event carries that login; under `REVIEW verdict` its login is null.
 
+## Rebase on the base
+
+```
+brigade rebase context <pr>
+brigade rebase done <pr>
+```
+
+Both run from the worktree of the task whose rebase conflicted, in a run of the `rebase` slot. `rebase context` prints
+the branch of the pull request, its base, the branch the `wave.started` of its wave names, and the files `git
+merge-tree` reports in conflict between the head and `origin/<base>`. `rebase done` fetches both branches, refuses a
+head that does not descend from `origin/<base>`, exit 1, and pushes nothing; otherwise it pushes the head onto the
+branch with `--force-with-lease` on the remote head it fetched, under the account of the run, and prints the head
+pushed.
+
 ## Studies
 
 A study is a `STUDY` entity of `studies.awawa` in the operational corpus: deterministic collectors, then at most one
@@ -311,6 +325,14 @@ through `brigade review context|reply`; a task whose preflight found a failing c
 launch records the task `fixing` and counts one round; a run that ends without a push leaves the task `fixing`, and the
 next tick launches it again. A push moves the task back to `pr_open`. Past the `VERIFY_ROUNDS` of the project's
 `POLICY`, 2 by default, the task is parked, `task.parked` naming the rounds.
+A task whose open pull request is behind the branch of its wave, from `pr_open` to `fixing`, is rebased by git when no
+run holds its worktree, and waits for the next tick otherwise: under the lock of the project's worktrees, the tick
+fetches the wave branch, rebases the worktree onto it and pushes with `--force-with-lease` on the head it read, as the
+login of the key `cli` of `[forge_accounts]`, then records `task.rebased`, the head before and after and that login,
+and moves the task back to `pr_open`. On a conflict it aborts the rebase and starts a detached run of the slot
+`rebase`, of `rebase-on-base`, the procedure brigade ships, or of the one the key `rebase` of `[procedures]` names,
+which works through `brigade rebase context|done`; the launch records the task `fixing` and counts one round, and past
+the rounds the task is parked instead.
 The waves are the
 open waves of the ledger, each with the tasks its `wave.started` names, in that order, read from the project corpus
 at the wave's branch; a wave whose pull requests the forge fails to read is skipped, named on stderr, and the tick

@@ -133,3 +133,15 @@ class OpenIntegrationPullRequest:
 class CloseWave:
     wave: str
     pr: int
+
+
+@dataclass(frozen=True)
+class RebaseTask:
+    project: str
+    wave: str
+    branch: str
+    task: str
+    pr: int
+    worktree: str
+    head: str
+    parking_reason: str | None

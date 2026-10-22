@@ -1866,7 +1866,7 @@ TASK B18
 		+ "the ledger event task.parked"
 		IMPL "brigade/tick/build_snapshot.py::def _count_repair_rounds(events: tuple, wave: str) ->"
 			+ "dict:"
-		IMPL "brigade/tick/plan.py::if task.repair_rounds >= project.verify_rounds:"
+		IMPL "brigade/tick/plan.py::def _describe_spent_rounds("
 		IMPL "tests/unit/tick/test_plan.py::def"
 			+ "test_should_park_a_task_whose_repair_would_go_past_the_rounds_of_the_policy(self):"
 	AFTER @TASK.B17

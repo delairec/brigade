@@ -17,6 +17,7 @@ from brigade.tick.actions import (
     OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
+    RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -40,6 +41,7 @@ CHANGES_REQUESTED_STATE = "changes_requested"
 FIXING_STATE = "fixing"
 AWAITING_PUSH_STATES = (VERIFYING_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
 REPAIRED_STATES = (PR_OPEN_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
+REBASED_STATES = (PR_OPEN_STATE, VERIFYING_STATE, VERIFIED_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
 CHECKS_FINDING = "checks"
 UNREQUESTED_FINDINGS = ("ancestry", CHECKS_FINDING)
 STATES_BY_VERDICT = {"pass": VERIFIED_STATE, "changes": CHANGES_REQUESTED_STATE}
@@ -179,6 +181,10 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             record = _decide_task_state(wave, task)
             if record is not None:
                 actions.append(record)
+            rebase = _decide_rebase(wave, task, projects[wave.project], held, live_tasks)
+            if rebase is not None:
+                actions.append(rebase)
+                continue
             if _is_ready_for_preflight(wave, task, projects[wave.project]):
                 actions.append(
                     RunPreflight(
@@ -205,6 +211,36 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             ):
                 actions.append(RemoveTaskWorktree(project=wave.project, task=task.name, worktree=task.worktree))
     return tuple(actions)
+
+
+def _decide_rebase(
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, held: set, live_tasks: set
+) -> RebaseTask | None:
+    if (
+        not task.pull_request.behind
+        or task.pull_request.state != OPEN_PULL_REQUEST
+        or wave.states.get(task.name) not in REBASED_STATES
+        or task.worktree is None
+        or task.worktree in held
+        or (wave.wave, task.name) in live_tasks
+    ):
+        return None
+    return RebaseTask(
+        project=wave.project,
+        wave=wave.wave,
+        branch=wave.branch,
+        task=task.name,
+        pr=task.pull_request.number,
+        worktree=task.worktree,
+        head=task.pull_request.head,
+        parking_reason=_describe_spent_rounds(task, project),
+    )
+
+
+def _describe_spent_rounds(task: TaskFacts, project: ProjectFacts) -> str | None:
+    if task.repair_rounds < project.verify_rounds:
+        return None
+    return f"past {project.verify_rounds} repair rounds"
 
 
 def _decide_verification(
@@ -276,10 +312,9 @@ def _decide_repair(
         if not request:
             return None
         return RecordTaskState(wave=wave.wave, task=task.name, state=CHANGES_REQUESTED_STATE, reason=request)
-    if task.repair_rounds >= project.verify_rounds:
-        return ParkTask(
-            wave=wave.wave, task=task.name, reason=f"past {project.verify_rounds} repair rounds", blockers=()
-        )
+    parking_reason = _describe_spent_rounds(task, project)
+    if parking_reason is not None:
+        return ParkTask(wave=wave.wave, task=task.name, reason=parking_reason, blockers=())
     if task.worktree is None:
         return None
     return _launch_repair(wave, task)

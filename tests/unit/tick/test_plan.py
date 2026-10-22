@@ -18,6 +18,7 @@ from brigade.tick.actions import (
     OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
+    RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -1304,6 +1305,106 @@ class PlanRepairTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (RECORD_PR_OPEN,))
+
+
+BEHIND = dataclasses.replace(OPEN, behind=True)
+REBASE_S3 = RebaseTask(
+    project="shop",
+    wave="shop_w1",
+    branch=WAVE_BRANCH,
+    task="S3",
+    pr=42,
+    worktree=WORKTREE_S3,
+    head=HEAD,
+    parking_reason=None,
+)
+REBASE_S3_PARKED_ON_A_CONFLICT = dataclasses.replace(REBASE_S3, parking_reason="past 2 repair rounds")
+BUILD_RUN_OF_S3 = LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree=WORKTREE_S3, wave="shop_w1", task="S3")
+
+
+class PlanRebaseTest(unittest.TestCase):
+    def test_should_rebase_a_task_whose_pull_request_is_behind_the_wave_branch_before_anything_else(self):
+        for state in ["pr_open", "verifying", "verified", "changes_requested", "fixing"]:
+            with self.subTest(state=state):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=BEHIND,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    verdict=PASS_AT_THE_HEAD,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (REBASE_S3,))
+
+    def test_should_wait_for_the_next_tick_to_rebase_a_task_whose_worktree_a_run_holds(self):
+        for case, live_run in [
+            ("a run of the task", REMEDIATION_RUN_OF_S3),
+            ("a run of no task in its worktree", RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=BEHIND,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                )
+                project = dataclasses.replace(SHOP, live_runs=(live_run,))
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_rebase_no_task_whose_run_has_not_ended_or_whose_worktree_is_removed(self):
+        for case, state, worktree in [
+            ("a task still running", "running", WORKTREE_S3),
+            ("a task paused on the quota", "paused:quota", WORKTREE_S3),
+            ("a task whose worktree is removed", "pr_open", NO_WORKTREE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", pull_request=BEHIND, worktree=worktree)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertNotIn(REBASE_S3, actions)
+
+    def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):
+        for case, rounds, expected in [
+            ("a round left", ONE_ROUND_TAKEN, REBASE_S3),
+            ("no round left", TWO_ROUNDS_TAKEN, REBASE_S3_PARKED_ON_A_CONFLICT),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=BEHIND,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    repair_rounds=rounds,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (expected,))
 
 
 SHOP_ON_GITHUB = dataclasses.replace(SHOP, on_github=True)
