@@ -763,6 +763,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                             "branch_missing": False,
                             "reported": False,
                             "integration_pull_request": None,
+                            "opened_integration_pull_request": None,
                         }
                     ],
                     "projects": [
@@ -776,6 +777,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                             "review": "verdict",
                             "auto_merge": "integration",
                             "verify_rounds": 2,
+                            "awaits_check_runs": True,
+                            "on_github": False,
                         }
                     ],
                     "studies": [],
@@ -886,6 +889,8 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LiveBuildRunTickTestCase):
                     "review": "verdict",
                     "auto_merge": "integration",
                     "verify_rounds": 2,
+                    "awaits_check_runs": True,
+                    "on_github": False,
                 }
             ],
         )
@@ -916,6 +921,8 @@ class BrigadeTickDryRunOfTheProjectsTest(WaveTickTestCase):
                     "review": "verdict",
                     "auto_merge": "integration",
                     "verify_rounds": 2,
+                    "awaits_check_runs": True,
+                    "on_github": False,
                 }
             ],
         )

@@ -172,6 +172,7 @@ class WaveFacts:
             "integration_pull_request": (
                 None if self.integration_pull_request is None else self.integration_pull_request.to_document()
             ),
+            "opened_integration_pull_request": self.opened_integration_pull_request,
         }
 
 
@@ -209,6 +210,8 @@ class ProjectFacts:
             "review": self.review,
             "auto_merge": self.auto_merge,
             "verify_rounds": self.verify_rounds,
+            "awaits_check_runs": self.awaits_check_runs,
+            "on_github": self.on_github,
         }
 
 
