@@ -157,8 +157,7 @@ class ValidateAnswerTest(unittest.TestCase):
         path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
         return {"collector": collector, "summary": {}, "document": str(path)}
 
-    def test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):
-        # Arrange
+    def script_report_answer(self, submitted_fields: dict, filled_fields: dict) -> None:
         collected = [
             self.write_document("ledger", LEDGER_ITEMS),
             self.write_document("pr-list", []),
@@ -172,18 +171,45 @@ class ValidateAnswerTest(unittest.TestCase):
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))}
         )
         self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
-        self.processes.answer_json(
-            ("awawa", "show", REPORT_TARGET, "--json", str(self.submitted)),
-            {"fields": [{"name": "TASK_ROW", "atoms": ['"B17 parked"']}]},
-        )
-        self.processes.answer_json(
-            ("awawa", "show", REPORT_TARGET, "--json", str(self.filled)),
-            {"fields": [{"name": "TASK_ROW", "atoms": ['"B17 merged"']}]},
-        )
+        self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.submitted)), submitted_fields)
+        self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.filled)), filled_fields)
 
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            validate_answer(self.runtime, REPORT_STUDY, self.run_directory, SUBMITTED)
+    def test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):
+        for field, refusal_message in [
+            ("WAVE", "the answer changed WAVE, a field brigade filled"),
+            ("PROJECT", "the answer changed PROJECT, a field brigade filled"),
+            ("TASK_ROW", "the answer changed TASK_ROW, a field brigade filled"),
+            ("STATISTIC", "the answer changed STATISTIC, a field brigade filled"),
+            ("GRAPH", "the answer changed GRAPH, a field brigade filled"),
+            ("MANUAL_TEST", "the answer changed MANUAL_TEST, a field brigade filled"),
+            ("INSTRUCTIONS_CHANGE", "the answer changed INSTRUCTIONS_CHANGE, a field brigade filled"),
+            ("PARKED_QUESTION", "the answer changed PARKED_QUESTION, a field brigade filled"),
+        ]:
+            with self.subTest(field=field):
+                # Arrange
+                self.script_report_answer(
+                    {"fields": [{"name": field, "atoms": ['"rewritten by the slot"']}]},
+                    {"fields": [{"name": field, "atoms": ['"filled by brigade"']}]},
+                )
 
-        # Assert
-        self.assertEqual(str(refusal.exception), "the answer changed TASK_ROW, a field brigade filled")
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    validate_answer(self.runtime, REPORT_STUDY, self.run_directory, SUBMITTED)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), refusal_message)
+
+    def test_should_accept_a_report_whose_slot_completed_the_prose_brigade_left_to_it(self):
+        for field in ["NARRATIVE", "REASON", "TESTER_STEP", "SAMPLING"]:
+            with self.subTest(field=field):
+                # Arrange
+                self.script_report_answer(
+                    {"fields": [{"name": field, "atoms": ['"written by the slot"']}]},
+                    {"fields": [{"name": field, "atoms": ['"left to the slot"']}]},
+                )
+
+                # Act
+                accepted = validate_answer(self.runtime, REPORT_STUDY, self.run_directory, SUBMITTED)
+
+                # Assert
+                self.assertIsNone(accepted)
