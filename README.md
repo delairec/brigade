@@ -272,7 +272,8 @@ the procedure brigade ships, or of the one the key `build` of the table `[proced
 place, resolved as the argument of `brigade run` is, with the wave and the task as `--wave` and `--task`. It follows the pull request of each task past its launch,
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
 `merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
-worktree is removed once its pull request is merged or closed, never while a run holds it. On the pull request a task
+worktree is removed once its pull request is merged or closed, never while a run holds it. A task whose setup fails is
+recorded `parked` with the reason `setup failed`, its worktree and branch removed. On the pull request a task
 in `pr_open` opened, once every check run completed, at least one unless the project declares `CHECK_RUNS none`, and
 for each head once, it runs `brigade verify preflight`,
 records its findings in `task.preflighted` and moves the task to `verifying` when no check fails. On a task in
