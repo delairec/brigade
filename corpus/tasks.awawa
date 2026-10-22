@@ -8886,6 +8886,9 @@ TASK B143
 		+ "brigade rebase context|done: context prints the branch, its base and the conflicting"
 		+ "files, done refuses a branch that does not descend from the head of BRANCH and pushes it"
 		IMPL "brigade/commands/tick.py::def _launch_rebase("
+		IMPL "brigade/git/rebase_onto.py::if stopped_at.exit_code != REBASE_IN_PROGRESS:"
+		IMPL "tests/unit/git/test_rebase_onto.py::def"
+			+ "test_should_fail_with_the_refusal_of_git_when_the_rebase_stopped_on_no_conflict(self):"
 		IMPL "brigade/commands/rebase_context.py::def rebase_context("
 		IMPL "brigade/commands/rebase_done.py::def rebase_done("
 		IMPL "tests/unit/commands/test_tick.py::def"
@@ -11475,3 +11478,24 @@ TASK B192
 		+ "tâche, avant #160 »: « lex écrit une tâche « un run signale qu'il est prêt avant que"
 		+ "stop l'arrête » ; ada la livre dans sa propre PR, puis #160 est rebasée dessus. Les"
 		+ "tests ne deviennent jamais instables sur main. »"
+
+TASK B196
+	TITLE "A task whose rebase git refuses on no conflict, its worktree holding uncommitted"
+		+ "changes, is no longer retried at every tick without end"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE ada
+	SPEC "a git rebase that stops on no conflict in the worktree of a task, refused as git refuses"
+		+ "a worktree holding uncommitted changes, leads the task to an end the refinement chooses,"
+		+ "parked with the refusal of git or the worktree cleaned first, rather than a failed"
+		+ "action at every tick"
+	AFTER @TASK.B166
+	RATIONALE "since PR 182 brigade/git/rebase_onto.py tells a conflict from a refusal by"
+		+ "REBASE_HEAD and raises the refusal; under @TASK.B166 it becomes a tick.action_failed at"
+		+ "every tick, the task behind and never parked, as the planner plans the same RebaseTask"
+		+ "again from the same facts"
+		REF @TASK.B143
+		REF @TASK.B166
+	SOURCE "review 5616826315 of PR 182, thread 4350364074: a build or remediate run that ends"
+		+ "without committing leaves such a worktree, and a task in fixing is in REBASED_STATES"
