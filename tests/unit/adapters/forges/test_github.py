@@ -3,6 +3,9 @@ import unittest
 from types import SimpleNamespace
 
 from brigade.adapters.forges.github import (
+    PULL_REQUESTS_QUERY,
+    REVIEW_THREADS_QUERY,
+    THREAD_REPLY_MUTATION,
     approve_pull_request,
     create_milestone,
     describe_account,
@@ -20,7 +23,7 @@ from brigade.adapters.forges.github import (
     reply_review_thread,
     rewrite_pull_request_body,
 )
-from brigade.system.run_process import ProcessRecord
+from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
 
 UNBOUND_REQUEST = {"schema_version": 1, "environment": {}}
 LOGIN_REQUEST = {"schema_version": 1, "login": "octo-bot"}
@@ -83,10 +86,14 @@ class DecidePullRequestTest(unittest.TestCase):
                 answer = decide(request, runtime)
 
                 # Assert
-                [asked] = runtime.requests
+                self.assertEqual(answer, {"schema_version": 1})
                 self.assertEqual(
-                    (answer, asked.argv, asked.cwd, asked.environment),
-                    ({"schema_version": 1}, expected_argv, "/projects/shop", BOT_ENVIRONMENT),
+                    runtime.requests,
+                    [
+                        ProcessRequest(
+                            argv=expected_argv, cwd="/projects/shop", timeout_s=60.0, environment=BOT_ENVIRONMENT
+                        )
+                    ],
                 )
 
 
@@ -105,16 +112,18 @@ class RewritePullRequestBodyTest(unittest.TestCase):
         answer = rewrite_pull_request_body(request, runtime)
 
         # Assert
-        [asked] = runtime.requests
+        self.assertEqual(answer, {"schema_version": 1})
         self.assertEqual(
-            (answer, asked.argv, asked.cwd, asked.stdin, asked.environment),
-            (
-                {"schema_version": 1},
-                ("gh", "pr", "edit", "12", "--body-file", "-"),
-                "/projects/shop",
-                "# REPORT shop_w1\n",
-                BOT_ENVIRONMENT,
-            ),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "pr", "edit", "12", "--body-file", "-"),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    stdin="# REPORT shop_w1\n",
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
         )
 
 
@@ -173,8 +182,15 @@ class ReadLoginEnvironmentTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (runtime.requests[0].argv, runtime.requests[0].environment),
-            (("gh", "auth", "token", "--hostname", "github.com", "--user", "octo-bot"), {}),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "auth", "token", "--hostname", "github.com", "--user", "octo-bot"),
+                    cwd="/",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=EVERY_EXIT_CODE,
+                )
+            ],
         )
 
     def test_should_answer_no_environment_when_gh_prints_no_token(self):
@@ -215,26 +231,30 @@ class OpenPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (runtime.requests[0].argv, runtime.requests[0].environment, runtime.requests[0].stdin),
-            (
-                (
-                    "gh",
-                    "pr",
-                    "create",
-                    "--base",
-                    "integration/M1-empty-cart",
-                    "--head",
-                    "task/M1-empty-cart/S3",
-                    "--milestone",
-                    "Empty cart",
-                    "--title",
-                    "feat(cart): empty the cart in one click (@TASK.S3)",
-                    "--body-file",
-                    "-",
-                ),
-                {"GH_TOKEN": "token-of-octo-bot"},
-                "Empty the cart in one click\n",
-            ),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "pr",
+                        "create",
+                        "--base",
+                        "integration/M1-empty-cart",
+                        "--head",
+                        "task/M1-empty-cart/S3",
+                        "--milestone",
+                        "Empty cart",
+                        "--title",
+                        "feat(cart): empty the cart in one click (@TASK.S3)",
+                        "--body-file",
+                        "-",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    stdin="Empty the cart in one click\n",
+                    environment={"GH_TOKEN": "token-of-octo-bot"},
+                )
+            ],
         )
 
     def test_should_open_it_without_a_milestone_when_the_request_names_none(self):
@@ -270,12 +290,15 @@ class ListMilestonesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (runtime.requests[0].argv, runtime.requests[0].cwd, runtime.requests[0].environment),
-            (
-                ("gh", "api", "--paginate", "repos/{owner}/{repo}/milestones?state=all", "--jq", ".[].title"),
-                "/projects/shop",
-                {"GH_TOKEN": "token-of-octo-bot"},
-            ),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "api", "--paginate", "repos/{owner}/{repo}/milestones?state=all", "--jq", ".[].title"),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment={"GH_TOKEN": "token-of-octo-bot"},
+                )
+            ],
         )
 
 
@@ -301,13 +324,17 @@ class CreateMilestoneTest(unittest.TestCase):
         answer = create_milestone({**MILESTONES_REQUEST, "title": "Empty cart"}, runtime)
 
         # Assert
+        self.assertEqual(answer, {"schema_version": 1})
         self.assertEqual(
-            (answer, runtime.requests[0].argv, runtime.requests[0].environment),
-            (
-                {"schema_version": 1},
-                ("gh", "api", "--method", "POST", "repos/{owner}/{repo}/milestones", "-f", "title=Empty cart"),
-                {"GH_TOKEN": "token-of-octo-bot"},
-            ),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "api", "--method", "POST", "repos/{owner}/{repo}/milestones", "-f", "title=Empty cart"),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment={"GH_TOKEN": "token-of-octo-bot"},
+                )
+            ],
         )
 
 
@@ -463,13 +490,17 @@ class OpenIssueTest(unittest.TestCase):
         issue = open_issue(request, runtime)
 
         # Assert
+        self.assertEqual(issue, {"schema_version": 1, "url": "https://github.com/ada/shop/issues/7"})
         self.assertEqual(
-            (issue, runtime.requests[0].argv, runtime.requests[0].environment),
-            (
-                {"schema_version": 1, "url": "https://github.com/ada/shop/issues/7"},
-                ("gh", "issue", "create", "--title", "the cart forgets", "--body-file", "-"),
-                {},
-            ),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "issue", "create", "--title", "the cart forgets", "--body-file", "-"),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    stdin="Steps\n",
+                )
+            ],
         )
 
 
@@ -532,37 +563,59 @@ class ListOpenPullRequestsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (listing, runtime.requests[0].argv[9:11]),
-            (
-                {
-                    "schema_version": 1,
-                    "pull_requests": [
-                        {
-                            "number": 7,
-                            "title": "feat: empty the cart",
-                            "head": "task/w1/S3",
-                            "base": "integration/w1",
-                            "state": "open",
-                            "author": None,
-                            "draft": False,
-                            "review": None,
-                            "checks": [],
-                        },
-                        {
-                            "number": 8,
-                            "title": "fix: keep the cart",
-                            "head": "task/w1/S4",
-                            "base": "integration/w1",
-                            "state": "open",
-                            "author": "Clauche-bot",
-                            "draft": True,
-                            "review": "approved",
-                            "checks": [{"name": "unit", "verdict": "pending"}],
-                        },
-                    ],
-                },
-                ("-f", "states[]=OPEN"),
-            ),
+            listing,
+            {
+                "schema_version": 1,
+                "pull_requests": [
+                    {
+                        "number": 7,
+                        "title": "feat: empty the cart",
+                        "head": "task/w1/S3",
+                        "base": "integration/w1",
+                        "state": "open",
+                        "author": None,
+                        "draft": False,
+                        "review": None,
+                        "checks": [],
+                    },
+                    {
+                        "number": 8,
+                        "title": "fix: keep the cart",
+                        "head": "task/w1/S4",
+                        "base": "integration/w1",
+                        "state": "open",
+                        "author": "Clauche-bot",
+                        "draft": True,
+                        "review": "approved",
+                        "checks": [{"name": "unit", "verdict": "pending"}],
+                    },
+                ],
+            },
+        )
+        self.assertEqual(
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "api",
+                        "graphql",
+                        "--paginate",
+                        "--slurp",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-f",
+                        "states[]=OPEN",
+                        "-f",
+                        f"query={PULL_REQUESTS_QUERY}",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=600.0,
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
         )
 
 
@@ -625,28 +678,30 @@ class PostReviewTest(unittest.TestCase):
                 )
 
                 # Assert
-                request = runtime.requests[0]
+                self.assertEqual(answer, {"schema_version": 1})
                 self.assertEqual(
-                    (answer, request.argv, request.cwd, request.stdin, request.environment),
-                    (
-                        {"schema_version": 1},
-                        (
-                            "gh",
-                            "api",
-                            "repos/{owner}/{repo}/pulls/42/reviews",
-                            "--method",
-                            "POST",
-                            "-f",
-                            expected_field,
-                            "-f",
-                            "commit_id=8885daa",
-                            "-F",
-                            "body=@-",
-                        ),
-                        "/projects/shop",
-                        "verdict pass\n",
-                        {"GH_TOKEN": "token-of-octo-bot"},
-                    ),
+                    runtime.requests,
+                    [
+                        ProcessRequest(
+                            argv=(
+                                "gh",
+                                "api",
+                                "repos/{owner}/{repo}/pulls/42/reviews",
+                                "--method",
+                                "POST",
+                                "-f",
+                                expected_field,
+                                "-f",
+                                "commit_id=8885daa",
+                                "-F",
+                                "body=@-",
+                            ),
+                            cwd="/projects/shop",
+                            timeout_s=60.0,
+                            stdin="verdict pass\n",
+                            environment={"GH_TOKEN": "token-of-octo-bot"},
+                        )
+                    ],
                 )
 
 
@@ -723,7 +778,15 @@ class ReadCheckLogsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (runtime.requests[0].cwd, runtime.requests[0].environment), ("/projects/shop", BOT_ENVIRONMENT)
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=CHECKS_OF_PULL_REQUEST_42,
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
         )
 
 
@@ -829,12 +892,27 @@ class ListReviewThreadsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (runtime.requests[0].argv[:9], runtime.requests[0].cwd, runtime.requests[0].environment),
-            (
-                ("gh", "api", "graphql", "-F", "owner={owner}", "-F", "name={repo}", "-F", "number=42"),
-                "/projects/shop",
-                BOT_ENVIRONMENT,
-            ),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "api",
+                        "graphql",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-F",
+                        "number=42",
+                        "-f",
+                        f"query={REVIEW_THREADS_QUERY}",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
         )
 
 
@@ -854,12 +932,25 @@ class ReplyReviewThreadTest(unittest.TestCase):
         answer = reply_review_thread(request, runtime)
 
         # Assert
+        self.assertEqual(answer, {"schema_version": 1})
         self.assertEqual(
-            (answer, runtime.requests[0].argv[:7], runtime.requests[0].cwd, runtime.requests[0].environment),
-            (
-                {"schema_version": 1},
-                ("gh", "api", "graphql", "-f", "thread=PRRT_kwDOA1", "-f", "body=fixed by 8885daa"),
-                "/projects/shop",
-                BOT_ENVIRONMENT,
-            ),
+            runtime.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "api",
+                        "graphql",
+                        "-f",
+                        "thread=PRRT_kwDOA1",
+                        "-f",
+                        "body=fixed by 8885daa",
+                        "-f",
+                        f"query={THREAD_REPLY_MUTATION}",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
         )
