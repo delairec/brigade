@@ -1432,30 +1432,37 @@ class PlanRebaseTest(unittest.TestCase):
                 self.assertEqual(actions, (expected,))
 
     def test_should_repair_rather_than_rebase_a_task_behind_whose_worktree_holds_uncommitted_changes(self):
-        for state in ["pr_open", "verifying", "verified", "changes_requested", "fixing"]:
-            for case, pull_request, failures, expected in [
-                ("no failing check", BEHIND, NO_PREFLIGHT_FAILURE, REMEDIATE_S3),
-                ("a failing check", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), REPAIR_CHECKS_OF_S3),
-            ]:
-                with self.subTest(state=state, case=case):
-                    # Arrange
-                    task = TaskFacts(
-                        name="S3",
-                        pull_request=pull_request,
-                        worktree=WORKTREE_S3,
-                        opened_pull_request=OPENED_BY_THE_TASK,
-                        preflighted_head=PREFLIGHTED_AT_THE_HEAD,
-                        preflight_failures=failures,
-                        repair_rounds=ONE_ROUND_TAKEN,
-                        holds_uncommitted_changes=HOLDING_UNCOMMITTED_CHANGES,
-                    )
-                    snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+        for state, case, pull_request, failures, expected in [
+            ("pr_open", "no failing check", BEHIND, NO_PREFLIGHT_FAILURE, REMEDIATE_S3),
+            ("pr_open", "a failing check", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), REPAIR_CHECKS_OF_S3),
+            ("verifying", "no failing check", BEHIND, NO_PREFLIGHT_FAILURE, REMEDIATE_S3),
+            ("verifying", "a failing check", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), REPAIR_CHECKS_OF_S3),
+            ("verified", "no failing check", BEHIND, NO_PREFLIGHT_FAILURE, REMEDIATE_S3),
+            ("verified", "a failing check", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), REPAIR_CHECKS_OF_S3),
+            ("changes_requested", "no failing check", BEHIND, NO_PREFLIGHT_FAILURE, REMEDIATE_S3),
+            ("changes_requested", "a failing check", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), REPAIR_CHECKS_OF_S3),
+            ("fixing", "no failing check", BEHIND, NO_PREFLIGHT_FAILURE, REMEDIATE_S3),
+            ("fixing", "a failing check", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), REPAIR_CHECKS_OF_S3),
+        ]:
+            with self.subTest(state=state, case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    preflight_failures=failures,
+                    repair_rounds=ONE_ROUND_TAKEN,
+                    holds_uncommitted_changes=HOLDING_UNCOMMITTED_CHANGES,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
-                    # Act
-                    actions = plan(snapshot)
+                # Act
+                actions = plan(snapshot)
 
-                    # Assert
-                    self.assertEqual(actions, (expected,))
+                # Assert
+                self.assertEqual(actions, (expected,))
 
     def test_should_park_a_task_behind_holding_uncommitted_changes_whose_repair_rounds_are_spent(self):
         for state in ["pr_open", "fixing"]:
