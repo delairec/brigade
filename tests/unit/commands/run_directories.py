@@ -64,3 +64,13 @@ def write_run(state_root: Path, record: dict, result: dict | None) -> Path:
         (run_directory / "segments" / "1").mkdir(parents=True)
         (run_directory / "segments" / "1" / "result.json").write_text(json.dumps(result), encoding="utf-8")
     return run_directory
+
+
+def create_planner_record(run_id: str, request: str) -> dict:
+    return {
+        **create_run_record(run_id, None, None),
+        "procedure": "wave-plan",
+        "slot": "plan",
+        "role": "planner",
+        "arguments": {"request": request},
+    }

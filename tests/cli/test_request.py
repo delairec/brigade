@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
@@ -42,6 +43,27 @@ PLANNING_REQUEST = (
     '\tCREATED_AT "2026-10-13T14:00:00Z"\n'
     "\tSTATUS planning\n"
 )
+DEAD_PLANNER_RUN = "20261013T140000Z-a10001"
+DEAD_PLANNER_RECORD = {
+    "schema_version": 1,
+    "run": DEAD_PLANNER_RUN,
+    "procedure": "wave-plan",
+    "procedure_path": "built-in",
+    "slot": "plan",
+    "role": "planner",
+    "role_source": "built-in",
+    "client": "fake",
+    "project": "shop",
+    "cwd": "/home/user/shop",
+    "worktree": "/home/user/shop",
+    "capabilities": ["read"],
+    "budget": 30,
+    "wall_limit_s": 1140.0,
+    "arguments": {"request": "shop_r2"},
+    "wave": None,
+    "task": None,
+    "brief": None,
+}
 CAFE_REQUEST = (
     "REQUEST cafe_r1\n"
     "\tPROJECT @PROJECT.cafe\n"
@@ -80,16 +102,19 @@ class RequestTestCase(FileWaitingTestCase):
     def wait_for_result(self, run_id: str) -> None:
         self.wait_for_file(self.runs / run_id / "result.json")
 
-
-class BrigadeRequestNewTest(RequestTestCase):
-    def setUp(self):
-        super().setUp()
+    def configure_fake_planner(self) -> None:
         recordings = Path(self.root.name) / "recordings"
         recordings.mkdir()
         (recordings / "planner.json").write_text(json.dumps(DONE_RESULT))
         self.machine.write_configuration(
             f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
+
+
+class BrigadeRequestNewTest(RequestTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake_planner()
 
     def test_should_launch_the_planner_on_the_request_detached_and_print_its_run(self):
         # Act
@@ -99,12 +124,38 @@ class BrigadeRequestNewTest(RequestTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertRegex(document["run"], RUN_ID_PATTERN)
-        self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": document["run"]})
+        self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": ANY})
         self.wait_for_result(document["run"])
         run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
         self.assertEqual(
             (run_record["procedure"], run_record["slot"], run_record["project"], run_record["arguments"]),
             ("wave-plan", "plan", "shop", {"request": "shop_r1"}),
+        )
+
+
+class BrigadeRequestReplanTest(RequestTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure_fake_planner()
+        self.write_requests(PLANNING_REQUEST)
+        dead_run = self.runs / DEAD_PLANNER_RUN
+        dead_run.mkdir(parents=True)
+        (dead_run / "run.json").write_text(json.dumps(DEAD_PLANNER_RECORD))
+
+    def test_should_relaunch_the_planner_of_a_request_whose_planner_run_is_dead(self):
+        # Act
+        completed = self.run_request("replan", "shop_r2", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertRegex(document["run"], RUN_ID_PATTERN)
+        self.assertEqual(document, {"schema_version": 1, "request": "shop_r2", "run": ANY})
+        self.wait_for_result(document["run"])
+        run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
+        self.assertEqual(
+            (run_record["procedure"], run_record["slot"], run_record["project"], run_record["arguments"]),
+            ("wave-plan", "plan", "shop", {"request": "shop_r2"}),
         )
 
 
@@ -140,6 +191,7 @@ class BrigadeRequestShowTest(RequestTestCase):
                 "milestone": "M1",
                 "pr": 7,
                 "created_at": "2026-10-12T09:30:00Z",
+                "planner": None,
             },
         )
 

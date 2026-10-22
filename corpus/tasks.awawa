@@ -10241,7 +10241,7 @@ TASK B168
 TASK B169
 	TITLE "brigade request replan relaunches by hand the planner of a REQUEST left planning by a"
 		+ "dead or blocked planner"
-	STATUS todo
+	STATUS implemented
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "waves"
@@ -10250,15 +10250,38 @@ TASK B169
 		+ "launches, for a REQUEST in planning whose last planner run is dead or ended blocked, and"
 		+ "prints the id of the run and the line brigade runs show <id> --log; a REQUEST in another"
 		+ "STATUS, or whose planner run is live, exits 1 naming it"
+		IMPL "brigade/commands/request_replan.py::def request_replan("
+		IMPL "brigade/commands/_launch_planner.py::def launch_planner("
+		IMPL "brigade/waves/read_planner_run.py::def read_planner_run("
+		IMPL "tests/unit/commands/test_request_replan.py::def"
+			+ "test_should_relaunch_the_planner_of_a_request_whose_planner_run_is_dead("
+		IMPL "tests/unit/commands/test_request_replan.py::def"
+			+ "test_should_relaunch_the_planner_of_a_request_whose_planner_run_ended_blocked("
+		IMPL "tests/unit/commands/test_request_replan.py::def"
+			+ "test_should_refuse_a_request_that_is_not_planning("
+		IMPL "tests/unit/commands/test_request_replan.py::def"
+			+ "test_should_refuse_a_request_whose_planner_run_is_live("
+		IMPL "tests/unit/commands/test_request_replan.py::def"
+			+ "test_should_name_the_request_its_run_and_the_line_that_follows_it("
 	SPEC "brigade request show of a planning REQUEST says whether its planner run is live, dead or"
 		+ "blocked"
+		IMPL "brigade/commands/request_show.py::\"planner\": read_planner_run("
+		IMPL "tests/unit/commands/test_request_show.py::def"
+			+ "test_should_say_that_the_planner_run_of_a_planning_request_is_live("
+		IMPL "tests/unit/commands/test_request_show.py::def"
+			+ "test_should_say_that_the_planner_run_of_a_planning_request_is_dead("
+		IMPL "tests/unit/commands/test_request_show.py::def"
+			+ "test_should_say_that_the_planner_run_of_a_planning_request_ended_blocked("
 	SPEC "the tick relaunches no planner: the decision"
 		+ "ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked stays"
 		+ "true, a second lint failure ending the run blocked with no automatic relaunch"
+		IMPL "corpus/decisions.awawa::DECISION"
+			+ "ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked"
 	SPEC "tests/unit prove the relaunch after a dead and after a blocked planner run, each refusal"
 		+ "and the three planner states of request show; tests/cli gains one flow of brigade"
 		+ "request replan, a dead planner run relaunched through the fake adapter, as DESC 4 of the"
 		+ "decision ThePortableContractIsTheCommandLineAndNeutralFiles sets"
+		IMPL "tests/cli/test_request.py::class BrigadeRequestReplanTest("
 	AFTER @TASK.B187
 	RATIONALE "the command groups of"
 		+ "@DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone put the planning"
@@ -10270,6 +10293,7 @@ TASK B169
 		+ "ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked"
 		REF @DECISION.ThePlannerLintsItsPlanFileBeforeRecordingItAndASecondFailureEndsTheRunBlocked
 	SOURCE "use-case map of 2026-10-16, findings G4 and B6"
+	DELIVERED_BY 174
 
 TASK B170
 	TITLE "brigade scheduler status exits non-zero when the last tick is older than the interval"
