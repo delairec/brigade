@@ -99,6 +99,45 @@ class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
         # Assert
         self.assertEqual(context["findings"], [])
 
+    def test_should_give_the_request_of_the_last_sending_back(self):
+        # Arrange
+        changes_requested_again = {
+            "schema_version": 1,
+            "ts": "2026-10-18T14:00:00Z",
+            "event": "task.state",
+            "wave": "tidepool_w16",
+            "task": "T7",
+            "state": "changes_requested",
+            "reason": "body: the body names no task",
+        }
+        write_ledger(self.root, [CHANGES_REQUESTED, changes_requested_again])
+        runtime = create_runtime(self.root, run_process=create_corpus_double({"POLICY": NO_POLICY}))
+
+        # Act
+        context = assemble_review_context(runtime, create_demand(ForgeDouble()))
+
+        # Assert
+        self.assertEqual(context["request"], "body: the body names no task")
+
+    def test_should_keep_the_request_through_the_repair_round_that_follows_it(self):
+        # Arrange
+        fixing = {
+            "schema_version": 1,
+            "ts": "2026-10-18T14:00:00Z",
+            "event": "task.state",
+            "wave": "tidepool_w16",
+            "task": "T7",
+            "state": "fixing",
+        }
+        write_ledger(self.root, [CHANGES_REQUESTED, fixing])
+        runtime = create_runtime(self.root, run_process=create_corpus_double({"POLICY": NO_POLICY}))
+
+        # Act
+        context = assemble_review_context(runtime, create_demand(ForgeDouble()))
+
+        # Assert
+        self.assertEqual(context["request"], "body: the body keeps the placeholder $checks")
+
     def test_should_give_no_request_to_a_task_no_preflight_sent_back(self):
         # Arrange
         write_ledger(self.root, [VERDICT_CHANGES])

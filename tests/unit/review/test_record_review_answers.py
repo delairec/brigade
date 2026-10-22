@@ -4,6 +4,8 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
 from brigade.system.read_configuration import Configuration
 from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_ledger
@@ -74,6 +76,27 @@ class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):
                 "answers": [{"finding": "1", "answer": "fixed by 8885daa"}],
                 "login": None,
             },
+        )
+
+    def test_should_record_answers_the_ledger_reads_back_as_the_answers_to_the_review(self):
+        # Arrange
+        answers = {"answers": [{"finding": "1", "answer": "fixed by 8885daa"}]}
+
+        # Act
+        self.record(NO_POLICY, answers)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.root / "state").entries[-1].event,
+            TaskReviewAnswered(
+                project="tidepool",
+                wave="tidepool_w16",
+                task="T7",
+                pr=42,
+                head="8885daa",
+                answers=({"finding": "1", "answer": "fixed by 8885daa"},),
+                login=None,
+            ),
         )
 
     def test_should_post_no_reply(self):
