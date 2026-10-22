@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import CommandFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_started import WaveStarted
@@ -133,7 +134,8 @@ class PublishWaveReportTest(unittest.TestCase):
         published = publish_wave_report(context)
 
         # Assert
-        self.assertEqual((published["pull_request"], self.forge.rewritten), (None, []))
+        self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
+        self.assertEqual(self.forge.rewritten, [])
 
     def test_should_rewrite_no_pull_request_of_a_project_without_a_forge(self):
         # Arrange
@@ -144,4 +146,59 @@ class PublishWaveReportTest(unittest.TestCase):
         published = publish_wave_report(context)
 
         # Assert
-        self.assertEqual((published["pull_request"], self.forge.rewritten), (None, []))
+        self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
+        self.assertEqual(self.forge.rewritten, [])
+
+    def test_should_commit_the_report_on_the_integration_branch_push_it_and_remove_its_checkout(self):
+        # Arrange
+        context = self.create_context("github")
+
+        # Act
+        publish_wave_report(context)
+
+        # Assert
+        self.assertEqual(
+            self.processes.list_argvs(),
+            [
+                ("awawa", "status", "PROJECT", "--json", str(self.runtime.paths.config_root)),
+                ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
+                ("awawa", "status", "PROJECT", "--json", str(self.runtime.paths.config_root)),
+                ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
+                ("git", "fetch", "--quiet", "origin", BRANCH),
+                ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+                ("git", "switch", "--quiet", "--force-create", BRANCH),
+                ("git", "add", "--", REPORT_PATH),
+                ("git", "diff", "--cached", "--quiet", "--", REPORT_PATH),
+                ("git", "commit", "--quiet", "-m", "docs(waves): add the report of oak_w2"),
+                ("git", "push", "--quiet", "origin", BRANCH),
+                ("git", "worktree", "remove", "--force", str(self.checkout)),
+            ],
+        )
+
+    def test_should_remove_its_checkout_from_the_project_when_the_push_fails(self):
+        # Arrange
+        self.processes.answer(("git", "push", "--quiet", "origin", BRANCH), exit_code=1)
+        context = self.create_context("github")
+
+        # Act
+        with self.assertRaises(CommandFailed):
+            publish_wave_report(context)
+
+        # Assert
+        self.assertEqual(
+            self.processes.list_argvs(),
+            [
+                ("awawa", "status", "PROJECT", "--json", str(self.runtime.paths.config_root)),
+                ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
+                ("awawa", "status", "PROJECT", "--json", str(self.runtime.paths.config_root)),
+                ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
+                ("git", "fetch", "--quiet", "origin", BRANCH),
+                ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+                ("git", "switch", "--quiet", "--force-create", BRANCH),
+                ("git", "add", "--", REPORT_PATH),
+                ("git", "diff", "--cached", "--quiet", "--", REPORT_PATH),
+                ("git", "commit", "--quiet", "-m", "docs(waves): add the report of oak_w2"),
+                ("git", "push", "--quiet", "origin", BRANCH),
+                ("git", "worktree", "remove", "--force", str(self.checkout)),
+            ],
+        )
