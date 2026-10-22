@@ -3462,5 +3462,5 @@ DECISION ARepairRoundIsOneFixingStateOfTheTask
 		+ "as @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks, and a run"
 		+ "that fails before its push still spends a round, which bounds the repair"
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
-	SOURCE "taken in the delivery of @TASK.B18"
+	SOURCE "taken in the delivery of @TASK.B18, pull request #180"
 		REF @TASK.B18
