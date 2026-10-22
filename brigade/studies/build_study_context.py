@@ -27,7 +27,7 @@ def build_study_context(runtime: Runtime, run_id: str) -> dict:
     run_directory = runtime.paths.state_root / RUNS_DIRECTORY / run_id
     study = read_study_of_run(runtime, run_directory)
     collected = read_collected(run_directory)
-    form = choose_answer_form(study.answer_type)
+    form = choose_answer_form(study)
     root = runtime.paths.config_root
     package = {
         "schema_version": PACKAGE_SCHEMA_VERSION,

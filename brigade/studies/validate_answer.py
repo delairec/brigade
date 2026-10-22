@@ -32,7 +32,7 @@ def _require_conformity(runtime: Runtime, study: Study, directory: Path) -> None
 
 
 def _read_filled_fields(runtime: Runtime, study: Study, run_id: str, directory: Path) -> list[dict]:
-    form = choose_answer_form(study.answer_type)
+    form = choose_answer_form(study)
     target = f"@{study.answer_type}.{form.name(study, run_id)}"
     record = run_awawa(runtime.run_process, directory, ("show", target, "--json", str(directory)))
     if record.exit_code != CONFORMING_EXIT_CODE:
@@ -55,7 +55,7 @@ def _compare_answer(runtime: Runtime, study: Study, run_directory: Path, answer:
     filled_directory = run_directory / VALIDATION_DIRECTORY / FILLED_DIRECTORY
     _prepare_corpus(runtime, submitted_directory, answer)
     _require_conformity(runtime, study, submitted_directory)
-    form = choose_answer_form(study.answer_type)
+    form = choose_answer_form(study)
     _prepare_corpus(runtime, filled_directory, form.render(runtime, study, run_id, read_collected(run_directory)))
     changed = _find_changed_field(
         form.fields_the_cli_fills,

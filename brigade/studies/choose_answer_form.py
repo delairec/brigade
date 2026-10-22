@@ -46,15 +46,15 @@ STUDY_ANSWER_FORM = AnswerForm(
     fields_the_cli_fills=FIELDS_THE_CLI_FILLS,
     publish=_publish_nothing,
 )
-FORMS_BY_ANSWER_TYPE = {
-    "REPORT": AnswerForm(
-        name=_name_report,
-        render=render_report_answer,
-        fields_the_cli_fills=REPORT_FIELDS_THE_CLI_FILLS,
-        publish=publish_wave_report,
-    ),
-}
+REPORT_ANSWER_FORM = AnswerForm(
+    name=_name_report,
+    render=render_report_answer,
+    fields_the_cli_fills=REPORT_FIELDS_THE_CLI_FILLS,
+    publish=publish_wave_report,
+)
 
 
-def choose_answer_form(answer_type: str) -> AnswerForm:
-    return FORMS_BY_ANSWER_TYPE.get(answer_type, STUDY_ANSWER_FORM)
+def choose_answer_form(study: Study) -> AnswerForm:
+    if study.wave is None:
+        return STUDY_ANSWER_FORM
+    return REPORT_ANSWER_FORM

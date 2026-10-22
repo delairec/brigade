@@ -56,5 +56,5 @@ def write_answer(context: StudyRunContext) -> dict:
     written = {"output": output, "answer": str(context.run_directory / ANSWER_FILE)}
     if output.startswith(ENTITY_OUTPUT_PREFIX):
         _write_entity(context, answer)
-        return {**written, **choose_answer_form(context.study.answer_type).publish(context)}
+        return {**written, **choose_answer_form(context.study).publish(context)}
     return {**written, **_choose_publisher(output)(context, present_answer(context))}
