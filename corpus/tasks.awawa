@@ -1866,7 +1866,7 @@ TASK B18
 		+ "the ledger event task.parked"
 		IMPL "brigade/tick/build_snapshot.py::def _count_repair_rounds(events: tuple, wave: str) ->"
 			+ "dict:"
-		IMPL "brigade/tick/plan.py::if task.repair_rounds >= project.verify_rounds:"
+		IMPL "brigade/tick/plan.py::def _describe_spent_rounds("
 		IMPL "tests/unit/tick/test_plan.py::def"
 			+ "test_should_park_a_task_whose_repair_would_go_past_the_rounds_of_the_policy(self):"
 	AFTER @TASK.B17
@@ -8866,7 +8866,8 @@ TASK B142
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
 		+ "conflict"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 182
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
@@ -8874,14 +8875,50 @@ TASK B143
 	SPEC "a task whose pull request is behind the branch the wave.started of its wave names is"
 		+ "rebased by git in its worktree onto the head of that branch and pushed with"
 		+ "--force-with-lease, without a run"
+		IMPL "brigade/tick/plan.py::def _decide_rebase("
+		IMPL "brigade/tick/rebase_task.py::def rebase_task("
+		IMPL "brigade/git/push_with_lease.py::f\"--force-with-lease={push.branch}:{push.expected_head}\","
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_rebase_a_task_whose_pull_request_is_behind_the_wave_branch_before_anything_else(self):"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):"
 	SPEC "on a conflict the tick aborts the rebase and starts a run of the rebase slot through"
 		+ "brigade rebase context|done: context prints the branch, its base and the conflicting"
 		+ "files, done refuses a branch that does not descend from the head of BRANCH and pushes it"
+		IMPL "brigade/commands/tick.py::def _launch_rebase("
+		IMPL "brigade/git/rebase_onto.py::if stopped_at.exit_code != REBASE_IN_PROGRESS:"
+		IMPL "tests/unit/git/test_rebase_onto.py::def"
+			+ "test_should_fail_with_the_refusal_of_git_when_the_rebase_stopped_on_no_conflict(self):"
+		IMPL "brigade/commands/rebase_context.py::def rebase_context("
+		IMPL "brigade/commands/rebase_done.py::def rebase_done("
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):"
+		IMPL "tests/unit/commands/test_rebase_context.py::def"
+			+ "test_should_give_the_files_git_reports_in_conflict_between_the_branch_and_its_base(self):"
+		IMPL "tests/unit/commands/test_rebase_done.py::def"
+			+ "test_should_refuse_a_branch_that_does_not_descend_from_the_head_of_its_base_and_push_nothing(self):"
 	SPEC "a run of the rebase slot counts as one round of POLICY.VERIFY_ROUNDS"
+		IMPL "brigade/tick/plan.py::parking_reason=_describe_spent_rounds(task, project),"
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):"
 	SPEC "the git rebase runs under the lock of the project's worktrees, never while a run holds"
 		+ "the worktree, and waits for the next tick then"
+		IMPL "brigade/tick/rebase_task.py::with"
+			+ "hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, action.project)):"
+		IMPL "brigade/tick/plan.py::or task.worktree in held"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_rebase_under_the_lock_of_the_worktrees_of_the_project(self):"
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_wait_for_the_next_tick_to_rebase_a_task_while_a_run_holds_its_worktree_or_works_on_it(self):"
 	SPEC "the ledger event task.rebased carries the task, the head before and after the rebase and"
 		+ "the login the push ran as"
+		IMPL "brigade/ledger/task_rebased.py::name: ClassVar[str] = \"task.rebased\""
+		IMPL "brigade/commands/tick.py::TaskRebased(wave=action.wave, task=action.task,"
+			+ "before=action.head, after=head, login=login),"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_record_the_rebase_with_both_heads_and_the_login_of_the_push_and_send_the_task_to_its_preflight("
 	AFTER @TASK.B17
 	AFTER @TASK.B18
 	RATIONALE "split from @TASK.B18 in its refinement; step 7b of the wave lifecycle of"
@@ -11441,3 +11478,24 @@ TASK B192
 		+ "tâche, avant #160 »: « lex écrit une tâche « un run signale qu'il est prêt avant que"
 		+ "stop l'arrête » ; ada la livre dans sa propre PR, puis #160 est rebasée dessus. Les"
 		+ "tests ne deviennent jamais instables sur main. »"
+
+TASK B196
+	TITLE "A task whose rebase git refuses on no conflict, its worktree holding uncommitted"
+		+ "changes, is no longer retried at every tick without end"
+	STATUS draft
+	MILESTONE @MILESTONE.M1
+	COMPONENT "tick"
+	ROLE ada
+	SPEC "a git rebase that stops on no conflict in the worktree of a task, refused as git refuses"
+		+ "a worktree holding uncommitted changes, leads the task to an end the refinement chooses,"
+		+ "parked with the refusal of git or the worktree cleaned first, rather than a failed"
+		+ "action at every tick"
+	AFTER @TASK.B166
+	RATIONALE "since PR 182 brigade/git/rebase_onto.py tells a conflict from a refusal by"
+		+ "REBASE_HEAD and raises the refusal; under @TASK.B166 it becomes a tick.action_failed at"
+		+ "every tick, the task behind and never parked, as the planner plans the same RebaseTask"
+		+ "again from the same facts"
+		REF @TASK.B143
+		REF @TASK.B166
+	SOURCE "review 5616826315 of PR 182, thread 4350364074: a build or remediate run that ends"
+		+ "without committing leaves such a worktree, and a task in fixing is in REBASED_STATES"

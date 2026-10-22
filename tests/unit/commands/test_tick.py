@@ -1248,3 +1248,256 @@ class TickLaunchingAStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])
+
+
+BEHIND_PULL_REQUEST = {**OPEN_PULL_REQUEST, "behind": True}
+REBASED_HEAD = "9a9a9a9"
+REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "verdict": "pending"}]}
+REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "origin/integration/M4")
+FETCH_OF_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/M4")
+CLI_BOUND_TO_A_FORGE_ACCOUNT = '[forge_accounts]\ncli = "tidepool-cli"\n'
+ENVIRONMENT_OF_THE_CLI_ACCOUNT = {"GH_TOKEN": "t0k3n"}
+REBASE_OUTPUTS = {
+    **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()},
+    REBASE_ONTO_THE_WAVE_BRANCH: ProcessAnswer(),
+    ("git", "rebase", "--abort"): ProcessAnswer(),
+    ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout=f"{REBASED_HEAD}\n"),
+    ("git", "push"): ProcessAnswer(),
+}
+CONFLICTING_REBASE = ProcessAnswer(exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py")
+OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT = {
+    **REBASE_OUTPUTS,
+    REBASE_ONTO_THE_WAVE_BRANCH: CONFLICTING_REBASE,
+    ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
+}
+LEDGER_OF_A_TASK_IN_VERIFYING = [
+    WAVE_STARTED,
+    TASK_PR_OPENED,
+    TASK_PREFLIGHTED_AT_THE_HEAD,
+    _record_task_state("verifying"),
+]
+LEDGER_OF_A_TASK_PAST_ITS_ROUNDS = [
+    *LEDGER_OF_A_TASK_IN_VERIFYING,
+    _record_task_state("fixing"),
+    _record_task_state("fixing"),
+    _record_task_state("verifying"),
+]
+
+
+class RebasingForgeDouble:
+    def __init__(self, found: list[dict]):
+        self.found = found
+
+    def find_pull_request(self, request: dict, runtime) -> dict:
+        pull_request = self.found[0] if len(self.found) == 1 else self.found.pop(0)
+        return {"schema_version": 1, "pull_request": pull_request}
+
+    def describe_account(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "login": "tidepool-cli"}
+
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "environment": ENVIRONMENT_OF_THE_CLI_ACCOUNT}
+
+
+class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.worktree.mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        self.lock_free_at_the_rebase = []
+        self.environments_of_the_fetch = []
+
+    def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_DELIVERED},
+        }
+        self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
+        forge = RebasingForgeDouble(found)
+        return create_runtime(
+            self.root,
+            run_process=self._observe_the_lock(self.machine.run),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+        )
+
+    def _observe_the_lock(self, run_process):
+        def run(request):
+            if request.argv == FETCH_OF_THE_WAVE_BRANCH:
+                self.environments_of_the_fetch.append(request.environment)
+            if request.argv == REBASE_ONTO_THE_WAVE_BRANCH:
+                lock = self.root / "state" / "locks" / "worktrees-tidepool.lock"
+                with contextlib.ExitStack() as stack:
+                    lock.parent.mkdir(parents=True, exist_ok=True)
+                    lock_file = stack.enter_context(lock.open("a", encoding="utf-8"))
+                    try:
+                        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        self.lock_free_at_the_rebase.append(True)
+                    except BlockingIOError:
+                        self.lock_free_at_the_rebase.append(False)
+            return run_process(request)
+
+        return run
+
+    def _read_events(self) -> list[dict]:
+        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        return [json.loads(line) for line in lines]
+
+    def test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            [argv for argv in self.machine.argvs if argv[:2] in {("git", "rebase"), ("git", "push")}],
+            [
+                REBASE_ONTO_THE_WAVE_BRANCH,
+                ("git", "push", "--quiet", "--force-with-lease=task/M4/T7:8885daa", "origin", "HEAD:task/M4/T7"),
+            ],
+        )
+
+    def test_should_record_the_rebase_with_both_heads_and_the_login_of_the_push_and_send_the_task_to_its_preflight(
+        self,
+    ):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events()[4:],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.rebased",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "before": "8885daa",
+                    "after": REBASED_HEAD,
+                    "login": "tidepool-cli",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "pr_open",
+                },
+            ],
+        )
+
+    def test_should_rebase_under_the_lock_of_the_worktrees_of_the_project(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.lock_free_at_the_rebase, [False])
+
+    def test_should_fetch_the_wave_branch_as_the_forge_account_of_the_cli(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(
+            CLIENT_AND_DOCUMENT_CONFIGURATION + CLI_BOUND_TO_A_FORGE_ACCOUNT, encoding="utf-8"
+        )
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.environments_of_the_fetch, [ENVIRONMENT_OF_THE_CLI_ACCOUNT])
+
+    def test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (
+                [argv for argv in self.machine.argvs if argv[:2] in {("git", "rebase"), ("git", "push")}],
+                self.spawn.argvs,
+                self._read_events()[4:],
+            ),
+            (
+                [REBASE_ONTO_THE_WAVE_BRANCH, ("git", "rebase", "--abort")],
+                [
+                    (
+                        "run",
+                        "rebase-on-base",
+                        "pr=42",
+                        "task=@TASK.T7",
+                        "--slot",
+                        "rebase",
+                        "--cwd",
+                        str(self.worktree),
+                        "--project",
+                        "tidepool",
+                        "--wave",
+                        "tidepool_w16",
+                        "--task",
+                        "T7",
+                        "--run-id",
+                        ANY,
+                    )
+                ],
+                [
+                    {
+                        "schema_version": 1,
+                        "ts": "2026-10-19T09:00:00Z",
+                        "event": "task.state",
+                        "wave": "tidepool_w16",
+                        "task": "T7",
+                        "state": "fixing",
+                    }
+                ],
+            ),
+        )
+
+    def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_PAST_ITS_ROUNDS)
+        runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (self.spawn.argvs, self._read_events()[7:8]),
+            (
+                [],
+                [
+                    {
+                        "schema_version": 1,
+                        "ts": "2026-10-19T09:00:00Z",
+                        "event": "task.parked",
+                        "wave": "tidepool_w16",
+                        "task": "T7",
+                        "reason": "past 2 repair rounds",
+                        "blockers": [],
+                    }
+                ],
+            ),
+        )

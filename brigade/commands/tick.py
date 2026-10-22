@@ -15,6 +15,7 @@ from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
+from brigade.ledger.task_rebased import TaskRebased
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
@@ -57,6 +58,7 @@ from brigade.tick.actions import (
     OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
+    RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -70,6 +72,7 @@ from brigade.tick.build_snapshot import build_snapshot
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
+from brigade.tick.rebase_task import rebase_task
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
@@ -85,6 +88,9 @@ BUILD_SLOT = "build"
 VERIFY_PROCEDURE = "verify-pr"
 REMEDIATE_PROCEDURE = "remediate-pr"
 REMEDIATE_SLOT = "remediate"
+REBASE_PROCEDURE = "rebase-on-base"
+REBASE_SLOT = "rebase"
+PR_OPEN_STATE = "pr_open"
 FIXING_STATE = "fixing"
 CHECK_LOG_LINES = 200
 RUNNING_STATE = "running"
@@ -195,6 +201,47 @@ def _launch_check_repair(runtime: Runtime, configuration: Configuration, action:
     )
     run(repairing, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
+
+
+def _launch_rebase(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
+    rebasing = argparse.Namespace(
+        procedure=configuration.procedures.get(REBASE_SLOT, REBASE_PROCEDURE),
+        slot=REBASE_SLOT,
+        project=action.project,
+        cwd=action.worktree,
+        brief=None,
+        arguments=(f"pr={action.pr}", f"task=@TASK.{action.task}"),
+        run_id=None,
+        wave=action.wave,
+        task=action.task,
+        detach=True,
+        resume=False,
+    )
+    run(rebasing, runtime)
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
+
+
+def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    login = ask_forge_account(runtime.resolve_plugin("forge", FORGE_NAME), FORGE_NAME, environment, runtime).login
+    head = rebase_task(runtime, action, environment)
+    if head is not None:
+        append_event(
+            runtime.paths,
+            runtime.now,
+            TaskRebased(wave=action.wave, task=action.task, before=action.head, after=head, login=login),
+        )
+        _record_task_state(
+            runtime, RecordTaskState(wave=action.wave, task=action.task, state=PR_OPEN_STATE, reason=None)
+        )
+    elif action.parking_reason is not None:
+        append_event(
+            runtime.paths,
+            runtime.now,
+            TaskParked(wave=action.wave, task=action.task, reason=action.parking_reason, blockers=()),
+        )
+    else:
+        _launch_rebase(runtime, configuration, action)
 
 
 def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
@@ -361,6 +408,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
         LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
         LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
+        RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: append_event(
             runtime.paths,
