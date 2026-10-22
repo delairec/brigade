@@ -62,6 +62,18 @@ class ReviewContextTextTest(unittest.TestCase):
         self.assertNotIn("# request", text)
 
 
+class ReviewContextRequestTest(unittest.TestCase):
+    def test_should_take_the_options_as_the_request(self):
+        # Arrange
+        options = SimpleNamespace(pr=42)
+
+        # Act
+        request = COMMAND.read_request(options)
+
+        # Assert
+        self.assertIs(request, options)
+
+
 class ReviewContextExitCodeTest(unittest.TestCase):
     def test_should_exit_0(self):
         # Act

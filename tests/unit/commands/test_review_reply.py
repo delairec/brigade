@@ -44,6 +44,18 @@ class ReviewReplyTextTest(unittest.TestCase):
         self.assertEqual(text, "findings answered on #42, @TASK.T7 at 8885daa: 1, posted as tidepool-remediate")
 
 
+class ReviewReplyRequestTest(unittest.TestCase):
+    def test_should_take_the_options_as_the_request(self):
+        # Arrange
+        options = SimpleNamespace(pr=42, file="answers.json")
+
+        # Act
+        request = COMMAND.read_request(options)
+
+        # Assert
+        self.assertIs(request, options)
+
+
 class ReviewReplyExitCodeTest(unittest.TestCase):
     def test_should_exit_0(self):
         # Act
