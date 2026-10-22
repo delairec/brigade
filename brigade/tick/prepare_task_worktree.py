@@ -22,11 +22,12 @@ from brigade.tick.actions import LaunchTask
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
+from brigade.waves.read_task_state import PARKED_STATE
 
 SETUP_FIELD = "SETUP"
 SETUP_TIMEOUT_S = 1800.0
 SETUP_PROMPT = "$ "
-PARKED_STATE = "parked"
+SETUP_FAILED_REASON = "setup failed"
 
 
 def _split_line(line: str) -> tuple[str, ...]:
@@ -69,6 +70,10 @@ def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action
         with hold_lock(lock):
             remove_worktree(runtime.run_process, repository, worktree.path)
             delete_branch(runtime.run_process, repository, worktree.branch)
-        append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=PARKED_STATE))
+        append_event(
+            runtime.paths,
+            runtime.now,
+            TaskState(wave=action.wave, task=action.task, state=PARKED_STATE, reason=SETUP_FAILED_REASON),
+        )
         raise BrigadeError(f"the setup of @TASK.{action.task} failed: {failure}") from None
     return worktree

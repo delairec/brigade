@@ -114,6 +114,6 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
                     ("/srv/shop", ("git", "worktree", "remove", "--force", str(WORKTREE))),
                     ("/srv/shop", ("git", "branch", "--quiet", "-D", "task/w1/B1")),
                 ],
-                TaskState(wave="w1", task="B1", state="parked"),
+                TaskState(wave="w1", task="B1", state="parked", reason="setup failed"),
             ),
         )

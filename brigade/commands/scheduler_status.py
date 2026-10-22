@@ -82,6 +82,12 @@ def _render_resumption(pause: dict) -> str:
     return f"resumes at {pause['resume_at']}"
 
 
+def _render_parked_task(task: dict) -> str:
+    if task["reason"] is None:
+        return f"parked     {task['task']} of {task['wave']}"
+    return f"parked     {task['task']} of {task['wave']}, {task['reason']}"
+
+
 def _render_text(document: dict) -> str:
     lines = [f"scheduler  {document['scheduler']}", *(f"unit       {unit}" for unit in document["unit_files"])]
     if document["cron_line"] is not None:
@@ -95,7 +101,7 @@ def _render_text(document: dict) -> str:
         f"paused     {pause['wave']}, {pause['reason']}, {_render_resumption(pause)}"
         for pause in document["paused_waves"]
     )
-    lines.extend(f"parked     {task['task']} of {task['wave']}, {task['reason']}" for task in document["parked_tasks"])
+    lines.extend(_render_parked_task(task) for task in document["parked_tasks"])
     return "\n".join(lines)
 
 

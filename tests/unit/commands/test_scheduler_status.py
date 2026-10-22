@@ -136,7 +136,10 @@ class SchedulerStatusTextTest(unittest.TestCase):
                 {"wave": "brigade_w1", "reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
                 {"wave": "brigade_w2", "reason": "forge_account", "resume_at": None},
             ],
-            "parked_tasks": [{"task": "B12", "wave": "brigade_w1", "reason": "blocked"}],
+            "parked_tasks": [
+                {"task": "B12", "wave": "brigade_w1", "reason": "blocked"},
+                {"task": "B15", "wave": "brigade_w2", "reason": None},
+            ],
         }
 
         # Act
@@ -149,7 +152,8 @@ class SchedulerStatusTextTest(unittest.TestCase):
                 "scheduler  none\nlast tick  never\n"
                 "paused     brigade_w1, quota, resumes at 2026-10-19T10:00:00Z\n"
                 "paused     brigade_w2, forge_account, resumes on brigade wave resume\n"
-                "parked     B12 of brigade_w1, blocked"
+                "parked     B12 of brigade_w1, blocked\n"
+                "parked     B15 of brigade_w2"
             ),
         )
 
