@@ -14,6 +14,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
+from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -76,6 +77,10 @@ REVIEW_FIELD = "REVIEW"
 VERDICT_REVIEW = "verdict"
 AUTO_MERGE_FIELD = "AUTO_MERGE"
 MERGE_INTO_INTEGRATION = "integration"
+VERIFY_ROUNDS_BY_DEFAULT = 2
+VERIFY_ROUNDS_FIELD = "VERIFY_ROUNDS"
+FIXING_STATE = "fixing"
+FAILED_PREFLIGHT_CHECK = "fail"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
 
@@ -94,6 +99,12 @@ class RecordedVerdict:
 
 
 @dataclass(frozen=True)
+class PreflightFailure:
+    name: str
+    findings: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class TaskFacts:
     name: str
     after: tuple[str, ...] = ()
@@ -106,6 +117,8 @@ class TaskFacts:
     preflighted_head: str | None = None
     verdict: RecordedVerdict | None = None
     reviewed_head: str | None = None
+    preflight_failures: tuple[PreflightFailure, ...] = ()
+    repair_rounds: int = 0
 
     def to_document(self) -> dict:
         return {
@@ -120,6 +133,10 @@ class TaskFacts:
             "preflighted_head": self.preflighted_head,
             "verdict": None if self.verdict is None else {"head": self.verdict.head, "verdict": self.verdict.verdict},
             "reviewed_head": self.reviewed_head,
+            "preflight_failures": [
+                {"name": failure.name, "findings": list(failure.findings)} for failure in self.preflight_failures
+            ],
+            "repair_rounds": self.repair_rounds,
         }
 
 
@@ -175,6 +192,7 @@ class ProjectFacts:
     merge: str = REBASE_MERGE
     review: str = VERDICT_REVIEW
     auto_merge: str = MERGE_INTO_INTEGRATION
+    verify_rounds: int = VERIFY_ROUNDS_BY_DEFAULT
 
     def to_document(self) -> dict:
         return {
@@ -186,6 +204,7 @@ class ProjectFacts:
             "merge": self.merge,
             "review": self.review,
             "auto_merge": self.auto_merge,
+            "verify_rounds": self.verify_rounds,
         }
 
 
@@ -250,6 +269,8 @@ class FollowedWave:
     preflighted_heads: dict
     verdicts: dict
     reviewed_heads: dict
+    preflight_failures: dict
+    repair_rounds: dict
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
 
 
@@ -267,7 +288,25 @@ def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
         preflighted_head=followed.preflighted_heads.get(task.name),
         verdict=followed.verdicts.get(task.name),
         reviewed_head=followed.reviewed_heads.get(task.name),
+        preflight_failures=followed.preflight_failures.get(task.name, ()),
+        repair_rounds=followed.repair_rounds.get(task.name, 0),
     )
+
+
+def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFailure, ...]:
+    return tuple(
+        PreflightFailure(name=check["name"], findings=tuple(check["findings"]))
+        for check in preflighted.checks
+        if check["verdict"] == FAILED_PREFLIGHT_CHECK
+    )
+
+
+def _count_repair_rounds(events: tuple, wave: str) -> dict:
+    rounds = {}
+    for event in events:
+        if isinstance(event, TaskState) and event.wave == wave and event.state == FIXING_STATE:
+            rounds[event.task] = rounds.get(event.task, 0) + 1
+    return rounds
 
 
 @dataclass(frozen=True)
@@ -390,6 +429,12 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
             if isinstance(event, TaskVerdict) and event.wave == wave
         },
         reviewed_heads=_read_reviewed_heads(reading.events, wave),
+        preflight_failures={
+            event.task: _list_preflight_failures(event)
+            for event in reading.events
+            if isinstance(event, TaskPreflighted) and event.wave == wave
+        },
+        repair_rounds=_count_repair_rounds(reading.events, wave),
         read_pull_request=reading.read_pull_request,
     )
     return WaveFacts(
@@ -435,6 +480,9 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         merge=read_project_field(project, MERGE_FIELD) or REBASE_MERGE,
         review=read_policy_field(policies, project.name, REVIEW_FIELD, VERDICT_REVIEW),
         auto_merge=read_policy_field(policies, project.name, AUTO_MERGE_FIELD, MERGE_INTO_INTEGRATION),
+        verify_rounds=int(
+            read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
+        ),
     )
 
 

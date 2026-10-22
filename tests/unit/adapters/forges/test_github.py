@@ -9,12 +9,15 @@ from brigade.adapters.forges.github import (
     find_pull_request,
     list_milestones,
     list_pull_requests,
+    list_review_threads,
     merge_pull_request,
     open_issue,
     open_pull_request,
     post_review,
+    read_check_logs,
     read_login_environment,
     read_pull_request,
+    reply_review_thread,
 )
 from brigade.system.run_process import ProcessRecord
 
@@ -40,6 +43,18 @@ def create_runtime(stdout: str, exit_code: int = 0) -> SimpleNamespace:
         requests.append(request)
         return ProcessRecord(
             argv=request.argv, cwd=request.cwd, exit_code=exit_code, stdout=stdout, stderr="", duration_ms=0
+        )
+
+    return SimpleNamespace(run_process=run_gh, requests=requests)
+
+
+def create_runtime_answering_by_argv(answers: dict) -> SimpleNamespace:
+    requests = []
+
+    def run_gh(request):
+        requests.append(request)
+        return ProcessRecord(
+            argv=request.argv, cwd=request.cwd, exit_code=0, stdout=answers[request.argv], stderr="", duration_ms=0
         )
 
     return SimpleNamespace(run_process=run_gh, requests=requests)
@@ -604,3 +619,218 @@ class PostReviewTest(unittest.TestCase):
                         {"GH_TOKEN": "token-of-octo-bot"},
                     ),
                 )
+
+
+CHECKS_OF_PULL_REQUEST_42 = ("gh", "pr", "checks", "42", "--json", "name,link")
+
+
+class ReadCheckLogsTest(unittest.TestCase):
+    def test_should_keep_the_last_lines_of_the_log_of_each_check_asked(self):
+        # Arrange
+        runtime = create_runtime_answering_by_argv(
+            {
+                CHECKS_OF_PULL_REQUEST_42: json.dumps(
+                    [
+                        {"name": "tests", "link": "https://github.com/octo/shop/actions/runs/7/job/70"},
+                        {"name": "lint", "link": "https://github.com/octo/shop/actions/runs/7/job/71"},
+                    ]
+                ),
+                ("gh", "api", "repos/{owner}/{repo}/actions/jobs/70/logs"): "set up\nrun\nFAIL test_cart\nexit 1\n",
+            }
+        )
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": ["tests"],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "tests", "tail": "FAIL test_cart\nexit 1"}]})
+
+    def test_should_hold_no_tail_for_a_check_whose_log_the_forge_does_not_keep(self):
+        # Arrange
+        runtime = create_runtime_answering_by_argv(
+            {
+                CHECKS_OF_PULL_REQUEST_42: json.dumps(
+                    [{"name": "coverage", "link": "https://app.codecov.io/gh/octo/shop"}]
+                )
+            }
+        )
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": ["coverage"],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "coverage", "tail": None}]})
+
+    def test_should_run_gh_in_the_repository_as_the_login_of_the_environment(self):
+        # Arrange
+        runtime = create_runtime_answering_by_argv({CHECKS_OF_PULL_REQUEST_42: json.dumps([])})
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": [],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            (runtime.requests[0].cwd, runtime.requests[0].environment), ("/projects/shop", BOT_ENVIRONMENT)
+        )
+
+
+REVIEW_THREADS_REQUEST = {
+    "schema_version": 1,
+    "repository": "/projects/shop",
+    "number": 42,
+    "environment": BOT_ENVIRONMENT,
+}
+
+
+def create_review_threads_page(threads: list[dict]) -> str:
+    return json.dumps({"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": threads}}}}})
+
+
+class ListReviewThreadsTest(unittest.TestCase):
+    def test_should_answer_each_open_thread_by_its_identifier_with_its_first_comment(self):
+        # Arrange
+        runtime = create_runtime(
+            create_review_threads_page(
+                [
+                    {
+                        "id": "PRRT_kwDOA1",
+                        "isResolved": False,
+                        "path": "src/cart.py",
+                        "line": 12,
+                        "comments": {"nodes": [{"author": {"login": "octo-reviewer"}, "body": "the total is wrong"}]},
+                    }
+                ]
+            )
+        )
+
+        # Act
+        answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            {
+                "schema_version": 1,
+                "threads": [
+                    {
+                        "id": "PRRT_kwDOA1",
+                        "file": "src/cart.py",
+                        "line": 12,
+                        "author": "octo-reviewer",
+                        "body": "the total is wrong",
+                    }
+                ],
+            },
+        )
+
+    def test_should_leave_out_a_resolved_thread(self):
+        # Arrange
+        runtime = create_runtime(
+            create_review_threads_page(
+                [
+                    {
+                        "id": "PRRT_kwDOA2",
+                        "isResolved": True,
+                        "path": "src/cart.py",
+                        "line": 3,
+                        "comments": {"nodes": [{"author": {"login": "octo-reviewer"}, "body": "rename it"}]},
+                    }
+                ]
+            )
+        )
+
+        # Act
+        answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "threads": []})
+
+    def test_should_name_no_author_for_a_comment_of_a_deleted_account(self):
+        # Arrange
+        runtime = create_runtime(
+            create_review_threads_page(
+                [
+                    {
+                        "id": "PRRT_kwDOA3",
+                        "isResolved": False,
+                        "path": "src/cart.py",
+                        "line": None,
+                        "comments": {"nodes": [{"author": None, "body": "outdated"}]},
+                    }
+                ]
+            )
+        )
+
+        # Act
+        answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(answer["threads"][0]["author"], None)
+
+    def test_should_ask_the_threads_of_the_pull_request_in_the_repository_as_the_login_of_the_environment(self):
+        # Arrange
+        runtime = create_runtime(create_review_threads_page([]))
+
+        # Act
+        list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            (runtime.requests[0].argv[:9], runtime.requests[0].cwd, runtime.requests[0].environment),
+            (
+                ("gh", "api", "graphql", "-F", "owner={owner}", "-F", "name={repo}", "-F", "number=42"),
+                "/projects/shop",
+                BOT_ENVIRONMENT,
+            ),
+        )
+
+
+class ReplyReviewThreadTest(unittest.TestCase):
+    def test_should_reply_on_the_thread_with_the_body_as_the_login_of_the_environment(self):
+        # Arrange
+        runtime = create_runtime(json.dumps({"data": {}}))
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "thread": "PRRT_kwDOA1",
+            "body": "fixed by 8885daa",
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = reply_review_thread(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            (answer, runtime.requests[0].argv[:7], runtime.requests[0].cwd, runtime.requests[0].environment),
+            (
+                {"schema_version": 1},
+                ("gh", "api", "graphql", "-f", "thread=PRRT_kwDOA1", "-f", "body=fixed by 8885daa"),
+                "/projects/shop",
+                BOT_ENVIRONMENT,
+            ),
+        )

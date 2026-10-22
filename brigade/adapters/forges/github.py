@@ -37,7 +37,21 @@ LISTING_TIMEOUT_S = 600.0
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
+JOB_SEPARATOR = "/job/"
+JOB_LOGS_PATH = "repos/{owner}/{repo}/actions/jobs"
 REVIEW_EVENTS = {"approve": "APPROVE", "request_changes": "REQUEST_CHANGES"}
+REVIEW_THREADS_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes { id isResolved path line comments(first: 1) { nodes { author { login } body } } }
+      }
+    }
+  }
+}"""
+THREAD_REPLY_MUTATION = """mutation($thread: ID!, $body: String!) {
+  addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $thread, body: $body}) { comment { id } }
+}"""
 
 
 def _read_active_login(hosts_document: str):
@@ -324,5 +338,81 @@ def post_review(request: dict, runtime: Runtime) -> dict:
             stdin=request["body"],
             environment=request["environment"],
         )
+    )
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+def _read_job_tail(request: dict, runtime: Runtime, link: str) -> str | None:
+    if JOB_SEPARATOR not in link:
+        return None
+    job = link.rsplit(JOB_SEPARATOR, 1)[1]
+    log = _ask_gh(request, runtime, ("api", f"{JOB_LOGS_PATH}/{job}/logs"))
+    return "\n".join(log.splitlines()[-request["lines"] :])
+
+
+def read_check_logs(request: dict, runtime: Runtime) -> dict:
+    links = {
+        check["name"]: check["link"]
+        for check in json.loads(
+            _ask_gh(request, runtime, ("pr", "checks", str(request["number"]), "--json", "name,link"))
+        )
+    }
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "logs": [{"name": name, "tail": _read_job_tail(request, runtime, links[name])} for name in request["checks"]],
+    }
+
+
+def _describe_review_thread(thread: dict) -> dict:
+    comment = thread["comments"]["nodes"][0]
+    return {
+        "id": thread["id"],
+        "file": thread["path"],
+        "line": thread["line"],
+        "author": _read_login(comment["author"]),
+        "body": comment["body"],
+    }
+
+
+def list_review_threads(request: dict, runtime: Runtime) -> dict:
+    page = json.loads(
+        _ask_gh(
+            request,
+            runtime,
+            (
+                "api",
+                "graphql",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "name={repo}",
+                "-F",
+                f"number={request['number']}",
+                "-f",
+                f"query={REVIEW_THREADS_QUERY}",
+            ),
+        )
+    )
+    threads = page["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "threads": [_describe_review_thread(thread) for thread in threads if not thread["isResolved"]],
+    }
+
+
+def reply_review_thread(request: dict, runtime: Runtime) -> dict:
+    _ask_gh(
+        request,
+        runtime,
+        (
+            "api",
+            "graphql",
+            "-f",
+            f"thread={request['thread']}",
+            "-f",
+            f"body={request['body']}",
+            "-f",
+            f"query={THREAD_REPLY_MUTATION}",
+        ),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}

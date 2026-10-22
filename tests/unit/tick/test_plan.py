@@ -9,6 +9,8 @@ from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
     CloseWave,
     CutWaveBranch,
+    LaunchCheckRepair,
+    LaunchRemediation,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
@@ -25,6 +27,7 @@ from brigade.tick.actions import (
 )
 from brigade.tick.build_snapshot import (
     LiveRun,
+    PreflightFailure,
     ProjectFacts,
     RateLimit,
     RecordedVerdict,
@@ -1007,3 +1010,296 @@ class PlanWaveCloseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+
+BODY_FAILURE = PreflightFailure(name="body", findings=("the body names no task",))
+ANCESTRY_FAILURE = PreflightFailure(name="ancestry", findings=("the head does not descend from the wave branch",))
+CHECKS_FAILURE = PreflightFailure(name="checks", findings=("tests: failure",))
+NO_PREFLIGHT_FAILURE = ()
+NO_ROUND_TAKEN = 0
+ONE_ROUND_TAKEN = 1
+TWO_ROUNDS_TAKEN = 2
+SHOP_ALLOWING_ONE_ROUND = ProjectFacts(name="shop", slots=4, verify_rounds=1)
+RECORD_CHANGES_REQUESTED_BY_THE_BODY = RecordTaskState(
+    wave="shop_w1", task="S3", state="changes_requested", reason="body: the body names no task"
+)
+REMEDIATE_S3 = LaunchRemediation(project="shop", wave="shop_w1", task="S3", pr=42, worktree=WORKTREE_S3)
+REPAIR_CHECKS_OF_S3 = LaunchCheckRepair(
+    project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", pr=42, worktree=WORKTREE_S3, checks=("tests",)
+)
+PARK_S3_PAST_ITS_ROUNDS = ParkTask(wave="shop_w1", task="S3", reason="past 2 repair rounds", blockers=())
+PARK_S3_PAST_ONE_ROUND = ParkTask(wave="shop_w1", task="S3", reason="past 1 repair rounds", blockers=())
+REMEDIATION_RUN_OF_S3 = LiveRun(
+    run="20261006T110000Z-a1b2c3", slot="remediate", worktree=WORKTREE_S3, wave="shop_w1", task="S3"
+)
+RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3 = LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree=WORKTREE_S3)
+REVIEW_RUN_OF_S3_IN_THE_MAIN_CHECKOUT = LiveRun(
+    run="20261006T110500Z-d4e5f6", slot="review", worktree="/projects/shop", wave="shop_w1", task="S3"
+)
+FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE = PullRequestFacts(
+    number=42,
+    state="open",
+    checks=(CheckVerdict(name="lint", verdict="success"), CheckVerdict(name="tests", verdict="failure")),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base=WAVE_BRANCH,
+)
+
+
+class PlanRepairTest(unittest.TestCase):
+    def test_should_ask_for_changes_on_a_preflight_finding_other_than_ancestry_and_checks(self):
+        for case, failures, expected in [
+            ("a finding on the body", (BODY_FAILURE,), (RECORD_CHANGES_REQUESTED_BY_THE_BODY,)),
+            ("a finding on the ancestry alone", (ANCESTRY_FAILURE,), ()),
+            (
+                "a finding on the body beside the ancestry",
+                (ANCESTRY_FAILURE, BODY_FAILURE),
+                (RECORD_CHANGES_REQUESTED_BY_THE_BODY,),
+            ),
+            ("no finding", NO_PREFLIGHT_FAILURE, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    preflight_failures=failures,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_start_a_build_run_on_the_failing_checks_of_a_preflighted_head(self):
+        for case, pull_request, failures, preflighted, expected in [
+            (
+                "a failing check at the head",
+                FAILED_CHECK_RUN,
+                (CHECKS_FAILURE,),
+                PREFLIGHTED_AT_THE_HEAD,
+                (REPAIR_CHECKS_OF_S3,),
+            ),
+            (
+                "a failing check beside a passing one",
+                FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE,
+                (CHECKS_FAILURE,),
+                PREFLIGHTED_AT_THE_HEAD,
+                (REPAIR_CHECKS_OF_S3,),
+            ),
+            (
+                "a failing check beside a finding on the body",
+                FAILED_CHECK_RUN,
+                (CHECKS_FAILURE, BODY_FAILURE),
+                PREFLIGHTED_AT_THE_HEAD,
+                (REPAIR_CHECKS_OF_S3,),
+            ),
+            (
+                "a failing check before a push",
+                FAILED_CHECK_RUN,
+                (CHECKS_FAILURE,),
+                PREFLIGHTED_BEFORE_A_PUSH,
+                (PREFLIGHT_S3,),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=preflighted,
+                    preflight_failures=failures,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_start_a_remediate_run_on_a_task_in_changes_requested(self):
+        for case, worktree, live_runs, expected in [
+            ("with its worktree free", WORKTREE_S3, (), (REMEDIATE_S3,)),
+            ("without its worktree", NO_WORKTREE, (), ()),
+            ("while another run holds its worktree", WORKTREE_S3, (RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3,), ()),
+            ("while a run of the task is live elsewhere", WORKTREE_S3, (REVIEW_RUN_OF_S3_IN_THE_MAIN_CHECKOUT,), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                project = ProjectFacts(name="shop", slots=4, live_runs=live_runs)
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=worktree,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    verdict=CHANGES_AT_THE_HEAD,
+                )
+                snapshot = Snapshot(
+                    now=NOW, waves=(create_wave((task,), {"S3": "changes_requested"}),), projects=(project,)
+                )
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_follow_a_task_in_fixing_by_the_head_of_its_pull_request(self):
+        for case, pull_request, preflighted, failures, live_runs, expected in [
+            (
+                "pushed by its repair run",
+                OPEN,
+                PREFLIGHTED_BEFORE_A_PUSH,
+                NO_PREFLIGHT_FAILURE,
+                (),
+                (RECORD_PR_OPEN,),
+            ),
+            (
+                "while its repair run is live",
+                OPEN,
+                PREFLIGHTED_AT_THE_HEAD,
+                NO_PREFLIGHT_FAILURE,
+                (REMEDIATION_RUN_OF_S3,),
+                (),
+            ),
+            (
+                "a remediation ended without a push",
+                OPEN,
+                PREFLIGHTED_AT_THE_HEAD,
+                NO_PREFLIGHT_FAILURE,
+                (),
+                (REMEDIATE_S3,),
+            ),
+            (
+                "a check repair ended without a push",
+                FAILED_CHECK_RUN,
+                PREFLIGHTED_AT_THE_HEAD,
+                (CHECKS_FAILURE,),
+                (),
+                (REPAIR_CHECKS_OF_S3,),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                project = ProjectFacts(name="shop", slots=4, live_runs=live_runs)
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=preflighted,
+                    preflight_failures=failures,
+                    repair_rounds=ONE_ROUND_TAKEN,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_park_a_task_whose_repair_would_go_past_the_rounds_of_the_policy(self):
+        for case, state, pull_request, failures, rounds, project, expected in [
+            (
+                "changes requested within the rounds",
+                "changes_requested",
+                OPEN,
+                NO_PREFLIGHT_FAILURE,
+                ONE_ROUND_TAKEN,
+                SHOP,
+                (REMEDIATE_S3,),
+            ),
+            (
+                "changes requested past the rounds",
+                "changes_requested",
+                OPEN,
+                NO_PREFLIGHT_FAILURE,
+                TWO_ROUNDS_TAKEN,
+                SHOP,
+                (PARK_S3_PAST_ITS_ROUNDS,),
+            ),
+            (
+                "a failing check past the rounds",
+                "pr_open",
+                FAILED_CHECK_RUN,
+                (CHECKS_FAILURE,),
+                TWO_ROUNDS_TAKEN,
+                SHOP,
+                (PARK_S3_PAST_ITS_ROUNDS,),
+            ),
+            (
+                "a repair ended without a push past the rounds",
+                "fixing",
+                OPEN,
+                NO_PREFLIGHT_FAILURE,
+                TWO_ROUNDS_TAKEN,
+                SHOP,
+                (PARK_S3_PAST_ITS_ROUNDS,),
+            ),
+            (
+                "under a policy of one round",
+                "changes_requested",
+                OPEN,
+                NO_PREFLIGHT_FAILURE,
+                ONE_ROUND_TAKEN,
+                SHOP_ALLOWING_ONE_ROUND,
+                (PARK_S3_PAST_ONE_ROUND,),
+            ),
+            (
+                "the first round",
+                "changes_requested",
+                OPEN,
+                NO_PREFLIGHT_FAILURE,
+                NO_ROUND_TAKEN,
+                SHOP_ALLOWING_ONE_ROUND,
+                (REMEDIATE_S3,),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    preflight_failures=failures,
+                    repair_rounds=rounds,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_move_back_to_pr_open_a_task_awaiting_its_repair_whose_head_moved(self):
+        for state in ["changes_requested", "fixing"]:
+            with self.subTest(state=state):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_BEFORE_A_PUSH,
+                    verdict=CHANGES_AT_THE_HEAD,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (RECORD_PR_OPEN,))

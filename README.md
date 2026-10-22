@@ -203,6 +203,25 @@ review of that commit, approving or requesting changes, as the login of the key 
 the event carries that login; under `REVIEW verdict`, the default, the event alone is the verdict and its login is
 null.
 
+## Review answers
+
+```
+brigade review context <pr>
+brigade review reply <pr> --file <answers.json>
+```
+
+Both run from the worktree of the task whose review a run of the `remediate` slot answers. `review context` prints
+the head of the pull request, the request of the preflight that moved the task to `changes_requested` when there is
+one, and the findings to answer, each under its identifier: under `REVIEW verdict` the findings of the last
+`task.verdict`, numbered from 1; under `REVIEW approval` the open review threads of the pull request, each by its
+thread identifier.
+
+`review reply` reads `{"answers": [{"finding", "answer"}]}`, one answer per finding of the context; it refuses a
+document of another shape, a finding left unanswered, answered twice or not in the context, exit 1 naming what to
+correct, and records nothing. It records the ledger event `task.review_answered` at the head of the pull request.
+Under `REVIEW approval` it also replies each answer on its thread as the login of the key `remediate` of
+`[forge_accounts]`, and the event carries that login; under `REVIEW verdict` its login is null.
+
 ## Studies
 
 A study is a `STUDY` entity of `studies.awawa` in the operational corpus: deterministic collectors, then at most one
@@ -283,6 +302,15 @@ as its arguments, unless a run holds the worktree or a review run of the task al
 a rate limit; once a `task.verdict` is recorded at the head of the pull request, it moves the task to `verified` on
 `pass` and to `changes_requested` on `changes`. A task in `verifying` whose pull request head is no longer the head of
 its last `task.preflighted` moves back to `pr_open`, where the preflight of the new head opens the next verification.
+A task in `pr_open` whose preflight failed on a finding other than `ancestry` and `checks` moves to
+`changes_requested`, those findings as its reason. On an open pull request whose head the last preflight judged, and
+when no run holds the task's worktree, a task in `changes_requested` starts a detached run of the slot `remediate`, of
+`remediate-pr`, the procedure brigade ships, or of the one the key `remediate` of `[procedures]` names, which answers
+through `brigade review context|reply`; a task whose preflight found a failing check starts a detached run of the slot
+`build` whose brief carries the build brief of the task and the last 200 lines of the log of each failing check. Each
+launch records the task `fixing` and counts one round; a run that ends without a push leaves the task `fixing`, and the
+next tick launches it again. A push moves the task back to `pr_open`. Past the `VERIFY_ROUNDS` of the project's
+`POLICY`, 2 by default, the task is parked, `task.parked` naming the rounds.
 The waves are the
 open waves of the ledger, each with the tasks its `wave.started` names, in that order, read from the project corpus
 at the wave's branch; a wave whose pull requests the forge fails to read is skipped, named on stderr, and the tick

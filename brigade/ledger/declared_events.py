@@ -15,6 +15,7 @@ from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_promoted import TaskPromoted
+from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.undeclared_event import UndeclaredEvent
@@ -60,6 +61,7 @@ DECLARED_EVENTS = {
         TaskPromoted,
         TaskPreflighted,
         TaskVerdict,
+        TaskReviewAnswered,
     )
 }
 LedgerEvent = (
@@ -88,5 +90,6 @@ LedgerEvent = (
     | TaskPromoted
     | TaskPreflighted
     | TaskVerdict
+    | TaskReviewAnswered
     | UndeclaredEvent
 )

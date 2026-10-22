@@ -21,6 +21,7 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import Configuration
 from brigade.tick.build_snapshot import (
+    PreflightFailure,
     ProjectFacts,
     RateLimit,
     RecordedVerdict,
@@ -141,6 +142,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                             {"name": "PROJECT", "atoms": ["@PROJECT.shop"]},
                             {"name": "REVIEW", "atoms": ["approval"]},
                             {"name": "AUTO_MERGE", "atoms": ["none"]},
+                            {"name": "VERIFY_ROUNDS", "atoms": ["3"]},
                         ]
                     },
                 ),
@@ -312,6 +314,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     merge="squash",
                     review="approval",
                     auto_merge="none",
+                    verify_rounds=3,
                 ),
             ),
         )
@@ -411,5 +414,48 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(name="B2", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
                 TaskFacts(name="B3"),
                 TaskFacts(name="B4", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+            ),
+        )
+
+
+FAILING_CHECKS = {"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}
+FAILING_BODY = {"name": "body", "verdict": "fail", "findings": ["the body names no task"]}
+PASSING_PRIVACY = {"name": "privacy", "verdict": "pass", "findings": []}
+MEASURED_SIZE = {"name": "size", "verdict": "info", "findings": ["3 files"]}
+
+
+class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1", "B2", "B3", "B4")))
+        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B1",)))
+        self.record(50, dataclasses.replace(create_preflight("B1"), checks=(FAILING_BODY,)))
+        self.record(49, TaskState(wave="w1", task="B1", state="fixing"))
+        self.record(
+            40, dataclasses.replace(create_preflight("B1"), checks=(FAILING_CHECKS, PASSING_PRIVACY, MEASURED_SIZE))
+        )
+        self.record(39, TaskState(wave="w1", task="B1", state="fixing"))
+        self.record(38, TaskState(wave="w4", task="B1", state="fixing"))
+        self.record(30, TaskState(wave="w1", task="B2", state="changes_requested"))
+
+    def test_should_carry_the_failures_of_the_last_preflight_and_the_repair_rounds_taken(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[:2],
+            (
+                TaskFacts(
+                    name="B1",
+                    after=("B0",),
+                    pull_request=PULL_REQUEST,
+                    worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                    preflighted_head="4f2a9c1",
+                    preflight_failures=(PreflightFailure(name="checks", findings=("tests: failure",)),),
+                    repair_rounds=2,
+                ),
+                TaskFacts(name="B2", pull_request=PULL_REQUEST),
             ),
         )
