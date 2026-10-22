@@ -11558,7 +11558,8 @@ TASK B192
 TASK B196
 	TITLE "A task whose worktree holds uncommitted changes when its pull request falls behind is"
 		+ "repaired before it is rebased"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 188
 	TYPE fix
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
@@ -11569,14 +11570,29 @@ TASK B196
 		+ "whatever its state among pr_open, verifying, verified, changes_requested and fixing,"
 		+ "recorded as task.state fixing and counted as a repair round; where today"
 		+ "brigade/tick/plan.py:184-187 plans the rebase, which git refuses at every tick"
+		IMPL "brigade/tick/plan.py::if task.holds_uncommitted_changes:"
+		IMPL "brigade/tick/build_snapshot.py::holds_uncommitted_changes=standing and"
+			+ "has_uncommitted_changes("
+		IMPL "brigade/git/has_uncommitted_changes.py::def has_uncommitted_changes("
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_repair_rather_than_rebase_a_task_behind_whose_worktree_holds_uncommitted_changes(self):"
 	SPEC "past POLICY.VERIFY_ROUNDS repair rounds such a task is parked with the reason of the"
 		+ "rounds spent instead of a repair run; its worktree is never reset nor stashed"
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_park_a_task_behind_holding_uncommitted_changes_whose_repair_rounds_are_spent(self):"
 	SPEC "once its worktree holds no uncommitted change, a task whose pull request is behind is"
 		+ "rebased by the next tick as TASK B143 sets"
+		IMPL "brigade/tick/plan.py::return RebaseTask("
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_rebase_a_task_whose_pull_request_is_behind_the_wave_branch_before_anything_else(self):"
 	SPEC "tests/unit prove a repair run and no rebase planned for a worktree holding uncommitted"
 		+ "changes behind its wave branch, in fixing and in pr_open, the parking past"
 		+ "POLICY.VERIFY_ROUNDS, and a clean worktree behind still rebased; tests/cli gains no"
 		+ "case, as DESC 4 of the decision ThePortableContractIsTheCommandLineAndNeutralFiles sets"
+		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::def"
+			+ "test_should_tell_that_the_worktree_of_a_task_holds_uncommitted_changes(self):"
+		IMPL "tests/unit/git/test_has_uncommitted_changes.py::def"
+			+ "test_should_tell_whether_the_worktree_holds_changes_to_its_tracked_files(self):"
 	AFTER @TASK.B143
 	RATIONALE "since PR 182 the tick rebases a task branch behind its wave by git, and git refuses"
 		+ "a worktree holding uncommitted changes; the rebase is decided before every other path of"
