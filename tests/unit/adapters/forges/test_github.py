@@ -481,10 +481,15 @@ class DescribeAccountOfAnUnreadableHostsDocumentTest(unittest.TestCase):
 
 
 class OpenIssueTest(unittest.TestCase):
-    def test_should_answer_the_url_of_the_issue_opened_without_the_account_environment(self):
+    def test_should_answer_the_url_of_the_issue_opened_under_the_account_environment(self):
         # Arrange
         runtime = create_runtime("https://github.com/ada/shop/issues/7\n")
-        request = {"repository": "/projects/shop", "title": "the cart forgets", "body": "Steps\n"}
+        request = {
+            "repository": "/projects/shop",
+            "title": "the cart forgets",
+            "body": "Steps\n",
+            "environment": {"GH_TOKEN": "cli-token"},
+        }
 
         # Act
         issue = open_issue(request, runtime)
@@ -499,6 +504,7 @@ class OpenIssueTest(unittest.TestCase):
                     cwd="/projects/shop",
                     timeout_s=60.0,
                     stdin="Steps\n",
+                    environment={"GH_TOKEN": "cli-token"},
                 )
             ],
         )

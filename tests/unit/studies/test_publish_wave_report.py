@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import CommandFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.wave_pr_opened import WavePrOpened
@@ -9,6 +10,8 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.convert_study import Study
 from brigade.studies.publish_wave_report import publish_wave_report
 from brigade.studies.study_run_context import StudyRunContext
+from brigade.system.read_configuration import Configuration
+from brigade.system.run_process import ProcessRequest
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
@@ -28,6 +31,8 @@ STUDY = Study(
     status="active",
     wave="oak_w2",
 )
+CLI_BOUND_TO_OCTO_CLI = Configuration(forge_accounts={"cli": "octo-cli"})
+NOTHING_BOUND = Configuration()
 
 
 class DocumentDouble:
@@ -42,6 +47,9 @@ class ForgeDouble:
     def rewrite_pull_request_body(self, request: dict, runtime) -> dict:
         self.rewritten.append(request)
         return {"schema_version": 1}
+
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"])}
 
 
 class PublishWaveReportTest(unittest.TestCase):
@@ -68,13 +76,17 @@ class PublishWaveReportTest(unittest.TestCase):
         self.processes.answer(("git", "push", "--quiet", "origin", BRANCH))
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
 
-    def create_context(self, forge: str) -> StudyRunContext:
+    def create_context(self, forge: str, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         self.processes.answer_entities(
             self.runtime.paths.config_root,
             "PROJECT",
             {"oak": (("PATH", "/srv/oak"), ("FORGE", forge), ("CORPUS", "corpus"))},
         )
-        equipment = create_study_equipment(document=DocumentDouble(), resolve_forge={"github": self.forge}.__getitem__)
+        equipment = create_study_equipment(
+            collector_equipment=CollectorEquipment(configuration=configuration, forge=None, forge_name="github"),
+            document=DocumentDouble(),
+            resolve_forge={"github": self.forge}.__getitem__,
+        )
         return StudyRunContext(
             runtime=self.runtime, study=STUDY, run_id=RUN_ID, run_directory=self.run_directory, equipment=equipment
         )
@@ -125,6 +137,53 @@ class PublishWaveReportTest(unittest.TestCase):
                 }
             ],
         )
+
+    def test_should_fetch_the_integration_branch_as_the_login_bound_to_cli(self):
+        # Arrange
+        context = self.create_context("github", CLI_BOUND_TO_OCTO_CLI)
+
+        # Act
+        publish_wave_report(context)
+
+        # Assert
+        self.assertIn(
+            ProcessRequest(
+                argv=("git", "fetch", "--quiet", "origin", BRANCH),
+                cwd="/srv/oak",
+                timeout_s=120.0,
+                environment={"GH_TOKEN": "cli-token"},
+            ),
+            self.processes.requests,
+        )
+
+    def test_should_push_the_report_as_the_login_bound_to_cli(self):
+        # Arrange
+        context = self.create_context("github", CLI_BOUND_TO_OCTO_CLI)
+
+        # Act
+        publish_wave_report(context)
+
+        # Assert
+        self.assertIn(
+            ProcessRequest(
+                argv=("git", "push", "--quiet", "origin", BRANCH),
+                cwd=str(self.checkout),
+                timeout_s=120.0,
+                environment={"GH_TOKEN": "cli-token"},
+            ),
+            self.processes.requests,
+        )
+
+    def test_should_rewrite_the_body_of_the_integration_pull_request_as_the_login_bound_to_cli(self):
+        # Arrange
+        self.open_integration_pull_request()
+        context = self.create_context("github", CLI_BOUND_TO_OCTO_CLI)
+
+        # Act
+        publish_wave_report(context)
+
+        # Assert
+        self.assertEqual(self.forge.rewritten[0]["environment"], {"GH_TOKEN": "cli-token"})
 
     def test_should_rewrite_no_pull_request_before_the_wave_opened_its_integration_pull_request(self):
         # Arrange

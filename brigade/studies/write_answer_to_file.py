@@ -1,11 +1,13 @@
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.force_push_branch import force_push_branch
+from brigade.git.push_branch import BranchPush
 from brigade.git.read_main_branch import read_main_branch
 from brigade.git.remove_worktree import remove_worktree
 from brigade.git.reset_branch import reset_branch
 from brigade.studies.locate_study_project import StudyProject, locate_study_project
 from brigade.studies.present_answer import AnswerPublication
+from brigade.studies.read_publication_environment import read_publication_environment
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
@@ -16,7 +18,6 @@ BRANCH_PREFIX = "brigade/study-"
 CHECKOUT_DIRECTORY = "checkout"
 NO_PULL_REQUEST = None
 NO_MILESTONE = None
-UNBOUND_ENVIRONMENT = {}
 
 
 def _open_pull_request(
@@ -25,7 +26,10 @@ def _open_pull_request(
     if project.forge is None:
         return NO_PULL_REQUEST
     checkout = context.run_directory / CHECKOUT_DIRECTORY
-    force_push_branch(context.runtime.run_process, checkout, branch)
+    environment = read_publication_environment(context, project)
+    force_push_branch(
+        context.runtime.run_process, BranchPush(repository=checkout, branch=branch, environment=environment)
+    )
     forge = context.equipment.resolve_forge(project.forge)
     pull_request = forge.open_pull_request(
         {
@@ -35,7 +39,7 @@ def _open_pull_request(
             "title": publication.title,
             "body": publication.markdown,
             "milestone": NO_MILESTONE,
-            "environment": UNBOUND_ENVIRONMENT,
+            "environment": environment,
         },
         context.runtime,
     )

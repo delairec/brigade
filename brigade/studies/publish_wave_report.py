@@ -10,6 +10,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.studies.locate_study_project import locate_study_project
 from brigade.studies.present_answer import present_answer
+from brigade.studies.read_publication_environment import read_publication_environment
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
@@ -20,7 +21,6 @@ CORPUS_FIELD = "CORPUS"
 WAVE_NUMBER_SEPARATOR = "_w"
 CHECKOUT_DIRECTORY = "checkout"
 REMOTE_PREFIX = "origin/"
-UNBOUND_ENVIRONMENT = {}
 NO_PULL_REQUEST = None
 
 
@@ -32,6 +32,7 @@ def _locate_report(context: StudyRunContext) -> str:
 
 def publish_wave_report(context: StudyRunContext) -> dict:
     project = locate_study_project(context)
+    environment = read_publication_environment(context, project)
     run_process = context.runtime.run_process
     wave = context.study.wave
     events = tuple(entry.event for entry in read_ledger(context.runtime.paths.state_root).entries)
@@ -40,9 +41,7 @@ def publish_wave_report(context: StudyRunContext) -> dict:
     markdown = present_answer(context).markdown
     pull_request = find_integration_pull_request(events, wave) if project.forge is not None else NO_PULL_REQUEST
     checkout = context.run_directory / CHECKOUT_DIRECTORY
-    fetch_branches(
-        run_process, BranchesFetch(repository=project.path, branches=(branch,), environment=UNBOUND_ENVIRONMENT)
-    )
+    fetch_branches(run_process, BranchesFetch(repository=project.path, branches=(branch,), environment=environment))
     add_detached_worktree(run_process, project.path, checkout, f"{REMOTE_PREFIX}{branch}")
     try:
         reset_branch(run_process, checkout, branch)
@@ -52,14 +51,14 @@ def publish_wave_report(context: StudyRunContext) -> dict:
             run_process,
             CommitRequest(repository=checkout, files=(report,), message=f"docs(waves): add the report of {wave}"),
         )
-        push_branch(run_process, BranchPush(repository=checkout, branch=branch, environment=UNBOUND_ENVIRONMENT))
+        push_branch(run_process, BranchPush(repository=checkout, branch=branch, environment=environment))
         if pull_request is not None:
             context.equipment.resolve_forge(project.forge).rewrite_pull_request_body(
                 {
                     "repository": str(checkout),
                     "number": pull_request,
                     "body": markdown,
-                    "environment": UNBOUND_ENVIRONMENT,
+                    "environment": environment,
                 },
                 context.runtime,
             )

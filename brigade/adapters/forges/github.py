@@ -11,7 +11,6 @@ AUTHENTICATION_VARIABLE = "GH_TOKEN"
 PUBLICATION_TIMEOUT_S = 60.0
 BODY_FROM_STDIN = "-"
 URL_SEPARATOR = "/"
-UNBOUND_ENVIRONMENT = {}
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
 PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
@@ -131,7 +130,7 @@ def open_pull_request(request: dict, runtime: Runtime) -> dict:
 
 
 def open_issue(request: dict, runtime: Runtime) -> dict:
-    url = _publish(request, runtime, ("gh", "issue", "create"), UNBOUND_ENVIRONMENT)
+    url = _publish(request, runtime, ("gh", "issue", "create"), request["environment"])
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "url": url}
 
 

@@ -1,6 +1,7 @@
 from brigade.errors import BrigadeError
 from brigade.studies.locate_study_project import locate_study_project
 from brigade.studies.present_answer import AnswerPublication
+from brigade.studies.read_publication_environment import read_publication_environment
 from brigade.studies.study_run_context import StudyRunContext
 
 
@@ -10,6 +11,12 @@ def open_answer_issue(context: StudyRunContext, publication: AnswerPublication) 
         raise BrigadeError(f"the output {context.study.output} needs a project with a forge")
     forge = context.equipment.resolve_forge(project.forge)
     issue = forge.open_issue(
-        {"repository": str(project.path), "title": publication.title, "body": publication.markdown}, context.runtime
+        {
+            "repository": str(project.path),
+            "title": publication.title,
+            "body": publication.markdown,
+            "environment": read_publication_environment(context, project),
+        },
+        context.runtime,
     )
     return {"issue": issue["url"]}
