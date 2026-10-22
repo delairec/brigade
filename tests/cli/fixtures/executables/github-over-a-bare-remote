@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+import json
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+URL_PREFIX = "https://github.com/sandbox/shop/pull/"
+
+
+def run_git(*arguments: str, cwd: Path | None = None) -> str:
+    return subprocess.run(["git", *arguments], cwd=cwd, capture_output=True, text=True, check=True).stdout
+
+
+def read_option(arguments: list[str], name: str) -> str | None:
+    return arguments[arguments.index(name) + 1] if name in arguments else None
+
+
+class Forge:
+    def __init__(self, store: Path):
+        self.store = store
+        self.remote = store / "remote.git"
+        self.pulls = store / "pulls"
+        self.pulls.mkdir(exist_ok=True)
+
+    def read_pulls(self) -> list[dict]:
+        return [json.loads(path.read_text()) for path in sorted(self.pulls.glob("*.json"), key=lambda p: int(p.stem))]
+
+    def write_pull(self, pull: dict) -> None:
+        (self.pulls / f"{pull['number']}.json").write_text(json.dumps(pull))
+
+    def read_pull(self, number: str) -> dict:
+        return json.loads((self.pulls / f"{number}.json").read_text())
+
+    def read_head(self, pull: dict) -> str:
+        if pull["state"] == "MERGED":
+            return pull["mergedHead"]
+        return run_git("-C", str(self.remote), "rev-parse", pull["headRefName"]).strip()
+
+    def describe(self, pull: dict) -> dict:
+        return {
+            **pull,
+            "headRefOid": self.read_head(pull),
+            "statusCheckRollup": [],
+            "author": {"login": pull["author"]},
+            "isDraft": False,
+            "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
+        }
+
+    def create(self, arguments: list[str]) -> str:
+        number = len(self.read_pulls()) + 1
+        pull = {
+            "number": number,
+            "title": read_option(arguments, "--title"),
+            "body": sys.stdin.read(),
+            "headRefName": read_option(arguments, "--head"),
+            "baseRefName": read_option(arguments, "--base"),
+            "state": "OPEN",
+            "reviewDecision": None,
+            "author": "octo-build",
+        }
+        self.write_pull(pull)
+        return f"{URL_PREFIX}{number}"
+
+    def list_by_head(self, arguments: list[str]) -> str:
+        head = read_option(arguments, "--head")
+        found = [self.describe(pull) for pull in reversed(self.read_pulls()) if pull["headRefName"] == head]
+        return json.dumps(found[:1])
+
+    def merge(self, number: str, method: str) -> str:
+        pull = self.read_pull(number)
+        head = self.read_head(pull)
+        with tempfile.TemporaryDirectory() as clone:
+            run_git("clone", "--quiet", "--branch", pull["baseRefName"], str(self.remote), clone)
+            run_git("fetch", "--quiet", "origin", pull["headRefName"], cwd=Path(clone))
+            if method == "--squash":
+                run_git("merge", "--quiet", "--squash", "FETCH_HEAD", cwd=Path(clone))
+                run_git("commit", "--quiet", "-m", f"{pull['title']} (#{number})", cwd=Path(clone))
+            elif method == "--rebase":
+                run_git("rebase", "--quiet", "HEAD", "FETCH_HEAD", cwd=Path(clone))
+                run_git("checkout", "--quiet", "-B", pull["baseRefName"], cwd=Path(clone))
+            else:
+                run_git("merge", "--quiet", "--no-ff", "-m", f"Merge #{number}", "FETCH_HEAD", cwd=Path(clone))
+            run_git("push", "--quiet", "origin", pull["baseRefName"], cwd=Path(clone))
+        self.write_pull({**pull, "state": "MERGED", "mergedHead": head})
+        return ""
+
+    def answer_graphql(self, arguments: list[str]) -> str:
+        if any(argument.startswith("number=") for argument in arguments):
+            threads = {"reviewThreads": {"nodes": []}}
+            return json.dumps({"data": {"repository": {"pullRequest": threads}}})
+        nodes = [self.describe(pull) for pull in reversed(self.read_pulls())]
+        return json.dumps([{"data": {"repository": {"pullRequests": {"nodes": nodes}}}}])
+
+    def answer_api(self, arguments: list[str]) -> str:
+        path = next(argument for argument in arguments if argument == "graphql" or "/" in argument)
+        if path == "graphql":
+            return self.answer_graphql(arguments)
+        if path.startswith("repos/{owner}/{repo}/compare/"):
+            base, _, head = path.partition("/compare/")[2].partition("...")
+            return run_git("-C", str(self.remote), "rev-list", "--count", f"{head}..{base}")
+        if path.startswith("repos/{owner}/{repo}/milestones"):
+            return "" if "--method" not in arguments else "{}"
+        if path.startswith("repos/{owner}/{repo}/pulls/"):
+            sys.stdin.read()
+            return "{}"
+        raise SystemExit(f"github-over-a-bare-remote: no answer to api {path}")
+
+    def answer(self, arguments: list[str]) -> str:
+        command = " ".join(arguments[:2])
+        if command == "auth token":
+            return f"token-of-{read_option(arguments, '--user')}"
+        if command == "auth status":
+            return json.dumps({"hosts": {"github.com": [{"login": "octo-cli", "active": True}]}})
+        if command == "pr create":
+            return self.create(arguments)
+        if command == "pr list":
+            return self.list_by_head(arguments)
+        if command == "pr view":
+            return json.dumps(self.describe(self.read_pull(arguments[2])))
+        if command == "pr merge":
+            return self.merge(arguments[2], arguments[3])
+        if command == "pr review":
+            self.write_pull({**self.read_pull(arguments[2]), "reviewDecision": "APPROVED"})
+            return ""
+        if command == "pr edit":
+            self.write_pull({**self.read_pull(arguments[2]), "body": sys.stdin.read()})
+            return ""
+        if arguments[0] == "api":
+            return self.answer_api(arguments[1:])
+        raise SystemExit(f"github-over-a-bare-remote: no answer to {' '.join(arguments)}")
+
+
+def main() -> None:
+    forge = Forge(Path(sys.argv[1]))
+    with (forge.store / "calls").open("a") as calls:
+        calls.write(" ".join(sys.argv[2:]) + "\n")
+    print(forge.answer(sys.argv[2:]))
+
+
+main()
