@@ -15,7 +15,7 @@ from unittest import mock
 from unittest.mock import ANY
 
 from brigade.commands.tick import COMMAND
-from brigade.errors import StandingDown, UsageError
+from brigade.errors import BrigadeError, StandingDown, UsageError
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
@@ -789,6 +789,15 @@ TASK_PASSED_AT_THE_HEAD = {
 }
 
 
+LEDGER_OF_A_VERIFIED_TASK = [
+    WAVE_OF_TWO_TASKS_STARTED,
+    TASK_PR_OPENED,
+    TASK_PREFLIGHTED_AT_THE_HEAD,
+    TASK_PASSED_AT_THE_HEAD,
+    _record_task_state("verified"),
+]
+
+
 class MergingForgeDouble:
     def __init__(self, found_by_branch: dict):
         self.found_by_branch = found_by_branch
@@ -805,6 +814,11 @@ class MergingForgeDouble:
         return {"schema_version": 1, "login": "tidepool-cli"}
 
 
+class MergingForgeWithAnUnreadableAccountDouble(MergingForgeDouble):
+    def describe_account(self, request: dict, runtime) -> dict:
+        raise BrigadeError("gh api user failed")
+
+
 class TickMergingAVerifiedTaskTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -815,25 +829,19 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
         self.spawn = SpawnRecorderDouble()
         self.forge = MergingForgeDouble({"task/M4/T7": GREEN_PULL_REQUEST})
-        write_ledger(
-            self.root,
-            [
-                WAVE_OF_TWO_TASKS_STARTED,
-                TASK_PR_OPENED,
-                TASK_PREFLIGHTED_AT_THE_HEAD,
-                TASK_PASSED_AT_THE_HEAD,
-                _record_task_state("verified"),
-            ],
-        )
+        write_ledger(self.root, LEDGER_OF_A_VERIFIED_TASK)
+        self.runtime = self._create_runtime(self.forge)
+
+    def _create_runtime(self, forge: MergingForgeDouble) -> Runtime:
         corpus = {
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
-        self.runtime = create_runtime(
+        return create_runtime(
             self.root,
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, self.forge),
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
         )
 
     def _read_events(self) -> list[dict]:
@@ -849,6 +857,21 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             self.forge.merges,
             [{"repository": str(self.repository), "number": 42, "method": "rebase", "environment": {}}],
         )
+
+    def test_should_merge_nothing_when_the_login_the_merge_would_run_as_cannot_be_read(self):
+        # Arrange
+        forge = MergingForgeWithAnUnreadableAccountDouble({"task/M4/T7": GREEN_PULL_REQUEST})
+        runtime = self._create_runtime(forge)
+
+        # Act
+        self._run_tick_to_its_failure(runtime)
+
+        # Assert
+        self.assertEqual(forge.merges, [])
+
+    def _run_tick_to_its_failure(self, runtime: Runtime) -> None:
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
     def test_should_record_the_merge_with_the_login_it_ran_as_and_the_task_merged(self):
         # Arrange

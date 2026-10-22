@@ -218,6 +218,7 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     project = find_project(read_projects(runtime), action.project)
+    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
     forge.merge_pull_request(
         {
             "repository": read_project_field(project, PATH_FIELD),
@@ -236,7 +237,7 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
             task=action.task,
             pr=action.pr,
             rounds=_count_review_rounds(runtime, action),
-            login=ask_forge_account(forge, FORGE_NAME, environment, runtime).login,
+            login=login,
         ),
     )
     _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
