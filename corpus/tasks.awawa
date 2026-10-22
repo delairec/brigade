@@ -11520,25 +11520,45 @@ TASK B192
 		+ "tests ne deviennent jamais instables sur main. »"
 
 TASK B196
-	TITLE "A task whose rebase git refuses on no conflict, its worktree holding uncommitted"
-		+ "changes, is no longer retried at every tick without end"
-	STATUS draft
+	TITLE "A task whose worktree holds uncommitted changes when its pull request falls behind is"
+		+ "repaired before it is rebased"
+	STATUS todo
+	TYPE fix
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
 	ROLE ada
-	SPEC "a git rebase that stops on no conflict in the worktree of a task, refused as git refuses"
-		+ "a worktree holding uncommitted changes, leads the task to an end the refinement chooses,"
-		+ "parked with the refusal of git or the worktree cleaned first, rather than a failed"
-		+ "action at every tick"
-	AFTER @TASK.B166
-	RATIONALE "since PR 182 brigade/git/rebase_onto.py tells a conflict from a refusal by"
-		+ "REBASE_HEAD and raises the refusal; under @TASK.B166 it becomes a tick.action_failed at"
-		+ "every tick, the task behind and never parked, as the planner plans the same RebaseTask"
-		+ "again from the same facts"
+	SPEC "a task whose pull request is behind its wave branch and whose worktree holds uncommitted"
+		+ "changes to tracked files gets no RebaseTask: the tick launches in that worktree the"
+		+ "repair run of TASK B18, check repair when a check fails and remediation otherwise,"
+		+ "whatever its state among pr_open, verifying, verified, changes_requested and fixing,"
+		+ "recorded as task.state fixing and counted as a repair round; where today"
+		+ "brigade/tick/plan.py:184-187 plans the rebase, which git refuses at every tick"
+	SPEC "past POLICY.VERIFY_ROUNDS repair rounds such a task is parked with the reason of the"
+		+ "rounds spent instead of a repair run; its worktree is never reset nor stashed"
+	SPEC "once its worktree holds no uncommitted change, a task whose pull request is behind is"
+		+ "rebased by the next tick as TASK B143 sets"
+	SPEC "tests/unit prove a repair run and no rebase planned for a worktree holding uncommitted"
+		+ "changes behind its wave branch, in fixing and in pr_open, the parking past"
+		+ "POLICY.VERIFY_ROUNDS, and a clean worktree behind still rebased; tests/cli gains no"
+		+ "case, as DESC 4 of the decision ThePortableContractIsTheCommandLineAndNeutralFiles sets"
+	AFTER @TASK.B143
+	RATIONALE "since PR 182 the tick rebases a task branch behind its wave by git, and git refuses"
+		+ "a worktree holding uncommitted changes; the rebase is decided before every other path of"
+		+ "the task (brigade/tick/plan.py:184-187), so the repair that would finish the interrupted"
+		+ "work is never planned and the refused rebase comes back at every tick"
 		REF @TASK.B143
-		REF @TASK.B166
+	RATIONALE "the resumption already exists: a run of fixing that pushed nothing has its repair"
+		+ "run launched again in the same worktree, a round counted by task.state fixing and parked"
+		+ "past POLICY.VERIFY_ROUNDS; the task lets it pass before the rebase and adds no mechanism"
+		REF @TASK.B18
+	RATIONALE "the worktree is left to the repair run, never cleaned: the uncommitted changes are"
+		+ "the work of an interrupted run"
 	SOURCE "review 5616826315 of PR 182, thread 4350364074: a build or remediate run that ends"
 		+ "without committing leaves such a worktree, and a task in fixing is in REBASED_STATES"
+	SOURCE "the user's rulings of 2026-10-22 in the refinement of B196: « je vois pas où est le pb"
+		+ "de reprendre un worktree pour le terminer »; « Réparer avant rebaser (Recommended) »;"
+		+ "outside fixing, « Je dirais pareil que fixing »; « AFTER B143 seul (Recommended) »; «"
+		+ "Oui, todo »"
 
 TASK B197
 	TITLE "brigade init upgrades an installed operational schema"
