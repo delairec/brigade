@@ -181,9 +181,9 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             record = _decide_task_state(wave, task)
             if record is not None:
                 actions.append(record)
-            rebase = _decide_rebase(wave, task, projects[wave.project], held, live_tasks)
-            if rebase is not None:
-                actions.append(rebase)
+            catch_up = _decide_catch_up(wave, task, projects[wave.project], held, live_tasks)
+            if catch_up is not None:
+                actions.append(catch_up)
                 continue
             if _is_ready_for_preflight(wave, task, projects[wave.project]):
                 actions.append(
@@ -213,9 +213,9 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
     return tuple(actions)
 
 
-def _decide_rebase(
+def _decide_catch_up(
     wave: WaveFacts, task: TaskFacts, project: ProjectFacts, held: set, live_tasks: set
-) -> RebaseTask | None:
+) -> RebaseTask | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
     if (
         not task.pull_request.behind
         or task.pull_request.state != OPEN_PULL_REQUEST
@@ -225,6 +225,11 @@ def _decide_rebase(
         or (wave.wave, task.name) in live_tasks
     ):
         return None
+    if task.holds_uncommitted_changes:
+        parking_reason = _describe_spent_rounds(task, project)
+        if parking_reason is not None:
+            return ParkTask(wave=wave.wave, task=task.name, reason=parking_reason, blockers=())
+        return _launch_repair(wave, task)
     return RebaseTask(
         project=wave.project,
         wave=wave.wave,

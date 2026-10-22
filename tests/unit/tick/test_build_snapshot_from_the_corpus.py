@@ -239,6 +239,33 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_tell_that_the_worktree_of_a_task_holds_uncommitted_changes(self):
+        # Arrange
+        self.remote_answers = {
+            ("git", "status", "--porcelain", "--untracked-files=no"): ProcessAnswer(stdout=" M brigade/cli.py\n")
+        }
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks,
+            (
+                TaskFacts(
+                    name="B1",
+                    after=("B0",),
+                    pull_request=PULL_REQUEST,
+                    worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                    rate_limit=RateLimit(reset=None),
+                    holds_uncommitted_changes=True,
+                ),
+                TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
+                TaskFacts(name="B3"),
+                TaskFacts(name="B4", pull_request=PULL_REQUEST),
+            ),
+        )
+
     def test_should_describe_the_wave_from_its_branch_and_the_ledger(self):
         # Act
         snapshot, _ = self.build()

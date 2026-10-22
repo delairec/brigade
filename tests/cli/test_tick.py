@@ -728,6 +728,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "reviewed_head": None,
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
+                                    "holds_uncommitted_changes": False,
                                 },
                                 {
                                     "task": "S4",
@@ -743,6 +744,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "reviewed_head": None,
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
+                                    "holds_uncommitted_changes": False,
                                 },
                                 {
                                     "task": "S5",
@@ -758,6 +760,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "reviewed_head": None,
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
+                                    "holds_uncommitted_changes": False,
                                 },
                                 {
                                     "task": "S6",
@@ -773,6 +776,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "reviewed_head": None,
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
+                                    "holds_uncommitted_changes": False,
                                 },
                             ],
                             "states": {"S3": "queued"},
@@ -1498,6 +1502,7 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                 "reviewed_head": None,
                 "preflight_failures": [],
                 "repair_rounds": 0,
+                "holds_uncommitted_changes": False,
             },
         )
 

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.errors import CommandFailed, ToolFailure
+from brigade.git.has_uncommitted_changes import has_uncommitted_changes
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -35,6 +36,7 @@ from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.reset_hour import ResetHour
+from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
@@ -121,6 +123,7 @@ class TaskFacts:
     reviewed_head: str | None = None
     preflight_failures: tuple[PreflightFailure, ...] = ()
     repair_rounds: int = 0
+    holds_uncommitted_changes: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -139,6 +142,7 @@ class TaskFacts:
                 {"name": failure.name, "findings": list(failure.findings)} for failure in self.preflight_failures
             ],
             "repair_rounds": self.repair_rounds,
+            "holds_uncommitted_changes": self.holds_uncommitted_changes,
         }
 
 
@@ -279,6 +283,7 @@ class FollowedWave:
     preflight_failures: dict
     repair_rounds: dict
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
+    run_process: Callable[[ProcessRequest], ProcessRecord]
 
 
 def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
@@ -297,6 +302,7 @@ def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
         reviewed_head=followed.reviewed_heads.get(task.name),
         preflight_failures=followed.preflight_failures.get(task.name, ()),
         repair_rounds=followed.repair_rounds.get(task.name, 0),
+        holds_uncommitted_changes=standing and has_uncommitted_changes(followed.run_process, worktree),
     )
 
 
@@ -443,6 +449,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         },
         repair_rounds=_count_repair_rounds(reading.events, wave),
         read_pull_request=reading.read_pull_request,
+        run_process=runtime.run_process,
     )
     return WaveFacts(
         project=started.project,
