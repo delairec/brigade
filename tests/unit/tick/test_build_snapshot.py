@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.build_snapshot import (
+    PreflightFailure,
     ProjectFacts,
     RateLimit,
     RecordedVerdict,
@@ -121,6 +122,8 @@ class SnapshotTest(unittest.TestCase):
                             "preflighted_head": None,
                             "verdict": None,
                             "reviewed_head": None,
+                            "preflight_failures": [],
+                            "repair_rounds": 0,
                         }
                     ],
                     "states": {},
@@ -155,6 +158,7 @@ class SnapshotTest(unittest.TestCase):
                     "merge": "rebase",
                     "review": "verdict",
                     "auto_merge": "integration",
+                    "verify_rounds": 2,
                 }
             ],
         )
@@ -171,4 +175,21 @@ class TaskFactsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             (document["verdict"], document["reviewed_head"]), ({"head": "4f2a9c1", "verdict": "pass"}, "4f2a9c1")
+        )
+
+    def test_should_carry_the_failures_of_its_last_preflight_and_its_repair_rounds_in_its_document(self):
+        # Arrange
+        task = TaskFacts(
+            name="B18",
+            preflight_failures=(PreflightFailure(name="checks", findings=("tests: failure",)),),
+            repair_rounds=1,
+        )
+
+        # Act
+        document = task.to_document()
+
+        # Assert
+        self.assertEqual(
+            (document["preflight_failures"], document["repair_rounds"]),
+            ([{"name": "checks", "findings": ["tests: failure"]}], 1),
         )
