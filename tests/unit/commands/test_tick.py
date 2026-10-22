@@ -796,6 +796,8 @@ LEDGER_OF_A_VERIFIED_TASK = [
     TASK_PASSED_AT_THE_HEAD,
     _record_task_state("verified"),
 ]
+OTHER_TASK_PASSED = {**TASK_PASSED_AT_THE_HEAD, "task": "T8", "pr": 43}
+SAME_TASK_PASSED_IN_ANOTHER_WAVE = {**TASK_PASSED_AT_THE_HEAD, "wave": "tidepool_w15", "pr": 41}
 
 
 class MergingForgeDouble:
@@ -905,6 +907,17 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_count_as_review_rounds_the_verdicts_of_the_merged_task_in_its_wave_alone(self):
+        # Arrange
+        write_ledger(self.root, [*LEDGER_OF_A_VERIFIED_TASK, OTHER_TASK_PASSED, SAME_TASK_PASSED_IN_ANOTHER_WAVE])
+        merged_event = 7
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(self._read_events()[merged_event]["rounds"], 1)
 
     def test_should_start_the_dependent_of_the_merged_task_in_the_same_tick(self):
         # Act

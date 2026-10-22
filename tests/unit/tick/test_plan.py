@@ -474,17 +474,20 @@ class PlanMergeTest(unittest.TestCase):
         self.assertEqual(actions, (PARK_S3_ON_ANOTHER_BASE,))
 
     def test_should_record_the_merge_of_a_verified_task_whose_pull_request_was_merged_by_hand(self):
-        # Arrange
-        task = TaskFacts(name="S3", pull_request=MERGED, verdict=PASS_AT_THE_HEAD)
-        snapshot = Snapshot(
-            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
-        )
+        for case, project in [
+            ("under AUTO_MERGE none", SHOP_WITHOUT_AUTO_MERGE),
+            ("under AUTO_MERGE integration", SHOP),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", pull_request=MERGED, verdict=PASS_AT_THE_HEAD)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
 
-        # Act
-        actions = plan(snapshot)
+                # Act
+                actions = plan(snapshot)
 
-        # Assert
-        self.assertEqual(actions, (RECORD_MERGED,))
+                # Assert
+                self.assertEqual(actions, (RECORD_MERGED,))
 
 
 class PlanSlotsTest(unittest.TestCase):
