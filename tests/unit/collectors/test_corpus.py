@@ -5,6 +5,7 @@ from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.corpus import collect
+from brigade.errors import EntityNotDefined
 from brigade.system.read_configuration import Configuration
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
@@ -67,3 +68,53 @@ class CorpusCollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.processes.requests[-1].cwd, str(self.root / "cache" / "refs" / "oak" / "bead"))
+
+    def test_should_list_each_entity_it_is_given_whole(self):
+        # Arrange
+        self.create_cached_tree("HEAD", "c0ffee")
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B17", "--json", "."),
+            {"type": "TASK", "name": "B17", "fields": [{"name": "STATUS", "atoms": ["implemented"]}]},
+        )
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B20", "--json", "."),
+            {"type": "TASK", "name": "B20", "fields": [{"name": "STATUS", "atoms": ["todo"]}]},
+        )
+        environment = {
+            "BRIGADE_PROJECT_PATH": "/srv/oak",
+            "BRIGADE_SINCE": "2026-10-01",
+            "BRIGADE_PARAMS": json.dumps({"entities": "@TASK.B17,@TASK.B20"}),
+        }
+
+        # Act
+        document = collect(environment, self.runtime, EQUIPMENT)
+
+        # Assert
+        self.assertEqual(
+            document["items"],
+            [
+                {"type": "TASK", "name": "B17", "fields": [{"name": "STATUS", "atoms": ["implemented"]}]},
+                {"type": "TASK", "name": "B20", "fields": [{"name": "STATUS", "atoms": ["todo"]}]},
+            ],
+        )
+
+    def test_should_refuse_an_entity_the_corpus_does_not_define(self):
+        # Arrange
+        self.create_cached_tree("HEAD", "c0ffee")
+        self.processes.answer(
+            ("awawa", "show", "@TASK.B99", "--json", "."),
+            exit_code=1,
+            stderr="error: @TASK.B99 is not defined in the workspace\n",
+        )
+        environment = {
+            "BRIGADE_PROJECT_PATH": "/srv/oak",
+            "BRIGADE_SINCE": "2026-10-01",
+            "BRIGADE_PARAMS": json.dumps({"entities": "@TASK.B99"}),
+        }
+
+        # Act
+        with self.assertRaises(EntityNotDefined) as raised:
+            collect(environment, self.runtime, EQUIPMENT)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "@TASK.B99 is not defined in the corpus of oak at HEAD")
