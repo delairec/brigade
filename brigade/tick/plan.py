@@ -3,6 +3,7 @@ from datetime import datetime
 from brigade.errors import BrigadeError
 from brigade.ledger.format_instant import format_instant
 from brigade.studies.read_schedule import read_schedule
+from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
     CloseWave,
@@ -10,6 +11,7 @@ from brigade.tick.actions import (
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
+    MergePullRequest,
     ParkTask,
     PauseWave,
     RecordTaskState,
@@ -46,6 +48,12 @@ QUOTA_REASON = "quota"
 FORGE_ACCOUNT_REASON = "forge_account"
 AUTOMATIC_WAVE_START = "auto"
 BLOCKED_REASON = "blocked"
+APPROVAL_REVIEW = "approval"
+APPROVED_REVIEW = "approved"
+NO_AUTO_MERGE = "none"
+PASSING_VERDICT = "pass"
+SUCCESSFUL_CHECK = "success"
+OTHER_BASE_REASON = "pull request base is not the wave branch"
 
 
 def plan(snapshot: Snapshot) -> tuple:
@@ -174,6 +182,9 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             verification = _decide_verification(wave, task, held, live_tasks)
             if verification is not None:
                 actions.append(verification)
+            merge = _decide_merge(wave, task, projects[wave.project])
+            if merge is not None:
+                actions.append(merge)
             if (
                 task.pull_request.state in SETTLED_PULL_REQUESTS
                 and task.worktree is not None
@@ -207,6 +218,38 @@ def _decide_verification(
             project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree
         )
     return None
+
+
+def _are_checks_passed(pull_request: PullRequestFacts, project: ProjectFacts) -> bool:
+    return (bool(pull_request.checks) or not project.awaits_check_runs) and all(
+        check.verdict == SUCCESSFUL_CHECK for check in pull_request.checks
+    )
+
+
+def _is_verdict_accepted(task: TaskFacts, project: ProjectFacts) -> bool:
+    if project.review == APPROVAL_REVIEW:
+        return task.pull_request.review == APPROVED_REVIEW
+    return (
+        task.verdict is not None
+        and task.verdict.verdict == PASSING_VERDICT
+        and task.verdict.head == task.pull_request.head
+    )
+
+
+def _decide_merge(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> MergePullRequest | ParkTask | None:
+    if (
+        wave.states.get(task.name) != VERIFIED_STATE
+        or task.pull_request.state != OPEN_PULL_REQUEST
+        or project.auto_merge == NO_AUTO_MERGE
+        or not _are_checks_passed(task.pull_request, project)
+        or not _is_verdict_accepted(task, project)
+    ):
+        return None
+    if task.pull_request.base != wave.branch:
+        return ParkTask(wave=wave.wave, task=task.name, reason=OTHER_BASE_REASON, blockers=())
+    return MergePullRequest(
+        project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, method=project.merge
+    )
 
 
 def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> bool:

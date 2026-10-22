@@ -31,7 +31,7 @@ SCHEMA PROJECT
 	FIELD SLOTS uint
 		DEFAULT 4
 	FIELD MERGE squash|rebase|merge
-		DEFAULT squash
+		DEFAULT rebase
 	FIELD GRAPH string
 		DESC "the command that regenerates the dependency graph document"
 	FIELD CLIENT string

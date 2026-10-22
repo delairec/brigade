@@ -145,7 +145,18 @@ class SnapshotTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document["projects"],
-            [{"project": "brigade", "slots": 4, "live_runs": [], "wave_start": "ask", "candidates": ["B188", "B189"]}],
+            [
+                {
+                    "project": "brigade",
+                    "slots": 4,
+                    "live_runs": [],
+                    "wave_start": "ask",
+                    "candidates": ["B188", "B189"],
+                    "merge": "rebase",
+                    "review": "verdict",
+                    "auto_merge": "integration",
+                }
+            ],
         )
 
 

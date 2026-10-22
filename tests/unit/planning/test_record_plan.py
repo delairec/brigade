@@ -40,6 +40,7 @@ def create_found_pull_request(review: str | None, state: str = "open") -> dict:
             "review": review,
             "behind": False,
             "head": "c0ffee",
+            "base": "main",
         },
     }
 
@@ -259,7 +260,12 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
             self.forge.calls[-1],
             (
                 "merge_pull_request",
-                {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-cli"}},
+                {
+                    "repository": "/srv/oak",
+                    "number": 42,
+                    "method": "squash",
+                    "environment": {"GH_TOKEN": "token-of-cli"},
+                },
             ),
         )
 
@@ -292,7 +298,12 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
                 ),
                 (
                     "merge_pull_request",
-                    {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-cli"}},
+                    {
+                        "repository": "/srv/oak",
+                        "number": 42,
+                        "method": "squash",
+                        "environment": {"GH_TOKEN": "token-of-cli"},
+                    },
                 ),
             ],
         )
@@ -399,7 +410,12 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
             self.forge.calls[-1],
             (
                 "merge_pull_request",
-                {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-cli"}},
+                {
+                    "repository": "/srv/oak",
+                    "number": 42,
+                    "method": "squash",
+                    "environment": {"GH_TOKEN": "token-of-cli"},
+                },
             ),
         )
 

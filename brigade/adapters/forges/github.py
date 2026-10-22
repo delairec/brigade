@@ -161,7 +161,7 @@ def approve_pull_request(request: dict, runtime: Runtime) -> dict:
 
 
 def merge_pull_request(request: dict, runtime: Runtime) -> dict:
-    _ask_gh(request, runtime, ("pr", "merge", str(request["number"]), "--squash"))
+    _ask_gh(request, runtime, ("pr", "merge", str(request["number"]), f"--{request['method']}"))
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
 
 
@@ -281,6 +281,7 @@ def find_pull_request(request: dict, runtime: Runtime) -> dict:
             "review": _describe_review(pull_request["reviewDecision"]),
             "behind": int(behind_by) > 0,
             "head": pull_request["headRefOid"],
+            "base": pull_request["baseRefName"],
         },
     }
 

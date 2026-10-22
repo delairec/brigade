@@ -49,6 +49,15 @@ class LaunchVerification:
 
 
 @dataclass(frozen=True)
+class MergePullRequest:
+    project: str
+    wave: str
+    task: str
+    pr: int
+    method: str
+
+
+@dataclass(frozen=True)
 class RemoveTaskWorktree:
     project: str
     task: str

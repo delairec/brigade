@@ -758,7 +758,16 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                         }
                     ],
                     "projects": [
-                        {"project": "shop", "slots": 4, "live_runs": [], "wave_start": "auto", "candidates": []}
+                        {
+                            "project": "shop",
+                            "slots": 4,
+                            "live_runs": [],
+                            "wave_start": "auto",
+                            "candidates": [],
+                            "merge": "rebase",
+                            "review": "verdict",
+                            "auto_merge": "integration",
+                        }
                     ],
                     "studies": [],
                     "live_study_runs": [],
@@ -857,7 +866,18 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LiveBuildRunTickTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout)["snapshot"]["projects"],
-            [{"project": "shop", "slots": 4, "live_runs": [], "wave_start": "auto", "candidates": []}],
+            [
+                {
+                    "project": "shop",
+                    "slots": 4,
+                    "live_runs": [],
+                    "wave_start": "auto",
+                    "candidates": [],
+                    "merge": "rebase",
+                    "review": "verdict",
+                    "auto_merge": "integration",
+                }
+            ],
         )
 
 
@@ -875,7 +895,18 @@ class BrigadeTickDryRunOfTheProjectsTest(WaveTickTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout)["snapshot"]["projects"],
-            [{"project": "shop", "slots": 1, "live_runs": [], "wave_start": "auto", "candidates": []}],
+            [
+                {
+                    "project": "shop",
+                    "slots": 1,
+                    "live_runs": [],
+                    "wave_start": "auto",
+                    "candidates": [],
+                    "merge": "rebase",
+                    "review": "verdict",
+                    "auto_merge": "integration",
+                }
+            ],
         )
 
 
@@ -1418,6 +1449,7 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                     "review": "review_required",
                     "behind": False,
                     "head": "0123abc",
+                    "base": "integration/M1-empty-cart",
                 },
                 "worktree": str(self.worktree),
                 "rate_limit": None,
@@ -1464,6 +1496,7 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                 "review": "review_required",
                 "behind": True,
                 "head": "0123abc",
+                "base": "integration/M1-empty-cart",
             },
         )
 

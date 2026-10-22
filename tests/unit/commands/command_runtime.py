@@ -112,7 +112,7 @@ def write_operational_corpus(root: Path) -> None:
 
 
 def write_ledger(root: Path, lines: list[dict]) -> None:
-    (root / "state" / "ledger").mkdir(parents=True)
+    (root / "state" / "ledger").mkdir(parents=True, exist_ok=True)
     (root / "state" / "ledger" / "2026-10.jsonl").write_text(
         "".join(f"{json.dumps(line)}\n" for line in lines), encoding="utf-8"
     )

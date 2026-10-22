@@ -15,7 +15,7 @@ from unittest import mock
 from unittest.mock import ANY
 
 from brigade.commands.tick import COMMAND
-from brigade.errors import StandingDown, UsageError
+from brigade.errors import BrigadeError, StandingDown, UsageError
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
@@ -393,6 +393,7 @@ OPEN_PULL_REQUEST = {
     "review": None,
     "behind": False,
     "head": "8885daa",
+    "base": "integration/M4",
 }
 MERGED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "state": "merged"}
 TASK_PREFLIGHTED_AT_THE_HEAD = {
@@ -767,6 +768,165 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 "wave": "tidepool_w16",
                 "pr": 42,
             },
+        )
+
+
+WAVE_OF_TWO_TASKS_STARTED = {**WAVE_STARTED, "tasks": ["T7", "T8"]}
+TASK_AFTER_T7 = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"), ("AFTER", "@TASK.T7"))
+GREEN_PULL_REQUEST = {**OPEN_PULL_REQUEST, "checks": [{"name": "ci", "verdict": "success"}]}
+TASK_PASSED_AT_THE_HEAD = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:45:00Z",
+    "event": "task.verdict",
+    "project": "tidepool",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "pr": 42,
+    "head": "8885daa",
+    "verdict": "pass",
+    "findings": [],
+    "login": None,
+}
+
+
+LEDGER_OF_A_VERIFIED_TASK = [
+    WAVE_OF_TWO_TASKS_STARTED,
+    TASK_PR_OPENED,
+    TASK_PREFLIGHTED_AT_THE_HEAD,
+    TASK_PASSED_AT_THE_HEAD,
+    _record_task_state("verified"),
+]
+OTHER_TASK_PASSED = {**TASK_PASSED_AT_THE_HEAD, "task": "T8", "pr": 43}
+SAME_TASK_PASSED_IN_ANOTHER_WAVE = {**TASK_PASSED_AT_THE_HEAD, "wave": "tidepool_w15", "pr": 41}
+
+
+class MergingForgeDouble:
+    def __init__(self, found_by_branch: dict):
+        self.found_by_branch = found_by_branch
+        self.merges = []
+
+    def find_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_request": self.found_by_branch.get(request["branch"])}
+
+    def merge_pull_request(self, request: dict, runtime) -> dict:
+        self.merges.append(request)
+        return {"schema_version": 1}
+
+    def describe_account(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "login": "tidepool-cli"}
+
+
+class MergingForgeWithAnUnreadableAccountDouble(MergingForgeDouble):
+    def describe_account(self, request: dict, runtime) -> dict:
+        raise BrigadeError("gh api user failed")
+
+
+class TickMergingAVerifiedTaskTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        self.forge = MergingForgeDouble({"task/M4/T7": GREEN_PULL_REQUEST})
+        write_ledger(self.root, LEDGER_OF_A_VERIFIED_TASK)
+        self.runtime = self._create_runtime(self.forge)
+
+    def _create_runtime(self, forge: MergingForgeDouble) -> Runtime:
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
+        }
+        return create_runtime(
+            self.root,
+            run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+        )
+
+    def _read_events(self) -> list[dict]:
+        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        return [json.loads(line) for line in lines]
+
+    def test_should_merge_the_pull_request_by_the_method_of_the_project(self):
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.forge.merges,
+            [{"repository": str(self.repository), "number": 42, "method": "rebase", "environment": {}}],
+        )
+
+    def test_should_merge_nothing_when_the_login_the_merge_would_run_as_cannot_be_read(self):
+        # Arrange
+        forge = MergingForgeWithAnUnreadableAccountDouble({"task/M4/T7": GREEN_PULL_REQUEST})
+        runtime = self._create_runtime(forge)
+
+        # Act
+        self._run_tick_to_its_failure(runtime)
+
+        # Assert
+        self.assertEqual(forge.merges, [])
+
+    def _run_tick_to_its_failure(self, runtime: Runtime) -> None:
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+    def test_should_record_the_merge_with_the_login_it_ran_as_and_the_task_merged(self):
+        # Arrange
+        first_event_of_the_tick = 5
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events()[first_event_of_the_tick : first_event_of_the_tick + 2],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "pr.merged",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "rounds": 1,
+                    "login": "tidepool-cli",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+            ],
+        )
+
+    def test_should_count_as_review_rounds_the_verdicts_of_the_merged_task_in_its_wave_alone(self):
+        # Arrange
+        write_ledger(self.root, [*LEDGER_OF_A_VERIFIED_TASK, OTHER_TASK_PASSED, SAME_TASK_PASSED_IN_ANOTHER_WAVE])
+        merged_event = 7
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(self._read_events()[merged_event]["rounds"], 1)
+
+    def test_should_start_the_dependent_of_the_merged_task_in_the_same_tick(self):
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            [argv[:3] for argv in self.spawn.argvs],
+            [("run", "build-task", "task=@TASK.T8")],
         )
 
 

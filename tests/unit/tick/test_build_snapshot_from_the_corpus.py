@@ -39,7 +39,9 @@ from tests.unit.registry_answers import create_registry_answers
 WAVE_SHA = "abc123"
 MAIN_SHA = "def456"
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
-PULL_REQUEST = PullRequestFacts(number=7, state="open", checks=(), review=None, behind=False, head="4f2a9c1")
+PULL_REQUEST = PullRequestFacts(
+    number=7, state="open", checks=(), review=None, behind=False, head="4f2a9c1", base="integration/w1"
+)
 
 
 def answer_entities(root: Path, entity_type: str, entities: dict[str, list[dict]], *conditions: str) -> dict:
@@ -125,12 +127,23 @@ class BuildSnapshotTestCase(unittest.TestCase):
                             "CHECK_RUNS": "none",
                             "MAIN": "main",
                             "FORGE": self.shop_forge,
+                            "MERGE": "squash",
                         },
                         "depot": {"PATH": str(self.root / "depot"), "STATUS": "paused"},
                         "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk"},
                     },
                 ),
-                **answer_entities(config_root, "POLICY", {}),
+                **answer_entities(
+                    config_root,
+                    "POLICY",
+                    {
+                        "shop_policy": [
+                            {"name": "PROJECT", "atoms": ["@PROJECT.shop"]},
+                            {"name": "REVIEW", "atoms": ["approval"]},
+                            {"name": "AUTO_MERGE", "atoms": ["none"]},
+                        ]
+                    },
+                ),
                 **answer_entities(
                     config_root,
                     "STUDY",
@@ -290,8 +303,16 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(
             snapshot.projects,
             (
-                ProjectFacts(name="depot", slots=4),
-                ProjectFacts(name="shop", slots=2, awaits_check_runs=False, candidates=("B5",)),
+                ProjectFacts(name="depot", slots=4, merge="rebase", review="verdict", auto_merge="integration"),
+                ProjectFacts(
+                    name="shop",
+                    slots=2,
+                    awaits_check_runs=False,
+                    candidates=("B5",),
+                    merge="squash",
+                    review="approval",
+                    auto_merge="none",
+                ),
             ),
         )
 
