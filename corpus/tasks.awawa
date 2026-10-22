@@ -1980,7 +1980,8 @@ TASK B19
 
 TASK B20
 	TITLE "Built-in study wave-report"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 183
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
@@ -1989,13 +1990,29 @@ TASK B20
 		+ "SCHEMA REPORT: WAVE, the name <project>_w<n> of the wave as TASK B187 sets it, and"
 		+ "PROJECT; the fields the CLI fills, TASK_ROW, STATISTIC, GRAPH, MANUAL_TEST,"
 		+ "INSTRUCTIONS_CHANGE and PARKED_QUESTION; the prose fields the report slot fills,"
-		+ "NARRATIVE, REASON, TESTER_STEP and SAMPLING; brigade init installs it as it upgrades the"
-		+ "installed schema"
+		+ "NARRATIVE, REASON, TESTER_STEP and SAMPLING; brigade init installs it in a new"
+		+ "operational corpus and upgrades no installed schema, an operational corpus of an older"
+		+ "schema being thrown away"
+		IMPL "brigade/corpus/data/schema.awawa.tpl::SCHEMA REPORT"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_install_a_schema_accepting_the_report_of_a_wave(self):"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_leave_the_file_as_it_is_and_report_it_differing(self):"
 	SPEC "the report of a wave is one REPORT entity of the operational corpus, written and read"
 		+ "through the document kind; the collectors ledger, pr-list, corpus and git-diff-stat fill"
 		+ "the CLI fields, the task table, the statistics, the dependency graph, the manual-test"
 		+ "table from SPEC lines, the instructions-corpus change list and the parked questions, one"
 		+ "field each"
+		IMPL "brigade/studies/describe_wave_report.py::def describe_wave_report("
+		IMPL "brigade/studies/render_wave_report.py::def render_wave_report("
+		IMPL "tests/unit/studies/test_describe_wave_report.py::def"
+			+ "test_should_collect_the_events_the_pull_requests_the_tasks_and_the_changes_of_the_wave(self):"
+		IMPL "tests/unit/studies/test_render_wave_report.py::def"
+			+ "test_should_fill_the_report_of_the_wave_with_what_the_collectors_gave(self):"
+		IMPL "tests/unit/collectors/test_ledger.py::def"
+			+ "test_should_keep_the_events_of_the_wave_it_names_whatever_their_project(self):"
+		IMPL "tests/unit/collectors/test_corpus.py::def"
+			+ "test_should_list_each_entity_it_is_given_whole(self):"
 	SPEC "the report slot completes the prose fields, the narrative, the reasons, the manual tests"
 		+ "in a tester's words and the sampling suggestions; study answer validates the answer by"
 		+ "awawa lint against the schema, refuses an answer that changed a field the CLI filled,"
@@ -2004,9 +2021,25 @@ TASK B20
 		+ "updates the integration pull request it reads from wave.pr_opened; the Markdown is"
 		+ "rendered from the entity for the person and for the dashboard, and brigade reads it back"
 		+ "nowhere"
+		IMPL "brigade/studies/choose_answer_form.py::REPORT_FIELDS_THE_CLI_FILLS = ("
+		IMPL "brigade/studies/publish_wave_report.py::def publish_wave_report("
+		IMPL "brigade/adapters/forges/github.py::def rewrite_pull_request_body("
+		IMPL "tests/unit/studies/test_build_study_context.py::def"
+			+ "test_should_package_the_report_of_the_wave_to_complete(self):"
+		IMPL "tests/unit/studies/test_validate_answer.py::def"
+			+ "test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):"
+		IMPL "tests/unit/studies/test_publish_wave_report.py::def"
+			+ "test_should_rewrite_the_body_of_the_integration_pull_request_with_the_report(self):"
+		IMPL "tests/unit/studies/test_write_answer.py::def"
+			+ "test_should_publish_the_report_of_a_wave_on_its_integration_branch_once_its_entity_is_written(self):"
 	SPEC "the tick runs it when every task of the wave is merged or parked, and writes the run in"
 		+ "the wave.reported it records, where today brigade/commands/tick.py records wave.reported"
 		+ "with no run"
+		IMPL "brigade/commands/tick.py::def _report_wave("
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_detach_the_wave_report_run_the_wave_reported_names(self):"
+		IMPL "tests/unit/commands/test_study_run.py::def"
+			+ "test_should_resume_the_run_of_a_wave_report_from_the_wave_its_run_records(self):"
 	AFTER @TASK.B17
 	AFTER @TASK.B48
 	AFTER @TASK.B106
@@ -2019,7 +2052,7 @@ TASK B20
 		REF @TASK.B106
 	RATIONALE "the entity is the answer entity of the study, as @TASK.B48 designs every study"
 		+ "answer: brigade reads the report once, the answer of the report slot, and lint validates"
-		+ "it; it lives in the operational corpus because brigade ships and upgrades that schema"
+		+ "it; it lives in the operational corpus because brigade ships that schema"
 		+ "(brigade/corpus/data/schema.awawa.tpl, @TASK.B11), while a project's corpus carries no"
 		+ "schema of brigade since @TASK.B81 was archived; the user kept the entity over an answer"
 		+ "as JSON carrying the prose alone, validated by a shape"
@@ -2034,6 +2067,13 @@ TASK B20
 	SOURCE "the user's ruling of 2026-10-13 on pr-list: the collector is delivered by @TASK.B146, a"
 		+ "task of M1 this task follows"
 		REF @TASK.B146
+	SOURCE "the user's ruling of 2026-10-22 on the review of pull request #183, which found SPEC 1"
+		+ "promising an upgrade of the installed schema that brigade init does not make: « A : on"
+		+ "jette (Recommended) », init leaving the installed schema as it is, as SPEC 1 of"
+		+ "@TASK.B48 says, the operational corpus of the machine reinstalled after the merge, and"
+		+ "the upgrade of an installed schema opened as @TASK.B197"
+		REF @TASK.B48
+		REF @TASK.B197
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
@@ -2819,8 +2859,8 @@ TASK B47
 	SPEC "the built-in ledger: items are the events of the ledger since BRIGADE_SINCE, narrowed to"
 		+ "the project of BRIGADE_PROJECT_PATH when it is registered; summary aggregates them by"
 		+ "event name and, for run.finished, by outcome"
-		IMPL "brigade/collectors/ledger.py::if entry.instant >= start and (project is None or"
-			+ "_read_project(entry.event) == project.name)"
+		IMPL "brigade/collectors/ledger.py::return lambda event: project is None or"
+			+ "_read_project(event) == project.name"
 		IMPL "tests/cli/test_collect.py::class BrigadeCollectLedgerTest(CollectTestCase):"
 	SPEC "no built-in launches a model: the test suite runs every built-in with no client on PATH"
 		+ "and proves that no process other than git and awawa was spawned through the process"
@@ -8203,7 +8243,7 @@ TASK B130
 	ROLE ada
 	SPEC "tests/awawa/recordings holds one recording per awawa call of the suite, each carrying the"
 		+ "operational schema installed by brigade init from the template of main"
-		IMPL "tests/awawa/recordings/status-14ae6e76f93d.json::e.g. remediate=builder"
+		IMPL "tests/awawa/recordings/status-15e2b6cd84a8.json::e.g. remediate=builder"
 	SPEC "python3 -m unittest passes with no awawa on PATH, every test running on the fake"
 		IMPL "tests/awawa/test_recordings.py::class"
 	RATIONALE "the fake awawa of @TASK.B95 replays a recording matched on the arguments, the"
@@ -11499,3 +11539,26 @@ TASK B196
 		REF @TASK.B166
 	SOURCE "review 5616826315 of PR 182, thread 4350364074: a build or remediate run that ends"
 		+ "without committing leaves such a worktree, and a task in fixing is in REBASED_STATES"
+
+TASK B197
+	TITLE "brigade init upgrades an installed operational schema"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "corpus"
+	ROLE ada
+	SPEC "brigade init brings an installed _schema.awawa that differs from the shipped one to the"
+		+ "shipped schema, the entities of the operational corpus kept and checked by awawa lint"
+		+ "against it, so that a schema brigade extends reaches a machine that installed an earlier"
+		+ "one without the operational corpus being thrown away"
+	RATIONALE "today brigade init installs the schema in a new operational corpus alone, as SPEC 1"
+		+ "of @TASK.B48 and SPEC 1 of @TASK.B20 say, and an operational corpus of an older schema"
+		+ "is thrown away, as DESC 4 of"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry rules for the build"
+		+ "phase; this task is refined once that ruling is revisited, and it then rewrites those"
+		+ "SPEC lines"
+		REF @TASK.B48
+		REF @TASK.B20
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	SOURCE "the user's ruling of 2026-10-22 on the review of pull request #183: « A : on jette"
+		+ "(Recommended) », B197 opened as draft for the future upgrade of an installed schema"

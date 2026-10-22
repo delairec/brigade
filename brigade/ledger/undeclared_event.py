@@ -8,3 +8,6 @@ class UndeclaredEvent:
     @classmethod
     def from_document(cls, document: dict) -> "UndeclaredEvent":
         return cls(name=document["event"])
+
+    def to_document(self) -> dict:
+        return {}

@@ -416,3 +416,16 @@ def reply_review_thread(request: dict, runtime: Runtime) -> dict:
         ),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+def rewrite_pull_request_body(request: dict, runtime: Runtime) -> dict:
+    runtime.run_process(
+        ProcessRequest(
+            argv=("gh", "pr", "edit", str(request["number"]), "--body-file", BODY_FROM_STDIN),
+            cwd=request["repository"],
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            stdin=request["body"],
+            environment=request["environment"],
+        )
+    )
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}

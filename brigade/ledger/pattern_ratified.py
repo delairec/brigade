@@ -10,3 +10,6 @@ class PatternRatified:
     @classmethod
     def from_document(cls, document: dict) -> "PatternRatified":
         return cls(project=document["project"])
+
+    def to_document(self) -> dict:
+        return {"project": self.project}

@@ -1,3 +1,5 @@
+import dataclasses
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -36,6 +38,12 @@ CHANGED_FIELDS = {
     ]
 }
 SUBMITTED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n\tVERDICT "two"\n'
+REPORT_STUDY = dataclasses.replace(STUDY, name="wave-report", project="oak", answer_type="REPORT", wave="oak_w2")
+REPORT_TARGET = "@REPORT.oak_w2"
+LEDGER_ITEMS = [
+    {"ts": "2026-10-04T08:00:00Z", "event": "wave.started", "wave": "oak_w2", "tasks": ["B17"]},
+    {"ts": "2026-10-04T10:30:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "merged"},
+]
 DIAGNOSTICS = "answer.awawa:4: L003 unknown field VERDIKT\n"
 
 
@@ -143,3 +151,65 @@ class ValidateAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(linted, [("SCHEMA FINDING\n", SUBMITTED)])
+
+    def write_document(self, collector: str, items: list) -> dict:
+        path = self.root / f"{collector}.json"
+        path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
+        return {"collector": collector, "summary": {}, "document": str(path)}
+
+    def script_report_answer(self, submitted_fields: dict, filled_fields: dict) -> None:
+        collected = [
+            self.write_document("ledger", LEDGER_ITEMS),
+            self.write_document("pr-list", []),
+            self.write_document("corpus", []),
+            self.write_document("git-diff-stat", []),
+        ]
+        (self.run_directory / "steps" / "collect.json").write_text(
+            json.dumps({"collected": collected}), encoding="utf-8"
+        )
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))}
+        )
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
+        self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.submitted)), submitted_fields)
+        self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.filled)), filled_fields)
+
+    def test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):
+        for field, refusal_message in [
+            ("WAVE", "the answer changed WAVE, a field brigade filled"),
+            ("PROJECT", "the answer changed PROJECT, a field brigade filled"),
+            ("TASK_ROW", "the answer changed TASK_ROW, a field brigade filled"),
+            ("STATISTIC", "the answer changed STATISTIC, a field brigade filled"),
+            ("GRAPH", "the answer changed GRAPH, a field brigade filled"),
+            ("MANUAL_TEST", "the answer changed MANUAL_TEST, a field brigade filled"),
+            ("INSTRUCTIONS_CHANGE", "the answer changed INSTRUCTIONS_CHANGE, a field brigade filled"),
+            ("PARKED_QUESTION", "the answer changed PARKED_QUESTION, a field brigade filled"),
+        ]:
+            with self.subTest(field=field):
+                # Arrange
+                self.script_report_answer(
+                    {"fields": [{"name": field, "atoms": ['"rewritten by the slot"']}]},
+                    {"fields": [{"name": field, "atoms": ['"filled by brigade"']}]},
+                )
+
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    validate_answer(self.runtime, REPORT_STUDY, self.run_directory, SUBMITTED)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), refusal_message)
+
+    def test_should_accept_a_report_whose_slot_completed_the_prose_brigade_left_to_it(self):
+        for field in ["NARRATIVE", "REASON", "TESTER_STEP", "SAMPLING"]:
+            with self.subTest(field=field):
+                # Arrange
+                self.script_report_answer(
+                    {"fields": [{"name": field, "atoms": ['"written by the slot"']}]},
+                    {"fields": [{"name": field, "atoms": ['"left to the slot"']}]},
+                )
+
+                # Act
+                accepted = validate_answer(self.runtime, REPORT_STUDY, self.run_directory, SUBMITTED)
+
+                # Assert
+                self.assertIsNone(accepted)

@@ -10,3 +10,6 @@ class ConstraintDelivered:
     @classmethod
     def from_document(cls, document: dict) -> "ConstraintDelivered":
         return cls(project=document["project"])
+
+    def to_document(self) -> dict:
+        return {"project": self.project}

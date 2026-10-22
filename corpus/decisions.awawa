@@ -3482,3 +3482,42 @@ DECISION ACleanRebaseSendsTheTaskBackToItsPreflight
 		+ "verification"
 	SOURCE "taken in the delivery of @TASK.B143, pull request #182"
 		REF @TASK.B143
+
+DECISION TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBranch
+	TITLE "wave-report is a study brigade builds from the wave.started of the wave, its REPORT"
+		+ "named after the wave, and its Markdown is committed on the integration branch and"
+		+ "becomes the body of the integration pull request"
+	STATUS active
+	DESC "the study has no STUDY entity: slot report, output entity:REPORT, collectors ledger"
+		+ "wave=<wave>, pr-list state=all, corpus ref=<branch> entities=<the tasks of the wave>,"
+		+ "git-diff-stat to=<branch>; study.json records the wave and every command given the run"
+		+ "rebuilds the study from that wave.started"
+	DESC "each field the CLI fills is one string brigade formats: TASK_ROW \"B17 merged #178\","
+		+ "STATISTIC \"<name> <value>\", GRAPH \"B20 after B17\", MANUAL_TEST \"B17: <spec line>\","
+		+ "INSTRUCTIONS_CHANGE \"<path> +<insertions> -<deletions>\" for each file under"
+		+ "PROJECT.CORPUS the wave changed, PARKED_QUESTION \"B21 blocked by <entity>\""
+	DESC "the answer type chooses the form of the answer: its name, its rendering, the fields the"
+		+ "CLI fills and its publication after the entity is written; a study answer publishes"
+		+ "nothing more"
+	DESC "the Markdown is <PROJECT.CORPUS>/waves/<n>-report.md, committed on the integration branch"
+		+ "fetched from origin and pushed without force; the body of the pull request of"
+		+ "wave.pr_opened is replaced whole with it, and no pull request is touched before"
+		+ "wave.pr_opened or for a project without a forge"
+	DESC "binds @TASK.B20"
+		REF @TASK.B20
+	REJECTED "a STUDY entity wave-report in the operational corpus: its collectors take the wave as"
+		+ "parameter, so the tick would write one entity per wave, while wave.started already holds"
+		+ "every input"
+	REJECTED "the report posted as a comment of the integration pull request: a run resumed or"
+		+ "redone would pile up comments, while the body describes the head of the integration"
+		+ "branch"
+	REJECTED "the CLI fields as nested fields, one per column: brigade reads the report back"
+		+ "nowhere, and a string written whole is what study answer compares to refuse a changed"
+		+ "field"
+	RATIONALE "the ledger stays the one source of a wave, and the entity stays the one source of"
+		+ "its renderings, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+	SOURCE "pull request #183 of the brigade repository, delivering @TASK.B20"
+		REF @TASK.B20

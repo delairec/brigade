@@ -896,9 +896,21 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 "ts": "2026-10-19T09:00:00Z",
                 "event": "wave.reported",
                 "wave": "tidepool_w16",
-                "run": None,
+                "run": ANY,
             },
         )
+
+    def test_should_detach_the_wave_report_run_the_wave_reported_names(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        reported_run = self._read_last_event()["run"]
+        self.assertEqual(self.spawn.argvs, [("study", "run", "wave-report", "--run-id", reported_run)])
 
     def test_should_close_a_reported_wave_once_its_integration_pull_request_is_merged(self):
         # Arrange
@@ -1487,7 +1499,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.assertEqual(
             (self.spawn.argvs, self._read_events()[7:8]),
             (
-                [],
+                [("study", "run", "wave-report", "--run-id", ANY)],
                 [
                     {
                         "schema_version": 1,

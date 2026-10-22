@@ -16,6 +16,7 @@ class Study:
     output: str
     answer_type: str
     status: str
+    wave: str | None = None
 
 
 def _read_values(entity: Entity, field_name: str) -> tuple[str, ...]:

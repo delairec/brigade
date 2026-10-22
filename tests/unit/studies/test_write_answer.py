@@ -2,6 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.ledger.append_event import append_event
+from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.convert_study import Study
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer import write_answer
@@ -12,6 +14,19 @@ from tests.unit.studies.create_study_equipment import create_study_equipment
 RUN_ID = "20261019T090000Z-aaaaaa"
 RENDERED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n'
 JUDGED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tVERDICT "two oaks"\n'
+REPORTED = 'REPORT oak_w2\n\tWAVE "oak_w2"\n'
+WAVE_REPORT = Study(
+    name="wave-report",
+    project="oak",
+    question=None,
+    collectors=(),
+    slot="report",
+    every=None,
+    output="entity:REPORT",
+    answer_type="REPORT",
+    status="active",
+    wave="oak_w2",
+)
 
 
 def create_study(output: str) -> Study:
@@ -52,13 +67,13 @@ class WriteAnswerTest(unittest.TestCase):
         (self.run_directory / "steps").mkdir(parents=True)
         (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
 
-    def create_context(self, output: str) -> StudyRunContext:
+    def create_context(self, output: str, study: Study | None = None) -> StudyRunContext:
         equipment = create_study_equipment(
             document=DocumentDouble(), resolve_forge={"github": ForgeDouble()}.__getitem__
         )
         return StudyRunContext(
             runtime=self.runtime,
-            study=create_study(output),
+            study=study or create_study(output),
             run_id=RUN_ID,
             run_directory=self.run_directory,
             equipment=equipment,
@@ -165,3 +180,43 @@ class WriteAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(written["branch"], branch)
+
+    def test_should_publish_the_report_of_a_wave_on_its_integration_branch_once_its_entity_is_written(self):
+        # Arrange
+        checkout = self.run_directory / "checkout"
+        (self.run_directory / "answer.awawa").write_text(REPORTED, encoding="utf-8")
+        append_event(
+            self.runtime.paths,
+            self.runtime.now,
+            WaveStarted(wave="oak_w2", project="oak", branch="integration/oak_w2", tasks=("B17",)),
+        )
+        self.processes.answer_corpus_change(
+            self.config_root, ("reports.awawa",), "brigade study run: the answer of @STUDY.wave-report"
+        )
+        self.processes.answer_entities(
+            self.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("FORGE", "none"), ("CORPUS", "corpus"))}
+        )
+        self.processes.answer(("git", "fetch", "--quiet", "origin", "integration/oak_w2"))
+        self.processes.answer(
+            ("git", "worktree", "add", "--quiet", "--detach", str(checkout), "origin/integration/oak_w2")
+        )
+        self.processes.answer(("git", "switch", "--quiet", "--force-create", "integration/oak_w2"))
+        self.processes.answer(("git", "add", "--", "corpus/waves/2-report.md"))
+        self.processes.answer(("git", "diff", "--cached", "--quiet", "--", "corpus/waves/2-report.md"))
+        self.processes.answer(("git", "push", "--quiet", "origin", "integration/oak_w2"))
+        self.processes.answer(("git", "worktree", "remove", "--force", str(checkout)))
+
+        # Act
+        written = write_answer(self.create_context("entity:REPORT", WAVE_REPORT))
+
+        # Assert
+        self.assertEqual(
+            written,
+            {
+                "output": "entity:REPORT",
+                "answer": str(self.run_directory / "answer.awawa"),
+                "report": "corpus/waves/2-report.md",
+                "branch": "integration/oak_w2",
+                "pull_request": None,
+            },
+        )

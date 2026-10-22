@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import tempfile
 import unittest
@@ -39,7 +40,22 @@ class StartStudyRunTest(unittest.TestCase):
         # Assert
         record = self.root / "state" / "runs" / RUN_ID / "study.json"
         self.assertEqual(
-            json.loads(record.read_text(encoding="utf-8")), {"schema_version": 1, "study": "trees", "project": "oak"}
+            json.loads(record.read_text(encoding="utf-8")),
+            {"schema_version": 1, "study": "trees", "project": "oak", "wave": None},
+        )
+
+    def test_should_record_the_wave_a_study_reports(self):
+        # Arrange
+        study = dataclasses.replace(STUDY, name="wave-report", wave="oak_w2")
+
+        # Act
+        start_study_run(self.runtime, study, RUN_ID)
+
+        # Assert
+        record = self.root / "state" / "runs" / RUN_ID / "study.json"
+        self.assertEqual(
+            json.loads(record.read_text(encoding="utf-8")),
+            {"schema_version": 1, "study": "wave-report", "project": "oak", "wave": "oak_w2"},
         )
 
     def test_should_record_the_order_started_in_the_ledger(self):

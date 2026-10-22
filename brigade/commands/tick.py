@@ -32,6 +32,7 @@ from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
 from brigade.runtime import Runtime
+from brigade.studies.describe_wave_report import describe_wave_report
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
 from brigade.studies.start_study_run import start_study_run
@@ -80,6 +81,7 @@ from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
+from brigade.waves.find_wave_started import find_wave_started
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -274,6 +276,15 @@ def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
     detach_study_run(runtime, study.name, run_id, record_run_pid)
 
 
+def _report_wave(runtime: Runtime, action: ReportWave) -> None:
+    events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
+    study = describe_wave_report(find_wave_started(events, action.wave))
+    run_id = create_run_id(runtime.now)
+    start_study_run(runtime, study, run_id)
+    detach_study_run(runtime, study.name, run_id, record_run_pid)
+    append_event(runtime.paths, runtime.now, WaveReported(wave=action.wave, run=run_id))
+
+
 def _record_task_state(runtime: Runtime, action: RecordTaskState) -> None:
     append_event(
         runtime.paths,
@@ -422,7 +433,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         StartWave: lambda action: _start_wave(runtime, configuration, action),
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
-        ReportWave: lambda action: append_event(runtime.paths, runtime.now, WaveReported(wave=action.wave, run=None)),
+        ReportWave: lambda action: _report_wave(runtime, action),
         CloseWave: lambda action: append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr)),
     }
 
