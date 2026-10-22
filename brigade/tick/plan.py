@@ -181,9 +181,9 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
             record = _decide_task_state(wave, task)
             if record is not None:
                 actions.append(record)
-            rebase = _decide_rebase(wave, task, projects[wave.project], held, live_tasks)
-            if rebase is not None:
-                actions.append(rebase)
+            catch_up = _decide_catch_up(wave, task, projects[wave.project], held, live_tasks)
+            if catch_up is not None:
+                actions.append(catch_up)
                 continue
             if _is_ready_for_preflight(wave, task, projects[wave.project]):
                 actions.append(
@@ -213,7 +213,7 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
     return tuple(actions)
 
 
-def _decide_rebase(
+def _decide_catch_up(
     wave: WaveFacts, task: TaskFacts, project: ProjectFacts, held: set, live_tasks: set
 ) -> RebaseTask | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
     if (

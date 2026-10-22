@@ -8917,7 +8917,7 @@ TASK B143
 	SPEC "a task whose pull request is behind the branch the wave.started of its wave names is"
 		+ "rebased by git in its worktree onto the head of that branch and pushed with"
 		+ "--force-with-lease, without a run"
-		IMPL "brigade/tick/plan.py::def _decide_rebase("
+		IMPL "brigade/tick/plan.py::def _decide_catch_up("
 		IMPL "brigade/tick/rebase_task.py::def rebase_task("
 		IMPL "brigade/git/push_with_lease.py::f\"--force-with-lease={push.branch}:{push.expected_head}\","
 		IMPL "tests/unit/tick/test_plan.py::def"
