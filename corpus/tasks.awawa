@@ -1990,11 +1990,14 @@ TASK B20
 		+ "SCHEMA REPORT: WAVE, the name <project>_w<n> of the wave as TASK B187 sets it, and"
 		+ "PROJECT; the fields the CLI fills, TASK_ROW, STATISTIC, GRAPH, MANUAL_TEST,"
 		+ "INSTRUCTIONS_CHANGE and PARKED_QUESTION; the prose fields the report slot fills,"
-		+ "NARRATIVE, REASON, TESTER_STEP and SAMPLING; brigade init installs it as it upgrades the"
-		+ "installed schema"
+		+ "NARRATIVE, REASON, TESTER_STEP and SAMPLING; brigade init installs it in a new"
+		+ "operational corpus and upgrades no installed schema, an operational corpus of an older"
+		+ "schema being thrown away"
 		IMPL "brigade/corpus/data/schema.awawa.tpl::SCHEMA REPORT"
 		IMPL "tests/cli/test_init.py::def"
 			+ "test_should_install_a_schema_accepting_the_report_of_a_wave(self):"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_leave_the_file_as_it_is_and_report_it_differing(self):"
 	SPEC "the report of a wave is one REPORT entity of the operational corpus, written and read"
 		+ "through the document kind; the collectors ledger, pr-list, corpus and git-diff-stat fill"
 		+ "the CLI fields, the task table, the statistics, the dependency graph, the manual-test"
@@ -2049,7 +2052,7 @@ TASK B20
 		REF @TASK.B106
 	RATIONALE "the entity is the answer entity of the study, as @TASK.B48 designs every study"
 		+ "answer: brigade reads the report once, the answer of the report slot, and lint validates"
-		+ "it; it lives in the operational corpus because brigade ships and upgrades that schema"
+		+ "it; it lives in the operational corpus because brigade ships that schema"
 		+ "(brigade/corpus/data/schema.awawa.tpl, @TASK.B11), while a project's corpus carries no"
 		+ "schema of brigade since @TASK.B81 was archived; the user kept the entity over an answer"
 		+ "as JSON carrying the prose alone, validated by a shape"
@@ -2064,6 +2067,13 @@ TASK B20
 	SOURCE "the user's ruling of 2026-10-13 on pr-list: the collector is delivered by @TASK.B146, a"
 		+ "task of M1 this task follows"
 		REF @TASK.B146
+	SOURCE "the user's ruling of 2026-10-22 on the review of pull request #183, which found SPEC 1"
+		+ "promising an upgrade of the installed schema that brigade init does not make: « A : on"
+		+ "jette (Recommended) », init leaving the installed schema as it is, as SPEC 1 of"
+		+ "@TASK.B48 says, the operational corpus of the machine reinstalled after the merge, and"
+		+ "the upgrade of an installed schema opened as @TASK.B197"
+		REF @TASK.B48
+		REF @TASK.B197
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
@@ -11529,3 +11539,26 @@ TASK B196
 		REF @TASK.B166
 	SOURCE "review 5616826315 of PR 182, thread 4350364074: a build or remediate run that ends"
 		+ "without committing leaves such a worktree, and a task in fixing is in REBASED_STATES"
+
+TASK B197
+	TITLE "brigade init upgrades an installed operational schema"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "corpus"
+	ROLE ada
+	SPEC "brigade init brings an installed _schema.awawa that differs from the shipped one to the"
+		+ "shipped schema, the entities of the operational corpus kept and checked by awawa lint"
+		+ "against it, so that a schema brigade extends reaches a machine that installed an earlier"
+		+ "one without the operational corpus being thrown away"
+	RATIONALE "today brigade init installs the schema in a new operational corpus alone, as SPEC 1"
+		+ "of @TASK.B48 and SPEC 1 of @TASK.B20 say, and an operational corpus of an older schema"
+		+ "is thrown away, as DESC 4 of"
+		+ "@DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry rules for the build"
+		+ "phase; this task is refined once that ruling is revisited, and it then rewrites those"
+		+ "SPEC lines"
+		REF @TASK.B48
+		REF @TASK.B20
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	SOURCE "the user's ruling of 2026-10-22 on the review of pull request #183: « A : on jette"
+		+ "(Recommended) », B197 opened as draft for the future upgrade of an installed schema"
