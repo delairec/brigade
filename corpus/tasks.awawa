@@ -2079,7 +2079,7 @@ TASK B20
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
-	STATUS todo
+	STATUS implemented
 	TYPE test
 	MILESTONE @MILESTONE.M1
 	COMPONENT "validation"
@@ -2089,11 +2089,23 @@ TASK B21
 		+ "request new to the integration pull request it reads from wave.pr_opened: the plan"
 		+ "merged into PROJECT.MAIN, the wave started by the tick, its three tasks merged into its"
 		+ "branch"
+		IMPL "tests/cli/test_rehearsal.py::def"
+			+ "test_should_merge_the_three_tasks_into_the_branch_of_the_wave("
+		IMPL "tests/cli/test_rehearsal.py::def"
+			+ "test_should_open_the_integration_pull_request_wave_pr_opened_names("
 	SPEC "the ledger holds every run"
-	SPEC "the steps per run and the steps to first edit measured are written as the budget of the"
-		+ "front matter of each built-in procedure the wave ran, and quoted in the pull request"
-		+ "body with the output of brigade ledger budgets"
+		IMPL "tests/cli/test_rehearsal.py::def test_should_record_every_run_in_the_ledger("
+	SPEC "the budget of the front matter of each built-in procedure the wave ran stays as the real"
+		+ "runs set it, and the pull request body quotes the output of brigade ledger budgets on"
+		+ "the state of the rehearsal"
+		IMPL "brigade/runs/data/procedures/build-task.md::budget: 75"
+		IMPL "brigade/runs/data/procedures/verify-pr.md::budget: 40"
+		IMPL "brigade/runs/data/procedures/wave-plan.md::budget: 30"
+		IMPL "brigade/runs/data/procedures/study.md::budget: 20"
 	SPEC "the same rehearsal runs on the fake adapter as the test suite's end-to-end case"
+		IMPL "tests/cli/test_rehearsal.py::class"
+			+ "BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest("
+	DELIVERED_BY 187
 	AFTER @TASK.B142
 	AFTER @TASK.B18
 	AFTER @TASK.B143
@@ -2124,6 +2136,12 @@ TASK B21
 		REF @TASK.B141
 		REF @TASK.B20
 	SOURCE "use-case map of 2026-10-16, findings X5 and X6"
+	SOURCE "the user's ruling of 2026-10-22 on SPEC 3 in the delivery of @TASK.B21, pull request"
+		+ "#187, « Garder, citer (Recommended) »: « Les budgets actuels restent. La sortie de"
+		+ "`brigade ledger budgets` du sandbox est citée dans le corps de #187, et le SPEC 3 est"
+		+ "reformulé dans la PR de B21 en ce sens. »; a budget is a hard cap, and the sandbox p90"
+		+ "(build-task 23) would cap the real builds, whose p90 is 75"
+		REF @TASK.B21
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"

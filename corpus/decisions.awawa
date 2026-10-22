@@ -3571,7 +3571,8 @@ DECISION AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
 		+ "names the forge already held and opened a plan pull request in conflict"
 		REF @TASK.B21
 	SOURCE "the user's ruling of 2026-10-22 on the first run of @TASK.B21, « Lire origin/<MAIN>"
-		+ "(Recommended) », delivered in its pull request « Dans la PR de B21 (Recommended) »"
+		+ "(Recommended) », delivered in its pull request « Dans la PR de B21 (Recommended) », pull"
+		+ "request #187"
 		REF @TASK.B21
 
 DECISION TheFakeClientPlaysAnAgentFromAnExecutableNamedAfterItsRole
@@ -3591,5 +3592,5 @@ DECISION TheFakeClientPlaysAnAgentFromAnExecutableNamedAfterItsRole
 		+ "integration pull request only when its agents run plan record, task check, pr and"
 		+ "promote, and verify verdict"
 		REF @TASK.B21
-	SOURCE "the first run of @TASK.B21, 2026-10-22"
+	SOURCE "the first run of @TASK.B21, 2026-10-22, pull request #187"
 		REF @TASK.B21
