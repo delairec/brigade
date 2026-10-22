@@ -11636,3 +11636,30 @@ TASK B197
 		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	SOURCE "the user's ruling of 2026-10-22 on the review of pull request #183: « A : on jette"
 		+ "(Recommended) », B197 opened as draft for the future upgrade of an installed schema"
+
+TASK B205
+	TITLE "A study publishes on a private GitHub repository with the environment of the cli slot"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M1
+	COMPONENT "studies"
+	ROLE ada
+	SPEC "on a project of FORGE github, the built-in study wave-report fetches the integration"
+		+ "branch, pushes the commit of its report and rewrites the body of the integration pull"
+		+ "request with the environment of the cli slot, so that the report of a wave reaches a"
+		+ "private repository"
+	SPEC "a study whose answer is written to a file pushes its branch and opens its pull request"
+		+ "with the environment of the cli slot on a project of FORGE github"
+	RATIONALE "the rehearsal of @TASK.B21 on the private repository fake-repository-for-testing"
+		+ "parked both wave-report studies, runs 20261022T201206Z-e270a5 and"
+		+ "20261022T204810Z-33b0f4, at their output step on « git fetch --quiet origin"
+		+ "integration/<wave> exited 128: remote: Repository not found »:"
+		+ "brigade/studies/publish_wave_report.py, delivered by @TASK.B20 in #183, fetches, pushes"
+		+ "and rewrites the body with UNBOUND_ENVIRONMENT = {}, and"
+		+ "brigade/studies/write_answer_to_file.py opens its pull request with the same empty"
+		+ "environment"
+		REF @TASK.B21
+		REF @TASK.B20
+	SOURCE "the review of pull request #187, comment 4353876375 on corpus/decisions.awawa: « Either"
+		+ "close it here or report it with this evidence as a blocker/question for its own task »"
+		REF @TASK.B21
