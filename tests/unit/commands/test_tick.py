@@ -408,6 +408,14 @@ TASK_PREFLIGHTED_AT_THE_HEAD = {
     "checks": [],
 }
 NO_DETAILS_ASKED = None
+PULL_REQUEST_FAILING_TWO_CHECKS = {
+    **OPEN_PULL_REQUEST,
+    "checks": [{"name": "ci", "verdict": "failure"}, {"name": "coverage", "verdict": "failure"}],
+}
+TASK_PREFLIGHTED_ON_FAILING_CHECKS = {
+    **TASK_PREFLIGHTED_AT_THE_HEAD,
+    "checks": [{"name": "checks", "verdict": "fail", "findings": ["ci: failure", "coverage: failure"]}],
+}
 PULL_REQUEST_DETAILS = {
     "head": "task/M4/T7",
     "head_sha": "8885daa",
@@ -437,15 +445,19 @@ def _record_task_state(state: str) -> dict:
 
 
 class ForgeDouble:
-    def __init__(self, found: dict | None, details: dict | None):
+    def __init__(self, found: dict | None, details: dict | None, tails: dict | None = None):
         self.found = found
         self.details = details
+        self.tails = tails
 
     def find_pull_request(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "pull_request": self.found}
 
     def read_pull_request(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "pull_request": self.details}
+
+    def read_check_logs(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "logs": [{"name": name, "tail": self.tails[name]} for name in request["checks"]]}
 
 
 class SpawnRecorderDouble:
@@ -644,6 +656,126 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     ANY,
                 )
             ],
+        )
+
+    def test_should_launch_the_remediation_of_a_task_in_changes_requested_and_record_it_in_fixing(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("changes_requested")],
+        )
+        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (self.spawn.argvs, self._read_last_event()),
+            (
+                [
+                    (
+                        "run",
+                        "remediate-pr",
+                        "pr=42",
+                        "task=@TASK.T7",
+                        "--slot",
+                        "remediate",
+                        "--cwd",
+                        str(self.worktree),
+                        "--project",
+                        "tidepool",
+                        "--wave",
+                        "tidepool_w16",
+                        "--task",
+                        "T7",
+                        "--run-id",
+                        ANY,
+                    )
+                ],
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "fixing",
+                },
+            ),
+        )
+
+    def test_should_launch_the_repair_of_the_failing_checks_with_the_tail_of_their_logs_and_record_it_in_fixing(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_ON_FAILING_CHECKS, _record_task_state("pr_open")],
+        )
+        tails = {"ci": "FAIL test_cart\nexit 1", "coverage": None}
+        runtime = self._create_runtime(
+            TASK_DELIVERED, ForgeDouble(PULL_REQUEST_FAILING_TWO_CHECKS, NO_DETAILS_ASKED, tails)
+        )
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        brief = self.root / "state" / "briefs" / "tidepool_w16-T7-checks.md"
+        self.assertEqual(
+            (self.spawn.argvs, brief.read_text(), self._read_last_event()),
+            (
+                [
+                    (
+                        "run",
+                        "build-task",
+                        "task=@TASK.T7",
+                        "base=integration/M4",
+                        "--slot",
+                        "build",
+                        "--cwd",
+                        str(self.worktree),
+                        "--project",
+                        "tidepool",
+                        "--brief",
+                        str(brief),
+                        "--wave",
+                        "tidepool_w16",
+                        "--task",
+                        "T7",
+                        "--run-id",
+                        ANY,
+                    )
+                ],
+                (
+                    "Repair the failing checks of the pull request #42, which delivers @TASK.T7 of @PROJECT.tidepool,"
+                    " in the wave tidepool_w16.\n"
+                    "\n"
+                    "- Base branch: integration/M4.\n"
+                    f"- Worktree: {self.worktree}, on the branch task/M4/T7.\n"
+                    "\n"
+                    "The tail of the log of each failing check:\n"
+                    "\n"
+                    "## ci\n"
+                    "\n"
+                    "```\n"
+                    "FAIL test_cart\n"
+                    "exit 1\n"
+                    "```\n"
+                    "\n"
+                    "## coverage\n"
+                    "\n"
+                    "The forge keeps no log of this check.\n"
+                ),
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "fixing",
+                },
+            ),
         )
 
     def test_should_record_the_verdict_passed_at_the_head_of_the_pull_request(self):

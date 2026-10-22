@@ -33,6 +33,7 @@ from brigade.runtime import Runtime
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
 from brigade.studies.start_study_run import start_study_run
+from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
@@ -46,6 +47,8 @@ from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
     CloseWave,
     CutWaveBranch,
+    LaunchCheckRepair,
+    LaunchRemediation,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
@@ -68,6 +71,7 @@ from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
+from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
@@ -77,6 +81,10 @@ DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
 VERIFY_PROCEDURE = "verify-pr"
+REMEDIATE_PROCEDURE = "remediate-pr"
+REMEDIATE_SLOT = "remediate"
+FIXING_STATE = "fixing"
+CHECK_LOG_LINES = 200
 RUNNING_STATE = "running"
 VERIFYING_STATE = "verifying"
 MERGED_STATE = "merged"
@@ -135,6 +143,54 @@ def _launch_verification(runtime: Runtime, configuration: Configuration, action:
         resume=False,
     )
     run(verifying, runtime)
+
+
+def _launch_remediation(runtime: Runtime, configuration: Configuration, action: LaunchRemediation) -> None:
+    remediating = argparse.Namespace(
+        procedure=configuration.procedures.get(REMEDIATE_SLOT, REMEDIATE_PROCEDURE),
+        slot=REMEDIATE_SLOT,
+        project=action.project,
+        cwd=action.worktree,
+        brief=None,
+        arguments=(f"pr={action.pr}", f"task=@TASK.{action.task}"),
+        run_id=None,
+        wave=action.wave,
+        task=action.task,
+        detach=True,
+        resume=False,
+    )
+    run(remediating, runtime)
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
+
+
+def _launch_check_repair(runtime: Runtime, configuration: Configuration, action: LaunchCheckRepair) -> None:
+    logs = ask_check_logs(
+        runtime.resolve_plugin("forge", FORGE_NAME),
+        FORGE_NAME,
+        CheckLogsQuery(
+            repository=read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD),
+            number=action.pr,
+            checks=action.checks,
+            lines=CHECK_LOG_LINES,
+            environment=read_forge_environment(configuration, CLI_KEY, runtime),
+        ),
+        runtime,
+    )
+    repairing = argparse.Namespace(
+        procedure=configuration.procedures.get(BUILD_SLOT, BUILD_PROCEDURE),
+        slot=BUILD_SLOT,
+        project=action.project,
+        cwd=action.worktree,
+        brief=str(write_repair_brief(runtime.paths.state_root, action, logs)),
+        arguments=(f"task=@TASK.{action.task}", f"base={action.branch}"),
+        run_id=None,
+        wave=action.wave,
+        task=action.task,
+        detach=True,
+        resume=False,
+    )
+    run(repairing, runtime)
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
 
 
 def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
@@ -275,6 +331,8 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
+        LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
+        LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: append_event(
             runtime.paths,

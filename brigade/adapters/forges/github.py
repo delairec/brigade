@@ -37,6 +37,8 @@ LISTING_TIMEOUT_S = 600.0
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
+JOB_SEPARATOR = "/job/"
+JOB_LOGS_PATH = "repos/{owner}/{repo}/actions/jobs"
 REVIEW_EVENTS = {"approve": "APPROVE", "request_changes": "REQUEST_CHANGES"}
 
 
@@ -326,3 +328,24 @@ def post_review(request: dict, runtime: Runtime) -> dict:
         )
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+def _read_job_tail(request: dict, runtime: Runtime, link: str) -> str | None:
+    if JOB_SEPARATOR not in link:
+        return None
+    job = link.rsplit(JOB_SEPARATOR, 1)[1]
+    log = _ask_gh(request, runtime, ("api", f"{JOB_LOGS_PATH}/{job}/logs"))
+    return "\n".join(log.splitlines()[-request["lines"] :])
+
+
+def read_check_logs(request: dict, runtime: Runtime) -> dict:
+    links = {
+        check["name"]: check["link"]
+        for check in json.loads(
+            _ask_gh(request, runtime, ("pr", "checks", str(request["number"]), "--json", "name,link"))
+        )
+    }
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "logs": [{"name": name, "tail": _read_job_tail(request, runtime, links[name])} for name in request["checks"]],
+    }

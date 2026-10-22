@@ -21,4 +21,8 @@ FORGE_ANSWER_SHAPES = {
         "schema_version": Field(kinds=(int,), values=(1,)),
         "pull_request": Field(kinds=(dict,)),
     },
+    "read_check_logs": {
+        "schema_version": Field(kinds=(int,), values=(1,)),
+        "logs": Field(kinds=(list,), items=Field(kinds=(dict,))),
+    },
 }

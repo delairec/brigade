@@ -13,6 +13,7 @@ from brigade.adapters.forges.github import (
     open_issue,
     open_pull_request,
     post_review,
+    read_check_logs,
     read_login_environment,
     read_pull_request,
 )
@@ -40,6 +41,18 @@ def create_runtime(stdout: str, exit_code: int = 0) -> SimpleNamespace:
         requests.append(request)
         return ProcessRecord(
             argv=request.argv, cwd=request.cwd, exit_code=exit_code, stdout=stdout, stderr="", duration_ms=0
+        )
+
+    return SimpleNamespace(run_process=run_gh, requests=requests)
+
+
+def create_runtime_answering_by_argv(answers: dict) -> SimpleNamespace:
+    requests = []
+
+    def run_gh(request):
+        requests.append(request)
+        return ProcessRecord(
+            argv=request.argv, cwd=request.cwd, exit_code=0, stdout=answers[request.argv], stderr="", duration_ms=0
         )
 
     return SimpleNamespace(run_process=run_gh, requests=requests)
@@ -604,3 +617,80 @@ class PostReviewTest(unittest.TestCase):
                         {"GH_TOKEN": "token-of-octo-bot"},
                     ),
                 )
+
+
+CHECKS_OF_PULL_REQUEST_42 = ("gh", "pr", "checks", "42", "--json", "name,link")
+
+
+class ReadCheckLogsTest(unittest.TestCase):
+    def test_should_keep_the_last_lines_of_the_log_of_each_check_asked(self):
+        # Arrange
+        runtime = create_runtime_answering_by_argv(
+            {
+                CHECKS_OF_PULL_REQUEST_42: json.dumps(
+                    [
+                        {"name": "tests", "link": "https://github.com/octo/shop/actions/runs/7/job/70"},
+                        {"name": "lint", "link": "https://github.com/octo/shop/actions/runs/7/job/71"},
+                    ]
+                ),
+                ("gh", "api", "repos/{owner}/{repo}/actions/jobs/70/logs"): "set up\nrun\nFAIL test_cart\nexit 1\n",
+            }
+        )
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": ["tests"],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "tests", "tail": "FAIL test_cart\nexit 1"}]})
+
+    def test_should_hold_no_tail_for_a_check_whose_log_the_forge_does_not_keep(self):
+        # Arrange
+        runtime = create_runtime_answering_by_argv(
+            {
+                CHECKS_OF_PULL_REQUEST_42: json.dumps(
+                    [{"name": "coverage", "link": "https://app.codecov.io/gh/octo/shop"}]
+                )
+            }
+        )
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": ["coverage"],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "coverage", "tail": None}]})
+
+    def test_should_run_gh_in_the_repository_as_the_login_of_the_environment(self):
+        # Arrange
+        runtime = create_runtime_answering_by_argv({CHECKS_OF_PULL_REQUEST_42: json.dumps([])})
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": [],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            (runtime.requests[0].cwd, runtime.requests[0].environment), ("/projects/shop", BOT_ENVIRONMENT)
+        )

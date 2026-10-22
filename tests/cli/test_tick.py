@@ -707,6 +707,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflighted_head": None,
                                     "verdict": None,
                                     "reviewed_head": None,
+                                    "preflight_failures": [],
+                                    "repair_rounds": 0,
                                 },
                                 {
                                     "task": "S4",
@@ -720,6 +722,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflighted_head": None,
                                     "verdict": None,
                                     "reviewed_head": None,
+                                    "preflight_failures": [],
+                                    "repair_rounds": 0,
                                 },
                                 {
                                     "task": "S5",
@@ -733,6 +737,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflighted_head": None,
                                     "verdict": None,
                                     "reviewed_head": None,
+                                    "preflight_failures": [],
+                                    "repair_rounds": 0,
                                 },
                                 {
                                     "task": "S6",
@@ -746,6 +752,8 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflighted_head": None,
                                     "verdict": None,
                                     "reviewed_head": None,
+                                    "preflight_failures": [],
+                                    "repair_rounds": 0,
                                 },
                             ],
                             "states": {"S3": "queued"},
@@ -767,6 +775,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                             "merge": "rebase",
                             "review": "verdict",
                             "auto_merge": "integration",
+                            "verify_rounds": 2,
                         }
                     ],
                     "studies": [],
@@ -876,6 +885,7 @@ class BrigadeTickDryRunWhileBuildRunsAreLiveTest(LiveBuildRunTickTestCase):
                     "merge": "rebase",
                     "review": "verdict",
                     "auto_merge": "integration",
+                    "verify_rounds": 2,
                 }
             ],
         )
@@ -905,6 +915,7 @@ class BrigadeTickDryRunOfTheProjectsTest(WaveTickTestCase):
                     "merge": "rebase",
                     "review": "verdict",
                     "auto_merge": "integration",
+                    "verify_rounds": 2,
                 }
             ],
         )
@@ -1458,6 +1469,8 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                 "preflighted_head": None,
                 "verdict": None,
                 "reviewed_head": None,
+                "preflight_failures": [],
+                "repair_rounds": 0,
             },
         )
 
@@ -1985,12 +1998,12 @@ class BrigadeTickOnAPullRequestWithAFailingCheckTest(TickPreflightTestCase):
         super().setUp()
         self.describe_pull_request(body="Empty the cart in one click\n\n$checks\n")
 
-    def test_should_leave_the_task_in_pr_open(self):
+    def test_should_hand_the_task_to_a_remediation_run_in_fixing(self):
         # Act
         self.run_tick()
 
         # Assert
-        self.assertEqual(self.read_last_state_of_s3(), "pr_open")
+        self.assertEqual(self.read_last_state_of_s3(), "fixing")
 
     def test_should_run_the_preflight_of_a_head_once(self):
         # Arrange
