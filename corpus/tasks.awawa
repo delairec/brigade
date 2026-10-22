@@ -8203,7 +8203,7 @@ TASK B130
 	ROLE ada
 	SPEC "tests/awawa/recordings holds one recording per awawa call of the suite, each carrying the"
 		+ "operational schema installed by brigade init from the template of main"
-		IMPL "tests/awawa/recordings/status-14ae6e76f93d.json::e.g. remediate=builder"
+		IMPL "tests/awawa/recordings/status-15e2b6cd84a8.json::e.g. remediate=builder"
 	SPEC "python3 -m unittest passes with no awawa on PATH, every test running on the fake"
 		IMPL "tests/awawa/test_recordings.py::class"
 	RATIONALE "the fake awawa of @TASK.B95 replays a recording matched on the arguments, the"

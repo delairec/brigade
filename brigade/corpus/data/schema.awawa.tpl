@@ -135,6 +135,46 @@ SCHEMA ANSWER
 		REPEATABLE
 		DESC "one finding with its evidence, filled by the judging slot"
 
+SCHEMA REPORT
+	DESC "the answer of the built-in study wave-report: the CLI fills what the collectors gave,"
+		+ "the report slot the prose"
+	FIELD WAVE string
+		REQUIRED
+		DESC "the wave reported, <project>_w<n>"
+	FIELD PROJECT string
+		REQUIRED
+		DESC "the project of the wave"
+	FIELD TASK_ROW string
+		REPEATABLE
+		DESC "one task of the wave, its last state and its pull request, filled by the CLI"
+	FIELD STATISTIC string
+		REPEATABLE
+		DESC "one figure of the wave, its name then its value, filled by the CLI"
+	FIELD GRAPH string
+		REPEATABLE
+		DESC "one dependency between two tasks of the wave, filled by the CLI"
+	FIELD MANUAL_TEST string
+		REPEATABLE
+		DESC "one SPEC line of a merged task, to test by hand, filled by the CLI"
+	FIELD INSTRUCTIONS_CHANGE string
+		REPEATABLE
+		DESC "one file of the project's corpus the wave changed, filled by the CLI"
+	FIELD PARKED_QUESTION string
+		REPEATABLE
+		DESC "one parked task and what it waits for, filled by the CLI"
+	FIELD NARRATIVE string
+		REPEATABLE
+		DESC "filled by the report slot"
+	FIELD REASON string
+		REPEATABLE
+		DESC "why a task was parked or failed, filled by the report slot"
+	FIELD TESTER_STEP string
+		REPEATABLE
+		DESC "one manual test in a tester's words, filled by the report slot"
+	FIELD SAMPLING string
+		REPEATABLE
+		DESC "one change worth reading by sampling, filled by the report slot"
+
 SCHEMA ORDER
 	DESC "one instance of a recipe: its parameters, its project, its schedule"
 	FIELD RECIPE string

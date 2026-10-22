@@ -177,6 +177,38 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
             json.loads(completed.stdout)["fields"],
         )
 
+    def test_should_install_a_schema_accepting_the_report_of_a_wave(self):
+        # Arrange
+        provide_awawa(self)
+        self.machine.run_init()
+        (self.machine.corpus / "reports.awawa").write_text(
+            "REPORT shop_w2\n"
+            '\tWAVE "shop_w2"\n'
+            '\tPROJECT "shop"\n'
+            '\tTASK_ROW "B17 merged #178"\n'
+            '\tSTATISTIC "tasks merged 1"\n'
+            '\tGRAPH "B20 after B17"\n'
+            '\tMANUAL_TEST "B17: the task becomes merged"\n'
+            '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +12 -3"\n'
+            '\tPARKED_QUESTION "B21 blocked by @OPEN_QUESTION.TheKeyOfAWave"\n'
+            '\tNARRATIVE "one task merged"\n'
+            '\tREASON "B21 waits for a ruling"\n'
+            '\tTESTER_STEP "open the dashboard and see B17 merged"\n'
+            '\tSAMPLING "read the merge of B17"\n'
+        )
+
+        # Act
+        completed = ProcessLauncher.run(
+            ["awawa", "lint", "--strict", str(self.machine.corpus)],
+            cwd=self.machine.corpus,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
 
 class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
     def setUp(self):
