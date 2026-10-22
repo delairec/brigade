@@ -25,4 +25,11 @@ FORGE_ANSWER_SHAPES = {
         "schema_version": Field(kinds=(int,), values=(1,)),
         "logs": Field(kinds=(list,), items=Field(kinds=(dict,))),
     },
+    "list_review_threads": {
+        "schema_version": Field(kinds=(int,), values=(1,)),
+        "threads": Field(kinds=(list,), items=Field(kinds=(dict,))),
+    },
+    "reply_review_thread": {
+        "schema_version": Field(kinds=(int,), values=(1,)),
+    },
 }

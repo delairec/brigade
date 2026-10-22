@@ -9,6 +9,7 @@ from brigade.adapters.forges.github import (
     find_pull_request,
     list_milestones,
     list_pull_requests,
+    list_review_threads,
     merge_pull_request,
     open_issue,
     open_pull_request,
@@ -16,6 +17,7 @@ from brigade.adapters.forges.github import (
     read_check_logs,
     read_login_environment,
     read_pull_request,
+    reply_review_thread,
 )
 from brigade.system.run_process import ProcessRecord
 
@@ -693,4 +695,142 @@ class ReadCheckLogsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             (runtime.requests[0].cwd, runtime.requests[0].environment), ("/projects/shop", BOT_ENVIRONMENT)
+        )
+
+
+REVIEW_THREADS_REQUEST = {
+    "schema_version": 1,
+    "repository": "/projects/shop",
+    "number": 42,
+    "environment": BOT_ENVIRONMENT,
+}
+
+
+def create_review_threads_page(threads: list[dict]) -> str:
+    return json.dumps({"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": threads}}}}})
+
+
+class ListReviewThreadsTest(unittest.TestCase):
+    def test_should_answer_each_open_thread_by_its_identifier_with_its_first_comment(self):
+        # Arrange
+        runtime = create_runtime(
+            create_review_threads_page(
+                [
+                    {
+                        "id": "PRRT_kwDOA1",
+                        "isResolved": False,
+                        "path": "src/cart.py",
+                        "line": 12,
+                        "comments": {"nodes": [{"author": {"login": "octo-reviewer"}, "body": "the total is wrong"}]},
+                    }
+                ]
+            )
+        )
+
+        # Act
+        answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            {
+                "schema_version": 1,
+                "threads": [
+                    {
+                        "id": "PRRT_kwDOA1",
+                        "file": "src/cart.py",
+                        "line": 12,
+                        "author": "octo-reviewer",
+                        "body": "the total is wrong",
+                    }
+                ],
+            },
+        )
+
+    def test_should_leave_out_a_resolved_thread(self):
+        # Arrange
+        runtime = create_runtime(
+            create_review_threads_page(
+                [
+                    {
+                        "id": "PRRT_kwDOA2",
+                        "isResolved": True,
+                        "path": "src/cart.py",
+                        "line": 3,
+                        "comments": {"nodes": [{"author": {"login": "octo-reviewer"}, "body": "rename it"}]},
+                    }
+                ]
+            )
+        )
+
+        # Act
+        answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "threads": []})
+
+    def test_should_name_no_author_for_a_comment_of_a_deleted_account(self):
+        # Arrange
+        runtime = create_runtime(
+            create_review_threads_page(
+                [
+                    {
+                        "id": "PRRT_kwDOA3",
+                        "isResolved": False,
+                        "path": "src/cart.py",
+                        "line": None,
+                        "comments": {"nodes": [{"author": None, "body": "outdated"}]},
+                    }
+                ]
+            )
+        )
+
+        # Act
+        answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(answer["threads"][0]["author"], None)
+
+    def test_should_ask_the_threads_of_the_pull_request_in_the_repository_as_the_login_of_the_environment(self):
+        # Arrange
+        runtime = create_runtime(create_review_threads_page([]))
+
+        # Act
+        list_review_threads(REVIEW_THREADS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            (runtime.requests[0].argv[:9], runtime.requests[0].cwd, runtime.requests[0].environment),
+            (
+                ("gh", "api", "graphql", "-F", "owner={owner}", "-F", "name={repo}", "-F", "number=42"),
+                "/projects/shop",
+                BOT_ENVIRONMENT,
+            ),
+        )
+
+
+class ReplyReviewThreadTest(unittest.TestCase):
+    def test_should_reply_on_the_thread_with_the_body_as_the_login_of_the_environment(self):
+        # Arrange
+        runtime = create_runtime(json.dumps({"data": {}}))
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "thread": "PRRT_kwDOA1",
+            "body": "fixed by 8885daa",
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = reply_review_thread(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            (answer, runtime.requests[0].argv[:7], runtime.requests[0].cwd, runtime.requests[0].environment),
+            (
+                {"schema_version": 1},
+                ("gh", "api", "graphql", "-f", "thread=PRRT_kwDOA1", "-f", "body=fixed by 8885daa"),
+                "/projects/shop",
+                BOT_ENVIRONMENT,
+            ),
         )
