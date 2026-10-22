@@ -1499,7 +1499,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.assertEqual(
             (self.spawn.argvs, self._read_events()[7:8]),
             (
-                [],
+                [("study", "run", "wave-report", "--run-id", ANY)],
                 [
                     {
                         "schema_version": 1,
