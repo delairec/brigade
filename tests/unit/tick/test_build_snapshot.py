@@ -133,6 +133,7 @@ class SnapshotTest(unittest.TestCase):
                     "branch_missing": False,
                     "reported": False,
                     "integration_pull_request": None,
+                    "opened_integration_pull_request": None,
                 }
             ],
         )
@@ -159,9 +160,35 @@ class SnapshotTest(unittest.TestCase):
                     "review": "verdict",
                     "auto_merge": "integration",
                     "verify_rounds": 2,
+                    "awaits_check_runs": True,
+                    "on_github": False,
                 }
             ],
         )
+
+
+class ProjectFactsTest(unittest.TestCase):
+    def test_should_carry_the_forge_facts_of_a_project_in_its_document(self):
+        # Arrange
+        project = ProjectFacts(name="brigade", slots=4, awaits_check_runs=False, on_github=True)
+
+        # Act
+        document = project.to_document()
+
+        # Assert
+        self.assertEqual((document["awaits_check_runs"], document["on_github"]), (False, True))
+
+
+class WaveFactsTest(unittest.TestCase):
+    def test_should_carry_the_integration_pull_request_the_wave_opened_in_its_document(self):
+        # Arrange
+        wave = WaveFacts(project="brigade", wave="w1", branch="wave/w1", opened_integration_pull_request=184)
+
+        # Act
+        document = wave.to_document()
+
+        # Assert
+        self.assertEqual(document["opened_integration_pull_request"], 184)
 
 
 class TaskFactsTest(unittest.TestCase):

@@ -19,6 +19,7 @@ from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
@@ -53,6 +54,7 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
     RecordTaskState,
@@ -89,6 +91,8 @@ RUNNING_STATE = "running"
 VERIFYING_STATE = "verifying"
 MERGED_STATE = "merged"
 PATH_FIELD = "PATH"
+MAIN_FIELD = "MAIN"
+NO_MILESTONE = None
 FAILED_VERDICT = "fail"
 TICK_INTERVAL_S = 300
 ROUND_CAP = 10
@@ -299,6 +303,30 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
     _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
 
 
+def _open_integration_pull_request(
+    runtime: Runtime, configuration: Configuration, action: OpenIntegrationPullRequest
+) -> None:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    project = find_project(read_projects(runtime), action.project)
+    main = read_project_field(project, MAIN_FIELD)
+    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+    tasks = ", ".join(f"@TASK.{task}" for task in action.tasks)
+    opened = forge.open_pull_request(
+        {
+            "repository": read_project_field(project, PATH_FIELD),
+            "base": main,
+            "branch": action.branch,
+            "title": f"chore(wave): merge the wave {action.wave} into {main}",
+            "body": f"Integrates the wave {action.wave} of @PROJECT.{action.project} into {main}: {tasks}.",
+            "milestone": NO_MILESTONE,
+            "environment": environment,
+        },
+        runtime,
+    )
+    append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=opened["number"], login=login))
+
+
 def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
     return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
 
@@ -345,6 +373,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
         StartWave: lambda action: _start_wave(runtime, configuration, action),
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
+        OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: append_event(runtime.paths, runtime.now, WaveReported(wave=action.wave, run=None)),
         CloseWave: lambda action: append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr)),
     }

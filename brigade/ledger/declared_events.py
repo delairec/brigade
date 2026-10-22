@@ -22,6 +22,7 @@ from brigade.ledger.undeclared_event import UndeclaredEvent
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
@@ -41,6 +42,7 @@ DECLARED_EVENTS = {
         WavePaused,
         WaveResumed,
         WaveReported,
+        WavePrOpened,
         WaveClosed,
         WaveCancelled,
         TaskParked,
@@ -70,6 +72,7 @@ LedgerEvent = (
     | WavePaused
     | WaveResumed
     | WaveReported
+    | WavePrOpened
     | WaveClosed
     | WaveCancelled
     | TaskParked

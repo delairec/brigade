@@ -100,6 +100,7 @@ class BrigadeWaveShowTest(WaveTestCase):
                 "branch": "integration/shop_w1",
                 "started_at": "2026-10-13T09:00:00Z",
                 "last_event": "wave.started",
+                "pull_request": None,
                 "tasks": [
                     {"task": "S3", "state": "running", "pull_request": None, "run": "20261013T121500Z-a00002"},
                     {"task": "S4", "state": "pr_open", "pull_request": 12, "run": None},

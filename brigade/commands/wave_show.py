@@ -5,6 +5,7 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
+from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_last_task_event import find_last_task_event
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.require_wave_summary import require_wave_summary
@@ -23,7 +24,8 @@ def _render_text(document: dict) -> str:
     rows = [tuple(_show(task[column]) for column in TASK_COLUMNS) for task in document["tasks"]]
     heading = (
         f"wave {document['wave']} of @PROJECT.{document['project']} on {document['branch']},"
-        f" started {document['started_at']}, last event {document['last_event']}"
+        f" started {document['started_at']}, last event {document['last_event']},"
+        f" pull request {_show(document['pull_request'])}"
     )
     return "\n".join([heading, render_table(TASK_HEADER, rows)])
 
@@ -60,6 +62,7 @@ def wave_show(request, runtime: Runtime) -> dict:
         "branch": started.branch,
         "started_at": format_instant(summary.started_at),
         "last_event": summary.last_event,
+        "pull_request": find_integration_pull_request(events, started.wave),
         "tasks": [_describe_task(events, states, started.wave, task) for task in started.tasks],
     }
 
