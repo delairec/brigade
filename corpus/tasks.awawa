@@ -10397,7 +10397,8 @@ TASK B167
 TASK B168
 	TITLE "The tick parks the task of a dead run with its reason, and brigade wave requeue"
 		+ "re-queues a parked task by hand"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 190
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
@@ -10407,15 +10408,35 @@ TASK B168
 		+ "parked, with the reason run dead and the id of the last run naming it, or the reason run"
 		+ "not started when none names it, where today brigade/tick/plan.py:47 never reopens"
 		+ "running"
+		IMPL "brigade/tick/plan.py::def _plan_dead_run_parkings(snapshot: Snapshot) -> tuple:"
+		IMPL "brigade/tick/build_snapshot.py::def _note_last_run("
+		IMPL "tests/unit/tick/test_plan.py::class"
+			+ "PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):"
+		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::def"
+			+ "test_should_name_the_last_run_naming_each_task_of_the_wave(self):"
 	SPEC "brigade wave requeue <wave> <task> records task.state queued for a parked task of the"
 		+ "wave, so that the next tick may launch it in its existing worktree; a task not parked"
 		+ "exits 1 naming its state, a task outside the wave exits 1 naming the wave"
+		IMPL "brigade/commands/wave_requeue.py::def wave_requeue(request, runtime: Runtime) ->"
+			+ "dict:"
+		IMPL "tests/unit/commands/test_wave_requeue.py::class"
+			+ "WaveRequeueOfAParkedTaskTest(unittest.TestCase):"
+		IMPL "tests/unit/commands/test_wave_requeue.py::class"
+			+ "WaveRequeueRefusalTest(unittest.TestCase):"
 	SPEC "the tick re-queues no task itself: a parked task stays parked until it is re-queued by"
 		+ "hand"
+		IMPL "tests/unit/tick/test_plan.py::(\"parked\", ALONE, {\"S3\": \"parked\"}, (),"
+			+ "(REPORT_SHOP_W1,)),"
 	SPEC "tests/unit prove the two reasons of the reconciliation, the requeue of a parked task and"
 		+ "each refusal; tests/cli gains one flow of brigade wave requeue, a parked task re-queued"
 		+ "through the fake adapter, as DESC 4 of the decision"
 		+ "ThePortableContractIsTheCommandLineAndNeutralFiles sets"
+		IMPL "tests/unit/tick/test_plan.py::class"
+			+ "PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):"
+		IMPL "tests/unit/commands/test_wave_requeue.py::class"
+			+ "WaveRequeueRefusalTest(unittest.TestCase):"
+		IMPL "tests/cli/test_wave_requeue.py::class"
+			+ "BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):"
 	AFTER @TASK.B166
 	AFTER @TASK.B187
 	RATIONALE "@TASK.B166 writes task.state running before the spawn, so that a crash between the"
