@@ -1032,6 +1032,19 @@ PARK_S3_PAST_ONE_ROUND = ParkTask(wave="shop_w1", task="S3", reason="past 1 repa
 REMEDIATION_RUN_OF_S3 = LiveRun(
     run="20261006T110000Z-a1b2c3", slot="remediate", worktree=WORKTREE_S3, wave="shop_w1", task="S3"
 )
+RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3 = LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree=WORKTREE_S3)
+REVIEW_RUN_OF_S3_IN_THE_MAIN_CHECKOUT = LiveRun(
+    run="20261006T110500Z-d4e5f6", slot="review", worktree="/projects/shop", wave="shop_w1", task="S3"
+)
+FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE = PullRequestFacts(
+    number=42,
+    state="open",
+    checks=(CheckVerdict(name="lint", verdict="success"), CheckVerdict(name="tests", verdict="failure")),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base=WAVE_BRANCH,
+)
 
 
 class PlanRepairTest(unittest.TestCase):
@@ -1065,21 +1078,41 @@ class PlanRepairTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
     def test_should_start_a_build_run_on_the_failing_checks_of_a_preflighted_head(self):
-        for case, failures, preflighted, expected in [
-            ("a failing check at the head", (CHECKS_FAILURE,), PREFLIGHTED_AT_THE_HEAD, (REPAIR_CHECKS_OF_S3,)),
+        for case, pull_request, failures, preflighted, expected in [
+            (
+                "a failing check at the head",
+                FAILED_CHECK_RUN,
+                (CHECKS_FAILURE,),
+                PREFLIGHTED_AT_THE_HEAD,
+                (REPAIR_CHECKS_OF_S3,),
+            ),
+            (
+                "a failing check beside a passing one",
+                FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE,
+                (CHECKS_FAILURE,),
+                PREFLIGHTED_AT_THE_HEAD,
+                (REPAIR_CHECKS_OF_S3,),
+            ),
             (
                 "a failing check beside a finding on the body",
+                FAILED_CHECK_RUN,
                 (CHECKS_FAILURE, BODY_FAILURE),
                 PREFLIGHTED_AT_THE_HEAD,
                 (REPAIR_CHECKS_OF_S3,),
             ),
-            ("a failing check before a push", (CHECKS_FAILURE,), PREFLIGHTED_BEFORE_A_PUSH, (PREFLIGHT_S3,)),
+            (
+                "a failing check before a push",
+                FAILED_CHECK_RUN,
+                (CHECKS_FAILURE,),
+                PREFLIGHTED_BEFORE_A_PUSH,
+                (PREFLIGHT_S3,),
+            ),
         ]:
             with self.subTest(case=case):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
-                    pull_request=FAILED_CHECK_RUN,
+                    pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
                     preflighted_head=preflighted,
@@ -1097,7 +1130,8 @@ class PlanRepairTest(unittest.TestCase):
         for case, worktree, live_runs, expected in [
             ("with its worktree free", WORKTREE_S3, (), (REMEDIATE_S3,)),
             ("without its worktree", NO_WORKTREE, (), ()),
-            ("while a run of the task is live", WORKTREE_S3, (REMEDIATION_RUN_OF_S3,), ()),
+            ("while another run holds its worktree", WORKTREE_S3, (RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3,), ()),
+            ("while a run of the task is live elsewhere", WORKTREE_S3, (REVIEW_RUN_OF_S3_IN_THE_MAIN_CHECKOUT,), ()),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -1120,18 +1154,34 @@ class PlanRepairTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
     def test_should_follow_a_task_in_fixing_by_the_head_of_its_pull_request(self):
-        for case, preflighted, failures, live_runs, expected in [
-            ("pushed by its repair run", PREFLIGHTED_BEFORE_A_PUSH, NO_PREFLIGHT_FAILURE, (), (RECORD_PR_OPEN,)),
+        for case, pull_request, preflighted, failures, live_runs, expected in [
+            (
+                "pushed by its repair run",
+                OPEN,
+                PREFLIGHTED_BEFORE_A_PUSH,
+                NO_PREFLIGHT_FAILURE,
+                (),
+                (RECORD_PR_OPEN,),
+            ),
             (
                 "while its repair run is live",
+                OPEN,
                 PREFLIGHTED_AT_THE_HEAD,
                 NO_PREFLIGHT_FAILURE,
                 (REMEDIATION_RUN_OF_S3,),
                 (),
             ),
-            ("a remediation ended without a push", PREFLIGHTED_AT_THE_HEAD, NO_PREFLIGHT_FAILURE, (), (REMEDIATE_S3,)),
+            (
+                "a remediation ended without a push",
+                OPEN,
+                PREFLIGHTED_AT_THE_HEAD,
+                NO_PREFLIGHT_FAILURE,
+                (),
+                (REMEDIATE_S3,),
+            ),
             (
                 "a check repair ended without a push",
+                FAILED_CHECK_RUN,
                 PREFLIGHTED_AT_THE_HEAD,
                 (CHECKS_FAILURE,),
                 (),
@@ -1143,7 +1193,7 @@ class PlanRepairTest(unittest.TestCase):
                 project = ProjectFacts(name="shop", slots=4, live_runs=live_runs)
                 task = TaskFacts(
                     name="S3",
-                    pull_request=FAILED_CHECK_RUN if failures else OPEN,
+                    pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
                     preflighted_head=preflighted,
@@ -1159,10 +1209,11 @@ class PlanRepairTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
     def test_should_park_a_task_whose_repair_would_go_past_the_rounds_of_the_policy(self):
-        for case, state, failures, rounds, project, expected in [
+        for case, state, pull_request, failures, rounds, project, expected in [
             (
                 "changes requested within the rounds",
                 "changes_requested",
+                OPEN,
                 NO_PREFLIGHT_FAILURE,
                 ONE_ROUND_TAKEN,
                 SHOP,
@@ -1171,6 +1222,7 @@ class PlanRepairTest(unittest.TestCase):
             (
                 "changes requested past the rounds",
                 "changes_requested",
+                OPEN,
                 NO_PREFLIGHT_FAILURE,
                 TWO_ROUNDS_TAKEN,
                 SHOP,
@@ -1179,6 +1231,7 @@ class PlanRepairTest(unittest.TestCase):
             (
                 "a failing check past the rounds",
                 "pr_open",
+                FAILED_CHECK_RUN,
                 (CHECKS_FAILURE,),
                 TWO_ROUNDS_TAKEN,
                 SHOP,
@@ -1187,6 +1240,7 @@ class PlanRepairTest(unittest.TestCase):
             (
                 "a repair ended without a push past the rounds",
                 "fixing",
+                OPEN,
                 NO_PREFLIGHT_FAILURE,
                 TWO_ROUNDS_TAKEN,
                 SHOP,
@@ -1195,6 +1249,7 @@ class PlanRepairTest(unittest.TestCase):
             (
                 "under a policy of one round",
                 "changes_requested",
+                OPEN,
                 NO_PREFLIGHT_FAILURE,
                 ONE_ROUND_TAKEN,
                 SHOP_ALLOWING_ONE_ROUND,
@@ -1203,6 +1258,7 @@ class PlanRepairTest(unittest.TestCase):
             (
                 "the first round",
                 "changes_requested",
+                OPEN,
                 NO_PREFLIGHT_FAILURE,
                 NO_ROUND_TAKEN,
                 SHOP_ALLOWING_ONE_ROUND,
@@ -1213,7 +1269,7 @@ class PlanRepairTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
-                    pull_request=FAILED_CHECK_RUN if failures else OPEN,
+                    pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
                     preflighted_head=PREFLIGHTED_AT_THE_HEAD,
