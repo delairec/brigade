@@ -69,6 +69,10 @@ def answer_tree(ref: str, sha: str) -> dict:
     return {argv: ProcessAnswer(stdout=f"{sha}\n")}
 
 
+def answer_main_of_the_forge(sha: str) -> dict:
+    return {("git", "fetch", "--quiet", "origin", "main"): ProcessAnswer(), **answer_tree("origin/main", sha)}
+
+
 def answer_unreadable_tree(ref: str) -> dict:
     argv = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
     return {argv: ProcessAnswer(exit_code=128, stderr="fatal: bad revision")}
@@ -187,7 +191,8 @@ class BuildSnapshotTestCase(unittest.TestCase):
         )
 
     def build(self) -> tuple[Snapshot, str]:
-        runtime = create_test_runtime(self.paths, run_process=self.create_runner())
+        self.runner = self.create_runner()
+        runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
             snapshot = build_snapshot(runtime, Configuration(), self.reader, _read_forge_environment)
@@ -314,7 +319,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         # Arrange
         self.shop_forge = "github"
         argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
-        self.remote_answers = {argv: ProcessAnswer()}
+        self.remote_answers = {argv: ProcessAnswer(), **answer_main_of_the_forge(MAIN_SHA)}
 
         # Act
         snapshot, _ = self.build()
@@ -335,6 +340,22 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_fetch_the_main_branch_with_the_environment_of_the_forge_on_github(self):
+        # Arrange
+        self.shop_forge = "github"
+        argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
+        self.remote_answers = {argv: ProcessAnswer(), **answer_main_of_the_forge(MAIN_SHA)}
+
+        # Act
+        self.build()
+
+        # Assert
+        fetches = [request for request in self.runner.requests if request.argv[:2] == ("git", "fetch")]
+        self.assertEqual(
+            [(request.argv, request.cwd, request.environment) for request in fetches],
+            [(("git", "fetch", "--quiet", "origin", "main"), str(self.repository), FORGE_ENVIRONMENT)],
+        )
+
     def test_should_mark_a_wave_whose_branch_is_gone(self):
         # Act
         snapshot, _ = self.build()
@@ -349,7 +370,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         # Arrange
         self.shop_forge = "github"
         argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
-        self.remote_answers = {argv: ProcessAnswer(exit_code=2)}
+        self.remote_answers = {argv: ProcessAnswer(exit_code=2), **answer_main_of_the_forge(MAIN_SHA)}
 
         # Act
         snapshot, _ = self.build()

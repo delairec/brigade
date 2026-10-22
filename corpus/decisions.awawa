@@ -3548,3 +3548,49 @@ DECISION AFailedActionIsNotAppliedAgainInTheTickThatSawItFail
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	SOURCE "taken in the delivery of @TASK.B166, pull request #185"
 		REF @TASK.B166
+
+DECISION AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
+	TITLE "on a project of FORGE github, brigade fetches origin/<MAIN> and reads from it the corpus"
+		+ "the planner is given, checks and records the plan on a worktree cut from it, reads the"
+		+ "candidates of a wave and cuts its integration branch from it; a project of FORGE none"
+		+ "keeps its local MAIN"
+	STATUS active
+	DESC "the fetch runs with the environment of the cli slot, at each plan context, each plan"
+		+ "record, each read of the candidates and each cut of a wave branch; the local MAIN and"
+		+ "the checkout of the user are never touched"
+	DESC "plan context reads the corpus from the tree of that commit on both forges, never from the"
+		+ "checkout of the clone, so the planner sees the corpus the plan is recorded against"
+	DESC "binds @TASK.B21"
+		REF @TASK.B21
+	REJECTED "a fast-forward of the local MAIN after the plan pull request merges: it fails on a"
+		+ "dirty or advanced checkout of the user, while the forge is where the plan and the tasks"
+		+ "are merged"
+	RATIONALE "the rehearsal of @TASK.B21 found the wave never starting: the plan pull request"
+		+ "merges on GitHub, and nothing brought the local MAIN up to it, so the tick read no"
+		+ "candidate; its second request was then planned against the stale clone, reused task"
+		+ "names the forge already held and opened a plan pull request in conflict"
+		REF @TASK.B21
+	SOURCE "the user's ruling of 2026-10-22 on the first run of @TASK.B21, « Lire origin/<MAIN>"
+		+ "(Recommended) », delivered in its pull request « Dans la PR de B21 (Recommended) », pull"
+		+ "request #187"
+		REF @TASK.B21
+
+DECISION TheFakeClientPlaysAnAgentFromAnExecutableNamedAfterItsRole
+	TITLE "the setting plays of [clients.fake] names a directory whose executable named after the"
+		+ "role runs on the brief as stdin, given the recording path, in place of the replay"
+	STATUS active
+	DESC "a role with no executable in the directory, or no plays setting, is replayed from its"
+		+ "recording as before; the play prints the recording itself to end like a replay"
+	DESC "binds @TASK.B21"
+		REF @TASK.B21
+	REJECTED "the end-to-end case running the brigade commands of each agent from the test between"
+		+ "two ticks: the run would no longer be the one the tick launched, with its worktree, its"
+		+ "brief and its environment"
+	REJECTED "recordings that carry the commands to run: a recording is the transcript of a client,"
+		+ "and a fake that executes it would make every replay a script"
+	RATIONALE "SPEC 4 of @TASK.B21 asks the rehearsal on the fake adapter, and a wave reaches its"
+		+ "integration pull request only when its agents run plan record, task check, pr and"
+		+ "promote, and verify verdict"
+		REF @TASK.B21
+	SOURCE "the first run of @TASK.B21, 2026-10-22, pull request #187"
+		REF @TASK.B21

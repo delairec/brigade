@@ -474,7 +474,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
 def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[str, ...]:
     if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
         return ()
-    tasks = read_project_tasks(runtime, reading.configuration, project)
+    tasks = read_project_tasks(runtime, reading.configuration, project, reading.read_environment)
     return admit_candidates(runtime.run_process, tasks, map_open_tasks(reading.entries, project.name))
 
 

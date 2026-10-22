@@ -86,6 +86,8 @@ class RecordPlanArrangement:
         (self.worktree / "corpus" / "tasks.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
         self.config_root = self.runtime.paths.config_root
         (self.config_root / "requests.awawa").write_text("REQUEST oak_r1\n\tSTATUS planning\n", encoding="utf-8")
+        self.processes.answer(("git", "fetch", "--quiet", "origin", "main"))
+        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main"))
         self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.worktree)))
         self.forge = ForgeDouble([create_found_pull_request(NO_REVIEW_REQUIRED)])
@@ -318,11 +320,50 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertIn(("git", "worktree", "remove", "--force", str(self.worktree)), self.processes.list_argvs())
 
+    def test_should_check_the_plan_against_the_main_branch_of_the_forge(self):
+        # Arrange
+        self.script_recording()
+
+        # Act
+        record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        worktree_add = next(argv for argv in self.processes.list_argvs() if argv[:3] == ("git", "worktree", "add"))
+        self.assertEqual(
+            worktree_add, ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main")
+        )
+
+    def test_should_fetch_the_main_branch_with_the_environment_of_the_forge(self):
+        # Arrange
+        self.script_recording()
+
+        # Act
+        record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        fetches = [request for request in self.processes.requests if request.argv[:2] == ("git", "fetch")]
+        self.assertEqual(
+            [(request.argv, request.cwd, request.environment) for request in fetches],
+            [(("git", "fetch", "--quiet", "origin", "main"), "/srv/oak", {"GH_TOKEN": "token-of-cli"})],
+        )
+
 
 class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.script_recording()
+
+    def test_should_check_the_plan_against_the_local_main_branch(self):
+        # Arrange
+        self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=MAIN_HELD_BY_NO_WORKTREE)
+        self.processes.answer(("git", "fetch", "--quiet", ".", f"{BRANCH}:main"))
+
+        # Act
+        record_plan(self.runtime, self.create_recording("none"))
+
+        # Assert
+        worktree_add = next(argv for argv in self.processes.list_argvs() if argv[:3] == ("git", "worktree", "add"))
+        self.assertEqual(worktree_add, ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
 
     def test_should_merge_the_plan_branch_into_the_main_branch_no_worktree_holds(self):
         # Arrange

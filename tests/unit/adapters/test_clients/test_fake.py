@@ -125,6 +125,49 @@ class FakeLaunchOfASegmentResumedFromItsBriefTest(unittest.TestCase):
         self.assertEqual(launch["argv"], ["cat", "--", f"{self.recordings}/builder.json"])
 
 
+class FakeLaunchOfARolePlayingItsCommandsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.plays = Path(self.root.name) / "plays"
+        self.plays.mkdir()
+
+    def tearDown(self):
+        self.root.cleanup()
+
+    def launch(self) -> dict:
+        settings = {"recordings": "/srv/recordings", "plays": str(self.plays)}
+        return answer("launch-argv", {**LAUNCH_REQUEST, "settings": settings})
+
+    def test_should_run_the_play_of_the_role_on_its_brief_then_replay_its_recording(self):
+        # Arrange
+        (self.plays / "builder").write_text("#!/bin/sh\n")
+
+        # Act
+        launch = self.launch()
+
+        # Assert
+        self.assertEqual(
+            launch,
+            {
+                "schema_version": 1,
+                "argv": [f"{self.plays}/builder", "/srv/recordings/builder.json"],
+                "environment": {},
+                "stdin": "Deliver the task B42.",
+                "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
+            },
+        )
+
+    def test_should_replay_the_recording_of_a_role_that_has_no_play(self):
+        # Arrange
+        (self.plays / "planner").write_text("#!/bin/sh\n")
+
+        # Act
+        launch = self.launch()
+
+        # Assert
+        self.assertEqual(launch["argv"], ["cat", "--", "/srv/recordings/builder.json"])
+
+
 class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
     def test_should_declare_the_features_its_settings_name(self):
         # Arrange

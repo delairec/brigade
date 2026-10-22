@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@TASK.S2",
+      "--json",
+      "<tmp:0>/state/brigade/runs/<run:1>/plan.awawa"
+    ],
+    "cwd": "<tmp:0>/state/brigade/runs/<run:1>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/state/brigade/runs/<run:1>/plan.awawa": "MILESTONE M1\n\tTITLE \"Empty cart\"\n\tSTATUS planned\n\nTASK S1\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n\nTASK S2\n\tTITLE \"Confirm before emptying the cart\"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n\tAFTER @TASK.S1\n\nTASK S3\n\tTITLE \"Count the emptied carts\"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"S2\", \"file\": \"<tmp:0>/state/brigade/runs/<run:1>/plan.awawa\", \"line\": 11, \"status\": \"todo\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Confirm before emptying the cart\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"todo\"], \"fields\": []}, {\"name\": \"TYPE\", \"atoms\": [\"feat\"], \"fields\": []}, {\"name\": \"MILESTONE\", \"atoms\": [\"@MILESTONE.M1\"], \"fields\": []}, {\"name\": \"AFTER\", \"atoms\": [\"@TASK.S1\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [
+    "<run:1>"
+  ],
+  "version": "awawa 2.7.0"
+}

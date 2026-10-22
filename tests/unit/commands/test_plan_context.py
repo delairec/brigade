@@ -18,7 +18,28 @@ REQUEST = json.dumps(
     }
 )
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
-APP = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}, {"name": "CORPUS", "atoms": ['"corpus"']}]})
+MAIN_SHA = "4f1c2a9"
+FORGE_MAIN_SHA = "9b0d3e7"
+APP = json.dumps(
+    {
+        "fields": [
+            {"name": "PATH", "atoms": ['"/srv/app"']},
+            {"name": "MAIN", "atoms": ['"main"']},
+            {"name": "CORPUS", "atoms": ['"corpus"']},
+            {"name": "FORGE", "atoms": ['"none"']},
+        ]
+    }
+)
+APP_ON_GITHUB = json.dumps(
+    {
+        "fields": [
+            {"name": "PATH", "atoms": ['"/srv/app"']},
+            {"name": "MAIN", "atoms": ['"main"']},
+            {"name": "CORPUS", "atoms": ['"corpus"']},
+            {"name": "FORGE", "atoms": ['"github"']},
+        ]
+    }
+)
 APP_WITHOUT_CORPUS = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}]})
 CORPUS_STATUS = json.dumps(
     {
@@ -54,26 +75,38 @@ DECISION_D1 = json.dumps(
     }
 )
 TASK_SCHEMA = json.dumps({"fields": [{"name": "FIELD", "atoms": ["TITLE"]}]})
+FORGE = object()
+
+
+def resolve_forge(kind: str, name: str, **places):
+    return FORGE
 
 
 class PlanContextTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
+        self.main_tree = Path(self.root.name) / "cache" / "refs" / "app" / MAIN_SHA
+        self.main_tree.mkdir(parents=True)
         self.answers = {
             ("awawa", "show", "@REQUEST.r1"): ProcessAnswer(stdout=REQUEST),
             ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=PROJECTS),
             ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=APP),
-            ("awawa", "status", "--json", "/srv/app"): ProcessAnswer(stdout=CORPUS_STATUS),
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "main^{commit}"): ProcessAnswer(
+                stdout=f"{MAIN_SHA}\n"
+            ),
+            ("awawa", "status", "--json", str(self.main_tree)): ProcessAnswer(stdout=CORPUS_STATUS),
             ("awawa", "show", "@TASK.T7"): ProcessAnswer(stdout=TASK_T7),
             ("awawa", "show", "@DECISION.D1"): ProcessAnswer(stdout=DECISION_D1),
             ("awawa", "show", "TASK"): ProcessAnswer(stdout="SCHEMA TASK\n\tFIELD TITLE\n"),
             ("awawa", "show", "TASK", "--json"): ProcessAnswer(stdout=TASK_SCHEMA),
             ("awawa", "show", "MILESTONE"): ProcessAnswer(exit_code=1),
         }
-        self.runtime = create_runtime(Path(self.root.name), run_process=ScriptedProcessRunner(self.answers).run)
+        self.runner = ScriptedProcessRunner(self.answers)
+        self.runtime = create_runtime(Path(self.root.name), run_process=self.runner.run, resolve_plugin=resolve_forge)
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA REQUEST\n")
+        self.runtime.paths.configuration_file.write_text("")
 
     def test_should_assemble_the_package_of_the_request_and_of_the_corpus_of_its_project(self):
         # Arrange
@@ -88,7 +121,7 @@ class PlanContextTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "request": {"name": "r1", "project": "app", "text": "Let the tides be planned"},
-                "corpus": "/srv/app",
+                "corpus": str(self.main_tree),
                 "status": [{"type": "TASK", "total": 2, "counts": {"draft": 1, "todo": 1}}],
                 "decisions": [{"name": "D1", "title": "Tides run on the clock"}],
                 "tasks": [{"name": "T7", "status": "draft", "title": "Ebb the tide"}],
@@ -110,6 +143,39 @@ class PlanContextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "@PROJECT.app declares no corpus")
+
+    def test_should_read_the_corpus_of_the_main_branch_of_the_forge_on_github(self):
+        # Arrange
+        forge_tree = Path(self.root.name) / "cache" / "refs" / "app" / FORGE_MAIN_SHA
+        forge_tree.mkdir(parents=True)
+        self.answers["awawa", "show", "@PROJECT.app"] = ProcessAnswer(stdout=APP_ON_GITHUB)
+        self.answers["git", "fetch", "--quiet", "origin", "main"] = ProcessAnswer()
+        self.answers["git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"] = (
+            ProcessAnswer(stdout=f"{FORGE_MAIN_SHA}\n")
+        )
+        self.answers["awawa", "status", "--json", str(forge_tree)] = ProcessAnswer(stdout=CORPUS_STATUS)
+        request = argparse.Namespace(request="r1")
+
+        # Act
+        document = plan_context(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["corpus"], str(forge_tree))
+
+    def test_should_fetch_the_main_branch_of_the_forge_before_reading_it_on_github(self):
+        # Arrange
+        self.answers["awawa", "show", "@PROJECT.app"] = ProcessAnswer(stdout=APP_ON_GITHUB)
+        self.answers["git", "fetch", "--quiet", "origin", "main"] = ProcessAnswer()
+        self.answers["git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"] = (
+            ProcessAnswer(stdout=f"{MAIN_SHA}\n")
+        )
+        request = argparse.Namespace(request="r1")
+
+        # Act
+        plan_context(request, self.runtime)
+
+        # Assert
+        self.assertIn(("git", "fetch", "--quiet", "origin", "main"), self.runner.argvs)
 
 
 class PlanContextRequestTest(unittest.TestCase):
