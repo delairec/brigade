@@ -31,6 +31,20 @@ class AskReviewThreadsTest(unittest.TestCase):
             str(refusal.exception), "forge plugin github answered list_review_threads: lacks the key threads"
         )
 
+    def test_should_refuse_an_answer_whose_thread_is_not_an_object_naming_the_forge(self):
+        # Arrange
+        forge = ForgeDouble({"schema_version": 1, "threads": ["wrong total"]})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            ask_review_threads(forge, "github", QUERY, NO_RUNTIME_NEEDED)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "forge plugin github answered list_review_threads: threads[0] is a string, not an object",
+        )
+
     def test_should_answer_the_threads_the_forge_lists(self):
         # Arrange
         thread = {"id": "PRRT_kwDOA1", "file": "src/cart.py", "line": 12, "author": "octo", "body": "wrong total"}
