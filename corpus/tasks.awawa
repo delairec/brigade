@@ -11654,28 +11654,47 @@ TASK B197
 		+ "(Recommended) », B197 opened as draft for the future upgrade of an installed schema"
 
 TASK B205
-	TITLE "A study publishes on a private GitHub repository with the environment of the cli slot"
-	STATUS draft
+	TITLE "A study publishes on a private GitHub repository with the environment of the login bound"
+		+ "to cli"
+	STATUS todo
 	TYPE fix
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
 	ROLE ada
 	SPEC "on a project of FORGE github, the built-in study wave-report fetches the integration"
 		+ "branch, pushes the commit of its report and rewrites the body of the integration pull"
-		+ "request with the environment of the cli slot, so that the report of a wave reaches a"
-		+ "private repository"
-	SPEC "a study whose answer is written to a file pushes its branch and opens its pull request"
-		+ "with the environment of the cli slot on a project of FORGE github"
+		+ "request with the environment of the login forge_accounts binds to cli, so that the"
+		+ "report of a wave reaches a private repository"
+	SPEC "on a project of FORGE github, a study whose answer is written to a file pushes its branch"
+		+ "and opens its pull request with the environment of the login forge_accounts binds to cli"
+	SPEC "on a project of FORGE github, a study whose answer goes to an issue opens it with the"
+		+ "environment of the login forge_accounts binds to cli"
+	SPEC "with no login bound to cli, the three outputs act with the environment of brigade itself,"
+		+ "as today; a login bound to cli for which gh prints no token after forge_attempts parks"
+		+ "the study at its output step, with forge_account.unavailable and a reason naming the"
+		+ "login"
 	RATIONALE "the rehearsal of @TASK.B21 on the private repository fake-repository-for-testing"
 		+ "parked both wave-report studies, runs 20261022T201206Z-e270a5 and"
 		+ "20261022T204810Z-33b0f4, at their output step on « git fetch --quiet origin"
 		+ "integration/<wave> exited 128: remote: Repository not found »:"
 		+ "brigade/studies/publish_wave_report.py, delivered by @TASK.B20 in #183, fetches, pushes"
-		+ "and rewrites the body with UNBOUND_ENVIRONMENT = {}, and"
+		+ "and rewrites the body with UNBOUND_ENVIRONMENT = {},"
 		+ "brigade/studies/write_answer_to_file.py opens its pull request with the same empty"
-		+ "environment"
+		+ "environment and pushes through brigade/git/force_push_branch.py, which takes none, and"
+		+ "brigade/studies/open_answer_issue.py reaches open_issue of"
+		+ "brigade/adapters/forges/github.py, which passes UNBOUND_ENVIRONMENT itself"
 		REF @TASK.B21
 		REF @TASK.B20
+	RATIONALE "cli is a key of forge_accounts, not a slot: FORGE_ACCOUNT_KEYS of"
+		+ "brigade/system/read_configuration.py is the slots plus cli, and the tick and the"
+		+ "collector pr-list already read the environment of cli through read_account_environment,"
+		+ "which answers the environment of brigade itself for an unbound key and raises"
+		+ "LoginUnavailable, a BrigadeError, for a login without a token; run_study parks a study"
+		+ "on any BrigadeError of a step"
+		REF @DECISION.TheForgeAdapterAnswersTheEnvironmentOfALoginAndDoctorReadsItOnce
 	SOURCE "the review of pull request #187, comment 4353876375 on corpus/decisions.awawa: « Either"
 		+ "close it here or report it with this evidence as a blocker/question for its own task »"
 		REF @TASK.B21
+	SOURCE "the user's ruling of 2026-10-23 in the refinement of B205: the issue output in the"
+		+ "task, a SPEC for a login without a token, cli named as the login bound to it in"
+		+ "forge_accounts"
