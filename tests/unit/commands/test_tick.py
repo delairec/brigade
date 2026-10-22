@@ -449,6 +449,7 @@ class ForgeDouble:
         self.found = found
         self.details = details
         self.tails = tails
+        self.check_log_requests = []
 
     def find_pull_request(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "pull_request": self.found}
@@ -457,6 +458,7 @@ class ForgeDouble:
         return {"schema_version": 1, "pull_request": self.details}
 
     def read_check_logs(self, request: dict, runtime) -> dict:
+        self.check_log_requests.append(request)
         return {"schema_version": 1, "logs": [{"name": name, "tail": self.tails[name]} for name in request["checks"]]}
 
 
@@ -704,6 +706,22 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 },
             ),
         )
+
+    def test_should_ask_the_forge_for_the_last_200_lines_of_the_log_of_each_failing_check(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_ON_FAILING_CHECKS, _record_task_state("pr_open")],
+        )
+        forge = ForgeDouble(PULL_REQUEST_FAILING_TWO_CHECKS, NO_DETAILS_ASKED, {"ci": None, "coverage": None})
+        runtime = self._create_runtime(TASK_DELIVERED, forge)
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(forge.check_log_requests[0]["lines"], 200)
 
     def test_should_launch_the_repair_of_the_failing_checks_with_the_tail_of_their_logs_and_record_it_in_fixing(self):
         # Arrange
