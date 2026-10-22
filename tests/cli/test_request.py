@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
@@ -123,7 +124,7 @@ class BrigadeRequestNewTest(RequestTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertRegex(document["run"], RUN_ID_PATTERN)
-        self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": document["run"]})
+        self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": ANY})
         self.wait_for_result(document["run"])
         run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
         self.assertEqual(
@@ -149,7 +150,7 @@ class BrigadeRequestReplanTest(RequestTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertRegex(document["run"], RUN_ID_PATTERN)
-        self.assertEqual(document, {"schema_version": 1, "request": "shop_r2", "run": document["run"]})
+        self.assertEqual(document, {"schema_version": 1, "request": "shop_r2", "run": ANY})
         self.wait_for_result(document["run"])
         run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
         self.assertEqual(
