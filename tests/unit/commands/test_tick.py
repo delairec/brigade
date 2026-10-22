@@ -346,6 +346,7 @@ MACHINE_OUTPUTS = {
     ("git", "merge-base"): "",
     ("git", "fetch"): "",
     ("git", "diff"): "",
+    ("git", "status", "--porcelain", "--untracked-files=no"): "",
     ("awawa", "status", "TASK", "--where", "STATUS==implemented"): '{"entities": []}',
     ("awawa", "refs"): '{"incoming": []}',
     ("awawa", "fmt"): "",

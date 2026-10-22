@@ -124,6 +124,7 @@ class SnapshotTest(unittest.TestCase):
                             "reviewed_head": None,
                             "preflight_failures": [],
                             "repair_rounds": 0,
+                            "holds_uncommitted_changes": False,
                         }
                     ],
                     "states": {},

@@ -1321,6 +1321,8 @@ REBASE_S3 = RebaseTask(
     parking_reason=None,
 )
 REBASE_S3_PARKED_ON_A_CONFLICT = dataclasses.replace(REBASE_S3, parking_reason="past 2 repair rounds")
+BEHIND_ON_A_FAILED_CHECK = dataclasses.replace(FAILED_CHECK_RUN, behind=True)
+HOLDING_UNCOMMITTED_CHANGES = True
 
 
 class PlanRebaseTest(unittest.TestCase):
@@ -1428,6 +1430,53 @@ class PlanRebaseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (expected,))
+
+    def test_should_repair_rather_than_rebase_a_task_behind_whose_worktree_holds_uncommitted_changes(self):
+        for state in ["pr_open", "verifying", "verified", "changes_requested", "fixing"]:
+            for case, pull_request, failures, expected in [
+                ("no failing check", BEHIND, NO_PREFLIGHT_FAILURE, REMEDIATE_S3),
+                ("a failing check", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), REPAIR_CHECKS_OF_S3),
+            ]:
+                with self.subTest(state=state, case=case):
+                    # Arrange
+                    task = TaskFacts(
+                        name="S3",
+                        pull_request=pull_request,
+                        worktree=WORKTREE_S3,
+                        opened_pull_request=OPENED_BY_THE_TASK,
+                        preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                        preflight_failures=failures,
+                        repair_rounds=ONE_ROUND_TAKEN,
+                        holds_uncommitted_changes=HOLDING_UNCOMMITTED_CHANGES,
+                    )
+                    snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                    # Act
+                    actions = plan(snapshot)
+
+                    # Assert
+                    self.assertEqual(actions, (expected,))
+
+    def test_should_park_a_task_behind_holding_uncommitted_changes_whose_repair_rounds_are_spent(self):
+        for state in ["pr_open", "fixing"]:
+            with self.subTest(state=state):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=BEHIND,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    repair_rounds=TWO_ROUNDS_TAKEN,
+                    holds_uncommitted_changes=HOLDING_UNCOMMITTED_CHANGES,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (PARK_S3_PAST_ITS_ROUNDS,))
 
 
 SHOP_ON_GITHUB = dataclasses.replace(SHOP, on_github=True)
