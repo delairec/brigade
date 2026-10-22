@@ -136,8 +136,8 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         detach=True,
         resume=False,
     )
-    run(building, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
+    run(building, runtime)
 
 
 def _launch_verification(runtime: Runtime, configuration: Configuration, action: LaunchVerification) -> None:
@@ -265,8 +265,8 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
         detach=True,
         resume=True,
     )
-    run(resuming, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
+    run(resuming, runtime)
 
 
 def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
@@ -462,7 +462,11 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
             Rounds(
                 build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
                 plan=plan,
-                apply=functools.partial(apply_actions, executors=_list_executors(runtime, configuration)),
+                apply=functools.partial(
+                    apply_actions,
+                    executors=_list_executors(runtime, configuration),
+                    record_failure=lambda event: append_event(runtime.paths, runtime.now, event),
+                ),
                 cap=ROUND_CAP,
             )
         )
@@ -470,6 +474,7 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
             ts=format_instant(runtime.now),
             duration_ms=int((time.monotonic() - started) * 1000),
             actions_applied=outcome.actions_applied,
+            actions_failed=outcome.actions_failed,
         )
         write_json_atomically(_locate_heartbeat(runtime), heartbeat.to_document())
     return heartbeat
@@ -485,6 +490,7 @@ def _tick_once(runtime: Runtime) -> dict:
         "ts": heartbeat.ts,
         "duration_ms": heartbeat.duration_ms,
         "actions_applied": heartbeat.actions_applied,
+        "actions_failed": heartbeat.actions_failed,
         "heartbeat": str(_locate_heartbeat(runtime)),
     }
 
@@ -513,7 +519,8 @@ def _tick_and_report(create_runtime: Callable[[], Runtime]) -> None:
         sys.stderr.write(f"brigade tick: another tick holds {_locate_lock(runtime)}\n")
         return
     sys.stderr.write(
-        f"brigade tick: {heartbeat.ts}: {heartbeat.actions_applied} actions applied in {heartbeat.duration_ms} ms\n"
+        f"brigade tick: {heartbeat.ts}: {heartbeat.actions_applied} actions applied,"
+        f" {heartbeat.actions_failed} failed in {heartbeat.duration_ms} ms\n"
     )
     sys.stderr.flush()
 
@@ -526,7 +533,8 @@ def _tick_in_loop(create_runtime: Callable[[], Runtime]) -> dict:
 
 
 def _render_once(document: dict) -> list[str]:
-    return [f"tick {document['ts']}: {document['actions_applied']} actions applied in {document['duration_ms']} ms"]
+    applied = f"{document['actions_applied']} actions applied, {document['actions_failed']} failed"
+    return [f"tick {document['ts']}: {applied} in {document['duration_ms']} ms"]
 
 
 def _render_dry_run(document: dict) -> list[str]:

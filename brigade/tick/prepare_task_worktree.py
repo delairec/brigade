@@ -3,8 +3,9 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError, ToolFailure
 from brigade.git.add_branch_worktree import BranchWorktree, add_branch_worktree
-from brigade.git.delete_branch import delete_branch
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.add_worktree_on_branch import add_worktree_on_branch
+from brigade.git.find_branch import find_branch
+from brigade.git.list_worktrees import list_worktrees
 from brigade.git.require_ancestor import require_ancestor
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_state import TaskState
@@ -46,6 +47,16 @@ def _set_up(runtime: Runtime, setup: tuple[str, ...], worktree: BranchWorktree, 
     require_ancestor(runtime.run_process, worktree.path, worktree.start)
 
 
+def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree) -> None:
+    listed = list_worktrees(runtime.run_process, repository)
+    if any(found.path == worktree.path and found.branch == worktree.branch for found in listed):
+        return
+    if find_branch(runtime.run_process, repository, worktree.branch):
+        add_worktree_on_branch(runtime.run_process, repository, worktree)
+        return
+    add_branch_worktree(runtime.run_process, repository, worktree)
+
+
 def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> BranchWorktree:
     project = find_project(read_projects(runtime), action.project)
     repository = Path(read_project_field(project, "PATH"))
@@ -58,7 +69,7 @@ def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action
     with hold_lock(lock):
         if configuration.worktree_root is None:
             ignore_worktrees(runtime.run_process, repository, action.branch)
-        add_branch_worktree(runtime.run_process, repository, worktree)
+        _open_worktree(runtime, repository, worktree)
     try:
         _set_up(
             runtime,
@@ -67,9 +78,6 @@ def prepare_task_worktree(runtime: Runtime, configuration: Configuration, action
             locate_setup_log(runtime.paths.setup_directory, action.project, action.task),
         )
     except ToolFailure as failure:
-        with hold_lock(lock):
-            remove_worktree(runtime.run_process, repository, worktree.path)
-            delete_branch(runtime.run_process, repository, worktree.branch)
         append_event(
             runtime.paths,
             runtime.now,

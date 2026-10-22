@@ -19,6 +19,7 @@ from brigade.ledger.task_rebased import TaskRebased
 from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.undeclared_event import UndeclaredEvent
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
@@ -66,6 +67,7 @@ DECLARED_EVENTS = {
         TaskVerdict,
         TaskReviewAnswered,
         TaskRebased,
+        TickActionFailed,
     )
 }
 LedgerEvent = (
@@ -97,5 +99,6 @@ LedgerEvent = (
     | TaskVerdict
     | TaskReviewAnswered
     | TaskRebased
+    | TickActionFailed
     | UndeclaredEvent
 )

@@ -3521,3 +3521,30 @@ DECISION TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBr
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 	SOURCE "pull request #183 of the brigade repository, delivering @TASK.B20"
 		REF @TASK.B20
+
+DECISION AFailedActionIsNotAppliedAgainInTheTickThatSawItFail
+	TITLE "an action of the tick that fails with a BrigadeError is recorded once and not applied"
+		+ "again in a later round of the same tick; any other exception ends the tick"
+	STATUS active
+	DESC "run_rounds leaves out of every later round of a tick the actions that failed in an"
+		+ "earlier one; the next tick plans them again from the facts"
+	DESC "a failed action is one whose executor raised a BrigadeError; any other exception is a"
+		+ "defect of brigade and ends the tick as before"
+	DESC "a heartbeat that holds no actions_failed, written before failed actions were counted,"
+		+ "reads as none failed"
+	DESC "binds @TASK.B166"
+		REF @TASK.B166
+	REJECTED "every round applying the plan it is given: an action that fails on a persistent fact"
+		+ "is planned again at each round and recorded up to ROUND_CAP times in one tick"
+	REJECTED "the rounds stopped at the first round holding a failure: the merge of one project"
+		+ "would no longer make its dependents startable in the same tick because another project"
+		+ "failed"
+	REJECTED "every exception recorded as a failed action: a defect of brigade, or an"
+		+ "AssertionError of a test double, would be hidden in the ledger behind a tick that exits"
+		+ "0"
+	RATIONALE "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction makes a failed"
+		+ "action an event and the tick go on; within one tick the facts a failed action rests on"
+		+ "have not changed, so applying it again records the same failure"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "taken in the delivery of @TASK.B166, pull request #185"
+		REF @TASK.B166

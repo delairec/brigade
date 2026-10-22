@@ -188,9 +188,16 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "ts": "2026-10-07T09:00:00Z",
                     "duration_ms": 250,
                     "actions_applied": 0,
+                    "actions_failed": 0,
                     "heartbeat": str(self.root / "state" / "tick.json"),
                 },
-                {"schema_version": 1, "ts": "2026-10-07T09:00:00Z", "duration_ms": 250, "actions_applied": 0},
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-07T09:00:00Z",
+                    "duration_ms": 250,
+                    "actions_applied": 0,
+                    "actions_failed": 0,
+                },
             ),
         )
 
@@ -249,7 +256,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
             (document, reported.getvalue()),
             (
                 {"schema_version": 1, "mode": "loop", "ticks_attempted": 1},
-                "brigade tick: 2026-10-07T09:00:00Z: 0 actions applied in 250 ms\n",
+                "brigade tick: 2026-10-07T09:00:00Z: 0 actions applied, 0 failed in 250 ms\n",
             ),
         )
 
@@ -275,8 +282,14 @@ class TickTextTest(unittest.TestCase):
         rows = [
             (
                 "once",
-                {"mode": "once", "ts": "2026-10-07T09:00:00Z", "duration_ms": 250, "actions_applied": 2},
-                "tick 2026-10-07T09:00:00Z: 2 actions applied in 250 ms",
+                {
+                    "mode": "once",
+                    "ts": "2026-10-07T09:00:00Z",
+                    "duration_ms": 250,
+                    "actions_applied": 2,
+                    "actions_failed": 1,
+                },
+                "tick 2026-10-07T09:00:00Z: 2 actions applied, 1 failed in 250 ms",
             ),
             ("a loop", {"mode": "loop", "ticks_attempted": 3}, "tick --loop: 3 ticks attempted"),
             (
@@ -329,6 +342,7 @@ MACHINE_OUTPUTS = {
     ("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n",
     ("git", "cat-file", "-p"): ".brigade/worktrees/\n",
     ("git", "worktree", "add"): "",
+    ("git", "worktree", "list"): "",
     ("git", "merge-base"): "",
     ("git", "fetch"): "",
     ("git", "diff"): "",
@@ -462,6 +476,16 @@ class ForgeDouble:
         return {"schema_version": 1, "logs": [{"name": name, "tail": self.tails[name]} for name in request["checks"]]}
 
 
+class SpawnReadingTheLedgerDouble:
+    def __init__(self, ledger: Path):
+        self.ledger = ledger
+        self.last_events_at_spawn = []
+
+    def spawn(self, request):
+        self.last_events_at_spawn.append(json.loads(self.ledger.read_text(encoding="utf-8").splitlines()[-1]))
+        return SimpleNamespace(pid=os.getpid())
+
+
 class SpawnRecorderDouble:
     def __init__(self):
         self.argvs = []
@@ -481,9 +505,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
         self.spawn = SpawnRecorderDouble()
 
-    def _create_runtime(self, task: tuple, forge: ForgeDouble) -> Runtime:
+    def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = ()) -> Runtime:
         corpus = {
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), *setup)},
             "TASK": {"T7": task},
         }
         return create_runtime(
@@ -540,6 +564,64 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             ),
         )
 
+    def test_should_record_the_task_running_before_its_build_run_is_spawned(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED])
+        self.spawn = SpawnReadingTheLedgerDouble(self.root / "state" / "ledger" / "2026-10.jsonl")
+        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.last_events_at_spawn,
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                }
+            ],
+        )
+
+    def test_should_record_a_failed_setup_as_a_failed_action_and_count_it_in_the_heartbeat(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED])
+        broken_setup = (("SETUP", 'make "deps'),)
+        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED), broken_setup)
+        first_event_of_the_tick = 1
+
+        # Act
+        document = COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (
+                document["actions_failed"],
+                json.loads((self.root / "state" / "tick.json").read_text(encoding="utf-8"))["actions_failed"],
+                self._read_event(first_event_of_the_tick + 1),
+            ),
+            (
+                1,
+                1,
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "tick.action_failed",
+                    "action": "LaunchTask",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "error": 'the setup of @TASK.T7 failed: the line make "deps splits into no argv: No closing quotation',
+                },
+            ),
+        )
+
     def test_should_resume_the_run_of_a_task_paused_on_the_quota(self):
         # Arrange
         self.worktree.mkdir(parents=True)
@@ -578,6 +660,39 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     FIRST_RUN,
                     "--resume",
                 )
+            ],
+        )
+
+    def test_should_record_the_task_running_before_its_paused_run_is_resumed(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        stopped_run = {
+            **create_run_record(FIRST_RUN, WAVE, "T7"),
+            "procedure_path": "build-task",
+            "project": "tidepool",
+            "cwd": str(self.worktree),
+        }
+        write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
+        finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
+        write_ledger(self.root, [WAVE_STARTED, finished, _record_task_state("paused:quota")])
+        self.spawn = SpawnReadingTheLedgerDouble(self.root / "state" / "ledger" / "2026-10.jsonl")
+        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.last_events_at_spawn,
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                }
             ],
         )
 
@@ -1028,14 +1143,10 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         runtime = self._create_runtime(forge)
 
         # Act
-        self._run_tick_to_its_failure(runtime)
+        COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(forge.merges, [])
-
-    def _run_tick_to_its_failure(self, runtime: Runtime) -> None:
-        with self.assertRaises(BrigadeError):
-            COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
     def test_should_record_the_merge_with_the_login_it_ran_as_and_the_task_merged(self):
         # Arrange

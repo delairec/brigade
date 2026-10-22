@@ -114,7 +114,9 @@ class BrigadeTickOnceTest(TickTestCase):
         heartbeat = json.loads(self.heartbeat.read_text())
         self.assertRegex(heartbeat["ts"], INSTANT)
         self.assertIsInstance(heartbeat["duration_ms"], int)
-        self.assertEqual(heartbeat, {"schema_version": 1, "ts": ANY, "duration_ms": ANY, "actions_applied": 0})
+        self.assertEqual(
+            heartbeat, {"schema_version": 1, "ts": ANY, "duration_ms": ANY, "actions_applied": 0, "actions_failed": 0}
+        )
 
     def test_should_leave_the_lock_the_heartbeat_and_the_trails_alone_in_the_state_directory(self):
         # Act
@@ -139,6 +141,7 @@ class BrigadeTickOnceTest(TickTestCase):
                 "ts": heartbeat["ts"],
                 "duration_ms": heartbeat["duration_ms"],
                 "actions_applied": 0,
+                "actions_failed": 0,
                 "heartbeat": str(self.heartbeat),
             },
         )
@@ -150,7 +153,7 @@ class BrigadeTickOnceTest(TickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertRegex(
-            completed.stdout, r"^tick \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$"
+            completed.stdout, r"^tick \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied, 0 failed in \d+ ms\n$"
         )
 
 
@@ -456,15 +459,19 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
 class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
     setup_commands = ("false",)
 
-    def test_should_remove_the_worktree_and_its_branch_and_report_the_failure(self):
+    def test_should_leave_the_worktree_and_its_branch_and_record_the_failed_action(self):
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertIn("the setup of @TASK.S3 failed", completed.stderr)
-        self.assertFalse(self.worktree.exists())
-        self.assertEqual(self.project.run_git("branch", "--list", TASK_BRANCH), "")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.read_events("tick.action_failed")[0]["error"], "the setup of @TASK.S3 failed: false exited 1: "
+        )
+        self.assertTrue(self.worktree.is_dir())
+        self.assertEqual(
+            self.project.run_git("branch", "--list", "--format=%(refname:short)", TASK_BRANCH), f"{TASK_BRANCH}\n"
+        )
 
     def test_should_record_the_task_parked_in_the_wave(self):
         # Act
@@ -499,6 +506,15 @@ class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
                     "state": "parked",
                     "reason": "setup failed",
                 },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S6",
+                    "state": "parked",
+                    "reason": "setup failed",
+                },
             ],
         )
 
@@ -516,14 +532,14 @@ class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
 class BrigadeTickOnceWithASetupLeavingTheWaveBranchTest(LaunchingTickTestCase):
     setup_commands = ("git checkout --quiet --orphan elsewhere", "git commit --quiet --allow-empty -m elsewhere")
 
-    def test_should_remove_the_worktree_whose_head_no_longer_descends_from_the_wave_branch(self):
+    def test_should_park_the_task_whose_head_no_longer_descends_from_the_wave_branch_leaving_its_worktree(self):
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertIn("the setup of @TASK.S3 failed", completed.stderr)
-        self.assertFalse(self.worktree.exists())
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("the setup of @TASK.S3 failed", self.read_events("tick.action_failed")[0]["error"])
+        self.assertTrue(self.worktree.is_dir())
 
 
 class BrigadeTickOnceWithASetupLineOfShellSyntaxTest(LaunchingTickTestCase):
@@ -551,17 +567,20 @@ class BrigadeTickOnceWithASetupFailingOnItsFirstLineTest(LaunchingTickTestCase):
 class BrigadeTickOnceWithASetupLineThatSplitsIntoNoArgvTest(LaunchingTickTestCase):
     setup_commands = ("touch ../../../first-line-ran", 'touch "unclosed')
 
-    def test_should_remove_the_worktree_and_its_branch_and_name_the_line(self):
+    def test_should_leave_the_worktree_and_its_branch_and_name_the_line(self):
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertIn(
-            'brigade tick: the setup of @TASK.S3 failed: the line touch "unclosed splits into no argv', completed.stderr
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            self.read_events("tick.action_failed")[0]["error"],
+            'the setup of @TASK.S3 failed: the line touch "unclosed splits into no argv: No closing quotation',
         )
-        self.assertFalse(self.worktree.exists())
-        self.assertEqual(self.project.run_git("branch", "--list", TASK_BRANCH), "")
+        self.assertTrue(self.worktree.is_dir())
+        self.assertEqual(
+            self.project.run_git("branch", "--list", "--format=%(refname:short)", TASK_BRANCH), f"{TASK_BRANCH}\n"
+        )
 
     def test_should_run_no_line_of_the_setup(self):
         # Act
@@ -578,12 +597,12 @@ class BrigadeTickOnceWithTheWaveBranchCheckedOutTest(LaunchingTickTestCase):
 
     def test_should_refuse_to_move_the_checked_out_wave_branch(self):
         # Act
-        completed = self.run_tick("--once")
+        self.run_tick("--once")
 
         # Assert
-        self.assertEqual(completed.returncode, 1)
         self.assertIn(
-            f"brigade tick: the wave branch {WAVE_BRANCH} is checked out in {self.project.path}", completed.stderr
+            f"the wave branch {WAVE_BRANCH} is checked out in {self.project.path}",
+            self.read_events("tick.action_failed")[0]["error"],
         )
 
     def test_should_leave_the_checkout_and_its_branch_as_they_were(self):
@@ -1029,7 +1048,8 @@ class BrigadeTickLoopTest(TickTestCase):
         # Assert
         _, later_reports = loop.communicate(timeout=STOP_WAIT_S)
         self.assertRegex(
-            first_report, r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied in \d+ ms\n$"
+            first_report,
+            r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied, 0 failed in \d+ ms\n$",
         )
         self.assertEqual(later_reports, "")
 
