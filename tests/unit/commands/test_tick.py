@@ -1301,7 +1301,10 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.lock_free_at_the_rebase = []
 
     def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
-        corpus = {"PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))}, "TASK": {"T7": TASK_DELIVERED}}
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_DELIVERED},
+        }
         self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
         forge = RebasingForgeDouble(found)
         return create_runtime(

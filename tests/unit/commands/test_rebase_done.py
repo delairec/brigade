@@ -24,23 +24,21 @@ PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD = (
     "origin",
     "HEAD:task/M4-tides/T7",
 )
+DONE_DOCUMENT = {
+    "schema_version": 1,
+    "project": "tidepool",
+    "pr": 42,
+    "task": "T7",
+    "branch": "task/M4-tides/T7",
+    "base": "integration/M4-tides",
+    "head": "9a9a9a9",
+}
 
 
 class RebaseDoneTextTest(unittest.TestCase):
     def test_should_name_the_branch_pushed_its_head_and_its_base(self):
-        # Arrange
-        document = {
-            "schema_version": 1,
-            "project": "tidepool",
-            "pr": 42,
-            "task": "T7",
-            "branch": "task/M4-tides/T7",
-            "base": "integration/M4-tides",
-            "head": "9a9a9a9",
-        }
-
         # Act
-        text = COMMAND.render_text(document)
+        text = COMMAND.render_text(DONE_DOCUMENT)
 
         # Assert
         self.assertEqual(text, "task/M4-tides/T7 pushed at 9a9a9a9 on top of integration/M4-tides for #42, @TASK.T7")
@@ -93,3 +91,24 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
             (str(raised.exception), [argv for argv in self.machine.argvs if argv[:2] == ("git", "push")]),
             ("task/M4-tides/T7 does not descend from the head of integration/M4-tides: rebase it first", []),
         )
+
+
+class RebaseDoneRequestTest(unittest.TestCase):
+    def test_should_take_the_options_as_the_request(self):
+        # Arrange
+        options = SimpleNamespace(pr=42)
+
+        # Act
+        request = COMMAND.read_request(options)
+
+        # Assert
+        self.assertIs(request, options)
+
+
+class RebaseDoneExitCodeTest(unittest.TestCase):
+    def test_should_exit_0(self):
+        # Act
+        exit_code = COMMAND.decide_exit_code(DONE_DOCUMENT)
+
+        # Assert
+        self.assertEqual(exit_code, 0)

@@ -10,7 +10,11 @@ MERGE_TREE = ("git", "merge-tree", "--write-tree", "--name-only", "--no-messages
 class ListConflictingFilesTest(unittest.TestCase):
     def test_should_give_the_files_git_reports_in_conflict_after_the_tree_it_writes(self):
         for case, merge, conflicts in [
-            ("two files in conflict", ProcessAnswer(stdout="4b825dc\nsrc/tides.py\nREADME.md\n", exit_code=1), ["src/tides.py", "README.md"]),
+            (
+                "two files in conflict",
+                ProcessAnswer(stdout="4b825dc\nsrc/tides.py\nREADME.md\n", exit_code=1),
+                ["src/tides.py", "README.md"],
+            ),
             ("no file in conflict", ProcessAnswer(stdout="4b825dc\n"), []),
         ]:
             with self.subTest(case=case):

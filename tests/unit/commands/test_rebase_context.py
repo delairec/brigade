@@ -13,7 +13,15 @@ from tests.unit.commands.command_runtime import (
 )
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 
-MERGE_TREE = ("git", "merge-tree", "--write-tree", "--name-only", "--no-messages", "HEAD", "origin/integration/M4-tides")
+MERGE_TREE = (
+    "git",
+    "merge-tree",
+    "--write-tree",
+    "--name-only",
+    "--no-messages",
+    "HEAD",
+    "origin/integration/M4-tides",
+)
 CONFLICTING_MERGE = ProcessAnswer(stdout="4b825dc\nsrc/tides.py\nREADME.md\n", exit_code=1)
 CLEAN_MERGE = ProcessAnswer(stdout="4b825dc\n")
 
@@ -52,8 +60,13 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
 
     def _create_runtime(self, merge: ProcessAnswer):
-        answers = {**{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in TASK_WORKTREE.items()}, MERGE_TREE: merge}
-        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}))
+        answers = {
+            **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in TASK_WORKTREE.items()},
+            MERGE_TREE: merge,
+        }
+        machine = ScriptedProcessRunner(
+            answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}})
+        )
         return create_runtime(self.root, run_process=machine.run)
 
     def test_should_give_the_files_git_reports_in_conflict_between_the_branch_and_its_base(self):
@@ -70,3 +83,24 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(document, create_document(conflicts))
+
+
+class RebaseContextRequestTest(unittest.TestCase):
+    def test_should_take_the_options_as_the_request(self):
+        # Arrange
+        options = SimpleNamespace(pr=42)
+
+        # Act
+        request = COMMAND.read_request(options)
+
+        # Assert
+        self.assertIs(request, options)
+
+
+class RebaseContextExitCodeTest(unittest.TestCase):
+    def test_should_exit_0(self):
+        # Act
+        exit_code = COMMAND.decide_exit_code(create_document([]))
+
+        # Assert
+        self.assertEqual(exit_code, 0)

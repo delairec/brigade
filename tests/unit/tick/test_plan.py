@@ -1319,7 +1319,6 @@ REBASE_S3 = RebaseTask(
     parking_reason=None,
 )
 REBASE_S3_PARKED_ON_A_CONFLICT = dataclasses.replace(REBASE_S3, parking_reason="past 2 repair rounds")
-BUILD_RUN_OF_S3 = LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree=WORKTREE_S3, wave="shop_w1", task="S3")
 
 
 class PlanRebaseTest(unittest.TestCase):
