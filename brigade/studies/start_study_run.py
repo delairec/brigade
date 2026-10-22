@@ -12,7 +12,12 @@ STUDY_RECORD_SCHEMA_VERSION = 1
 def start_study_run(runtime: Runtime, study: Study, run_id: str) -> None:
     write_json_atomically(
         runtime.paths.state_root / RUNS_DIRECTORY / run_id / STUDY_RECORD_FILE,
-        {"schema_version": STUDY_RECORD_SCHEMA_VERSION, "study": study.name, "project": study.project},
+        {
+            "schema_version": STUDY_RECORD_SCHEMA_VERSION,
+            "study": study.name,
+            "project": study.project,
+            "wave": study.wave,
+        },
     )
     append_event(
         runtime.paths, runtime.now, OrderStarted(project=study.project, kind=STUDY_KIND, order=study.name, run=run_id)

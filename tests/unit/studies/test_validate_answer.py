@@ -1,3 +1,5 @@
+import dataclasses
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -36,6 +38,12 @@ CHANGED_FIELDS = {
     ]
 }
 SUBMITTED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n\tVERDICT "two"\n'
+REPORT_STUDY = dataclasses.replace(STUDY, name="wave-report", project="oak", answer_type="REPORT", wave="oak_w2")
+REPORT_TARGET = "@REPORT.oak_w2"
+LEDGER_ITEMS = [
+    {"ts": "2026-10-04T08:00:00Z", "event": "wave.started", "wave": "oak_w2", "tasks": ["B17"]},
+    {"ts": "2026-10-04T10:30:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "merged"},
+]
 DIAGNOSTICS = "answer.awawa:4: L003 unknown field VERDIKT\n"
 
 
@@ -143,3 +151,39 @@ class ValidateAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(linted, [("SCHEMA FINDING\n", SUBMITTED)])
+
+    def write_document(self, collector: str, items: list) -> dict:
+        path = self.root / f"{collector}.json"
+        path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
+        return {"collector": collector, "summary": {}, "document": str(path)}
+
+    def test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):
+        # Arrange
+        collected = [
+            self.write_document("ledger", LEDGER_ITEMS),
+            self.write_document("pr-list", []),
+            self.write_document("corpus", []),
+            self.write_document("git-diff-stat", []),
+        ]
+        (self.run_directory / "steps" / "collect.json").write_text(
+            json.dumps({"collected": collected}), encoding="utf-8"
+        )
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))}
+        )
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
+        self.processes.answer_json(
+            ("awawa", "show", REPORT_TARGET, "--json", str(self.submitted)),
+            {"fields": [{"name": "TASK_ROW", "atoms": ['"B17 parked"']}]},
+        )
+        self.processes.answer_json(
+            ("awawa", "show", REPORT_TARGET, "--json", str(self.filled)),
+            {"fields": [{"name": "TASK_ROW", "atoms": ['"B17 merged"']}]},
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            validate_answer(self.runtime, REPORT_STUDY, self.run_directory, SUBMITTED)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the answer changed TASK_ROW, a field brigade filled")
