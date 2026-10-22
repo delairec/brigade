@@ -448,12 +448,14 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
     def test_should_launch_nothing_more_at_the_next_tick(self):
         # Arrange
         self.run_tick("--once")
+        self.wait_for_the_runs()
+        launched = self.read_run_records()
 
         # Act
-        completed = self.run_tick("--once", "--json")
+        self.run_tick("--once")
 
         # Assert
-        self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
+        self.assertEqual(self.read_run_records(), launched)
 
 
 class BrigadeTickOnceWithAFailingSetupTest(LaunchingTickTestCase):
@@ -729,6 +731,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
                                     "holds_uncommitted_changes": False,
+                                    "last_run": None,
                                 },
                                 {
                                     "task": "S4",
@@ -745,6 +748,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
                                     "holds_uncommitted_changes": False,
+                                    "last_run": None,
                                 },
                                 {
                                     "task": "S5",
@@ -761,6 +765,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
                                     "holds_uncommitted_changes": False,
+                                    "last_run": None,
                                 },
                                 {
                                     "task": "S6",
@@ -777,6 +782,7 @@ class BrigadeTickDryRunOnARunningWaveTest(WaveTickTestCase):
                                     "preflight_failures": [],
                                     "repair_rounds": 0,
                                     "holds_uncommitted_changes": False,
+                                    "last_run": None,
                                 },
                             ],
                             "states": {"S3": "queued"},
@@ -1503,6 +1509,7 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
                 "preflight_failures": [],
                 "repair_rounds": 0,
                 "holds_uncommitted_changes": False,
+                "last_run": None,
             },
         )
 

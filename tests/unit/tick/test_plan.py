@@ -87,7 +87,6 @@ class PlanStartableTasksTest(unittest.TestCase):
         for case, tasks, states, implemented, expected in [
             ("with no state yet", ALONE, {}, (), (LAUNCH_S3,)),
             ("queued", ALONE, {"S3": "queued"}, (), (LAUNCH_S3,)),
-            ("already running", ALONE, {"S3": "running"}, (), ()),
             ("with its pull request open", ALONE, {"S3": "pr_open"}, (), ()),
             ("parked", ALONE, {"S3": "parked"}, (), (REPORT_SHOP_W1,)),
             ("after a task merged in the wave", FOLLOWING, {"S2": "merged"}, (), (LAUNCH_S3,)),
@@ -109,6 +108,14 @@ class PlanStartableTasksTest(unittest.TestCase):
 
 
 WORKTREE_S3 = "/projects/shop/.brigade/worktrees/S3"
+LIVE_RUN_OF_S3 = LiveRun(run="20261006T113000Z-e7f8a9", slot="build", worktree=WORKTREE_S3, wave="shop_w1", task="S3")
+LIVE_RUN_OF_S9 = LiveRun(
+    run="20261006T113500Z-b0c1d2",
+    slot="build",
+    worktree="/projects/shop/.brigade/worktrees/S9",
+    wave="shop_w1",
+    task="S9",
+)
 
 
 HEAD = "0123abc"
@@ -143,7 +150,6 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
             ("a running task whose pull request opened", "running", OPEN, (RECORD_PR_OPEN,)),
             ("a running task whose pull request merged", "running", MERGED, (RECORD_MERGED,)),
             ("a running task whose pull request closed", "running", CLOSED, (RECORD_PARKED,)),
-            ("a running task with no pull request yet", "running", NO_PULL_REQUEST, ()),
             ("a task whose open pull request is already recorded", "pr_open", OPEN, ()),
             ("a task in review whose pull request merged", "verifying", MERGED, (RECORD_MERGED,)),
             ("a task in fixing whose pull request closed", "fixing", CLOSED, (RECORD_PARKED,)),
@@ -822,7 +828,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
         wave = dataclasses.replace(
             create_wave(STOPPED_S3 + ALONE_S9, {"S3": "paused:quota", "S9": "running"}), pause=QUOTA_UNTIL_12
         )
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(dataclasses.replace(SHOP, live_runs=(LIVE_RUN_OF_S9,)),))
 
         # Act
         actions = plan(snapshot)
@@ -941,7 +947,6 @@ class PlanBlockedTaskParkingTest(unittest.TestCase):
                     ),
                 ),
             ),
-            ("already running", BLOCKED, {"S3": "running"}, ()),
             ("with its pull request open", BLOCKED, {"S3": "pr_open"}, ()),
         ]:
             with self.subTest(case=case):
@@ -968,7 +973,7 @@ class PlanWaveReportTest(unittest.TestCase):
                 False,
                 (LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S4"),),
             ),
-            ("a task still running", {"S3": "merged", "S4": "running"}, False, ()),
+            ("a task in repair", {"S3": "merged", "S4": "fixing"}, False, ()),
             ("a task with its pull request open", {"S3": "parked", "S4": "pr_open"}, False, ()),
             ("already reported", {"S3": "merged", "S4": "parked"}, True, ()),
         ]:
@@ -1003,7 +1008,7 @@ class PlanWaveCloseTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 wave = dataclasses.replace(
-                    create_wave(TWO_TASKS, {"S3": "running", "S4": "running"}), integration_pull_request=integration
+                    create_wave(TWO_TASKS, {"S3": "pr_open", "S4": "pr_open"}), integration_pull_request=integration
                 )
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
@@ -1489,8 +1494,8 @@ class PlanRebaseTest(unittest.TestCase):
 SHOP_ON_GITHUB = dataclasses.replace(SHOP, on_github=True)
 SHOP_ON_GITHUB_UNDER_APPROVAL = dataclasses.replace(SHOP_ON_GITHUB, review="approval")
 SHOP_ON_GITHUB_DELIVERED_LOCALLY = dataclasses.replace(SHOP_ON_GITHUB, review="local")
-FIRST_TASK_MERGED = {"S3": "merged", "S4": "running"}
-NO_TASK_MERGED = {"S3": "running", "S4": "running"}
+FIRST_TASK_MERGED = {"S3": "merged", "S4": "pr_open"}
+NO_TASK_MERGED = {"S3": "pr_open", "S4": "pr_open"}
 NOT_OPENED = None
 OPENED_AS_77 = 77
 OPEN_INTEGRATION_OF_SHOP_W1 = OpenIntegrationPullRequest(
@@ -1524,3 +1529,65 @@ class PlanIntegrationPullRequestTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+
+LAST_RUN_OF_S3 = "20261006T110000Z-d1e2f3"
+NO_RUN = None
+PARK_S3_RUN_NOT_STARTED = ParkTask(wave="shop_w1", task="S3", reason="run not started", blockers=())
+
+
+class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
+    def test_should_park_a_running_task_no_live_run_names_with_the_reason_of_its_last_run(self):
+        for case, last_run, expected in [
+            (
+                "its last run dead",
+                LAST_RUN_OF_S3,
+                (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),),
+            ),
+            ("no run naming it", NO_RUN, (PARK_S3_RUN_NOT_STARTED,)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", last_run=last_run)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_park_a_running_task_whose_live_runs_name_another_task(self):
+        for case, live_run in [
+            (
+                "another task of the wave",
+                LiveRun(run="20261006T113000Z-e7f8a9", slot="build", worktree=WORKTREE_S3, wave="shop_w1", task="S4"),
+            ),
+            (
+                "the same task in another wave",
+                LiveRun(run="20261006T113000Z-e7f8a9", slot="build", worktree=WORKTREE_S3, wave="shop_w2", task="S3"),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                project = dataclasses.replace(SHOP, live_runs=(live_run,))
+                snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {"S3": "running"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (PARK_S3_RUN_NOT_STARTED,))
+
+    def test_should_neither_launch_nor_park_a_running_task_a_live_run_names(self):
+        for case, tasks in [("with no pull request yet", ALONE), ("blocked by a live question", BLOCKED)]:
+            with self.subTest(case=case):
+                # Arrange
+                project = dataclasses.replace(SHOP, live_runs=(LIVE_RUN_OF_S3,))
+                snapshot = Snapshot(now=NOW, waves=(create_wave(tasks, {"S3": "running"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())

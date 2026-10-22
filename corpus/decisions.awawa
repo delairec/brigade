@@ -3594,3 +3594,27 @@ DECISION TheFakeClientPlaysAnAgentFromAnExecutableNamedAfterItsRole
 		REF @TASK.B21
 	SOURCE "the first run of @TASK.B21, 2026-10-22, pull request #187"
 		REF @TASK.B21
+
+DECISION ARunningTaskThatNoLiveRunNamesIsParkedWithItsLastRunInTheReason
+	TITLE "the tick parks a running task with no pull request that no live run names, task.parked"
+		+ "carrying the last run naming it in its reason"
+	STATUS active
+	DESC "the plan parks a task recorded running whose pull request the forge does not find, whose"
+		+ "last run did not end on a rate limit, and that no live run names in its wave and its"
+		+ "task; a finished run is not live, so the task of a run that ended without opening its"
+		+ "pull request is parked as well"
+	DESC "the reason is run dead: <run>, the last run directory naming the wave and the task"
+		+ "whatever its state, or run not started when none names them; task.parked keeps its"
+		+ "fields"
+	DESC "binds @TASK.B168"
+		REF @TASK.B168
+	REJECTED "a run field added to task.parked: a change of the event shape and of every reader of"
+		+ "task.parked for one value only the reason is read for"
+	REJECTED "parking only the task of a run in the state dead: the task of a run that finished"
+		+ "without opening its pull request would stay running at every tick"
+	RATIONALE "@TASK.B166 records running before the spawn, so a crash between the two leaves a"
+		+ "running task no run names; a stale running state is the one task state no fact of the"
+		+ "forge moves"
+		REF @TASK.B166
+	SOURCE "taken in the delivery of @TASK.B168"
+		REF @TASK.B168

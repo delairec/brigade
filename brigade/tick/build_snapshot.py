@@ -124,6 +124,7 @@ class TaskFacts:
     preflight_failures: tuple[PreflightFailure, ...] = ()
     repair_rounds: int = 0
     holds_uncommitted_changes: bool = False
+    last_run: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -143,6 +144,7 @@ class TaskFacts:
             ],
             "repair_rounds": self.repair_rounds,
             "holds_uncommitted_changes": self.holds_uncommitted_changes,
+            "last_run": self.last_run,
         }
 
 
@@ -328,6 +330,7 @@ class WaveReading:
     entries: tuple[LedgerEntry, ...]
     events: tuple
     live_runs: frozenset[str]
+    runs: tuple[dict, ...]
     projects: tuple[Entity, ...]
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
     read_environment: Callable[[str], dict]
@@ -385,6 +388,13 @@ def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) 
     if states.get(task.name) != RUNNING_STATE:
         return task
     return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
+
+
+def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
+    naming = [run["run"] for run in reading.runs if run["wave"] == wave and run["task"] == task.name]
+    if not naming:
+        return task
+    return dataclasses.replace(task, last_run=naming[-1])
 
 
 def _is_review_ended_within_quota(event, wave: str) -> bool:
@@ -456,8 +466,12 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         wave=wave,
         branch=started.branch,
         tasks=tuple(
-            _note_quota(
-                _follow_task(_read_task_facts(runtime, tree.root, tasks[task]), followed), reading, wave, states
+            _note_last_run(
+                _note_quota(
+                    _follow_task(_read_task_facts(runtime, tree.root, tasks[task]), followed), reading, wave, states
+                ),
+                reading,
+                wave,
             )
             for task in started.tasks
         ),
@@ -539,6 +553,7 @@ def build_snapshot(
         entries=entries,
         events=tuple(entry.event for entry in entries),
         live_runs=frozenset(run["run"] for run in runs if run["state"] == LIVE_RUN_STATE),
+        runs=tuple(runs),
         projects=registered,
         read_pull_request=read_pull_request,
         read_environment=read_environment,

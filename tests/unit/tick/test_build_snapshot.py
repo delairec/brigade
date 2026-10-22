@@ -125,6 +125,7 @@ class SnapshotTest(unittest.TestCase):
                             "preflight_failures": [],
                             "repair_rounds": 0,
                             "holds_uncommitted_changes": False,
+                            "last_run": None,
                         }
                     ],
                     "states": {},
@@ -221,3 +222,13 @@ class TaskFactsTest(unittest.TestCase):
             (document["preflight_failures"], document["repair_rounds"]),
             ([{"name": "checks", "findings": ["tests: failure"]}], 1),
         )
+
+    def test_should_carry_the_last_run_naming_it_in_its_document(self):
+        # Arrange
+        task = TaskFacts(name="B19", last_run="20261022T232947Z-1858d2")
+
+        # Act
+        document = task.to_document()
+
+        # Assert
+        self.assertEqual(document["last_run"], "20261022T232947Z-1858d2")

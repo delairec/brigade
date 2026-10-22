@@ -123,6 +123,7 @@ class SelectCommandModulesOfThePackageTest(unittest.TestCase):
             (["verify", "preflight"], ["verify_preflight"]),
             (["wave", "cancel"], ["wave_cancel"]),
             (["wave", "list"], ["wave_list"]),
+            (["wave", "requeue"], ["wave_requeue"]),
             (["wave", "resume"], ["wave_resume"]),
             (["wave", "show"], ["wave_show"]),
             (["wave", "start"], ["wave_start"]),

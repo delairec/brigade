@@ -32,6 +32,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
+from tests.unit.commands.run_directories import create_run_record, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.ledger.create_run_finished import create_run_finished
@@ -241,6 +242,34 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
                 TaskFacts(name="B3"),
                 TaskFacts(name="B4", pull_request=PULL_REQUEST),
+            ),
+        )
+
+    def test_should_name_the_last_run_naming_each_task_of_the_wave(self):
+        # Arrange
+        write_run(self.paths.state_root, create_run_record("20261013T080000Z-a00001", "w1", "B4"), None)
+        write_run(self.paths.state_root, create_run_record("20261013T090000Z-a00002", "w1", "B4"), None)
+        write_run(self.paths.state_root, create_run_record("20261013T100000Z-a00003", "w1", "B1"), None)
+        write_run(self.paths.state_root, create_run_record("20261013T110000Z-a00004", "w4", "B4"), None)
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks,
+            (
+                TaskFacts(
+                    name="B1",
+                    after=("B0",),
+                    pull_request=PULL_REQUEST,
+                    worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                    rate_limit=RateLimit(reset=None),
+                    last_run="20261013T100000Z-a00003",
+                ),
+                TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
+                TaskFacts(name="B3"),
+                TaskFacts(name="B4", pull_request=PULL_REQUEST, last_run="20261013T090000Z-a00002"),
             ),
         )
 

@@ -78,8 +78,8 @@ These commands need awawa on `PATH`.
 ## Waves
 
 A request is a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one
-project, in their words, and the plan it receives. Every command below but `wave show`, `wave list`, `wave cancel` and
-`wave resume`, which read the ledger alone, exits 1 naming `brigade init` until the corpus exists, and each prints text
+project, in their words, and the plan it receives. Every command below but `wave show`, `wave list`, `wave cancel`,
+`wave resume` and `wave requeue`, which read the ledger alone, exits 1 naming `brigade init` until the corpus exists, and each prints text
 or, with `--json`, a JSON document.
 
 ```
@@ -93,6 +93,7 @@ brigade wave show <wave>
 brigade wave list [--project P]
 brigade wave cancel <wave>
 brigade wave resume [<wave>]
+brigade wave requeue <wave> <task>
 ```
 
 `request new` records the request as `<project>_r<n>`, `n` one above the highest its project holds, under the lock
@@ -134,6 +135,11 @@ exits 1 naming that event. The tasks of a cancelled wave are candidates of the n
 `wave resume` records `wave.resumed` for the wave named, whatever the reason of its pause, or, without one, for every
 wave paused on the forge account, the tick resuming by itself a wave paused on the quota; it prints each wave it
 resumed, and a wave no `wave.started` names, or one that is not paused, exits 1 naming it.
+
+`wave requeue` records `task.state` `queued` for a parked task of the wave named, so that the next tick launches it
+again in its existing worktree; it prints the task queued, and a task that is not parked exits 1 naming its state, a
+task outside the wave exits 1 naming the wave, and a wave no `wave.started` names exits 1 naming it. The tick never
+queues a parked task again by itself.
 
 ## Tasks
 
@@ -307,7 +313,10 @@ read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `
 `merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
 worktree is removed once its pull request is merged or closed, never while a run holds it. A task is recorded `running`
 before its run is spawned, and its launch reuses the branch `task/<slug>/<task>` and its worktree when they exist. A
-task whose setup fails is recorded `parked` with the reason `setup failed`, its worktree and branch left in place. An
+task whose setup fails is recorded `parked` with the reason `setup failed`, its worktree and branch left in place. A
+`running` task with no pull request that no live run names in its wave and task, its run rate-limited aside, is
+parked, `task.parked` with the reason `run dead: <run>`, the last run naming the task, or `run not started` when no run
+names it. An
 action that fails is recorded as `tick.action_failed`, with the action, its project, wave and task where it names
 them, and the error; the tick applies the actions that follow it, never applies it again in the same tick and undoes
 nothing, the next tick planning again from the facts. On the pull request a task
