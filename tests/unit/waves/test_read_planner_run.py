@@ -3,7 +3,12 @@ import unittest
 from pathlib import Path
 
 from brigade.waves.read_planner_run import read_planner_run
-from tests.unit.commands.run_directories import create_planner_record, create_run_record, write_run
+from tests.unit.commands.run_directories import (
+    create_planner_record,
+    create_run_record,
+    create_run_result,
+    write_run,
+)
 
 FIRST_PLANNER_RUN = "20261013T140000Z-a10001"
 OTHER_REQUEST_RUN = "20261013T150000Z-a10002"
@@ -46,6 +51,17 @@ class ReadPlannerRunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(planner, {"run": LAST_PLANNER_RUN, "state": "dead"})
+
+    def test_should_give_the_outcome_of_a_finished_planner_run(self):
+        # Arrange
+        failed = create_run_result(LAST_PLANNER_RUN, "failed", "2026-10-14T09:20:00Z")
+        write_run(self.state_root, create_planner_record(LAST_PLANNER_RUN, "shop_r2"), failed)
+
+        # Act
+        planner = read_planner_run(self.state_root, "shop_r2")
+
+        # Assert
+        self.assertEqual(planner, {"run": LAST_PLANNER_RUN, "state": "failed"})
 
     def test_should_pass_over_a_run_whose_record_is_unreadable(self):
         # Arrange
