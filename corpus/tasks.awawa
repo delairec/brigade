@@ -1757,7 +1757,8 @@ TASK B16
 
 TASK B17
 	TITLE "Auto-merge into integration and scheduling of dependents"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 178
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
@@ -1766,12 +1767,35 @@ TASK B17
 		+ "project declares none: the approving review under POLICY.REVIEW approval, the pass"
 		+ "verdict of the ledger under verdict; the schema brigade init installs declares MERGE"
 		+ "rebase by default"
+		IMPL "brigade/tick/plan.py::def _is_verdict_accepted("
+		IMPL "brigade/tick/build_snapshot.py::merge=read_project_field(project, MERGE_FIELD) or"
+			+ "REBASE_MERGE,"
+		IMPL "brigade/corpus/data/schema.awawa.tpl::FIELD MERGE squash|rebase|merge"
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_merge_a_verified_task_once_its_checks_pass_and_the_review_mode_accepts_its_verdict(self):"
+		IMPL "tests/cli/test_init.py::def"
+			+ "test_should_install_a_schema_whose_project_merges_by_rebase_by_default(self):"
 	SPEC "under POLICY.AUTO_MERGE none the tick merges nothing and the task stays verified until it"
 		+ "sees the pull request merged"
+		IMPL "brigade/tick/plan.py::or project.auto_merge == NO_AUTO_MERGE"
+		IMPL "tests/unit/tick/test_plan.py::def test_should_merge_no_task_short_of_verified(self):"
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_record_the_merge_of_a_verified_task_whose_pull_request_was_merged_by_hand(self):"
 	SPEC "the tick merges no pull request whose base is not the branch the wave.started of its wave"
 		+ "names; it parks the task with that reason"
+		IMPL "brigade/tick/plan.py::if task.pull_request.base != wave.branch:"
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_park_rather_than_merge_a_task_whose_pull_request_is_based_on_another_branch(self):"
 	SPEC "the ledger event of a merge carries the login the merge ran as"
+		IMPL "brigade/commands/tick.py::login=ask_forge_account(forge, FORGE_NAME, environment,"
+			+ "runtime).login,"
+		IMPL "brigade/ledger/pr_merged.py::login: str | None"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_record_the_merge_with_the_login_it_ran_as_and_the_task_merged(self):"
 	SPEC "the task becomes merged and its dependents become startable in the same tick"
+		IMPL "brigade/commands/tick.py::def _merge_pull_request("
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_start_the_dependent_of_the_merged_task_in_the_same_tick(self):"
 	AFTER @TASK.B16
 	AFTER @TASK.B75
 	AFTER @TASK.B99
