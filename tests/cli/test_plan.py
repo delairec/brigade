@@ -110,9 +110,16 @@ class PlanContextTestCase(unittest.TestCase):
         self.project.write("corpus/tasks.awawa", tasks)
         self.project.write("corpus/decisions.awawa", decisions)
 
+    def commit_corpus(self) -> None:
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "--message", "corpus")
+
+    def locate_main_tree(self) -> Path:
+        return self.machine.cache_home / "brigade" / "refs" / "shop" / self.project.run_git("rev-parse", "main").strip()
+
     def register_project(self, schema: str, tasks: str = TASKS, decisions: str = DECISIONS) -> None:
         self.write_corpus(schema, tasks, decisions)
-        self.project.track("corpus")
+        self.commit_corpus()
         self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
 
     def write_request(self, status: str) -> None:
@@ -141,7 +148,7 @@ class BrigadePlanContextOfAPlanningRequestTest(PlanContextTestCase):
             {
                 "schema_version": 1,
                 "request": {"name": "R1", "project": "shop", "text": REQUEST_TEXT},
-                "corpus": str(self.project.path),
+                "corpus": str(self.locate_main_tree()),
                 "status": [
                     {"type": "DECISION", "total": 2, "counts": {"active": 1, "archived": 1}},
                     {"type": "MILESTONE", "total": 0, "counts": {}},
@@ -176,7 +183,7 @@ class BrigadePlanContextOfAPlanningRequestTest(PlanContextTestCase):
             "@REQUEST.R1 of @PROJECT.shop\n"
             f"{REQUEST_TEXT}\n"
             "\n"
-            f"Corpus {self.project.path}\n"
+            f"Corpus {self.locate_main_tree()}\n"
             "DECISION   2  active 1, archived 1\n"
             "MILESTONE  0\n"
             "SCHEMA     3\n"
@@ -251,7 +258,7 @@ class BrigadePlanContextOnACorpusListingNoTypeTest(PlanContextTestCase):
     def setUp(self):
         super().setUp()
         self.project.write("corpus/tasks.awawa")
-        self.project.track("corpus")
+        self.commit_corpus()
         self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
         self.write_request("planning")
 
@@ -266,7 +273,7 @@ class BrigadePlanContextOnACorpusListingNoTypeTest(PlanContextTestCase):
             "@REQUEST.R1 of @PROJECT.shop\n"
             f"{REQUEST_TEXT}\n"
             "\n"
-            f"Corpus {self.project.path}\n"
+            f"Corpus {self.locate_main_tree()}\n"
             "\n"
             "Active decisions\n"
             "\n"
@@ -351,6 +358,7 @@ class BrigadePlanContextOnACorpusWhoseEntityHoldsNoTitleTest(PlanContextTestCase
             with self.subTest(expected_stderr=expected_stderr):
                 # Arrange
                 self.write_corpus(schema, tasks, decisions)
+                self.commit_corpus()
 
                 # Act
                 completed = self.run_plan_context("R1")
@@ -488,7 +496,6 @@ class PlanRecordTestCase(PlanContextTestCase):
     def setUp(self):
         super().setUp()
         self.register_project(f"{TASK_SCHEMA}\n{DECISION_SCHEMA}\n{MILESTONE_SCHEMA}", OPEN_TASKS, OPEN_DECISIONS)
-        self.project.run_git("commit", "--quiet", "--message", "corpus")
         self.write_request("planning")
         self.plan_file = Path(self.root.name).resolve() / "plan.awawa"
 
@@ -631,6 +638,7 @@ class PlanRecordOnTheGithubForgeTestCase(PlanRecordTestCase):
         projects = self.machine.corpus / "projects.awawa"
         projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n'))
         self.project.run_git("remote", "add", "origin", str(remote))
+        self.project.run_git("push", "--quiet", "origin", "main")
         self.gh_calls = root / "gh-calls"
         self.listed = root / "listed-pull-requests.json"
         self.viewed = root / "viewed-pull-request.json"
@@ -669,7 +677,9 @@ class BrigadePlanRecordOnAProjectOfTheGithubForgeTest(PlanRecordOnTheGithubForge
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(self.project.run_git("ls-remote", "--heads", "origin").split()[1], f"refs/heads/{BRANCH}")
+        self.assertEqual(
+            self.project.run_git("ls-remote", "--heads", "origin", BRANCH).split()[1], f"refs/heads/{BRANCH}"
+        )
 
     def test_should_open_the_plan_pull_request_to_the_main_branch_as_the_login_of_the_cli_key(self):
         # Act

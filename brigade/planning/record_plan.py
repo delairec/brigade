@@ -37,6 +37,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.read_configuration import CLI_KEY
+from brigade.waves.locate_project_main import locate_project_main
 
 MILESTONE_TYPE = "MILESTONE"
 TASK_TYPE = "TASK"
@@ -161,7 +162,8 @@ def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: 
 def _write_plan(runtime: Runtime, recording: PlanRecording, plan, branch: str, run: str | None) -> PlanEntity:
     root = Path(read_project_field(recording.project, "PATH"))
     worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / recording.request.name
-    add_detached_worktree(runtime.run_process, root, worktree, read_project_field(recording.project, "MAIN"))
+    main = locate_project_main(runtime.run_process, recording.project, recording.read_environment)
+    add_detached_worktree(runtime.run_process, root, worktree, main)
     try:
         milestone = _check_against_corpus(runtime, recording, worktree, plan)
         _write_on_branch(runtime, recording, worktree, plan, branch, run)
