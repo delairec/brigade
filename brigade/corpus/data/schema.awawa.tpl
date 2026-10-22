@@ -136,8 +136,8 @@ SCHEMA ANSWER
 		DESC "one finding with its evidence, filled by the judging slot"
 
 SCHEMA REPORT
-	DESC "the answer of the built-in study wave-report: the CLI fills what the collectors gave,"
-		+ "the report slot the prose"
+	DESC "the answer of the built-in study wave-report: the CLI fills what the collectors gave, the"
+		+ "report slot the prose"
 	FIELD WAVE string
 		REQUIRED
 		DESC "the wave reported, <project>_w<n>"
