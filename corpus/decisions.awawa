@@ -3441,3 +3441,26 @@ DECISION SchedulerStatusJudgesTheTickStaleStrictlyPastItsMinutesAndSummarisesThe
 		+ "intervals from reporting the tick that is merely due"
 	SOURCE "pull request #176 of the brigade repository, delivering @TASK.B170"
 		REF @TASK.B170
+
+DECISION ARepairRoundIsOneFixingStateOfTheTask
+	TITLE "a repair round is one task.state fixing of the task in its wave, recorded by the tick"
+		+ "after each launch of a repair run; a run that ends without a push is launched again"
+	STATUS active
+	DESC "the tick records task.state fixing after it launches a run of the remediate or the build"
+		+ "slot on a task in changes_requested or with a failing check; the rounds of a task are"
+		+ "the count of those events of the task in its wave"
+	DESC "a task left fixing whose pull request head is still the head of its last preflight, with"
+		+ "no run holding its worktree, is launched again, one more round; past the VERIFY_ROUNDS"
+		+ "of the project's POLICY it is parked"
+	DESC "binds @TASK.B18 and @TASK.B143, whose rebase run counts one round the same way"
+		REF @TASK.B18
+		REF @TASK.B143
+	REJECTED "the rounds counted from run.finished of the repair slots: a run resumed after a rate"
+		+ "limit finishes once per segment and would count twice"
+	REJECTED "the rounds counted by pushes: a run that never pushes would be launched without end"
+	RATIONALE "the ledger holds the launch decision the tick took, so the count follows from facts"
+		+ "as @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks, and a run"
+		+ "that fails before its push still spends a round, which bounds the repair"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "taken in the delivery of @TASK.B18"
+		REF @TASK.B18
