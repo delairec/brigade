@@ -1,8 +1,8 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.review_reply import COMMAND
 from brigade.errors import BrigadeError
@@ -47,7 +47,7 @@ class ReviewReplyTextTest(unittest.TestCase):
 class ReviewReplyRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42, file="answers.json")
+        options = Namespace(pr=42, file="answers.json")
 
         # Act
         request = COMMAND.read_request(options)
@@ -83,7 +83,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
         self.answers_file.write_text(json.dumps({"answers": [{"finding": "1", "answer": "fixed by 8885daa"}]}))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(pr=42, file=str(self.answers_file)), self.runtime)
+        document = COMMAND.run(Namespace(pr=42, file=str(self.answers_file)), self.runtime)
 
         # Assert
         self.assertEqual(document["answers"], [{"finding": "1", "answer": "fixed by 8885daa"}])
@@ -94,7 +94,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            COMMAND.run(SimpleNamespace(pr=42, file=str(self.answers_file)), self.runtime)
+            COMMAND.run(Namespace(pr=42, file=str(self.answers_file)), self.runtime)
 
         # Assert
         self.assertEqual(str(refusal.exception), f"the answers file {self.answers_file} holds no JSON document")
@@ -105,7 +105,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            COMMAND.run(SimpleNamespace(pr=42, file=str(missing_file)), self.runtime)
+            COMMAND.run(Namespace(pr=42, file=str(missing_file)), self.runtime)
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot read {missing_file}: No such file or directory")

@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_show import COMMAND
 from brigade.errors import BrigadeError
@@ -106,7 +106,7 @@ class WaveShowExitCodeTest(unittest.TestCase):
 class WaveShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(wave="tidepool_w16")
+        options = Namespace(wave="tidepool_w16")
 
         # Act
         request = COMMAND.read_request(options)
@@ -124,7 +124,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_RUNNING, T7_PR_OPENED, T7_RUN_FINISHED, T7_PR_OPEN])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), create_runtime(self.root))
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_runtime(self.root))
 
         # Assert
         self.assertEqual(
@@ -149,7 +149,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, WAVE_PR_OPENED])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), create_runtime(self.root))
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_runtime(self.root))
 
         # Assert
         self.assertEqual(document["pull_request"], 77)
@@ -159,7 +159,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), create_runtime(self.root))
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_runtime(self.root))
 
         # Assert
         self.assertEqual(document["tasks"][1], {"task": "T8", "state": "parked", "pull_request": None, "run": None})
@@ -170,7 +170,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="tidepool_w17"), create_runtime(self.root))
+            COMMAND.run(Namespace(wave="tidepool_w17"), create_runtime(self.root))
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")

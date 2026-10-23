@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.roles_show import COMMAND
 from tests.unit.commands.command_runtime import create_runtime
@@ -78,7 +78,7 @@ class RolesShowExitCodeTest(unittest.TestCase):
 class RolesShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(slot="review", short=False)
+        options = Namespace(slot="review", short=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -97,7 +97,7 @@ class RolesShowOfAMachineRoleTest(unittest.TestCase):
 
     def test_should_show_the_role_with_its_body(self):
         # Arrange
-        request = SimpleNamespace(slot="review", short=False)
+        request = Namespace(slot="review", short=False)
 
         # Act
         document = COMMAND.run(request, create_runtime(self.root))
@@ -117,7 +117,7 @@ class RolesShowOfAMachineRoleTest(unittest.TestCase):
 
     def test_should_show_the_role_with_the_size_of_its_body(self):
         # Arrange
-        request = SimpleNamespace(slot="review", short=True)
+        request = Namespace(slot="review", short=True)
 
         # Act
         document = COMMAND.run(request, create_runtime(self.root))

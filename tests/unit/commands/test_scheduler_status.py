@@ -1,8 +1,8 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.scheduler_status import COMMAND
 from tests.unit.commands.command_runtime import create_runtime, write_ledger
@@ -174,7 +174,7 @@ class SchedulerStatusExitCodeTest(unittest.TestCase):
 class SchedulerStatusRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(json=False)
+        options = Namespace(json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -202,7 +202,7 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
 
     def read_status(self, statuses: dict) -> dict:
         runtime = create_runtime(self.root, resolve_plugin=_create_scheduler_resolution(statuses))
-        return COMMAND.run(SimpleNamespace(), runtime)
+        return COMMAND.run(Namespace(), runtime)
 
     def test_should_report_the_first_scheduler_installed_and_the_last_heartbeat(self):
         # Arrange

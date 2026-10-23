@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.study_show import COMMAND
 from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
@@ -46,7 +46,7 @@ class StudyShowExitCodeTest(unittest.TestCase):
 class StudyShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(name="health")
+        options = Namespace(name="health")
 
         # Act
         request = COMMAND.read_request(options)
@@ -64,7 +64,7 @@ class StudyShowOfARecordedStudyTest(unittest.TestCase):
         runtime = create_runtime(root, run_process=create_corpus_double(entities))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(name="health"), runtime)
+        document = COMMAND.run(Namespace(name="health"), runtime)
 
         # Assert
         self.assertEqual(

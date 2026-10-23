@@ -1,8 +1,8 @@
 import os
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.request_show import COMMAND
 from brigade.errors import BrigadeError
@@ -40,7 +40,7 @@ class RequestShowTest(unittest.TestCase):
 
     def test_should_describe_the_request_its_plan_and_its_pull_request(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r1"), self.runtime)
+        document = COMMAND.run(Namespace(request="shop_r1"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -64,7 +64,7 @@ class RequestShowTest(unittest.TestCase):
         record_run_pid(run_directory, os.getpid())
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r2"), self.runtime)
+        document = COMMAND.run(Namespace(request="shop_r2"), self.runtime)
 
         # Assert
         self.assertEqual(document["planner"], {"run": PLANNER_RUN, "state": "live"})
@@ -74,7 +74,7 @@ class RequestShowTest(unittest.TestCase):
         write_run(self.state_root, create_planner_record(PLANNER_RUN, "shop_r2"), NO_RESULT)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r2"), self.runtime)
+        document = COMMAND.run(Namespace(request="shop_r2"), self.runtime)
 
         # Assert
         self.assertEqual(document["planner"], {"run": PLANNER_RUN, "state": "dead"})
@@ -85,7 +85,7 @@ class RequestShowTest(unittest.TestCase):
         write_run(self.state_root, create_planner_record(PLANNER_RUN, "shop_r2"), blocked)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r2"), self.runtime)
+        document = COMMAND.run(Namespace(request="shop_r2"), self.runtime)
 
         # Assert
         self.assertEqual(document["planner"], {"run": PLANNER_RUN, "state": "blocked"})
@@ -93,7 +93,7 @@ class RequestShowTest(unittest.TestCase):
     def test_should_refuse_a_request_the_operational_corpus_does_not_define(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(request="shop_r9"), self.runtime)
+            COMMAND.run(Namespace(request="shop_r9"), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "@REQUEST.shop_r9 is not defined in the operational corpus")
@@ -169,7 +169,7 @@ class RequestShowExitCodeTest(unittest.TestCase):
 class RequestShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(request="shop_r1")
+        options = Namespace(request="shop_r1")
 
         # Act
         request = COMMAND.read_request(options)

@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_requeue import COMMAND
 from brigade.errors import BrigadeError
@@ -72,7 +72,7 @@ class WaveRequeueExitCodeTest(unittest.TestCase):
 class WaveRequeueRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(wave="tidepool_w16", task="T7")
+        options = Namespace(wave="tidepool_w16", task="T7")
 
         # Act
         request = COMMAND.read_request(options)
@@ -98,7 +98,7 @@ class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
                 write_ledger(self.root, [WAVE_STARTED, parking])
 
                 # Act
-                COMMAND.run(SimpleNamespace(wave="tidepool_w16", task="T7"), self.runtime)
+                COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), self.runtime)
 
                 # Assert
                 self.assertEqual(
@@ -111,7 +111,7 @@ class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16", task="T7"), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "wave": "tidepool_w16", "task": "T7", "state": "queued"})
@@ -135,7 +135,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    COMMAND.run(SimpleNamespace(wave="tidepool_w16", task="T7"), self.runtime)
+                    COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), self.runtime)
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_refusal)
@@ -146,7 +146,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="tidepool_w16", task="T9"), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w16", task="T9"), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "the task T9 is not a task of the wave tidepool_w16")
@@ -157,7 +157,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="tidepool_w99", task="T7"), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w99", task="T7"), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w99")

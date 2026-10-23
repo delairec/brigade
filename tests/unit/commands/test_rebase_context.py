@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.rebase_context import COMMAND
 from tests.unit.commands.command_runtime import (
@@ -79,7 +79,7 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
                 runtime = self._create_runtime(merge)
 
                 # Act
-                document = COMMAND.run(SimpleNamespace(pr=42), runtime)
+                document = COMMAND.run(Namespace(pr=42), runtime)
 
                 # Assert
                 self.assertEqual(document, create_document(conflicts))
@@ -88,7 +88,7 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
 class RebaseContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)

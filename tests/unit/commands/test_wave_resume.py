@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_resume import COMMAND
 from brigade.errors import BrigadeError
@@ -62,7 +62,7 @@ class WaveResumeExitCodeTest(unittest.TestCase):
 class WaveResumeRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(wave=None)
+        options = Namespace(wave=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -86,7 +86,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave=EVERY_PAUSE), self.runtime)
+        document = COMMAND.run(Namespace(wave=EVERY_PAUSE), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -98,7 +98,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, _pause("tidepool_w16", "quota")])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "resumed": [{"wave": "tidepool_w16", "reason": "quota"}]})
@@ -109,7 +109,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="tidepool_w16"), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "the wave tidepool_w16 is running, not paused")
@@ -120,7 +120,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="tidepool_w17"), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w17"), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")

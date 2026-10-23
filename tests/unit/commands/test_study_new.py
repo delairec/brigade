@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import ANY
@@ -51,7 +52,7 @@ class StudyNewExitCodeTest(unittest.TestCase):
 class StudyNewRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(name="health")
+        options = Namespace(name="health")
 
         # Act
         request = COMMAND.read_request(options)
@@ -66,7 +67,7 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
         run_process = create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}, CORPUS_CHANGE_OUTPUTS)
-        request = SimpleNamespace(
+        request = Namespace(
             name="health",
             title="the health of the tidepool",
             question=None,
@@ -88,7 +89,7 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
-        request = SimpleNamespace(
+        request = Namespace(
             name="health",
             title="the health of the machine",
             question=None,
@@ -143,7 +144,7 @@ class StudyNewOfAStudyOnDemandTest(unittest.TestCase):
         write_operational_corpus(root)
         run_process = create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, CORPUS_CHANGE_OUTPUTS)
         on_demand = None
-        request = SimpleNamespace(
+        request = Namespace(
             name="health",
             title="the health of the machine",
             question=None,

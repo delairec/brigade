@@ -4,8 +4,8 @@ import json
 import os
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.runs_show import COMMAND
 from brigade.errors import BrigadeError, UsageError
@@ -140,7 +140,7 @@ class RunsShowExitCodeTest(unittest.TestCase):
 class RunsShowRequestTest(unittest.TestCase):
     def test_should_refuse_to_follow_a_run_in_json(self):
         # Arrange
-        options = SimpleNamespace(run=FIRST_RUN, log=False, follow=True, json=True)
+        options = Namespace(run=FIRST_RUN, log=False, follow=True, json=True)
 
         # Act
         with self.assertRaises(UsageError) as raised:
@@ -151,7 +151,7 @@ class RunsShowRequestTest(unittest.TestCase):
 
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(run=FIRST_RUN, log=False, follow=True, json=False)
+        options = Namespace(run=FIRST_RUN, log=False, follow=True, json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -191,7 +191,7 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stdout(printed):
-            document = COMMAND.run(SimpleNamespace(run=FIRST_RUN, log=False, follow=True), runtime)
+            document = COMMAND.run(Namespace(run=FIRST_RUN, log=False, follow=True), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False})
@@ -226,7 +226,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
     def test_should_show_the_run_with_its_journal(self):
         # Arrange
-        request = SimpleNamespace(run=FIRST_RUN, log=True, follow=False)
+        request = Namespace(run=FIRST_RUN, log=True, follow=False)
 
         # Act
         document = COMMAND.run(request, create_runtime(self.root))
@@ -239,7 +239,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
     def test_should_print_the_run_and_its_journal_when_following_a_run_already_ended(self):
         # Arrange
-        request = SimpleNamespace(run=FIRST_RUN, log=False, follow=True)
+        request = Namespace(run=FIRST_RUN, log=False, follow=True)
         printed = io.StringIO()
 
         # Act
@@ -267,7 +267,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
     def test_should_refuse_a_run_never_started(self):
         # Arrange
-        request = SimpleNamespace(run="20261009T090000Z-d90c03", log=False, follow=False)
+        request = Namespace(run="20261009T090000Z-d90c03", log=False, follow=False)
 
         # Act
         with self.assertRaises(BrigadeError) as raised:

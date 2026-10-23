@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -56,7 +57,7 @@ class StudyRunExitCodeTest(unittest.TestCase):
 class StudyRunRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(name="health", run_id=None)
+        options = Namespace(name="health", run_id=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -76,7 +77,7 @@ class StudyRunOfAStudyTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(name="health", run_id=None), runtime)
+            COMMAND.run(Namespace(name="health", run_id=None), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the operational corpus")
@@ -112,7 +113,7 @@ class StudyRunOfAStudyTest(unittest.TestCase):
         )
 
         # Act
-        ending = COMMAND.run(SimpleNamespace(name="wave-report", run_id=RUN_ID), runtime)
+        ending = COMMAND.run(Namespace(name="wave-report", run_id=RUN_ID), runtime)
 
         # Assert
         self.assertEqual(ending, {"schema_version": 1, "study": "wave-report", "run": RUN_ID, "state": "done"})

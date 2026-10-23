@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_list import COMMAND
 from tests.unit.commands.command_runtime import create_runtime, write_ledger
@@ -76,7 +76,7 @@ class WaveListExitCodeTest(unittest.TestCase):
 class WaveListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(project=None)
+        options = Namespace(project=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -98,7 +98,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
         for case, project, expected_waves in rows:
             with self.subTest(case=case):
                 # Act
-                document = COMMAND.run(SimpleNamespace(project=project), runtime)
+                document = COMMAND.run(Namespace(project=project), runtime)
 
                 # Assert
                 self.assertEqual(document, {"schema_version": 1, "waves": expected_waves})
@@ -109,7 +109,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
         runtime = create_runtime(root)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), runtime)
+        document = COMMAND.run(Namespace(project=EVERY_PROJECT), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "waves": []})

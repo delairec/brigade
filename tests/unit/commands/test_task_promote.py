@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -40,7 +41,7 @@ class TaskPromoteExitCodeTest(unittest.TestCase):
 class TaskPromoteRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(task=None, pr=None)
+        options = Namespace(task=None, pr=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -61,7 +62,7 @@ class TaskPromoteOutsideATaskTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(task=THE_TASK_OF_THE_BRANCH, pr=THE_LAST_PULL_REQUEST), runtime)
+            COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, pr=THE_LAST_PULL_REQUEST), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")

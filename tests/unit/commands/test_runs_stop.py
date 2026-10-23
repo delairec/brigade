@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.runs_stop import COMMAND
 from brigade.errors import BrigadeError
@@ -33,7 +33,7 @@ class RunsStopExitCodeTest(unittest.TestCase):
 class RunsStopRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(run=FIRST_RUN)
+        options = Namespace(run=FIRST_RUN)
 
         # Act
         request = COMMAND.read_request(options)
@@ -55,7 +55,7 @@ class RunsStopOfAFinishedRunTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(run=FIRST_RUN), create_runtime(root))
+            COMMAND.run(Namespace(run=FIRST_RUN), create_runtime(root))
 
         # Assert
         self.assertEqual(str(raised.exception), f"run {FIRST_RUN} has already finished on done")

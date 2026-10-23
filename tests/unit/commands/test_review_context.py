@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
@@ -65,7 +65,7 @@ class ReviewContextTextTest(unittest.TestCase):
 class ReviewContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)
@@ -97,7 +97,7 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
 
     def test_should_give_the_context_of_the_review_of_the_task_of_the_pull_request(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(pr=42), self.runtime)
+        document = COMMAND.run(Namespace(pr=42), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -117,7 +117,7 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
     def test_should_refuse_a_pull_request_no_task_opened(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=41), self.runtime)
+            COMMAND.run(Namespace(pr=41), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")

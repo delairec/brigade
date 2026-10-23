@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import ANY
 
 from brigade.commands.request_new import COMMAND
@@ -52,7 +52,7 @@ class RequestNewTest(unittest.TestCase):
         runtime = self._create_runtime((("PATH", str(self.repository)),), STEP_COUNTING_PROBE)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(project="shop", text="empty the cart"), runtime)
+        document = COMMAND.run(Namespace(project="shop", text="empty the cart"), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": ANY})
@@ -63,7 +63,7 @@ class RequestNewTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(project="shop", text="empty the cart"), runtime)
+            COMMAND.run(Namespace(project="shop", text="empty the cart"), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "@PROJECT.shop is paused")
@@ -114,7 +114,7 @@ class RequestNewExitCodeTest(unittest.TestCase):
 class RequestNewRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(project="shop", text="empty the cart")
+        options = Namespace(project="shop", text="empty the cart")
 
         # Act
         request = COMMAND.read_request(options)

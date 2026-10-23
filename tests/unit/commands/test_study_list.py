@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.study_list import COMMAND
 from brigade.errors import BrigadeError
@@ -66,7 +66,7 @@ class StudyListExitCodeTest(unittest.TestCase):
 class StudyListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(json=False)
+        options = Namespace(json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -87,7 +87,7 @@ class StudyListOfTheOperationalCorpusTest(unittest.TestCase):
         runtime = create_runtime(self.root, run_process=create_corpus_double({"STUDY": {"health": HEALTH_STUDY}}))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), runtime)
+        document = COMMAND.run(Namespace(), runtime)
 
         # Assert
         self.assertEqual(
@@ -104,7 +104,7 @@ class StudyListOfTheOperationalCorpusTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(), runtime)
+            COMMAND.run(Namespace(), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "the operational corpus is missing; run brigade init first")

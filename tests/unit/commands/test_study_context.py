@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.study_context import COMMAND
 from brigade.errors import BrigadeError
@@ -49,7 +49,7 @@ class StudyContextExitCodeTest(unittest.TestCase):
 class StudyContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(run=RUN_ID)
+        options = Namespace(run=RUN_ID)
 
         # Act
         request = COMMAND.read_request(options)
@@ -66,7 +66,7 @@ class StudyContextOfARunTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(run=RUN_ID), create_runtime(root))
+            COMMAND.run(Namespace(run=RUN_ID), create_runtime(root))
 
         # Assert
         self.assertEqual(str(raised.exception), f"{RUN_ID} is not a run of a study")

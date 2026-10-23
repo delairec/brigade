@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.request_cancel import COMMAND
 from tests.unit.create_scripted_runtime import create_scripted_runtime
@@ -21,7 +21,7 @@ class RequestCancelTest(unittest.TestCase):
         processes.answer_corpus_change(config_root, ("requests.awawa",), message)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r2"), runtime)
+        document = COMMAND.run(Namespace(request="shop_r2"), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r2", "status": "cancelled"})
@@ -51,7 +51,7 @@ class RequestCancelExitCodeTest(unittest.TestCase):
 class RequestCancelRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(request="shop_r1")
+        options = Namespace(request="shop_r1")
 
         # Act
         request = COMMAND.read_request(options)

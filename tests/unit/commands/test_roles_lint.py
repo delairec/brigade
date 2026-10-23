@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.roles_lint import COMMAND
 from tests.unit.commands.command_runtime import create_runtime
@@ -105,7 +105,7 @@ class RolesLintExitCodeTest(unittest.TestCase):
 class RolesLintRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(json=False)
+        options = Namespace(json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -129,7 +129,7 @@ class RolesLintOfTheMachineRolesTest(unittest.TestCase):
         (self.roles / "second-auditor.md").write_text(SECOND_AUDITOR_ROLE, encoding="utf-8")
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), create_runtime(self.root))
+        document = COMMAND.run(Namespace(), create_runtime(self.root))
 
         # Assert
         self.assertEqual(
@@ -153,7 +153,7 @@ class RolesLintOfTheMachineRolesTest(unittest.TestCase):
         (self.roles / "auditor.md").write_text(AUDITOR_ROLE.replace("slot: review\n", ""), encoding="utf-8")
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), create_runtime(self.root))
+        document = COMMAND.run(Namespace(), create_runtime(self.root))
 
         # Assert
         self.assertEqual(
@@ -165,7 +165,7 @@ class RolesLintOfTheMachineRolesTest(unittest.TestCase):
         (self.roles / "auditor.md").write_text(AUDITOR_ROLE, encoding="utf-8")
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), create_runtime(self.root))
+        document = COMMAND.run(Namespace(), create_runtime(self.root))
 
         # Assert
         self.assertEqual(document["files"][-1], f"{self.roles}/auditor.md")

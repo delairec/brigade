@@ -1,8 +1,8 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_cancel import COMMAND
 from brigade.errors import BrigadeError
@@ -76,7 +76,7 @@ class WaveCancelExitCodeTest(unittest.TestCase):
 class WaveCancelRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(wave="shop_w1")
+        options = Namespace(wave="shop_w1")
 
         # Act
         request = COMMAND.read_request(options)
@@ -97,7 +97,7 @@ class WaveCancelOfAnOpenWaveTest(unittest.TestCase):
 
     def test_should_record_the_cancellation_in_the_ledger(self):
         # Act
-        COMMAND.run(SimpleNamespace(wave="shop_w1"), create_runtime(self.root))
+        COMMAND.run(Namespace(wave="shop_w1"), create_runtime(self.root))
 
         # Assert
         lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -114,7 +114,7 @@ class WaveCancelOfAnOpenWaveTest(unittest.TestCase):
 
     def test_should_list_the_worktree_of_a_finished_run_the_branch_and_the_pull_request_and_stop_nothing(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(wave="shop_w1"), create_runtime(self.root))
+        document = COMMAND.run(Namespace(wave="shop_w1"), create_runtime(self.root))
 
         # Assert
         self.assertEqual(
@@ -155,7 +155,7 @@ class WaveCancelOfAWaveNotOpenTest(unittest.TestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    COMMAND.run(SimpleNamespace(wave="shop_w1"), create_runtime(root))
+                    COMMAND.run(Namespace(wave="shop_w1"), create_runtime(root))
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_message)
@@ -167,7 +167,7 @@ class WaveCancelOfAWaveNotOpenTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="shop_w9"), create_runtime(root))
+            COMMAND.run(Namespace(wave="shop_w9"), create_runtime(root))
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave shop_w9")

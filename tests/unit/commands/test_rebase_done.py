@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.rebase_done import COMMAND
 from brigade.errors import BrigadeError
@@ -73,7 +73,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
         runtime = self._create_runtime(DESCENDING)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(pr=42), runtime)
+        document = COMMAND.run(Namespace(pr=42), runtime)
 
         # Assert
         self.assertEqual(document["head"], "9a9a9a9")
@@ -85,7 +85,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=42), runtime)
+            COMMAND.run(Namespace(pr=42), runtime)
 
         # Assert
         self.assertEqual(
@@ -98,7 +98,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
 class RebaseDoneRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)

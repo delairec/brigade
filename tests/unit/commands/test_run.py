@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+from argparse import Namespace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -68,7 +69,7 @@ class RunClientPrecedenceTest(unittest.TestCase):
         root = Path(directory.name)
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text(f'client = "{UNKNOWN_CLIENT}"\n', encoding="utf-8")
-        request = SimpleNamespace(
+        request = Namespace(
             procedure=UNKNOWN_PROCEDURE,
             slot="build",
             project=None,
@@ -209,7 +210,7 @@ class RunDetachedTest(unittest.TestCase):
         self.root = Path(directory.name)
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
-        self.request = SimpleNamespace(
+        self.request = Namespace(
             procedure="wave-plan",
             slot="plan",
             project=None,
@@ -311,7 +312,7 @@ class RunAttachedTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
-        request = SimpleNamespace(
+        request = Namespace(
             procedure="build-task",
             slot="build",
             project=None,

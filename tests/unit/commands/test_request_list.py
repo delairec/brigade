@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.request_list import COMMAND
 from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
@@ -42,14 +42,14 @@ class RequestListTest(unittest.TestCase):
 
     def test_should_list_one_row_per_request(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), self.runtime)
+        document = COMMAND.run(Namespace(project=EVERY_PROJECT), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "requests": [DEPOT_ROW, SHOP_ROW]})
 
     def test_should_narrow_the_rows_to_one_project(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(project="depot"), self.runtime)
+        document = COMMAND.run(Namespace(project="depot"), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "requests": [DEPOT_ROW]})
@@ -59,7 +59,7 @@ class RequestListTest(unittest.TestCase):
         runtime = create_runtime(self.root, run_process=create_corpus_double({"REQUEST": {}}))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), runtime)
+        document = COMMAND.run(Namespace(project=EVERY_PROJECT), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "requests": []})
@@ -96,7 +96,7 @@ class RequestListExitCodeTest(unittest.TestCase):
 class RequestListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(project="shop")
+        options = Namespace(project="shop")
 
         # Act
         request = COMMAND.read_request(options)

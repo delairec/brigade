@@ -7,6 +7,7 @@ import os
 import signal
 import tempfile
 import unittest
+from argparse import Namespace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -108,7 +109,7 @@ class TickLoopTest(unittest.TestCase):
         # Arrange
         first_round = _create_runtime(self.root, datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC))
         second_round = _create_runtime(self.root, datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC))
-        request = SimpleNamespace(
+        request = Namespace(
             mode=LOOP_MODE,
             create_runtime=_create_round_factory([(first_round, WAKE_THE_LOOP), (second_round, signal.SIGTERM)]),
         )
@@ -140,7 +141,7 @@ class TickWithoutAKnownModeTest(unittest.TestCase):
                 # Arrange
                 directory = self.enterContext(tempfile.TemporaryDirectory())
                 runtime = _create_runtime(Path(directory), datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC))
-                request = SimpleNamespace(mode=mode, create_runtime=_stop_the_loop_it_entered)
+                request = Namespace(mode=mode, create_runtime=_stop_the_loop_it_entered)
 
                 # Act
                 with self.assertRaises(UsageError) as raised, contextlib.redirect_stderr(io.StringIO()):
@@ -177,7 +178,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_apply_no_action_and_write_the_heartbeat(self):
         # Arrange
-        request = SimpleNamespace(mode="once")
+        request = Namespace(mode="once")
 
         runtime = dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
 
@@ -210,7 +211,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_stand_down_while_another_tick_holds_the_lock(self):
         # Arrange
-        request = SimpleNamespace(mode="once")
+        request = Namespace(mode="once")
         self.lock.parent.mkdir(parents=True)
 
         # Act
@@ -223,7 +224,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_plan_nothing_on_a_dry_run(self):
         # Arrange
-        request = SimpleNamespace(mode="dry-run")
+        request = Namespace(mode="dry-run")
 
         # Act
         document = COMMAND.run(request, _create_quiet_runtime(self.root))
@@ -253,7 +254,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         create_round = _create_single_round_factory(
             dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
         )
-        request = SimpleNamespace(mode=LOOP_MODE, create_runtime=create_round)
+        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
         reported = io.StringIO()
 
         # Act
@@ -271,7 +272,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         create_round = _create_single_round_factory(
             dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
         )
-        request = SimpleNamespace(mode=LOOP_MODE, create_runtime=create_round)
+        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
         self.lock.parent.mkdir(parents=True)
         reported = io.StringIO()
 
@@ -332,7 +333,7 @@ class TickExitCodeTest(unittest.TestCase):
 class TickRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(mode="once")
+        options = Namespace(mode="once")
 
         # Act
         request = COMMAND.read_request(options)
@@ -541,7 +542,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["actions_applied"], 1)
@@ -579,7 +580,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -604,7 +605,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         first_event_of_the_tick = 1
 
         # Act
-        document = COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["actions_failed"], 1)
@@ -640,7 +641,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -682,7 +683,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -706,7 +707,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         first_event_of_the_tick = 2
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -727,7 +728,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -751,7 +752,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -788,7 +789,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -837,7 +838,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, forge)
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(forge.check_log_requests[0]["lines"], 200)
@@ -855,7 +856,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         brief = self.root / "state" / "briefs" / "tidepool_w16-T7-checks.md"
@@ -939,7 +940,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -973,7 +974,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         first_event_of_the_tick = 2
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -996,7 +997,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, failing_checks))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_last_event()["event"], "task.preflighted")
@@ -1007,7 +1008,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1027,7 +1028,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         reported_run = self._read_last_event()["run"]
@@ -1039,7 +1040,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1135,7 +1136,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
     def test_should_merge_the_pull_request_by_the_method_of_the_project(self):
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -1149,7 +1150,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         runtime = self._create_runtime(forge)
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(forge.merges, [])
@@ -1159,7 +1160,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         first_event_of_the_tick = 5
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -1193,14 +1194,14 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         merged_event = 7
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(self._read_events()[merged_event]["rounds"], 1)
 
     def test_should_start_the_dependent_of_the_merged_task_in_the_same_tick(self):
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -1271,7 +1272,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
     def test_should_open_the_pull_request_from_the_wave_branch_to_the_main_branch(self):
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -1291,7 +1292,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
     def test_should_record_the_opening_with_the_login_it_ran_as(self):
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -1308,10 +1309,10 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
     def test_should_open_none_at_a_second_tick(self):
         # Arrange
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(len(self.forge.opened), 1)
@@ -1350,7 +1351,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         self._miss_the_branch("integration/tidepool_w1")
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -1374,7 +1375,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         self._miss_the_branch("integration/M4")
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertIn(("git", "branch", "--quiet", "integration/M4", "main"), self.machine.argvs)
@@ -1394,7 +1395,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])
@@ -1504,7 +1505,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1523,7 +1524,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1556,7 +1557,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(self.lock_free_at_the_rebase, [False])
@@ -1570,7 +1571,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(self.environments_of_the_fetch, [ENVIRONMENT_OF_THE_CLI_ACCOUNT])
@@ -1581,7 +1582,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1631,7 +1632,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
 
         # Act
-        COMMAND.run(SimpleNamespace(mode="once"), runtime)
+        COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(self.spawn.argvs, [("study", "run", "wave-report", "--run-id", ANY)])

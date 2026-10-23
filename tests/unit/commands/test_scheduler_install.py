@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.scheduler_install import COMMAND
 from brigade.errors import ToolNotFound
@@ -89,7 +89,7 @@ class SchedulerInstallExitCodeTest(unittest.TestCase):
 class SchedulerInstallRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(json=False)
+        options = Namespace(json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -111,7 +111,7 @@ class SchedulerInstallChoiceTest(unittest.TestCase):
         runtime = create_runtime(self.root, resolve_plugin=_resolve_a_scheduler_double)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), runtime)
+        document = COMMAND.run(Namespace(), runtime)
 
         # Assert
         self.assertEqual(
@@ -140,7 +140,7 @@ class SchedulerInstallChoiceTest(unittest.TestCase):
                 runtime = create_runtime(self.root, run_process=run_process, resolve_plugin=_resolve_a_scheduler_double)
 
                 # Act
-                document = COMMAND.run(SimpleNamespace(), runtime)
+                document = COMMAND.run(Namespace(), runtime)
 
                 # Assert
                 self.assertEqual(document["scheduler"], expected_scheduler)

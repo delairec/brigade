@@ -1,8 +1,8 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.study_answer import COMMAND
 from brigade.errors import BrigadeError
@@ -40,7 +40,7 @@ class StudyAnswerExitCodeTest(unittest.TestCase):
 class StudyAnswerRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(run=RUN_ID, file="/home/user/answer.awawa")
+        options = Namespace(run=RUN_ID, file="/home/user/answer.awawa")
 
         # Act
         request = COMMAND.read_request(options)
@@ -71,7 +71,7 @@ class StudyAnswerOfAJudgingRunTest(unittest.TestCase):
         answer_file.write_text(ANSWER_TEXT, encoding="utf-8")
 
         # Act
-        document = COMMAND.run(SimpleNamespace(run=RUN_ID, file=str(answer_file)), self.runtime)
+        document = COMMAND.run(Namespace(run=RUN_ID, file=str(answer_file)), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -85,7 +85,7 @@ class StudyAnswerOfAJudgingRunTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(run=RUN_ID, file=str(missing_file)), self.runtime)
+            COMMAND.run(Namespace(run=RUN_ID, file=str(missing_file)), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot read {missing_file}: No such file or directory")

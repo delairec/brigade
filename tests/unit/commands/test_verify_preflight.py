@@ -1,7 +1,7 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.verify_preflight import COMMAND
 from brigade.errors import BrigadeError
@@ -79,7 +79,7 @@ class VerifyPreflightExitCodeTest(unittest.TestCase):
 class VerifyPreflightRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)
@@ -106,7 +106,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
     def test_should_ask_the_forge_about_the_pull_request_of_the_task(self):
         # Act
         with self.assertRaises(BrigadeError):
-            COMMAND.run(SimpleNamespace(pr=42), self.runtime)
+            COMMAND.run(Namespace(pr=42), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -122,7 +122,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
     def test_should_refuse_a_pull_request_no_task_opened(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=41), self.runtime)
+            COMMAND.run(Namespace(pr=41), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
