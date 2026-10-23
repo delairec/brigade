@@ -3,10 +3,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.corpus.run_awawa import run_awawa
 from brigade.errors import CommandFailed, EntityNotDefined
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-AWAWA_TIMEOUT_S = 30.0
 QUOTE = '"'
 ENTITY_NOT_SHOWN = 1
 SHOWN_OR_NOT = (0, ENTITY_NOT_SHOWN)
@@ -35,10 +35,7 @@ def read_entity(
     run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, entity_type: str, name: str
 ) -> Entity:
     target = f"@{entity_type}.{name}"
-    argv = ("awawa", "show", target, "--json", str(root))
-    record = run_process(
-        ProcessRequest(argv=argv, cwd=str(root), timeout_s=AWAWA_TIMEOUT_S, acceptable_exit_codes=SHOWN_OR_NOT)
-    )
+    record = run_awawa(run_process, root, ("show", target, "--json", str(root)), SHOWN_OR_NOT)
     if record.exit_code == ENTITY_NOT_SHOWN:
         if UNKNOWN_ENTITY_DIAGNOSTIC in record.stderr:
             raise EntityNotDefined(f"{target} is not defined in {root}")
