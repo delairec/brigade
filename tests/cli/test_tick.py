@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
+from tests.cli.stop_process import stop_process
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 from tests.cli.test_collect import install_executable
@@ -1040,10 +1041,9 @@ class BrigadeTickLoopTest(TickTestCase):
                 self.wait_for_first_tick(loop)
 
                 # Act
-                loop.send_signal(stop_signal)
+                stdout, stderr = stop_process(loop, stop_signal, STOP_WAIT_S)
 
                 # Assert
-                stdout, stderr = loop.communicate(timeout=STOP_WAIT_S)
                 self.assertEqual(loop.returncode, 0, stderr)
                 self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
 
@@ -1053,10 +1053,9 @@ class BrigadeTickLoopTest(TickTestCase):
         first_report = self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        _, later_reports = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        _, later_reports = loop.communicate(timeout=STOP_WAIT_S)
         self.assertRegex(
             first_report,
             r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied, 0 failed in \d+ ms\n$",
@@ -1069,10 +1068,9 @@ class BrigadeTickLoopTest(TickTestCase):
         self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stdout, stderr = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        stdout, stderr = loop.communicate(timeout=STOP_WAIT_S)
         self.assertEqual((loop.returncode, stdout), (0, "tick --loop: 1 ticks attempted\n"), stderr)
 
     def test_should_write_the_trail_of_its_first_round(self):
@@ -1081,10 +1079,9 @@ class BrigadeTickLoopTest(TickTestCase):
         self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        loop.communicate(timeout=STOP_WAIT_S)
         [trail] = (self.state / "ticks").iterdir()
         self.assertRegex(trail.name, r"^\d{8}T\d{6}Z\.jsonl$")
 
@@ -1097,10 +1094,9 @@ class BrigadeTickLoopWhileAnotherTickHoldsTheLockTest(TickTestCase):
         stand_down_line = self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stdout, _ = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        stdout, _ = loop.communicate(timeout=STOP_WAIT_S)
         self.assertEqual(
             (stand_down_line, loop.returncode, json.loads(stdout)),
             (
@@ -1192,10 +1188,9 @@ class BrigadeTickLoopWhereAFileStandsForTheStateDirectoryTest(TickTestCase):
         failure_line = self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stdout, later_reports = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        stdout, later_reports = loop.communicate(timeout=STOP_WAIT_S)
         self.assertEqual(
             (failure_line, later_reports, loop.returncode, self.state.exists()),
             (f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n", "", 0, False),

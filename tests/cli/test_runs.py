@@ -9,6 +9,7 @@ from unittest.mock import ANY
 
 from brigade.runs.record_run_pid import record_run_pid
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, TURN_LIMIT_RESULT, RunTestCase
+from tests.cli.stop_process import stop_process
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.process_launcher import ProcessLauncher
 
@@ -561,10 +562,9 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
                 self.read_opening(follow)
 
                 # Act
-                follow.send_signal(stop_signal)
+                stdout, stderr = stop_process(follow, stop_signal, FOLLOW_WAIT_S)
 
                 # Assert
-                stdout, stderr = follow.communicate(timeout=FOLLOW_WAIT_S)
                 shown = self.run_brigade("runs", "show", run_id, "--json")
                 self.wait_for_file(self.runs / run_id / "result.json")
                 self.assertEqual((follow.returncode, stderr), (0, ""))

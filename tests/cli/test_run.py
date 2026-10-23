@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FINISHING_CLIENT, TURN_LIMIT_RESULT, RunTestCase
+from tests.cli.stop_process import stop_process
 from tests.cli.temporary_instructions import TemporaryInstructions
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT
 from tests.cli.temporary_project import TemporaryProject
@@ -854,10 +855,9 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         client_pid = self.wait_for_client(brigade.pid)
 
         # Act
-        brigade.send_signal(signal.SIGINT)
+        stdout, stderr = stop_process(brigade, signal.SIGINT, STOP_WAIT_S)
 
         # Assert
-        stdout, stderr = brigade.communicate(timeout=STOP_WAIT_S)
         self.assertEqual(brigade.returncode, 21, stderr)
         self.assert_process_gone(client_pid)
         run_id = json.loads(stdout)["run"]
