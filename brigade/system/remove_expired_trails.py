@@ -18,7 +18,7 @@ def _read_configuration_document(configuration: Path) -> dict | None:
         return tomllib.loads(configuration.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}
-    except tomllib.TOMLDecodeError:
+    except (OSError, tomllib.TOMLDecodeError):
         return None
 
 

@@ -111,6 +111,18 @@ class RemoveExpiredTrailsOfConfiguredDaysTest(RemoveExpiredTrailsTestCase):
         # Assert
         self.assertTrue(expired.exists())
 
+    def test_should_keep_every_trail_when_config_toml_cannot_be_read(self):
+        # Arrange
+        self.configuration.mkdir(parents=True)
+        expired = self.ticks / "20260901T000000Z.jsonl"
+        self.write_trails(expired)
+
+        # Act
+        remove_expired_trails(self.paths, NOW)
+
+        # Assert
+        self.assertTrue(expired.exists())
+
     def test_should_keep_every_trail_when_trail_days_is_no_integer_of_1_or_more(self):
         # Arrange
         rows = [
