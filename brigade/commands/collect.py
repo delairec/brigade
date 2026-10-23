@@ -9,7 +9,7 @@ from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.read_since import read_since
 from brigade.system.render_inline_json import render_inline_json
 
@@ -68,7 +68,7 @@ def collect(request: argparse.Namespace, runtime: Runtime) -> dict:
             inputs=inputs,
             refresh=request.refresh,
             equipment=CollectorEquipment(
-                configuration=read_optional_configuration(runtime.paths.configuration_file),
+                configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
                 forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
                 forge_name=FORGE_NAME,
             ),

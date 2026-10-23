@@ -9,7 +9,7 @@ from brigade.system.list_client_adapters import SUPPORTED_CLIENT, ClientAdapter,
 from brigade.system.parse_configuration import Configuration
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 SCHEMA_VERSION = 1
 OPERATION_CAPABILITIES = ("launch", "result", "resume", "transcripts", "actions")
@@ -154,7 +154,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def adapter_matrix(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     rows = [_describe_adapter(runtime, configuration, adapter) for adapter in list_client_adapters(runtime)]
     return {"schema_version": SCHEMA_VERSION, "adapters": sorted(rows, key=_order_row), "fallbacks": FALLBACKS}
 

@@ -11,7 +11,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
-from brigade.system.parse_configuration import parse_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.read_text_file import read_text_file
 from brigade.system.validate_document import DocumentInvalid
 from brigade.verify.find_opened_task import find_opened_task
@@ -52,7 +52,7 @@ def verify_verdict(request: argparse.Namespace, runtime: Runtime) -> dict:
         opened=find_opened_task(runtime, project.name, request.pr).opened,
         verdict=verdict,
         forge=runtime.resolve_plugin("forge", FORGE_NAME),
-        configuration=parse_configuration(runtime.paths.configuration_file),
+        configuration=read_configuration(runtime, CONFIGURATION_REQUIRED),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_verdict(runtime, demand)}
 

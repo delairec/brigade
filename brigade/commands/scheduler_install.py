@@ -7,7 +7,7 @@ from brigade.errors import ToolNotFound
 from brigade.runtime import Runtime
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -52,7 +52,7 @@ def _render_text(document: dict) -> str:
 
 
 def scheduler_install(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     if configuration.scheduler is not None:
         name, chosen_by = configuration.scheduler, "configuration"
     else:

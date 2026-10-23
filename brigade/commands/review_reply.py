@@ -12,7 +12,7 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
 from brigade.runtime import Runtime
-from brigade.system.parse_configuration import parse_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.read_text_file import read_text_file
 from brigade.verify.find_opened_task import find_opened_task
 
@@ -47,7 +47,7 @@ def review_reply(request: argparse.Namespace, runtime: Runtime) -> dict:
         project_path=read_project_field(project, PATH_FIELD),
         answers=answers,
         forge=runtime.resolve_plugin("forge", FORGE_NAME),
-        configuration=parse_configuration(runtime.paths.configuration_file),
+        configuration=read_configuration(runtime, CONFIGURATION_REQUIRED),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_review_answers(runtime, demand)}
 

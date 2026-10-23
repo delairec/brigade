@@ -11,7 +11,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
-from brigade.system.parse_configuration import parse_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 
@@ -25,7 +25,7 @@ def plan_record(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = find_project(read_projects(runtime), planning_request.project)
     if read_project_field(project, "CORPUS") is None:
         raise BrigadeError(f"@PROJECT.{project.name} declares no corpus")
-    configuration = parse_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     recording = PlanRecording(
         request=planning_request,
         project=project,

@@ -10,7 +10,7 @@ from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
 from brigade.system.parse_configuration import SLOTS, Configuration
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -43,7 +43,7 @@ def _render_text(document: dict) -> str:
 
 
 def roles_list(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS, configuration) for slot in SLOTS]
     slot_clients = list_slot_clients_elsewhere(configuration, configuration.client)
     models_by_client = {

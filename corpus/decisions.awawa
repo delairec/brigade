@@ -2012,11 +2012,13 @@ DECISION TheClientIsAskedThroughOneFunctionAndTheConfigurationIsReadOncePerComma
 		+ "client and the configuration; a command reads config.toml once and passes the record"
 		+ "down"
 	STATUS active
-	DESC "the command modules that ask a client read config.toml once, through"
-		+ "read_configured_client or read_optional_configuration, resolve the client through the"
-		+ "runtime's resolver and pass the resolved client and the Configuration record to"
-		+ "ask_named_client, which completes the question and resolves nothing"
+	DESC "the command modules that ask a client read config.toml once, through read_configuration"
+		+ "of brigade/system, whose ConfigurationRequest decides whether a missing file is the"
+		+ "default record or a refusal, resolve the client through the runtime's resolver and pass"
+		+ "the resolved client and the Configuration record to ask_named_client, which completes"
+		+ "the question and resolves nothing"
 		REF @TASK.B73
+		REF @TASK.B153
 	DESC "the ask of a client goes through one function of brigade/system; the configuration"
 		+ "travels from the command that read it and the system layer parses no file"
 		REF @TASK.B77

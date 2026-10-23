@@ -1,9 +1,10 @@
 import ast
 from pathlib import Path
 
-READER_NAMES = ("parse_configuration", "read_optional_configuration", "read_configured_client")
+COMMAND_READER = "read_configuration"
+READER_NAMES = (COMMAND_READER, "parse_configuration")
 READER_MODULES = tuple(("system", f"{name}.py") for name in READER_NAMES)
-PACKAGE_ALLOWED_TO_READ = "commands"
+COMMANDS_PACKAGE = "commands"
 PURGE_OF_THE_TRAILS = ("system", "remove_expired_trails.py")
 CONFIGURATION_FILE_ATTRIBUTE = "configuration_file"
 CONFIGURATION_FILE_CONSTANT = "CONFIGURATION_FILE"
@@ -11,8 +12,8 @@ CONFIGURATION_FILE_NAME = "config.toml"
 TOML_PARSERS = ("load", "loads")
 
 
-def _may_read(parts: tuple[str, ...]) -> bool:
-    return parts in READER_MODULES or parts[0] == PACKAGE_ALLOWED_TO_READ
+def _list_allowed_readers(parts: tuple[str, ...]) -> tuple[str, ...]:
+    return (COMMAND_READER,) if parts[0] == COMMANDS_PACKAGE else ()
 
 
 def _name_reader(node: ast.AST) -> str | None:
@@ -42,8 +43,12 @@ def _reaches_configuration_file(tree: ast.AST) -> bool:
     return any(_names_configuration_file(node) for node in ast.walk(tree))
 
 
-def _find_reader_calls(tree: ast.AST) -> list[tuple[int, str]]:
-    return [(node.lineno, f"calls {_name_reader(node)}") for node in ast.walk(tree) if _name_reader(node) is not None]
+def _find_reader_calls(tree: ast.AST, allowed_readers: tuple[str, ...]) -> list[tuple[int, str]]:
+    return [
+        (node.lineno, f"calls {_name_reader(node)}")
+        for node in ast.walk(tree)
+        if _name_reader(node) is not None and _name_reader(node) not in allowed_readers
+    ]
 
 
 def _find_configuration_parses(tree: ast.AST) -> list[tuple[int, str]]:
@@ -54,10 +59,10 @@ def _find_configuration_parses(tree: ast.AST) -> list[tuple[int, str]]:
 
 def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
     parts = module_path.relative_to(package_root).parts
-    if _may_read(parts):
+    if parts in READER_MODULES:
         return []
     tree = ast.parse(module_path.read_text(encoding="utf-8"))
-    findings = _find_reader_calls(tree)
+    findings = _find_reader_calls(tree, _list_allowed_readers(parts))
     if parts != PURGE_OF_THE_TRAILS:
         findings = findings + _find_configuration_parses(tree)
     location = Path(package_root.name, *parts).as_posix()

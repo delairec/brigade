@@ -8,7 +8,7 @@ from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
-from brigade.system.parse_configuration import parse_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 
@@ -29,7 +29,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def verify_preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = parse_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     run_process = runtime.run_process
     project = require_project_at(
         read_projects(runtime), locate_main_checkout(run_process, locate_worktree_root(run_process, Path.cwd()))

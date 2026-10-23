@@ -7,8 +7,9 @@ from brigade.runtime import Runtime
 from brigade.system.ask_configured_client import ConfiguredClientAnswer, ask_configured_client
 from brigade.system.describe_configured_client_answer import describe_configured_client_answer
 from brigade.system.read_client_request import read_client_request
-from brigade.system.read_configured_client import read_configured_client
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.render_json import render_json
+from brigade.system.require_configured_client import require_configured_client
 
 OPERATION = "transcripts"
 
@@ -19,7 +20,9 @@ def _read_request(options) -> str:
 
 def adapter_transcripts(request: argparse.Namespace, runtime: Runtime) -> ConfiguredClientAnswer:
     client_request = read_client_request(OPERATION, request)
-    configured = read_configured_client(runtime)
+    configured = require_configured_client(
+        read_configuration(runtime, CONFIGURATION_REQUIRED), runtime.paths.configuration_file
+    )
     client = runtime.resolve_plugin("client", configured.name)
     return ask_configured_client(client, configured, client_request, runtime)
 

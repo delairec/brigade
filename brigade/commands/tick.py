@@ -41,7 +41,7 @@ from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.parse_configuration import Configuration
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
@@ -461,7 +461,7 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
         if not acquired:
             return None
         runtime.trail.locate(_locate_trail(runtime))
-        configuration = read_optional_configuration(runtime.paths.configuration_file)
+        configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
         read_pull_request = _follow_pull_requests(runtime, configuration)
         read_environment = _cache_forge_environment(runtime, configuration)
         outcome = run_rounds(
@@ -502,7 +502,7 @@ def _tick_once(runtime: Runtime) -> dict:
 
 
 def _plan_dry(runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     snapshot = build_snapshot(
         runtime,
         configuration,

@@ -20,9 +20,10 @@ from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
-from brigade.system.parse_configuration import CLI_KEY, Configuration, ConfigurationMissing, parse_configuration
+from brigade.system.parse_configuration import CLI_KEY, Configuration, ConfigurationMissing
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.require_configured_client import require_configured_client
 from brigade.system.run_process import ProcessRequest
@@ -100,9 +101,9 @@ def _check_awawa(runtime: Runtime) -> dict:
     return _create_prerequisite("awawa", state, f"{version} (floor {floor})")
 
 
-def _read_configuration(runtime: Runtime) -> Configuration | BrigadeError:
+def _attempt_configuration_reading(runtime: Runtime) -> Configuration | BrigadeError:
     try:
-        return parse_configuration(runtime.paths.configuration_file)
+        return read_configuration(runtime, CONFIGURATION_REQUIRED)
     except BrigadeError as error:
         return error
 
@@ -370,7 +371,7 @@ def _read_slot_clients(reading: Configuration | BrigadeError) -> dict:
 
 
 def doctor(request: argparse.Namespace, runtime: Runtime) -> dict:
-    reading = _read_configuration(runtime)
+    reading = _attempt_configuration_reading(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "client": _read_client(reading),

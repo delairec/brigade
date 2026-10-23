@@ -5,7 +5,7 @@ from brigade.command import Command
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.run_awawa import run_awawa
 from brigade.runtime import Runtime
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.run_process import ProcessRecord
 
 
@@ -33,7 +33,7 @@ def _describe_diagnostics(passage: AwawaPassage) -> list[str]:
 
 
 def corpus_awawa(request: argparse.Namespace, runtime: Runtime) -> AwawaPassage:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     tree = prepare_project_tree(request, configuration, runtime)
     record = run_awawa(runtime.run_process, tree.root, request.passed_arguments)
     return AwawaPassage(project=tree.project, sha=tree.sha, record=record)

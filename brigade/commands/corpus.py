@@ -4,7 +4,7 @@ from pathlib import Path
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.runtime import Runtime
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 FIELD_NAME_WIDTH = 6
@@ -20,7 +20,7 @@ def _render_text(document: dict) -> str:
 
 
 def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     tree = prepare_project_tree(request, configuration, runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

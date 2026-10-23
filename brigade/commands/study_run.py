@@ -17,7 +17,7 @@ from brigade.studies.read_study_of_run import read_study_of_run
 from brigade.studies.run_study import DONE, run_study
 from brigade.studies.study_run_context import StudyEquipment
 from brigade.system.collector_places import locate_collectors
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 PARKED_EXIT_CODE = 1
@@ -47,7 +47,7 @@ def _read_study_of_request(request: argparse.Namespace, runtime: Runtime) -> Stu
 def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     equipment = StudyEquipment(
         collector_equipment=CollectorEquipment(
-            configuration=read_optional_configuration(runtime.paths.configuration_file),
+            configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
             forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
             forge_name=FORGE_NAME,
         ),

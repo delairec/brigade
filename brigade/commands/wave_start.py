@@ -4,7 +4,7 @@ import functools
 from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import read_forge_environment
 from brigade.runtime import Runtime
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -18,7 +18,7 @@ def _render_text(document: dict) -> str:
 
 
 def wave_start(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     start = WaveStart(
         project=request.project,
         tasks=tuple(request.tasks),
