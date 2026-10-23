@@ -11677,7 +11677,8 @@ TASK B197
 TASK B205
 	TITLE "A study publishes on a private GitHub repository with the environment of the login bound"
 		+ "to cli"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 191
 	TYPE fix
 	MILESTONE @MILESTONE.M1
 	COMPONENT "studies"
@@ -11686,14 +11687,29 @@ TASK B205
 		+ "branch, pushes the commit of its report and rewrites the body of the integration pull"
 		+ "request with the environment of the login forge_accounts binds to cli, so that the"
 		+ "report of a wave reaches a private repository"
+		IMPL "brigade/studies/publish_wave_report.py::environment = read_publication_environment("
+		IMPL "tests/unit/studies/test_publish_wave_report.py::def"
+			+ "test_should_fetch_the_integration_branch_as_the_login_bound_to_cli"
 	SPEC "on a project of FORGE github, a study whose answer is written to a file pushes its branch"
 		+ "and opens its pull request with the environment of the login forge_accounts binds to cli"
+		IMPL "brigade/studies/write_answer_to_file.py::environment = read_publication_environment("
+		IMPL "brigade/git/force_push_branch.py::environment=push.environment"
+		IMPL "tests/unit/studies/test_write_answer_to_file.py::def"
+			+ "test_should_push_the_branch_of_the_answer_as_the_login_bound_to_cli"
 	SPEC "on a project of FORGE github, a study whose answer goes to an issue opens it with the"
 		+ "environment of the login forge_accounts binds to cli"
+		IMPL "brigade/studies/open_answer_issue.py::\"environment\": read_publication_environment("
+		IMPL "brigade/adapters/forges/github.py::(\"gh\", \"issue\", \"create\"),"
+			+ "request[\"environment\"]"
+		IMPL "tests/unit/studies/test_open_answer_issue.py::def"
+			+ "test_should_open_the_issue_as_the_login_bound_to_cli"
 	SPEC "with no login bound to cli, the three outputs act with the environment of brigade itself,"
 		+ "as today; a login bound to cli for which gh prints no token after forge_attempts parks"
 		+ "the study at its output step, with forge_account.unavailable and a reason naming the"
 		+ "login"
+		IMPL "brigade/studies/read_publication_environment.py::def read_publication_environment("
+		IMPL "tests/unit/studies/test_read_publication_environment.py::def"
+			+ "test_should_refuse_a_login_bound_to_cli_for_which_gh_prints_no_token"
 	RATIONALE "the rehearsal of @TASK.B21 on the private repository fake-repository-for-testing"
 		+ "parked both wave-report studies, runs 20261022T201206Z-e270a5 and"
 		+ "20261022T204810Z-33b0f4, at their output step on « git fetch --quiet origin"

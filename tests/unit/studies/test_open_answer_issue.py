@@ -2,16 +2,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
 from brigade.studies.convert_study import Study
 from brigade.studies.open_answer_issue import open_answer_issue
 from brigade.studies.present_answer import AnswerPublication
 from brigade.studies.study_run_context import StudyRunContext
+from brigade.system.read_configuration import Configuration
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
 PUBLICATION = AnswerPublication(title="Study trees, run 1", markdown="# FINDING trees_1\n")
+CLI_BOUND_TO_OCTO_CLI = Configuration(forge_accounts={"cli": "octo-cli"})
+NOTHING_BOUND = Configuration()
 
 
 def create_study(project: str | None) -> Study:
@@ -36,6 +40,9 @@ class ForgeDouble:
         self.issues.append(request)
         return {"url": "https://github.com/acme/oak/issues/3"}
 
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"])}
+
 
 class OpenAnswerIssueTest(unittest.TestCase):
     def setUp(self):
@@ -45,8 +52,11 @@ class OpenAnswerIssueTest(unittest.TestCase):
         self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
         self.forges = {"github": ForgeDouble()}
 
-    def create_context(self, project: str | None) -> StudyRunContext:
-        equipment = create_study_equipment(resolve_forge=self.forges.__getitem__)
+    def create_context(self, project: str | None, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
+        equipment = create_study_equipment(
+            collector_equipment=CollectorEquipment(configuration=configuration, forge=None, forge_name="github"),
+            resolve_forge=self.forges.__getitem__,
+        )
         return StudyRunContext(
             runtime=self.runtime,
             study=create_study(project),
@@ -80,8 +90,25 @@ class OpenAnswerIssueTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             self.forges["github"].issues,
-            [{"repository": "/srv/oak", "title": "Study trees, run 1", "body": "# FINDING trees_1\n"}],
+            [
+                {
+                    "repository": "/srv/oak",
+                    "title": "Study trees, run 1",
+                    "body": "# FINDING trees_1\n",
+                    "environment": {},
+                }
+            ],
         )
+
+    def test_should_open_the_issue_as_the_login_bound_to_cli(self):
+        # Arrange
+        self.register_project("github")
+
+        # Act
+        open_answer_issue(self.create_context("oak", CLI_BOUND_TO_OCTO_CLI), PUBLICATION)
+
+        # Assert
+        self.assertEqual(self.forges["github"].issues[0]["environment"], {"GH_TOKEN": "cli-token"})
 
     def test_should_refuse_a_project_without_a_forge(self):
         # Arrange

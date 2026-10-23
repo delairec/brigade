@@ -2,10 +2,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.studies.convert_study import Study
 from brigade.studies.present_answer import AnswerPublication
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer_to_file import write_answer_to_file
+from brigade.system.read_configuration import Configuration
+from brigade.system.run_process import ProcessRequest
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
@@ -26,6 +29,8 @@ STUDY = Study(
     answer_type="FINDING",
     status="active",
 )
+CLI_BOUND_TO_OCTO_CLI = Configuration(forge_accounts={"cli": "octo-cli"})
+NOTHING_BOUND = Configuration()
 
 
 class ForgeDouble:
@@ -35,6 +40,9 @@ class ForgeDouble:
     def open_pull_request(self, request: dict, runtime) -> dict:
         self.opened.append(request)
         return {"number": 7, "url": "https://github.com/acme/oak/pull/7"}
+
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"])}
 
 
 class WriteAnswerToFileTest(unittest.TestCase):
@@ -59,11 +67,14 @@ class WriteAnswerToFileTest(unittest.TestCase):
         self.processes.answer(FORCED_PUSH)
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
 
-    def create_context(self, forge: str) -> StudyRunContext:
+    def create_context(self, forge: str, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         self.processes.answer_entities(
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("FORGE", forge))}
         )
-        equipment = create_study_equipment(resolve_forge={"github": self.forge}.__getitem__)
+        equipment = create_study_equipment(
+            collector_equipment=CollectorEquipment(configuration=configuration, forge=None, forge_name="github"),
+            resolve_forge={"github": self.forge}.__getitem__,
+        )
         return StudyRunContext(
             runtime=self.runtime, study=STUDY, run_id=RUN_ID, run_directory=self.run_directory, equipment=equipment
         )
@@ -94,6 +105,25 @@ class WriteAnswerToFileTest(unittest.TestCase):
                 }
             ],
         )
+
+    def test_should_push_the_branch_of_the_answer_as_the_login_bound_to_cli(self):
+        # Act
+        write_answer_to_file(self.create_context("github", CLI_BOUND_TO_OCTO_CLI), PUBLICATION)
+
+        # Assert
+        self.assertIn(
+            ProcessRequest(
+                argv=FORCED_PUSH, cwd=str(self.checkout), timeout_s=120.0, environment={"GH_TOKEN": "cli-token"}
+            ),
+            self.processes.requests,
+        )
+
+    def test_should_open_the_pull_request_of_the_answer_as_the_login_bound_to_cli(self):
+        # Act
+        write_answer_to_file(self.create_context("github", CLI_BOUND_TO_OCTO_CLI), PUBLICATION)
+
+        # Assert
+        self.assertEqual(self.forge.opened[0]["environment"], {"GH_TOKEN": "cli-token"})
 
     def test_should_write_the_answer_at_the_path_the_output_names_for_the_run(self):
         # Act
