@@ -9,7 +9,7 @@ from tests.unit.commands.command_runtime import create_machine_double, write_led
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
-from tests.unit.verify.test_record_verdict import ForgeDouble
+from tests.unit.verify.test_record_verdict import create_review_forge
 
 VERDICT_FINDING = {"id": "1", "grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}
 CHANGES_REQUESTED = {
@@ -94,7 +94,7 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
-            resolve_plugin=lambda kind, name, **places: ForgeDouble(),
+            resolve_plugin=lambda kind, name, **places: create_review_forge(),
         )
 
     def test_should_give_the_context_of_the_review_of_the_task_of_the_pull_request(self):

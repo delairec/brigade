@@ -10,7 +10,7 @@ from tests.unit.commands.command_runtime import create_machine_double, write_led
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
-from tests.unit.verify.test_record_verdict import ForgeDouble
+from tests.unit.verify.test_record_verdict import create_review_forge
 
 PASS = {"head": "8885daa", "verdict": "pass", "findings": []}
 
@@ -69,7 +69,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
         self.verdict = self.root / "verdict.json"
-        self.forge = ForgeDouble()
+        self.forge = create_review_forge()
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),

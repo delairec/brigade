@@ -13,6 +13,9 @@ class ForgeDouble:
         self._answers = answers
         self.requests: list[ForgeRequest] = []
 
+    def list_operations(self) -> list[str]:
+        return [forge_request.operation for forge_request in self.requests]
+
     def list_requests(self, operation: str) -> list[dict]:
         return [forge_request.request for forge_request in self.requests if forge_request.operation == operation]
 

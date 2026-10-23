@@ -5,13 +5,14 @@ from pathlib import Path
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.review.assemble_review_context import ReviewDemand, assemble_review_context
 from tests.unit.commands.command_runtime import create_corpus_double, write_ledger
-from tests.unit.verify.test_record_verdict import ForgeDouble
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
+from tests.unit.verify.test_record_verdict import create_review_forge
 
 OPENED = TaskPrOpened(
     project="tidepool", task="T7", wave="tidepool_w16", branch="task/M4-tides/T7", pr=42, login="tidepool-bot"
 )
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
 
 NO_POLICY = {}
 POLICY_UNDER_APPROVAL = {"tidepool_policy": (("PROJECT", "@PROJECT.tidepool"), ("REVIEW", "approval"))}
@@ -39,21 +40,22 @@ VERDICT_CHANGES = {
 }
 
 
-class ThreadListingForgeDouble(ForgeDouble):
-    def list_review_threads(self, request: dict, runtime) -> dict:
-        self.questions.append(("list_review_threads", request))
-        return {
-            "schema_version": 1,
-            "threads": [
-                {
-                    "id": "PRRT_kwDOA1",
-                    "file": "src/tides.py",
-                    "line": 12,
-                    "author": "octo-reviewer",
-                    "body": "the tide table is read twice",
-                }
-            ],
+LISTED_THREADS = {
+    "schema_version": 1,
+    "threads": [
+        {
+            "id": "PRRT_kwDOA1",
+            "file": "src/tides.py",
+            "line": 12,
+            "author": "octo-reviewer",
+            "body": "the tide table is read twice",
         }
+    ],
+}
+
+
+def create_thread_listing_forge(**more_answers) -> ForgeDouble:
+    return create_review_forge(list_review_threads=lambda request: LISTED_THREADS, **more_answers)
 
 
 def create_demand(forge) -> ReviewDemand:
@@ -71,7 +73,10 @@ class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
             create_test_paths(self.root), run_process=create_corpus_double({"POLICY": NO_POLICY})
         )
         demand = ReviewDemand(
-            opened=OPENED, project_path="/home/user/tidepool", forge=ForgeDouble(), environment={"GH_TOKEN": "t"}
+            opened=OPENED,
+            project_path="/home/user/tidepool",
+            forge=create_review_forge(),
+            environment={"GH_TOKEN": "t"},
         )
 
         # Act
@@ -101,7 +106,7 @@ class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
         )
 
         # Act
-        context = assemble_review_context(runtime, create_demand(ForgeDouble()))
+        context = assemble_review_context(runtime, create_demand(create_review_forge()))
 
         # Assert
         self.assertEqual(context["findings"], [])
@@ -123,7 +128,7 @@ class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
         )
 
         # Act
-        context = assemble_review_context(runtime, create_demand(ForgeDouble()))
+        context = assemble_review_context(runtime, create_demand(create_review_forge()))
 
         # Assert
         self.assertEqual(context["request"], "body: the body names no task")
@@ -144,7 +149,7 @@ class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
         )
 
         # Act
-        context = assemble_review_context(runtime, create_demand(ForgeDouble()))
+        context = assemble_review_context(runtime, create_demand(create_review_forge()))
 
         # Assert
         self.assertEqual(context["request"], "body: the body keeps the placeholder $checks")
@@ -157,7 +162,7 @@ class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
         )
 
         # Act
-        context = assemble_review_context(runtime, create_demand(ForgeDouble()))
+        context = assemble_review_context(runtime, create_demand(create_review_forge()))
 
         # Assert
         self.assertIsNone(context["request"])
@@ -175,7 +180,7 @@ class AssembleReviewContextUnderTheApprovalModeTest(unittest.TestCase):
         )
 
         # Act
-        context = assemble_review_context(runtime, create_demand(ThreadListingForgeDouble()))
+        context = assemble_review_context(runtime, create_demand(create_thread_listing_forge()))
 
         # Assert
         self.assertEqual(
@@ -197,21 +202,20 @@ class AssembleReviewContextUnderTheApprovalModeTest(unittest.TestCase):
         runtime = create_test_runtime(
             create_test_paths(self.root), run_process=create_corpus_double({"POLICY": POLICY_UNDER_APPROVAL})
         )
-        forge = ThreadListingForgeDouble()
+        forge = create_thread_listing_forge()
 
         # Act
         assemble_review_context(runtime, create_demand(forge))
 
         # Assert
-        self.assertIn(
-            (
-                "list_review_threads",
+        self.assertEqual(
+            forge.list_requests("list_review_threads"),
+            [
                 {
                     "schema_version": 1,
                     "repository": "/home/user/tidepool",
                     "number": 42,
                     "environment": {"GH_TOKEN": "t"},
-                },
-            ),
-            forge.questions,
+                }
+            ],
         )

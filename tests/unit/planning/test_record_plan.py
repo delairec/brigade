@@ -15,6 +15,7 @@ from brigade.system.run_process import ProcessRequest
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
+from tests.unit.forge_double import ForgeDouble, ForgeRequest
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 from tests.unit.select_requests_opening_on import select_requests_opening_on
@@ -58,27 +59,15 @@ def read_environment(key: str) -> dict:
     return {"GH_TOKEN": f"token-of-{key}"}
 
 
-class ForgeDouble:
-    def __init__(self, found_pull_requests: list[dict]):
-        self.found_pull_requests = found_pull_requests
-        self.calls = []
-
-    def find_pull_request(self, request: dict, runtime) -> dict:
-        self.calls.append(("find_pull_request", request))
-        return self.found_pull_requests.pop(0)
-
-    def open_pull_request(self, request: dict, runtime) -> dict:
-        self.calls.append(("open_pull_request", request))
-        return {"number": 42}
-
-    def approve_pull_request(self, request: dict, runtime) -> None:
-        self.calls.append(("approve_pull_request", request))
-
-    def merge_pull_request(self, request: dict, runtime) -> None:
-        self.calls.append(("merge_pull_request", request))
-
-    def list_operations(self) -> list[str]:
-        return [operation for operation, request in self.calls]
+def create_forge(found_pull_requests: list[dict]) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "find_pull_request": lambda request: found_pull_requests.pop(0),
+            "open_pull_request": lambda request: {"number": 42},
+            "approve_pull_request": lambda request: None,
+            "merge_pull_request": lambda request: None,
+        }
+    )
 
 
 class RecordPlanArrangement:
@@ -102,7 +91,7 @@ class RecordPlanArrangement:
         self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main"))
         self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.worktree)))
-        self.forge = ForgeDouble([create_found_pull_request(NO_REVIEW_REQUIRED)])
+        self.forge = create_forge([create_found_pull_request(NO_REVIEW_REQUIRED)])
 
     def script_plan_entities(self, entities: list[dict]) -> None:
         plan_file = str(self.plan_file)
@@ -247,8 +236,8 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertIn(PUSH, self.processes.list_argvs())
         self.assertEqual(
-            self.forge.calls[0],
-            (
+            self.forge.requests[0],
+            ForgeRequest(
                 "open_pull_request",
                 {
                     "repository": "/srv/oak",
@@ -271,8 +260,8 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forge.calls[-1],
-            (
+            self.forge.requests[-1],
+            ForgeRequest(
                 "merge_pull_request",
                 {
                     "repository": "/srv/oak",
@@ -297,20 +286,20 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
     def test_should_approve_with_the_review_login_before_merging_where_the_forge_requires_a_review(self):
         # Arrange
         self.script_recording()
-        self.forge.found_pull_requests = [create_found_pull_request("review_required")]
+        self.forge = create_forge([create_found_pull_request("review_required")])
 
         # Act
         record_plan(self.runtime, self.create_recording())
 
         # Assert
         self.assertEqual(
-            self.forge.calls[2:],
+            self.forge.requests[2:],
             [
-                (
+                ForgeRequest(
                     "approve_pull_request",
                     {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-review"}},
                 ),
-                (
+                ForgeRequest(
                     "merge_pull_request",
                     {
                         "repository": "/srv/oak",
@@ -444,7 +433,7 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
     def test_should_reuse_the_merged_pull_request_of_the_plan_branch_and_mark_the_request_planned_alone(self):
         # Arrange
-        self.forge.found_pull_requests = [create_found_pull_request(NO_REVIEW_REQUIRED, "merged")]
+        self.forge = create_forge([create_found_pull_request(NO_REVIEW_REQUIRED, "merged")])
 
         # Act
         recorded = record_plan(self.runtime, self.create_recording())
@@ -459,10 +448,9 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
     def test_should_merge_the_open_pull_request_of_the_plan_branch_under_the_automatic_review(self):
         # Arrange
-        self.forge.found_pull_requests = [
-            create_found_pull_request(NO_REVIEW_REQUIRED),
-            create_found_pull_request(NO_REVIEW_REQUIRED),
-        ]
+        self.forge = create_forge(
+            [create_found_pull_request(NO_REVIEW_REQUIRED), create_found_pull_request(NO_REVIEW_REQUIRED)]
+        )
         self.script_policies(NO_POLICY)
 
         # Act
@@ -470,8 +458,8 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forge.calls[-1],
-            (
+            self.forge.requests[-1],
+            ForgeRequest(
                 "merge_pull_request",
                 {
                     "repository": "/srv/oak",
@@ -494,7 +482,7 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
     def test_should_open_the_pull_request_the_plan_branch_lacks(self):
         # Arrange
-        self.forge.found_pull_requests = [NO_PULL_REQUEST, create_found_pull_request(NO_REVIEW_REQUIRED)]
+        self.forge = create_forge([NO_PULL_REQUEST, create_found_pull_request(NO_REVIEW_REQUIRED)])
         self.processes.answer(PUSH)
         self.script_policies(NO_POLICY)
 

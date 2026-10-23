@@ -11,28 +11,27 @@ from brigade.system.parse_configuration import Configuration
 from tests.unit.commands.command_runtime import create_corpus_double, write_ledger
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.review.test_assemble_review_context import (
     CHANGES_REQUESTED,
     OPENED,
     POLICY_UNDER_APPROVAL,
     VERDICT_CHANGES,
-    ThreadListingForgeDouble,
+    create_thread_listing_forge,
 )
 
 NO_POLICY = {}
 REMEDIATE_ACCOUNTS = Configuration(forge_accounts={"remediate": "tidepool-remediate"})
 
 
-class ReplyingForgeDouble(ThreadListingForgeDouble):
-    def reply_review_thread(self, request: dict, runtime) -> dict:
-        self.questions.append(("reply_review_thread", request))
-        return {"schema_version": 1}
+def create_replying_forge() -> ForgeDouble:
+    return create_thread_listing_forge(reply_review_thread=lambda request: {"schema_version": 1})
 
 
 class RecordReviewAnswersTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.forge = ReplyingForgeDouble()
+        self.forge = create_replying_forge()
         write_ledger(self.root, [CHANGES_REQUESTED, VERDICT_CHANGES])
 
     def record(self, policies: dict, answers: dict) -> dict:
@@ -54,7 +53,7 @@ class RecordReviewAnswersTestCase(unittest.TestCase):
         return json.loads((self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines()[-1])
 
     def list_replies(self) -> list[dict]:
-        return [request for operation, request in self.forge.questions if operation == "reply_review_thread"]
+        return self.forge.list_requests("reply_review_thread")
 
 
 class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):

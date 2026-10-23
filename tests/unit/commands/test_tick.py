@@ -31,6 +31,7 @@ from tests.unit.commands.run_doubles import (
 )
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 from tests.unit.spawned_process_double import SpawnedProcessDouble
@@ -437,22 +438,17 @@ def _record_task_state(state: str) -> dict:
     }
 
 
-class ForgeDouble:
-    def __init__(self, found: dict | None, details: dict | None, tails: dict | None = None):
-        self.found = found
-        self.details = details
-        self.tails = tails
-        self.check_log_requests = []
-
-    def find_pull_request(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "pull_request": self.found}
-
-    def read_pull_request(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "pull_request": self.details}
-
-    def read_check_logs(self, request: dict, runtime) -> dict:
-        self.check_log_requests.append(request)
-        return {"schema_version": 1, "logs": [{"name": name, "tail": self.tails[name]} for name in request["checks"]]}
+def create_forge(found: dict | None, details: dict | None, tails: dict | None = None) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "find_pull_request": lambda request: {"schema_version": 1, "pull_request": found},
+            "read_pull_request": lambda request: {"schema_version": 1, "pull_request": details},
+            "read_check_logs": lambda request: {
+                "schema_version": 1,
+                "logs": [{"name": name, "tail": tails[name]} for name in request["checks"]],
+            },
+        }
+    )
 
 
 class SpawnReadingTheLedgerDouble:
@@ -508,7 +504,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         self.worktree.mkdir(parents=True)
         write_ledger(self.root, [WAVE_STARTED])
-        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         document = COMMAND.run(Namespace(mode="once"), runtime)
@@ -546,7 +542,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree.mkdir(parents=True)
         write_ledger(self.root, [WAVE_STARTED])
         self.spawn = SpawnReadingTheLedgerDouble(self.root / "state" / "ledger" / "2026-10.jsonl")
-        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -570,7 +566,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED])
         broken_setup = (("SETUP", 'make "deps'),)
-        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED), broken_setup)
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED), broken_setup)
         first_event_of_the_tick = 1
 
         # Act
@@ -607,7 +603,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
         write_ledger(self.root, [WAVE_STARTED, finished, _record_task_state("paused:quota")])
-        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -649,7 +645,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
         write_ledger(self.root, [WAVE_STARTED, finished, _record_task_state("paused:quota")])
         self.spawn = SpawnReadingTheLedgerDouble(self.root / "state" / "ledger" / "2026-10.jsonl")
-        runtime = self._create_runtime(TASK_TO_DELIVER, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -672,7 +668,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_record_the_merge_of_the_pull_request_of_a_running_task(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
         first_event_of_the_tick = 2
 
         # Act
@@ -694,7 +690,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_hold_for_verification_a_pull_request_passing_its_preflight(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -718,7 +714,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_ledger(
             self.root, [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("verifying")]
         )
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -755,7 +751,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             self.root,
             [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("changes_requested")],
         )
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -803,14 +799,14 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             self.root,
             [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_ON_FAILING_CHECKS, _record_task_state("pr_open")],
         )
-        forge = ForgeDouble(PULL_REQUEST_FAILING_TWO_CHECKS, NO_DETAILS_ASKED, {"ci": None, "coverage": None})
+        forge = create_forge(PULL_REQUEST_FAILING_TWO_CHECKS, NO_DETAILS_ASKED, {"ci": None, "coverage": None})
         runtime = self._create_runtime(TASK_DELIVERED, forge)
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(forge.check_log_requests[0]["lines"], 200)
+        self.assertEqual(forge.list_requests("read_check_logs")[0]["lines"], 200)
 
     def test_should_launch_the_repair_of_the_failing_checks_with_the_tail_of_their_logs_and_record_it_in_fixing(self):
         # Arrange
@@ -821,7 +817,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         )
         tails = {"ci": "FAIL test_cart\nexit 1", "coverage": None}
         runtime = self._create_runtime(
-            TASK_DELIVERED, ForgeDouble(PULL_REQUEST_FAILING_TWO_CHECKS, NO_DETAILS_ASKED, tails)
+            TASK_DELIVERED, create_forge(PULL_REQUEST_FAILING_TWO_CHECKS, NO_DETAILS_ASKED, tails)
         )
 
         # Act
@@ -906,7 +902,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             self.root,
             [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("verifying"), verdict],
         )
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -936,7 +932,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
             spawn_process=self.spawn.spawn,
             resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
             ),
         )
 
@@ -963,7 +959,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
         failing_checks = {**PULL_REQUEST_DETAILS, "checks": [{"name": "ci", "verdict": "failure"}]}
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(OPEN_PULL_REQUEST, failing_checks))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, failing_checks))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -974,7 +970,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_report_a_wave_whose_tasks_are_merged_or_parked(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -994,7 +990,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_detach_the_wave_report_run_the_wave_reported_names(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -1006,7 +1002,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_close_a_reported_wave_once_its_integration_pull_request_is_merged(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), WAVE_REPORTED])
-        runtime = self._create_runtime(TASK_DELIVERED, ForgeDouble(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -1307,7 +1303,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             run_process=self.machine.run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, ForgeDouble(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
             ),
         )
 

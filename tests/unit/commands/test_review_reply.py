@@ -11,7 +11,7 @@ from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKT
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.review.test_assemble_review_context import VERDICT_CHANGES
-from tests.unit.review.test_record_review_answers import ReplyingForgeDouble
+from tests.unit.review.test_record_review_answers import create_replying_forge
 
 
 def create_document(login: str | None) -> dict:
@@ -76,7 +76,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
-            resolve_plugin=lambda kind, name, **places: ReplyingForgeDouble(),
+            resolve_plugin=lambda kind, name, **places: create_replying_forge(),
         )
         self.answers_file = self.root / "answers.json"
 
