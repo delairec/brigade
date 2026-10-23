@@ -9,22 +9,13 @@ from brigade.system.parse_configuration import Configuration
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 
 PULL_REQUESTS = [
     {"number": 4, "head": "task/f0-parser/B12", "state": "open"},
     {"number": 3, "head": "docs/readme", "state": "merged"},
 ]
-
-
-class ForgeDouble:
-    def __init__(self, answer: dict):
-        self.queries = []
-        self._answer = answer
-
-    def list_pull_requests(self, query: dict, runtime) -> dict:
-        self.queries.append(query)
-        return self._answer
 
 
 def create_environment(parameters: str) -> dict:
@@ -50,7 +41,9 @@ class PrListCollectorTest(unittest.TestCase):
     def test_should_list_the_pull_requests_with_the_task_their_branch_delivers(self):
         # Arrange
         self.register_project("github")
-        forge = ForgeDouble({"schema_version": 1, "pull_requests": PULL_REQUESTS})
+        forge = ForgeDouble(
+            {"list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": PULL_REQUESTS}}
+        )
 
         # Act
         document = collect(create_environment("{}"), self.runtime, self.create_equipment(forge))
@@ -74,31 +67,32 @@ class PrListCollectorTest(unittest.TestCase):
     def test_should_ask_the_forge_for_the_open_pull_requests_with_no_account_bound_by_default(self):
         # Arrange
         self.register_project("github")
-        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+        forge = ForgeDouble({"list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []}})
 
         # Act
         collect(create_environment("{}"), self.runtime, self.create_equipment(forge))
 
         # Assert
         self.assertEqual(
-            forge.queries, [{"schema_version": 1, "repository": "/srv/oak", "state": "open", "environment": {}}]
+            forge.list_requests("list_pull_requests"),
+            [{"schema_version": 1, "repository": "/srv/oak", "state": "open", "environment": {}}],
         )
 
     def test_should_ask_the_forge_for_the_state_it_is_given(self):
         # Arrange
         self.register_project("github")
-        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+        forge = ForgeDouble({"list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []}})
 
         # Act
         collect(create_environment('{"state": "all"}'), self.runtime, self.create_equipment(forge))
 
         # Assert
-        self.assertEqual(forge.queries[0]["state"], "all")
+        self.assertEqual(forge.list_requests("list_pull_requests")[0]["state"], "all")
 
     def test_should_refuse_a_state_the_forge_does_not_know(self):
         # Arrange
         self.register_project("github")
-        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+        forge = ForgeDouble({"list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []}})
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -112,7 +106,7 @@ class PrListCollectorTest(unittest.TestCase):
     def test_should_refuse_a_project_without_a_forge(self):
         # Arrange
         self.register_project("none")
-        forge = ForgeDouble({"schema_version": 1, "pull_requests": []})
+        forge = ForgeDouble({"list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []}})
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:

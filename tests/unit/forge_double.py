@@ -13,6 +13,9 @@ class ForgeDouble:
         self._answers = answers
         self.requests: list[ForgeRequest] = []
 
+    def list_requests(self, operation: str) -> list[dict]:
+        return [forge_request.request for forge_request in self.requests if forge_request.operation == operation]
+
     def __getattr__(self, operation: str) -> Callable[[dict, object], object]:
         answers = self.__dict__.get("_answers", {})
         if operation not in answers:

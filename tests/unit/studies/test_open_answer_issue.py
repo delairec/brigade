@@ -12,6 +12,7 @@ from brigade.system.parse_configuration import Configuration
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -34,16 +35,16 @@ def create_study(project: str | None) -> Study:
     )
 
 
-class ForgeDouble:
-    def __init__(self):
-        self.issues = []
-
-    def open_issue(self, request: dict, runtime) -> dict:
-        self.issues.append(request)
-        return {"url": "https://github.com/acme/oak/issues/3"}
-
-    def read_login_environment(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"])}
+def create_forge() -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "open_issue": lambda request: {"url": "https://github.com/acme/oak/issues/3"},
+            "read_login_environment": lambda request: {
+                "schema_version": 1,
+                "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"]),
+            },
+        }
+    )
 
 
 class OpenAnswerIssueTest(unittest.TestCase):
@@ -53,7 +54,7 @@ class OpenAnswerIssueTest(unittest.TestCase):
         self.processes = ScriptedProcesses()
         write_operational_corpus(Path(directory.name))
         self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=self.processes)
-        self.forges = {"github": ForgeDouble()}
+        self.forges = {"github": create_forge()}
 
     def create_context(self, project: str | None, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         equipment = create_study_equipment(
@@ -92,7 +93,7 @@ class OpenAnswerIssueTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forges["github"].issues,
+            self.forges["github"].list_requests("open_issue"),
             [
                 {
                     "repository": "/srv/oak",
@@ -111,7 +112,7 @@ class OpenAnswerIssueTest(unittest.TestCase):
         open_answer_issue(self.create_context("oak", CLI_BOUND_TO_OCTO_CLI), PUBLICATION)
 
         # Assert
-        self.assertEqual(self.forges["github"].issues[0]["environment"], {"GH_TOKEN": "cli-token"})
+        self.assertEqual(self.forges["github"].list_requests("open_issue")[0]["environment"], {"GH_TOKEN": "cli-token"})
 
     def test_should_refuse_a_project_without_a_forge(self):
         # Arrange

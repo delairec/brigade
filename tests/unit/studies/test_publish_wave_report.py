@@ -12,6 +12,7 @@ from brigade.studies.publish_wave_report import publish_wave_report
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -43,16 +44,16 @@ class DocumentDouble:
         return {"entities": [{"type": "REPORT", "name": "oak_w2", "fields": [{"name": "WAVE", "value": "oak_w2"}]}]}
 
 
-class ForgeDouble:
-    def __init__(self):
-        self.rewritten = []
-
-    def rewrite_pull_request_body(self, request: dict, runtime) -> dict:
-        self.rewritten.append(request)
-        return {"schema_version": 1}
-
-    def read_login_environment(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"])}
+def create_forge() -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "rewrite_pull_request_body": lambda request: {"schema_version": 1},
+            "read_login_environment": lambda request: {
+                "schema_version": 1,
+                "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"]),
+            },
+        }
+    )
 
 
 class PublishWaveReportTest(unittest.TestCase):
@@ -65,7 +66,7 @@ class PublishWaveReportTest(unittest.TestCase):
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         self.checkout = self.run_directory / "checkout"
-        self.forge = ForgeDouble()
+        self.forge = create_forge()
         append_event(
             self.runtime.paths,
             self.runtime.now,
@@ -131,7 +132,7 @@ class PublishWaveReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forge.rewritten,
+            self.forge.list_requests("rewrite_pull_request_body"),
             [
                 {
                     "repository": str(self.checkout),
@@ -187,7 +188,9 @@ class PublishWaveReportTest(unittest.TestCase):
         publish_wave_report(context)
 
         # Assert
-        self.assertEqual(self.forge.rewritten[0]["environment"], {"GH_TOKEN": "cli-token"})
+        self.assertEqual(
+            self.forge.list_requests("rewrite_pull_request_body")[0]["environment"], {"GH_TOKEN": "cli-token"}
+        )
 
     def test_should_rewrite_no_pull_request_before_the_wave_opened_its_integration_pull_request(self):
         # Arrange
@@ -198,7 +201,7 @@ class PublishWaveReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
-        self.assertEqual(self.forge.rewritten, [])
+        self.assertEqual(self.forge.list_requests("rewrite_pull_request_body"), [])
 
     def test_should_rewrite_no_pull_request_of_a_project_without_a_forge(self):
         # Arrange
@@ -210,7 +213,7 @@ class PublishWaveReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
-        self.assertEqual(self.forge.rewritten, [])
+        self.assertEqual(self.forge.list_requests("rewrite_pull_request_body"), [])
 
     def test_should_commit_the_report_on_the_integration_branch_push_it_and_remove_its_checkout(self):
         # Arrange

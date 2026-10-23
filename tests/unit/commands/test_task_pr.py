@@ -8,6 +8,7 @@ from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
@@ -16,13 +17,11 @@ MAIN_BRANCH_CHECKOUT = {
 }
 
 
-class ForgeDouble:
-    def describe_account(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "login": "tidepool-bot"}
+ACCOUNT = {"schema_version": 1, "login": "tidepool-bot"}
 
 
 def _resolve_the_forge_double(kind: str, name: str, **places):
-    return ForgeDouble()
+    return ForgeDouble({"describe_account": lambda request: ACCOUNT})
 
 
 class TaskPrTextTest(unittest.TestCase):

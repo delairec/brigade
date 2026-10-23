@@ -9,6 +9,7 @@ from brigade.studies.read_publication_environment import read_publication_enviro
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.parse_configuration import Configuration
 from brigade.system.require_login_environment import LoginUnavailable
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -33,12 +34,15 @@ CLI_BOUND_TO_OCTO_CLI = Configuration(forge_accounts={"cli": "octo-cli"}, forge_
 NOTHING_BOUND = Configuration()
 
 
-class ForgeDouble:
-    def __init__(self, environments: dict):
-        self._environments = environments
-
-    def read_login_environment(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "environment": self._environments.get(request["login"])}
+def create_forge(environments: dict) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "read_login_environment": lambda request: {
+                "schema_version": 1,
+                "environment": environments.get(request["login"]),
+            }
+        }
+    )
 
 
 class ReadPublicationEnvironmentTest(unittest.TestCase):
@@ -59,7 +63,7 @@ class ReadPublicationEnvironmentTest(unittest.TestCase):
 
     def test_should_answer_the_environment_of_the_login_bound_to_cli(self):
         # Arrange
-        context = self.create_context(CLI_BOUND_TO_OCTO_CLI, ForgeDouble({"octo-cli": {"GH_TOKEN": "cli-token"}}))
+        context = self.create_context(CLI_BOUND_TO_OCTO_CLI, create_forge({"octo-cli": {"GH_TOKEN": "cli-token"}}))
 
         # Act
         environment = read_publication_environment(context, GITHUB_PROJECT)
@@ -69,7 +73,7 @@ class ReadPublicationEnvironmentTest(unittest.TestCase):
 
     def test_should_answer_the_environment_of_brigade_itself_with_no_login_bound_to_cli(self):
         # Arrange
-        context = self.create_context(NOTHING_BOUND, ForgeDouble({"octo-cli": {"GH_TOKEN": "cli-token"}}))
+        context = self.create_context(NOTHING_BOUND, create_forge({"octo-cli": {"GH_TOKEN": "cli-token"}}))
 
         # Act
         environment = read_publication_environment(context, GITHUB_PROJECT)
@@ -79,7 +83,7 @@ class ReadPublicationEnvironmentTest(unittest.TestCase):
 
     def test_should_answer_the_environment_of_brigade_itself_for_a_project_without_a_forge(self):
         # Arrange
-        context = self.create_context(CLI_BOUND_TO_OCTO_CLI, ForgeDouble({"octo-cli": {"GH_TOKEN": "cli-token"}}))
+        context = self.create_context(CLI_BOUND_TO_OCTO_CLI, create_forge({"octo-cli": {"GH_TOKEN": "cli-token"}}))
 
         # Act
         environment = read_publication_environment(context, PROJECT_WITHOUT_FORGE)
@@ -89,7 +93,7 @@ class ReadPublicationEnvironmentTest(unittest.TestCase):
 
     def test_should_refuse_a_login_bound_to_cli_for_which_gh_prints_no_token(self):
         # Arrange
-        context = self.create_context(CLI_BOUND_TO_OCTO_CLI, ForgeDouble({}))
+        context = self.create_context(CLI_BOUND_TO_OCTO_CLI, create_forge({}))
 
         # Act
         with self.assertRaises(LoginUnavailable) as refusal:

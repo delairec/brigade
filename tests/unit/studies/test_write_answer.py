@@ -7,6 +7,7 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.convert_study import Study
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer import write_answer
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -50,9 +51,8 @@ class DocumentDouble:
         return {"entities": [{"type": "FINDING", "name": "trees_1", "fields": []}]}
 
 
-class ForgeDouble:
-    def open_issue(self, request: dict, runtime) -> dict:
-        return {"url": "https://github.com/acme/oak/issues/3"}
+def create_forge() -> ForgeDouble:
+    return ForgeDouble({"open_issue": lambda request: {"url": "https://github.com/acme/oak/issues/3"}})
 
 
 class WriteAnswerTest(unittest.TestCase):
@@ -74,7 +74,7 @@ class WriteAnswerTest(unittest.TestCase):
 
     def create_context(self, output: str, study: Study | None = None) -> StudyRunContext:
         equipment = create_study_equipment(
-            document=DocumentDouble(), resolve_forge={"github": ForgeDouble()}.__getitem__
+            document=DocumentDouble(), resolve_forge={"github": create_forge()}.__getitem__
         )
         return StudyRunContext(
             runtime=self.runtime,
