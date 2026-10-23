@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from brigade.adapters.documents import markdown
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, CannotWrite
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.plan_run import RunPlan
@@ -700,6 +700,18 @@ class RunSegmentJournalTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_name_the_journal_it_cannot_write(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+        self.journal.mkdir(parents=True)
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.journal}: Is a directory")
 
     def test_should_journal_nothing_of_an_output_in_which_the_client_reads_no_action(self):
         # Arrange
