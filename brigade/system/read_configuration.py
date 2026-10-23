@@ -73,9 +73,20 @@ class Configuration:
     attribution: tuple[str, ...] | None = None
 
 
-def _require(value, kind: type, expected: str, location: str, path: Path):
-    if not isinstance(value, kind):
-        raise BrigadeError(f"{location} is {name_toml_type(value)}, not {expected}, in {path}")
+@dataclass(frozen=True)
+class ExpectedType:
+    kind: type
+    description: str
+
+
+TABLE = ExpectedType(kind=dict, description="a table")
+STRING = ExpectedType(kind=str, description="a string")
+ARRAY = ExpectedType(kind=list, description="an array")
+
+
+def _require(value, expected: ExpectedType, location: str, path: Path):
+    if not isinstance(value, expected.kind):
+        raise BrigadeError(f"{location} is {name_toml_type(value)}, not {expected.description}, in {path}")
     return value
 
 
@@ -87,61 +98,56 @@ def _refuse_unknown_keys(table: dict, known_keys: tuple, prefix: str, path: Path
 
 def _read_reasoning_row(row, level: str, path: Path) -> ReasoningRow:
     location = f"reasoning.{level}"
-    _require(row, dict, "a table", location, path)
+    _require(row, TABLE, location, path)
     _refuse_unknown_keys(row, REASONING_ROW_KEYS, f"{location}.", path)
     for key in REASONING_ROW_KEYS:
         if key not in row:
             raise BrigadeError(f"{location} lacks {key} in {path}")
-        _require(row[key], str, "a string", f"{location}.{key}", path)
+        _require(row[key], STRING, f"{location}.{key}", path)
     return ReasoningRow(model=row["model"], effort=row["effort"])
 
 
 def _read_reasoning(table, path: Path) -> dict:
-    _require(table, dict, "a table", "reasoning", path)
+    _require(table, TABLE, "reasoning", path)
     _refuse_unknown_keys(table, REASONING_LEVELS, "reasoning.", path)
     return {level: _read_reasoning_row(row, level, path) for level, row in table.items()}
 
 
 def _read_client_settings(settings, name: str, path: Path) -> dict:
     location = f"clients.{name}"
-    _require(settings, dict, "a table", location, path)
+    _require(settings, TABLE, location, path)
     for key, value in settings.items():
-        _require(value, str, "a string", f"{location}.{key}", path)
+        _require(value, STRING, f"{location}.{key}", path)
     return dict(settings)
 
 
 def _read_clients(table, path: Path) -> dict:
-    _require(table, dict, "a table", "clients", path)
+    _require(table, TABLE, "clients", path)
     return {name: _read_client_settings(settings, name, path) for name, settings in table.items()}
 
 
 def _read_slots(table, path: Path) -> dict:
-    _require(table, dict, "a table", "slots", path)
+    _require(table, TABLE, "slots", path)
     _refuse_unknown_keys(table, SLOTS, "slots.", path)
-    return {slot: _require(name, str, "a string", f"slots.{slot}", path) for slot, name in table.items()}
+    return {slot: _require(name, STRING, f"slots.{slot}", path) for slot, name in table.items()}
 
 
 def _read_forge_accounts(table, path: Path) -> dict:
-    _require(table, dict, "a table", FORGE_ACCOUNTS_KEY, path)
+    _require(table, TABLE, FORGE_ACCOUNTS_KEY, path)
     _refuse_unknown_keys(table, FORGE_ACCOUNT_KEYS, f"{FORGE_ACCOUNTS_KEY}.", path)
-    return {key: _require(login, str, "a string", f"{FORGE_ACCOUNTS_KEY}.{key}", path) for key, login in table.items()}
+    return {key: _require(login, STRING, f"{FORGE_ACCOUNTS_KEY}.{key}", path) for key, login in table.items()}
 
 
 def _read_slot_clients(table, path: Path) -> dict:
-    _require(table, dict, "a table", SLOT_CLIENTS_KEY, path)
+    _require(table, TABLE, SLOT_CLIENTS_KEY, path)
     _refuse_unknown_keys(table, SLOTS, f"{SLOT_CLIENTS_KEY}.", path)
-    return {
-        slot: _require(client, str, "a string", f"{SLOT_CLIENTS_KEY}.{slot}", path) for slot, client in table.items()
-    }
+    return {slot: _require(client, STRING, f"{SLOT_CLIENTS_KEY}.{slot}", path) for slot, client in table.items()}
 
 
 def _read_procedures(table, path: Path) -> dict:
-    _require(table, dict, "a table", PROCEDURES_KEY, path)
+    _require(table, TABLE, PROCEDURES_KEY, path)
     _refuse_unknown_keys(table, PROCEDURE_SLOTS, f"{PROCEDURES_KEY}.", path)
-    return {
-        slot: _require(procedure, str, "a string", f"{PROCEDURES_KEY}.{slot}", path)
-        for slot, procedure in table.items()
-    }
+    return {slot: _require(procedure, STRING, f"{PROCEDURES_KEY}.{slot}", path) for slot, procedure in table.items()}
 
 
 def _read_forge_attempts(document: dict, path: Path) -> int:
@@ -174,10 +180,8 @@ def _read_positive_number(document: dict, key: str, default: int, path: Path) ->
 def _read_attribution(document: dict, path: Path) -> tuple[str, ...] | None:
     if ATTRIBUTION_KEY not in document:
         return None
-    lines = _require(document[ATTRIBUTION_KEY], list, "an array", ATTRIBUTION_KEY, path)
-    return tuple(
-        _require(line, str, "a string", f"{ATTRIBUTION_KEY}[{index}]", path) for index, line in enumerate(lines)
-    )
+    lines = _require(document[ATTRIBUTION_KEY], ARRAY, ATTRIBUTION_KEY, path)
+    return tuple(_require(line, STRING, f"{ATTRIBUTION_KEY}[{index}]", path) for index, line in enumerate(lines))
 
 
 def _parse(path: Path) -> dict:
@@ -191,37 +195,39 @@ def _parse(path: Path) -> dict:
         raise BrigadeError(f"{path} is not valid TOML: {error}") from None
 
 
-def read_configuration(path: Path) -> Configuration:
-    document = _parse(path)
-    _refuse_unknown_keys(
-        document,
-        (
-            *STRING_KEYS,
-            *UNREAD_STRING_KEYS,
-            REFS_CACHE_MB_KEY,
-            "reasoning",
-            "clients",
-            "slots",
-            SLOT_CLIENTS_KEY,
-            PROCEDURES_KEY,
-            SECONDS_PER_STEP_KEY,
-            SOFT_LIMIT_MARGIN_KEY,
-            TRAIL_DAYS_KEY,
-            RUNS_KEPT_KEY,
-            STUDY_RUNS_KEY,
-            TICK_STALE_AFTER_KEY,
-            JOURNAL_POLL_KEY,
-            FORGE_ACCOUNTS_KEY,
-            FORGE_ATTEMPTS_KEY,
-            ATTRIBUTION_KEY,
-        ),
-        "",
-        path,
-    )
+KNOWN_KEYS = (
+    *STRING_KEYS,
+    *UNREAD_STRING_KEYS,
+    REFS_CACHE_MB_KEY,
+    "reasoning",
+    "clients",
+    "slots",
+    SLOT_CLIENTS_KEY,
+    PROCEDURES_KEY,
+    SECONDS_PER_STEP_KEY,
+    SOFT_LIMIT_MARGIN_KEY,
+    TRAIL_DAYS_KEY,
+    RUNS_KEPT_KEY,
+    STUDY_RUNS_KEY,
+    TICK_STALE_AFTER_KEY,
+    JOURNAL_POLL_KEY,
+    FORGE_ACCOUNTS_KEY,
+    FORGE_ATTEMPTS_KEY,
+    ATTRIBUTION_KEY,
+)
+
+
+def _read_strings(document: dict, path: Path) -> dict:
     for key in UNREAD_STRING_KEYS:
         if key in document:
-            _require(document[key], str, "a string", key, path)
-    strings = {key: _require(document[key], str, "a string", key, path) for key in STRING_KEYS if key in document}
+            _require(document[key], STRING, key, path)
+    return {key: _require(document[key], STRING, key, path) for key in STRING_KEYS if key in document}
+
+
+def read_configuration(path: Path) -> Configuration:
+    document = _parse(path)
+    _refuse_unknown_keys(document, KNOWN_KEYS, "", path)
+    strings = _read_strings(document, path)
     journal_poll_s, findings = read_journal_poll(document, path)
     return Configuration(
         **strings,

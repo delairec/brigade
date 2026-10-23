@@ -53,15 +53,8 @@ def publish_wave_report(context: StudyRunContext) -> dict:
         )
         push_branch(run_process, BranchPush(repository=checkout, branch=branch, environment=environment))
         if pull_request is not None:
-            context.equipment.resolve_forge(project.forge).rewrite_pull_request_body(
-                {
-                    "repository": str(checkout),
-                    "number": pull_request,
-                    "body": markdown,
-                    "environment": environment,
-                },
-                context.runtime,
-            )
+            body = {"repository": str(checkout), "number": pull_request, "body": markdown, "environment": environment}
+            context.equipment.resolve_forge(project.forge).rewrite_pull_request_body(body, context.runtime)
     finally:
         remove_worktree(run_process, project.path, checkout)
     return {"report": report, "branch": branch, "pull_request": pull_request}

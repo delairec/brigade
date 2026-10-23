@@ -27,14 +27,8 @@ from brigade.system.paths import Paths
 LEDGER_SUFFIX = ".jsonl"
 
 
-class LedgerEventRefused(BrigadeError):
-    pass
-
-
-def write_event_line(
-    paths: Paths,
-    instant: datetime,
-    event: RunFinished
+WrittenEvent = (
+    RunFinished
     | SignalRecorded
     | ForgeAccountUnavailable
     | PlanLintFailed
@@ -48,8 +42,15 @@ def write_event_line(
     | TaskPrOpened
     | MilestoneCreated
     | TaskPromoted
-    | TaskPreflighted,
-) -> dict:
+    | TaskPreflighted
+)
+
+
+class LedgerEventRefused(BrigadeError):
+    pass
+
+
+def write_event_line(paths: Paths, instant: datetime, event: WrittenEvent) -> dict:
     if instant.utcoffset() is None:
         raise LedgerEventRefused(f"the instant of the event {event.name} carries no time zone")
     utc_instant = instant.astimezone(UTC)

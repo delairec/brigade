@@ -404,14 +404,24 @@ def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: Cut
     cut_wave_branch(runtime.run_process, cut)
 
 
+def _park_task(runtime: Runtime, action: ParkTask) -> None:
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskParked(wave=action.wave, task=action.task, reason=action.reason, blockers=action.blockers),
+    )
+
+
+def _pause_wave(runtime: Runtime, action: PauseWave) -> None:
+    append_event(
+        runtime.paths, runtime.now, WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at)
+    )
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
-        ParkTask: lambda action: append_event(
-            runtime.paths,
-            runtime.now,
-            TaskParked(wave=action.wave, task=action.task, reason=action.reason, blockers=action.blockers),
-        ),
+        ParkTask: lambda action: _park_task(runtime, action),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
@@ -421,11 +431,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
         RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
-        PauseWave: lambda action: append_event(
-            runtime.paths,
-            runtime.now,
-            WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at),
-        ),
+        PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
         ),

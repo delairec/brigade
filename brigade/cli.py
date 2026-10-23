@@ -146,6 +146,10 @@ def main(arguments: list[str]) -> int:
     options.create_runtime = functools.partial(
         build_runtime, Invocation(command=_name(command), verbose=getattr(options, "verbose", False))
     )
+    return _run_reporting_errors(command, options)
+
+
+def _run_reporting_errors(command: object, options: argparse.Namespace) -> int:
     try:
         return _run_command(command, options)
     except StandingDown as reason:
