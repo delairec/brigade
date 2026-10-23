@@ -5,19 +5,16 @@ from brigade.errors import BrigadeError
 from brigade.system.collector_places import CollectorPlaces
 from brigade.system.resolve_plugin import ClientExecutableCaller, PluginSources, resolve_plugin
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
+from tests.unit.refuse_to_run import refuse_to_run
 
 NO_SOURCES_NEEDED = None
 NO_EXECUTABLE_DIRECTORY = ""
 
 
-def _refuse_process(request):
-    raise AssertionError(f"the resolver ran {request.argv}")
-
-
 class ResolvePluginRefusalTest(unittest.TestCase):
     def test_should_refuse_a_client_name_no_adapter_can_carry(self):
         # Arrange
-        sources = PluginSources(executable_search_path=NO_EXECUTABLE_DIRECTORY, run_process=_refuse_process)
+        sources = PluginSources(executable_search_path=NO_EXECUTABLE_DIRECTORY, run_process=refuse_to_run)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:

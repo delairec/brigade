@@ -4,7 +4,9 @@ from pathlib import Path
 
 from brigade.studies.convert_study import Study
 from brigade.studies.read_studies import read_studies
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 
@@ -14,7 +16,8 @@ class ReadStudiesTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         processes = ScriptedProcesses()
-        runtime = create_scripted_runtime(Path(directory.name), processes)
+        write_operational_corpus(Path(directory.name))
+        runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=processes)
         processes.answer_entities(
             runtime.paths.config_root,
             "STUDY",

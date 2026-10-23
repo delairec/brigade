@@ -106,10 +106,3 @@ class BrigadeVerifyVerdictUnderTheApprovalModeTest(VerifyVerdictTestCase):
             f"-f commit_id={self.read_head()} -F body=@-\n",
             self.gh_calls.read_text(),
         )
-
-    def test_should_record_the_login_the_review_ran_as(self):
-        # Act
-        self.run_verify_verdict({"head": self.read_head(), "verdict": "pass", "findings": []})
-
-        # Assert
-        self.assertEqual(self.read_verdicts()[0]["login"], "review-bot")

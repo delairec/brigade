@@ -69,7 +69,7 @@ def _check_value(value, field: Field, location: str) -> None:
             _check_value(item, field.items, f"{location}[{index}]")
 
 
-def validate_document(document, shape: dict) -> None:
+def validate_document(document: object, shape: dict) -> None:
     if not isinstance(document, dict):
         raise DocumentInvalid(f"the document is {_articulate(_name_value_kind(document))}, not an object")
     _check_object(document, shape, "")

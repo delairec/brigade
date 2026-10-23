@@ -17,7 +17,7 @@ class ThreadReply:
     environment: dict
 
 
-def ask_thread_reply(forge, forge_name: str, reply: ThreadReply, runtime: Runtime) -> None:
+def ask_thread_reply(forge: object, forge_name: str, reply: ThreadReply, runtime: Runtime) -> None:
     answer = forge.reply_review_thread(
         {
             "schema_version": DOCUMENT_SCHEMA_VERSION,

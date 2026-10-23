@@ -5,15 +5,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
-
-
-def try_lock(path: Path) -> bool:
-    with path.open("a") as other_holder:
-        try:
-            fcntl.flock(other_holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return False
-        return True
+from tests.unit.system.try_lock import try_lock
 
 
 class HoldLockWithoutWaitingTest(unittest.TestCase):
@@ -30,7 +22,8 @@ class HoldLockWithoutWaitingTest(unittest.TestCase):
             acquired_by_another = try_lock(self.lock_path)
 
         # Assert
-        self.assertEqual((acquired, acquired_by_another), (True, False))
+        self.assertEqual(acquired, True)
+        self.assertEqual(acquired_by_another, False)
 
     def test_should_give_up_at_once_when_another_holds_the_lock(self):
         # Arrange
@@ -88,7 +81,6 @@ class HoldLockWithoutWaitingWhereTheMachineRefusesTheWriteTest(unittest.TestCase
         self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Is a directory")
 
 
-@unittest.skipUnless(Path("/dev/full").exists(), "no device refusing every write")
 class HoldLockWithoutWaitingOnADeviceRefusingEveryWriteTest(unittest.TestCase):
     def test_should_name_the_lock_it_cannot_write_its_pid_in(self):
         # Arrange

@@ -1,10 +1,9 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.runs_prune import COMMAND
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_directories import (
     FIRST_RUN,
     SECOND_RUN,
@@ -12,6 +11,8 @@ from tests.unit.commands.run_directories import (
     create_run_result,
     write_run,
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 NO_DAY = None
 KEEP_FROM_CONFIGURATION = None
@@ -80,7 +81,7 @@ class RunsPruneExitCodeTest(unittest.TestCase):
 class RunsPruneRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(keep=1, before=None, resumable=False, dry_run=True)
+        options = Namespace(keep=1, before=None, resumable=False, dry_run=True)
 
         # Act
         request = COMMAND.read_request(options)
@@ -108,10 +109,10 @@ class RunsPruneOfTwoFinishedRunsTest(unittest.TestCase):
 
     def test_should_name_the_older_run_beyond_the_bound_asked(self):
         # Arrange
-        request = SimpleNamespace(keep=1, before=NO_DAY, resumable=False, dry_run=True)
+        request = Namespace(keep=1, before=NO_DAY, resumable=False, dry_run=True)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(
@@ -123,10 +124,10 @@ class RunsPruneOfTwoFinishedRunsTest(unittest.TestCase):
         # Arrange
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("runs_kept = 1\n", encoding="utf-8")
-        request = SimpleNamespace(keep=KEEP_FROM_CONFIGURATION, before=NO_DAY, resumable=False, dry_run=False)
+        request = Namespace(keep=KEEP_FROM_CONFIGURATION, before=NO_DAY, resumable=False, dry_run=False)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(

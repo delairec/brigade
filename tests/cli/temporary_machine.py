@@ -1,7 +1,9 @@
 import os
 import sys
+import unittest
 from pathlib import Path
 
+from tests.awawa.provide_awawa import provide_awawa
 from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -17,17 +19,21 @@ class TemporaryMachine:
         self.state_home = root / "state"
         self.cache_home = root / "cache"
         self.corpus = self.config_home / "brigade"
+        self.search_path = os.environ["PATH"]
         self.home.mkdir()
         (self.home / ".gitconfig").write_text(git_configuration)
 
     def describe_environment(self) -> dict:
         return {
-            "PATH": os.environ["PATH"],
+            "PATH": self.search_path,
             "HOME": str(self.home),
             "XDG_CONFIG_HOME": str(self.config_home),
             "XDG_STATE_HOME": str(self.state_home),
             "XDG_CACHE_HOME": str(self.cache_home),
         }
+
+    def install_awawa(self, test_case: unittest.TestCase) -> None:
+        self.search_path = provide_awawa(test_case)
 
     def write_configuration(self, content: str) -> Path:
         configuration = self.corpus / "config.toml"

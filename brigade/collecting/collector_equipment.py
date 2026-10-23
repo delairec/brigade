@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 
 @dataclass(frozen=True)

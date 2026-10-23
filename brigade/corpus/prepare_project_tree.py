@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, Tree, TreeRequest, prepare_tree
@@ -5,7 +6,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 REPOSITORY_FIELD = "PATH"
 REFS_CACHE_DIRECTORY = "refs"
@@ -13,7 +14,7 @@ BYTES_PER_MB = 1024 * 1024
 CACHE_LOCK_FILE = "refs-cache.lock"
 
 
-def prepare_project_tree(request, configuration: Configuration, runtime: Runtime) -> Tree:
+def prepare_project_tree(request: argparse.Namespace, configuration: Configuration, runtime: Runtime) -> Tree:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.project)
     repository = next(field.value for field in project.fields if field.name == REPOSITORY_FIELD)

@@ -1,6 +1,4 @@
-import os
 import unittest
-from unittest import mock
 
 from brigade.system.build_process_environment import build_process_environment
 
@@ -21,8 +19,7 @@ class BuildProcessEnvironmentTest(unittest.TestCase):
         }
 
         # Act
-        with mock.patch.dict(os.environ, environment, clear=True):
-            built = build_process_environment()
+        built = build_process_environment(environment)
 
         # Assert
         self.assertEqual(

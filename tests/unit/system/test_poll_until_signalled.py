@@ -1,9 +1,9 @@
-import os
 import signal
 import unittest
 from collections.abc import Callable
 
 from brigade.system.poll_until_signalled import poll_until_signalled
+from tests.unit.system.signal_itself import signal_itself
 
 SHORT_INTERVAL_S = 0.01
 
@@ -17,14 +17,14 @@ def answer_done() -> bool:
 
 
 def create_signalling_answer(stop_signal: int) -> Callable[[], bool]:
-    def signal_itself_and_answer_not_done() -> bool:
-        os.kill(os.getpid(), stop_signal)
+    def answer_not_done_after_signalling() -> bool:
+        signal_itself(stop_signal)
         return False
 
-    return signal_itself_and_answer_not_done
+    return answer_not_done_after_signalling
 
 
-class ScriptedPoller:
+class ScriptedPollerDouble:
     def __init__(self, answers: list[Callable[[], bool]]):
         self.answers = iter(answers)
         self.calls = 0
@@ -44,13 +44,14 @@ class PollUntilSignalledTest(unittest.TestCase):
 
     def test_should_stop_once_the_poll_answers_done_and_answer_that_no_signal_stopped_it(self):
         # Arrange
-        poller = ScriptedPoller([answer_not_done, answer_not_done, answer_done])
+        poller = ScriptedPollerDouble([answer_not_done, answer_not_done, answer_done])
 
         # Act
         signalled = poll_until_signalled(poller, SHORT_INTERVAL_S)
 
         # Assert
-        self.assertEqual((signalled, poller.calls), (False, 3))
+        self.assertEqual(signalled, False)
+        self.assertEqual(poller.calls, 3)
 
     def test_should_finish_the_poll_under_way_and_stop_on_a_signal(self):
         # Arrange
@@ -58,20 +59,22 @@ class PollUntilSignalledTest(unittest.TestCase):
         for name, stop_signal in rows:
             with self.subTest(signal=name):
                 # Arrange
-                poller = ScriptedPoller([answer_not_done, create_signalling_answer(stop_signal), answer_done])
+                poller = ScriptedPollerDouble([answer_not_done, create_signalling_answer(stop_signal), answer_done])
 
                 # Act
                 signalled = poll_until_signalled(poller, SHORT_INTERVAL_S)
 
                 # Assert
-                self.assertEqual((signalled, poller.calls), (True, 2))
+                self.assertEqual(signalled, True)
+                self.assertEqual(poller.calls, 2)
 
     def test_should_restore_the_signal_handlers_it_replaced(self):
         # Arrange
-        poller = ScriptedPoller([create_signalling_answer(signal.SIGTERM)])
+        poller = ScriptedPollerDouble([create_signalling_answer(signal.SIGTERM)])
 
         # Act
         poll_until_signalled(poller, SHORT_INTERVAL_S)
 
         # Assert
-        self.assertEqual((signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT)), self.handlers_before)
+        self.assertEqual(signal.getsignal(signal.SIGTERM), self.handlers_before[0])
+        self.assertEqual(signal.getsignal(signal.SIGINT), self.handlers_before[1])

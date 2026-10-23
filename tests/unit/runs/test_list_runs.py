@@ -204,7 +204,8 @@ class ListRunsOfAFinishedRunTest(ListRunsTestCase):
         [listed] = list_runs(self.state_root)["runs"]
 
         # Assert
-        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "done"))
+        self.assertEqual(listed["state"], "finished")
+        self.assertEqual(listed["outcome"], "done")
 
 
 class ListRunsOfARefusedDocumentTest(ListRunsTestCase):

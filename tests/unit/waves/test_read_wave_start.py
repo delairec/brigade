@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 
 from brigade.waves.read_wave_start import read_wave_start
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 
@@ -11,7 +13,8 @@ class ReadWaveStartTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
 
     def answer_policy(self, fields: tuple[tuple[str, str], ...]) -> None:
         self.processes.answer_entities(self.root / "config", "POLICY", {"shop_policy": fields})

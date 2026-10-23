@@ -42,10 +42,9 @@ class DescribeWaveTest(unittest.TestCase):
         wave = describe_wave(WAVE_W1, "w1")
 
         # Assert
-        self.assertEqual(
-            (wave["first"], wave["last"], wave["wall_time_ms"]),
-            ("2026-10-10T09:00:00Z", "2026-10-10T09:09:00Z", 540000),
-        )
+        self.assertEqual(wave["first"], "2026-10-10T09:00:00Z")
+        self.assertEqual(wave["last"], "2026-10-10T09:09:00Z")
+        self.assertEqual(wave["wall_time_ms"], 540000)
 
     def test_should_pair_each_pause_with_the_resumption_ending_it(self):
         # Act
@@ -53,39 +52,34 @@ class DescribeWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (wave["pauses"], wave["paused_ms"]),
-            (
-                [
-                    {"paused_at": "2026-10-10T09:03:00Z", "resumed_at": "2026-10-10T09:05:00Z", "duration_ms": 120000},
-                    {"paused_at": "2026-10-10T09:09:00Z", "resumed_at": None, "duration_ms": None},
-                ],
-                120000,
-            ),
+            wave["pauses"],
+            [
+                {"paused_at": "2026-10-10T09:03:00Z", "resumed_at": "2026-10-10T09:05:00Z", "duration_ms": 120000},
+                {"paused_at": "2026-10-10T09:09:00Z", "resumed_at": None, "duration_ms": None},
+            ],
         )
+        self.assertEqual(wave["paused_ms"], 120000)
 
     def test_should_tell_what_became_of_each_task(self):
         # Act
         wave = describe_wave(WAVE_W1, "w1")
 
         # Assert
-        self.assertEqual(
-            (wave["tasks"], wave["pull_requests"], wave["hand_overs"], wave["parked"]),
-            (
-                ["TP1", "TP2"],
-                [{"task": "TP1", "pr": 7, "rounds": 2}],
-                [{"task": "TP1", "role": "builder", "slot": "build", "segment": 2}],
-                ["TP2"],
-            ),
-        )
+        self.assertEqual(wave["tasks"], ["TP1", "TP2"])
+        self.assertEqual(wave["pull_requests"], [{"task": "TP1", "pr": 7, "rounds": 2}])
+        self.assertEqual(wave["hand_overs"], [{"task": "TP1", "role": "builder", "slot": "build", "segment": 2}])
+        self.assertEqual(wave["parked"], ["TP2"])
 
     def test_should_summarize_the_steps_by_slot_and_by_role(self):
         # Act
         wave = describe_wave(WAVE_W1, "w1")
 
         # Assert
+        self.assertEqual(list(wave["steps"]["by_slot"]), ["build"])
+        self.assertEqual(list(wave["steps"]["by_role"]), ["builder"])
         self.assertEqual(
-            (list(wave["steps"]["by_slot"]), list(wave["steps"]["by_role"]), wave["steps"]["by_slot"]["build"]["runs"]),
-            (["build"], ["builder"], {"measured": 1, "unmeasured": 0, "p50": 15, "p90": 15, "partial": 0}),
+            wave["steps"]["by_slot"]["build"]["runs"],
+            {"measured": 1, "unmeasured": 0, "p50": 15, "p90": 15, "partial": 0},
         )
 
     def test_should_refuse_a_wave_no_event_names(self):

@@ -3,12 +3,12 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from brigade.commands.adapter_transcripts import COMMAND, adapter_transcripts
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 TRANSCRIPTS_REQUEST = '{"schema_version": 1, "session_id": "s1", "worktree": "/srv/b42"}'
 TRANSCRIPTS_ANSWER = {
@@ -42,11 +42,10 @@ class AdapterTranscriptsTextTest(unittest.TestCase):
 class AdapterTranscriptsRequestTest(unittest.TestCase):
     def test_should_read_the_request_on_stdin(self):
         # Arrange
-        no_option = argparse.Namespace()
+        options = argparse.Namespace(standard_input=io.StringIO(TRANSCRIPTS_REQUEST))
 
         # Act
-        with mock.patch("sys.stdin", io.StringIO(TRANSCRIPTS_REQUEST)):
-            request = COMMAND.read_request(no_option)
+        request = COMMAND.read_request(options)
 
         # Assert
         self.assertEqual(request, TRANSCRIPTS_REQUEST)
@@ -66,8 +65,9 @@ class AdapterTranscriptsOfTheConfiguredClientTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         client = ScriptedClient({"transcripts": TRANSCRIPTS_ANSWER})
-        self.runtime = create_runtime(
-            Path(self.root.name), resolve_plugin=create_plugin_resolver({("client", "scripted"): client})
+        self.runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name)),
+            resolve_plugin=create_plugin_resolver({("client", "scripted"): client}),
         )
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.configuration_file.write_text('client = "scripted"\n')

@@ -4,8 +4,8 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from unittest.mock import ANY
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
@@ -72,7 +72,7 @@ class RehearsalOnTheFakeClientTestCase(FileWaitingTestCase):
         self.store = root / "forge"
         self.remote = self.store / "remote.git"
         self.tools = root / "tools"
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.install_tools()
         self.machine.run_init()
         self.prepare_sandbox(root / "projects" / "shop")
@@ -85,7 +85,7 @@ class RehearsalOnTheFakeClientTestCase(FileWaitingTestCase):
         self.root.cleanup()
 
     def describe_environment(self) -> dict:
-        return {**self.machine.describe_environment(), "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}"}
+        return {**self.machine.describe_environment(), "PATH": f"{self.tools}{os.pathsep}{self.machine.search_path}"}
 
     def install_tools(self) -> None:
         install_executable(self.tools / "gh", f'#!/bin/sh\nexec "{sys.executable}" "{FORGE}" "{self.store}" "$@"\n')
@@ -158,10 +158,26 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(RehearsalOnTheFakeClie
 
     def test_should_merge_the_three_tasks_into_the_branch_of_the_wave(self):
         # Act
-        merged = sorted(event["task"] for event in self.read_events("task.state") if event["state"] == "merged")
+        completed = self.run_brigade("wave", "show", "shop_w1", "--json")
 
         # Assert
-        self.assertEqual(merged, ["S1", "S2", "S3"])
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "wave": "shop_w1",
+                "project": "shop",
+                "branch": "integration/shop_w1",
+                "started_at": ANY,
+                "last_event": "wave.reported",
+                "pull_request": ANY,
+                "tasks": [
+                    {"task": "S1", "state": "merged", "pull_request": ANY, "run": ANY},
+                    {"task": "S2", "state": "merged", "pull_request": ANY, "run": ANY},
+                    {"task": "S3", "state": "merged", "pull_request": ANY, "run": ANY},
+                ],
+            },
+        )
 
     def test_should_open_the_integration_pull_request_wave_pr_opened_names(self):
         # Arrange
@@ -171,17 +187,17 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(RehearsalOnTheFakeClie
         pull_request = self.read_pull_request(opened["pr"])
 
         # Assert
-        self.assertEqual(
-            (opened["wave"], pull_request["headRefName"], pull_request["baseRefName"]),
-            ("shop_w1", "integration/shop_w1", "main"),
-        )
+        self.assertEqual(opened["wave"], "shop_w1")
+        self.assertEqual(pull_request["headRefName"], "integration/shop_w1")
+        self.assertEqual(pull_request["baseRefName"], "main")
 
     def test_should_record_every_run_in_the_ledger(self):
         # Arrange
         runs = self.list_finished_runs()
 
         # Act
-        recorded = sorted(event["run"] for event in self.read_events("run.finished"))
+        completed = self.run_brigade("ledger", "--json")
 
         # Assert
-        self.assertEqual(recorded, runs)
+        self.assertEqual(len(runs), 8)
+        self.assertEqual(json.loads(completed.stdout)["runs"], {"outcomes": {"done": 8}, "error_classes": {}})

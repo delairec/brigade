@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.read_ledger import read_ledger
@@ -30,14 +32,6 @@ def _render_text(document: dict) -> str:
     return "\n".join([heading, render_table(TASK_HEADER, rows)])
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) -> dict:
     opened = find_last_task_event(events, TaskPrOpened, wave, task)
     finished = find_last_task_event(events, RunFinished, wave, task)
@@ -49,7 +43,7 @@ def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) 
     }
 
 
-def wave_show(request, runtime: Runtime) -> dict:
+def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     entries = read_ledger(runtime.paths.state_root).entries
     summary = require_wave_summary(entries, request.wave)
     events = tuple(entry.event for entry in entries)
@@ -72,7 +66,5 @@ COMMAND = Command(
     help="print a wave and each of its tasks with its state, its pull request and its run",
     arguments=(Argument(("wave",), {"help": "the name of a wave of the ledger"}),),
     run=wave_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

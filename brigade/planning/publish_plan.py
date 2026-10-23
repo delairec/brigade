@@ -2,7 +2,7 @@ from brigade.git.push_branch import BranchPush, push_branch
 from brigade.planning.plan_publication import PlanPublication
 from brigade.planning.review_plan_pull_request import review_plan_pull_request
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import CLI_KEY
+from brigade.system.parse_configuration import CLI_KEY
 
 NO_MILESTONE = None
 

@@ -1,3 +1,4 @@
+import argparse
 import shlex
 
 from brigade.command import Argument, Command
@@ -24,15 +25,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(_render_record(record) for record in document["processes"])
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def processes_show(request, runtime: Runtime) -> dict:
+def processes_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     return show_invocation(runtime.paths.state_root, request.id, failed_only=request.failed)
 
 
@@ -45,7 +38,5 @@ COMMAND = Command(
         Argument(("--failed",), {"action": "store_true", "help": "keep the processes not exited with code 0"}),
     ),
     run=processes_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

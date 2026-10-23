@@ -5,7 +5,6 @@ from datetime import date
 from pathlib import Path
 
 from brigade.commands.ledger_compare import COMMAND, ledger_compare
-from tests.unit.commands.command_runtime import create_runtime
 
 RUN_FINISHED_BEFORE = (
     '{"schema_version": 2, "ts": "2026-09-30T10:33:00Z", "event": "run.finished", "run": "20260930T101817Z-1aa96f",'
@@ -21,13 +20,15 @@ RUN_FINISHED_FROM = (
     ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
     ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63}\n'
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class LedgerCompareTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
-        self.runtime = create_runtime(Path(self.root.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
         ledger_directory = self.runtime.paths.state_root / "ledger"
         ledger_directory.mkdir(parents=True)
         (ledger_directory / "2026-09.jsonl").write_text(RUN_FINISHED_BEFORE)

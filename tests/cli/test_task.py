@@ -4,7 +4,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 
@@ -80,7 +79,7 @@ class TaskContextTestCase(unittest.TestCase):
         self.state = self.machine.state_home / "brigade"
         self.recordings = root / "recordings"
         self.recordings.mkdir()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.configure()
         self.project = TemporaryProject(root / "projects" / "shop", self.describe_environment())
@@ -235,19 +234,19 @@ class BrigadeTaskContextOutsideTheWorktreeOfATaskTest(TaskContextTestCase):
         completed = self.run_task_context(cwd=self.project.path)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade task context: the branch main is not a task/<slug>/<task> branch\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, "brigade task context: the branch main is not a task/<slug>/<task> branch\n")
 
     def test_should_exit_1_naming_a_task_other_than_the_task_of_the_branch(self):
         # Act
         completed = self.run_task_context("S6")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade task context: @TASK.S6 is not the task of the branch {TASK_BRANCH}\n"),
+            completed.stderr, f"brigade task context: @TASK.S6 is not the task of the branch {TASK_BRANCH}\n"
         )
 
 
@@ -264,7 +263,8 @@ class BrigadeTaskContextOfATaskTheCorpusDoesNotHoldTest(TaskContextTestCase):
         completed = self.run_task_context()
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (1, ""))
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertRegex(
             completed.stderr, r"\Abrigade task context: awawa context @TASK\.S7 --with-schema \. exited 1: "
         )
@@ -308,9 +308,11 @@ class BrigadeTaskContextOfABranchNoWaveStartedTest(TaskContextTestCase):
         completed = self.run_task_context()
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade task context: no wave.started of @PROJECT.shop has the branch integration/M2-gift-wrap\n"),
+            completed.stderr,
+            "brigade task context: no wave.started of @PROJECT.shop has the branch integration/M2-gift-wrap\n",
         )
 
 
@@ -328,10 +330,9 @@ class BrigadeTaskContextInARepositoryNoProjectRegistersTest(TaskContextTestCase)
         completed = self.run_task_context(cwd=self.pantry.path)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade task context: no registered project at {self.pantry.path}\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade task context: no registered project at {self.pantry.path}\n")
 
 
 class BrigadeTaskContextWithNoClientConfiguredTest(TaskContextTestCase):

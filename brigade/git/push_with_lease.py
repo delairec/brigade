@@ -2,7 +2,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from brigade.git.push_branch import PUSH_TIMEOUT_S, REMOTE
+from brigade.git.push_branch import REMOTE
+from brigade.git.timeouts import REMOTE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 
@@ -26,7 +27,7 @@ def push_with_lease(run_process: Callable[[ProcessRequest], ProcessRecord], push
                 f"HEAD:{push.branch}",
             ),
             cwd=str(push.worktree),
-            timeout_s=PUSH_TIMEOUT_S,
+            timeout_s=REMOTE_TIMEOUT_S,
             environment=push.environment,
         )
     )

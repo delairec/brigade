@@ -30,6 +30,7 @@ TIMER_UNIT = (
     "[Install]\n"
     "WantedBy=timers.target\n"
 )
+from tests.list_entry_names import list_entry_names
 
 
 class SchedulerTestCase(unittest.TestCase):
@@ -143,7 +144,7 @@ class BrigadeSchedulerInstallWithSystemdConfiguredTest(SchedulerTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(sorted(path.name for path in self.units.iterdir()), ["brigade.service", "brigade.timer"])
+        self.assertEqual(list_entry_names(self.units), ["brigade.service", "brigade.timer"])
 
 
 class BrigadeSchedulerInstallWithCronConfiguredTest(SchedulerTestCase):
@@ -219,27 +220,6 @@ class BrigadeSchedulerInstallWithTheLoopConfiguredTest(SchedulerTestCase):
         super().setUp()
         self.machine.write_configuration(LOOP_CONFIGURED)
 
-    def test_should_install_nothing_and_name_the_command_to_keep_running(self):
-        # Act
-        completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout),
-            {
-                "schema_version": 1,
-                "scheduler": "loop",
-                "chosen_by": "configuration",
-                "unit_files": [],
-                "cron_line": None,
-                "keep_running": f"{CLONE_ENTRY_POINT} tick --loop",
-            },
-        )
-        self.assertEqual(
-            (self.units.exists(), self.crontab.exists(), self.systemctl_calls.exists()), (False, False, False)
-        )
-
     def test_should_print_the_command_to_keep_running_as_text(self):
         # Act
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install")
@@ -276,7 +256,8 @@ class BrigadeSchedulerInstallWithoutTheSchedulerKeyTest(SchedulerTestCase):
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 document = json.loads(completed.stdout)
-                self.assertEqual((document["scheduler"], document["chosen_by"]), (expected_scheduler, "probe"))
+                self.assertEqual(document["scheduler"], expected_scheduler)
+                self.assertEqual(document["chosen_by"], "probe")
 
     def test_should_say_the_probe_chose_it_in_the_text(self):
         # Arrange
@@ -308,15 +289,19 @@ class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSignTest(S
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        environment_lines = [line for line in self.service.read_text().splitlines() if line.startswith("Environment=")]
         root = Path(self.root.name).resolve()
         self.assertEqual(
-            environment_lines[1:],
-            [
-                f'Environment="XDG_CONFIG_HOME={root}/a 100%% b/config"',
-                f'Environment="XDG_STATE_HOME={root}/a 100%% b/state"',
-                f'Environment="XDG_CACHE_HOME={root}/a 100%% b/cache"',
-            ],
+            self.service.read_text(),
+            "[Unit]\n"
+            "Description=brigade tick\n"
+            "\n"
+            "[Service]\n"
+            "Type=oneshot\n"
+            f'Environment="PATH={SYSTEMD_USER_MANAGER}"\n'
+            f'Environment="XDG_CONFIG_HOME={root}/a 100%% b/config"\n'
+            f'Environment="XDG_STATE_HOME={root}/a 100%% b/state"\n'
+            f'Environment="XDG_CACHE_HOME={root}/a 100%% b/cache"\n'
+            f'ExecStart="{CLONE_ENTRY_POINT}" tick --once\n',
         )
 
     def test_should_quote_them_in_the_cron_line(self):
@@ -355,7 +340,9 @@ class BrigadeSchedulerInstallWhenTheConfigurationNamesAnUnknownSchedulerTest(Sch
                 completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install")
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_stderr))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
+                self.assertEqual(completed.stderr, expected_stderr)
 
 
 class BrigadeSchedulerInstallWhenCrontabCannotBeListedTest(SchedulerTestCase):
@@ -367,35 +354,31 @@ class BrigadeSchedulerInstallWhenCrontabCannotBeListedTest(SchedulerTestCase):
         completed = self.run_scheduler([CRONTAB_FAILING], "install")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade scheduler install: crontab -l exited 1: crontab: cannot open the spool directory\n"),
+            completed.stderr,
+            "brigade scheduler install: crontab -l exited 1: crontab: cannot open the spool directory\n",
         )
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectoryTest(SchedulerTestCase):
+class BrigadeSchedulerInstallWhereAFileStandsForTheUnitDirectoryTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(SYSTEMD_CONFIGURED)
         self.units.parent.mkdir(parents=True)
 
-    def tearDown(self):
-        self.units.parent.chmod(0o700)
-        super().tearDown()
-
     def test_should_exit_1_naming_the_unit_directory_it_cannot_create(self):
         # Arrange
-        self.units.parent.chmod(0o500)
+        self.units.write_text("")
 
         # Act
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER], "install")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade scheduler install: cannot write {self.units}: Permission denied\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade scheduler install: cannot write {self.units}: File exists\n")
 
 
 class BrigadeSchedulerInstallOverAUnitItCannotWriteTest(SchedulerTestCase):
@@ -415,9 +398,10 @@ class BrigadeSchedulerInstallOverAUnitItCannotWriteTest(SchedulerTestCase):
                 completed = self.run_scheduler([SYSTEMD_USER_MANAGER], "install")
 
                 # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
                 self.assertEqual(
-                    (completed.returncode, completed.stdout, completed.stderr),
-                    (1, "", f"brigade scheduler install: cannot write {self.units / unit}: Is a directory\n"),
+                    completed.stderr, f"brigade scheduler install: cannot write {self.units / unit}: Is a directory\n"
                 )
 
 

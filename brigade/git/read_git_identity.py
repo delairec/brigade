@@ -1,10 +1,10 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 PROBE_DIRECTORY = "/"
-PROBE_TIMEOUT_S = 10.0
 KEY_PRESENT_OR_ABSENT = (0, 1)
 KEY_ABSENT = 1
 
@@ -20,7 +20,7 @@ def _read_key(run_process: Callable[[ProcessRequest], ProcessRecord], key: str) 
         ProcessRequest(
             argv=("git", "config", "--get", key),
             cwd=PROBE_DIRECTORY,
-            timeout_s=PROBE_TIMEOUT_S,
+            timeout_s=GIT_TIMEOUT_S,
             acceptable_exit_codes=KEY_PRESENT_OR_ABSENT,
         )
     )

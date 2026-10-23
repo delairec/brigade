@@ -1,4 +1,4 @@
-import json
+import argparse
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -9,8 +9,9 @@ from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.read_since import read_since
+from brigade.system.render_inline_json import render_inline_json
 
 DOCUMENT_SCHEMA_VERSION = 1
 COLLECTOR_KIND = "collector"
@@ -23,10 +24,6 @@ COLUMN_GAP = 2
 
 def _accept_parameter(argument: str) -> bool:
     return PARAMETER_SEPARATOR in argument and not argument.startswith(OPTION_PREFIX)
-
-
-def _read_request(options):
-    return options
 
 
 def _read_parameters(arguments: list[str]) -> dict:
@@ -44,7 +41,7 @@ def _resolve_since_day(since: timedelta | date | None, now: datetime) -> date:
 def _render_value(value) -> str:
     if isinstance(value, str):
         return value
-    return json.dumps(value)
+    return render_inline_json(value)
 
 
 def _render_text(document: dict) -> str:
@@ -57,11 +54,7 @@ def _render_text(document: dict) -> str:
     return "\n".join([f"{document['collector']} {origin}", *(f"{key:<{width}}{value}" for key, value in rows)])
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def collect(request, runtime: Runtime) -> dict:
+def collect(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = Path.cwd()
     collector = runtime.resolve_plugin(COLLECTOR_KIND, request.name, places=locate_collectors(project, runtime.paths))
     inputs = CollectorInputs(
@@ -75,7 +68,7 @@ def collect(request, runtime: Runtime) -> dict:
             inputs=inputs,
             refresh=request.refresh,
             equipment=CollectorEquipment(
-                configuration=read_optional_configuration(runtime.paths.configuration_file),
+                configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
                 forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
                 forge_name=FORGE_NAME,
             ),
@@ -103,8 +96,6 @@ COMMAND = Command(
         Argument(("--refresh",), {"action": "store_true", "help": "ignore the cache and replace its entry"}),
     ),
     run=collect,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     accept_extra_argument=_accept_parameter,
 )

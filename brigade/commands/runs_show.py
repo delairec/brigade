@@ -1,3 +1,4 @@
+import argparse
 import sys
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runs.show_run import show_run
 from brigade.runtime import Runtime
 from brigade.system.poll_until_signalled import poll_until_signalled
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -97,12 +98,12 @@ class _FollowPrinter:
 
 def _follow_run(run_id: str, runtime: Runtime) -> dict:
     printer = _FollowPrinter(runtime.paths.state_root, run_id)
-    interval_s = read_optional_configuration(runtime.paths.configuration_file).journal_poll_s
+    interval_s = read_configuration(runtime, CONFIGURATION_OPTIONAL).journal_poll_s
     interrupted = poll_until_signalled(printer.poll, interval_s)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": printer.follower.run, "interrupted": interrupted}
 
 
-def runs_show(request, runtime: Runtime) -> dict:
+def runs_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.follow:
         return _follow_run(request.run, runtime)
     return show_run(runtime.paths.state_root, request.run, with_journal=request.log)

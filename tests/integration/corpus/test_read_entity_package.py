@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entity_package import read_entity_package
 from tests.awawa.provide_awawa import provide_awawa
-from tests.integration.run_process_without_trail import run_process_without_trail
+from tests.create_process_runner import create_process_runner
 
 SCHEMA = (
     'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\tFIELD LOADS @RULE\n'
@@ -19,7 +19,7 @@ AGENTS = (
 
 class ReadEntityPackageTest(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
+        self.run_process = create_process_runner(provide_awawa(self))
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)
         (self.corpus / "_schema.awawa").write_text(SCHEMA)
@@ -30,7 +30,7 @@ class ReadEntityPackageTest(unittest.TestCase):
 
     def test_should_read_the_package_of_the_entity_and_what_it_rests_on_without_its_reasoning(self):
         # Act
-        package = read_entity_package(run_process_without_trail, self.corpus, "@AGENT.planner")
+        package = read_entity_package(self.run_process, self.corpus, "@AGENT.planner")
 
         # Assert
         self.assertEqual(

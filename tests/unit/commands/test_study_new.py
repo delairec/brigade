@@ -1,12 +1,13 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import ANY
 
 from brigade.commands.study_new import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
+from tests.unit.plugin_double import PluginDouble
 
 TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
 MACHINE_WIDE = None
@@ -51,7 +52,7 @@ class StudyNewExitCodeTest(unittest.TestCase):
 class StudyNewRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(name="health")
+        options = Namespace(name="health")
 
         # Act
         request = COMMAND.read_request(options)
@@ -66,7 +67,7 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
         run_process = create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}, CORPUS_CHANGE_OUTPUTS)
-        request = SimpleNamespace(
+        request = Namespace(
             name="health",
             title="the health of the tidepool",
             question=None,
@@ -79,7 +80,7 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(request, create_runtime(root, run_process=run_process))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(root), run_process=run_process))
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "study": "health", "every": "daily@06:00"})
@@ -88,7 +89,7 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
-        request = SimpleNamespace(
+        request = Namespace(
             name="health",
             title="the health of the machine",
             question=None,
@@ -102,25 +103,22 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
 
         # Act
         document = COMMAND.run(
-            request, create_runtime(root, run_process=create_machine_double({}, CORPUS_CHANGE_OUTPUTS))
+            request,
+            create_test_runtime(create_test_paths(root), run_process=create_machine_double({}, CORPUS_CHANGE_OUTPUTS)),
         )
 
         # Assert
+        self.assertEqual(document, {"schema_version": 1, "study": "health", "every": "daily@06:00"})
         self.assertEqual(
-            (document, (root / "config" / "studies.awawa").read_text(encoding="utf-8")),
-            (
-                {"schema_version": 1, "study": "health", "every": "daily@06:00"},
-                (
-                    "STUDY health\n"
-                    '\tTITLE "the health of the machine"\n'
-                    '\tCOLLECTOR "runs-list"\n'
-                    "\tSLOT report\n"
-                    '\tEVERY "daily@06:00"\n'
-                    '\tOUTPUT "file:/home/user/health.md"\n'
-                    '\tANSWER "ANSWER"\n'
-                    "\tSTATUS active\n"
-                ),
-            ),
+            (root / "config" / "studies.awawa").read_text(encoding="utf-8"),
+            "STUDY health\n"
+            '\tTITLE "the health of the machine"\n'
+            '\tCOLLECTOR "runs-list"\n'
+            "\tSLOT report\n"
+            '\tEVERY "daily@06:00"\n'
+            '\tOUTPUT "file:/home/user/health.md"\n'
+            '\tANSWER "ANSWER"\n'
+            "\tSTATUS active\n",
         )
 
 
@@ -132,12 +130,14 @@ HEALTH_STUDY = (
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 def _resolve_no_collector(kind: str, name: str, **places):
     if kind == "collector":
         raise BrigadeError(f"no collector {name}")
-    return SimpleNamespace(kind=kind, name=name)
+    return PluginDouble(kind=kind, name=name)
 
 
 class StudyNewOfAStudyOnDemandTest(unittest.TestCase):
@@ -147,7 +147,7 @@ class StudyNewOfAStudyOnDemandTest(unittest.TestCase):
         write_operational_corpus(root)
         run_process = create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, CORPUS_CHANGE_OUTPUTS)
         on_demand = None
-        request = SimpleNamespace(
+        request = Namespace(
             name="health",
             title="the health of the machine",
             question=None,
@@ -161,7 +161,8 @@ class StudyNewOfAStudyOnDemandTest(unittest.TestCase):
 
         # Act
         document = COMMAND.run(
-            request, create_runtime(root, run_process=run_process, resolve_plugin=_resolve_no_collector)
+            request,
+            create_test_runtime(create_test_paths(root), run_process=run_process, resolve_plugin=_resolve_no_collector),
         )
 
         # Assert

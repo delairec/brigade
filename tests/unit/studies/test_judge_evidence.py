@@ -7,7 +7,9 @@ from brigade.errors import BrigadeError
 from brigade.studies.convert_study import Study
 from brigade.studies.judge_evidence import judge_evidence
 from brigade.studies.study_run_context import StudyRunContext
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -46,7 +48,8 @@ class JudgeEvidenceTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_scripted_runtime(self.root, ScriptedProcesses())
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=ScriptedProcesses())
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         self.run_directory.mkdir(parents=True)
 

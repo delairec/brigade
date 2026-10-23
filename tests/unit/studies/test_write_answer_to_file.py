@@ -7,9 +7,9 @@ from brigade.studies.convert_study import Study
 from brigade.studies.present_answer import AnswerPublication
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer_to_file import write_answer_to_file
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -29,20 +29,24 @@ STUDY = Study(
     answer_type="FINDING",
     status="active",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 CLI_BOUND_TO_OCTO_CLI = Configuration(forge_accounts={"cli": "octo-cli"})
 NOTHING_BOUND = Configuration()
 
 
-class ForgeDouble:
-    def __init__(self):
-        self.opened = []
-
-    def open_pull_request(self, request: dict, runtime) -> dict:
-        self.opened.append(request)
-        return {"number": 7, "url": "https://github.com/acme/oak/pull/7"}
-
-    def read_login_environment(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"])}
+def create_forge() -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "open_pull_request": lambda request: {"number": 7, "url": "https://github.com/acme/oak/pull/7"},
+            "read_login_environment": lambda request: {
+                "schema_version": 1,
+                "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"]),
+            },
+        }
+    )
 
 
 class WriteAnswerToFileTest(unittest.TestCase):
@@ -51,10 +55,11 @@ class WriteAnswerToFileTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         self.checkout = self.run_directory / "checkout"
-        self.forge = ForgeDouble()
+        self.forge = create_forge()
         message = f"docs(studies): add the answer of trees, run {RUN_ID}"
         self.processes.answer(
             ("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"), "origin/main\n"
@@ -92,7 +97,7 @@ class WriteAnswerToFileTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forge.opened,
+            self.forge.list_requests("open_pull_request"),
             [
                 {
                     "repository": str(self.checkout),
@@ -123,7 +128,7 @@ class WriteAnswerToFileTest(unittest.TestCase):
         write_answer_to_file(self.create_context("github", CLI_BOUND_TO_OCTO_CLI), PUBLICATION)
 
         # Assert
-        self.assertEqual(self.forge.opened[0]["environment"], {"GH_TOKEN": "cli-token"})
+        self.assertEqual(self.forge.list_requests("open_pull_request")[0]["environment"], {"GH_TOKEN": "cli-token"})
 
     def test_should_write_the_answer_at_the_path_the_output_names_for_the_run(self):
         # Act

@@ -11,8 +11,7 @@ from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
-from brigade.system.read_configuration import Configuration
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from brigade.system.parse_configuration import Configuration
 from tests.unit.scripted_processes import ScriptedProcesses
 
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
@@ -37,6 +36,9 @@ FINISHED_RUN = RunFinished(
     task=None,
     nulls={},
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class LedgerCollectorTest(unittest.TestCase):
@@ -44,7 +46,8 @@ class LedgerCollectorTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
+        write_operational_corpus(Path(directory.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=self.processes)
         paths = self.runtime.paths
         append_event(
             paths,
@@ -201,7 +204,8 @@ class LedgerCollectorTest(unittest.TestCase):
                 directory = tempfile.TemporaryDirectory()
                 self.addCleanup(directory.cleanup)
                 processes = ScriptedProcesses()
-                runtime = create_scripted_runtime(Path(directory.name), processes)
+                write_operational_corpus(Path(directory.name))
+                runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=processes)
                 no_registered_project = {}
                 processes.answer_entities(runtime.paths.config_root, "PROJECT", no_registered_project)
                 ledger_directory = runtime.paths.state_root / "ledger"

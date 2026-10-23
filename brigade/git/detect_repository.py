@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-READ_TIMEOUT_S = 10.0
 REPOSITORY_OR_NOT = (0, 128)
 INSIDE_A_REPOSITORY = 0
 
@@ -15,7 +15,7 @@ def detect_repository(run_process: Callable[[ProcessRequest], ProcessRecord], pa
         ProcessRequest(
             argv=("git", "rev-parse", "--git-dir"),
             cwd=str(path),
-            timeout_s=READ_TIMEOUT_S,
+            timeout_s=GIT_TIMEOUT_S,
             acceptable_exit_codes=REPOSITORY_OR_NOT,
         )
     )

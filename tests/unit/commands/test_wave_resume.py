@@ -1,11 +1,13 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_resume import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 EVERY_PAUSE = None
 WAVE_STARTED = {
@@ -62,7 +64,7 @@ class WaveResumeExitCodeTest(unittest.TestCase):
 class WaveResumeRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(wave=None)
+        options = Namespace(wave=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -76,7 +78,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_runtime(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root))
 
     def test_should_resume_every_wave_paused_on_the_forge_account_only(self):
         # Arrange
@@ -86,7 +88,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave=EVERY_PAUSE), self.runtime)
+        document = COMMAND.run(Namespace(wave=EVERY_PAUSE), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -98,7 +100,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, _pause("tidepool_w16", "quota")])
 
         # Act
-        document = COMMAND.run(SimpleNamespace(wave="tidepool_w16"), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "resumed": [{"wave": "tidepool_w16", "reason": "quota"}]})
@@ -109,7 +111,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="tidepool_w16"), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "the wave tidepool_w16 is running, not paused")
@@ -120,7 +122,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(wave="tidepool_w17"), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w17"), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")

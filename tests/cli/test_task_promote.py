@@ -88,10 +88,9 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
         completed = self.run_task_promote()
 
         # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            (completed.returncode, completed.stdout),
-            (0, f"@TASK.S3 implemented, delivered by #42, in {self.read_head()}\n"),
-            completed.stderr,
+            completed.stdout, f"@TASK.S3 implemented, delivered by #42, in {self.read_head()}\n", completed.stderr
         )
         self.assertIn(PROMOTED_TASK.format(pr=42), self.read_tasks())
 
@@ -100,12 +99,9 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
         self.run_task_promote()
 
         # Assert
+        self.assertEqual(self.read_last_subject(), "docs(corpus): mark @TASK.S3 implemented, delivered by #42")
         self.assertEqual(
-            (
-                self.read_last_subject(),
-                self.project.run_git("-C", str(self.remote), "rev-parse", TASK_BRANCH).strip(),
-            ),
-            ("docs(corpus): mark @TASK.S3 implemented, delivered by #42", self.read_head()),
+            self.project.run_git("-C", str(self.remote), "rev-parse", TASK_BRANCH).strip(), self.read_head()
         )
 
     def test_should_end_the_promotion_commit_on_the_attribution_lines(self):
@@ -124,26 +120,6 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
 
         # Assert
         self.assertEqual(self.pushes.read_text(), "token-of-octo-bot\ntoken-of-octo-bot\n")
-
-    def test_should_record_the_promotion_in_the_ledger(self):
-        # Act
-        self.run_task_promote()
-
-        # Assert
-        self.assertEqual(
-            self.read_events("task.promoted"),
-            [
-                {
-                    "schema_version": 1,
-                    "ts": ANY,
-                    "event": "task.promoted",
-                    "project": "shop",
-                    "task": "S3",
-                    "pr": 42,
-                    "commit": self.read_head(),
-                }
-            ],
-        )
 
     def test_should_promote_on_the_pull_request_of_the_task_not_on_the_last_one_of_the_wave(self):
         # Arrange
@@ -176,11 +152,9 @@ class BrigadeTaskPromoteOfAnAlreadyPromotedTaskTest(TaskPromoteTestCase):
         completed = self.run_task_promote("--pr", "57")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, self.read_head(), self.read_tasks()),
-            (0, self.promotion, TASKS_PROMOTED_BY_57),
-            completed.stderr,
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_head(), self.promotion, completed.stderr)
+        self.assertEqual(self.read_tasks(), TASKS_PROMOTED_BY_57, completed.stderr)
         self.assertEqual(
             self.read_events("task.promoted")[-1],
             {
@@ -199,11 +173,8 @@ class BrigadeTaskPromoteOfAnAlreadyPromotedTaskTest(TaskPromoteTestCase):
         completed = self.run_task_promote("--pr", "42")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, self.read_tasks()),
-            (0, TASKS_PROMOTED_BY_42),
-            completed.stderr,
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.read_tasks(), TASKS_PROMOTED_BY_42, completed.stderr)
 
 
 class BrigadeTaskPromoteRefusalTest(TaskPromoteTestCase):

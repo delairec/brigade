@@ -2,29 +2,19 @@ import argparse
 import functools
 import tempfile
 import unittest
-from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.commands.adapter_matrix import COMMAND, adapter_matrix
 from brigade.errors import ToolFailure, UsageError
-from brigade.runtime import Runtime
-from brigade.system.paths import Paths
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 BARE_PROBE = (
     '{"schema_version": 1, "client": "bare", "version_argv": null, "operations": ["probe"], "features": [],'
     ' "models": {}}'
 )
-
-
-def _keep_no_trace(trace) -> None:
-    pass
-
-
-def _refuse_spawn(request):
-    raise AssertionError(f"the matrix spawned {request.argv}")
 
 
 def _time_out(request: ProcessRequest):
@@ -46,20 +36,9 @@ class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
         executable.write_text("#!/bin/sh\n")
         executable.chmod(0o755)
         sources = PluginSources(executable_search_path=str(search_directory), run_process=_answer_the_bare_probe)
-        self.runtime = Runtime(
+        self.runtime = create_test_runtime(
+            create_test_paths(root, executable_search_path=str(search_directory)),
             run_process=_answer_the_bare_probe,
-            spawn_process=_refuse_spawn,
-            paths=Paths(
-                config_root=root / "config" / "brigade",
-                state_root=root / "state" / "brigade",
-                cache_root=root / "cache" / "brigade",
-                home=root,
-                executable_search_path=str(search_directory),
-            ),
-            now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
             resolve_plugin=functools.partial(resolve_plugin, sources=sources),
         )
 
@@ -102,20 +81,9 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
         self.executable.write_text("#!/bin/sh\n")
         self.executable.chmod(0o755)
         sources = PluginSources(executable_search_path=str(search_directory), run_process=_time_out)
-        self.runtime = Runtime(
+        self.runtime = create_test_runtime(
+            create_test_paths(root, executable_search_path=str(search_directory)),
             run_process=_time_out,
-            spawn_process=_refuse_spawn,
-            paths=Paths(
-                config_root=root / "config" / "brigade",
-                state_root=root / "state" / "brigade",
-                cache_root=root / "cache" / "brigade",
-                home=root,
-                executable_search_path=str(search_directory),
-            ),
-            now=datetime(2026, 10, 6, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 6, 9, 0, tzinfo=UTC),
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
             resolve_plugin=functools.partial(resolve_plugin, sources=sources),
         )
 

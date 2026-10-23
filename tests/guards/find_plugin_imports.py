@@ -9,6 +9,7 @@ from brigade.system.resolve_plugin import (
     CLIENT_PACKAGES,
     COLLECTOR_KIND,
 )
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
 
 PLUGIN_PACKAGES = ("adapters", "collectors", "checks", "outputs")
 COMMANDS_PACKAGE = "commands"
@@ -21,8 +22,8 @@ KIND_PACKAGES = {
 ENTRY_POINTS = {"client": CLIENT_ENTRY_POINT, COLLECTOR_KIND: COLLECTOR_ENTRY_POINT, **BUILT_IN_ENTRY_POINTS}
 
 
-def _name_module(package_root: Path, module_path: Path) -> list[str]:
-    parts = [package_root.name, *module_path.relative_to(package_root).with_suffix("").parts]
+def _name_module(package_root: Path, relative_path: Path) -> list[str]:
+    parts = [package_root.name, *relative_path.with_suffix("").parts]
     if parts[-1] == "__init__":
         return parts[:-1]
     return parts
@@ -83,24 +84,19 @@ def _breaks_autonomy(package_root: Path, module_name: str, name: str, plugin_pac
     return name != module_name and _answers_entry_point(package_root, name, kind)
 
 
-def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
-    module_parts = _name_module(package_root, module_path)
-    is_package = module_path.name == "__init__.py"
-    plugin_packages = [f"{package_root.name}.{package}" for package in PLUGIN_PACKAGES]
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    module_parts = _name_module(module.root, module.relative_path)
+    is_package = module.relative_path.name == "__init__.py"
+    plugin_packages = [f"{module.root.name}.{package}" for package in PLUGIN_PACKAGES]
     module_name = ".".join(module_parts)
-    location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
     violations = []
-    for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8"))):
+    for node in ast.walk(module.tree):
         for name in _imported_names(node, module_parts, is_package=is_package):
-            if _breaks_autonomy(package_root, module_name, name, plugin_packages):
-                violations.append((node.lineno, f"{location}:{node.lineno} imports {name}"))
+            if _breaks_autonomy(module.root, module_name, name, plugin_packages):
+                violations.append((node.lineno, 0, f"imports {name}"))
                 break
-    return [violation for _, violation in sorted(violations)]
+    return violations
 
 
 def find_plugin_imports(package_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(package_root.rglob("*.py"))
-        for violation in _inspect_module(package_root, module_path)
-    ]
+    return find_violations(package_root, _find_in_module)

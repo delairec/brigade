@@ -53,6 +53,20 @@ def _pair_pauses(entries: list[LedgerEntry]) -> list[dict]:
     return pauses
 
 
+def _list_merged_pull_requests(events: list) -> list[dict]:
+    return [
+        {"task": event.task, "pr": event.pr, "rounds": event.rounds} for event in events if isinstance(event, PrMerged)
+    ]
+
+
+def _list_hand_overs(events: list) -> list[dict]:
+    return [
+        {"task": event.task, "role": event.role, "slot": event.slot, "segment": event.segment}
+        for event in events
+        if isinstance(event, RunFinished) and event.segment >= FIRST_HAND_OVER_SEGMENT
+    ]
+
+
 def describe_wave(reading: LedgerReading, wave: str) -> dict:
     entries = [entry for entry in reading.entries if getattr(entry.event, "wave", None) == wave]
     if not entries:
@@ -61,7 +75,6 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
     first = min(entry.instant for entry in entries)
     last = max(entry.instant for entry in entries)
     runs = group_runs(entries)
-    segments = [event for event in events if isinstance(event, RunFinished)]
     pauses = _pair_pauses(entries)
     return {
         "view": "wave",
@@ -70,18 +83,10 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "last": format_instant(last),
         "wall_time_ms": _measure_ms(first, last),
         "tasks": _list_tasks(events),
-        "pull_requests": [
-            {"task": event.task, "pr": event.pr, "rounds": event.rounds}
-            for event in events
-            if isinstance(event, PrMerged)
-        ],
+        "pull_requests": _list_merged_pull_requests(events),
         "steps": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
         "pauses": pauses,
         "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
-        "hand_overs": [
-            {"task": segment.task, "role": segment.role, "slot": segment.slot, "segment": segment.segment}
-            for segment in segments
-            if segment.segment >= FIRST_HAND_OVER_SEGMENT
-        ],
+        "hand_overs": _list_hand_overs(events),
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
     }

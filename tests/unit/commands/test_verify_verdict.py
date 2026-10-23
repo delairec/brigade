@@ -1,14 +1,16 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.verify_verdict import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
-from tests.unit.verify.test_record_verdict import ForgeDouble
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.verify.test_record_verdict import create_review_forge
 
 PASS = {"head": "8885daa", "verdict": "pass", "findings": []}
 
@@ -49,7 +51,7 @@ class VerifyVerdictExitCodeTest(unittest.TestCase):
 class VerifyVerdictRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42, file="verdict.json")
+        options = Namespace(pr=42, file="verdict.json")
 
         # Act
         request = COMMAND.read_request(options)
@@ -67,9 +69,9 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
         self.verdict = self.root / "verdict.json"
-        self.forge = ForgeDouble()
-        self.runtime = create_runtime(
-            self.root,
+        self.forge = create_review_forge()
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
             resolve_plugin=lambda kind, name, **places: self.forge,
         )
@@ -77,7 +79,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
     def test_should_refuse_a_verdict_file_it_cannot_read(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=42, file=str(self.verdict)), self.runtime)
+            COMMAND.run(Namespace(pr=42, file=str(self.verdict)), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot read {self.verdict}: No such file or directory")
@@ -98,7 +100,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    COMMAND.run(SimpleNamespace(pr=42, file=str(self.verdict)), self.runtime)
+                    COMMAND.run(Namespace(pr=42, file=str(self.verdict)), self.runtime)
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_message)
@@ -109,7 +111,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=41, file=str(self.verdict)), self.runtime)
+            COMMAND.run(Namespace(pr=41, file=str(self.verdict)), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
@@ -119,7 +121,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
         self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
 
         # Act
-        document = COMMAND.run(SimpleNamespace(pr=42, file=str(self.verdict)), self.runtime)
+        document = COMMAND.run(Namespace(pr=42, file=str(self.verdict)), self.runtime)
 
         # Assert
         self.assertEqual(

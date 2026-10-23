@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
@@ -12,19 +14,11 @@ DOCUMENT_SCHEMA_VERSION = 1
 QUEUED_STATE = "queued"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"task {document['task']} of {document['wave']} {document['state']}"
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def wave_requeue(request, runtime: Runtime) -> dict:
+def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     summary = require_wave_summary(read_ledger(runtime.paths.state_root).entries, request.wave)
     if request.task not in summary.started.tasks:
         raise BrigadeError(f"the task {request.task} is not a task of the wave {request.wave}")
@@ -48,7 +42,5 @@ COMMAND = Command(
         Argument(("task",), {"help": "the task of the wave to queue again"}),
     ),
     run=wave_requeue,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

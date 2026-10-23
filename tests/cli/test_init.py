@@ -1,12 +1,11 @@
 import json
-import os
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
+from tests.list_entry_names import list_entry_names
 from tests.process_launcher import ProcessLauncher
 
 SCHEMA_ENTRY = 1
@@ -111,12 +110,13 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_create_a_corpus_that_lints_clean(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
 
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "lint", "--strict", str(self.machine.corpus)],
+            env=self.machine.describe_environment(),
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,
@@ -128,7 +128,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_install_a_schema_whose_policy_reviews_by_approval_or_verdict_only(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         (self.machine.corpus / "projects.awawa").write_text(SHOP_PROJECT)
         rows = [
@@ -144,6 +144,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
                 # Act
                 completed = ProcessLauncher.run(
                     ["awawa", "lint", "--strict", str(self.machine.corpus)],
+                    env=self.machine.describe_environment(),
                     cwd=self.machine.corpus,
                     capture_output=True,
                     text=True,
@@ -155,12 +156,13 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_install_a_schema_whose_project_merges_by_rebase_by_default(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
 
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "show", "PROJECT", "--json", str(self.machine.corpus)],
+            env=self.machine.describe_environment(),
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,
@@ -179,7 +181,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_install_a_schema_accepting_the_report_of_a_wave(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         (self.machine.corpus / "reports.awawa").write_text(
             "REPORT shop_w2\n"
@@ -200,6 +202,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "lint", "--strict", str(self.machine.corpus)],
+            env=self.machine.describe_environment(),
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,
@@ -231,7 +234,7 @@ class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            sorted(path.name for path in (self.machine.home / ".config" / "brigade").iterdir()),
+            list_entry_names(self.machine.home / ".config" / "brigade"),
             [".git", ".gitignore", "_schema.awawa", "config.toml"],
         )
 
@@ -251,22 +254,34 @@ class BrigadeInitRunTwiceTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        corpus = self.machine.corpus
         self.assertEqual(
-            [item["state"] for item in json.loads(completed.stdout)["items"]],
-            ["present", "present", "present", "present"],
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "items": [
+                    {"name": "repository", "path": str(corpus), "state": "present"},
+                    {"name": "schema", "path": str(corpus / "_schema.awawa"), "state": "present"},
+                    {"name": ".gitignore", "path": str(corpus / ".gitignore"), "state": "present"},
+                    {"name": "config.toml", "path": str(corpus / "config.toml"), "state": "present"},
+                ],
+            },
         )
 
     def test_should_rewrite_nothing_and_commit_nothing(self):
         # Arrange
         corpus = self.machine.corpus
-        written_files = [corpus / "_schema.awawa", corpus / ".gitignore", corpus / "config.toml"]
-        modification_times = [path.stat().st_mtime_ns for path in written_files]
+        schema_written_at = (corpus / "_schema.awawa").stat().st_mtime_ns
+        gitignore_written_at = (corpus / ".gitignore").stat().st_mtime_ns
+        configuration_written_at = (corpus / "config.toml").stat().st_mtime_ns
 
         # Act
         self.machine.run_init()
 
         # Assert
-        self.assertEqual([path.stat().st_mtime_ns for path in written_files], modification_times)
+        self.assertEqual((corpus / "_schema.awawa").stat().st_mtime_ns, schema_written_at)
+        self.assertEqual((corpus / ".gitignore").stat().st_mtime_ns, gitignore_written_at)
+        self.assertEqual((corpus / "config.toml").stat().st_mtime_ns, configuration_written_at)
         self.assertEqual(self.machine.read_git("rev-list", "--count", "HEAD"), "1\n")
 
 
@@ -409,58 +424,51 @@ class BrigadeInitWithoutAGitIdentityTest(unittest.TestCase):
                 completed = machine.run_init("--json")
 
                 # Assert
-                self.assertEqual(
-                    (completed.returncode, completed.stdout, completed.stderr, machine.config_home.exists()),
-                    (1, "", message, False),
-                )
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
+                self.assertEqual(completed.stderr, message)
+                self.assertEqual(machine.config_home.exists(), False)
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeInitWhereTheMachineRefusesTheConfigurationDirectoryTest(unittest.TestCase):
+class BrigadeInitWhereAFileStandsForTheConfigurationDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
-        self.machine.config_home.mkdir()
+        self.machine.config_home.write_text("")
 
     def tearDown(self):
-        self.machine.config_home.chmod(0o700)
         self.root.cleanup()
 
     def test_should_exit_1_naming_the_configuration_directory_it_cannot_create(self):
-        # Arrange
-        self.machine.config_home.chmod(0o500)
-
         # Act
         completed = self.machine.run_init()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade init: cannot write {self.machine.corpus}: Permission denied\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade init: cannot write {self.machine.corpus}: Not a directory\n")
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeInitWhereTheMachineRefusesAFileOfTheCorpusTest(unittest.TestCase):
+class BrigadeInitWhereADirectoryStandsForAFileOfTheCorpusTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
         self.machine.run_init()
 
     def tearDown(self):
-        self.machine.corpus.chmod(0o700)
         self.root.cleanup()
 
     def test_should_exit_1_naming_the_file_it_cannot_create(self):
         # Arrange
         (self.machine.corpus / "config.toml").unlink()
-        self.machine.corpus.chmod(0o500)
+        (self.machine.corpus / "config.toml").mkdir()
 
         # Act
         completed = self.machine.run_init()
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade init: cannot write {self.machine.corpus / 'config.toml'}: Permission denied\n"),
+            completed.stderr, f"brigade init: cannot write {self.machine.corpus / 'config.toml'}: Is a directory\n"
         )

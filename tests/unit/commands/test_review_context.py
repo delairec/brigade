@@ -1,13 +1,15 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
-from tests.unit.verify.test_record_verdict import ForgeDouble
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.verify.test_record_verdict import create_review_forge
 
 VERDICT_FINDING = {"id": "1", "grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}
 CHANGES_REQUESTED = {
@@ -65,7 +67,7 @@ class ReviewContextTextTest(unittest.TestCase):
 class ReviewContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)
@@ -89,15 +91,15 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED, CHANGES_REQUESTED])
-        self.runtime = create_runtime(
-            self.root,
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
-            resolve_plugin=lambda kind, name, **places: ForgeDouble(),
+            resolve_plugin=lambda kind, name, **places: create_review_forge(),
         )
 
     def test_should_give_the_context_of_the_review_of_the_task_of_the_pull_request(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(pr=42), self.runtime)
+        document = COMMAND.run(Namespace(pr=42), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -117,7 +119,7 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
     def test_should_refuse_a_pull_request_no_task_opened(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=41), self.runtime)
+            COMMAND.run(Namespace(pr=41), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")

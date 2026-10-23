@@ -6,7 +6,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.runs.read_run_setting import read_run_setting
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -40,7 +40,8 @@ class ReadRunSettingTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual((setting.project.name, setting.client), ("tidepool", "codex"))
+        self.assertEqual(setting.project.name, "tidepool")
+        self.assertEqual(setting.client, "codex")
 
     def test_should_refuse_a_run_no_configuration_names_a_client_for(self):
         # Arrange

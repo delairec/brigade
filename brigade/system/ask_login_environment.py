@@ -7,7 +7,7 @@ OPERATION = "read_login_environment"
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def ask_login_environment(forge, forge_name: str, login: str, runtime: Runtime) -> dict | None:
+def ask_login_environment(forge: object, forge_name: str, login: str, runtime: Runtime) -> dict | None:
     answer = forge.read_login_environment({"schema_version": DOCUMENT_SCHEMA_VERSION, "login": login}, runtime)
     try:
         validate_document(answer, FORGE_ANSWER_SHAPES[OPERATION])

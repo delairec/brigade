@@ -4,13 +4,15 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.waves.cancel_request import cancel_request
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 REQUESTS = (
     "REQUEST shop_r1\n\tPROJECT @PROJECT.shop\n\tSTATUS planned\n\n\n"
     "REQUEST shop_r3\n\tPROJECT @PROJECT.shop\n\tSTATUS cancelled\n"
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class CancelRequestTest(unittest.TestCase):
@@ -18,7 +20,8 @@ class CancelRequestTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
+        write_operational_corpus(Path(directory.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=self.processes)
         self.config_root = self.runtime.paths.config_root
         self.requests = self.config_root / "requests.awawa"
         self.requests.write_text(REQUESTS, encoding="utf-8")

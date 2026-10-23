@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
@@ -13,19 +15,11 @@ def _render_text(document: dict) -> str:
     return render_table(HEADER, [tuple(str(row[column]) for column in COLUMNS) for row in document["waves"]])
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def _is_ended(summary: WaveSummary) -> bool:
     return not summary.is_open
 
 
-def wave_list(request, runtime: Runtime) -> dict:
+def wave_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     summaries = sorted(summarize_waves(read_ledger(runtime.paths.state_root).entries), key=_is_ended)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -48,7 +42,5 @@ COMMAND = Command(
     help="print one row per wave of the ledger, the open waves first",
     arguments=(Argument(("--project",), {"help": "only the waves of this registered project"}),),
     run=wave_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

@@ -207,7 +207,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune", "--keep", "1")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, f"removed {oldest} (finished)\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, f"removed {oldest} (finished)\n")
 
     def test_should_say_so_when_no_run_is_removed(self):
         # Arrange
@@ -217,7 +218,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "no run removed\n")
 
     def test_should_print_what_would_go_and_remove_nothing_on_a_dry_run(self):
         # Arrange
@@ -228,7 +230,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune", "--keep", "1", "--dry-run")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, f"would remove {oldest} (finished)\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, f"would remove {oldest} (finished)\n")
         self.assertEqual(self.list_kept_runs(), {oldest, newest})
 
     def test_should_remove_every_run_older_than_the_date_whatever_their_number(self):
@@ -286,10 +289,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune", "--keep", "1")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade runs prune: cannot write {self.removed_runs}: Permission denied\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade runs prune: cannot write {self.removed_runs}: Permission denied\n")
         self.assertEqual(self.list_kept_runs(), {oldest, newest})
 
     def test_should_first_empty_what_an_interrupted_removal_left(self):
@@ -323,9 +324,10 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade runs prune: cannot write {self.removed_runs / INTERRUPTED_REMOVAL}: Permission denied\n"),
+            completed.stderr,
+            f"brigade runs prune: cannot write {self.removed_runs / INTERRUPTED_REMOVAL}: Permission denied\n",
         )
 
     def test_should_leave_a_run_whole_in_runs_when_it_cannot_create_the_removed_runs_directory(self):
@@ -338,10 +340,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune", "--keep", "1")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade runs prune: cannot write {self.removed_runs}: File exists\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade runs prune: cannot write {self.removed_runs}: File exists\n")
         self.assertEqual(self.list_kept_runs(), {oldest, newest})
 
     def test_should_name_the_unreadable_runs_in_the_order_of_their_names(self):
@@ -419,7 +419,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune", "--keep", "1")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "no run removed\n")
         self.assertEqual(self.list_kept_runs(), {rate_limited, newest})
 
     def test_should_remove_a_rate_limited_run_as_well_when_asked_for_the_resumable_runs(self):
@@ -431,7 +432,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune", "--keep", "1", "--resumable")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, f"removed {rate_limited} (finished)\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, f"removed {rate_limited} (finished)\n")
         self.assertEqual(self.list_kept_runs(), {newest})
 
     def test_should_never_remove_a_running_run(self):
@@ -442,7 +444,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune", "--before", "2099-01-01", "--resumable")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "no run removed\n")
         self.assertEqual(self.list_kept_runs(), {running})
 
     def test_should_remove_nothing_on_a_machine_that_never_ran_one(self):
@@ -450,7 +453,8 @@ class BrigadeRunsPruneTest(RunsPruneTestCase):
         completed = self.run_brigade("runs", "prune")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"), completed.stderr)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "no run removed\n", completed.stderr)
 
     def test_should_refuse_a_keep_below_1(self):
         # Act

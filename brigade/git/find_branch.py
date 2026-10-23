@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-GIT_TIMEOUT_S = 10.0
 FOUND = 0
 FOUND_OR_NOT = (FOUND, 1)
 

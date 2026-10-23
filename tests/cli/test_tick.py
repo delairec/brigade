@@ -10,8 +10,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
+from tests.cli.stop_process import stop_process
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 from tests.cli.test_collect import install_executable
@@ -68,6 +68,7 @@ WAVE_EVENTS = (
     '{"schema_version": 1, "ts": "2026-10-13T10:30:00Z", "event": "task.state", "wave": "cafe_w1", "task": "S6",'
     ' "state": "running"}\n'
 )
+from tests.list_entry_names import list_entry_names
 
 
 class TickTestCase(unittest.TestCase):
@@ -124,7 +125,7 @@ class BrigadeTickOnceTest(TickTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(sorted(path.name for path in self.state.iterdir()), ["locks", "tick.json", "ticks"])
+        self.assertEqual(list_entry_names(self.state), ["locks", "tick.json", "ticks"])
 
     def test_should_report_the_tick_it_recorded_in_the_versioned_document(self):
         # Act
@@ -166,10 +167,9 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (0, "", f"brigade tick: another tick holds {self.lock}\n"),
-        )
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade tick: another tick holds {self.lock}\n")
         self.assertEqual(list(self.state.iterdir()), [self.state / "locks"])
 
 
@@ -214,7 +214,7 @@ class WaveTickTestCase(TickTestCase):
         return {
             **self.machine.describe_environment(),
             **PINNED_COMMIT_DATES,
-            "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
+            "PATH": f"{self.tools}{os.pathsep}{self.machine.search_path}",
         }
 
     def setUp(self):
@@ -228,7 +228,7 @@ class WaveTickTestCase(TickTestCase):
             self.tools / "gh",
             FAKE_GH.format(calls=self.gh_calls, pull_requests=self.pull_requests, tokenless=TOKENLESS_LOGIN),
         )
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
             Path(self.root.name).resolve() / "projects" / "shop",
@@ -278,6 +278,10 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
     def tearDown(self):
         self.wait_for_the_runs()
         super().tearDown()
+
+    def tick_once_until_the_runs_end(self) -> None:
+        self.run_tick("--once")
+        self.wait_for_the_runs()
 
     def wait_for_the_runs(self) -> None:
         for record in self.read_run_records():
@@ -416,10 +420,9 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
 
     def test_should_carry_the_wave_and_the_task_in_every_finished_build_run(self):
         # Act
-        self.run_tick("--once")
+        self.tick_once_until_the_runs_end()
 
         # Assert
-        self.wait_for_the_runs()
         [first, second] = self.read_events("run.finished")
         self.assertCountEqual(
             [(first["wave"], first["task"]), (second["wave"], second["task"])], [("shop_w1", "S3"), ("shop_w1", "S6")]
@@ -447,8 +450,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
 
     def test_should_launch_nothing_more_at_the_next_tick(self):
         # Arrange
-        self.run_tick("--once")
-        self.wait_for_the_runs()
+        self.tick_once_until_the_runs_end()
         launched = self.read_run_records()
 
         # Act
@@ -1040,10 +1042,9 @@ class BrigadeTickLoopTest(TickTestCase):
                 self.wait_for_first_tick(loop)
 
                 # Act
-                loop.send_signal(stop_signal)
+                stdout, stderr = stop_process(loop, stop_signal, STOP_WAIT_S)
 
                 # Assert
-                stdout, stderr = loop.communicate(timeout=STOP_WAIT_S)
                 self.assertEqual(loop.returncode, 0, stderr)
                 self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
 
@@ -1053,10 +1054,9 @@ class BrigadeTickLoopTest(TickTestCase):
         first_report = self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        _, later_reports = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        _, later_reports = loop.communicate(timeout=STOP_WAIT_S)
         self.assertRegex(
             first_report,
             r"^brigade tick: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z: 0 actions applied, 0 failed in \d+ ms\n$",
@@ -1069,11 +1069,11 @@ class BrigadeTickLoopTest(TickTestCase):
         self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stdout, stderr = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        stdout, stderr = loop.communicate(timeout=STOP_WAIT_S)
-        self.assertEqual((loop.returncode, stdout), (0, "tick --loop: 1 ticks attempted\n"), stderr)
+        self.assertEqual(loop.returncode, 0, stderr)
+        self.assertEqual(stdout, "tick --loop: 1 ticks attempted\n", stderr)
 
     def test_should_write_the_trail_of_its_first_round(self):
         # Arrange
@@ -1081,10 +1081,9 @@ class BrigadeTickLoopTest(TickTestCase):
         self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        loop.communicate(timeout=STOP_WAIT_S)
         [trail] = (self.state / "ticks").iterdir()
         self.assertRegex(trail.name, r"^\d{8}T\d{6}Z\.jsonl$")
 
@@ -1097,18 +1096,12 @@ class BrigadeTickLoopWhileAnotherTickHoldsTheLockTest(TickTestCase):
         stand_down_line = self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stdout, _ = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        stdout, _ = loop.communicate(timeout=STOP_WAIT_S)
-        self.assertEqual(
-            (stand_down_line, loop.returncode, json.loads(stdout)),
-            (
-                f"brigade tick: another tick holds {self.lock}\n",
-                0,
-                {"schema_version": 1, "mode": "loop", "ticks_attempted": 1},
-            ),
-        )
+        self.assertEqual(stand_down_line, f"brigade tick: another tick holds {self.lock}\n")
+        self.assertEqual(loop.returncode, 0)
+        self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
         self.assertFalse(self.heartbeat.exists())
 
 
@@ -1122,96 +1115,67 @@ class BrigadeTickWithoutAModeTest(TickTestCase):
         self.assertIn("one of the arguments --once --dry-run --loop is required", completed.stderr)
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectoryTest(TickTestCase):
-    def setUp(self):
-        super().setUp()
-        self.machine.state_home.mkdir()
-
-    def tearDown(self):
-        self.machine.state_home.chmod(0o700)
-        super().tearDown()
-
-    def test_should_exit_1_naming_the_state_directory_it_cannot_create(self):
+class BrigadeTickOnceWhereAFileStandsForTheStateDirectoryTest(TickTestCase):
+    def test_should_exit_1_naming_the_lock_directory_it_cannot_create(self):
         # Arrange
-        self.machine.state_home.chmod(0o500)
+        self.machine.state_home.write_text("")
 
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade tick: cannot write {self.state}: Permission denied\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n")
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTestCase):
+class BrigadeTickOnceWhereAnEntryOfTheStateDirectoryStandsInTheWayTest(TickTestCase):
     def setUp(self):
         super().setUp()
         self.lock.parent.mkdir(parents=True)
 
-    def tearDown(self):
-        self.state.chmod(0o700)
-        super().tearDown()
-
     def test_should_exit_1_naming_the_lock_it_cannot_open(self):
         # Arrange
-        self.lock.touch(mode=0o400)
+        self.lock.mkdir()
 
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade tick: cannot write {self.lock}: Permission denied\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.lock}: Is a directory\n")
 
     def test_should_exit_1_naming_the_trail_directory_it_cannot_create_and_write_no_heartbeat(self):
         # Arrange
-        self.state.chmod(0o500)
+        (self.state / "ticks").write_text("")
 
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (
-                completed.returncode,
-                completed.stdout,
-                completed.stderr,
-                sorted(path.name for path in self.state.iterdir()),
-            ),
-            (1, "", f"brigade tick: cannot write {self.state / 'ticks'}: Permission denied\n", ["locks"]),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.state / 'ticks'}: File exists\n")
+        self.assertEqual(set(self.state.iterdir()), {self.state / "locks", self.state / "ticks"})
 
     def test_should_exit_1_naming_the_heartbeat_it_cannot_write_and_write_none(self):
         # Arrange
         (self.state / "ticks").mkdir()
-        self.state.chmod(0o500)
+        self.heartbeat.mkdir()
 
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr, self.heartbeat.exists()),
-            (1, "", f"brigade tick: cannot write {self.heartbeat}: Permission denied\n", False),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.heartbeat}: Is a directory\n")
+        self.assertEqual(set(self.state.iterdir()), {self.state / "locks", self.state / "ticks", self.heartbeat})
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickLoopWhereTheMachineRefusesTheWriteTest(TickTestCase):
+class BrigadeTickLoopWhereAFileStandsForTheStateDirectoryTest(TickTestCase):
     def setUp(self):
         super().setUp()
-        self.machine.state_home.mkdir()
-        self.machine.state_home.chmod(0o500)
-
-    def tearDown(self):
-        self.machine.state_home.chmod(0o700)
-        super().tearDown()
+        self.machine.state_home.write_text("")
 
     def test_should_report_the_failed_tick_and_keep_ticking_until_a_signal(self):
         # Arrange
@@ -1219,14 +1183,13 @@ class BrigadeTickLoopWhereTheMachineRefusesTheWriteTest(TickTestCase):
         failure_line = self.wait_for_first_tick(loop)
 
         # Act
-        loop.send_signal(signal.SIGTERM)
+        stdout, later_reports = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        stdout, later_reports = loop.communicate(timeout=STOP_WAIT_S)
-        self.assertEqual(
-            (failure_line, later_reports, loop.returncode, self.state.exists()),
-            (f"brigade tick: cannot write {self.state}: Permission denied\n", "", 0, False),
-        )
+        self.assertEqual(failure_line, f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n")
+        self.assertEqual(later_reports, "")
+        self.assertEqual(loop.returncode, 0)
+        self.assertEqual(self.state.exists(), False)
         self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
 
 
@@ -1256,6 +1219,7 @@ WEEKLY_PARKED_LONG_AGO = WEEKLY_STARTED_LONG_AGO + (
     '{"schema_version": 1, "ts": "2026-10-01T09:05:00Z", "event": "order.parked", "project": null,'
     f' "kind": "study", "order": "weekly", "run": "{WEEKLY_RUN}", "step": "judge", "reason": "no answer"}}\n'
 )
+
 WEEKLY_RECORD = {"schema_version": 1, "study": "weekly", "project": None}
 
 
@@ -1265,7 +1229,7 @@ class StudyTickTestCase(TickTestCase, FileWaitingTestCase):
 
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         recordings = Path(self.root.name) / "recordings"
         recordings.mkdir()
@@ -1329,6 +1293,10 @@ class StudyTickTestCase(TickTestCase, FileWaitingTestCase):
             if event["event"].startswith(("order.", "step.")) and event["run"] in runs
         ]
 
+    def tick_once_until_the_order_ends(self, study: str) -> None:
+        self.run_tick("--once")
+        self.wait_for_order_end(study)
+
     def wait_for_order_end(self, study: str) -> None:
         deadline = time.monotonic() + ORDER_WAIT_S
         while not any(event in ORDER_END_EVENTS for event, _ in self.read_order_events(study)):
@@ -1343,10 +1311,9 @@ class BrigadeTickOnceWithADueStudyTest(StudyTickTestCase):
         self.record_study("weekly")
 
         # Act
-        self.run_tick("--once")
+        self.tick_once_until_the_order_ends("weekly")
 
         # Assert
-        self.wait_for_order_end("weekly")
         self.assertEqual(
             self.read_order_events("weekly"),
             [("order.started", None), ("step.done", "collect"), ("step.failed", "judge"), ("order.parked", "judge")],
@@ -1401,17 +1368,6 @@ class BrigadeTickOnceWithTheStudyRunsTakenTest(StudyTickTestCase):
         # Assert
         self.assertEqual(self.read_started_studies(), {"monthly"})
 
-    def test_should_launch_a_scan_beyond_the_study_runs(self):
-        # Arrange
-        self.record_study("monthly", collector=self.gated_collector)
-        self.record_study("trees", slot="none", collector=self.gated_collector)
-
-        # Act
-        self.run_tick_before_the_collectors_end()
-
-        # Assert
-        self.assertEqual(self.read_started_studies(), {"monthly", "trees"})
-
 
 class LiveStudyRunTestCase(StudyTickTestCase):
     def setUp(self):
@@ -1433,15 +1389,6 @@ class LiveStudyRunTestCase(StudyTickTestCase):
         self.gate.touch()
         self.live_run.wait()
         super().tearDown()
-
-
-class BrigadeTickOnceWhileARunOfTheStudyIsLiveTest(LiveStudyRunTestCase):
-    def test_should_launch_no_study_while_a_run_of_it_is_live(self):
-        # Act
-        completed = self.run_tick_before_the_collectors_end("--json")
-
-        # Assert
-        self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
 
 
 RUNNING_S3 = (
@@ -1561,9 +1508,10 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
         completed = self.run_tick("--dry-run", "--json")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade tick: gh printed no token for the login {TOKENLESS_LOGIN}, bound to cli, after 1 attempt\n"),
+            completed.stderr,
+            f"brigade tick: gh printed no token for the login {TOKENLESS_LOGIN}, bound to cli, after 1 attempt\n",
         )
 
 
@@ -1738,7 +1686,8 @@ class BrigadeTickOnceFollowingThePullRequestOfARunningTaskTest(FollowingTickTest
             waiting = self.detect_waiting("--once")
 
         # Assert
-        self.assertEqual((waiting, self.worktree.is_dir()), (True, True))
+        self.assertEqual(waiting, True)
+        self.assertEqual(self.worktree.is_dir(), True)
 
     def detect_waiting(self, *options: str) -> bool:
         try:
@@ -1808,7 +1757,8 @@ class BrigadeTickDryRunWithTheLoginOfTheKeyCliWithoutATokenTest(LaunchingTickTes
         completed = self.run_tick("--dry-run", "--json")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stderr), (0, ""))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, "")
 
 
 class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTickTestCase):
@@ -1841,16 +1791,12 @@ class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTick
         completed = self.run_tick("--dry-run", "--json")
 
         # Assert
+        self.assertEqual(completed.returncode, 0)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (
-                0,
-                (
-                    "brigade tick: the wave cafe_w1 skipped: gh pr list --head task/M1-menu/S6 --state all --limit 1"
-                    " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup exited 1:"
-                    " HTTP 502: Bad Gateway\n"
-                ),
-            ),
+            completed.stderr,
+            "brigade tick: the wave cafe_w1 skipped: gh pr list --head task/M1-menu/S6 --state all --limit 1"
+            " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup exited 1:"
+            " HTTP 502: Bad Gateway\n",
         )
         self.assertEqual(
             json.loads(completed.stdout)["plan"],

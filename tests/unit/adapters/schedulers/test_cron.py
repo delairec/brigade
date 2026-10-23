@@ -1,8 +1,9 @@
 import unittest
-from types import SimpleNamespace
 
 from brigade.adapters.schedulers.cron import install, read_status
 from brigade.errors import CommandFailed, ToolNotFound
+from brigade.runtime import Runtime
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 LIST_CRONTAB = ("crontab", "-l")
@@ -18,8 +19,8 @@ CRON_LINE = (
 )
 
 
-def create_runtime(listing: ProcessAnswer) -> SimpleNamespace:
-    return SimpleNamespace(run_process=RecordingProcessRunner({LIST_CRONTAB: listing}))
+def create_runtime(listing: ProcessAnswer) -> Runtime:
+    return create_test_runtime(run_process=RecordingProcessRunner({LIST_CRONTAB: listing}))
 
 
 def refuse_missing_crontab(request):
@@ -38,18 +39,16 @@ class InstallCronTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (installation, runtime.run_process.requests[-1].stdin),
-            (
-                {
-                    "schema_version": 1,
-                    "scheduler": "cron",
-                    "unit_files": [],
-                    "cron_line": CRON_LINE,
-                    "keep_running": None,
-                },
-                f"0 3 * * * backup\n{CRON_LINE}\n",
-            ),
+            installation,
+            {
+                "schema_version": 1,
+                "scheduler": "cron",
+                "unit_files": [],
+                "cron_line": CRON_LINE,
+                "keep_running": None,
+            },
         )
+        self.assertEqual(runtime.run_process.requests[-1].stdin, f"0 3 * * * backup\n{CRON_LINE}\n")
 
     def test_should_start_the_crontab_of_a_user_who_has_none(self):
         # Arrange
@@ -89,10 +88,11 @@ class ReadCronStatusTest(unittest.TestCase):
 
     def test_should_read_nothing_installed_without_crontab(self):
         # Arrange
-        runtime = SimpleNamespace(run_process=refuse_missing_crontab)
+        runtime = create_test_runtime(run_process=refuse_missing_crontab)
 
         # Act
         status = read_status({}, runtime)
 
         # Assert
-        self.assertEqual((status["installed"], status["cron_line"]), (False, None))
+        self.assertEqual(status["installed"], False)
+        self.assertEqual(status["cron_line"], None)

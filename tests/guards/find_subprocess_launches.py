@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 SUBPROCESS_MODULE = "subprocess"
 LAUNCHING_FUNCTIONS = ("run", "Popen")
 MODULE_ALLOWED_TO_LAUNCH = Path("process_launcher.py")
@@ -32,22 +34,19 @@ def _launch_of(node: ast.AST, subprocess_names: set[str]) -> str | None:
     return None
 
 
-def _inspect_module(tests_root: Path, module_path: Path) -> list[str]:
-    location = Path(tests_root.name, module_path.relative_to(tests_root)).as_posix()
-    tree = ast.parse(module_path.read_text(encoding="utf-8"))
-    subprocess_names = _names_bound_to_subprocess(tree)
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    subprocess_names = _names_bound_to_subprocess(module.tree)
     findings = []
-    for node in ast.walk(tree):
+    for node in ast.walk(module.tree):
         launch = _launch_of(node, subprocess_names)
         if launch:
-            findings.append((node.lineno, node.col_offset, f"{location}:{node.lineno} {launch}"))
-    return [violation for _, _, violation in sorted(findings)]
+            findings.append((node.lineno, node.col_offset, launch))
+    return findings
+
+
+def _is_inspected(relative_path: Path) -> bool:
+    return relative_path != MODULE_ALLOWED_TO_LAUNCH
 
 
 def find_subprocess_launches(tests_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(tests_root.rglob("*.py"))
-        if module_path.relative_to(tests_root) != MODULE_ALLOWED_TO_LAUNCH
-        for violation in _inspect_module(tests_root, module_path)
-    ]
+    return find_violations(tests_root, _find_in_module, is_inspected=_is_inspected)

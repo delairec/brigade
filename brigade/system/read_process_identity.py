@@ -1,14 +1,11 @@
 from pathlib import Path
 
-from brigade.system.read_start_time import read_start_time
+from brigade.system.identify_process import identify_process
 
-BOOT_ID_FILE = Path("/proc/sys/kernel/random/boot_id")
+
+def _read_kernel_file(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
 
 
 def read_process_identity(pid: int) -> str | None:
-    try:
-        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
-    except (FileNotFoundError, ProcessLookupError):
-        return None
-    boot_id = BOOT_ID_FILE.read_text(encoding="utf-8").strip()
-    return f"{read_start_time(stat)} {boot_id}"
+    return identify_process(pid, _read_kernel_file)

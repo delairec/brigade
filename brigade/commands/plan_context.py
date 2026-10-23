@@ -13,7 +13,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import read_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.waves.locate_project_main import locate_project_main
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -76,20 +76,12 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def plan_context(request, runtime: Runtime) -> dict:
+def plan_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     planning_request = read_planning_request(runtime, request.request)
     project = find_project(read_projects(runtime), planning_request.project)
     if read_project_field(project, "CORPUS") is None:
         raise BrigadeError(f"@PROJECT.{project.name} declares no corpus")
-    configuration = read_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     read_environment = cache(lambda key: read_forge_environment(configuration, key, runtime))
     main = locate_project_main(runtime.run_process, project, read_environment)
     query = argparse.Namespace(project=project.name, ref=main, worktree=None)
@@ -110,7 +102,5 @@ COMMAND = Command(
     group_help="plan the waves of the registered projects",
     arguments=(Argument(("request",)),),
     run=plan_context,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

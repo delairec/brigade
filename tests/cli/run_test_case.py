@@ -56,6 +56,7 @@ class FileWaitingTestCase(unittest.TestCase):
 class RunTestCase(FileWaitingTestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
         root = Path(self.root.name)
         self.machine = TemporaryMachine(root)
         self.recordings = root / "recordings"
@@ -67,9 +68,6 @@ class RunTestCase(FileWaitingTestCase):
         self.procedure.write_text(PROCEDURE)
         self.runs = self.machine.state_home / "brigade" / "runs"
         self.ledger = self.machine.state_home / "brigade" / "ledger"
-
-    def tearDown(self):
-        self.root.cleanup()
 
     def configure_fake(self, settings: str = "", keys: str = "", document: str | None = "markdown") -> None:
         document_key = "" if document is None else f'document = "{document}"\n'
@@ -83,7 +81,7 @@ class RunTestCase(FileWaitingTestCase):
     def run_brigade(self, *arguments: str, path_directories: tuple = ()):
         environment = {
             **self.machine.describe_environment(),
-            "PATH": os.pathsep.join([*path_directories, os.environ["PATH"]]),
+            "PATH": os.pathsep.join([*path_directories, self.machine.search_path]),
         }
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments, environment=environment)
 
@@ -114,6 +112,14 @@ class RunTestCase(FileWaitingTestCase):
             if time.monotonic() > deadline:
                 self.fail(f"the process {pid} never exited")
             time.sleep(FILE_POLL_S)
+
+    def wait_for_the_detached_run(self, started):
+        [pid_file] = self.runs.glob("*/pid")
+        self.wait_for_exit(self.read_run_pid(pid_file.parent.name))
+        return started
+
+    def list_the_runs(self) -> list:
+        return json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
 
     def read_run_pid(self, run_id: str) -> int:
         pid, _start_time, _boot_id = (self.runs / run_id / "pid").read_text().split()

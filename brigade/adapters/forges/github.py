@@ -225,23 +225,27 @@ def _describe_states(state: str) -> tuple[str, ...]:
     return ("-f", f"states[]={state.upper()}")
 
 
+def _build_listing_argv(state: str) -> tuple[str, ...]:
+    return (
+        "gh",
+        "api",
+        "graphql",
+        "--paginate",
+        "--slurp",
+        "-F",
+        "owner={owner}",
+        "-F",
+        "name={repo}",
+        *_describe_states(state),
+        "-f",
+        f"query={PULL_REQUESTS_QUERY}",
+    )
+
+
 def list_pull_requests(request: dict, runtime: Runtime) -> dict:
     record = runtime.run_process(
         ProcessRequest(
-            argv=(
-                "gh",
-                "api",
-                "graphql",
-                "--paginate",
-                "--slurp",
-                "-F",
-                "owner={owner}",
-                "-F",
-                "name={repo}",
-                *_describe_states(request["state"]),
-                "-f",
-                f"query={PULL_REQUESTS_QUERY}",
-            ),
+            argv=_build_listing_argv(request["state"]),
             cwd=request["repository"],
             timeout_s=LISTING_TIMEOUT_S,
             environment=request["environment"],
@@ -258,25 +262,24 @@ def list_pull_requests(request: dict, runtime: Runtime) -> dict:
     }
 
 
+def _build_head_listing_arguments(branch: str) -> tuple[str, ...]:
+    return ("pr", "list", "--head", branch, "--state", "all", "--limit", "1", "--json", PULL_REQUEST_FIELDS)
+
+
+def _describe_found_pull_request(pull_request: dict, behind_by: str) -> dict:
+    return {
+        "number": pull_request["number"],
+        "state": pull_request["state"].lower(),
+        "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
+        "review": _describe_review(pull_request["reviewDecision"]),
+        "behind": int(behind_by) > 0,
+        "head": pull_request["headRefOid"],
+        "base": pull_request["baseRefName"],
+    }
+
+
 def find_pull_request(request: dict, runtime: Runtime) -> dict:
-    found = json.loads(
-        _ask_gh(
-            request,
-            runtime,
-            (
-                "pr",
-                "list",
-                "--head",
-                request["branch"],
-                "--state",
-                "all",
-                "--limit",
-                "1",
-                "--json",
-                PULL_REQUEST_FIELDS,
-            ),
-        )
-    )
+    found = json.loads(_ask_gh(request, runtime, _build_head_listing_arguments(request["branch"])))
     if not found:
         return {"schema_version": DOCUMENT_SCHEMA_VERSION, "pull_request": None}
     pull_request = found[0]
@@ -287,15 +290,7 @@ def find_pull_request(request: dict, runtime: Runtime) -> dict:
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "pull_request": {
-            "number": pull_request["number"],
-            "state": pull_request["state"].lower(),
-            "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
-            "review": _describe_review(pull_request["reviewDecision"]),
-            "behind": int(behind_by) > 0,
-            "head": pull_request["headRefOid"],
-            "base": pull_request["baseRefName"],
-        },
+        "pull_request": _describe_found_pull_request(pull_request, behind_by),
     }
 
 

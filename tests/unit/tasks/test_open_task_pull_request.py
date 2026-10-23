@@ -11,7 +11,10 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.wave_started import WaveStarted
 from brigade.tasks.open_task_pull_request import TaskPullRequestDemand, open_task_pull_request
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 
 WAVE_START = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
@@ -35,32 +38,27 @@ FAILED_CHECK = (
     '{"schema_version": 1, "project": "oak", "task": "B12", "head": "c0ffee",'
     ' "checks": [{"command": "ruff check .", "passed": false, "duration_ms": 30, "tail": []}]}'
 )
+OPENED_PULL_REQUEST = {"number": 42, "url": "https://github.com/acme/oak/pull/42"}
 
 
-class ForgeDouble:
-    def __init__(self, milestones: list[str]):
-        self._milestones = milestones
-        self.created = []
-        self.opened = []
-
-    def list_milestones(self, request: dict, runtime) -> dict:
-        return {"titles": self._milestones}
-
-    def create_milestone(self, request: dict, runtime) -> None:
-        self.created.append(request)
-
-    def open_pull_request(self, request: dict, runtime) -> dict:
-        self.opened.append(request)
-        return {"number": 42, "url": "https://github.com/acme/oak/pull/42"}
+def create_forge(milestones: list[str]) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "list_milestones": lambda request: {"titles": milestones},
+            "create_milestone": lambda request: None,
+            "open_pull_request": lambda request: OPENED_PULL_REQUEST,
+        }
+    )
 
 
-class OpenTaskPullRequestArrangement:
+class OpenTaskPullRequestTestCase(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout="/srv/oak-b12\n")
         self.processes.answer(("git", "branch", "--show-current"), stdout="task/f0-parser/B12\n")
@@ -98,7 +96,7 @@ class OpenTaskPullRequestArrangement:
         )
 
 
-class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase):
+class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
     def setUp(self):
         super().setUp()
         self.record_check(PASSING_CHECK)
@@ -108,7 +106,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
 
         # Act
-        opened = open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+        opened = open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(
@@ -130,14 +128,14 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
     def test_should_describe_the_task_and_its_checks_in_the_body_of_the_pull_request(self):
         # Arrange
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
-        forge = ForgeDouble(["Parser"])
+        forge = create_forge(["Parser"])
 
         # Act
         open_task_pull_request(self.runtime, self.create_demand(forge))
 
         # Assert
         self.assertEqual(
-            forge.opened[0]["body"],
+            forge.list_requests("open_pull_request")[0]["body"],
             "The parser\n\n## Acceptance criteria\n\n- parses a line\n\n## Checks of c0ffee\n\n"
             "- pass `python3 -m unittest` 1.2 s\n\nCo-Authored-By: Ada <ada@example.org>\n",
         )
@@ -147,7 +145,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
 
         # Act
-        open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+        open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(
@@ -155,7 +153,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
             (
                 LedgerEntry(instant=WAVE_START, event=WAVE_STARTED),
                 LedgerEntry(
-                    instant=RUNTIME_NOW,
+                    instant=FIXED_NOW,
                     event=TaskPrOpened(
                         project="oak",
                         task="B12",
@@ -171,14 +169,15 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
     def test_should_create_the_milestone_the_forge_lacks(self):
         # Arrange
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
-        forge = ForgeDouble(["Printer"])
+        forge = create_forge(["Printer"])
 
         # Act
         open_task_pull_request(self.runtime, self.create_demand(forge))
 
         # Assert
         self.assertEqual(
-            forge.created, [{"repository": "/srv/oak-b12", "environment": {"GH_TOKEN": "t0ken"}, "title": "Parser"}]
+            forge.list_requests("create_milestone"),
+            [{"repository": "/srv/oak-b12", "environment": {"GH_TOKEN": "t0ken"}, "title": "Parser"}],
         )
 
     def test_should_record_the_milestone_it_created(self):
@@ -186,14 +185,12 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
 
         # Act
-        open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Printer"])))
+        open_task_pull_request(self.runtime, self.create_demand(create_forge(["Printer"])))
 
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries[1],
-            LedgerEntry(
-                instant=RUNTIME_NOW, event=MilestoneCreated(project="oak", title="Parser", login="clauche-bot")
-            ),
+            LedgerEntry(instant=FIXED_NOW, event=MilestoneCreated(project="oak", title="Parser", login="clauche-bot")),
         )
 
     def test_should_open_the_title_on_the_type_alone_for_a_task_with_no_component(self):
@@ -206,17 +203,17 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
         )
 
         # Act
-        opened = open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+        opened = open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(opened["title"], "fix: add the parser (@TASK.B12)")
 
 
-class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestArrangement, unittest.TestCase):
+class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
     def test_should_refuse_a_task_whose_check_is_not_recorded(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+            open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(str(refusal.exception), "no check of @TASK.B12 is recorded; run brigade task check")
@@ -227,7 +224,7 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestArrangement, unittest.Te
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+            open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(
@@ -241,7 +238,7 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestArrangement, unittest.Te
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+            open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(
@@ -255,7 +252,7 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestArrangement, unittest.Te
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+            open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(
@@ -269,7 +266,7 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestArrangement, unittest.Te
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            open_task_pull_request(self.runtime, self.create_demand(ForgeDouble(["Parser"])))
+            open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
         self.assertEqual(

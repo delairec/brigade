@@ -3,7 +3,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_instructions import TemporaryInstructions
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 
@@ -348,7 +347,7 @@ class BrigadeRolesShowShortTest(RolesTestCase):
 class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
         self.machine.write_configuration(f'instructions = "{self.instructions.root}"\n[slots]\nplan = "planner"\n')
 
@@ -374,9 +373,8 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
         completed = self.run_roles("list")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr), (1, "brigade roles list: @AGENT.planner: budget is missing\n")
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade roles list: @AGENT.planner: budget is missing\n")
 
     def test_should_leave_an_agent_entity_no_row_names_without_a_slot(self):
         # Act
@@ -385,17 +383,17 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            [row["role"] for row in json.loads(completed.stdout)["roles"]],
+            json.loads(completed.stdout)["roles"],
             [
-                "planner",
-                "builder",
-                "reviewer",
-                "remediator",
-                "rebaser",
-                "reporter",
-                "triager",
-                "rulewriter",
-                "explorer",
+                {"slot": "plan", "role": "planner", "source": "instructions", "model": None},
+                {"slot": "build", "role": "builder", "source": "built-in", "model": None},
+                {"slot": "review", "role": "reviewer", "source": "built-in", "model": None},
+                {"slot": "remediate", "role": "remediator", "source": "built-in", "model": None},
+                {"slot": "rebase", "role": "rebaser", "source": "built-in", "model": None},
+                {"slot": "report", "role": "reporter", "source": "built-in", "model": None},
+                {"slot": "triage", "role": "triager", "source": "built-in", "model": None},
+                {"slot": "rules", "role": "rulewriter", "source": "built-in", "model": None},
+                {"slot": "explore", "role": "explorer", "source": "built-in", "model": None},
             ],
         )
 

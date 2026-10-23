@@ -1,11 +1,13 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.scheduler_install import COMMAND
 from brigade.errors import ToolNotFound
-from tests.unit.commands.command_runtime import answer, create_runtime
+from tests.unit.commands.command_runtime import answer
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class SchedulerDouble:
@@ -89,7 +91,7 @@ class SchedulerInstallExitCodeTest(unittest.TestCase):
 class SchedulerInstallRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(json=False)
+        options = Namespace(json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -108,10 +110,10 @@ class SchedulerInstallChoiceTest(unittest.TestCase):
         # Arrange
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text('scheduler = "cron"\n', encoding="utf-8")
-        runtime = create_runtime(self.root, resolve_plugin=_resolve_a_scheduler_double)
+        runtime = create_test_runtime(create_test_paths(self.root), resolve_plugin=_resolve_a_scheduler_double)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), runtime)
+        document = COMMAND.run(Namespace(), runtime)
 
         # Assert
         self.assertEqual(
@@ -137,10 +139,12 @@ class SchedulerInstallChoiceTest(unittest.TestCase):
         for case, run_process, expected_scheduler in rows:
             with self.subTest(case=case):
                 # Arrange
-                runtime = create_runtime(self.root, run_process=run_process, resolve_plugin=_resolve_a_scheduler_double)
+                runtime = create_test_runtime(
+                    create_test_paths(self.root), run_process=run_process, resolve_plugin=_resolve_a_scheduler_double
+                )
 
                 # Act
-                document = COMMAND.run(SimpleNamespace(), runtime)
+                document = COMMAND.run(Namespace(), runtime)
 
                 # Assert
                 self.assertEqual(document["scheduler"], expected_scheduler)

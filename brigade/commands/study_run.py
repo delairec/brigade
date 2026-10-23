@@ -17,17 +17,13 @@ from brigade.studies.read_study_of_run import read_study_of_run
 from brigade.studies.run_study import DONE, run_study
 from brigade.studies.study_run_context import StudyEquipment
 from brigade.system.collector_places import locate_collectors
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 PARKED_EXIT_CODE = 1
 COLLECTOR_KIND = "collector"
 DOCUMENT_KIND = "document"
 ANSWER_DOCUMENT = "awawa"
-
-
-def _read_request(options):
-    return options
 
 
 def _render_text(document: dict) -> str:
@@ -42,16 +38,16 @@ def _decide_exit_code(document: dict) -> int:
     return PARKED_EXIT_CODE
 
 
-def _read_study_of_request(request, runtime: Runtime) -> Study:
+def _read_study_of_request(request: argparse.Namespace, runtime: Runtime) -> Study:
     if request.run_id is None:
         return read_study(runtime, request.name)
     return read_study_of_run(runtime, runtime.paths.state_root / RUNS_DIRECTORY / request.run_id)
 
 
-def study_run(request, runtime: Runtime) -> dict:
+def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     equipment = StudyEquipment(
         collector_equipment=CollectorEquipment(
-            configuration=read_optional_configuration(runtime.paths.configuration_file),
+            configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
             forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
             forge_name=FORGE_NAME,
         ),
@@ -80,7 +76,6 @@ COMMAND = Command(
         Argument(("--run-id",), {"help": argparse.SUPPRESS}),
     ),
     run=study_run,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

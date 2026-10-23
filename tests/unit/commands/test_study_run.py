@@ -1,23 +1,21 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.study_run import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import (
-    create_corpus_double,
-    create_runtime,
-    write_ledger,
-    write_operational_corpus,
-)
+from tests.unit.commands.command_runtime import create_corpus_double, write_ledger, write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.plugin_double import PluginDouble
 
 RUN_ID = "20261019T090000Z-e10d04"
 NO_STUDY_RECORDED = {}
 
 
 def _resolve_any_plugin(kind: str, name: str, **places):
-    return SimpleNamespace(kind=kind, name=name)
+    return PluginDouble(kind=kind, name=name)
 
 
 class StudyRunTextTest(unittest.TestCase):
@@ -56,7 +54,7 @@ class StudyRunExitCodeTest(unittest.TestCase):
 class StudyRunRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(name="health", run_id=None)
+        options = Namespace(name="health", run_id=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -70,13 +68,15 @@ class StudyRunOfAStudyTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
-        runtime = create_runtime(
-            root, run_process=create_corpus_double(NO_STUDY_RECORDED), resolve_plugin=_resolve_any_plugin
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_corpus_double(NO_STUDY_RECORDED),
+            resolve_plugin=_resolve_any_plugin,
         )
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(name="health", run_id=None), runtime)
+            COMMAND.run(Namespace(name="health", run_id=None), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the operational corpus")
@@ -107,12 +107,14 @@ class StudyRunOfAStudyTest(unittest.TestCase):
         (steps / "collect.json").write_text("{}", encoding="utf-8")
         (steps / "judge.json").write_text("{}", encoding="utf-8")
         (steps / "output.json").write_text("{}", encoding="utf-8")
-        runtime = create_runtime(
-            root, run_process=create_corpus_double(NO_STUDY_RECORDED), resolve_plugin=_resolve_any_plugin
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_corpus_double(NO_STUDY_RECORDED),
+            resolve_plugin=_resolve_any_plugin,
         )
 
         # Act
-        ending = COMMAND.run(SimpleNamespace(name="wave-report", run_id=RUN_ID), runtime)
+        ending = COMMAND.run(Namespace(name="wave-report", run_id=RUN_ID), runtime)
 
         # Assert
         self.assertEqual(ending, {"schema_version": 1, "study": "wave-report", "run": RUN_ID, "state": "done"})

@@ -7,6 +7,7 @@ from unittest.mock import ANY
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_tick import LaunchingTickTestCase, WaveTickTestCase
+from tests.list_entry_names import list_entry_names
 
 RATE_LIMITED_SESSION = "rate-limited-session"
 RESET_AT_15 = {"hour": "15:00", "timezone": "UTC"}
@@ -54,6 +55,8 @@ MERGED_S3_STOPPED_BY_A_RATE_LIMIT_LONG_AGO = (
     '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "merged"}\n'
 )
+
+
 HANDED_OVER_RESULT = {**DONE_RESULT, "outcome": "handed_over", "session_id": None}
 
 
@@ -148,7 +151,7 @@ class BrigadeTickPausingOnARateLimitTest(RateLimitedRunTestCase):
         self.run_tick("--once")
 
         # Assert
-        self.assertEqual([record["run"] for record in self.read_run_records()], [self.rate_limited_run])
+        self.assertEqual(list_entry_names(self.state / "runs"), [self.rate_limited_run])
 
 
 class BrigadeTickPausingOnARateLimitWithoutResetTest(RateLimitedRunTestCase):
@@ -341,8 +344,17 @@ class BrigadeTickOnAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Launchi
 
         # Assert
         self.assertEqual(
-            [(event["wave"], event["reason"]) for event in self.read_events("wave.paused")],
-            [("shop_w1", "forge_account")],
+            self.read_events("wave.paused"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "wave.paused",
+                    "wave": "shop_w1",
+                    "reason": "forge_account",
+                    "resume_at": None,
+                }
+            ],
         )
 
 
@@ -359,7 +371,19 @@ class BrigadeTickAfterTheForgeAccountResumeTest(LaunchingTickTestCase):
         self.run_tick("--once")
 
         # Assert
-        self.assertEqual([event["wave"] for event in self.read_events("wave.paused")], ["shop_w1"])
+        self.assertEqual(
+            self.read_events("wave.paused"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "wave.paused",
+                    "wave": "shop_w1",
+                    "reason": "forge_account",
+                    "resume_at": None,
+                }
+            ],
+        )
 
     def test_should_launch_the_tasks_of_the_resumed_wave(self):
         # Act
@@ -412,7 +436,10 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stdout, "wave shop_w1 resumed\n")
-        self.assertEqual([event["wave"] for event in self.read_events("wave.resumed")], ["shop_w1"])
+        self.assertEqual(
+            self.read_events("wave.resumed"),
+            [{"schema_version": 1, "ts": ANY, "event": "wave.resumed", "wave": "shop_w1", "reason": "forge_account"}],
+        )
 
     def test_should_exit_1_naming_the_state_of_a_wave_that_is_not_paused(self):
         # Arrange
@@ -430,7 +457,5 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         completed = self.run_wave_resume("shop_w9")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade wave resume: no wave.started names the wave shop_w9\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade wave resume: no wave.started names the wave shop_w9\n")

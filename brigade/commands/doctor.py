@@ -1,15 +1,15 @@
+import argparse
 import sys
 from pathlib import Path
 
-import brigade
 from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
 from brigade.corpus.read_entities import read_entities
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
+from brigade.git.describe_checkout_lag import describe_checkout_lag
 from brigade.git.read_git_version import read_git_version
-from brigade.git.read_upstream_lag import read_upstream_lag
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
@@ -19,9 +19,10 @@ from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
+from brigade.system.parse_configuration import CLI_KEY, Configuration, ConfigurationMissing
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import CLI_KEY, Configuration, ConfigurationMissing, read_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.require_configured_client import require_configured_client
 from brigade.system.run_process import ProcessRequest
@@ -99,9 +100,9 @@ def _check_awawa(runtime: Runtime) -> dict:
     return _create_prerequisite("awawa", state, f"{version} (floor {floor})")
 
 
-def _read_configuration(runtime: Runtime) -> Configuration | BrigadeError:
+def _attempt_configuration_reading(runtime: Runtime) -> Configuration | BrigadeError:
     try:
-        return read_configuration(runtime.paths.configuration_file)
+        return read_configuration(runtime, CONFIGURATION_REQUIRED)
     except BrigadeError as error:
         return error
 
@@ -288,22 +289,10 @@ def _check_steps(reading: Configuration | BrigadeError, runtime: Runtime) -> lis
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
 
 
-def _locate_checkout() -> Path | None:
-    package_parent = Path(brigade.__file__).resolve().parents[1]
-    return package_parent if package_parent.is_dir() else None
-
-
 def _check_checkout(runtime: Runtime) -> list[dict]:
-    checkout = _locate_checkout()
-    if checkout is None:
+    detail = describe_checkout_lag(runtime.run_process, runtime.paths.package_file)
+    if detail is None:
         return []
-    try:
-        lag = read_upstream_lag(runtime.run_process, checkout)
-    except ToolFailure as error:
-        return [_create_optional("checkout", "warning", f"{checkout}: {error}", CHECKOUT_FALLBACK)]
-    if lag is None:
-        return []
-    detail = f"{checkout} at {lag.commit}, {lag.behind} behind {lag.upstream} at {lag.upstream_commit}"
     return [_create_optional("checkout", "warning", detail, CHECKOUT_FALLBACK)]
 
 
@@ -352,10 +341,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
 def _decide_exit_code(document: dict) -> int:
     if any(item["state"] == "finding" for item in document["items"]):
         return 1
@@ -372,8 +357,8 @@ def _read_slot_clients(reading: Configuration | BrigadeError) -> dict:
     )
 
 
-def doctor(request, runtime: Runtime) -> dict:
-    reading = _read_configuration(runtime)
+def doctor(request: argparse.Namespace, runtime: Runtime) -> dict:
+    reading = _attempt_configuration_reading(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "client": _read_client(reading),
@@ -400,7 +385,6 @@ COMMAND = Command(
     path=("doctor",),
     help="check the prerequisites and report the optional items with their fallback",
     run=doctor,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

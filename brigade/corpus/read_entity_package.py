@@ -1,18 +1,14 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.corpus.run_awawa import SUCCESS, run_awawa
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-AWAWA_TIMEOUT_S = 30.0
 PACKAGE_DEPTH = "2"
 
 
 def read_entity_package(run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, target: str) -> str:
-    record = run_process(
-        ProcessRequest(
-            argv=("awawa", "context", target, "--depth", PACKAGE_DEPTH, "--skip", "reasoning", str(root)),
-            cwd=str(root),
-            timeout_s=AWAWA_TIMEOUT_S,
-        )
+    record = run_awawa(
+        run_process, root, ("context", target, "--depth", PACKAGE_DEPTH, "--skip", "reasoning", str(root)), SUCCESS
     )
     return record.stdout

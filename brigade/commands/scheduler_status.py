@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime, timedelta
 
 from brigade.command import Command
@@ -6,7 +7,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.scheduler_state import SchedulerState
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.read_heartbeat import read_heartbeat
@@ -105,17 +106,13 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
 def _decide_exit_code(document: dict) -> int:
     return STALE_EXIT_CODE if document["stale"] else 0
 
 
-def scheduler_status(request, runtime: Runtime) -> dict:
+def scheduler_status(request: argparse.Namespace, runtime: Runtime) -> dict:
     name, status = _find_installed(runtime)
-    minutes = read_optional_configuration(runtime.paths.configuration_file).tick_stale_after
+    minutes = read_configuration(runtime, CONFIGURATION_OPTIONAL).tick_stale_after
     heartbeat = read_heartbeat(runtime.paths.heartbeat_file)
     entries = read_ledger(runtime.paths.state_root).entries
     events = tuple(entry.event for entry in entries)
@@ -139,7 +136,6 @@ COMMAND = Command(
     help="report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
     group_help="install what fires the tick, and report it",
     run=scheduler_status,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

@@ -1,11 +1,12 @@
-import os
 import signal
 import subprocess
 import unittest
+from functools import partial
 
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 from tests.process_launcher import ProcessLauncher
+from tests.unit.system.signal_itself import signal_itself
 
 NO_TIME = 0.0
 ANY_GRACE_S = 30.0
@@ -18,10 +19,6 @@ LONG_LIMIT_S = 20.0
 
 def _poll_nothing() -> None:
     pass
-
-
-def _signal_itself() -> None:
-    os.kill(os.getpid(), signal.SIGTERM)
 
 
 class WaitWithinLimitTestCase(unittest.TestCase):
@@ -59,7 +56,8 @@ class WaitWithinLimitOfAProcessIgnoringTheStopSignalTest(WaitWithinLimitTestCase
         )
 
         # Assert
-        self.assertEqual((exit_code, process.returncode), (CUT, -signal.SIGKILL))
+        self.assertEqual(exit_code, CUT)
+        self.assertEqual(process.returncode, -signal.SIGKILL)
 
     def test_should_kill_the_group_once_the_grace_is_over_when_the_run_is_stopped(self):
         # Arrange
@@ -71,7 +69,7 @@ class WaitWithinLimitOfAProcessIgnoringTheStopSignalTest(WaitWithinLimitTestCase
 
         # Act
         with StopSignalReceiver() as receiver, receiver.raising(), self.assertRaises(StopRequested):
-            wait_within_limit(process, limit, _signal_itself)
+            wait_within_limit(process, limit, partial(signal_itself, signal.SIGTERM))
 
         # Assert
         self.assertEqual(process.returncode, -signal.SIGKILL)
@@ -95,12 +93,12 @@ class WaitWithinLimitOfAProcessThatRunsForSeveralPollsTest(WaitWithinLimitTestCa
         self.assertGreaterEqual(len(polls), 2)
 
 
-class PollFailure(Exception):
+class PollFailureDouble(Exception):
     pass
 
 
 def _fail_to_poll() -> None:
-    raise PollFailure("the journal could not be read")
+    raise PollFailureDouble("the journal could not be read")
 
 
 class WaitWithinLimitOfAProcessWhosePollFailsTest(WaitWithinLimitTestCase):
@@ -109,7 +107,7 @@ class WaitWithinLimitOfAProcessWhosePollFailsTest(WaitWithinLimitTestCase):
         process = self.start(["sleep", "5"], start_new_session=True)
 
         # Act
-        with self.assertRaises(PollFailure):
+        with self.assertRaises(PollFailureDouble):
             wait_within_limit(
                 process,
                 WallLimit(limit_s=LONG_LIMIT_S, grace_before_kill_s=SHORT_GRACE_S, poll_s=SHORT_POLL_S),

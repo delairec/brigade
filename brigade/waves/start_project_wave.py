@@ -15,7 +15,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import CLI_KEY, Configuration
+from brigade.system.parse_configuration import CLI_KEY, Configuration
 from brigade.tasks.find_task_number import find_task_number
 from brigade.tasks.read_task_after import read_task_after
 from brigade.tick.name_task_branch import WAVE_BRANCH_PREFIX

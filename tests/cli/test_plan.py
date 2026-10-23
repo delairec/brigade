@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.cli.test_collect import install_executable
@@ -95,10 +94,10 @@ REQUEST_TEXT = "let the customer empty the cart in one click"
 
 class PlanContextTestCase(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(root / "projects" / "shop", self.machine.describe_environment())
 
@@ -663,7 +662,7 @@ class PlanRecordOnTheGithubForgeTestCase(PlanRecordTestCase):
 
     def run_plan_record_on_github(self, *options: str):
         tools = Path(self.root.name).resolve() / "tools"
-        environment = {**self.machine.describe_environment(), "PATH": f"{tools}{os.pathsep}{os.environ['PATH']}"}
+        environment = {**self.machine.describe_environment(), "PATH": f"{tools}{os.pathsep}{self.machine.search_path}"}
         return self.run_plan_record(PLAN, *options, environment=environment)
 
     def read_pull_request_calls(self) -> list[str]:
@@ -938,6 +937,8 @@ class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/milestones.awawa"), RECORDED_MILESTONES)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/tasks.awawa"), RECORDED_TASKS)
 
     def test_should_record_the_corrected_plan_outside_a_run(self):
         # Act
@@ -945,3 +946,5 @@ class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/milestones.awawa"), RECORDED_MILESTONES)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/tasks.awawa"), RECORDED_TASKS)

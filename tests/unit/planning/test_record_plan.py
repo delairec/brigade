@@ -11,8 +11,18 @@ from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.read_ledger import read_ledger
 from brigade.planning.read_planning_request import PlanningRequest
 from brigade.planning.record_plan import PlanRecording, record_plan
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from brigade.system.run_process import ProcessRequest
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
+from tests.unit.forge_double import ForgeDouble, ForgeRequest
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+from tests.unit.select_requests_opening_on import select_requests_opening_on
+
+GIT_FETCH = ("git", "fetch")
+GIT_MERGE = ("git", "merge")
+GIT_WORKTREE_ADD = ("git", "worktree", "add")
 
 PLAN = 'MILESTONE F1\n\tTITLE "Printer"\n\nTASK B20\n\tTITLE "the printer"\n\tMILESTONE @MILESTONE.F1\n'
 BRANCH = "plan/oak_r1"
@@ -49,30 +59,18 @@ def read_environment(key: str) -> dict:
     return {"GH_TOKEN": f"token-of-{key}"}
 
 
-class ForgeDouble:
-    def __init__(self, found_pull_requests: list[dict]):
-        self.found_pull_requests = found_pull_requests
-        self.calls = []
-
-    def find_pull_request(self, request: dict, runtime) -> dict:
-        self.calls.append(("find_pull_request", request))
-        return self.found_pull_requests.pop(0)
-
-    def open_pull_request(self, request: dict, runtime) -> dict:
-        self.calls.append(("open_pull_request", request))
-        return {"number": 42}
-
-    def approve_pull_request(self, request: dict, runtime) -> None:
-        self.calls.append(("approve_pull_request", request))
-
-    def merge_pull_request(self, request: dict, runtime) -> None:
-        self.calls.append(("merge_pull_request", request))
-
-    def list_operations(self) -> list[str]:
-        return [operation for operation, request in self.calls]
+def create_forge(found_pull_requests: list[dict]) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "find_pull_request": lambda request: found_pull_requests.pop(0),
+            "open_pull_request": lambda request: {"number": 42},
+            "approve_pull_request": lambda request: None,
+            "merge_pull_request": lambda request: None,
+        }
+    )
 
 
-class RecordPlanArrangement:
+class RecordPlanTestCase(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -80,7 +78,10 @@ class RecordPlanArrangement:
         self.plan_file = self.root / "plan.awawa"
         self.plan_file.write_text(PLAN, encoding="utf-8")
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes, run_directory=self.root / "runs" / "r1")
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "runs" / "r1"), run_process=self.processes
+        )
         self.worktree = self.root / "cache" / "plans" / "oak_r1"
         (self.worktree / "corpus").mkdir(parents=True)
         (self.worktree / "corpus" / "tasks.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
@@ -90,7 +91,7 @@ class RecordPlanArrangement:
         self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main"))
         self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.worktree)))
-        self.forge = ForgeDouble([create_found_pull_request(NO_REVIEW_REQUIRED)])
+        self.forge = create_forge([create_found_pull_request(NO_REVIEW_REQUIRED)])
 
     def script_plan_entities(self, entities: list[dict]) -> None:
         plan_file = str(self.plan_file)
@@ -175,7 +176,7 @@ class RecordPlanArrangement:
         )
 
 
-class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanTest(RecordPlanTestCase):
     def test_should_record_the_plan_on_its_plan_branch_and_its_pull_request(self):
         # Arrange
         self.script_recording()
@@ -235,8 +236,8 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertIn(PUSH, self.processes.list_argvs())
         self.assertEqual(
-            self.forge.calls[0],
-            (
+            self.forge.requests[0],
+            ForgeRequest(
                 "open_pull_request",
                 {
                     "repository": "/srv/oak",
@@ -259,8 +260,8 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forge.calls[-1],
-            (
+            self.forge.requests[-1],
+            ForgeRequest(
                 "merge_pull_request",
                 {
                     "repository": "/srv/oak",
@@ -285,20 +286,20 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
     def test_should_approve_with_the_review_login_before_merging_where_the_forge_requires_a_review(self):
         # Arrange
         self.script_recording()
-        self.forge.found_pull_requests = [create_found_pull_request("review_required")]
+        self.forge = create_forge([create_found_pull_request("review_required")])
 
         # Act
         record_plan(self.runtime, self.create_recording())
 
         # Assert
         self.assertEqual(
-            self.forge.calls[2:],
+            self.forge.requests[2:],
             [
-                (
+                ForgeRequest(
                     "approve_pull_request",
                     {"repository": "/srv/oak", "number": 42, "environment": {"GH_TOKEN": "token-of-review"}},
                 ),
-                (
+                ForgeRequest(
                     "merge_pull_request",
                     {
                         "repository": "/srv/oak",
@@ -328,9 +329,9 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording())
 
         # Assert
-        worktree_add = next(argv for argv in self.processes.list_argvs() if argv[:3] == ("git", "worktree", "add"))
         self.assertEqual(
-            worktree_add, ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main")
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_WORKTREE_ADD),
+            [("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main")],
         )
 
     def test_should_fetch_the_main_branch_with_the_environment_of_the_forge(self):
@@ -341,14 +342,20 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording())
 
         # Assert
-        fetches = [request for request in self.processes.requests if request.argv[:2] == ("git", "fetch")]
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in fetches],
-            [(("git", "fetch", "--quiet", "origin", "main"), "/srv/oak", {"GH_TOKEN": "token-of-cli"})],
+            select_requests_opening_on(self.processes.requests, GIT_FETCH),
+            [
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "main"),
+                    cwd="/srv/oak",
+                    timeout_s=120.0,
+                    environment={"GH_TOKEN": "token-of-cli"},
+                )
+            ],
         )
 
 
-class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanWithoutForgeTest(RecordPlanTestCase):
     def setUp(self):
         super().setUp()
         self.script_recording()
@@ -362,8 +369,10 @@ class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording("none"))
 
         # Assert
-        worktree_add = next(argv for argv in self.processes.list_argvs() if argv[:3] == ("git", "worktree", "add"))
-        self.assertEqual(worktree_add, ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_WORKTREE_ADD),
+            [("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main")],
+        )
 
     def test_should_merge_the_plan_branch_into_the_main_branch_no_worktree_holds(self):
         # Arrange
@@ -386,8 +395,10 @@ class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording("none"))
 
         # Assert
-        merge = next(request for request in self.processes.requests if request.argv[:2] == ("git", "merge"))
-        self.assertEqual(merge.cwd, "/srv/oak")
+        self.assertEqual(
+            select_requests_opening_on(self.processes.requests, GIT_MERGE),
+            [ProcessRequest(argv=("git", "merge", "--quiet", "--ff-only", BRANCH), cwd="/srv/oak", timeout_s=60.0)],
+        )
 
     def test_should_mark_the_request_planned_with_no_pull_request_and_push_nothing(self):
         # Arrange
@@ -405,7 +416,7 @@ class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
         self.assertNotIn(PUSH, self.processes.list_argvs())
 
 
-class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanReplayTest(RecordPlanTestCase):
     def setUp(self):
         super().setUp()
         self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}, {"type": "TASK", "name": "B20"}])
@@ -422,7 +433,7 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
     def test_should_reuse_the_merged_pull_request_of_the_plan_branch_and_mark_the_request_planned_alone(self):
         # Arrange
-        self.forge.found_pull_requests = [create_found_pull_request(NO_REVIEW_REQUIRED, "merged")]
+        self.forge = create_forge([create_found_pull_request(NO_REVIEW_REQUIRED, "merged")])
 
         # Act
         recorded = record_plan(self.runtime, self.create_recording())
@@ -437,10 +448,9 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
     def test_should_merge_the_open_pull_request_of_the_plan_branch_under_the_automatic_review(self):
         # Arrange
-        self.forge.found_pull_requests = [
-            create_found_pull_request(NO_REVIEW_REQUIRED),
-            create_found_pull_request(NO_REVIEW_REQUIRED),
-        ]
+        self.forge = create_forge(
+            [create_found_pull_request(NO_REVIEW_REQUIRED), create_found_pull_request(NO_REVIEW_REQUIRED)]
+        )
         self.script_policies(NO_POLICY)
 
         # Act
@@ -448,8 +458,8 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forge.calls[-1],
-            (
+            self.forge.requests[-1],
+            ForgeRequest(
                 "merge_pull_request",
                 {
                     "repository": "/srv/oak",
@@ -472,7 +482,7 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
 
     def test_should_open_the_pull_request_the_plan_branch_lacks(self):
         # Arrange
-        self.forge.found_pull_requests = [NO_PULL_REQUEST, create_found_pull_request(NO_REVIEW_REQUIRED)]
+        self.forge = create_forge([NO_PULL_REQUEST, create_found_pull_request(NO_REVIEW_REQUIRED)])
         self.processes.answer(PUSH)
         self.script_policies(NO_POLICY)
 
@@ -509,7 +519,7 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
         self.assertIn(("git", "fetch", "--quiet", ".", f"{BRANCH}:main"), self.processes.list_argvs())
 
 
-class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanLintTest(RecordPlanTestCase):
     def test_should_record_the_lint_round_the_plan_spent(self):
         # Arrange
         self.script_refused_lint()
@@ -521,12 +531,13 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries,
-            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_r1", run="r1")),),
+            (LedgerEntry(instant=FIXED_NOW, event=PlanLintFailed(request="oak_r1", run="r1")),),
         )
 
     def test_should_record_the_lint_round_of_a_recording_outside_a_run_with_no_run(self):
         # Arrange
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.script_refused_lint()
 
         # Act
@@ -536,7 +547,7 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries,
-            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_r1", run=None)),),
+            (LedgerEntry(instant=FIXED_NOW, event=PlanLintFailed(request="oak_r1", run=None)),),
         )
 
     def test_should_refuse_a_second_lint_round_in_the_same_run(self):
@@ -553,7 +564,7 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         self.assertEqual(str(refusal.exception), "@REQUEST.oak_r1 spent its lint round in run r1; the run ends blocked")
 
 
-class RecordPlanRefusalTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanRefusalTest(RecordPlanTestCase):
     def setUp(self):
         super().setUp()
         self.script_plan_branch(BRANCH_NOT_FOUND)

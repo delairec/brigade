@@ -65,6 +65,20 @@ def _start_run(runtime: Runtime, study: Study, equipment: StudyEquipment, starte
     return context
 
 
+def _park_study(context: StudyRunContext, step: str, reason: str) -> dict:
+    runtime = context.runtime
+    study = context.study
+    append_event(runtime.paths, runtime.now, StepFailed(kind=STUDY_KIND, run=context.run_id, step=step, reason=reason))
+    append_event(
+        runtime.paths,
+        runtime.now,
+        OrderParked(
+            project=study.project, kind=STUDY_KIND, order=study.name, run=context.run_id, step=step, reason=reason
+        ),
+    )
+    return {"study": study.name, "run": context.run_id, "state": PARKED, "step": step, "reason": reason}
+
+
 def run_study(runtime: Runtime, study: Study, equipment: StudyEquipment, started_run: str | None) -> dict:
     refuse_inbox_output(study.output)
     context = _start_run(runtime, study, equipment, started_run)
@@ -75,23 +89,7 @@ def run_study(runtime: Runtime, study: Study, equipment: StudyEquipment, started
         try:
             result = perform(context)
         except BrigadeError as error:
-            reason = str(error)
-            append_event(
-                runtime.paths, runtime.now, StepFailed(kind=STUDY_KIND, run=context.run_id, step=step, reason=reason)
-            )
-            append_event(
-                runtime.paths,
-                runtime.now,
-                OrderParked(
-                    project=study.project,
-                    kind=STUDY_KIND,
-                    order=study.name,
-                    run=context.run_id,
-                    step=step,
-                    reason=reason,
-                ),
-            )
-            return {"study": study.name, "run": context.run_id, "state": PARKED, "step": step, "reason": reason}
+            return _park_study(context, step, str(error))
         write_json_atomically(result_path, result)
         append_event(runtime.paths, runtime.now, StepDone(kind=STUDY_KIND, run=context.run_id, step=step))
     append_event(

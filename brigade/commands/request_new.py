@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.commands._launch_planner import launch_planner
 from brigade.errors import BrigadeError
@@ -12,23 +14,15 @@ DOCUMENT_SCHEMA_VERSION = 1
 PAUSED_STATUS = "paused"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade runs show {document['run']} --log"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _describe_diagnostics(document: dict) -> list[str]:
     return document.get("warnings", [])
 
 
-def request_new(request, runtime: Runtime) -> dict:
+def request_new(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.project)
     if read_project_field(project, "STATUS") == PAUSED_STATUS:
@@ -46,8 +40,6 @@ COMMAND = Command(
         Argument(("text",), {"help": "what the request asks, in the user's words"}),
     ),
     run=request_new,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=_describe_diagnostics,
 )

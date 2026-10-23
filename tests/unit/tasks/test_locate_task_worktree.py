@@ -5,8 +5,9 @@ from pathlib import Path
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
-from tests.unit.commands.command_runtime import write_ledger
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_ledger, write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 OAK_WAVE_STARTED = {
@@ -26,7 +27,8 @@ class LocateTaskWorktreeTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
         self.root = Path(directory.name)
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout="/srv/oak-b12\n")
 

@@ -1,16 +1,14 @@
 import json
 import tempfile
 import unittest
-from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError, EntityNotDefined, ToolFailure, ToolNotFound
 from brigade.roles.resolve_role import ResolvedRole, RoleBindings, resolve_role
-from brigade.runtime import Runtime
-from brigade.system.paths import Paths
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 NO_RUNTIME_NEEDED = None
 NOTHING_CONFIGURED = Configuration()
@@ -28,16 +26,15 @@ SHOP_BUILDER = (
 )
 
 
-def _refuse_spawn(request):
-    raise AssertionError(f"resolve_role spawned {request.argv}")
-
-
-def _refuse_resolution(kind: str, name: str):
-    raise AssertionError(f"resolve_role resolved the {kind} plugin {name}")
-
-
-def _keep_no_trace(trace) -> None:
-    pass
+def answer_unknown_entity(request: ProcessRequest) -> ProcessRecord:
+    return ProcessRecord(
+        argv=request.argv,
+        cwd=request.cwd,
+        exit_code=1,
+        stdout="",
+        stderr="awawa show: @AGENT.planner is not defined in the workspace\n",
+        duration_ms=1,
+    )
 
 
 def create_bindings(roleset: str | None, project_path: Path | None = None, roles: dict | None = None) -> RoleBindings:
@@ -103,7 +100,8 @@ class ResolveRoleOfARolesetDirectoryThatDoesNotExistTest(ResolveRoleTestCase):
         resolved = resolve_role("build", NO_RUNTIME_NEEDED, create_bindings(missing_roleset), NOTHING_CONFIGURED)
 
         # Assert
-        self.assertEqual((resolved.role, resolved.source), ("builder", "built-in"))
+        self.assertEqual(resolved.role, "builder")
+        self.assertEqual(resolved.source, "built-in")
 
 
 class ResolveRoleOfASlotNoRoleDeclaresTest(ResolveRoleTestCase):
@@ -121,28 +119,10 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         root = Path(self.root.name)
-        self.config_root = root / "config" / "brigade"
+        self.config_root = root / "config"
         self.config_root.mkdir(parents=True)
         self.configuration = Configuration(instructions=str(root / "instructions"))
-        self.paths = Paths(
-            config_root=self.config_root,
-            state_root=root / "state" / "brigade",
-            cache_root=root / "cache" / "brigade",
-            home=root,
-            executable_search_path="",
-        )
-
-    def create_runtime(self, run_process) -> Runtime:
-        return Runtime(
-            run_process=run_process,
-            spawn_process=_refuse_spawn,
-            paths=self.paths,
-            now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
-            resolve_plugin=_refuse_resolution,
-        )
+        self.paths = create_test_paths(root)
 
     def test_should_let_a_missing_awawa_through_rather_than_look_elsewhere(self):
         # Arrange
@@ -153,30 +133,25 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolNotFound) as refusal:
-            resolve_role("build", self.create_runtime(find_no_awawa), bindings, self.configuration)
+            resolve_role(
+                "build", create_test_runtime(self.paths, run_process=find_no_awawa), bindings, self.configuration
+            )
 
         # Assert
         self.assertEqual(str(refusal.exception), "awawa not on PATH")
 
     def test_should_look_for_the_named_role_in_the_next_source_when_awawa_does_not_know_the_entity(self):
         # Arrange
-        def answer_unknown_entity(request: ProcessRequest) -> ProcessRecord:
-            return ProcessRecord(
-                argv=request.argv,
-                cwd=request.cwd,
-                exit_code=1,
-                stdout="",
-                stderr="awawa show: @AGENT.planner is not defined in the workspace\n",
-                duration_ms=1,
-            )
-
         bindings = create_bindings(None, roles={"build": "planner"})
 
         # Act
-        resolved = resolve_role("build", self.create_runtime(answer_unknown_entity), bindings, self.configuration)
+        resolved = resolve_role(
+            "build", create_test_runtime(self.paths, run_process=answer_unknown_entity), bindings, self.configuration
+        )
 
         # Assert
-        self.assertEqual((resolved.role, resolved.source), ("planner", "built-in"))
+        self.assertEqual(resolved.role, "planner")
+        self.assertEqual(resolved.source, "built-in")
 
     def test_should_stop_on_a_failure_of_awawa_show_rather_than_look_elsewhere(self):
         # Arrange
@@ -187,7 +162,7 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolFailure) as refusal:
-            resolve_role("build", self.create_runtime(fail_awawa), bindings, self.configuration)
+            resolve_role("build", create_test_runtime(self.paths, run_process=fail_awawa), bindings, self.configuration)
 
         # Assert
         self.assertEqual(
@@ -206,7 +181,9 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolFailure) as refusal:
-            resolve_role("build", self.create_runtime(fail_awawa_context), bindings, self.configuration)
+            resolve_role(
+                "build", create_test_runtime(self.paths, run_process=fail_awawa_context), bindings, self.configuration
+            )
 
         # Assert
         self.assertEqual(str(refusal.exception), "awawa context @AGENT.planner exited 2: awawa: unreadable root")
@@ -234,29 +211,11 @@ class ResolveRoleBoundByTheSlotsTableTest(unittest.TestCase):
         self.addCleanup(self.root.cleanup)
         root = Path(self.root.name)
         self.instructions = root / "instructions"
-        self.paths = Paths(
-            config_root=root / "config" / "brigade",
-            state_root=root / "state" / "brigade",
-            cache_root=root / "cache" / "brigade",
-            home=root,
-            executable_search_path="",
-        )
-
-    def create_runtime(self, run_process) -> Runtime:
-        return Runtime(
-            run_process=run_process,
-            spawn_process=_refuse_spawn,
-            paths=self.paths,
-            now=datetime(2026, 10, 9, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 9, 9, 0, tzinfo=UTC),
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
-            resolve_plugin=_refuse_resolution,
-        )
+        self.paths = create_test_paths(root)
 
     def test_should_resolve_the_agent_the_configuration_binds_with_no_config_toml_on_disk(self):
         # Arrange
-        runtime = self.create_runtime(_answer_awawa)
+        runtime = create_test_runtime(self.paths, run_process=_answer_awawa)
         configuration = Configuration(instructions=str(self.instructions), slots={"plan": "planner"})
         no_project_bindings = create_bindings(None)
 
@@ -285,22 +244,17 @@ class ResolveRoleBoundByTheSlotsTableTest(unittest.TestCase):
 
     def test_should_refuse_an_agent_awawa_does_not_know_naming_it_and_the_corpus(self):
         # Arrange
-        def answer_unknown_entity(request: ProcessRequest) -> ProcessRecord:
-            return ProcessRecord(
-                argv=request.argv,
-                cwd=request.cwd,
-                exit_code=1,
-                stdout="",
-                stderr="awawa show: @AGENT.planner is not defined in the workspace\n",
-                duration_ms=1,
-            )
-
         configuration = Configuration(instructions=str(self.instructions), slots={"plan": "planner"})
         no_project_bindings = create_bindings(None)
 
         # Act
         with self.assertRaises(EntityNotDefined) as refusal:
-            resolve_role("plan", self.create_runtime(answer_unknown_entity), no_project_bindings, configuration)
+            resolve_role(
+                "plan",
+                create_test_runtime(self.paths, run_process=answer_unknown_entity),
+                no_project_bindings,
+                configuration,
+            )
 
         # Assert
         self.assertEqual(str(refusal.exception), f"@AGENT.planner is not defined in {self.instructions}")
@@ -342,25 +296,7 @@ class ResolveRoleOfASlotTwoRoleFilesDeclareTest(ResolveRoleTestCase):
 class ResolveRoleFromTheCorpusRolesetTest(ResolveRoleTestCase):
     def setUp(self):
         super().setUp()
-        self.paths = Paths(
-            config_root=self.project / "config",
-            state_root=self.project / "state",
-            cache_root=self.project / "cache",
-            home=self.project,
-            executable_search_path="",
-        )
-
-    def create_runtime(self, run_process) -> Runtime:
-        return Runtime(
-            run_process=run_process,
-            spawn_process=_refuse_spawn,
-            paths=self.paths,
-            now=datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
-            resolve_plugin=_refuse_resolution,
-        )
+        self.paths = create_test_paths(self.project)
 
     def test_should_fall_through_to_the_built_in_role_for_a_slot_the_configuration_leaves_unbound(self):
         # Act
@@ -375,7 +311,7 @@ class ResolveRoleFromTheCorpusRolesetTest(ResolveRoleTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            resolve_role("plan", self.create_runtime(None), create_bindings("corpus"), configuration)
+            resolve_role("plan", create_test_runtime(self.paths), create_bindings("corpus"), configuration)
 
         # Assert
         self.assertEqual(
@@ -411,7 +347,12 @@ class ResolveRoleFromTheCorpusRolesetTest(ResolveRoleTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            resolve_role("plan", self.create_runtime(answer_shallow_agent), create_bindings("corpus"), configuration)
+            resolve_role(
+                "plan",
+                create_test_runtime(self.paths, run_process=answer_shallow_agent),
+                create_bindings("corpus"),
+                configuration,
+            )
 
         # Assert
         self.assertEqual(

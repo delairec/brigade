@@ -21,21 +21,13 @@ DEFAULT_SLOT = "report"
 DEFAULT_ANSWER_TYPE = "ANSWER"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     if document["every"] is None:
         return f"@STUDY.{document['study']} recorded, run {document['run']} {document['state']}"
     return f"@STUDY.{document['study']} recorded, every {document['every']}"
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def study_new(request, runtime: Runtime) -> dict:
+def study_new(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     if request.project is not None:
         find_project(read_projects(runtime), request.project)
@@ -92,7 +84,5 @@ COMMAND = Command(
         Argument(("--answer",), {"default": DEFAULT_ANSWER_TYPE, "help": "the entity type of the answer"}),
     ),
     run=study_new,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

@@ -5,7 +5,9 @@ import importlib
 import json
 import sys
 import traceback
+from collections.abc import Mapping
 from pathlib import Path
+from typing import NoReturn, TextIO
 
 from brigade import VERSION
 from brigade.add_command_parsers import add_command_parsers
@@ -13,8 +15,9 @@ from brigade.errors import BrigadeError, CannotWrite, StandingDown, UsageError
 from brigade.list_command_modules import COMMANDS_PACKAGE, list_command_modules
 from brigade.runtime import Invocation, Runtime, build_runtime
 from brigade.select_command_modules import PASSTHROUGH_SEPARATOR, select_command_modules
+from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.remove_expired_trails import remove_expired_trails
-from brigade.system.trail_locations import COMMANDS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
+from brigade.system.trail_locations import COMMANDS_DIRECTORY, TRAIL_SUFFIX
 from brigade.write_command_output import OutputStreams, write_command_output
 
 USAGE_EXIT_CODE = 2
@@ -28,10 +31,10 @@ class _ParseDeferred(Exception):
 
 
 class _DeferringArgumentParser(argparse.ArgumentParser):
-    def error(self, message):
+    def error(self, message: str) -> NoReturn:
         raise _ParseDeferred(message)
 
-    def print_help(self, file=None):
+    def print_help(self, file: TextIO | None = None) -> NoReturn:
         raise _ParseDeferred
 
 
@@ -78,7 +81,7 @@ def _find_passthrough(arguments: list[str], passthroughs: list):
 
 
 def _locate_command_trail(command, runtime: Runtime) -> Path:
-    instant = runtime.now.strftime(TRAIL_INSTANT_FORMAT)
+    instant = runtime.now.strftime(COMPACT_INSTANT_FORMAT)
     return runtime.paths.state_root / COMMANDS_DIRECTORY / f"{instant}-{'-'.join(command.path)}{TRAIL_SUFFIX}"
 
 
@@ -126,7 +129,7 @@ def _parse(arguments: list[str], module_names: list[str], parser_class):
     return options, extras, passthrough
 
 
-def main(arguments: list[str]) -> int:
+def main(arguments: list[str], environment: Mapping[str, str]) -> int:
     module_names = list_command_modules()
     try:
         options, extras, passthrough = _parse(
@@ -141,9 +144,14 @@ def main(arguments: list[str]) -> int:
     command = options.command if passthrough is None else passthrough
     options.extra_arguments = extras
     options.passed_arguments = tuple(arguments[separator + 1 :])
+    options.standard_input = sys.stdin
     options.create_runtime = functools.partial(
-        build_runtime, Invocation(command=_name(command), verbose=getattr(options, "verbose", False))
+        build_runtime, Invocation(command=_name(command), verbose=getattr(options, "verbose", False)), environment
     )
+    return _run_reporting_errors(command, options)
+
+
+def _run_reporting_errors(command: object, options: argparse.Namespace) -> int:
     try:
         return _run_command(command, options)
     except StandingDown as reason:

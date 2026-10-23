@@ -1,11 +1,9 @@
 import contextlib
 import io
-import os
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from brigade.runtime import Invocation, build_runtime
 from brigade.system.process_trace import ProcessTrace
@@ -17,20 +15,15 @@ class BuildRuntimeTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
-        environment = mock.patch.dict(
-            os.environ,
-            {
-                "HOME": str(self.root),
-                "XDG_CONFIG_HOME": str(self.root / "config"),
-                "XDG_STATE_HOME": str(self.root / "state"),
-                "XDG_CACHE_HOME": str(self.root / "cache"),
-            },
-        )
-        environment.start()
-        self.addCleanup(environment.stop)
+        self.environment = {
+            "HOME": str(self.root),
+            "XDG_CONFIG_HOME": str(self.root / "config"),
+            "XDG_STATE_HOME": str(self.root / "state"),
+            "XDG_CACHE_HOME": str(self.root / "cache"),
+        }
 
     def report(self, *, verbose: bool) -> str:
-        runtime = build_runtime(Invocation(command="runs list", verbose=verbose))
+        runtime = build_runtime(Invocation(command="runs list", verbose=verbose), self.environment)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
             runtime.trail.append(TRACE)
@@ -38,13 +31,12 @@ class BuildRuntimeTest(unittest.TestCase):
 
     def test_should_root_the_runtime_in_the_directories_of_the_environment(self):
         # Act
-        runtime = build_runtime(Invocation(command="runs list", verbose=False))
+        runtime = build_runtime(Invocation(command="runs list", verbose=False), self.environment)
 
         # Assert
-        self.assertEqual(
-            (runtime.paths.config_root, runtime.paths.state_root, runtime.entry_point.is_absolute()),
-            (self.root / "config" / "brigade", self.root / "state" / "brigade", True),
-        )
+        self.assertEqual(runtime.paths.config_root, self.root / "config" / "brigade")
+        self.assertEqual(runtime.paths.state_root, self.root / "state" / "brigade")
+        self.assertEqual(runtime.entry_point.is_absolute(), True)
 
     def test_should_report_each_process_on_stderr_when_verbose(self):
         # Act

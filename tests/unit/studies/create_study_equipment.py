@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.studies.study_run_context import StudyEquipment
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 UNUSED_WORKING_DIRECTORY = Path("/the/study/reads/no/working/directory")
 

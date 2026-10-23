@@ -2,12 +2,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.studies.detach_study_run import detach_study_run
 from brigade.system.spawn_process import SpawnRequest
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.spawned_process_double import SpawnedProcessDouble
 
 RUN_ID = "20261019T090000Z-aaaaaa"
 DETACHED_PID = 4242
@@ -20,11 +22,14 @@ class DetachStudyRunTest(unittest.TestCase):
         self.root = Path(directory.name)
         self.spawned = []
         self.recorded_pids = []
-        self.runtime = create_scripted_runtime(self.root, ScriptedProcesses(), spawn_process=self.spawn)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=ScriptedProcesses(), spawn_process=self.spawn
+        )
 
-    def spawn(self, request: SpawnRequest) -> SimpleNamespace:
+    def spawn(self, request: SpawnRequest) -> SpawnedProcessDouble:
         self.spawned.append(request)
-        return SimpleNamespace(pid=DETACHED_PID)
+        return SpawnedProcessDouble(pid=DETACHED_PID)
 
     def record_pid(self, run_directory: Path, pid: int) -> None:
         self.recorded_pids.append((run_directory, pid))
@@ -41,7 +46,7 @@ class DetachStudyRunTest(unittest.TestCase):
                 SpawnRequest(
                     argv=(
                         sys.executable,
-                        str(self.root / "bin" / "brigade"),
+                        "/srv/brigade/bin/brigade",
                         "study",
                         "run",
                         "trees",

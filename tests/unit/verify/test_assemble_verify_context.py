@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.preflight_pull_request import PreflightDemand
 from tests.unit.create_test_paths import create_test_paths

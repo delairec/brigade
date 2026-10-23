@@ -2,7 +2,6 @@ import argparse
 import dataclasses
 import functools
 import sys
-import time
 from collections.abc import Callable
 
 from brigade.command import Argument, Command, ExclusiveArguments
@@ -40,12 +39,13 @@ from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
-from brigade.system.read_configuration import Configuration
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
+from brigade.system.parse_configuration import Configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
-from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
+from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
     CloseWave,
@@ -118,7 +118,7 @@ def _locate_lock(runtime: Runtime):
 
 
 def _locate_trail(runtime: Runtime):
-    return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(TRAIL_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
+    return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(COMPACT_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
 
 
 def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
@@ -404,14 +404,24 @@ def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: Cut
     cut_wave_branch(runtime.run_process, cut)
 
 
+def _park_task(runtime: Runtime, action: ParkTask) -> None:
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskParked(wave=action.wave, task=action.task, reason=action.reason, blockers=action.blockers),
+    )
+
+
+def _pause_wave(runtime: Runtime, action: PauseWave) -> None:
+    append_event(
+        runtime.paths, runtime.now, WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at)
+    )
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
-        ParkTask: lambda action: append_event(
-            runtime.paths,
-            runtime.now,
-            TaskParked(wave=action.wave, task=action.task, reason=action.reason, blockers=action.blockers),
-        ),
+        ParkTask: lambda action: _park_task(runtime, action),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
@@ -421,11 +431,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
         RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
-        PauseWave: lambda action: append_event(
-            runtime.paths,
-            runtime.now,
-            WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at),
-        ),
+        PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
         ),
@@ -450,12 +456,12 @@ def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Cal
 
 
 def _tick(runtime: Runtime) -> Heartbeat | None:
-    started = time.monotonic()
+    started = runtime.read_monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
             return None
         runtime.trail.locate(_locate_trail(runtime))
-        configuration = read_optional_configuration(runtime.paths.configuration_file)
+        configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
         read_pull_request = _follow_pull_requests(runtime, configuration)
         read_environment = _cache_forge_environment(runtime, configuration)
         outcome = run_rounds(
@@ -472,7 +478,7 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
         )
         heartbeat = Heartbeat(
             ts=format_instant(runtime.now),
-            duration_ms=int((time.monotonic() - started) * 1000),
+            duration_ms=int((runtime.read_monotonic() - started) * 1000),
             actions_applied=outcome.actions_applied,
             actions_failed=outcome.actions_failed,
         )
@@ -496,7 +502,7 @@ def _tick_once(runtime: Runtime) -> dict:
 
 
 def _plan_dry(runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     snapshot = build_snapshot(
         runtime,
         configuration,
@@ -554,15 +560,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(RENDERERS[document["mode"]](document))
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def tick(request, runtime: Runtime) -> dict:
+def tick(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.mode == "once":
         return _tick_once(runtime)
     if request.mode == "dry-run":
@@ -604,7 +602,5 @@ COMMAND = Command(
         ),
     ),
     run=tick,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

@@ -1,9 +1,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.git.timeouts import TREE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-
-WORKTREE_TIMEOUT_S = 60.0
 
 
 def add_detached_worktree(
@@ -13,6 +12,6 @@ def add_detached_worktree(
         ProcessRequest(
             argv=("git", "worktree", "add", "--quiet", "--detach", str(worktree), start),
             cwd=str(repository),
-            timeout_s=WORKTREE_TIMEOUT_S,
+            timeout_s=TREE_TIMEOUT_S,
         )
     )

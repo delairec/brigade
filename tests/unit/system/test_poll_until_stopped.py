@@ -19,7 +19,7 @@ class StopSignalWatcherDouble:
         self.stopped = self.stop_while_waiting
 
 
-class ScriptedPoller:
+class ScriptedPollerDouble:
     def __init__(self, answers: list[bool], watcher: StopSignalWatcherDouble | None = None):
         self.answers = answers
         self.watcher = watcher
@@ -36,34 +36,40 @@ class PollUntilStoppedWithoutStopTest(unittest.TestCase):
     def test_should_wait_between_polls_until_the_poll_answers_done(self):
         # Arrange
         watcher = StopSignalWatcherDouble(stop_while_waiting=False)
-        poller = ScriptedPoller([False, False, True])
+        poller = ScriptedPollerDouble([False, False, True])
 
         # Act
         stopped = poll_until_stopped(poller, INTERVAL_S, watcher)
 
         # Assert
-        self.assertEqual((stopped, poller.calls, watcher.waits), (False, 3, [5.0, 5.0]))
+        self.assertEqual(stopped, False)
+        self.assertEqual(poller.calls, 3)
+        self.assertEqual(watcher.waits, [5.0, 5.0])
 
 
 class PollUntilStoppedOnAStopTest(unittest.TestCase):
     def test_should_finish_the_poll_under_way_and_stop_without_waiting(self):
         # Arrange
         watcher = StopSignalWatcherDouble(stop_while_waiting=False)
-        poller = ScriptedPoller([True], watcher)
+        poller = ScriptedPollerDouble([True], watcher)
 
         # Act
         stopped = poll_until_stopped(poller, INTERVAL_S, watcher)
 
         # Assert
-        self.assertEqual((stopped, poller.calls, watcher.waits), (True, 1, []))
+        self.assertEqual(stopped, True)
+        self.assertEqual(poller.calls, 1)
+        self.assertEqual(watcher.waits, [])
 
     def test_should_stop_without_polling_again_on_a_stop_received_while_waiting(self):
         # Arrange
         watcher = StopSignalWatcherDouble(stop_while_waiting=True)
-        poller = ScriptedPoller([False])
+        poller = ScriptedPollerDouble([False])
 
         # Act
         stopped = poll_until_stopped(poller, INTERVAL_S, watcher)
 
         # Assert
-        self.assertEqual((stopped, poller.calls, watcher.waits), (True, 1, [5.0]))
+        self.assertEqual(stopped, True)
+        self.assertEqual(poller.calls, 1)
+        self.assertEqual(watcher.waits, [5.0])

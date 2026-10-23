@@ -37,13 +37,13 @@ class FormatAndLintFileTest(unittest.TestCase):
                 ProcessRequest(
                     argv=("awawa", "fmt", "/state/brigade/runs/r1/progress.awawa"),
                     cwd="/state/brigade/runs/r1",
-                    timeout_s=30.0,
+                    timeout_s=300.0,
                     acceptable_exit_codes=EVERY_EXIT_CODE,
                 ),
                 ProcessRequest(
                     argv=("awawa", "lint", "--strict", "/state/brigade/runs/r1/progress.awawa"),
                     cwd="/state/brigade/runs/r1",
-                    timeout_s=30.0,
+                    timeout_s=300.0,
                     acceptable_exit_codes=(0, 1),
                 ),
             ],

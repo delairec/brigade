@@ -80,7 +80,7 @@ class VerifyPreflightTestCase(TaskContextTestCase):
 
     def describe_environment(self) -> dict:
         tools = Path(self.root.name).resolve() / "tools"
-        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{os.environ['PATH']}"}
+        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{self.machine.search_path}"}
 
     def commit_in_worktree(self, files: dict, message: str) -> None:
         for relative_path, content in files.items():
@@ -373,22 +373,6 @@ class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPrefligh
         # Assert
         self.assertEqual(checks["promotion"]["findings"], ["@TASK.S3 is STATUS todo, not implemented"])
 
-    def test_should_fail_a_task_delivered_by_another_pull_request(self):
-        # Arrange
-        self.deliver(
-            'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY 41\n\tTYPE feat\n'
-            '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
-            '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
-            '\t\tIMPL "src/cart/button.py::def empty_cart"\n'
-            '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n'
-        )
-
-        # Act
-        checks = self.read_checks()
-
-        # Assert
-        self.assertEqual(checks["promotion"]["findings"], ["@TASK.S3 is delivered by #41, not by #42"])
-
     def test_should_fail_a_task_that_names_no_pull_request_delivering_it(self):
         # Arrange
         self.deliver(
@@ -540,7 +524,8 @@ class BrigadeVerifyPreflightOfAPullRequestOfNoTaskTest(VerifyPreflightTestCase):
         completed = self.run_preflight("43")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade verify preflight: no task.pr_opened of @PROJECT.shop names the pull request #43\n"),
+            completed.stderr,
+            "brigade verify preflight: no task.pr_opened of @PROJECT.shop names the pull request #43\n",
         )

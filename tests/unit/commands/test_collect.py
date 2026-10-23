@@ -4,19 +4,22 @@ import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.collect import COMMAND, collect
-from tests.unit.commands.command_runtime import create_runtime
+from brigade.system.run_process import ProcessRecord
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 
 NOTES_DOCUMENT = (
     '{"schema_version": 1, "collector": "notes", "collected_at": "2026-10-19T09:00:00Z",'
     ' "summary": {"open": 3}, "items": []}'
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
+COLLECTOR_DIRECTORY = "/srv/app"
 
 
-class ScriptedCollector:
+class ScriptedCollectorDouble:
     name = "notes"
     source = "project"
     command = ("/srv/app/.brigade/collectors/notes",)
@@ -26,7 +29,9 @@ class ScriptedCollector:
 
     def collect(self, environment: dict, runtime, equipment):
         self.environments.append(environment)
-        return SimpleNamespace(exit_code=0, stdout=NOTES_DOCUMENT, stderr="", duration_ms=40)
+        return ProcessRecord(
+            argv=self.command, cwd=COLLECTOR_DIRECTORY, exit_code=0, stdout=NOTES_DOCUMENT, stderr="", duration_ms=40
+        )
 
 
 class CollectTest(unittest.TestCase):
@@ -37,9 +42,9 @@ class CollectTest(unittest.TestCase):
         self.project = root / "app"
         self.project.mkdir()
         self.enterContext(contextlib.chdir(self.project))
-        self.collector = ScriptedCollector()
-        self.runtime = create_runtime(
-            root,
+        self.collector = ScriptedCollectorDouble()
+        self.runtime = create_test_runtime(
+            create_test_paths(root),
             resolve_plugin=create_plugin_resolver(
                 {("collector", "notes"): self.collector, ("forge", "github"): object()}
             ),

@@ -7,34 +7,37 @@ from brigade.errors import BrigadeError
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
-from brigade.system.read_configuration import Configuration
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_ledger
+from brigade.system.parse_configuration import Configuration
+from tests.unit.commands.command_runtime import create_corpus_double, write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 from tests.unit.review.test_assemble_review_context import (
     CHANGES_REQUESTED,
     OPENED,
     POLICY_UNDER_APPROVAL,
     VERDICT_CHANGES,
-    ThreadListingForgeDouble,
+    create_thread_listing_forge,
 )
 
 NO_POLICY = {}
 REMEDIATE_ACCOUNTS = Configuration(forge_accounts={"remediate": "tidepool-remediate"})
 
 
-class ReplyingForgeDouble(ThreadListingForgeDouble):
-    def reply_review_thread(self, request: dict, runtime) -> dict:
-        self.questions.append(("reply_review_thread", request))
-        return {"schema_version": 1}
+def create_replying_forge() -> ForgeDouble:
+    return create_thread_listing_forge(reply_review_thread=lambda request: {"schema_version": 1})
 
 
 class RecordReviewAnswersTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.forge = ReplyingForgeDouble()
+        self.forge = create_replying_forge()
         write_ledger(self.root, [CHANGES_REQUESTED, VERDICT_CHANGES])
 
     def record(self, policies: dict, answers: dict) -> dict:
-        runtime = create_runtime(self.root, run_process=create_corpus_double({"POLICY": policies}))
+        runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_corpus_double({"POLICY": policies})
+        )
         return record_review_answers(
             runtime,
             AnswersDemand(
@@ -50,7 +53,7 @@ class RecordReviewAnswersTestCase(unittest.TestCase):
         return json.loads((self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines()[-1])
 
     def list_replies(self) -> list[dict]:
-        return [request for operation, request in self.forge.questions if operation == "reply_review_thread"]
+        return self.forge.list_requests("reply_review_thread")
 
 
 class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):
@@ -118,10 +121,8 @@ class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):
             self.record(NO_POLICY, no_answer)
 
         # Assert
-        self.assertEqual(
-            (str(refusal.exception), self.read_last_event()["event"]),
-            ("the answers are refused: finding 1 has no answer", "task.verdict"),
-        )
+        self.assertEqual(str(refusal.exception), "the answers are refused: finding 1 has no answer")
+        self.assertEqual(self.read_last_event()["event"], "task.verdict")
 
 
 class RecordReviewAnswersUnderTheApprovalModeTest(RecordReviewAnswersTestCase):

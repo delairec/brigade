@@ -15,7 +15,7 @@ class LocateCollectorsTest(unittest.TestCase):
             places,
             CollectorPlaces(
                 project_directory=Path("/srv/shop/.brigade/collectors"),
-                machine_directory=Path("/home/ada/config/brigade/collectors"),
-                executable_search_path="/usr/bin",
+                machine_directory=Path("/home/ada/config/collectors"),
+                executable_search_path="",
             ),
         )

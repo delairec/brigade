@@ -1,3 +1,4 @@
+import argparse
 import sys
 from pathlib import Path
 
@@ -6,7 +7,7 @@ from brigade.errors import ToolNotFound
 from brigade.runtime import Runtime
 from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -50,16 +51,8 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def scheduler_install(request, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+def scheduler_install(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     if configuration.scheduler is not None:
         name, chosen_by = configuration.scheduler, "configuration"
     else:
@@ -84,7 +77,5 @@ COMMAND = Command(
     help="install the scheduler config.toml names, or the default",
     group_help="install what fires the tick, and report it",
     run=scheduler_install,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

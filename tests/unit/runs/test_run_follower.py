@@ -33,18 +33,16 @@ class RunFollowerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (records, follower.run["state"]),
-            (
-                [
-                    {
-                        "schema_version": 1,
-                        "at": "2026-10-09T14:00:04Z",
-                        "segment": 1,
-                        "kind": "result",
-                        "summary": "done",
-                        "cut": False,
-                    }
-                ],
-                "finished",
-            ),
+            records,
+            [
+                {
+                    "schema_version": 1,
+                    "at": "2026-10-09T14:00:04Z",
+                    "segment": 1,
+                    "kind": "result",
+                    "summary": "done",
+                    "cut": False,
+                }
+            ],
         )
+        self.assertEqual(follower.run["state"], "finished")

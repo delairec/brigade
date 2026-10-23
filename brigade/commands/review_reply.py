@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -11,15 +12,12 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import read_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.system.read_text_file import read_text_file
 from brigade.verify.find_opened_task import find_opened_task
 
 DOCUMENT_SCHEMA_VERSION = 1
 PATH_FIELD = "PATH"
-
-
-def _read_request(options):
-    return options
 
 
 def _render_text(document: dict) -> str:
@@ -30,22 +28,15 @@ def _render_text(document: dict) -> str:
     return f"{text}, posted as {document['login']}"
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def _read_answers(path: Path) -> dict:
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as error:
-        raise BrigadeError(f"cannot read {path}: {error.strerror}") from None
+    text = read_text_file(path)
     try:
         return json.loads(text)
     except ValueError:
         raise BrigadeError(f"the answers file {path} holds no JSON document") from None
 
 
-def review_reply(request, runtime: Runtime) -> dict:
+def review_reply(request: argparse.Namespace, runtime: Runtime) -> dict:
     answers = _read_answers(Path(request.file))
     run_process = runtime.run_process
     project = require_project_at(
@@ -56,7 +47,7 @@ def review_reply(request, runtime: Runtime) -> dict:
         project_path=read_project_field(project, PATH_FIELD),
         answers=answers,
         forge=runtime.resolve_plugin("forge", FORGE_NAME),
-        configuration=read_configuration(runtime.paths.configuration_file),
+        configuration=read_configuration(runtime, CONFIGURATION_REQUIRED),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_review_answers(runtime, demand)}
 
@@ -70,7 +61,5 @@ COMMAND = Command(
         Argument(("--file",), {"required": True, "help": "the file holding the answers, a JSON document"}),
     ),
     run=review_reply,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

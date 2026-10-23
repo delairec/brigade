@@ -10,7 +10,7 @@ from brigade.roles.list_built_in_role_files import list_built_in_role_files
 from brigade.roles.list_machine_role_files import list_machine_role_files
 from brigade.roles.parse_role_file import RoleFile, RoleFileUnreadable, parse_role_file
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 ROLE_FILE_PATTERN = "*.md"
 BUILT_IN_ROLESET = "builtin"

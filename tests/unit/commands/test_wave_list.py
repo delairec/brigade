@@ -1,10 +1,12 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_list import COMMAND
-from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 EVERY_PROJECT = None
 TIDES_STARTED = {
@@ -76,7 +78,7 @@ class WaveListExitCodeTest(unittest.TestCase):
 class WaveListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(project=None)
+        options = Namespace(project=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -90,7 +92,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_ledger(root, [TIDES_STARTED, TIDES_CANCELLED, GAUGES_STARTED])
-        runtime = create_runtime(root)
+        runtime = create_test_runtime(create_test_paths(root))
         rows = [
             ("every project", EVERY_PROJECT, [GAUGES_ROW, TIDES_ROW]),
             ("one project", "tidepool", [TIDES_ROW]),
@@ -98,7 +100,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
         for case, project, expected_waves in rows:
             with self.subTest(case=case):
                 # Act
-                document = COMMAND.run(SimpleNamespace(project=project), runtime)
+                document = COMMAND.run(Namespace(project=project), runtime)
 
                 # Assert
                 self.assertEqual(document, {"schema_version": 1, "waves": expected_waves})
@@ -106,10 +108,10 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
     def test_should_list_no_wave_of_a_ledger_holding_none(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        runtime = create_runtime(root)
+        runtime = create_test_runtime(create_test_paths(root))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), runtime)
+        document = COMMAND.run(Namespace(project=EVERY_PROJECT), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "waves": []})

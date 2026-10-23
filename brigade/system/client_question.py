@@ -7,10 +7,12 @@ from brigade.system.probe_request import ProbeRequest
 from brigade.system.resume_argv_request import ResumeArgvRequest
 from brigade.system.transcripts_request import TranscriptsRequest
 
+ClientRequest = (
+    ProbeRequest | LaunchArgvRequest | ResumeArgvRequest | ParseResultRequest | TranscriptsRequest | ActionsRequest
+)
+
 
 @dataclass(frozen=True)
 class ClientQuestion:
     client_name: str
-    request: (
-        ProbeRequest | LaunchArgvRequest | ResumeArgvRequest | ParseResultRequest | TranscriptsRequest | ActionsRequest
-    )
+    request: ClientRequest

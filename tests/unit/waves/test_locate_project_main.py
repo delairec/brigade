@@ -1,6 +1,7 @@
 import unittest
 
 from brigade.corpus.read_entities import Entity, EntityField
+from brigade.system.run_process import ProcessRequest
 from brigade.waves.locate_project_main import locate_project_main
 from tests.unit.scripted_processes import ScriptedProcesses
 
@@ -47,8 +48,15 @@ class LocateProjectMainTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in self.processes.requests],
-            [(("git", "fetch", "--quiet", "origin", "trunk"), REPOSITORY, FORGE_ENVIRONMENT)],
+            self.processes.requests,
+            [
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "trunk"),
+                    cwd=REPOSITORY,
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                )
+            ],
         )
 
     def test_should_keep_the_local_main_branch_without_a_forge(self):
@@ -59,4 +67,5 @@ class LocateProjectMainTest(unittest.TestCase):
         main = locate_project_main(self.processes, project, _read_forge_environment)
 
         # Assert
-        self.assertEqual((main, self.processes.requests), ("trunk", []))
+        self.assertEqual(main, "trunk")
+        self.assertEqual(self.processes.requests, [])

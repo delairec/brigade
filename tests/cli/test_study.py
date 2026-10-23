@@ -4,12 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.cli.test_collect import install_executable
 from tests.cli.test_tick import WEEKLY_RUN, LiveStudyRunTestCase
+from tests.list_entry_names import list_entry_names
 
 PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
 QUESTION = "what changed in the shop this week?"
@@ -17,10 +17,10 @@ QUESTION = "what changed in the shop this week?"
 
 class StudyTestCase(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
             root / "projects" / "shop", {**self.machine.describe_environment(), **PINNED_COMMIT_DATES}
@@ -155,12 +155,10 @@ class BrigadeStudyNewTest(StudyTestCase):
         )
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (
-                1,
-                "brigade study new: the schedule 1d is none of <n>m, <n>h, daily@HH:MM or <day>@HH:MM, day mon to sun\n",
-            ),
+            completed.stderr,
+            "brigade study new: the schedule 1d is none of <n>m, <n>h, daily@HH:MM or <day>@HH:MM, day mon to sun\n",
         )
 
     def test_should_exit_1_naming_an_answer_type_the_schema_does_not_declare(self):
@@ -181,9 +179,9 @@ class BrigadeStudyNewTest(StudyTestCase):
         )
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study new: the schema of the operational corpus declares no VERDICT\n"),
+            completed.stderr, "brigade study new: the schema of the operational corpus declares no VERDICT\n"
         )
 
     def test_should_exit_1_naming_a_project_that_is_not_registered(self):
@@ -204,9 +202,8 @@ class BrigadeStudyNewTest(StudyTestCase):
         )
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr), (1, "brigade study new: @PROJECT.cart is not registered\n")
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade study new: @PROJECT.cart is not registered\n")
 
     def test_should_exit_1_naming_a_shell_command_it_cannot_split(self):
         # Act
@@ -224,9 +221,10 @@ class BrigadeStudyNewTest(StudyTestCase):
         )
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study new: the command printf 'oak cannot be split into an argv: No closing quotation\n"),
+            completed.stderr,
+            "brigade study new: the command printf 'oak cannot be split into an argv: No closing quotation\n",
         )
 
     def test_should_exit_1_naming_the_inbox_output_it_refuses_until_the_inbox_has_a_store(self):
@@ -245,9 +243,9 @@ class BrigadeStudyNewTest(StudyTestCase):
         )
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study new: the output inbox is refused: the inbox has no store until @TASK.B22\n"),
+            completed.stderr, "brigade study new: the output inbox is refused: the inbox has no store until @TASK.B22\n"
         )
 
     def test_should_record_no_study_whose_output_is_the_inbox(self):
@@ -317,7 +315,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         steps = self.runs / json.loads(completed.stdout)["run"] / "steps"
-        self.assertEqual(sorted(path.name for path in steps.iterdir()), ["collect.json", "judge.json", "output.json"])
+        self.assertEqual(list_entry_names(steps), ["collect.json", "judge.json", "output.json"])
 
     def test_should_record_the_order_and_its_steps_in_the_ledger(self):
         # Arrange
@@ -417,9 +415,9 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         completed = self.run_study("run", "trees")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study run: the output inbox is refused: the inbox has no store until @TASK.B22\n"),
+            completed.stderr, "brigade study run: the output inbox is refused: the inbox has no store until @TASK.B22\n"
         )
 
     def test_should_run_no_collector_of_a_study_whose_output_is_the_inbox(self):
@@ -522,19 +520,18 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         # Assert
         document = json.loads(completed.stdout)
         [judging] = self.read_events("run.finished")
-        self.assertEqual(
-            (document["state"], document["reason"], judging["procedure"]),
-            ("parked", f"the judging run {judging['run']} gave no answer", "study"),
-        )
+        self.assertEqual(document["state"], "parked")
+        self.assertEqual(document["reason"], f"the judging run {judging['run']} gave no answer")
+        self.assertEqual(judging["procedure"], "study")
 
     def test_should_exit_1_naming_a_study_that_is_not_defined(self):
         # Act
         completed = self.run_study("run", "absent")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study run: @STUDY.absent is not defined in the operational corpus\n"),
+            completed.stderr, "brigade study run: @STUDY.absent is not defined in the operational corpus\n"
         )
 
 
@@ -544,10 +541,9 @@ class BrigadeStudyRunWhileARunOfTheStudyIsLiveTest(LiveStudyRunTestCase):
         completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "study", "run", "weekly")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr, self.read_order_events("weekly")),
-            (1, f"brigade study run: @STUDY.weekly is running in run {WEEKLY_RUN}\n", [("order.started", None)]),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade study run: @STUDY.weekly is running in run {WEEKLY_RUN}\n")
+        self.assertEqual(self.read_order_events("weekly"), [("order.started", None)])
 
     def test_should_run_another_study(self):
         # Arrange
@@ -570,9 +566,8 @@ class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
         completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "prune", "--before", "2099-01-01")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout), (0, f"removed {done} (finished)\n"), completed.stderr
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, f"removed {done} (finished)\n", completed.stderr)
 
     def test_should_spare_a_parked_study_run_the_next_study_run_resumes(self):
         # Arrange
@@ -583,8 +578,9 @@ class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
         completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "prune", "--before", "2099-01-01")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"), completed.stderr)
-        self.assertEqual([path.name for path in self.runs.iterdir()], [parked])
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "no run removed\n", completed.stderr)
+        self.assertEqual(list_entry_names(self.runs), [parked])
 
 
 class BrigadeStudyContextTest(StudyRunTestCase):
@@ -617,9 +613,10 @@ class BrigadeStudyContextTest(StudyRunTestCase):
 
         # Assert
         package = json.loads(completed.stdout)
+        self.assertEqual(package["question"], QUESTION, completed.stderr)
         self.assertEqual(
-            (package["question"], package["collected"]),
-            (QUESTION, [{"collector": "shell", "summary": {"lines": 2}, "document": str(self.document)}]),
+            package["collected"],
+            [{"collector": "shell", "summary": {"lines": 2}, "document": str(self.document)}],
             completed.stderr,
         )
 
@@ -709,10 +706,8 @@ class BrigadeStudyContextTest(StudyRunTestCase):
         completed = self.run_study("context", "20261015T000000Z-000000")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study context: 20261015T000000Z-000000 is not a run of a study\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade study context: 20261015T000000Z-000000 is not a run of a study\n")
 
     def test_should_exit_1_naming_a_run_parked_before_its_evidence_was_collected(self):
         # Arrange
@@ -730,16 +725,14 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             "--output",
             "entity:ANSWER",
         )
-        [parked] = [path.name for path in self.runs.iterdir() if path.name != self.run_id]
+        [parked] = set(list_entry_names(self.runs)) - {self.run_id}
 
         # Act
         completed = self.run_study("context", parked)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade study context: the run {parked} has collected no evidence yet\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade study context: the run {parked} has collected no evidence yet\n")
 
 
 class BrigadeStudyAnswerTest(StudyRunTestCase):
@@ -788,10 +781,9 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
 
         # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            (completed.returncode, (self.runs / self.run_id / "answer.awawa").read_text()),
-            (0, self.answer_file.read_text()),
-            completed.stderr,
+            (self.runs / self.run_id / "answer.awawa").read_text(), self.answer_file.read_text(), completed.stderr
         )
 
     def test_should_refuse_an_answer_the_schema_of_its_type_rejects(self):
@@ -813,9 +805,9 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study answer: the answer changed COLLECTED, a field brigade filled\n"),
+            completed.stderr, "brigade study answer: the answer changed COLLECTED, a field brigade filled\n"
         )
 
     def test_should_keep_no_answer_it_refused(self):
@@ -826,7 +818,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         self.run_study("answer", self.run_id, "--file", str(self.answer_file))
 
         # Assert
-        self.assertEqual(sorted(path.name for path in (self.runs / self.run_id).glob("*.awawa")), [])
+        self.assertEqual(list((self.runs / self.run_id).glob("*.awawa")), [])
 
     def test_should_refuse_an_answer_that_names_another_entity(self):
         # Arrange
@@ -836,9 +828,10 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade study answer: the answer holds no @ANSWER.weekly_{self.run_id.replace('-', '_')}\n"),
+            completed.stderr,
+            f"brigade study answer: the answer holds no @ANSWER.weekly_{self.run_id.replace('-', '_')}\n",
         )
 
     def test_should_exit_1_naming_an_answer_file_it_cannot_read(self):
@@ -846,9 +839,9 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         completed = self.run_study("answer", self.run_id, "--file", str(self.answer_file))
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade study answer: cannot read {self.answer_file}: No such file or directory\n"),
+            completed.stderr, f"brigade study answer: cannot read {self.answer_file}: No such file or directory\n"
         )
 
     def test_should_finish_a_study_parked_at_its_judging_run_once_its_answer_is_recorded(self):
@@ -860,7 +853,8 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         completed = self.run_study("run", "weekly", "--json")
 
         # Assert
-        self.assertEqual((completed.returncode, json.loads(completed.stdout)["state"]), (0, "done"), completed.stderr)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["state"], "done", completed.stderr)
 
 
 FAKE_GH = '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "{calls}"\ncat >> "{calls}"\necho https://github.com/acme/atelier/7\n'
@@ -879,7 +873,7 @@ class StudyOutputTestCase(StudyRunTestCase):
         install_executable(self.tools / "gh", FAKE_GH.format(calls=self.gh_calls))
         self.environment = {
             **self.machine.describe_environment(),
-            "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
+            "PATH": f"{self.tools}{os.pathsep}{self.machine.search_path}",
         }
 
     def add_forge_project(self) -> TemporaryProject:
@@ -1180,12 +1174,9 @@ class BrigadeStudyListTest(StudyRunTestCase):
         completed = self.run_study("list")
 
         # Assert
+        self.assertEqual(completed.returncode, 0)
         self.assertEqual(
-            (completed.returncode, completed.stdout),
-            (
-                0,
-                "name    status  every      last run  outcome\nweekly  active  mon@09:00  -         -\n",
-            ),
+            completed.stdout, "name    status  every      last run  outcome\nweekly  active  mon@09:00  -         -\n"
         )
 
     def test_should_print_that_no_study_is_recorded(self):
@@ -1193,7 +1184,8 @@ class BrigadeStudyListTest(StudyRunTestCase):
         completed = self.run_study("list")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "no study recorded\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "no study recorded\n")
 
 
 class BrigadeStudyShowTest(StudyRunTestCase):
@@ -1237,24 +1229,20 @@ class BrigadeStudyShowTest(StudyRunTestCase):
         completed = self.run_study("show", "trees")
 
         # Assert
+        self.assertEqual(completed.returncode, 0)
         self.assertEqual(
-            (completed.returncode, completed.stdout),
-            (
-                0,
-                (
-                    "@STUDY.trees\n"
-                    "TITLE       the trees\n"
-                    "PROJECT     @PROJECT.shop\n"
-                    "COLLECTOR   shell: true\n"
-                    "SLOT        none\n"
-                    "EVERY       1h\n"
-                    "OUTPUT      entity:ANSWER\n"
-                    "ANSWER      ANSWER\n"
-                    "STATUS      active\n"
-                    "last run    -\n"
-                    "outcome     -\n"
-                ),
-            ),
+            completed.stdout,
+            "@STUDY.trees\n"
+            "TITLE       the trees\n"
+            "PROJECT     @PROJECT.shop\n"
+            "COLLECTOR   shell: true\n"
+            "SLOT        none\n"
+            "EVERY       1h\n"
+            "OUTPUT      entity:ANSWER\n"
+            "ANSWER      ANSWER\n"
+            "STATUS      active\n"
+            "last run    -\n"
+            "outcome     -\n",
         )
 
     def test_should_exit_1_naming_a_study_that_is_not_defined(self):
@@ -1262,9 +1250,9 @@ class BrigadeStudyShowTest(StudyRunTestCase):
         completed = self.run_study("show", "ghost")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study show: @STUDY.ghost is not defined in the operational corpus\n"),
+            completed.stderr, "brigade study show: @STUDY.ghost is not defined in the operational corpus\n"
         )
 
 
@@ -1299,7 +1287,8 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
         completed = self.run_study("resume", "trees")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "resumed @STUDY.trees\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "resumed @STUDY.trees\n")
         self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS active")
 
     def test_should_leave_a_study_already_in_that_status_as_it_is(self):
@@ -1318,15 +1307,10 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
                 completed = self.run_study(action, "trees")
 
                 # Assert
-                self.assertEqual(
-                    (
-                        completed.returncode,
-                        completed.stdout,
-                        self.read_studies().splitlines()[-1],
-                        self.count_commits(),
-                    ),
-                    (0, text, f"\tSTATUS {status}", commits),
-                )
+                self.assertEqual(completed.returncode, 0)
+                self.assertEqual(completed.stdout, text)
+                self.assertEqual(self.read_studies().splitlines()[-1], f"\tSTATUS {status}")
+                self.assertEqual(self.count_commits(), commits)
 
     def test_should_exit_1_naming_a_study_that_is_not_defined(self):
         for action in ["pause", "resume"]:
@@ -1335,9 +1319,9 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
                 completed = self.run_study(action, "ghost")
 
                 # Assert
+                self.assertEqual(completed.returncode, 1)
                 self.assertEqual(
-                    (completed.returncode, completed.stderr),
-                    (1, f"brigade study {action}: @STUDY.ghost is not defined in the operational corpus\n"),
+                    completed.stderr, f"brigade study {action}: @STUDY.ghost is not defined in the operational corpus\n"
                 )
 
     def test_should_exit_1_naming_an_archived_study_it_leaves_archived(self):
@@ -1351,14 +1335,12 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
                 completed = self.run_study(action, "trees")
 
                 # Assert
+                self.assertEqual(completed.returncode, 1)
                 self.assertEqual(
-                    (completed.returncode, completed.stderr, self.read_studies().splitlines()[-1]),
-                    (
-                        1,
-                        f"brigade study {action}: @STUDY.trees is archived; it is neither paused nor resumed\n",
-                        "\tSTATUS archived",
-                    ),
+                    completed.stderr,
+                    f"brigade study {action}: @STUDY.trees is archived; it is neither paused nor resumed\n",
                 )
+                self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS archived")
 
     def test_should_exit_1_naming_a_study_written_outside_the_studies_file(self):
         # Arrange
@@ -1371,7 +1353,5 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
         completed = self.run_study("pause", "trees")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade study pause: @STUDY.trees is not written in studies.awawa\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade study pause: @STUDY.trees is not written in studies.awawa\n")

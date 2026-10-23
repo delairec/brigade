@@ -36,7 +36,7 @@ from brigade.planning.review_plan_pull_request import review_plan_pull_request
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
-from brigade.system.read_configuration import CLI_KEY
+from brigade.system.parse_configuration import CLI_KEY
 from brigade.waves.locate_project_main import locate_project_main
 
 MILESTONE_TYPE = "MILESTONE"
@@ -56,6 +56,13 @@ class PlanRecording:
     plan_file: Path
     forge: object
     read_environment: Callable[[str], dict]
+
+
+@dataclass(frozen=True)
+class _PlanWrite:
+    plan: tuple[PlanEntity, ...]
+    branch: str
+    run: str | None
 
 
 def _read_run(runtime: Runtime) -> str | None:
@@ -105,7 +112,8 @@ def _append_blocks(text: str, blocks: list[str]) -> str:
     return "\n".join([text.rstrip("\n") + "\n", *blocks] if text.strip() else blocks)
 
 
-def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, plan, message: str) -> CorpusChange:
+def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, write: _PlanWrite) -> CorpusChange:
+    plan = write.plan
     corpus = read_project_field(recording.project, "CORPUS")
     files = locate_entity_files(read_entity_sites(partial(read_awawa_document, runtime.run_process), worktree), corpus)
     destinations = [
@@ -128,20 +136,17 @@ def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, pl
         repository=worktree,
         lock=locate_corpus_lock(runtime.paths.lock_directory, root),
         file_names=file_names,
-        describe_message=lambda: message,
+        describe_message=lambda: f"brigade plan record: {write.branch}",
         rewrite=rewrite,
     )
 
 
-def _write_on_branch(
-    runtime: Runtime, recording: PlanRecording, worktree: Path, plan, branch: str, run: str | None
-) -> None:
+def _write_on_branch(runtime: Runtime, recording: PlanRecording, worktree: Path, write: _PlanWrite) -> None:
     try:
-        message = f"brigade plan record: {branch}"
-        change_corpus_file(runtime.run_process, _build_change(runtime, recording, worktree, plan, message))
-        create_branch(runtime.run_process, worktree, branch)
+        change_corpus_file(runtime.run_process, _build_change(runtime, recording, worktree, write))
+        create_branch(runtime.run_process, worktree, write.branch)
     except CorpusLintFailed:
-        append_event(runtime.paths, runtime.now, PlanLintFailed(request=recording.request.name, run=run))
+        append_event(runtime.paths, runtime.now, PlanLintFailed(request=recording.request.name, run=write.run))
         raise
 
 
@@ -159,14 +164,14 @@ def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: 
     return _check_plan(plan)
 
 
-def _write_plan(runtime: Runtime, recording: PlanRecording, plan, branch: str, run: str | None) -> PlanEntity:
+def _write_plan(runtime: Runtime, recording: PlanRecording, write: _PlanWrite) -> PlanEntity:
     root = Path(read_project_field(recording.project, "PATH"))
     worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / recording.request.name
     main = locate_project_main(runtime.run_process, recording.project, recording.read_environment)
     add_detached_worktree(runtime.run_process, root, worktree, main)
     try:
-        milestone = _check_against_corpus(runtime, recording, worktree, plan)
-        _write_on_branch(runtime, recording, worktree, plan, branch, run)
+        milestone = _check_against_corpus(runtime, recording, worktree, write.plan)
+        _write_on_branch(runtime, recording, worktree, write)
     finally:
         remove_worktree(runtime.run_process, root, worktree)
     return milestone
@@ -259,7 +264,7 @@ def record_plan(runtime: Runtime, recording: PlanRecording) -> dict:
         milestone = _check_plan(plan)
         pr = _complete_delivery(runtime, recording, milestone, branch)
     else:
-        milestone = _write_plan(runtime, recording, plan, branch, run)
+        milestone = _write_plan(runtime, recording, _PlanWrite(plan=plan, branch=branch, run=run))
         pr = _deliver(runtime, recording, milestone, branch)
     _mark_planned(runtime, name, milestone.entity.name, pr)
     return {"request": name, "milestone": milestone.entity.name, "branch": branch, "pr": pr}

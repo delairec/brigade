@@ -6,7 +6,7 @@ from pathlib import Path
 
 from brigade.commands.plan_record import COMMAND, plan_record
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 
 REQUEST = json.dumps(
     {
@@ -35,6 +35,9 @@ MILESTONE_M4 = json.dumps({"fields": [{"name": "TITLE", "atoms": ['"Tides"']}]})
 TASK_T9 = json.dumps(
     {"fields": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}, {"name": "TITLE", "atoms": ['"Ebb"']}]}
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 CORPUS_SITES = json.dumps({"entities": [{"type": "TASK", "name": "T1", "file": "corpus/tasks.awawa", "line": 1}]})
 REQUEST_SITES = json.dumps({"entities": [{"type": "REQUEST", "name": "r1", "file": "requests.awawa", "line": 1}]})
 FORGE = object()
@@ -74,8 +77,8 @@ class PlanRecordTest(unittest.TestCase):
             ("git", "commit"): ProcessAnswer(),
             ("git", "fetch"): ProcessAnswer(),
         }
-        self.runtime = create_runtime(
-            root, run_process=ScriptedProcessRunner(self.answers).run, resolve_plugin=resolve_forge
+        self.runtime = create_test_runtime(
+            create_test_paths(root), run_process=ScriptedProcessRunner(self.answers).run, resolve_plugin=resolve_forge
         )
         config_root = self.runtime.paths.config_root
         self.answers["awawa", "status", "--json", str(config_root)] = ProcessAnswer(stdout=REQUEST_SITES)

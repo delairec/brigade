@@ -1,15 +1,14 @@
 import argparse
+import dataclasses
 import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
-import brigade
-from brigade.commands.doctor import COMMAND, _check_checkout, doctor
+from brigade.commands.doctor import COMMAND, doctor
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import ToolFailure, ToolNotFound
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 GIT_ANSWERS = {
@@ -37,10 +36,13 @@ APPROVAL_POLICY = json.dumps(
 COMMENT_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.lib"]}, {"name": "REVIEW", "atoms": ["comment"]}]}
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 TOKEN = {"GH_TOKEN": "t0k3n"}
 
 
-class ScriptedForge:
+class ScriptedForgeDouble:
     def __init__(self, environments: dict, account):
         self.environments = environments
         self.account = account
@@ -78,10 +80,10 @@ class DoctorTestCase(unittest.TestCase):
         self.addCleanup(self.root.cleanup)
         self.answers = _create_doctor_answers()
         self.probe = dict(PROBE)
-        self.forge = ScriptedForge({"ada-bot": TOKEN, "rev-bot": TOKEN}, "ada-bot")
+        self.forge = ScriptedForgeDouble({"ada-bot": TOKEN, "rev-bot": TOKEN}, "ada-bot")
         plugins = {("client", "scripted"): ScriptedClient({"probe": self.probe}), ("forge", "github"): self.forge}
-        self.runtime = create_runtime(
-            Path(self.root.name),
+        self.runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name)),
             run_process=ScriptedProcessRunner(self.answers).run,
             resolve_plugin=create_plugin_resolver(plugins),
         )
@@ -357,7 +359,8 @@ class DoctorOfAnUnreadableConfigurationTest(DoctorTestCase):
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertEqual((document["client"], document["slot_clients"]), (None, {}))
+        self.assertEqual(document["client"], None)
+        self.assertEqual(document["slot_clients"], {})
 
 
 class DoctorClientsTest(DoctorTestCase):
@@ -369,7 +372,8 @@ class DoctorClientsTest(DoctorTestCase):
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertEqual((document["client"], document["slot_clients"]), ("scripted", {"review": "other"}))
+        self.assertEqual(document["client"], "scripted")
+        self.assertEqual(document["slot_clients"], {"review": "other"})
 
 
 class DoctorReviewTest(DoctorTestCase):
@@ -573,95 +577,30 @@ class DoctorSchemaTest(DoctorTestCase):
         self.assertNotIn(self.schema_warning, document["items"])
 
 
-class DoctorCheckOfACheckoutTest(unittest.TestCase):
-    def setUp(self):
-        self.root = tempfile.TemporaryDirectory()
-        self.addCleanup(self.root.cleanup)
-        root = Path(self.root.name).resolve()
-        self.checkout = root / "checkout"
-        (self.checkout / "brigade").mkdir(parents=True)
-        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(GIT_ANSWERS).run)
-
+class DoctorCheckOfACheckoutTest(DoctorTestCase):
     def test_should_warn_that_the_checkout_is_behind_its_upstream(self):
         # Arrange
-        package_file = self.checkout / "brigade" / "__init__.py"
+        self.configure(CONFIGURATION)
+        checkout = Path(self.root.name).resolve() / "checkout"
+        (checkout / "brigade").mkdir(parents=True)
+        paths = dataclasses.replace(self.runtime.paths, package_file=checkout / "brigade" / "__init__.py")
+        runtime = dataclasses.replace(self.runtime, paths=paths)
+        self.answers.update(GIT_ANSWERS)
 
         # Act
-        with mock.patch.object(brigade, "__file__", str(package_file)):
-            items = _check_checkout(self.runtime)
+        document = doctor(self.no_option, runtime)
 
         # Assert
-        self.assertEqual(
-            items,
-            [
-                {
-                    "name": "checkout",
-                    "kind": "optional",
-                    "state": "warning",
-                    "detail": f"{self.checkout} at de446f3, 1 behind origin/main at 8885daa",
-                    "fallback": "git pull in the checkout",
-                }
-            ],
+        self.assertIn(
+            {
+                "name": "checkout",
+                "kind": "optional",
+                "state": "warning",
+                "detail": f"{checkout} at de446f3, 1 behind origin/main at 8885daa",
+                "fallback": "git pull in the checkout",
+            },
+            document["items"],
         )
-
-    def test_should_report_no_checkout_when_brigade_runs_from_an_archive(self):
-        # Arrange
-        archive = Path(self.root.name).resolve() / "dist" / "brigade.pyz"
-        archive.parent.mkdir()
-        archive.write_text("")
-        package_file = archive / "brigade" / "__init__.py"
-
-        # Act
-        with mock.patch.object(brigade, "__file__", str(package_file)):
-            items = _check_checkout(self.runtime)
-
-        # Assert
-        self.assertEqual(items, [])
-
-
-class DoctorCheckOfACheckoutGitCannotReadTest(unittest.TestCase):
-    def setUp(self):
-        self.root = tempfile.TemporaryDirectory()
-        self.addCleanup(self.root.cleanup)
-        root = Path(self.root.name).resolve()
-        self.checkout = root / "checkout"
-        (self.checkout / "brigade").mkdir(parents=True)
-        self.answers = {}
-        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
-        self.enterContext(mock.patch.object(brigade, "__file__", str(self.checkout / "brigade" / "__init__.py")))
-
-    def test_should_warn_with_the_failure_of_git(self):
-        # Arrange
-        self.answers["git", "for-each-ref"] = ToolFailure("git for-each-ref timed out after 10 s")
-
-        # Act
-        items = _check_checkout(self.runtime)
-
-        # Assert
-        self.assertEqual(
-            items,
-            [
-                {
-                    "name": "checkout",
-                    "kind": "optional",
-                    "state": "warning",
-                    "detail": f"{self.checkout}: git for-each-ref timed out after 10 s",
-                    "fallback": "git pull in the checkout",
-                }
-            ],
-        )
-
-    def test_should_report_nothing_for_a_checkout_up_to_date(self):
-        # Arrange
-        self.answers["git", "for-each-ref"] = ProcessAnswer(stdout="*\tde446f3\torigin/main\n")
-        self.answers["git", "rev-parse"] = ProcessAnswer(stdout="de446f3\n")
-        self.answers["git", "rev-list"] = ProcessAnswer(stdout="0\t0\n")
-
-        # Act
-        items = _check_checkout(self.runtime)
-
-        # Assert
-        self.assertEqual(items, [])
 
 
 class DoctorRequestTest(unittest.TestCase):

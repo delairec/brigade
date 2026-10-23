@@ -7,7 +7,6 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.studies.convert_study import Study
 from brigade.studies.validate_answer import validate_answer
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 RUN_ID = "20261019T090000Z-aaaaaa"
@@ -23,6 +22,10 @@ STUDY = Study(
     answer_type="FINDING",
     status="active",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 FILLED_FIELDS = {
     "fields": [
         {"name": "STUDY", "atoms": ['"trees"']},
@@ -53,7 +56,8 @@ class ValidateAnswerTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         (self.run_directory / "steps").mkdir(parents=True)
         (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")

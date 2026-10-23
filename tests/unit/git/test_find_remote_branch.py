@@ -36,4 +36,6 @@ class FindRemoteBranchTest(unittest.TestCase):
 
         # Assert
         [asked] = git.requests
-        self.assertEqual((asked.argv, asked.cwd, asked.environment), (LS_REMOTE, "/srv/shop", FORGE_ENVIRONMENT))
+        self.assertEqual(asked.argv, LS_REMOTE)
+        self.assertEqual(asked.cwd, "/srv/shop")
+        self.assertEqual(asked.environment, FORGE_ENVIRONMENT)

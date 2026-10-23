@@ -3,9 +3,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.git.timeouts import TREE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-DIFF_TIMEOUT_S = 60.0
 NEW_FILE_PREFIX = "+++ b/"
 ADDED_PREFIX = "+"
 HUNK_HEADER = re.compile(r"@@ -\S+ \+(?P<start>\d+)(?:,(?P<count>\d+))? @@")
@@ -37,14 +37,18 @@ def list_added_lines(
                 "--",
             ),
             cwd=str(repository),
-            timeout_s=DIFF_TIMEOUT_S,
+            timeout_s=TREE_TIMEOUT_S,
         )
     )
+    return _read_added_lines(record.stdout)
+
+
+def _read_added_lines(diff: str) -> tuple[AddedLine, ...]:
     added = []
     path = ""
     line = 0
     remaining = 0
-    for text in record.stdout.splitlines():
+    for text in diff.splitlines():
         if remaining:
             if text.startswith(ADDED_PREFIX):
                 added.append(AddedLine(path=path, line=line, text=text.removeprefix(ADDED_PREFIX)))

@@ -4,18 +4,14 @@ import json
 import os
 import tempfile
 import unittest
-from datetime import UTC, datetime
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.adapters.documents import markdown
 from brigade.commands.run import COMMAND, run
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
-from brigade.system.paths import Paths
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
-from brigade.system.trail_writer import TrailWriter
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
@@ -23,37 +19,19 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
     spawn_as_this_process,
 )
+from tests.unit.create_test_paths import NO_SEARCH_PATH, create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.plugin_double import PluginDouble
+from tests.unit.refuse_to_run import refuse_to_run
 
-NO_PATH_NEEDED = ""
 UNKNOWN_CLIENT = "no-such-client"
 UNKNOWN_PROCEDURE = "no-such-procedure"
 
 
-def _report_nothing(trace) -> None:
-    pass
-
-
-def _refuse_process(request):
-    raise AssertionError(f"the run of a command ran {request.argv}")
-
-
 def _create_runtime(root: Path) -> Runtime:
-    sources = PluginSources(executable_search_path=NO_PATH_NEEDED, run_process=_refuse_process)
-    return Runtime(
-        run_process=_refuse_process,
-        spawn_process=_refuse_process,
-        paths=Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root / "home",
-            executable_search_path=NO_PATH_NEEDED,
-        ),
-        now=datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
-        read_clock=lambda: datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
-        entry_point=root / "bin" / "brigade",
-        trail=TrailWriter(_report_nothing),
-        resolve_plugin=functools.partial(resolve_plugin, sources=sources),
+    sources = PluginSources(executable_search_path=NO_SEARCH_PATH, run_process=refuse_to_run)
+    return create_test_runtime(
+        create_test_paths(root), resolve_plugin=functools.partial(resolve_plugin, sources=sources)
     )
 
 
@@ -65,7 +43,7 @@ class RunClientPrecedenceTest(unittest.TestCase):
         root = Path(directory.name)
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text(f'client = "{UNKNOWN_CLIENT}"\n', encoding="utf-8")
-        request = SimpleNamespace(
+        request = Namespace(
             procedure=UNKNOWN_PROCEDURE,
             slot="build",
             project=None,
@@ -206,7 +184,7 @@ class RunDetachedTest(unittest.TestCase):
         self.root = Path(directory.name)
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
-        self.request = SimpleNamespace(
+        self.request = Namespace(
             procedure="wave-plan",
             slot="plan",
             project=None,
@@ -223,8 +201,8 @@ class RunDetachedTest(unittest.TestCase):
     def test_should_record_the_run_and_hand_it_to_a_process_of_its_own(self):
         # Arrange
         this_process = os.getpid()
-        runtime = create_runtime(
-            self.root,
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
             spawn_process=spawn_as_this_process,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
         )
@@ -236,19 +214,16 @@ class RunDetachedTest(unittest.TestCase):
         record = json.loads(
             (self.root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "run.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(
-            (document, record["procedure"], record["arguments"]),
-            (
-                {"schema_version": 1, "run": "20261019T090000Z-a1b2c3", "pid": this_process},
-                "wave-plan",
-                {"request": "tidepool_1"},
-            ),
-        )
+        self.assertEqual(document, {"schema_version": 1, "run": "20261019T090000Z-a1b2c3", "pid": this_process})
+        self.assertEqual(record["procedure"], "wave-plan")
+        self.assertEqual(record["arguments"], {"request": "tidepool_1"})
 
     def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
         # Arrange
-        runtime = create_runtime(
-            self.root, spawn_process=spawn_as_this_process, resolve_plugin=create_plugin_resolution(CLOCK_PROBE)
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(CLOCK_PROBE),
         )
 
         # Act
@@ -303,7 +278,11 @@ def _spawn_a_client_that_exits(request):
 
 
 def _resolve_the_delivering_client(kind: str, name: str, **places):
-    plugins = {"client": ClientDeliveringTheTaskDouble(), "document": markdown, "forge": SimpleNamespace()}
+    plugins = {
+        "client": ClientDeliveringTheTaskDouble(),
+        "document": markdown,
+        "forge": PluginDouble(kind="forge", name="github"),
+    }
     return plugins[kind]
 
 
@@ -313,7 +292,7 @@ class RunAttachedTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
-        request = SimpleNamespace(
+        request = Namespace(
             procedure="build-task",
             slot="build",
             project=None,
@@ -326,8 +305,10 @@ class RunAttachedTest(unittest.TestCase):
             detach=False,
             resume=False,
         )
-        runtime = create_runtime(
-            root, spawn_process=_spawn_a_client_that_exits, resolve_plugin=_resolve_the_delivering_client
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=_spawn_a_client_that_exits,
+            resolve_plugin=_resolve_the_delivering_client,
         )
 
         # Act

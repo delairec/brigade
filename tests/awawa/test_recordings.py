@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 
 from tests.awawa.provide_awawa import RECORDINGS, provide_awawa
@@ -8,10 +9,11 @@ from tests.process_launcher import ProcessLauncher
 
 class TheRecordingsMatchTheAwawaOnThePathTest(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
+        self.search_path = provide_awawa(self)
         self.version = ProcessLauncher.run(
             ["awawa", "--version"],
             cwd="/",
+            env={**os.environ, "PATH": self.search_path},
             capture_output=True,
             text=True,
             check=False,
@@ -24,7 +26,7 @@ class TheRecordingsMatchTheAwawaOnThePathTest(unittest.TestCase):
                 recording = json.loads(path.read_text())
 
                 # Act
-                outcome = replay_recording(self, recording)
+                outcome = replay_recording(self, recording, self.search_path)
 
                 # Assert
                 self.assertEqual(

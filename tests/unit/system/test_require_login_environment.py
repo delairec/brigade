@@ -3,40 +3,30 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.errors import BrigadeError
-from brigade.system.paths import Paths
 from brigade.system.require_login_environment import LoginDemand, require_login_environment
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 
 COMMAND_INSTANT = datetime(2026, 10, 9, 12, 30, tzinfo=UTC)
 TOKEN_ENVIRONMENT = {"GH_TOKEN": "token-of-octo-bot"}
 NO_TOKEN = None
 
 
-class ForgeDouble:
-    def __init__(self, environments):
-        self.environments = list(environments)
-        self.requests = []
-
-    def read_login_environment(self, request, runtime):
-        self.requests.append(request)
-        return {"schema_version": 1, "environment": self.environments.pop(0)}
+def create_forge(environments: list[dict | None]) -> ForgeDouble:
+    answers = iter(environments)
+    return ForgeDouble({"read_login_environment": lambda request: {"schema_version": 1, "environment": next(answers)}})
 
 
 class RequireLoginEnvironmentTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name)
-        self.state_root = root / "state" / "brigade"
-        paths = Paths(
-            config_root=root / "config" / "brigade",
-            state_root=self.state_root,
-            cache_root=root / "cache" / "brigade",
-            home=root,
-            executable_search_path="",
-        )
-        self.runtime = SimpleNamespace(paths=paths, now=COMMAND_INSTANT)
+        paths = create_test_paths(root)
+        self.runtime = create_test_runtime(paths, now=COMMAND_INSTANT)
+        self.state_root = paths.state_root
         self.waits = []
 
     def tearDown(self):
@@ -50,7 +40,7 @@ class RequireLoginEnvironmentTestCase(unittest.TestCase):
 class RequireLoginEnvironmentWhenGhPrintsTheTokenTest(RequireLoginEnvironmentTestCase):
     def test_should_answer_the_environment_of_the_login(self):
         # Arrange
-        forge = ForgeDouble([TOKEN_ENVIRONMENT])
+        forge = create_forge([TOKEN_ENVIRONMENT])
 
         # Act
         environment = self.require(forge)
@@ -60,31 +50,32 @@ class RequireLoginEnvironmentWhenGhPrintsTheTokenTest(RequireLoginEnvironmentTes
 
     def test_should_ask_the_forge_for_the_login_once(self):
         # Arrange
-        forge = ForgeDouble([TOKEN_ENVIRONMENT])
+        forge = create_forge([TOKEN_ENVIRONMENT])
 
         # Act
         self.require(forge)
 
         # Assert
-        self.assertEqual(forge.requests, [{"schema_version": 1, "login": "octo-bot"}])
+        self.assertEqual(forge.list_requests("read_login_environment"), [{"schema_version": 1, "login": "octo-bot"}])
 
 
 class RequireLoginEnvironmentWhenGhPrintsTheTokenAtTheLastAttemptTest(RequireLoginEnvironmentTestCase):
     def test_should_wait_a_delay_doubling_from_one_second_between_the_attempts(self):
         # Arrange
-        forge = ForgeDouble([NO_TOKEN, NO_TOKEN, TOKEN_ENVIRONMENT])
+        forge = create_forge([NO_TOKEN, NO_TOKEN, TOKEN_ENVIRONMENT])
 
         # Act
         environment = self.require(forge)
 
         # Assert
-        self.assertEqual((self.waits, environment), ([1.0, 2.0], {"GH_TOKEN": "token-of-octo-bot"}))
+        self.assertEqual(self.waits, [1.0, 2.0])
+        self.assertEqual(environment, {"GH_TOKEN": "token-of-octo-bot"})
 
 
 class RequireLoginEnvironmentWhenGhNeverPrintsTheTokenTest(RequireLoginEnvironmentTestCase):
     def setUp(self):
         super().setUp()
-        self.forge = ForgeDouble([NO_TOKEN, NO_TOKEN, NO_TOKEN])
+        self.forge = create_forge([NO_TOKEN, NO_TOKEN, NO_TOKEN])
 
     def test_should_stop_on_an_error_naming_the_login_and_the_attempts(self):
         # Arrange
@@ -95,7 +86,7 @@ class RequireLoginEnvironmentWhenGhNeverPrintsTheTokenTest(RequireLoginEnvironme
         for attempts, expected in rows:
             with self.subTest(attempts=attempts):
                 # Arrange
-                forge = ForgeDouble([NO_TOKEN, NO_TOKEN, NO_TOKEN])
+                forge = create_forge([NO_TOKEN, NO_TOKEN, NO_TOKEN])
 
                 # Act
                 with self.assertRaises(BrigadeError) as refusal:

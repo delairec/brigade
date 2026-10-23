@@ -22,14 +22,22 @@ def _select_whole_result(result):
     return result
 
 
+def _read_the_options(options):
+    return options
+
+
+def _exit_0(document) -> int:
+    return 0
+
+
 @dataclass(frozen=True)
 class Command:
     path: tuple[str, ...]
     help: str
     run: Callable[[object, object], object]
-    read_request: Callable[[object], object]
     render_text: Callable[[object], str]
-    decide_exit_code: Callable[[object], int]
+    read_request: Callable[[object], object] = _read_the_options
+    decide_exit_code: Callable[[object], int] = _exit_0
     arguments: tuple[Argument | ExclusiveArguments, ...] = ()
     group_help: str | None = None
     describe_diagnostics: Callable[[object], list[str]] = _describe_no_diagnostics

@@ -1,10 +1,9 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.runs_list import COMMAND
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_directories import (
     FIRST_RUN,
     SECOND_RUN,
@@ -12,6 +11,8 @@ from tests.unit.commands.run_directories import (
     create_run_result,
     write_run,
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 ANY_WAVE = None
 ANY_TASK = None
@@ -104,7 +105,7 @@ class RunsListExitCodeTest(unittest.TestCase):
 class RunsListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(wave=None, task=None)
+        options = Namespace(wave=None, task=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -133,15 +134,15 @@ class RunsListSelectionTest(unittest.TestCase):
     def test_should_keep_the_runs_of_the_wave_and_the_task_asked(self):
         # Arrange
         rows = [
-            ("every run", SimpleNamespace(wave=ANY_WAVE, task=ANY_TASK), [FIRST_LISTED, SECOND_LISTED]),
-            ("the runs of a wave", SimpleNamespace(wave="tidepool_w2", task=ANY_TASK), [SECOND_LISTED]),
-            ("the runs of a task", SimpleNamespace(wave=ANY_WAVE, task="T1"), [FIRST_LISTED]),
-            ("a task of another wave", SimpleNamespace(wave="tidepool_w2", task="T1"), []),
+            ("every run", Namespace(wave=ANY_WAVE, task=ANY_TASK), [FIRST_LISTED, SECOND_LISTED]),
+            ("the runs of a wave", Namespace(wave="tidepool_w2", task=ANY_TASK), [SECOND_LISTED]),
+            ("the runs of a task", Namespace(wave=ANY_WAVE, task="T1"), [FIRST_LISTED]),
+            ("a task of another wave", Namespace(wave="tidepool_w2", task="T1"), []),
         ]
         for case, request, expected_runs in rows:
             with self.subTest(case=case):
                 # Act
-                document = COMMAND.run(request, create_runtime(self.root))
+                document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
                 # Assert
                 self.assertEqual(document["runs"], expected_runs)

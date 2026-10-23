@@ -1,11 +1,13 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.task_context import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
@@ -94,7 +96,7 @@ class TaskContextExitCodeTest(unittest.TestCase):
 class TaskContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(task=None)
+        options = Namespace(task=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -109,11 +111,13 @@ class TaskContextOutsideATaskTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text("", encoding="utf-8")
-        runtime = create_runtime(root, run_process=create_machine_double({}, MAIN_BRANCH_CHECKOUT))
+        runtime = create_test_runtime(
+            create_test_paths(root), run_process=create_machine_double({}, MAIN_BRANCH_CHECKOUT)
+        )
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(task=THE_TASK_OF_THE_BRANCH), runtime)
+            COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")
@@ -155,10 +159,12 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
 
     def test_should_write_the_package_to_the_directory_of_the_run(self):
         # Arrange
-        runtime = create_runtime(self.root, run_process=self.run_process, run_directory=self.root / "run")
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "run"), run_process=self.run_process
+        )
 
         # Act
-        COMMAND.run(SimpleNamespace(task=THE_TASK_OF_THE_BRANCH), runtime)
+        COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH), runtime)
 
         # Assert
         self.assertEqual(
@@ -173,10 +179,10 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
 
     def test_should_assemble_the_package_of_a_task_worked_on_outside_a_run(self):
         # Arrange
-        runtime = create_runtime(self.root, run_process=self.run_process)
+        runtime = create_test_runtime(create_test_paths(self.root), run_process=self.run_process)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(task=THE_TASK_OF_THE_BRANCH), runtime)
+        document = COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH), runtime)
 
         # Assert
         self.assertEqual(

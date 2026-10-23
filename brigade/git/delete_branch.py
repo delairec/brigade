@@ -1,9 +1,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-
-GIT_TIMEOUT_S = 10.0
 
 
 def delete_branch(run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path, branch: str) -> None:

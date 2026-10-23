@@ -1,21 +1,22 @@
 import os
-import shutil
 import stat
 import tarfile
-import tempfile
-import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from brigade.errors import BrigadeError, CannotWrite
+from brigade.errors import BrigadeError
 from brigade.git.archive_commit import archive_commit
 from brigade.git.list_worktrees import Worktree, list_worktrees
 from brigade.git.resolve_commit import resolve_commit
 from brigade.system.create_directory import create_directory
 from brigade.system.hold_lock import hold_lock
+from brigade.system.place_directory_atomically import place_directory_atomically
+from brigade.system.refuse_failed_write import refuse_failed_write
+from brigade.system.remove_directory import remove_directory
 from brigade.system.run_process import ProcessRecord, ProcessRequest
+from brigade.system.stage_directory import stage_directory
 
 WORKTREE_PREFIX = "worktree:"
 HIDDEN_PREFIX = "."
@@ -93,29 +94,19 @@ def _read_worktree(run_process: Callable[[ProcessRequest], ProcessRecord], reque
     return Tree(project=request.project, ref=request.ref, sha=worktree.head, kind=WORKTREE_KIND, root=worktree.path)
 
 
-def _create_staging(root: Path) -> Path:
-    try:
-        return Path(tempfile.mkdtemp(prefix=HIDDEN_PREFIX, dir=root.parent))
-    except OSError as error:
-        raise CannotWrite(root, error) from error
-
-
-def _unpack(archive: Path, staged_tree: Path, root: Path) -> None:
+def _unpack(archive: Path, staged_tree: Path) -> None:
     with tarfile.open(archive) as commit_tar:
-        try:
-            commit_tar.extractall(staged_tree, filter="data")
-        except OSError as error:
-            raise CannotWrite(root, error) from error
+        commit_tar.extractall(staged_tree, filter="data")
 
 
 def _stage_tree(
-    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest, sha: str, staging: Path, root: Path
+    run_process: Callable[[ProcessRequest], ProcessRecord], request: TreeRequest, sha: str, staging: Path
 ) -> Path:
     archive = staging / ARCHIVE_NAME
     staged_tree = staging / STAGED_TREE_NAME
     archive_commit(run_process, request.repository, sha, archive)
     try:
-        _unpack(archive, staged_tree, root)
+        _unpack(archive, staged_tree)
     except tarfile.FilterError as error:
         raise BrigadeError(
             f"the archive of @PROJECT.{request.project} holds {error.tarinfo.name}, a member tarfile's data filter"
@@ -124,21 +115,10 @@ def _stage_tree(
     return staged_tree
 
 
-def _place_tree(staged_tree: Path, root: Path) -> None:
-    if root.is_dir():
-        return
-    try:
-        staged_tree.rename(root)
-    except OSError as error:
-        raise CannotWrite(root, error) from error
-
-
 def _mark_read(root: Path, now: datetime, keeper: ReadTimeKeeper) -> None:
     read_ns = (now - EPOCH) // timedelta(microseconds=1) * NANOSECONDS_PER_MICROSECOND
-    try:
+    with refuse_failed_write(root):
         keeper.stamp_read(root, read_ns)
-    except OSError as error:
-        raise CannotWrite(root, error) from error
 
 
 def _measure_file(path: Path) -> int:
@@ -155,23 +135,12 @@ def _list_visible_directories(parent: Path) -> list[Path]:
 
 
 def _list_cached_trees(cache: Path, keeper: ReadTimeKeeper) -> list[_CachedTree]:
-    try:
+    with refuse_failed_write(cache):
         return [
             _CachedTree(path=tree, last_read_ns=keeper.read_stamp(tree), size_bytes=_measure_tree(tree))
             for project in _list_visible_directories(cache)
             for tree in _list_visible_directories(project)
         ]
-    except OSError as error:
-        raise CannotWrite(error.filename or cache, error) from error
-
-
-def _remove_tree(root: Path) -> None:
-    doomed = root.parent / f"{HIDDEN_PREFIX}{root.name}.{uuid.uuid4().hex}"
-    try:
-        root.rename(doomed)
-    except OSError as error:
-        raise CannotWrite(root, error) from error
-    shutil.rmtree(doomed, ignore_errors=True)
 
 
 def _prune(cache: Path, bound_bytes: int, kept: Path, keeper: ReadTimeKeeper) -> None:
@@ -181,27 +150,25 @@ def _prune(cache: Path, bound_bytes: int, kept: Path, keeper: ReadTimeKeeper) ->
     for tree in removable:
         if total_bytes <= bound_bytes:
             return
-        _remove_tree(tree.path)
+        remove_directory(tree.path)
         total_bytes -= tree.size_bytes
 
 
+def _locate_cached_tree(request: TreeRequest, sha: str) -> Path:
+    return request.cache / request.project / sha
+
+
 def _extract_tree(
-    run_process: Callable[[ProcessRequest], ProcessRecord],
-    keeper: ReadTimeKeeper,
-    request: TreeRequest,
-    sha: str,
-    root: Path,
+    run_process: Callable[[ProcessRequest], ProcessRecord], keeper: ReadTimeKeeper, request: TreeRequest, sha: str
 ) -> None:
+    root = _locate_cached_tree(request, sha)
     create_directory(root.parent)
-    staging = _create_staging(root)
-    try:
-        staged_tree = _stage_tree(run_process, request, sha, staging, root)
+    with stage_directory(root) as staging:
+        staged_tree = _stage_tree(run_process, request, sha, staging)
         with hold_lock(request.cache_lock):
-            _place_tree(staged_tree, root)
+            place_directory_atomically(staged_tree, root)
             _mark_read(root, request.now, keeper)
             _prune(request.cache, request.cache_bound_bytes, root, keeper)
-    finally:
-        shutil.rmtree(staging, ignore_errors=True)
 
 
 def _reuse_cached_tree(root: Path, request: TreeRequest, keeper: ReadTimeKeeper) -> bool:
@@ -218,9 +185,9 @@ def _read_archive(
     sha = resolve_commit(run_process, request.repository, request.ref)
     if sha is None:
         raise BrigadeError(f"the ref {request.ref} is not a commit of @PROJECT.{request.project}")
-    root = request.cache / request.project / sha
+    root = _locate_cached_tree(request, sha)
     if not _reuse_cached_tree(root, request, keeper):
-        _extract_tree(run_process, keeper, request, sha, root)
+        _extract_tree(run_process, keeper, request, sha)
     return Tree(project=request.project, ref=request.ref, sha=sha, kind=ARCHIVE_KIND, root=root)
 
 

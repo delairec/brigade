@@ -2,9 +2,10 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.system.list_client_adapters import ClientAdapter, list_client_adapters
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class ListClientAdaptersOnAPathWithStrayEntriesTest(unittest.TestCase):
@@ -25,7 +26,7 @@ class ListClientAdaptersOnAPathWithStrayEntriesTest(unittest.TestCase):
     def test_should_list_the_adapters_of_the_directories_it_can_read_and_no_other_tool(self):
         # Arrange
         search_path = os.pathsep.join([str(self.missing_directory), str(self.search_directory)])
-        runtime = SimpleNamespace(paths=SimpleNamespace(executable_search_path=search_path))
+        runtime = create_test_runtime(create_test_paths(Path(self.root.name), executable_search_path=search_path))
 
         # Act
         adapters = list_client_adapters(runtime)
@@ -53,7 +54,9 @@ class ListClientAdaptersOnAPathWithUnfitExecutablesTest(unittest.TestCase):
 
     def test_should_list_neither_a_name_off_the_pattern_nor_a_file_it_cannot_run(self):
         # Arrange
-        runtime = SimpleNamespace(paths=SimpleNamespace(executable_search_path=str(self.search_directory)))
+        runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name), executable_search_path=str(self.search_directory))
+        )
 
         # Act
         adapters = list_client_adapters(runtime)

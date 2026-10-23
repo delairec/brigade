@@ -11,4 +11,4 @@ class LocateUnitDirectoryTest(unittest.TestCase):
         directory = locate_unit_directory(create_test_paths(Path("/home/ada")))
 
         # Assert
-        self.assertEqual(directory, Path("/home/ada/config/systemd/user"))
+        self.assertEqual(directory, Path("/home/ada/systemd/user"))

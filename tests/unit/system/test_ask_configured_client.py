@@ -5,8 +5,8 @@ from pathlib import Path
 
 from brigade.adapters.test_clients import fake
 from brigade.system.ask_configured_client import ask_configured_client
+from brigade.system.parse_configuration import Configuration
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import Configuration
 from brigade.system.require_configured_client import ConfiguredClient
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -32,6 +32,6 @@ class AskConfiguredClientTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(
-            (answer.client, answer.slot_clients, answer.document["client"]), ("fake", {"review": "codex"}, "fake")
-        )
+        self.assertEqual(answer.client, "fake")
+        self.assertEqual(answer.slot_clients, {"review": "codex"})
+        self.assertEqual(answer.document["client"], "fake")

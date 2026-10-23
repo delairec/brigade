@@ -1,6 +1,7 @@
 import functools
 import sys
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +28,7 @@ class Runtime:
     paths: Paths
     now: datetime
     read_clock: Callable[[], datetime]
+    read_monotonic: Callable[[], float]
     entry_point: Path
     trail: TrailWriter
     resolve_plugin: Callable[..., object]
@@ -42,17 +44,18 @@ def _choose_report(invocation: Invocation) -> Callable[[ProcessTrace], None]:
     return lambda trace: sys.stderr.write(f"brigade {invocation.command}: {render_trace(trace)}\n")
 
 
-def build_runtime(invocation: Invocation) -> Runtime:
+def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Runtime:
     trail = TrailWriter(_choose_report(invocation))
-    paths = build_paths()
-    run_recorded_process = functools.partial(run_process, record_trace=trail.append)
+    paths = build_paths(environment)
+    run_recorded_process = functools.partial(run_process, record_trace=trail.append, environment=environment)
     sources = PluginSources(executable_search_path=paths.executable_search_path, run_process=run_recorded_process)
     return Runtime(
         run_process=run_recorded_process,
-        spawn_process=functools.partial(spawn_process, record_trace=trail.append),
+        spawn_process=functools.partial(spawn_process, record_trace=trail.append, environment=environment),
         paths=paths,
         now=datetime.now(UTC),
         read_clock=functools.partial(datetime.now, UTC),
+        read_monotonic=time.monotonic,
         entry_point=Path(sys.argv[0]).absolute(),
         trail=trail,
         resolve_plugin=functools.partial(resolve_plugin, sources=sources),

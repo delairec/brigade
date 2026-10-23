@@ -1,9 +1,8 @@
-import shutil
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from pathlib import Path
 
-from brigade.errors import BrigadeError, CannotWrite
+from brigade.errors import BrigadeError
 from brigade.ledger.group_runs import group_runs
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.order_done import OrderDone
@@ -16,7 +15,9 @@ from brigade.runs.run_locations import (
     RUNS_DIRECTORY,
     RUNS_LOCK_FILE,
 )
+from brigade.system.delete_path import delete_path
 from brigade.system.hold_lock import hold_lock
+from brigade.system.move_directory_into import move_directory_into
 from brigade.system.paths import Paths
 
 RESUMED_ERROR_CLASS = "rate_limit"
@@ -114,26 +115,11 @@ def _empty_removed_runs(removed_runs_directory: Path) -> None:
     if not removed_runs_directory.is_dir():
         return
     for entry in removed_runs_directory.iterdir():
-        _delete(entry)
-
-
-def _delete(entry: Path) -> None:
-    try:
-        if entry.is_dir():
-            shutil.rmtree(entry)
-        else:
-            entry.unlink()
-    except OSError as error:
-        raise CannotWrite(entry, error) from error
+        delete_path(entry)
 
 
 def _remove(run: _SettledRun, removed_runs_directory: Path) -> None:
-    try:
-        removed_runs_directory.mkdir(parents=True, exist_ok=True)
-        removed_directory = run.directory.rename(removed_runs_directory / run.run)
-    except OSError as error:
-        raise CannotWrite(removed_runs_directory, error) from error
-    shutil.rmtree(removed_directory)
+    delete_path(move_directory_into(run.directory, removed_runs_directory))
 
 
 def prune_runs(request: PruneRequest) -> PruneOutcome:

@@ -78,10 +78,7 @@ def _promote(text: str, task: str, pr: int) -> str:
     )
 
 
-def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
-    worktree = locate_task_worktree(runtime, demand.path, demand.task)
-    pr = demand.pr if demand.pr is not None else _read_recorded_pull_request(runtime, worktree)
-    _require_promotion_fields(runtime, worktree)
+def _write_promotion(runtime: Runtime, worktree: TaskWorktree, pr: int, attribution: tuple[str, ...]) -> None:
     shown = read_awawa_document(runtime.run_process, worktree.path, ("show", f"@TASK.{worktree.task}"))
     file_name = str(Path(shown["file"]).relative_to(worktree.path))
     change_corpus_file(
@@ -91,11 +88,18 @@ def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
             lock=locate_corpus_lock(runtime.paths.lock_directory, worktree.path),
             file_names=(file_name,),
             describe_message=lambda: "\n".join(
-                (f"docs(corpus): mark @TASK.{worktree.task} implemented, delivered by #{pr}", "", *demand.attribution)
+                (f"docs(corpus): mark @TASK.{worktree.task} implemented, delivered by #{pr}", "", *attribution)
             ),
             rewrite=lambda texts: (_promote(texts[0], worktree.task, pr),),
         ),
     )
+
+
+def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
+    worktree = locate_task_worktree(runtime, demand.path, demand.task)
+    pr = demand.pr if demand.pr is not None else _read_recorded_pull_request(runtime, worktree)
+    _require_promotion_fields(runtime, worktree)
+    _write_promotion(runtime, worktree, pr, demand.attribution)
     branch = read_current_branch(runtime.run_process, worktree.path)
     push_branch(
         runtime.run_process, BranchPush(repository=worktree.path, branch=branch, environment=demand.environment)

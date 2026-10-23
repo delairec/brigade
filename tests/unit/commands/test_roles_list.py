@@ -1,10 +1,11 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.roles_list import COMMAND
-from tests.unit.commands.command_runtime import create_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 PROBE_ANSWER = {
     "schema_version": 1,
@@ -75,7 +76,7 @@ class RolesListExitCodeTest(unittest.TestCase):
 class RolesListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(json=False)
+        options = Namespace(json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -92,10 +93,10 @@ class RolesListOfTheMachineTest(unittest.TestCase):
 
     def test_should_bind_no_model_when_no_client_is_configured(self):
         # Arrange
-        runtime = create_runtime(self.root)
+        runtime = create_test_runtime(create_test_paths(self.root))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), runtime)
+        document = COMMAND.run(Namespace(), runtime)
 
         # Assert
         self.assertEqual(
@@ -106,10 +107,10 @@ class RolesListOfTheMachineTest(unittest.TestCase):
         # Arrange
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text('client = "double"\n', encoding="utf-8")
-        runtime = create_runtime(self.root, resolve_plugin=_resolve_the_client_double)
+        runtime = create_test_runtime(create_test_paths(self.root), resolve_plugin=_resolve_the_client_double)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(), runtime)
+        document = COMMAND.run(Namespace(), runtime)
 
         # Assert
         self.assertEqual(

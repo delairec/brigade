@@ -1,12 +1,10 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.registry.change_project_status import change_project_status
 from brigade.runtime import Runtime
 
 STATUS = "active"
-
-
-def _read_request(options):
-    return options
 
 
 def _render_text(document: dict) -> str:
@@ -16,11 +14,7 @@ def _render_text(document: dict) -> str:
     return f"{target} is already {document['status']}"
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def project_resume(request, runtime: Runtime) -> dict:
+def project_resume(request: argparse.Namespace, runtime: Runtime) -> dict:
     return change_project_status(runtime, request.name, STATUS)
 
 
@@ -30,7 +24,5 @@ COMMAND = Command(
     group_help="register the projects brigade works on, list and show them",
     arguments=(Argument(("name",)),),
     run=project_resume,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

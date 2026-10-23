@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime
 
-from brigade.errors import BrigadeError, CannotWrite
+from brigade.errors import BrigadeError
 from brigade.ledger.declared_events import LEDGER_SCHEMA_VERSION, WRITTEN_SCHEMA_VERSIONS
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
@@ -20,19 +20,15 @@ from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
+from brigade.system.append_line import append_line
+from brigade.system.instant_formats import MONTH_FORMAT
 from brigade.system.paths import Paths
 
-MONTH_FILE_FORMAT = "%Y-%m.jsonl"
+LEDGER_SUFFIX = ".jsonl"
 
 
-class LedgerEventRefused(BrigadeError):
-    pass
-
-
-def write_event_line(
-    paths: Paths,
-    instant: datetime,
-    event: RunFinished
+WrittenEvent = (
+    RunFinished
     | SignalRecorded
     | ForgeAccountUnavailable
     | PlanLintFailed
@@ -46,8 +42,15 @@ def write_event_line(
     | TaskPrOpened
     | MilestoneCreated
     | TaskPromoted
-    | TaskPreflighted,
-) -> dict:
+    | TaskPreflighted
+)
+
+
+class LedgerEventRefused(BrigadeError):
+    pass
+
+
+def write_event_line(paths: Paths, instant: datetime, event: WrittenEvent) -> dict:
     if instant.utcoffset() is None:
         raise LedgerEventRefused(f"the instant of the event {event.name} carries no time zone")
     utc_instant = instant.astimezone(UTC)
@@ -57,13 +60,7 @@ def write_event_line(
         "event": event.name,
         **event.to_document(),
     }
-    ledger_directory = paths.state_root / LEDGER_DIRECTORY
-    month_file = ledger_directory / utc_instant.strftime(MONTH_FILE_FORMAT)
-    try:
-        ledger_directory.mkdir(parents=True, exist_ok=True)
-        with month_file.open("a", encoding="utf-8") as ledger_file:
-            ledger_file.write(json.dumps(line) + "\n")
-            ledger_file.flush()
-    except OSError as error:
-        raise CannotWrite(error.filename or month_file, error) from error
+    append_line(
+        paths.state_root / LEDGER_DIRECTORY / f"{utc_instant.strftime(MONTH_FORMAT)}{LEDGER_SUFFIX}", json.dumps(line)
+    )
     return line

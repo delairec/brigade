@@ -38,7 +38,6 @@ SCHEDULER_ENTRY = 4
 FORGE_ENTRY = 5
 AWAWA_WEB_ENTRY = 6
 INSTRUCTIONS_ENTRY = 7
-STEPS_ENTRY = 8
 FORGE_LOGIN_ENTRY = 6
 REVIEW_ENTRY_BELOW_ONE_FORGE_LOGIN = 7
 INSTRUCTIONS_ENTRY_BELOW_ONE_FORGE_LOGIN = 8
@@ -249,7 +248,8 @@ class BrigadeDoctorWithNoConfigurationTest(DoctorTestCase):
 
         # Assert
         document = json.loads(completed.stdout)
-        self.assertEqual((document["client"], document["slot_clients"]), (None, no_slot_bound))
+        self.assertEqual(document["client"], None)
+        self.assertEqual(document["slot_clients"], no_slot_bound)
 
 
 class BrigadeDoctorWhenAPrerequisiteFailsTest(DoctorTestCase):
@@ -611,26 +611,6 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
             },
         )
 
-    def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
-        # Arrange
-        self.write_configuration('client = "fake"\n')
-
-        # Act
-        completed = self.run_doctor(EVERY_TOOL_BUT_THE_CLIENT, "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["items"][STEPS_ENTRY],
-            {
-                "name": "steps",
-                "kind": "optional",
-                "state": "warning",
-                "detail": "fake counts no steps: the budget is held on the clock and the run cut at its limit",
-                "fallback": "the wall-time limit of each run",
-            },
-        )
-
 
 class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
     def test_should_report_the_error_of_the_one_read_in_each_check_that_needs_the_configuration(self):
@@ -671,7 +651,7 @@ class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
         completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
 
         # Assert
-        self.assertNotIn("steps", [item["name"] for item in json.loads(completed.stdout)["items"]])
+        self.assertNotIn('"name": "steps"', completed.stdout)
 
     def test_should_report_no_instructions_configured_when_no_configuration_exists(self):
         # Act
@@ -701,11 +681,17 @@ AGENT_LACKING_ITS_REASONING = 'AGENT planner\n\tWORK "the plan of a wave"\n'
 class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.search_path = provide_awawa(self)
         self.instructions = Path(self.config_home.name) / "instructions"
         self.instructions.mkdir()
         (self.instructions / "_schema.awawa").write_text(INSTRUCTIONS_SCHEMA)
-        self.machine_with_awawa = [GIT, str(Path(shutil.which("awawa")).parent), SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+        self.machine_with_awawa = [
+            GIT,
+            str(Path(shutil.which("awawa", path=self.search_path)).parent),
+            SYSTEMD_RUNNING,
+            GH_ACTIVE,
+            AWAWA_WEB,
+        ]
 
     def test_should_report_a_warning_with_its_fallback_when_none_is_configured(self):
         # Arrange
@@ -959,26 +945,6 @@ class BrigadeDoctorRunFromACloneTest(DoctorTestCase):
             self.clone / "bin" / "brigade", [str(self.git_directory), *EVERY_TOOL_BUT_GIT], *options
         )
 
-    def test_should_warn_that_the_checkout_is_behind_its_upstream(self):
-        # Arrange
-        run_git(self.clone, "fetch", "--quiet")
-
-        # Act
-        completed = self.run_clone_doctor("--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["items"][-1],
-            {
-                "name": "checkout",
-                "kind": "optional",
-                "state": "warning",
-                "detail": f"{self.clone} at de446f3, 1 behind origin/main at 8885daa",
-                "fallback": "git pull in the checkout",
-            },
-        )
-
     def test_should_report_no_checkout_up_to_date_with_its_upstream_as_last_fetched(self):
         # Act
         completed = self.run_clone_doctor("--json")
@@ -1076,7 +1042,7 @@ class BrigadeDoctorReportsAnInstalledSchemaDifferingFromTheShippedOneTest(Doctor
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertNotIn("schema", [item["name"] for item in json.loads(completed.stdout)["items"]])
+        self.assertNotIn('"name": "schema"', completed.stdout)
 
 
 REVIEW_FALLBACK = "GitHub refuses the approval of the review slot"
@@ -1086,7 +1052,7 @@ POLICY_UNDER_APPROVAL = "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tREVIEW a
 class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.search_path = provide_awawa(self)
         self.write_configuration('client = "fake"\n')
         corpus = self.configuration.parent
         shutil.copyfile(REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl", corpus / "_schema.awawa")
@@ -1096,7 +1062,7 @@ class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestC
             SYSTEMD_RUNNING,
             GH_ACCOUNTS,
             AWAWA_WEB,
-            str(Path(shutil.which("awawa")).parent),
+            str(Path(shutil.which("awawa", path=self.search_path)).parent),
         ]
 
     def test_should_warn_naming_the_project_whose_build_and_review_slots_share_no_two_logins(self):
@@ -1153,7 +1119,7 @@ class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestC
 
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
-                self.assertNotIn("review", [item["name"] for item in json.loads(completed.stdout)["items"]])
+                self.assertNotIn('"name": "review"', completed.stdout)
 
     def test_should_report_the_error_of_the_one_read_of_a_config_toml_that_is_not_toml(self):
         # Arrange

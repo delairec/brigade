@@ -4,10 +4,9 @@ from pathlib import Path
 
 from brigade.errors import ToolFailure
 from brigade.git.require_ancestor import require_ancestor
+from tests.integration.repository_test_case import IDENTITY
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
-
-IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 
 
 def run_git(repository: Path, *arguments: str) -> str:

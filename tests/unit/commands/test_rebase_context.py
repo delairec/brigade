@@ -1,16 +1,10 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.rebase_context import COMMAND
-from tests.unit.commands.command_runtime import (
-    ProcessAnswer,
-    ScriptedProcessRunner,
-    create_corpus_double,
-    create_runtime,
-    write_ledger,
-)
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 
 MERGE_TREE = (
@@ -22,6 +16,9 @@ MERGE_TREE = (
     "HEAD",
     "origin/integration/M4-tides",
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 CONFLICTING_MERGE = ProcessAnswer(stdout="4b825dc\nsrc/tides.py\nREADME.md\n", exit_code=1)
 CLEAN_MERGE = ProcessAnswer(stdout="4b825dc\n")
 
@@ -67,7 +64,7 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
         machine = ScriptedProcessRunner(
             answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}})
         )
-        return create_runtime(self.root, run_process=machine.run)
+        return create_test_runtime(create_test_paths(self.root), run_process=machine.run)
 
     def test_should_give_the_files_git_reports_in_conflict_between_the_branch_and_its_base(self):
         for case, merge, conflicts in [
@@ -79,7 +76,7 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
                 runtime = self._create_runtime(merge)
 
                 # Act
-                document = COMMAND.run(SimpleNamespace(pr=42), runtime)
+                document = COMMAND.run(Namespace(pr=42), runtime)
 
                 # Assert
                 self.assertEqual(document, create_document(conflicts))
@@ -88,7 +85,7 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
 class RebaseContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)

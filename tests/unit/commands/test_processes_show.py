@@ -4,7 +4,8 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.processes_show import COMMAND, processes_show
-from tests.unit.commands.command_runtime import create_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 EXITED = '{"argv": ["git", "status"], "outcome": "exited", "exit": 0, "duration_ms": 12}\n'
 FAILED = '{"argv": ["git", "push"], "outcome": "exited", "exit": 1, "duration_ms": 30}\n'
@@ -14,7 +15,7 @@ class ProcessesShowTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
-        self.runtime = create_runtime(Path(self.root.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
         commands = self.runtime.paths.state_root / "commands"
         commands.mkdir(parents=True)
         (commands / "20261019T090000Z-a1b2c3.jsonl").write_text(EXITED + FAILED)

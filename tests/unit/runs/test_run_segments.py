@@ -85,10 +85,8 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(
-            (records[-1].number, json.loads((plan.run_directory / "result.json").read_text())["outcome"]),
-            (1, "done"),
-        )
+        self.assertEqual(records[-1].number, 1)
+        self.assertEqual(json.loads((plan.run_directory / "result.json").read_text())["outcome"], "done")
 
 
 class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
@@ -100,13 +98,11 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
+        self.assertEqual(records[-1].number, 1)
         self.assertEqual(
-            (records[-1].number, read_ledger(self.paths.state_root).entries[1].event),
-            (
-                1,
-                SignalRecorded(
-                    signal="handed_over", project=None, procedure="build-task", run=RUN_ID, segment=1, budget=40
-                ),
+            read_ledger(self.paths.state_root).entries[1].event,
+            SignalRecorded(
+                signal="handed_over", project=None, procedure="build-task", run=RUN_ID, segment=1, budget=40
             ),
         )
 
@@ -128,10 +124,10 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(
-            ((records[0].number, records[0].outcome), (records[1].number, records[1].outcome)),
-            ((1, "handed_over"), (2, "done")),
-        )
+        self.assertEqual(records[0].number, 1)
+        self.assertEqual(records[0].outcome, "handed_over")
+        self.assertEqual(records[1].number, 2)
+        self.assertEqual(records[1].outcome, "done")
 
 
 class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):

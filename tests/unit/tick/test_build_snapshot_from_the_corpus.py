@@ -19,8 +19,8 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_started import WaveStarted
+from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
-from brigade.system.read_configuration import Configuration
 from brigade.tick.build_snapshot import (
     PreflightFailure,
     ProjectFacts,
@@ -45,6 +45,8 @@ FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
 PULL_REQUEST = PullRequestFacts(
     number=7, state="open", checks=(), review=None, behind=False, head="4f2a9c1", base="integration/w1"
 )
+from brigade.system.run_process import ProcessRequest
+from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 
 def answer_entities(root: Path, entity_type: str, entities: dict[str, list[dict]], *conditions: str) -> dict:
@@ -90,7 +92,7 @@ def _read_forge_environment(slot: str) -> dict:
     return FORGE_ENVIRONMENT
 
 
-class PullRequestReader:
+class PullRequestReaderDouble:
     def __init__(self):
         self.branches = []
 
@@ -110,7 +112,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
         self.wave_tree.mkdir(parents=True)
         self.main_tree = self.paths.cache_root / "refs" / "shop" / MAIN_SHA
         self.main_tree.mkdir(parents=True)
-        self.reader = PullRequestReader()
+        self.reader = PullRequestReaderDouble()
         self.shop_forge = "none"
         self.remote_answers = {}
 
@@ -306,10 +308,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
         # Assert
         wave = snapshot.waves[0]
-        self.assertEqual(
-            (wave.wave, wave.implemented, wave.forge_account_unavailable, wave.reported),
-            ("w1", ("B0",), True, False),
-        )
+        self.assertEqual(wave.wave, "w1")
+        self.assertEqual(wave.implemented, ("B0",))
+        self.assertEqual(wave.forge_account_unavailable, True)
+        self.assertEqual(wave.reported, False)
 
     def test_should_follow_no_wave_closed_or_cancelled(self):
         # Arrange
@@ -379,10 +381,16 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.build()
 
         # Assert
-        fetches = [request for request in self.runner.requests if request.argv[:2] == ("git", "fetch")]
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in fetches],
-            [(("git", "fetch", "--quiet", "origin", "main"), str(self.repository), FORGE_ENVIRONMENT)],
+            select_requests_opening_on(self.runner.requests, ("git", "fetch")),
+            [
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "main"),
+                    cwd=str(self.repository),
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                )
+            ],
         )
 
     def test_should_mark_a_wave_whose_branch_is_gone(self):
@@ -437,16 +445,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
+        self.assertEqual(len(snapshot.rate_limits), 2)
         self.assertEqual(
-            (len(snapshot.rate_limits), snapshot.studies),
-            (
-                2,
-                (
-                    StudyFacts(
-                        name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False
-                    ),
-                ),
-            ),
+            snapshot.studies,
+            (StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),),
         )
 
     def test_should_skip_a_wave_or_a_project_whose_tree_cannot_be_read(self):

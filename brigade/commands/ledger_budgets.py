@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import asdict
 
 from brigade.command import Argument, Command
@@ -23,15 +24,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def ledger_budgets(request, runtime: Runtime) -> dict:
+def ledger_budgets(request: argparse.Namespace, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -54,8 +47,6 @@ COMMAND = Command(
         ),
     ),
     run=ledger_budgets,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=describe_skipped_lines,
 )

@@ -4,11 +4,19 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
+from brigade.system.run_process import ProcessRequest
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
-from tests.unit.commands.command_runtime import write_ledger
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_ledger, write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+from tests.unit.select_requests_opening_on import select_requests_opening_on
+
+GIT_BRANCH = ("git", "branch")
+GIT_FETCH = ("git", "fetch")
+GIT_PUSH = ("git", "push")
 
 REPOSITORY = "/srv/shop"
 MAIN_SHA = "4f1c2a9"
@@ -57,7 +65,8 @@ class StartProjectWaveTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         tree = self.root / "cache" / "refs" / "shop" / MAIN_SHA
         tree.mkdir(parents=True)
         self.processes.answer(
@@ -133,7 +142,7 @@ class StartProjectWaveOfTheStartableTasksTest(StartProjectWaveTestCase):
 
         # Assert
         self.assertEqual(
-            [argv for argv in self.processes.list_argvs() if argv[:2] == ("git", "branch")],
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH),
             [
                 ("git", "branch", "--quiet", "integration/shop_w1", "main"),
                 ("git", "branch", "--quiet", "integration/shop_w2", "main"),
@@ -248,10 +257,22 @@ class StartProjectWaveOnTheGithubForgeTest(StartProjectWaveTestCase):
         self.start_wave(EVERY_STARTABLE_TASK)
 
         # Assert
-        fetches = [request for request in self.processes.requests if request.argv[:2] == ("git", "fetch")]
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in fetches[:1]],
-            [(("git", "fetch", "--quiet", "origin", "main"), REPOSITORY, FORGE_ENVIRONMENT)],
+            select_requests_opening_on(self.processes.requests, GIT_FETCH),
+            [
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "main"),
+                    cwd=REPOSITORY,
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                ),
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "main"),
+                    cwd=REPOSITORY,
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                ),
+            ],
         )
 
     def test_should_push_the_integration_branch_with_the_environment_of_the_forge(self):
@@ -265,12 +286,21 @@ class StartProjectWaveOnTheGithubForgeTest(StartProjectWaveTestCase):
         self.start_wave(EVERY_STARTABLE_TASK)
 
         # Assert
-        pushes = [request for request in self.processes.requests if request.argv[:2] == ("git", "push")]
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in pushes],
+            select_requests_opening_on(self.processes.requests, GIT_PUSH),
             [
-                (("git", "push", "--quiet", "origin", "integration/shop_w1"), REPOSITORY, FORGE_ENVIRONMENT),
-                (("git", "push", "--quiet", "origin", "integration/shop_w2"), REPOSITORY, FORGE_ENVIRONMENT),
+                ProcessRequest(
+                    argv=("git", "push", "--quiet", "origin", "integration/shop_w1"),
+                    cwd=REPOSITORY,
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                ),
+                ProcessRequest(
+                    argv=("git", "push", "--quiet", "origin", "integration/shop_w2"),
+                    cwd=REPOSITORY,
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                ),
             ],
         )
 
@@ -287,7 +317,7 @@ class StartProjectWaveOnTheGithubForgeTest(StartProjectWaveTestCase):
 
         # Assert
         self.assertEqual(
-            [argv for argv in self.processes.list_argvs() if argv[:2] in {("git", "branch"), ("git", "push")}],
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH, GIT_PUSH),
             [
                 ("git", "push", "--quiet", "origin", "integration/shop_w1"),
                 ("git", "branch", "--quiet", "integration/shop_w2", "origin/main"),

@@ -1,13 +1,15 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError, UsageError
 from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.list_client_adapters import SUPPORTED_CLIENT, ClientAdapter, list_client_adapters
+from brigade.system.parse_configuration import Configuration
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import Configuration
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 SCHEMA_VERSION = 1
 OPERATION_CAPABILITIES = ("launch", "result", "resume", "transcripts", "actions")
@@ -151,8 +153,8 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def adapter_matrix(request, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+def adapter_matrix(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     rows = [_describe_adapter(runtime, configuration, adapter) for adapter in list_client_adapters(runtime)]
     return {"schema_version": SCHEMA_VERSION, "adapters": sorted(rows, key=_order_row), "fallbacks": FALLBACKS}
 

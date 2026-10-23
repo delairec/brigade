@@ -1,10 +1,10 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.request_list import COMMAND
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 
 SHOP_REQUEST = (
     ("PROJECT", "@PROJECT.shop"),
@@ -13,6 +13,9 @@ SHOP_REQUEST = (
     ("MILESTONE", "M4"),
     ("PR", "42"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 DEPOT_REQUEST = (("PROJECT", "@PROJECT.depot"), ("CREATED_AT", "2026-10-14T08:00:00Z"), ("STATUS", "planning"))
 SHOP_ROW = {
     "name": "shop_r1",
@@ -38,28 +41,28 @@ class RequestListTest(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
         requests = {"REQUEST": {"shop_r1": SHOP_REQUEST, "depot_r1": DEPOT_REQUEST}}
-        self.runtime = create_runtime(self.root, run_process=create_corpus_double(requests))
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=create_corpus_double(requests))
 
     def test_should_list_one_row_per_request(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), self.runtime)
+        document = COMMAND.run(Namespace(project=EVERY_PROJECT), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "requests": [DEPOT_ROW, SHOP_ROW]})
 
     def test_should_narrow_the_rows_to_one_project(self):
         # Act
-        document = COMMAND.run(SimpleNamespace(project="depot"), self.runtime)
+        document = COMMAND.run(Namespace(project="depot"), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "requests": [DEPOT_ROW]})
 
     def test_should_list_no_row_of_a_corpus_holding_no_request(self):
         # Arrange
-        runtime = create_runtime(self.root, run_process=create_corpus_double({"REQUEST": {}}))
+        runtime = create_test_runtime(create_test_paths(self.root), run_process=create_corpus_double({"REQUEST": {}}))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(project=EVERY_PROJECT), runtime)
+        document = COMMAND.run(Namespace(project=EVERY_PROJECT), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "requests": []})
@@ -96,7 +99,7 @@ class RequestListExitCodeTest(unittest.TestCase):
 class RequestListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(project="shop")
+        options = Namespace(project="shop")
 
         # Act
         request = COMMAND.read_request(options)

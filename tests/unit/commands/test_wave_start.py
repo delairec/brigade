@@ -1,11 +1,13 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.wave_start import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.waves.test_start_project_wave import StartProjectWaveTestCase
 
 NO_PROJECTS = {"PROJECT": {}}
@@ -41,7 +43,7 @@ class WaveStartExitCodeTest(unittest.TestCase):
 class WaveStartRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(project="tidepool", tasks=["S3"])
+        options = Namespace(project="tidepool", tasks=["S3"])
 
         # Act
         request = COMMAND.read_request(options)
@@ -53,7 +55,7 @@ class WaveStartRequestTest(unittest.TestCase):
 class WaveStartOfNamedTasksTest(StartProjectWaveTestCase):
     def test_should_start_the_wave_on_the_tasks_the_command_line_names(self):
         # Arrange
-        options = SimpleNamespace(project="shop", tasks=["S10"])
+        options = Namespace(project="shop", tasks=["S10"])
 
         # Act
         document = COMMAND.run(options, self.runtime)
@@ -67,12 +69,13 @@ class WaveStartOfAnUnknownProjectTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
-        runtime = create_runtime(root, run_process=create_corpus_double(NO_PROJECTS))
+        write_operational_corpus(root)
+        runtime = create_test_runtime(create_test_paths(root), run_process=create_corpus_double(NO_PROJECTS))
         every_startable_task = []
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(project="tidepool", tasks=every_startable_task), runtime)
+            COMMAND.run(Namespace(project="tidepool", tasks=every_startable_task), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "@PROJECT.tidepool is not registered")

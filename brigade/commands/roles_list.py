@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
 from brigade.runtime import Runtime
@@ -6,9 +8,9 @@ from brigade.system.client_question import ClientQuestion
 from brigade.system.describe_client_answered import describe_client_answered
 from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
+from brigade.system.parse_configuration import SLOTS, Configuration
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import SLOTS, Configuration
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -40,16 +42,8 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def roles_list(request, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+def roles_list(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS, configuration) for slot in SLOTS]
     slot_clients = list_slot_clients_elsewhere(configuration, configuration.client)
     models_by_client = {
@@ -79,7 +73,5 @@ COMMAND = Command(
     help="list the role, the source and the model of each slot",
     group_help="list, show and lint the roles each slot resolves to",
     run=roles_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

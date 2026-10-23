@@ -1,17 +1,11 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.rebase_done import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import (
-    ProcessAnswer,
-    ScriptedProcessRunner,
-    create_corpus_double,
-    create_runtime,
-    write_ledger,
-)
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 
 DESCENDING = ProcessAnswer()
@@ -24,6 +18,11 @@ PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD = (
     "origin",
     "HEAD:task/M4-tides/T7",
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+
+GIT_PUSH = ("git", "push")
 DONE_DOCUMENT = {
     "schema_version": 1,
     "project": "tidepool",
@@ -63,20 +62,18 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
         self.machine = ScriptedProcessRunner(
             answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}})
         )
-        return create_runtime(self.root, run_process=self.machine.run)
+        return create_test_runtime(create_test_paths(self.root), run_process=self.machine.run)
 
     def test_should_push_a_branch_descending_from_the_head_of_its_base_with_a_lease_on_its_remote_head(self):
         # Arrange
         runtime = self._create_runtime(DESCENDING)
 
         # Act
-        document = COMMAND.run(SimpleNamespace(pr=42), runtime)
+        document = COMMAND.run(Namespace(pr=42), runtime)
 
         # Assert
-        self.assertEqual(
-            (document["head"], [argv for argv in self.machine.argvs if argv[:2] == ("git", "push")]),
-            ("9a9a9a9", [PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD]),
-        )
+        self.assertEqual(document["head"], "9a9a9a9")
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_PUSH), [PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD])
 
     def test_should_refuse_a_branch_that_does_not_descend_from_the_head_of_its_base_and_push_nothing(self):
         # Arrange
@@ -84,19 +81,20 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=42), runtime)
+            COMMAND.run(Namespace(pr=42), runtime)
 
         # Assert
         self.assertEqual(
-            (str(raised.exception), [argv for argv in self.machine.argvs if argv[:2] == ("git", "push")]),
-            ("task/M4-tides/T7 does not descend from the head of integration/M4-tides: rebase it first", []),
+            str(raised.exception),
+            "task/M4-tides/T7 does not descend from the head of integration/M4-tides: rebase it first",
         )
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_PUSH), [])
 
 
 class RebaseDoneRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)

@@ -1,14 +1,14 @@
 import os
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import ANY
 
 from brigade.commands.request_replan import COMMAND
 from brigade.errors import BrigadeError
 from brigade.runs.record_run_pid import record_run_pid
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.commands.run_directories import create_planner_record, create_run_result, write_run
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
@@ -31,6 +31,9 @@ PLANNING_REQUEST = (
     ("CREATED_AT", "2026-10-13T14:00:00Z"),
     ("STATUS", "planning"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 PLANNER_RUN = "20261013T140000Z-a10001"
 NO_RESULT = None
 
@@ -49,8 +52,8 @@ class RequestReplanTest(unittest.TestCase):
             "PROJECT": {"shop": project},
             "REQUEST": {"shop_r1": PLANNED_REQUEST, "shop_r2": PLANNING_REQUEST},
         }
-        return create_runtime(
-            self.root,
+        return create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_corpus_double(corpus),
             spawn_process=spawn_as_this_process,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
@@ -62,7 +65,7 @@ class RequestReplanTest(unittest.TestCase):
         runtime = self._create_runtime((("PATH", str(self.repository)),))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r2"), runtime)
+        document = COMMAND.run(Namespace(request="shop_r2"), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r2", "run": ANY})
@@ -75,7 +78,7 @@ class RequestReplanTest(unittest.TestCase):
         runtime = self._create_runtime((("PATH", str(self.repository)),))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r2"), runtime)
+        document = COMMAND.run(Namespace(request="shop_r2"), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r2", "run": ANY})
@@ -86,7 +89,7 @@ class RequestReplanTest(unittest.TestCase):
         runtime = self._create_runtime((("PATH", str(self.repository)),))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(request="shop_r2"), runtime)
+        document = COMMAND.run(Namespace(request="shop_r2"), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r2", "run": ANY})
@@ -97,7 +100,7 @@ class RequestReplanTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(request="shop_r1"), runtime)
+            COMMAND.run(Namespace(request="shop_r1"), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "@REQUEST.shop_r1 is planned")
@@ -110,7 +113,7 @@ class RequestReplanTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(request="shop_r2"), runtime)
+            COMMAND.run(Namespace(request="shop_r2"), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), f"@REQUEST.shop_r2 has its planner run {PLANNER_RUN} live")
@@ -121,7 +124,7 @@ class RequestReplanTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(request="shop_r2"), runtime)
+            COMMAND.run(Namespace(request="shop_r2"), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "@PROJECT.shop is paused")
@@ -172,7 +175,7 @@ class RequestReplanExitCodeTest(unittest.TestCase):
 class RequestReplanRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(request="shop_r2")
+        options = Namespace(request="shop_r2")
 
         # Act
         request = COMMAND.read_request(options)

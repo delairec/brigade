@@ -1,9 +1,11 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.roles.render_role_file import render_role_file
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import SLOTS
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.parse_configuration import SLOTS
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 FINAL_NEWLINE = "\n"
@@ -20,16 +22,8 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def roles_show(request, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+def roles_show(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     resolved = resolve_role(request.slot, runtime, NO_PROJECT_BINDINGS, configuration)
     identity = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -56,7 +50,5 @@ COMMAND = Command(
         Argument(("--short",), {"action": "store_true", "help": "print the front matter and the size of the body"}),
     ),
     run=roles_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

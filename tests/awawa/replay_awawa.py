@@ -4,6 +4,7 @@ import re
 import sys
 from pathlib import Path
 
+from tests.awawa.read_input import read_input
 from tests.awawa.volatile_value_masker import VolatileValueMasker
 from tests.process_launcher import ProcessLauncher
 
@@ -12,7 +13,7 @@ IMPL_ANCHOR_PATH = re.compile(r'\bIMPL\s+"([^"]+?)::')
 
 
 def _list_anchored_files(root: Path, corpus_files: list[Path]) -> list[Path]:
-    paths = {root / match for file in corpus_files for match in IMPL_ANCHOR_PATH.findall(_read_input(file) or "")}
+    paths = {root / match for file in corpus_files for match in IMPL_ANCHOR_PATH.findall(read_input(file) or "")}
     return sorted(path for path in paths if path.is_file())
 
 
@@ -23,15 +24,8 @@ def _list_input_files(path: Path) -> list[Path]:
     return [path]
 
 
-def _read_input(file: Path) -> str | None:
-    try:
-        return file.read_text()
-    except PermissionError:
-        return None
-
-
 def _mask_input(file: Path, masker: VolatileValueMasker) -> str | None:
-    content = _read_input(file)
+    content = read_input(file)
     return None if content is None else masker.mask(content)
 
 
@@ -64,7 +58,7 @@ def _name_recording(call: dict) -> str:
 
 
 def _record(configuration: dict, arguments: list[str], call: dict, files: list[Path], masker) -> dict:
-    before = {file: _read_input(file) for file in files}
+    before = {file: read_input(file) for file in files}
     completed = ProcessLauncher.run(
         [configuration["real_awawa"], *arguments], capture_output=True, text=True, check=False
     )
@@ -78,7 +72,7 @@ def _record(configuration: dict, arguments: list[str], call: dict, files: list[P
             "rewritten": {
                 masker.mask(str(file)): _mask_input(file, masker)
                 for file in files
-                if file.exists() and _read_input(file) != before[file]
+                if file.exists() and read_input(file) != before[file]
             },
         },
     }

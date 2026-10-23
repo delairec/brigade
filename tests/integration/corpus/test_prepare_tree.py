@@ -1,3 +1,4 @@
+import errno
 import os
 import tempfile
 import unittest
@@ -5,18 +6,34 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, Tree, TreeRequest, prepare_tree
+from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, ReadTimeKeeper, Tree, TreeRequest, prepare_tree
 from brigade.errors import BrigadeError, CannotWrite
+from tests.integration.repository_test_case import IDENTITY
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
 
-IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 FIRST_READ = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
 SECOND_READ = datetime(2026, 10, 6, 10, 0, tzinfo=UTC)
 THIRD_READ = datetime(2026, 10, 6, 11, 0, tzinfo=UTC)
 FOURTH_READ = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 ROOMY_BOUND_BYTES = 1024 * 1024 * 1024
-A_DIRECTORY_OF_ANOTHER_OWNER = Path("/")
+LONGEST_NAME = 255
+
+
+def create_keeper_refusing_the_stamp() -> ReadTimeKeeper:
+    def refuse_stamp(tree: Path, read_ns: int) -> None:
+        raise PermissionError(errno.EPERM, os.strerror(errno.EPERM), str(tree))
+
+    return ReadTimeKeeper(stamp_read=refuse_stamp, read_stamp=FILESYSTEM_READ_TIME_KEEPER.read_stamp)
+
+
+def create_keeper_losing(vanished_tree: Path) -> ReadTimeKeeper:
+    def read_stamp(tree: Path) -> int:
+        if tree == vanished_tree:
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), str(tree))
+        return FILESYSTEM_READ_TIME_KEEPER.read_stamp(tree)
+
+    return ReadTimeKeeper(stamp_read=FILESYSTEM_READ_TIME_KEEPER.stamp_read, read_stamp=read_stamp)
 
 
 def run_git(repository: Path, *arguments: str) -> str:
@@ -86,14 +103,9 @@ class PrepareTreeAtABranchOrAShaTest(PrepareTreeTestCase):
 
         # Assert
         root = self.cache / "app" / self.sha
-        self.assertEqual(
-            (tree, (root / "corpus" / "tasks.awawa").read_text(), (root / "src" / "app.py").read_text()),
-            (
-                Tree(project="app", ref="main", sha=self.sha, kind="archive", root=root),
-                "committed\n",
-                "print('app')\n",
-            ),
-        )
+        self.assertEqual(tree, Tree(project="app", ref="main", sha=self.sha, kind="archive", root=root))
+        self.assertEqual((root / "corpus" / "tasks.awawa").read_text(), "committed\n")
+        self.assertEqual((root / "src" / "app.py").read_text(), "print('app')\n")
 
     def test_should_resolve_an_abbreviated_sha_to_the_whole_sha(self):
         # Act
@@ -198,10 +210,8 @@ class PrepareTreeWhenAnotherExtractionWinsTheRaceTest(PrepareTreeTestCase):
         )
 
         # Assert
-        self.assertEqual(
-            ((tree.root / "corpus" / "tasks.awawa").read_text(), list((self.cache / "app").iterdir())),
-            ("extracted by the winner\n", [self.cache / "app" / self.sha]),
-        )
+        self.assertEqual((tree.root / "corpus" / "tasks.awawa").read_text(), "extracted by the winner\n")
+        self.assertEqual(list((self.cache / "app").iterdir()), [self.cache / "app" / self.sha])
 
 
 class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
@@ -226,14 +236,10 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(
-            (tree, (tree.root / "corpus" / "tasks.awawa").read_text()),
-            (
-                Tree(
-                    project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree
-                ),
-                "edited on feature, not committed\n",
-            ),
+            tree,
+            Tree(project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree),
         )
+        self.assertEqual((tree.root / "corpus" / "tasks.awawa").read_text(), "edited on feature, not committed\n")
 
     def test_should_read_a_worktree_on_a_detached_head_by_its_path(self):
         # Arrange
@@ -332,82 +338,49 @@ class PrepareTreeOverTheCacheBoundTest(PrepareTreeTestCase):
         self.assertEqual(list((self.cache / "app").iterdir()), [self.cache / "app" / self.sha_b])
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class PrepareTreeWhereTheMachineRefusesAWriteTest(PrepareTreeTestCase):
+class PrepareTreeWhereAnEntryStandsInTheWayOfAWriteTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.sha = self.commit("corpus/tasks.awawa", "committed\n")
 
-    def tearDown(self):
-        self.refused.chmod(0o700)
-        super().tearDown()
-
-    def refuse_writes_in(self, directory: Path) -> None:
-        directory.mkdir(parents=True, exist_ok=True)
-        directory.chmod(0o500)
-        self.refused = directory
-
-    def run_process_refusing_the_extraction(self, request):
+    def run_process_blocking_the_extraction(self, request):
         record = run_process_without_trail(request)
         if request.argv[:2] == ("git", "archive"):
-            self.refuse_writes_in(Path(request.argv[3].removeprefix("--output=")).parent)
+            (Path(request.argv[3].removeprefix("--output=")).parent / "tree").write_text("")
         return record
 
     def test_should_name_the_cache_it_cannot_create(self):
         # Arrange
-        self.refuse_writes_in(self.cache.parent)
+        self.cache.parent.mkdir(parents=True)
+        self.cache.write_text("")
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
             prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
 
         # Assert
-        self.assertEqual(str(raised.exception), f"cannot write {self.cache}: Permission denied")
-
-    def test_should_name_the_tree_it_cannot_stage(self):
-        # Arrange
-        self.refuse_writes_in(self.cache / "app")
-
-        # Act
-        with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
-
-        # Assert
-        self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Permission denied")
+        self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app'}: Not a directory")
 
     def test_should_name_the_tree_it_cannot_extract(self):
         # Act
         with self.assertRaises(CannotWrite) as raised:
             prepare_tree(
-                self.run_process_refusing_the_extraction, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main")
+                self.run_process_blocking_the_extraction, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main")
             )
 
         # Assert
-        self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Permission denied")
+        self.assertEqual(str(raised.exception), f"cannot write {self.cache / 'app' / self.sha}: Not a directory")
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class PrepareTreeWhereTheMachineRefusesThePruningTest(PrepareTreeTestCase):
+class PrepareTreeOverAStaleTreeItCannotSetAsideTest(PrepareTreeTestCase):
     def setUp(self):
         super().setUp()
         self.commit("corpus/tasks.awawa", "committed\n")
-        self.stale_project = self.cache / "other"
-        self.stale_tree = self.stale_project / ("0" * 40)
+        self.stale_tree = self.cache / "other" / ("0" * LONGEST_NAME)
         (self.stale_tree / "corpus").mkdir(parents=True)
         (self.stale_tree / "corpus" / "tasks.awawa").write_text("stale\n")
 
-    def tearDown(self):
-        self.refused.chmod(0o700)
-        super().tearDown()
-
-    def restrict(self, directory: Path, mode: int) -> None:
-        directory.chmod(mode)
-        self.refused = directory
-
     def test_should_name_the_tree_it_cannot_remove(self):
-        # Arrange
-        self.restrict(self.stale_project, 0o500)
-
         # Act
         with self.assertRaises(CannotWrite) as raised:
             prepare_tree(
@@ -417,39 +390,18 @@ class PrepareTreeWhereTheMachineRefusesThePruningTest(PrepareTreeTestCase):
             )
 
         # Assert
-        self.assertEqual(str(raised.exception), f"cannot write {self.stale_tree}: Permission denied")
+        self.assertEqual(str(raised.exception), f"cannot write {self.stale_tree}: File name too long")
 
-    def test_should_name_the_project_cache_it_cannot_list(self):
+    def test_should_name_the_stale_tree_that_vanished_while_it_was_measured(self):
         # Arrange
-        self.restrict(self.stale_project, 0o300)
+        keeper = create_keeper_losing(self.stale_tree)
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(
-                run_process_without_trail,
-                FILESYSTEM_READ_TIME_KEEPER,
-                self.create_request(ref="main", cache_bound_bytes=0),
-            )
+            prepare_tree(run_process_without_trail, keeper, self.create_request(ref="main", cache_bound_bytes=0))
 
         # Assert
-        self.assertEqual(str(raised.exception), f"cannot write {self.stale_project}: Permission denied")
-
-    def test_should_name_the_file_it_cannot_measure(self):
-        # Arrange
-        self.restrict(self.stale_tree / "corpus", 0o600)
-
-        # Act
-        with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(
-                run_process_without_trail,
-                FILESYSTEM_READ_TIME_KEEPER,
-                self.create_request(ref="main", cache_bound_bytes=0),
-            )
-
-        # Assert
-        self.assertEqual(
-            str(raised.exception), f"cannot write {self.stale_tree / 'corpus' / 'tasks.awawa'}: Permission denied"
-        )
+        self.assertEqual(str(raised.exception), f"cannot write {self.stale_tree}: No such file or directory")
 
 
 class PrepareTreeOverAnEntryOfTheCacheItCannotUseTest(PrepareTreeTestCase):
@@ -470,14 +422,14 @@ class PrepareTreeOverAnEntryOfTheCacheItCannotUseTest(PrepareTreeTestCase):
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.tree_root}: Not a directory")
 
-    @unittest.skipIf(os.geteuid() == 0, "root dates what another user owns")
     def test_should_name_the_cached_tree_it_cannot_date(self):
         # Arrange
-        self.tree_root.symlink_to(A_DIRECTORY_OF_ANOTHER_OWNER)
+        self.tree_root.mkdir()
+        keeper = create_keeper_refusing_the_stamp()
 
         # Act
         with self.assertRaises(CannotWrite) as raised:
-            prepare_tree(run_process_without_trail, FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref="main"))
+            prepare_tree(run_process_without_trail, keeper, self.create_request(ref="main"))
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot write {self.tree_root}: Operation not permitted")

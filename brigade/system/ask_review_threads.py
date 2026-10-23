@@ -16,7 +16,7 @@ class ReviewThreadsQuery:
     environment: dict
 
 
-def ask_review_threads(forge, forge_name: str, query: ReviewThreadsQuery, runtime: Runtime) -> list[dict]:
+def ask_review_threads(forge: object, forge_name: str, query: ReviewThreadsQuery, runtime: Runtime) -> list[dict]:
     answer = forge.list_review_threads(
         {
             "schema_version": DOCUMENT_SCHEMA_VERSION,

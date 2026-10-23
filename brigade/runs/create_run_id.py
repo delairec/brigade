@@ -1,9 +1,10 @@
 import secrets
 from datetime import UTC, datetime
 
-RUN_INSTANT_FORMAT = "%Y%m%dT%H%M%SZ"
+from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
+
 SUFFIX_BYTES = 3
 
 
 def create_run_id(now: datetime) -> str:
-    return f"{now.astimezone(UTC).strftime(RUN_INSTANT_FORMAT)}-{secrets.token_hex(SUFFIX_BYTES)}"
+    return f"{now.astimezone(UTC).strftime(COMPACT_INSTANT_FORMAT)}-{secrets.token_hex(SUFFIX_BYTES)}"

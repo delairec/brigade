@@ -2,23 +2,16 @@ import unittest
 
 from brigade.errors import BrigadeError
 from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask_pull_request_details
+from tests.unit.forge_double import ForgeDouble
 
 NO_RUNTIME_NEEDED = None
 QUERY = PullRequestDetailsQuery(repository="/projects/shop", number=12, environment={"GH_TOKEN": "token-of-octo-cli"})
 
 
-class ForgeDouble:
-    def __init__(self, answer):
-        self.answer = answer
-
-    def read_pull_request(self, request, runtime):
-        return self.answer
-
-
 class AskPullRequestDetailsTest(unittest.TestCase):
     def test_should_refuse_an_answer_lacking_the_pull_request_naming_the_forge(self):
         # Arrange
-        forge = ForgeDouble({"schema_version": 1})
+        forge = ForgeDouble({"read_pull_request": lambda request: {"schema_version": 1}})
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -39,7 +32,7 @@ class AskPullRequestDetailsTest(unittest.TestCase):
             "head_sha": "4f2a9c1",
             "checks": [],
         }
-        forge = ForgeDouble({"schema_version": 1, "pull_request": pull_request})
+        forge = ForgeDouble({"read_pull_request": lambda request: {"schema_version": 1, "pull_request": pull_request}})
 
         # Act
         answered = ask_pull_request_details(forge, "github", QUERY, NO_RUNTIME_NEEDED)

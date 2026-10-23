@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
@@ -30,15 +32,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def request_show(request, runtime: Runtime) -> dict:
+def request_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     entity = read_wave_request(runtime, request.request)
     described = describe_request(entity)
     return {
@@ -59,7 +53,5 @@ COMMAND = Command(
     help="print a request, its status, its plan and its pull request",
     arguments=(Argument(("request",), {"help": "the name of a REQUEST"}),),
     run=request_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

@@ -71,4 +71,5 @@ class DescribeProjectTest(unittest.TestCase):
         description = describe_project(reading, "shop", no_instant)
 
         # Assert
-        self.assertEqual((description["since"], description["orders_done"]), (None, {"sweep": 1}))
+        self.assertEqual(description["since"], None)
+        self.assertEqual(description["orders_done"], {"sweep": 1})

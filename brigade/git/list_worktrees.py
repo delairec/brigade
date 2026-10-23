@@ -2,9 +2,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-LIST_TIMEOUT_S = 10.0
 RECORD_SEPARATOR = "\0\0"
 LINE_SEPARATOR = "\0"
 PATH_PREFIX = "worktree "
@@ -45,7 +45,7 @@ def _parse_record(record: str) -> Worktree | None:
 def list_worktrees(run_process: Callable[[ProcessRequest], ProcessRecord], repository: Path) -> tuple[Worktree, ...]:
     record = run_process(
         ProcessRequest(
-            argv=("git", "worktree", "list", "--porcelain", "-z"), cwd=str(repository), timeout_s=LIST_TIMEOUT_S
+            argv=("git", "worktree", "list", "--porcelain", "-z"), cwd=str(repository), timeout_s=GIT_TIMEOUT_S
         )
     )
     records = (part.strip(LINE_SEPARATOR) for part in record.stdout.split(RECORD_SEPARATOR))

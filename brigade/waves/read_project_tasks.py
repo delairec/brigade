@@ -6,7 +6,7 @@ from pathlib import Path
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.tasks.read_task_field import read_task_field
 from brigade.waves.locate_project_main import locate_project_main
 

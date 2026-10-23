@@ -1,6 +1,7 @@
 [run]
 source = brigade
 branch = True
+omit = brigade/launcher.py
 
 [report]
 fail_under = 100

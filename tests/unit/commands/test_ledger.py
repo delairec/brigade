@@ -6,19 +6,20 @@ from pathlib import Path
 
 from brigade.commands.ledger import COMMAND, ledger
 from brigade.errors import UsageError
-from tests.unit.commands.command_runtime import create_runtime
 
 WAVE_STARTED = (
     '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
     ' "project": "tidepool", "branch": "integration/M4-tides", "tasks": ["T7"]}\n'
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class LedgerTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
-        self.runtime = create_runtime(Path(self.root.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
         self.ledger_directory = self.runtime.paths.state_root / "ledger"
         self.ledger_directory.mkdir(parents=True)
 

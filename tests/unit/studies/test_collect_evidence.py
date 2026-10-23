@@ -2,12 +2,14 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.studies.collect_evidence import collect_evidence
 from brigade.studies.convert_study import Study
 from brigade.studies.study_run_context import StudyRunContext
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from brigade.system.run_process import ProcessRecord
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -21,6 +23,8 @@ DOCUMENT = {
     "items": ["sun"],
 }
 
+COLLECTOR_DIRECTORY = "/srv/shop"
+
 
 class CollectorDouble:
     name = "weather"
@@ -29,9 +33,16 @@ class CollectorDouble:
     def __init__(self):
         self.environments = []
 
-    def collect(self, environment: dict, runtime, equipment) -> SimpleNamespace:
+    def collect(self, environment: dict, runtime, equipment) -> ProcessRecord:
         self.environments.append(environment)
-        return SimpleNamespace(exit_code=0, stdout=json.dumps(DOCUMENT), stderr="", duration_ms=40)
+        return ProcessRecord(
+            argv=(self.command,),
+            cwd=COLLECTOR_DIRECTORY,
+            exit_code=0,
+            stdout=json.dumps(DOCUMENT),
+            stderr="",
+            duration_ms=40,
+        )
 
 
 def create_study(project: str | None) -> Study:
@@ -54,7 +65,8 @@ class CollectEvidenceTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         self.collector = CollectorDouble()
         self.resolved = []

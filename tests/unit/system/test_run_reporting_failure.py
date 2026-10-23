@@ -31,7 +31,8 @@ class RunReportingFailureTest(unittest.TestCase):
         stderr = run_capturing_stderr(lambda: calls.append("ran"))
 
         # Assert
-        self.assertEqual((calls, stderr), (["ran"], ""))
+        self.assertEqual(calls, ["ran"])
+        self.assertEqual(stderr, "")
 
     def test_should_report_a_brigade_error_in_one_line_named_after_the_command(self):
         # Act

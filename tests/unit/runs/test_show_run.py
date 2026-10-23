@@ -90,10 +90,8 @@ class ShowRunOfARunStillInItsFirstSegmentTest(ShowRunTestCase):
         document = show_run(self.state_root, RUN_ID, with_journal=False)
 
         # Assert
-        self.assertEqual(
-            (document["run"]["message"], document["segments"]),
-            (None, [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}]),
-        )
+        self.assertEqual(document["run"]["message"], None)
+        self.assertEqual(document["segments"], [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}])
 
     def test_should_show_no_segment_before_the_first_starts(self):
         # Act

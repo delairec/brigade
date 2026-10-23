@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 
 ROOT = ()
@@ -56,7 +58,9 @@ def _add_arguments(container, arguments) -> None:
             _add_arguments(container.add_mutually_exclusive_group(required=argument.required), argument.arguments)
 
 
-def add_command_parsers(parser, commands, common_options) -> None:
+def add_command_parsers(
+    parser: argparse.ArgumentParser, commands: list[Command], common_options: argparse.ArgumentParser
+) -> None:
     by_path = _index_by_path((command for command in commands if command.render_passed_stderr is None), "command")
     epilogs = _collect_epilogs(commands, by_path)
     helps = _collect_helps(by_path.values())

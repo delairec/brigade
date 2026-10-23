@@ -3,8 +3,9 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.system.paths import Paths
 from brigade.system.remove_expired_trails import remove_expired_trails
+from tests.list_entry_names import list_entry_names
+from tests.unit.create_test_paths import create_test_paths
 
 NOW = datetime(2026, 10, 7, 12, 0, 0, tzinfo=UTC)
 
@@ -14,13 +15,7 @@ class RemoveExpiredTrailsTestCase(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         root = Path(self.root.name)
-        self.paths = Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root,
-            executable_search_path="",
-        )
+        self.paths = create_test_paths(root)
         self.configuration = self.paths.config_root / "config.toml"
         self.ticks = self.paths.state_root / "ticks"
         self.commands = self.paths.state_root / "commands"
@@ -48,10 +43,8 @@ class RemoveExpiredTrailsByDefaultTest(RemoveExpiredTrailsTestCase):
         remove_expired_trails(self.paths, NOW)
 
         # Assert
-        self.assertEqual(
-            sorted(path.name for path in [*self.ticks.iterdir(), *self.commands.iterdir()]),
-            ["20260930T120000Z.jsonl", "20261007T115900Z-doctor.jsonl"],
-        )
+        self.assertEqual(list_entry_names(self.ticks), ["20260930T120000Z.jsonl"])
+        self.assertEqual(list_entry_names(self.commands), ["20261007T115900Z-doctor.jsonl"])
 
     def test_should_keep_a_file_whose_name_carries_no_instant(self):
         # Arrange
@@ -84,7 +77,7 @@ class RemoveExpiredTrailsOfConfiguredDaysTest(RemoveExpiredTrailsTestCase):
         remove_expired_trails(self.paths, NOW)
 
         # Assert
-        self.assertEqual([path.name for path in self.ticks.iterdir()], ["20261006T120000Z.jsonl"])
+        self.assertEqual(list_entry_names(self.ticks), ["20261006T120000Z.jsonl"])
 
     def test_should_remove_the_trails_older_than_the_trail_days_whatever_another_key_holds(self):
         # Arrange
@@ -97,11 +90,23 @@ class RemoveExpiredTrailsOfConfiguredDaysTest(RemoveExpiredTrailsTestCase):
         remove_expired_trails(self.paths, NOW)
 
         # Assert
-        self.assertEqual([path.name for path in self.ticks.iterdir()], ["20261006T120000Z.jsonl"])
+        self.assertEqual(list_entry_names(self.ticks), ["20261006T120000Z.jsonl"])
 
     def test_should_keep_every_trail_when_config_toml_is_not_toml(self):
         # Arrange
         self.configure("trail_days =\n")
+        expired = self.ticks / "20260901T000000Z.jsonl"
+        self.write_trails(expired)
+
+        # Act
+        remove_expired_trails(self.paths, NOW)
+
+        # Assert
+        self.assertTrue(expired.exists())
+
+    def test_should_keep_every_trail_when_config_toml_cannot_be_read(self):
+        # Arrange
+        self.configuration.mkdir(parents=True)
         expired = self.ticks / "20260901T000000Z.jsonl"
         self.write_trails(expired)
 

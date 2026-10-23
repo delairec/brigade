@@ -44,7 +44,8 @@ class ChangeCorpusFileLeftUnchangedTest(ChangeCorpusFileTestCase):
         changed = change_corpus_file(runner, self.create_change(keep_unchanged))
 
         # Assert
-        self.assertEqual((changed, runner.commands), (False, []))
+        self.assertEqual(changed, False)
+        self.assertEqual(runner.commands, [])
 
 
 class ChangeCorpusFileRewrittenTest(ChangeCorpusFileTestCase):
@@ -57,19 +58,17 @@ class ChangeCorpusFileRewrittenTest(ChangeCorpusFileTestCase):
         changed = change_corpus_file(runner, self.create_change(append_a_task))
 
         # Assert
+        self.assertEqual(changed, True)
+        self.assertEqual(self.tasks.read_text(), "TASK B1\nTASK B2\n")
         self.assertEqual(
-            (changed, self.tasks.read_text(), runner.commands),
-            (
-                True,
-                "TASK B1\nTASK B2\n",
-                [
-                    (str(self.repository), ("awawa", "fmt", str(self.tasks))),
-                    (str(self.repository), self.lint),
-                    (str(self.repository), ("git", "add", "--", "tasks.awawa")),
-                    (str(self.repository), self.staged),
-                    (str(self.repository), ("git", "commit", "--quiet", "-m", "add @TASK.B2")),
-                ],
-            ),
+            runner.commands,
+            [
+                (str(self.repository), ("awawa", "fmt", str(self.tasks))),
+                (str(self.repository), self.lint),
+                (str(self.repository), ("git", "add", "--", "tasks.awawa")),
+                (str(self.repository), self.staged),
+                (str(self.repository), ("git", "commit", "--quiet", "-m", "add @TASK.B2")),
+            ],
         )
 
     def test_should_read_a_missing_file_as_empty(self):
@@ -100,12 +99,10 @@ class ChangeCorpusFileRefusedByLintTest(ChangeCorpusFileTestCase):
 
         # Assert
         self.assertEqual(
-            (str(refusal.exception), runner.commands[-1][1]),
-            (
-                "awawa lint --strict refused the change; the corpus is restored\ntasks.awawa:2: L001",
-                ("git", "checkout", "HEAD", "--", "tasks.awawa"),
-            ),
+            str(refusal.exception),
+            "awawa lint --strict refused the change; the corpus is restored\ntasks.awawa:2: L001",
         )
+        self.assertEqual(runner.commands[-1][1], ("git", "checkout", "HEAD", "--", "tasks.awawa"))
 
 
 class ChangeCorpusFileUnwritableTest(ChangeCorpusFileTestCase):

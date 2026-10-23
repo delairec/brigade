@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
@@ -13,16 +15,8 @@ FORGE_ACCOUNT_REASON = "forge_account"
 NOTHING_RESUMED = "no wave is paused on the forge account"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return "\n".join(f"wave {resumed['wave']} resumed" for resumed in document["resumed"]) or NOTHING_RESUMED
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _list_forge_account_pauses(events: tuple) -> list[tuple[str, str]]:
@@ -42,7 +36,7 @@ def _find_wave_pause(entries: tuple, wave: str) -> list[tuple[str, str]]:
     return [(wave, pause.reason)]
 
 
-def wave_resume(request, runtime: Runtime) -> dict:
+def wave_resume(request: argparse.Namespace, runtime: Runtime) -> dict:
     entries = read_ledger(runtime.paths.state_root).entries
     if request.wave is None:
         paused = _list_forge_account_pauses(tuple(entry.event for entry in entries))
@@ -61,7 +55,5 @@ COMMAND = Command(
     help="resume the wave named, or every wave paused on the forge account",
     arguments=(Argument(("wave",), {"nargs": "?", "help": "the name of the wave to resume"}),),
     run=wave_resume,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

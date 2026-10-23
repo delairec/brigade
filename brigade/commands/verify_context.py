@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -7,17 +8,13 @@ from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import read_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.verify.preflight_pull_request import PreflightDemand
 
 DOCUMENT_SCHEMA_VERSION = 1
 CLI_KEY = "cli"
-
-
-def _read_request(options):
-    return options
 
 
 def _render_commands(entries: list[dict]) -> str:
@@ -45,12 +42,8 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def verify_context(request, runtime: Runtime) -> dict:
-    configuration = read_configuration(runtime.paths.configuration_file)
+def verify_context(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     run_process = runtime.run_process
     project = require_project_at(
         read_projects(runtime), locate_main_checkout(run_process, locate_worktree_root(run_process, Path.cwd()))
@@ -74,7 +67,5 @@ COMMAND = Command(
     group_help="check the pull request of a task",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=verify_context,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

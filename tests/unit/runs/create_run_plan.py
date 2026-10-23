@@ -5,7 +5,7 @@ from brigade.adapters.documents import markdown
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 RUN_ID = "20261019T090000Z-c0ffee"
 

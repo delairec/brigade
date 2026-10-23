@@ -33,6 +33,9 @@ class RecordingProcessRunner:
             duration_ms=0,
         )
 
+    def list_argvs(self) -> list[tuple[str, ...]]:
+        return [request.argv for request in self.requests]
+
     @property
     def commands(self) -> list[tuple[str, tuple[str, ...]]]:
         return [(request.cwd, request.argv) for request in self.requests]

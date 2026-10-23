@@ -91,10 +91,9 @@ class StopRunOfARunningRunTest(StopRunTestCase):
         ended = stop_run(self.state_root, RUN_ID, process.create_signaller())
 
         # Assert
-        self.assertEqual(
-            ((ended["state"], ended["outcome"]), process.calls),
-            (("finished", "stopped"), [("signal", RUN_PID, signal.SIGTERM), ("wait", 0.1)]),
-        )
+        self.assertEqual(ended["state"], "finished")
+        self.assertEqual(ended["outcome"], "stopped")
+        self.assertEqual(process.calls, [("signal", RUN_PID, signal.SIGTERM), ("wait", 0.1)])
 
 
 class StopRunOfARunNotYetReadyTest(StopRunTestCase):
@@ -127,10 +126,9 @@ class StopRunOfARunWhosePidFileStillNamesTheProcessThatLaunchedItTest(StopRunTes
         ended = stop_run(self.state_root, RUN_ID, process.create_signaller())
 
         # Assert
-        self.assertEqual(
-            ((ended["state"], ended["outcome"]), process.calls),
-            (("finished", "stopped"), [("wait", 0.1), ("signal", RUN_PID, signal.SIGTERM)]),
-        )
+        self.assertEqual(ended["state"], "finished")
+        self.assertEqual(ended["outcome"], "stopped")
+        self.assertEqual(process.calls, [("wait", 0.1), ("signal", RUN_PID, signal.SIGTERM)])
 
 
 class StopRunOfARunNeverReadyTest(StopRunTestCase):
@@ -147,12 +145,9 @@ class StopRunOfARunNeverReadyTest(StopRunTestCase):
 
         # Assert
         self.assertEqual(
-            (str(refusal.exception), process.calls),
-            (
-                f"run {RUN_ID} has not signalled it is ready within 10 s: no signal sent",
-                WAITS_UNTIL_THE_READINESS_BOUND,
-            ),
+            str(refusal.exception), f"run {RUN_ID} has not signalled it is ready within 10 s: no signal sent"
         )
+        self.assertEqual(process.calls, WAITS_UNTIL_THE_READINESS_BOUND)
 
 
 class StopRunOfARunWhoseProcessIsGoneTest(StopRunTestCase):
@@ -169,9 +164,9 @@ class StopRunOfARunWhoseProcessIsGoneTest(StopRunTestCase):
 
                 # Assert
                 self.assertEqual(
-                    (str(refusal.exception), process.calls),
-                    (f"run {RUN_ID} is dead: no process of its identity holds its pid {RUN_PID}", [("wait", 0.1)]),
+                    str(refusal.exception), f"run {RUN_ID} is dead: no process of its identity holds its pid {RUN_PID}"
                 )
+                self.assertEqual(process.calls, [("wait", 0.1)])
 
 
 class StopRunOfARunThatEndsOtherwiseThanStoppedTest(StopRunTestCase):

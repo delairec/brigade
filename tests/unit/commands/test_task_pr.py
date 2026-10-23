@@ -1,11 +1,14 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.task_pr import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime
+from tests.unit.commands.command_runtime import create_machine_double
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
@@ -14,13 +17,11 @@ MAIN_BRANCH_CHECKOUT = {
 }
 
 
-class ForgeDouble:
-    def describe_account(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "login": "tidepool-bot"}
+ACCOUNT = {"schema_version": 1, "login": "tidepool-bot"}
 
 
 def _resolve_the_forge_double(kind: str, name: str, **places):
-    return ForgeDouble()
+    return ForgeDouble({"describe_account": lambda request: ACCOUNT})
 
 
 class TaskPrTextTest(unittest.TestCase):
@@ -44,7 +45,7 @@ class TaskPrExitCodeTest(unittest.TestCase):
 class TaskPrRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(task=None, subject=None)
+        options = Namespace(task=None, subject=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -59,15 +60,15 @@ class TaskPrOutsideATaskTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text('attribution = ["Co-Authored-By: a model"]\n', encoding="utf-8")
-        runtime = create_runtime(
-            root,
+        runtime = create_test_runtime(
+            create_test_paths(root),
             run_process=create_machine_double({}, MAIN_BRANCH_CHECKOUT),
             resolve_plugin=_resolve_the_forge_double,
         )
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(task=THE_TASK_OF_THE_BRANCH, subject=None), runtime)
+            COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, subject=None), runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")

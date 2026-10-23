@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -20,10 +21,6 @@ ENVIRONMENT_OF_THE_RUN = {}
 NOT_AN_ANCESTOR = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return (
         f"{document['branch']} pushed at {document['head']} on top of {document['base']}"
@@ -31,11 +28,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def rebase_done(request, runtime: Runtime) -> dict:
+def rebase_done(request: argparse.Namespace, runtime: Runtime) -> dict:
     run_process = runtime.run_process
     worktree = locate_worktree_root(run_process, Path.cwd())
     project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))
@@ -72,7 +65,5 @@ COMMAND = Command(
     group_help="put the pull request of a task back on its base",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=rebase_done,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

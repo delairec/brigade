@@ -4,12 +4,11 @@ from pathlib import Path
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.refuse_to_run import refuse_to_run
 
 FIXED_NOW = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
-
-
-def _refuse_to_run(request):
-    raise AssertionError(f"{' '.join(request.argv)} should not run")
+UNWRITTEN_PATHS = create_test_paths(Path("/nonexistent"))
 
 
 def _refuse_to_spawn(request):
@@ -25,8 +24,8 @@ def _keep_no_trace(trace) -> None:
 
 
 def create_test_runtime(
-    paths: Paths,
-    run_process=_refuse_to_run,
+    paths: Paths = UNWRITTEN_PATHS,
+    run_process=refuse_to_run,
     spawn_process=_refuse_to_spawn,
     resolve_plugin=_refuse_to_resolve,
     now: datetime = FIXED_NOW,
@@ -38,6 +37,7 @@ def create_test_runtime(
         paths=paths,
         now=now,
         read_clock=lambda: now,
+        read_monotonic=lambda: 0.0,
         entry_point=Path("/srv/brigade/bin/brigade"),
         trail=TrailWriter(_keep_no_trace) if trail is None else trail,
         resolve_plugin=resolve_plugin,

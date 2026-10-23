@@ -72,7 +72,8 @@ class ResolveCollectorFoundTest(ResolveCollectorTestCase):
         collector = resolve_collector("pr-list", self.places)
 
         # Assert
-        self.assertEqual((collector.source, collector.command), ("built-in", "brigade.collectors.pr_list"))
+        self.assertEqual(collector.source, "built-in")
+        self.assertEqual(collector.command, "brigade.collectors.pr_list")
 
 
 class ResolveCollectorNotFoundTest(ResolveCollectorTestCase):
@@ -104,13 +105,8 @@ class ExecutableCollectorTest(ResolveCollectorTestCase):
         answer = collector.collect({"BRIGADE_PROJECT_PATH": "/srv/shop"}, runtime, NO_EQUIPMENT)
 
         # Assert
-        self.assertEqual(
-            (answer, runner.commands),
-            (
-                CollectorAnswer(exit_code=3, stdout="{}", stderr="partial\n", duration_ms=0),
-                [("/srv/shop", ("/opt/coverage",))],
-            ),
-        )
+        self.assertEqual(answer, CollectorAnswer(exit_code=3, stdout="{}", stderr="partial\n", duration_ms=0))
+        self.assertEqual(runner.commands, [("/srv/shop", ("/opt/coverage",))])
 
 
 class CollectingModuleDouble:
@@ -134,7 +130,9 @@ class BuiltInCollectorTest(unittest.TestCase):
         answer = collector.collect({}, None, NO_EQUIPMENT)
 
         # Assert
-        self.assertEqual((answer.exit_code, answer.stdout, answer.stderr), (0, '{"merged": 3}', ""))
+        self.assertEqual(answer.exit_code, 0)
+        self.assertEqual(answer.stdout, '{"merged": 3}')
+        self.assertEqual(answer.stderr, "")
 
     def test_should_answer_a_failure_of_the_module_on_stderr(self):
         # Arrange
@@ -145,4 +143,6 @@ class BuiltInCollectorTest(unittest.TestCase):
         answer = collector.collect({}, None, NO_EQUIPMENT)
 
         # Assert
-        self.assertEqual((answer.exit_code, answer.stdout, answer.stderr), (1, "", "gh is not logged in\n"))
+        self.assertEqual(answer.exit_code, 1)
+        self.assertEqual(answer.stdout, "")
+        self.assertEqual(answer.stderr, "gh is not logged in\n")

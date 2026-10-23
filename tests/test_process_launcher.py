@@ -24,7 +24,8 @@ class ProcessLauncherRunTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, f"{directory} request\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, f"{directory} request\n")
 
     def test_should_raise_on_a_failed_command_whose_caller_asks_for_the_check(self):
         # Act
@@ -38,8 +39,9 @@ class ProcessLauncherRunTest(unittest.TestCase):
 class ProcessLauncherStartTest(unittest.TestCase):
     def test_should_hand_the_running_command_to_its_caller(self):
         # Act
-        process = ProcessLauncher.start([sys.executable, "-c", "print('started')"], stdout=subprocess.PIPE, text=True)
-        self.addCleanup(process.wait)
+        output = ProcessLauncher.start(
+            [sys.executable, "-c", "print('started')"], stdout=subprocess.PIPE, text=True
+        ).communicate()
 
         # Assert
-        self.assertEqual(process.communicate(), ("started\n", None))
+        self.assertEqual(output, ("started\n", None))

@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.roles.check_front_matter import check_front_matter
 from brigade.roles.list_built_in_role_files import list_built_in_role_files
@@ -45,17 +47,13 @@ def _render_text(document: dict) -> str:
     return "\n".join([*(_render_finding(finding) for finding in document["findings"]), "", _summarise(document)])
 
 
-def _read_request(options):
-    return options
-
-
 def _decide_exit_code(document: dict) -> int:
     if document["findings"]:
         return 1
     return 0
 
 
-def roles_lint(request, runtime: Runtime) -> dict:
+def roles_lint(request: argparse.Namespace, runtime: Runtime) -> dict:
     built_in_files = [
         (f"{BUILT_IN_DIRECTORY}/{entry.name}", entry.read_text(encoding="utf-8"))
         for entry in list_built_in_role_files()
@@ -80,7 +78,6 @@ COMMAND = Command(
     help="check the built-in and the machine role files",
     group_help="list, show and lint the roles each slot resolves to",
     run=roles_lint,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

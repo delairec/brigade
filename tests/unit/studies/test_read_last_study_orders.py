@@ -9,7 +9,9 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.step_done import StepDone
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 
@@ -18,7 +20,8 @@ class ReadLastStudyOrdersTest(unittest.TestCase):
         # Arrange
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        paths = create_scripted_runtime(Path(directory.name), ScriptedProcesses()).paths
+        write_operational_corpus(Path(directory.name))
+        paths = create_test_runtime(create_test_paths(Path(directory.name)), run_process=ScriptedProcesses()).paths
         append_event(
             paths,
             datetime(2026, 10, 18, 7, 0, tzinfo=UTC),
@@ -62,7 +65,8 @@ class ReadLastStudyOrdersTest(unittest.TestCase):
         # Arrange
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        paths = create_scripted_runtime(Path(directory.name), ScriptedProcesses()).paths
+        write_operational_corpus(Path(directory.name))
+        paths = create_test_runtime(create_test_paths(Path(directory.name)), run_process=ScriptedProcesses()).paths
         append_event(
             paths,
             datetime(2026, 10, 19, 7, 5, tzinfo=UTC),

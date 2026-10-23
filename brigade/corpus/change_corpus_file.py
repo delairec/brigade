@@ -4,11 +4,13 @@ from pathlib import Path
 
 from brigade.corpus.format_files import format_files
 from brigade.corpus.lint_corpus import lint_corpus
-from brigade.errors import CannotWrite, CorpusLintFailed
+from brigade.errors import CorpusLintFailed
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.restore_files import restore_files
+from brigade.system.create_directory import create_directory
 from brigade.system.hold_lock import hold_lock
 from brigade.system.run_process import ProcessRecord, ProcessRequest
+from brigade.system.write_text_file import write_text_file
 
 
 @dataclass(frozen=True)
@@ -27,11 +29,8 @@ def _read_text(path: Path) -> str:
 
 
 def _write_text(path: Path, text: str) -> None:
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    except OSError as error:
-        raise CannotWrite(error.filename or path, error) from error
+    create_directory(path.parent)
+    write_text_file(path, text)
 
 
 def _write_checked(

@@ -59,7 +59,7 @@ def create_refusing_stamp_reader(refusal: OSError) -> Callable[[Path], int]:
     return read_stamp
 
 
-class ArchivingGit(RecordingProcessRunner):
+class ArchivingGitDouble(RecordingProcessRunner):
     def __init__(self, sha: str, members: list[tuple[str, bytes]], placed_meanwhile: Path | None = None):
         super().__init__(
             {
@@ -106,7 +106,7 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
             with self.subTest(ref=ref):
                 # Act
                 tree = prepare_tree(
-                    ArchivingGit("abc", []), FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref, worktree)
+                    ArchivingGitDouble("abc", []), FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref, worktree)
                 )
 
                 # Assert
@@ -123,7 +123,7 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
                 # Act
                 with self.assertRaises(BrigadeError) as refusal:
                     prepare_tree(
-                        ArchivingGit("abc", []), FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref, worktree)
+                        ArchivingGitDouble("abc", []), FILESYSTEM_READ_TIME_KEEPER, self.create_request(ref, worktree)
                     )
 
                 # Assert
@@ -133,35 +133,32 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
 class PrepareTreeOfACommitTest(PrepareTreeTestCase):
     def test_should_extract_the_commit_into_the_cache(self):
         # Act
-        tree = prepare_tree(ArchivingGit("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+        tree = prepare_tree(
+            ArchivingGitDouble("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1")
+        )
 
         # Assert
         self.assertEqual(
-            (tree, (self.cache / "shop" / "abc123" / "README.md").read_text(), list(self.cache.iterdir())),
-            (
-                Tree(project="shop", ref="v1", sha="abc123", kind="archive", root=self.cache / "shop" / "abc123"),
-                "# shop\n",
-                [self.cache / "shop"],
-            ),
+            tree, Tree(project="shop", ref="v1", sha="abc123", kind="archive", root=self.cache / "shop" / "abc123")
         )
+        self.assertEqual((self.cache / "shop" / "abc123" / "README.md").read_text(), "# shop\n")
+        self.assertEqual(list(self.cache.iterdir()), [self.cache / "shop"])
 
     def test_should_reuse_the_tree_already_cached_and_mark_it_read(self):
         # Arrange
         cached = self.cache / "shop" / "abc123"
         write_tree(cached, 8, LONG_AGO)
-        git = ArchivingGit("abc123", [README])
+        git = ArchivingGitDouble("abc123", [README])
 
         # Act
         prepare_tree(git, FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
 
         # Assert
         self.assertEqual(
-            (git.commands, cached.stat().st_mtime),
-            (
-                [("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "v1^{commit}"))],
-                NOW.timestamp(),
-            ),
+            git.commands,
+            [("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "v1^{commit}"))],
         )
+        self.assertEqual(cached.stat().st_mtime, NOW.timestamp())
 
     def test_should_keep_the_tree_another_extraction_placed_meanwhile(self):
         # Arrange
@@ -169,7 +166,7 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
 
         # Act
         tree = prepare_tree(
-            ArchivingGit("abc123", [README], placed_meanwhile=placed),
+            ArchivingGitDouble("abc123", [README], placed_meanwhile=placed),
             FILESYSTEM_READ_TIME_KEEPER,
             self.create_request("v1"),
         )
@@ -183,13 +180,11 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
         (self.cache / ".removing").mkdir()
 
         # Act
-        prepare_tree(ArchivingGit("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+        prepare_tree(ArchivingGitDouble("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
 
         # Assert
-        self.assertEqual(
-            (list((self.cache / "tidepool").iterdir()), list((self.cache / "shop").iterdir())),
-            ([], [self.cache / "shop" / "abc123"]),
-        )
+        self.assertEqual(list((self.cache / "tidepool").iterdir()), [])
+        self.assertEqual(list((self.cache / "shop").iterdir()), [self.cache / "shop" / "abc123"])
 
     def test_should_stop_evicting_once_the_cache_is_back_within_its_bound(self):
         # Arrange
@@ -197,7 +192,7 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
         write_tree(self.cache / "tidepool" / "old222", 8, LAST_JUNE)
 
         # Act
-        prepare_tree(ArchivingGit("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+        prepare_tree(ArchivingGitDouble("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
 
         # Assert
         self.assertEqual(list((self.cache / "tidepool").iterdir()), [self.cache / "tidepool" / "old222"])
@@ -205,7 +200,7 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
     def test_should_refuse_a_ref_naming_no_commit(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            prepare_tree(ArchivingGit("", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+            prepare_tree(ArchivingGitDouble("", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
 
         # Assert
         self.assertEqual(str(refusal.exception), "the ref v1 is not a commit of @PROJECT.shop")
@@ -214,7 +209,9 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             prepare_tree(
-                ArchivingGit("abc123", [("../evil", b"x")]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1")
+                ArchivingGitDouble("abc123", [("../evil", b"x")]),
+                FILESYSTEM_READ_TIME_KEEPER,
+                self.create_request("v1"),
             )
 
         # Assert
@@ -232,7 +229,7 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
         # Act
         with self.assertRaises(CannotWrite) as refusal:
             prepare_tree(
-                ArchivingGit("abc", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1", cache=cache)
+                ArchivingGitDouble("abc", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1", cache=cache)
             )
 
         # Assert
@@ -240,7 +237,7 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
 
     def test_should_refuse_an_archive_it_cannot_unpack(self):
         # Arrange
-        file_under_a_file = ArchivingGit("abc123", [("a", b"x"), ("a/b", b"y")])
+        file_under_a_file = ArchivingGitDouble("abc123", [("a", b"x"), ("a/b", b"y")])
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
@@ -256,7 +253,7 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
-            prepare_tree(ArchivingGit("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+            prepare_tree(ArchivingGitDouble("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.cache}/shop/abc123: Not a directory")
@@ -267,7 +264,7 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
-            prepare_tree(ArchivingGit("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
+            prepare_tree(ArchivingGitDouble("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
 
         # Assert
         self.assertEqual(
@@ -281,7 +278,7 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
-            prepare_tree(ArchivingGit("abc123", [README]), keeper, self.create_request("v1"))
+            prepare_tree(ArchivingGitDouble("abc123", [README]), keeper, self.create_request("v1"))
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.cache}/shop/abc123: Operation not permitted")
@@ -293,7 +290,7 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
-            prepare_tree(ArchivingGit("abc123", [README]), keeper, self.create_request("v1"))
+            prepare_tree(ArchivingGitDouble("abc123", [README]), keeper, self.create_request("v1"))
 
         # Assert
         self.assertEqual(str(refusal.exception), "cannot write /srv/refs/shop/abc123: Permission denied")
@@ -305,7 +302,7 @@ class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):
 
         # Act
         with self.assertRaises(CannotWrite) as refusal:
-            prepare_tree(ArchivingGit("abc123", [README]), keeper, self.create_request("v1"))
+            prepare_tree(ArchivingGitDouble("abc123", [README]), keeper, self.create_request("v1"))
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot write {self.cache}: Input/output error")

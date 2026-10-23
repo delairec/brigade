@@ -2,18 +2,17 @@ import contextlib
 import io
 import json
 import os
-import select
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
-from unittest import mock
 
 from brigade.commands.runs_show import COMMAND
 from brigade.errors import BrigadeError, UsageError
 from brigade.runs.record_run_pid import record_run_pid
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 FINISHED_RUN = {
     "run": FIRST_RUN,
@@ -142,7 +141,7 @@ class RunsShowExitCodeTest(unittest.TestCase):
 class RunsShowRequestTest(unittest.TestCase):
     def test_should_refuse_to_follow_a_run_in_json(self):
         # Arrange
-        options = SimpleNamespace(run=FIRST_RUN, log=False, follow=True, json=True)
+        options = Namespace(run=FIRST_RUN, log=False, follow=True, json=True)
 
         # Act
         with self.assertRaises(UsageError) as raised:
@@ -153,7 +152,7 @@ class RunsShowRequestTest(unittest.TestCase):
 
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(run=FIRST_RUN, log=False, follow=True, json=False)
+        options = Namespace(run=FIRST_RUN, log=False, follow=True, json=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -162,7 +161,7 @@ class RunsShowRequestTest(unittest.TestCase):
         self.assertIs(request, options)
 
 
-class RunFinishingOnItsFirstRecordStdout(io.StringIO):
+class RunFinishingOnItsFirstRecordStdoutDouble(io.StringIO):
     def __init__(self, run_directory: Path):
         super().__init__()
         self.run_directory = run_directory
@@ -176,7 +175,7 @@ class RunFinishingOnItsFirstRecordStdout(io.StringIO):
 
 
 JOURNAL_LINE = "2026-10-07T09:01:00Z  1  text  reads the task\n"
-NOTHING_TO_READ = ([], [], [])
+JOURNAL_POLLED_AT_ONCE = "journal_poll_s = 0.01\n"
 
 
 class RunsShowFollowingARunningRunTest(unittest.TestCase):
@@ -186,32 +185,31 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
         run_directory = write_run(root / "state", create_run_record(FIRST_RUN, None, None), None)
         record_run_pid(run_directory, os.getpid())
         (run_directory / "journal.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
-        printed = RunFinishingOnItsFirstRecordStdout(run_directory)
+        printed = RunFinishingOnItsFirstRecordStdoutDouble(run_directory)
+        runtime = create_test_runtime(create_test_paths(root))
+        runtime.paths.config_root.mkdir(parents=True)
+        runtime.paths.configuration_file.write_text(JOURNAL_POLLED_AT_ONCE, encoding="utf-8")
 
         # Act
-        with contextlib.redirect_stdout(printed), mock.patch.object(select, "select", return_value=NOTHING_TO_READ):
-            document = COMMAND.run(SimpleNamespace(run=FIRST_RUN, log=False, follow=True), create_runtime(root))
+        with contextlib.redirect_stdout(printed):
+            document = COMMAND.run(Namespace(run=FIRST_RUN, log=False, follow=True), runtime)
 
         # Assert
+        self.assertEqual(document, {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False})
         self.assertEqual(
-            (document, printed.getvalue()),
-            (
-                {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False},
-                (
-                    f"run        {FIRST_RUN}\n"
-                    "procedure  deliver\n"
-                    "slot       build\n"
-                    "role       builder\n"
-                    "project    -\n"
-                    "state      running\n"
-                    "outcome    -\n"
-                    "message    -\n"
-                    "\n"
-                    "segment  outcome  steps  duration\n"
-                    "\n"
-                    f"{JOURNAL_LINE}"
-                ),
-            ),
+            printed.getvalue(),
+            f"run        {FIRST_RUN}\n"
+            "procedure  deliver\n"
+            "slot       build\n"
+            "role       builder\n"
+            "project    -\n"
+            "state      running\n"
+            "outcome    -\n"
+            "message    -\n"
+            "\n"
+            "segment  outcome  steps  duration\n"
+            "\n"
+            f"{JOURNAL_LINE}",
         )
 
 
@@ -229,10 +227,10 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
     def test_should_show_the_run_with_its_journal(self):
         # Arrange
-        request = SimpleNamespace(run=FIRST_RUN, log=True, follow=False)
+        request = Namespace(run=FIRST_RUN, log=True, follow=False)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(
@@ -242,43 +240,39 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
     def test_should_print_the_run_and_its_journal_when_following_a_run_already_ended(self):
         # Arrange
-        request = SimpleNamespace(run=FIRST_RUN, log=False, follow=True)
+        request = Namespace(run=FIRST_RUN, log=False, follow=True)
         printed = io.StringIO()
 
         # Act
         with contextlib.redirect_stdout(printed):
-            document = COMMAND.run(request, create_runtime(self.root))
+            document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
+        self.assertEqual(document, {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False})
         self.assertEqual(
-            (document, printed.getvalue()),
-            (
-                {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False},
-                (
-                    f"run        {FIRST_RUN}\n"
-                    "procedure  deliver\n"
-                    "slot       build\n"
-                    "role       builder\n"
-                    "project    -\n"
-                    "state      finished\n"
-                    "outcome    done\n"
-                    "message    the task is delivered\n"
-                    "\n"
-                    "segment  outcome  steps  duration\n"
-                    "1        done     12     0m04s\n"
-                    "\n"
-                    "2026-10-07T09:01:00Z  1  text  reads the task\n"
-                ),
-            ),
+            printed.getvalue(),
+            f"run        {FIRST_RUN}\n"
+            "procedure  deliver\n"
+            "slot       build\n"
+            "role       builder\n"
+            "project    -\n"
+            "state      finished\n"
+            "outcome    done\n"
+            "message    the task is delivered\n"
+            "\n"
+            "segment  outcome  steps  duration\n"
+            "1        done     12     0m04s\n"
+            "\n"
+            "2026-10-07T09:01:00Z  1  text  reads the task\n",
         )
 
     def test_should_refuse_a_run_never_started(self):
         # Arrange
-        request = SimpleNamespace(run="20261009T090000Z-d90c03", log=False, follow=False)
+        request = Namespace(run="20261009T090000Z-d90c03", log=False, follow=False)
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(request, create_runtime(self.root))
+            COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(str(raised.exception), "no run 20261009T090000Z-d90c03")

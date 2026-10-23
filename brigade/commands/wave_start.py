@@ -1,16 +1,13 @@
+import argparse
 import functools
 
 from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import read_forge_environment
 from brigade.runtime import Runtime
-from brigade.system.read_optional_configuration import read_optional_configuration
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
-
-
-def _read_request(options):
-    return options
 
 
 def _render_text(document: dict) -> str:
@@ -20,12 +17,8 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def wave_start(request, runtime: Runtime) -> dict:
-    configuration = read_optional_configuration(runtime.paths.configuration_file)
+def wave_start(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     start = WaveStart(
         project=request.project,
         tasks=tuple(request.tasks),
@@ -47,7 +40,5 @@ COMMAND = Command(
         ),
     ),
     run=wave_start,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

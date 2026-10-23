@@ -208,9 +208,10 @@ class BrigadeLedgerOnAWaveStartedOfTheFirstVersionTest(LedgerTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["events"], {})
         self.assertEqual(
-            (json.loads(completed.stdout)["events"], json.loads(completed.stdout)["skipped"]),
-            ({}, [{"file": str(october), "line": 1, "reason": "schema_version is 1, not one of 2"}]),
+            json.loads(completed.stdout)["skipped"],
+            [{"file": str(october), "line": 1, "reason": "schema_version is 1, not one of 2"}],
         )
 
 

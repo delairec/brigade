@@ -22,23 +22,28 @@ class ConfigurationReadsGuardTest(unittest.TestCase):
         rows = [
             (
                 "brigade/roles/resolve_role.py",
-                "configuration = read_optional_configuration(path)\n",
-                "brigade/roles/resolve_role.py:1 calls read_optional_configuration",
+                "configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)\n",
+                "brigade/roles/resolve_role.py:1 calls read_configuration",
             ),
             (
                 "brigade/runs/read_run_setting.py",
-                "import os\nconfiguration = read_configuration(path)\n",
-                "brigade/runs/read_run_setting.py:2 calls read_configuration",
+                "import os\nconfiguration = parse_configuration(path)\n",
+                "brigade/runs/read_run_setting.py:2 calls parse_configuration",
             ),
             (
                 "brigade/system/ask_named_client.py",
-                "configured = reading.read_configured_client(runtime)\n",
-                "brigade/system/ask_named_client.py:1 calls read_configured_client",
+                "configuration = reading.read_configuration(runtime, request)\n",
+                "brigade/system/ask_named_client.py:1 calls read_configuration",
             ),
             (
                 "brigade/cli.py",
-                "configuration = read_configuration(runtime.paths.configuration_file)\n",
+                "configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)\n",
                 "brigade/cli.py:1 calls read_configuration",
+            ),
+            (
+                "brigade/commands/doctor.py",
+                "configuration = parse_configuration(runtime.paths.configuration_file)\n",
+                "brigade/commands/doctor.py:1 calls parse_configuration",
             ),
             (
                 "brigade/runs/plan_run.py",
@@ -75,10 +80,9 @@ class ConfigurationReadsGuardTest(unittest.TestCase):
     def test_should_let_the_commands_and_the_readers_read(self):
         # Arrange
         rows = [
-            ("brigade/commands/doctor.py", "configuration = read_configuration(runtime.paths.configuration_file)\n"),
-            ("brigade/system/read_optional_configuration.py", "configuration = read_configuration(path)\n"),
-            ("brigade/system/read_configured_client.py", "configuration = read_configuration(path)\n"),
-            ("brigade/system/read_configuration.py", "configuration = read_configuration(path)\n"),
+            ("brigade/commands/doctor.py", "configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)\n"),
+            ("brigade/system/read_configuration.py", "configuration = parse_configuration(path)\n"),
+            ("brigade/system/parse_configuration.py", "configuration = parse_configuration(path)\n"),
         ]
         for module_path, source in rows:
             with self.subTest(module=module_path), tempfile.TemporaryDirectory() as root:

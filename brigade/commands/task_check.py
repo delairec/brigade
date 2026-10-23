@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -9,10 +10,6 @@ PASSED = "pass"
 FAILED = "fail"
 MS_PER_S = 1000
 ONE_FAILED = 1
-
-
-def _read_request(options):
-    return options
 
 
 def _describe_verdict(check: dict) -> str:
@@ -35,7 +32,7 @@ def _decide_exit_code(document: dict) -> int:
     return ONE_FAILED if any(not check["passed"] for check in document["checks"]) else 0
 
 
-def task_check(request, runtime: Runtime) -> dict:
+def task_check(request: argparse.Namespace, runtime: Runtime) -> dict:
     return check_task(runtime, locate_task_worktree(runtime, Path.cwd(), request.task))
 
 
@@ -44,7 +41,6 @@ COMMAND = Command(
     help="run the acceptance commands and the checks of the corpus in the worktree of a task",
     arguments=(Argument(("task",), {"nargs": "?"}),),
     run=task_check,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

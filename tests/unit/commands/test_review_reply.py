@@ -1,15 +1,17 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.review_reply import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.review.test_assemble_review_context import VERDICT_CHANGES
-from tests.unit.review.test_record_review_answers import ReplyingForgeDouble
+from tests.unit.review.test_record_review_answers import create_replying_forge
 
 
 def create_document(login: str | None) -> dict:
@@ -47,7 +49,7 @@ class ReviewReplyTextTest(unittest.TestCase):
 class ReviewReplyRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42, file="answers.json")
+        options = Namespace(pr=42, file="answers.json")
 
         # Act
         request = COMMAND.read_request(options)
@@ -71,10 +73,10 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED, VERDICT_CHANGES])
-        self.runtime = create_runtime(
-            self.root,
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
-            resolve_plugin=lambda kind, name, **places: ReplyingForgeDouble(),
+            resolve_plugin=lambda kind, name, **places: create_replying_forge(),
         )
         self.answers_file = self.root / "answers.json"
 
@@ -83,7 +85,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
         self.answers_file.write_text(json.dumps({"answers": [{"finding": "1", "answer": "fixed by 8885daa"}]}))
 
         # Act
-        document = COMMAND.run(SimpleNamespace(pr=42, file=str(self.answers_file)), self.runtime)
+        document = COMMAND.run(Namespace(pr=42, file=str(self.answers_file)), self.runtime)
 
         # Assert
         self.assertEqual(document["answers"], [{"finding": "1", "answer": "fixed by 8885daa"}])
@@ -94,7 +96,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            COMMAND.run(SimpleNamespace(pr=42, file=str(self.answers_file)), self.runtime)
+            COMMAND.run(Namespace(pr=42, file=str(self.answers_file)), self.runtime)
 
         # Assert
         self.assertEqual(str(refusal.exception), f"the answers file {self.answers_file} holds no JSON document")
@@ -105,7 +107,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            COMMAND.run(SimpleNamespace(pr=42, file=str(missing_file)), self.runtime)
+            COMMAND.run(Namespace(pr=42, file=str(missing_file)), self.runtime)
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot read {missing_file}: No such file or directory")

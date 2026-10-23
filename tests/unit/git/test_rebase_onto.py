@@ -33,7 +33,8 @@ class RebaseOntoTest(unittest.TestCase):
                 rebased = rebase_onto(git, Path("/srv/shop"), "origin/integration/M4")
 
                 # Assert
-                self.assertEqual((rebased, [request.argv for request in git.requests]), (applied, argvs))
+                self.assertEqual(rebased, applied)
+                self.assertEqual(git.list_argvs(), argvs)
 
     def test_should_fail_with_the_refusal_of_git_when_the_rebase_stopped_on_no_conflict(self):
         # Arrange
@@ -45,9 +46,7 @@ class RebaseOntoTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (str(refusal.exception), [request.argv for request in git.requests]),
-            (
-                "git rebase origin/integration/M4 exited 1: error: cannot rebase: You have unstaged changes.",
-                [REBASE, REBASE_IN_PROGRESS],
-            ),
+            str(refusal.exception),
+            "git rebase origin/integration/M4 exited 1: error: cannot rebase: You have unstaged changes.",
         )
+        self.assertEqual(git.list_argvs(), [REBASE, REBASE_IN_PROGRESS])

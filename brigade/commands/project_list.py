@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.corpus.read_entities import Entity
 from brigade.registry.read_projects import read_projects
@@ -22,15 +24,7 @@ def _render_text(document: dict) -> str:
     return render_table(COLUMNS, [tuple(project[column] for column in COLUMNS) for project in projects])
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
-def project_list(request, runtime: Runtime) -> dict:
+def project_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -46,7 +40,5 @@ COMMAND = Command(
     help="list every registered project",
     group_help="register the projects brigade works on, list and show them",
     run=project_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

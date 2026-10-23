@@ -8,7 +8,7 @@ from brigade.ledger.append_derived_event import append_derived_event
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.wave_started import WaveStarted
-from brigade.system.paths import Paths
+from tests.unit.create_test_paths import create_test_paths
 
 FIRST_WAVE_LINE = (
     '{"schema_version": 2, "ts": "2026-10-16T08:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -21,16 +21,10 @@ class AppendDerivedEventTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name)
-        self.ledger = root / "state" / "brigade" / "ledger"
+        self.paths = create_test_paths(root)
+        self.ledger = self.paths.state_root / "ledger"
         self.ledger.mkdir(parents=True)
         (self.ledger / "2026-10.jsonl").write_text(FIRST_WAVE_LINE)
-        self.paths = Paths(
-            config_root=root / "config" / "brigade",
-            state_root=root / "state" / "brigade",
-            cache_root=root / "cache" / "brigade",
-            home=root,
-            executable_search_path="",
-        )
         self.readings = []
 
     def tearDown(self):
@@ -64,25 +58,26 @@ class AppendDerivedEventTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (line, json.loads((self.ledger / "2026-10.jsonl").read_text().splitlines()[1])),
-            (
-                {
-                    "schema_version": 2,
-                    "ts": "2026-10-17T09:00:00Z",
-                    "event": "wave.started",
-                    "wave": "shop_w2",
-                    "project": "shop",
-                    "branch": "integration/M2-undo",
-                    "tasks": ["S5", "S6"],
-                },
-                {
-                    "schema_version": 2,
-                    "ts": "2026-10-17T09:00:00Z",
-                    "event": "wave.started",
-                    "wave": "shop_w2",
-                    "project": "shop",
-                    "branch": "integration/M2-undo",
-                    "tasks": ["S5", "S6"],
-                },
-            ),
+            line,
+            {
+                "schema_version": 2,
+                "ts": "2026-10-17T09:00:00Z",
+                "event": "wave.started",
+                "wave": "shop_w2",
+                "project": "shop",
+                "branch": "integration/M2-undo",
+                "tasks": ["S5", "S6"],
+            },
+        )
+        self.assertEqual(
+            json.loads((self.ledger / "2026-10.jsonl").read_text().splitlines()[1]),
+            {
+                "schema_version": 2,
+                "ts": "2026-10-17T09:00:00Z",
+                "event": "wave.started",
+                "wave": "shop_w2",
+                "project": "shop",
+                "branch": "integration/M2-undo",
+                "tasks": ["S5", "S6"],
+            },
         )

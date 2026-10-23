@@ -5,7 +5,9 @@ from pathlib import Path
 
 from brigade.commands.init import COMMAND, init
 from brigade.errors import BrigadeError, CannotWrite
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 def _create_git_answers(name: ProcessAnswer, email: ProcessAnswer) -> dict:
@@ -26,7 +28,7 @@ class InitTest(unittest.TestCase):
         self.runner = ScriptedProcessRunner(
             _create_git_answers(ProcessAnswer(stdout="Ada\n"), ProcessAnswer(stdout="ada@example.org\n"))
         )
-        self.runtime = create_runtime(Path(self.root.name), run_process=self.runner.run)
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)), run_process=self.runner.run)
         self.config_root = self.runtime.paths.config_root
         self.no_option = argparse.Namespace()
 
@@ -66,16 +68,16 @@ class InitTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (document["items"], self.runner.argvs),
-            (
-                [
-                    {"name": "repository", "path": str(self.config_root), "state": "present"},
-                    {"name": "schema", "path": str(self.config_root / "_schema.awawa"), "state": "present"},
-                    {"name": ".gitignore", "path": str(self.config_root / ".gitignore"), "state": "present"},
-                    {"name": "config.toml", "path": str(self.config_root / "config.toml"), "state": "present"},
-                ],
-                [("git", "config", "--get", "user.name"), ("git", "config", "--get", "user.email")],
-            ),
+            document["items"],
+            [
+                {"name": "repository", "path": str(self.config_root), "state": "present"},
+                {"name": "schema", "path": str(self.config_root / "_schema.awawa"), "state": "present"},
+                {"name": ".gitignore", "path": str(self.config_root / ".gitignore"), "state": "present"},
+                {"name": "config.toml", "path": str(self.config_root / "config.toml"), "state": "present"},
+            ],
+        )
+        self.assertEqual(
+            self.runner.argvs, [("git", "config", "--get", "user.name"), ("git", "config", "--get", "user.email")]
         )
 
     def test_should_leave_a_file_that_differs_from_the_shipped_one(self):
@@ -117,7 +119,7 @@ class InitOverAFileWhereTheRepositoryGoesTest(unittest.TestCase):
         runner = ScriptedProcessRunner(
             _create_git_answers(ProcessAnswer(stdout="Ada\n"), ProcessAnswer(stdout="ada@example.org\n"))
         )
-        self.runtime = create_runtime(self.blocking_file, run_process=runner.run)
+        self.runtime = create_test_runtime(create_test_paths(self.blocking_file), run_process=runner.run)
 
     def test_should_refuse_the_directory_it_cannot_create(self):
         # Arrange
@@ -141,8 +143,9 @@ class InitWithoutAGitIdentityTest(unittest.TestCase):
         ]
         for name, email, lacking in rows:
             with self.subTest(lacking=lacking), tempfile.TemporaryDirectory() as root:
-                runtime = create_runtime(
-                    Path(root), run_process=ScriptedProcessRunner(_create_git_answers(name, email)).run
+                runtime = create_test_runtime(
+                    create_test_paths(Path(root)),
+                    run_process=ScriptedProcessRunner(_create_git_answers(name, email)).run,
                 )
 
                 # Act

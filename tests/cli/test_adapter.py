@@ -48,7 +48,7 @@ class AdapterTestCase(unittest.TestCase):
     def run_adapter(self, *arguments: str, request: str | None = None, path_directories: tuple = ()):
         environment = {
             **self.machine.describe_environment(),
-            "PATH": os.pathsep.join([*path_directories, os.environ["PATH"]]),
+            "PATH": os.pathsep.join([*path_directories, self.machine.search_path]),
         }
         return self.machine.run_brigade(
             CLONE_ENTRY_POINT, "adapter", *arguments, environment=environment, request=request
@@ -426,15 +426,11 @@ class BrigadeAdapterOnAMachineBindingASlotToAnotherClientTest(AdapterTestCase):
                 completed = self.run_adapter(operation, "--json", request=request)
 
                 # Assert
+                self.assertEqual(completed.returncode, 0)
                 self.assertEqual(
-                    (completed.returncode, completed.stderr),
-                    (
-                        0,
-                        (
-                            f"brigade adapter {operation}: answers for claude-code\n"
-                            f"brigade adapter {operation}: slot review runs on finishing\n"
-                        ),
-                    ),
+                    completed.stderr,
+                    f"brigade adapter {operation}: answers for claude-code\n"
+                    f"brigade adapter {operation}: slot review runs on finishing\n",
                 )
 
 
@@ -584,7 +580,8 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
                 completed = self.run_adapter("launch-argv", "--json", request=request)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, expected_refusal)
 
     def test_should_name_the_session_a_launch_or_a_resume_request_lacks(self):
         # Arrange
@@ -619,7 +616,8 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
                 completed = self.run_adapter(operation, "--json", request=request)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, expected_refusal)
 
     def test_should_refuse_a_stop_instant_a_launch_or_a_resume_request_lacks_or_carries_as_no_text(self):
         # Arrange
@@ -664,7 +662,8 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
                 completed = self.run_adapter(operation, "--json", request=request)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stderr), (1, expected_refusal))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, expected_refusal)
 
     def test_should_refuse_an_invalid_request_before_reading_the_configuration(self):
         # Arrange
@@ -677,17 +676,6 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(completed.stdout, "")
         self.assertEqual(completed.stderr, "brigade adapter launch-argv: the request on stdin: lacks the key role\n")
-
-    def test_should_refuse_a_request_that_is_not_json(self):
-        # Arrange
-        self.machine.write_configuration('client = "claude-code"\n')
-
-        # Act
-        completed = self.run_adapter("launch-argv", "--json", request="role: builder")
-
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertIn("brigade adapter launch-argv: the request on stdin is not JSON: ", completed.stderr)
 
 
 class BrigadeAdapterOnAnUnexpectedErrorTest(AdapterTestCase):

@@ -1,9 +1,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.git.timeouts import ARCHIVE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-
-ARCHIVE_TIMEOUT_S = 300.0
 
 
 def archive_commit(

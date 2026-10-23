@@ -3,14 +3,16 @@ import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.collecting.collect_document import Collection, CollectionRequest, collect_document
 from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from brigade.system.parse_configuration import Configuration
+from brigade.system.run_process import ProcessRecord
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 CACHE_KEY = "cdfce1be6a8703b24e8c5f9ef26d0702fcbabee709441769d8e27941e3ccc852"
@@ -47,15 +49,24 @@ MISSHAPEN_DOCUMENT = {
 INPUTS = CollectorInputs(project=Path("/srv/oak"), since=date(2026, 10, 1), parameters={"city": "Lyon"})
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
 
+COLLECTOR_DIRECTORY = "/srv/shop"
+
 
 class CollectorDouble:
     def __init__(self, exit_code: int, stdout: str, stderr: str = ""):
         self.name = "weather"
         self.command = "brigade-collector-weather"
         self.environments = []
-        self._answer = SimpleNamespace(exit_code=exit_code, stdout=stdout, stderr=stderr, duration_ms=40)
+        self._answer = ProcessRecord(
+            argv=(self.command,),
+            cwd=COLLECTOR_DIRECTORY,
+            exit_code=exit_code,
+            stdout=stdout,
+            stderr=stderr,
+            duration_ms=40,
+        )
 
-    def collect(self, environment: dict, runtime, equipment) -> SimpleNamespace:
+    def collect(self, environment: dict, runtime, equipment) -> ProcessRecord:
         self.environments.append(environment)
         return self._answer
 
@@ -69,7 +80,8 @@ class CollectDocumentTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_scripted_runtime(self.root, ScriptedProcesses())
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=ScriptedProcesses())
         self.cache_entry = self.root / "cache" / "collectors" / "weather" / CACHE_KEY
 
     def test_should_keep_a_document_declaring_itself_cacheable_in_the_cache(self):
@@ -180,7 +192,10 @@ class CollectDocumentTest(unittest.TestCase):
 
     def test_should_keep_a_document_fresh_at_each_call_in_the_run_directory_of_a_run(self):
         # Arrange
-        runtime = create_scripted_runtime(self.root, ScriptedProcesses(), run_directory=self.root / "run")
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "run"), run_process=ScriptedProcesses()
+        )
 
         # Act
         collection = collect_document(CollectorDouble(0, json.dumps(FRESH_DOCUMENT)), create_request(), runtime)
@@ -190,7 +205,10 @@ class CollectDocumentTest(unittest.TestCase):
 
     def test_should_answer_a_cached_document_from_its_copy_in_the_run_directory_of_a_run(self):
         # Arrange
-        runtime = create_scripted_runtime(self.root, ScriptedProcesses(), run_directory=self.root / "run")
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "run"), run_process=ScriptedProcesses()
+        )
         collect_document(CollectorDouble(0, json.dumps(CACHED_DOCUMENT)), create_request(), runtime)
 
         # Act
@@ -208,7 +226,10 @@ class CollectDocumentTest(unittest.TestCase):
 
     def test_should_copy_a_cached_document_into_the_run_directory_of_a_run(self):
         # Arrange
-        runtime = create_scripted_runtime(self.root, ScriptedProcesses(), run_directory=self.root / "run")
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "run"), run_process=ScriptedProcesses()
+        )
         collect_document(CollectorDouble(0, json.dumps(CACHED_DOCUMENT)), create_request(), runtime)
 
         # Act
@@ -223,7 +244,8 @@ class CollectDocumentRefusalTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        self.runtime = create_scripted_runtime(Path(directory.name), ScriptedProcesses())
+        write_operational_corpus(Path(directory.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=ScriptedProcesses())
 
     def test_should_report_a_collector_that_failed_with_the_tail_of_its_errors(self):
         # Arrange

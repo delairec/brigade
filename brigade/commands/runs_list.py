@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
@@ -27,21 +29,13 @@ def _describe_skipped_runs(document: dict) -> list[str]:
     return [f"skipped run {skipped['run']}: {skipped['reason']}" for skipped in document["skipped"]]
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def _is_selected(listed: dict, request) -> bool:
     return (request.wave is None or listed["wave"] == request.wave) and (
         request.task is None or listed["task"] == request.task
     )
 
 
-def runs_list(request, runtime: Runtime) -> dict:
+def runs_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     listing = list_runs(runtime.paths.state_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -59,8 +53,6 @@ COMMAND = Command(
         Argument(("--task",), {"help": "keep the runs of this task"}),
     ),
     run=runs_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=_describe_skipped_runs,
 )

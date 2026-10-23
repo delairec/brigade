@@ -1,11 +1,13 @@
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.verify_preflight import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 TASK_WORKTREE = {
     ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool-T7\n",
@@ -79,7 +81,7 @@ class VerifyPreflightExitCodeTest(unittest.TestCase):
 class VerifyPreflightRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = SimpleNamespace(pr=42)
+        options = Namespace(pr=42)
 
         # Act
         request = COMMAND.read_request(options)
@@ -97,8 +99,8 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
         self.forge = ForgeDeclineDouble()
-        self.runtime = create_runtime(
-            self.root,
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}, TASK_WORKTREE),
             resolve_plugin=lambda kind, name, **places: self.forge,
         )
@@ -106,7 +108,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
     def test_should_ask_the_forge_about_the_pull_request_of_the_task(self):
         # Act
         with self.assertRaises(BrigadeError):
-            COMMAND.run(SimpleNamespace(pr=42), self.runtime)
+            COMMAND.run(Namespace(pr=42), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -122,7 +124,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
     def test_should_refuse_a_pull_request_no_task_opened(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(SimpleNamespace(pr=41), self.runtime)
+            COMMAND.run(Namespace(pr=41), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")

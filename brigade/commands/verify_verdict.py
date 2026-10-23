@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -10,17 +11,14 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import read_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.system.read_text_file import read_text_file
 from brigade.system.validate_document import DocumentInvalid
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.verify.record_verdict import VerdictDemand, record_verdict
 from brigade.verify.validate_verdict import validate_verdict
 
 DOCUMENT_SCHEMA_VERSION = 1
-
-
-def _read_request(options):
-    return options
 
 
 def _render_text(document: dict) -> str:
@@ -30,15 +28,8 @@ def _render_text(document: dict) -> str:
     return f"{text}, posted as {document['login']}"
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def _read_verdict(path: Path) -> dict:
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as error:
-        raise BrigadeError(f"cannot read {path}: {error.strerror}") from None
+    text = read_text_file(path)
     try:
         verdict = json.loads(text)
     except ValueError:
@@ -50,7 +41,7 @@ def _read_verdict(path: Path) -> dict:
     return verdict
 
 
-def verify_verdict(request, runtime: Runtime) -> dict:
+def verify_verdict(request: argparse.Namespace, runtime: Runtime) -> dict:
     verdict = _read_verdict(Path(request.file))
     run_process = runtime.run_process
     project = require_project_at(
@@ -61,7 +52,7 @@ def verify_verdict(request, runtime: Runtime) -> dict:
         opened=find_opened_task(runtime, project.name, request.pr).opened,
         verdict=verdict,
         forge=runtime.resolve_plugin("forge", FORGE_NAME),
-        configuration=read_configuration(runtime.paths.configuration_file),
+        configuration=read_configuration(runtime, CONFIGURATION_REQUIRED),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_verdict(runtime, demand)}
 
@@ -75,7 +66,5 @@ COMMAND = Command(
         Argument(("--file",), {"required": True, "help": "the file holding the verdict, a JSON document"}),
     ),
     run=verify_verdict,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+from brigade.system.instant_formats import ISO_INSTANT_FORMAT
 
 
 def format_instant(instant: datetime) -> str:
-    return instant.astimezone(UTC).strftime(INSTANT_FORMAT)
+    return instant.astimezone(UTC).strftime(ISO_INSTANT_FORMAT)

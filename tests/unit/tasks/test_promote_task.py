@@ -11,7 +11,9 @@ from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.wave_started import WaveStarted
 from brigade.tasks.promote_task import TaskPromotionDemand, promote_task
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 TASKS = 'TASK B12\n\tTITLE "The parser"\n\tSTATUS todo\n\tDELIVERED_BY 40\n\nTASK B13\n\tSTATUS todo\n'
@@ -34,7 +36,8 @@ class PromoteTaskTest(unittest.TestCase):
         (self.worktree / "corpus").mkdir(parents=True)
         (self.worktree / "corpus" / "tasks.awawa").write_text(TASKS, encoding="utf-8")
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout=f"{self.worktree}\n")
         self.processes.answer(("git", "branch", "--show-current"), stdout="task/oak_w1/B12\n")
@@ -109,7 +112,7 @@ class PromoteTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries[-1],
-            LedgerEntry(instant=RUNTIME_NOW, event=TaskPromoted(project="oak", task="B12", pr=42, commit="d00d")),
+            LedgerEntry(instant=FIXED_NOW, event=TaskPromoted(project="oak", task="B12", pr=42, commit="d00d")),
         )
 
     def test_should_promote_on_the_last_pull_request_the_ledger_records_for_the_task(self):

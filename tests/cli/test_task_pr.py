@@ -86,7 +86,7 @@ class TaskPrTestCase(TaskCheckTestCase):
 
     def describe_environment(self) -> dict:
         tools = Path(self.root.name).resolve() / "tools"
-        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{os.environ['PATH']}"}
+        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{self.machine.search_path}"}
 
     def write_task(self, tasks: str) -> None:
         (self.worktree / "corpus" / "_schema.awawa").write_text(TYPED_SCHEMA)
@@ -144,9 +144,8 @@ class BrigadeTaskPrAfterAPassingCheckTest(TaskPrTestCase):
         completed = self.run_task_pr("--subject", SUBJECT)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout), (0, "https://github.com/acme/shop/pull/42\n"), completed.stderr
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "https://github.com/acme/shop/pull/42\n", completed.stderr)
         self.assertIn(PULL_REQUEST_CREATION, self.read_gh_calls())
 
     def test_should_fill_the_body_with_the_task_its_criteria_its_checks_and_the_attribution(self):

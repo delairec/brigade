@@ -5,31 +5,29 @@ import os
 import signal
 import subprocess
 import tempfile
-import time
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest import mock
 from unittest.mock import ANY
 
 from brigade.adapters.documents import markdown
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, CannotWrite
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
-from brigade.system.paths import Paths
+from brigade.system.parse_configuration import Configuration
 from brigade.system.process_trace import ProcessTrace
-from brigade.system.read_configuration import Configuration
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.token_usage import TokenUsage
 from brigade.system.trail_writer import TrailWriter
 from tests.process_launcher import ProcessLauncher
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 FIRST_SEGMENT = 1
-NO_PATH_NEEDED = ""
 NO_ARGUMENTS = {}
 NO_WAVE = None
 NO_TASK = None
@@ -157,6 +155,13 @@ class ClientRefusingToReadActionsDouble(ClientDouble):
     def answer(self, operation: str, request: dict) -> dict:
         if operation == "actions":
             return {"schema_version": 1}
+        return super().answer(operation, request)
+
+
+class ClientReadingNoActionsDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "actions":
+            return {"schema_version": 1, "actions": []}
         return super().answer(operation, request)
 
 
@@ -290,20 +295,7 @@ class SpawnOutlivingTheLimitDouble:
         return ProcessStoppedAtTheLimitDouble()
 
 
-def _report_nothing(trace) -> None:
-    pass
-
-
-def _read_launch_instant() -> datetime:
-    return datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
-
-
-def _refuse_process(request):
-    raise AssertionError(f"run_segment ran {request.argv}")
-
-
-def _refuse_resolution(kind: str, name: str):
-    raise AssertionError(f"run_segment resolved the {kind} plugin {name}")
+LAUNCH_INSTANT = datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
 
 
 def _read_journal_records(journal: Path) -> list[dict]:
@@ -311,22 +303,7 @@ def _read_journal_records(journal: Path) -> list[dict]:
 
 
 def _create_runtime(root: Path, spawn) -> Runtime:
-    return Runtime(
-        run_process=_refuse_process,
-        spawn_process=spawn.spawn,
-        paths=Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root / "home",
-            executable_search_path=NO_PATH_NEEDED,
-        ),
-        now=datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC),
-        read_clock=_read_launch_instant,
-        entry_point=root / "bin" / "brigade",
-        trail=TrailWriter(_report_nothing),
-        resolve_plugin=_refuse_resolution,
-    )
+    return create_test_runtime(create_test_paths(root), spawn_process=spawn.spawn, now=LAUNCH_INSTANT)
 
 
 def _create_plan(
@@ -430,18 +407,13 @@ class RunSegmentTest(unittest.TestCase):
         # Assert
         self.assertEqual(record.number, 1)
         self.assertEqual(record.exit_code, 0)
-        self.assertEqual(
-            (
-                record.outcome,
-                record.client_steps,
-                record.usage,
-                record.session_id,
-                record.error_class,
-                record.reset,
-                record.message,
-            ),
-            ("done", 12, None, "session-b73", None, None, "the client finished the task"),
-        )
+        self.assertEqual(record.outcome, "done")
+        self.assertEqual(record.client_steps, 12)
+        self.assertEqual(record.usage, None)
+        self.assertEqual(record.session_id, "session-b73")
+        self.assertEqual(record.error_class, None)
+        self.assertEqual(record.reset, None)
+        self.assertEqual(record.message, "the client finished the task")
 
 
 class RunSegmentStepsTest(unittest.TestCase):
@@ -530,10 +502,12 @@ class RunSegmentSoftLimitTest(unittest.TestCase):
         record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(
-            (record.outcome, record.client_steps, record.session_id, record.message, record.exit_code, record.cost_usd),
-            ("soft_limit", 12, "session-b73", None, 0, 0.42),
-        )
+        self.assertEqual(record.outcome, "soft_limit")
+        self.assertEqual(record.client_steps, 12)
+        self.assertEqual(record.session_id, "session-b73")
+        self.assertEqual(record.message, None)
+        self.assertEqual(record.exit_code, 0)
+        self.assertEqual(record.cost_usd, 0.42)
 
 
 class RunSegmentSessionTest(unittest.TestCase):
@@ -658,7 +632,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             json.loads(self.journal.read_text()),
             {
                 "schema_version": 1,
-                "at": ANY,
+                "at": "2026-10-07T09:05:00Z",
                 "segment": 1,
                 "kind": "raw",
                 "summary": "the client finished the task",
@@ -678,7 +652,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             json.loads(self.journal.read_text()),
             {
                 "schema_version": 1,
-                "at": ANY,
+                "at": "2026-10-07T09:05:00Z",
                 "segment": 1,
                 "kind": "text",
                 "summary": "the client finished the task",
@@ -710,7 +684,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             [
                 {
                     "schema_version": 1,
-                    "at": ANY,
+                    "at": "2026-10-07T09:05:00Z",
                     "segment": 1,
                     "kind": "raw",
                     "summary": "Reading the task",
@@ -718,7 +692,7 @@ class RunSegmentJournalTest(unittest.TestCase):
                 },
                 {
                     "schema_version": 1,
-                    "at": ANY,
+                    "at": "2026-10-07T09:05:00Z",
                     "segment": 1,
                     "kind": "raw",
                     "summary": "Writing the test",
@@ -726,6 +700,28 @@ class RunSegmentJournalTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_name_the_journal_it_cannot_write(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+        self.journal.mkdir(parents=True)
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.journal}: Is a directory")
+
+    def test_should_journal_nothing_of_an_output_in_which_the_client_reads_no_action(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=True, client_type=ClientReadingNoActionsDouble)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertFalse(self.journal.exists())
 
     def test_should_journal_raw_records_of_an_output_whose_actions_the_client_fails_to_read(self):
         # Arrange
@@ -739,7 +735,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             json.loads(self.journal.read_text()),
             {
                 "schema_version": 1,
-                "at": ANY,
+                "at": "2026-10-07T09:05:00Z",
                 "segment": 1,
                 "kind": "raw",
                 "summary": "the client finished the task",
@@ -831,10 +827,10 @@ class RunSegmentStoppedBeforeItsClientIsSpawnedTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(
-            (spawn.requests, record.outcome, record.exit_code, record.uncounted),
-            ([], "stopped", None, "the client was never launched"),
-        )
+        self.assertEqual(spawn.requests, [])
+        self.assertEqual(record.outcome, "stopped")
+        self.assertEqual(record.exit_code, None)
+        self.assertEqual(record.uncounted, "the client was never launched")
 
 
 class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
@@ -855,7 +851,9 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.spawn.process.returncode, -signal.SIGTERM)
-        self.assertEqual((record.outcome, record.exit_code, record.message), ("stopped", None, "stopped by a signal"))
+        self.assertEqual(record.outcome, "stopped")
+        self.assertEqual(record.exit_code, None)
+        self.assertEqual(record.message, "stopped by a signal")
 
     def test_should_record_the_client_stopped_in_the_trail(self):
         # Arrange
@@ -945,18 +943,13 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
                 )
 
                 # Assert
-                self.assertEqual(
-                    (
-                        record.outcome,
-                        record.client_steps,
-                        record.usage,
-                        record.session_id,
-                        record.error_class,
-                        record.reset,
-                        record.message,
-                    ),
-                    ("failed", None, None, None, None, None, expected_message),
-                )
+                self.assertEqual(record.outcome, "failed")
+                self.assertEqual(record.client_steps, None)
+                self.assertEqual(record.usage, None)
+                self.assertEqual(record.session_id, None)
+                self.assertEqual(record.error_class, None)
+                self.assertEqual(record.reset, None)
+                self.assertEqual(record.message, expected_message)
 
     def test_should_record_the_failure_of_the_adapter_apart_from_the_result_of_the_client(self):
         # Arrange
@@ -1002,10 +995,10 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
         record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, spawn), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(
-            (spawn.requests, record.outcome, record.exit_code, record.uncounted),
-            ([], "failed", None, "the client was never launched"),
-        )
+        self.assertEqual(spawn.requests, [])
+        self.assertEqual(record.outcome, "failed")
+        self.assertEqual(record.exit_code, None)
+        self.assertEqual(record.uncounted, "the client was never launched")
 
     def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
         # Arrange
@@ -1024,11 +1017,12 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
         # Arrange
         clock = ClockDouble()
         plan = _create_plan(self.root, client_type=ClientAnsweringParseResultWithoutOutcomeDouble)
-        runtime = _create_runtime(self.root, SpawnRunningAWhileDouble(clock, running_s=4.2))
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, SpawnRunningAWhileDouble(clock, running_s=4.2)), read_monotonic=clock.read
+        )
 
         # Act
-        with mock.patch.object(time, "monotonic", clock.read):
-            record = run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
+        record = run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
 
         # Assert
         self.assertEqual(record.measured_ms, 4200)

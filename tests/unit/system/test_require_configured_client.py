@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.require_configured_client import ConfiguredClient, require_configured_client
 
 CONFIGURATION_PATH = Path("/srv/config/brigade/config.toml")

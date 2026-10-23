@@ -5,12 +5,15 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.project_resume import COMMAND, project_resume
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
 PAUSED_APP = json.dumps(
     {"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}, {"name": "STATUS", "atoms": ["paused"]}]}
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 REGISTRY = 'PROJECT app\n\tPATH "/srv/app"\n\tSTATUS paused\n'
 
 
@@ -29,7 +32,7 @@ class ProjectResumeTest(unittest.TestCase):
                 ("git", "commit"): ProcessAnswer(),
             }
         )
-        self.runtime = create_runtime(Path(self.root.name), run_process=runner.run)
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)), run_process=runner.run)
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
         (self.runtime.paths.config_root / "projects.awawa").write_text(REGISTRY)

@@ -12,5 +12,5 @@ TOML_TYPE_NAMES = (
 )
 
 
-def name_toml_type(value) -> str:
+def name_toml_type(value: object) -> str:
     return next(name for kind, name in TOML_TYPE_NAMES if isinstance(value, kind))

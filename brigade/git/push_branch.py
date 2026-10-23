@@ -2,9 +2,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.git.timeouts import REMOTE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-PUSH_TIMEOUT_S = 120.0
 REMOTE = "origin"
 
 
@@ -20,7 +20,7 @@ def push_branch(run_process: Callable[[ProcessRequest], ProcessRecord], push: Br
         ProcessRequest(
             argv=("git", "push", "--quiet", REMOTE, push.branch),
             cwd=str(push.repository),
-            timeout_s=PUSH_TIMEOUT_S,
+            timeout_s=REMOTE_TIMEOUT_S,
             environment=push.environment,
         )
     )

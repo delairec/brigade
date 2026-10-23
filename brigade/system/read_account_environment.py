@@ -2,7 +2,7 @@ import time
 from dataclasses import dataclass
 
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.require_login_environment import LoginDemand, require_login_environment
 
 UNBOUND_ENVIRONMENT = {}

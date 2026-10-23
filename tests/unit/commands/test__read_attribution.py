@@ -3,9 +3,10 @@ import unittest
 from pathlib import Path
 
 from brigade.commands._read_attribution import read_attribution
-from brigade.system.read_configuration import Configuration
-from tests.unit.commands.command_runtime import create_runtime
+from brigade.system.parse_configuration import Configuration
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 ATTRIBUTING_PROBE = {
     "schema_version": 1,
@@ -23,8 +24,9 @@ class ReadAttributionTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         client = ScriptedClient({"probe": ATTRIBUTING_PROBE})
-        self.runtime = create_runtime(
-            Path(self.root.name), resolve_plugin=create_plugin_resolver({("client", "scripted"): client})
+        self.runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name)),
+            resolve_plugin=create_plugin_resolver({("client", "scripted"): client}),
         )
 
     def test_should_take_the_attribution_the_configuration_states(self):

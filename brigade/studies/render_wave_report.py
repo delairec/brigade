@@ -51,14 +51,8 @@ def _render_task_row(task: str, state: str, pull_requests: list[dict]) -> str:
     return " ".join([task, state, *numbers])
 
 
-def _render_rows(evidence: WaveEvidence) -> list[tuple[str, str]]:
-    wave_tasks = _read_wave_tasks(evidence.events)
-    states = _read_last_states(evidence.events)
-    merged = [task for task in wave_tasks if states.get(task) == MERGED_STATE]
-    instructions_changes = [
-        change for change in evidence.changes if change["path"].startswith(f"{evidence.corpus_folder}/")
-    ]
-    statistics = {
+def _count_statistics(evidence: WaveEvidence, wave_tasks: list, states: dict, merged: list) -> dict:
+    return {
         "tasks": len(wave_tasks),
         "merged": len(merged),
         "parked": sum(states.get(task) == PARKED_STATE for task in wave_tasks),
@@ -67,11 +61,10 @@ def _render_rows(evidence: WaveEvidence) -> list[tuple[str, str]]:
         "insertions": sum(change["insertions"] for change in evidence.changes),
         "deletions": sum(change["deletions"] for change in evidence.changes),
     }
+
+
+def _render_findings(evidence: WaveEvidence, wave_tasks: list, merged: list) -> list[tuple[str, str]]:
     return [
-        ("WAVE", evidence.wave),
-        ("PROJECT", evidence.project),
-        *[("TASK_ROW", _render_task_row(task, states[task], evidence.pull_requests)) for task in wave_tasks],
-        *[("STATISTIC", f"{name} {value}") for name, value in statistics.items()],
         *[
             ("GRAPH", f"{task['name']} after {predecessor}")
             for task in evidence.tasks
@@ -87,7 +80,8 @@ def _render_rows(evidence: WaveEvidence) -> list[tuple[str, str]]:
         ],
         *[
             ("INSTRUCTIONS_CHANGE", f"{change['path']} +{change['insertions']} -{change['deletions']}")
-            for change in instructions_changes
+            for change in evidence.changes
+            if change["path"].startswith(f"{evidence.corpus_folder}/")
         ],
         *[
             ("PARKED_QUESTION", f"{event['task']} blocked by {blocker}")
@@ -95,6 +89,20 @@ def _render_rows(evidence: WaveEvidence) -> list[tuple[str, str]]:
             if event["event"] == TASK_PARKED
             for blocker in event["blockers"]
         ],
+    ]
+
+
+def _render_rows(evidence: WaveEvidence) -> list[tuple[str, str]]:
+    wave_tasks = _read_wave_tasks(evidence.events)
+    states = _read_last_states(evidence.events)
+    merged = [task for task in wave_tasks if states.get(task) == MERGED_STATE]
+    statistics = _count_statistics(evidence, wave_tasks, states, merged)
+    return [
+        ("WAVE", evidence.wave),
+        ("PROJECT", evidence.project),
+        *[("TASK_ROW", _render_task_row(task, states[task], evidence.pull_requests)) for task in wave_tasks],
+        *[("STATISTIC", f"{name} {value}") for name, value in statistics.items()],
+        *_render_findings(evidence, wave_tasks, merged),
     ]
 
 

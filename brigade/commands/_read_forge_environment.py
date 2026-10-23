@@ -1,6 +1,6 @@
 from brigade.runtime import Runtime
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_account_environment import ForgeAccount, read_account_environment
-from brigade.system.read_configuration import Configuration
 
 FORGE_KIND = "forge"
 FORGE_NAME = "github"

@@ -7,13 +7,14 @@ from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.describe_skipped_runs import describe_skipped_runs
 from brigade.runs.detach_run import detach_run
-from brigade.runs.plan_run import RunPlan, RunRequest, plan_run
+from brigade.runs.plan_run import RunPlan, RunPlugins, RunRequest, plan_run
 from brigade.runs.prune_runs import PruneRequest, prune_runs
 from brigade.runs.read_run_setting import read_run_setting
 from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import SLOTS, Configuration, read_configuration
+from brigade.system.parse_configuration import SLOTS, Configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.stop_signal_receiver import StopSignalReceiver
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -76,18 +77,18 @@ def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> Run
     run_request = _read_run_request(request)
     forge_environment = read_forge_environment(configuration, run_request.slot, runtime)
     setting = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
-    client_adapter = runtime.resolve_plugin("client", setting.client)
-    document = runtime.resolve_plugin("document", configuration.document)
-    plan = dataclasses.replace(
-        plan_run(run_request, setting, client_adapter, document, runtime), forge_environment=forge_environment
+    plugins = RunPlugins(
+        client_adapter=runtime.resolve_plugin("client", setting.client),
+        document=runtime.resolve_plugin("document", configuration.document),
     )
+    plan = dataclasses.replace(plan_run(run_request, setting, plugins, runtime), forge_environment=forge_environment)
     create_run_directory(plan, runtime)
     runtime.trail.locate(plan.run_directory / PROCESSES_FILE)
     return plan
 
 
-def run(request, runtime: Runtime) -> dict:
-    configuration = read_configuration(runtime.paths.configuration_file)
+def run(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     if request.detach:
         plan = _prepare_run(request, configuration, runtime)
         pid = detach_run(plan, runtime)

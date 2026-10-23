@@ -7,7 +7,7 @@ from brigade.system.validate_document import Field
 
 
 @dataclass(frozen=True)
-class SampleEvent:
+class SampleEventDouble:
     name: ClassVar[str] = "sample.event"
     run: str
     steps: int | None
@@ -17,7 +17,7 @@ class SampleEvent:
 class DeclareEventShapeTest(unittest.TestCase):
     def test_should_require_every_field_without_default_of_any_kind_and_nullable(self):
         # Act
-        shape = declare_event_shape(SampleEvent)
+        shape = declare_event_shape(SampleEventDouble)
 
         # Assert
         self.assertEqual(
