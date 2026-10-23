@@ -260,19 +260,10 @@ class BrigadeCorpusWithAConfigurationThatIsNotTomlTest(CorpusTestCase):
         self.assertIn(f"brigade corpus: {self.configuration} is not valid TOML: ", completed.stderr)
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeCorpusWhereTheMachineRefusesTheCacheTest(CorpusTestCase):
-    def setUp(self):
-        super().setUp()
-        self.machine.cache_home.mkdir(exist_ok=True)
-
-    def tearDown(self):
-        self.machine.cache_home.chmod(0o700)
-        super().tearDown()
-
+class BrigadeCorpusWhereAFileStandsForTheCacheTest(CorpusTestCase):
     def test_should_exit_1_naming_the_cache_directory_it_cannot_create(self):
         # Arrange
-        self.machine.cache_home.chmod(0o500)
+        self.machine.cache_home.write_text("")
 
         # Act
         completed = self.run_corpus("app", "--ref", "main")
@@ -280,5 +271,9 @@ class BrigadeCorpusWhereTheMachineRefusesTheCacheTest(CorpusTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade corpus: cannot write {self.machine.cache_home / 'brigade'}: Permission denied\n"),
+            (
+                1,
+                "",
+                f"brigade corpus: cannot write {self.machine.cache_home / 'brigade' / 'refs' / 'app'}: Not a directory\n",
+            ),
         )

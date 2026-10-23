@@ -1,5 +1,4 @@
 import json
-import os
 import tempfile
 import tomllib
 import unittest
@@ -415,46 +414,39 @@ class BrigadeInitWithoutAGitIdentityTest(unittest.TestCase):
                 )
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeInitWhereTheMachineRefusesTheConfigurationDirectoryTest(unittest.TestCase):
+class BrigadeInitWhereAFileStandsForTheConfigurationDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
-        self.machine.config_home.mkdir()
+        self.machine.config_home.write_text("")
 
     def tearDown(self):
-        self.machine.config_home.chmod(0o700)
         self.root.cleanup()
 
     def test_should_exit_1_naming_the_configuration_directory_it_cannot_create(self):
-        # Arrange
-        self.machine.config_home.chmod(0o500)
-
         # Act
         completed = self.machine.run_init()
 
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade init: cannot write {self.machine.corpus}: Permission denied\n"),
+            (1, "", f"brigade init: cannot write {self.machine.corpus}: Not a directory\n"),
         )
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeInitWhereTheMachineRefusesAFileOfTheCorpusTest(unittest.TestCase):
+class BrigadeInitWhereADirectoryStandsForAFileOfTheCorpusTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
         self.machine.run_init()
 
     def tearDown(self):
-        self.machine.corpus.chmod(0o700)
         self.root.cleanup()
 
     def test_should_exit_1_naming_the_file_it_cannot_create(self):
         # Arrange
         (self.machine.corpus / "config.toml").unlink()
-        self.machine.corpus.chmod(0o500)
+        (self.machine.corpus / "config.toml").mkdir()
 
         # Act
         completed = self.machine.run_init()
@@ -462,5 +454,5 @@ class BrigadeInitWhereTheMachineRefusesAFileOfTheCorpusTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade init: cannot write {self.machine.corpus / 'config.toml'}: Permission denied\n"),
+            (1, "", f"brigade init: cannot write {self.machine.corpus / 'config.toml'}: Is a directory\n"),
         )

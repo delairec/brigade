@@ -1122,19 +1122,10 @@ class BrigadeTickWithoutAModeTest(TickTestCase):
         self.assertIn("one of the arguments --once --dry-run --loop is required", completed.stderr)
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectoryTest(TickTestCase):
-    def setUp(self):
-        super().setUp()
-        self.machine.state_home.mkdir()
-
-    def tearDown(self):
-        self.machine.state_home.chmod(0o700)
-        super().tearDown()
-
-    def test_should_exit_1_naming_the_state_directory_it_cannot_create(self):
+class BrigadeTickOnceWhereAFileStandsForTheStateDirectoryTest(TickTestCase):
+    def test_should_exit_1_naming_the_lock_directory_it_cannot_create(self):
         # Arrange
-        self.machine.state_home.chmod(0o500)
+        self.machine.state_home.write_text("")
 
         # Act
         completed = self.run_tick("--once")
@@ -1142,23 +1133,18 @@ class BrigadeTickOnceWhereTheMachineRefusesTheStateDirectoryTest(TickTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade tick: cannot write {self.state}: Permission denied\n"),
+            (1, "", f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n"),
         )
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTestCase):
+class BrigadeTickOnceWhereAnEntryOfTheStateDirectoryStandsInTheWayTest(TickTestCase):
     def setUp(self):
         super().setUp()
         self.lock.parent.mkdir(parents=True)
 
-    def tearDown(self):
-        self.state.chmod(0o700)
-        super().tearDown()
-
     def test_should_exit_1_naming_the_lock_it_cannot_open(self):
         # Arrange
-        self.lock.touch(mode=0o400)
+        self.lock.mkdir()
 
         # Act
         completed = self.run_tick("--once")
@@ -1166,52 +1152,39 @@ class BrigadeTickOnceWhereTheMachineRefusesAWriteInTheStateDirectoryTest(TickTes
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade tick: cannot write {self.lock}: Permission denied\n"),
+            (1, "", f"brigade tick: cannot write {self.lock}: Is a directory\n"),
         )
 
     def test_should_exit_1_naming_the_trail_directory_it_cannot_create_and_write_no_heartbeat(self):
         # Arrange
-        self.state.chmod(0o500)
+        (self.state / "ticks").write_text("")
 
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (
-                completed.returncode,
-                completed.stdout,
-                completed.stderr,
-                sorted(path.name for path in self.state.iterdir()),
-            ),
-            (1, "", f"brigade tick: cannot write {self.state / 'ticks'}: Permission denied\n", ["locks"]),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.state / 'ticks'}: File exists\n")
+        self.assertEqual(set(self.state.iterdir()), {self.state / "locks", self.state / "ticks"})
 
     def test_should_exit_1_naming_the_heartbeat_it_cannot_write_and_write_none(self):
         # Arrange
         (self.state / "ticks").mkdir()
-        self.state.chmod(0o500)
+        self.heartbeat.mkdir()
 
         # Act
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr, self.heartbeat.exists()),
-            (1, "", f"brigade tick: cannot write {self.heartbeat}: Permission denied\n", False),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.heartbeat}: Is a directory\n")
+        self.assertEqual(set(self.state.iterdir()), {self.state / "locks", self.state / "ticks", self.heartbeat})
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeTickLoopWhereTheMachineRefusesTheWriteTest(TickTestCase):
+class BrigadeTickLoopWhereAFileStandsForTheStateDirectoryTest(TickTestCase):
     def setUp(self):
         super().setUp()
-        self.machine.state_home.mkdir()
-        self.machine.state_home.chmod(0o500)
-
-    def tearDown(self):
-        self.machine.state_home.chmod(0o700)
-        super().tearDown()
+        self.machine.state_home.write_text("")
 
     def test_should_report_the_failed_tick_and_keep_ticking_until_a_signal(self):
         # Arrange
@@ -1225,7 +1198,7 @@ class BrigadeTickLoopWhereTheMachineRefusesTheWriteTest(TickTestCase):
         stdout, later_reports = loop.communicate(timeout=STOP_WAIT_S)
         self.assertEqual(
             (failure_line, later_reports, loop.returncode, self.state.exists()),
-            (f"brigade tick: cannot write {self.state}: Permission denied\n", "", 0, False),
+            (f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n", "", 0, False),
         )
         self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
 

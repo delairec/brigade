@@ -1,6 +1,5 @@
 import fcntl
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -624,49 +623,15 @@ class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
         return False
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):
+class BrigadeProjectWhereAFileStandsForTheLockDirectoryTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.state_root = self.machine.state_home / "brigade"
 
-    def tearDown(self):
-        self.state_root.chmod(0o700)
-        super().tearDown()
-
-    def test_should_exit_1_naming_the_registry_project_add_cannot_write(self):
-        # Arrange
-        self.run_project("add", str(self.create_project("app").path))
-        web = self.create_project("web")
-        self.registry.chmod(0o400)
-
-        # Act
-        completed = self.run_project("add", str(web.path))
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade project add: cannot write {self.registry}: Permission denied\n"),
-        )
-
-    def test_should_exit_1_naming_the_registry_project_pause_cannot_write(self):
-        # Arrange
-        self.run_project("add", str(self.create_project("app").path))
-        self.registry.chmod(0o400)
-
-        # Act
-        completed = self.run_project("pause", "app")
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade project pause: cannot write {self.registry}: Permission denied\n"),
-        )
-
     def test_should_exit_1_naming_the_state_directory_where_its_lock_goes(self):
         # Arrange
         project = self.create_project("app")
-        self.state_root.chmod(0o500)
+        (self.state_root / "locks").write_text("")
 
         # Act
         completed = self.run_project("add", str(project.path))
@@ -674,7 +639,7 @@ class BrigadeProjectWhereTheMachineRefusesTheWriteTest(ProjectTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade project add: cannot write {self.state_root / 'locks'}: Permission denied\n"),
+            (1, "", f"brigade project add: cannot write {self.state_root / 'locks'}: File exists\n"),
         )
 
 

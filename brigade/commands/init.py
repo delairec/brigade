@@ -45,7 +45,7 @@ def _render_configuration(runtime: Runtime) -> str:
 
 def _ensure_file(name: str, path: Path, content: bytes) -> dict:
     item = {"name": name, "path": str(path)}
-    if not path.exists():
+    if not path.is_file():
         write_bytes_file(path, content)
         return {**item, "state": "created"}
     if path.read_bytes() == content:

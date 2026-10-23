@@ -25,7 +25,7 @@ def _list_input_files(path: Path) -> list[Path]:
 
 def _read_input(file: Path) -> str | None:
     try:
-        return file.read_text()
+        return file.read_text(errors="surrogateescape")
     except PermissionError:
         return None
 

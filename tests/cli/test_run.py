@@ -4,7 +4,6 @@ import shutil
 import signal
 import subprocess
 import sys
-import unittest
 from pathlib import Path
 
 from tests.awawa.provide_awawa import provide_awawa
@@ -14,6 +13,7 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT
 from tests.cli.temporary_project import TemporaryProject
 from tests.process_launcher import ProcessLauncher
 
+NOT_UTF_8 = b"\xff\n"
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
 BUILT_IN_BUILDER = REPOSITORY_ROOT / "brigade" / "roles" / "data" / "builder.md"
@@ -1687,12 +1687,11 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["role"], "reviewer")
 
-    @unittest.skipIf(os.geteuid() == 0, "root reads what the permissions refuse")
     def test_should_exit_1_with_the_stderr_of_awawa_when_the_instructions_corpus_is_unreadable(self):
         # Arrange
         instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
         agents = instructions.root / "agents.awawa"
-        agents.chmod(0o000)
+        agents.write_bytes(NOT_UTF_8)
         self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
         self.record("reviewer", DONE_RESULT)
         self.register('ROLE "build=reviewer"')
@@ -1707,11 +1706,10 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         )
         self.assertIn(str(agents), completed.stderr)
 
-    @unittest.skipIf(os.geteuid() == 0, "root reads what the permissions refuse")
     def test_should_launch_no_client_when_the_instructions_corpus_is_unreadable(self):
         # Arrange
         instructions = TemporaryInstructions(Path(self.root.name) / "instructions")
-        (instructions.root / "agents.awawa").chmod(0o000)
+        (instructions.root / "agents.awawa").write_bytes(NOT_UTF_8)
         self.configure_fake(COUNTING_CLIENT, keys=f'instructions = "{instructions.root}"\n')
         self.record("reviewer", DONE_RESULT)
         self.register('ROLE "build=reviewer"')
@@ -1820,20 +1818,15 @@ SEGMENT_REFUSED_RUN = "20261006T120000Z-b57010"
 DETACHED_REFUSED_RUN = "20261006T120000Z-b57020"
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeRunWhereTheMachineRefusesTheRunsDirectoryTest(RunTestCase):
+class BrigadeRunWhereAFileStandsForTheRunsDirectoryTest(RunTestCase):
     def setUp(self):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT)
-        self.runs.mkdir(parents=True)
-
-    def tearDown(self):
-        self.runs.chmod(0o700)
-        super().tearDown()
+        self.runs.parent.mkdir(parents=True)
 
     def test_should_exit_1_naming_the_run_directory_it_cannot_create(self):
         # Arrange
-        self.runs.chmod(0o500)
+        self.runs.write_text("")
 
         # Act
         completed = self.run_brigade(
@@ -1843,7 +1836,7 @@ class BrigadeRunWhereTheMachineRefusesTheRunsDirectoryTest(RunTestCase):
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade run: cannot write {self.runs / REFUSED_RUN}: Permission denied\n"),
+            (1, "", f"brigade run: cannot write {self.runs / REFUSED_RUN}: Not a directory\n"),
         )
 
 

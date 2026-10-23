@@ -95,7 +95,6 @@ class HoldLockWhereTheMachineRefusesTheWriteTest(unittest.TestCase):
         self.assertEqual(str(refusal.exception), f"cannot write {self.lock_path}: Is a directory")
 
 
-@unittest.skipUnless(Path("/dev/full").exists(), "no device refusing every write")
 class HoldLockOnADeviceRefusingEveryWriteTest(unittest.TestCase):
     def test_should_name_the_lock_it_cannot_write_its_pid_in(self):
         # Arrange

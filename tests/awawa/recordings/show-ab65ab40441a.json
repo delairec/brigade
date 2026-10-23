@@ -12,13 +12,13 @@
     ],
     "inputs": {
       "<tmp:0>/_schema.awawa": "SCHEMA AGENT\n\tDESC \"a role\"\n\tFIELD WORK string\n\t\tREPEATABLE\n\tFIELD BUDGET uint\n",
-      "<tmp:0>/agents.awawa": null
+      "<tmp:0>/agents.awawa": "\udcff\n"
     }
   },
   "outcome": {
     "exit_code": 2,
     "rewritten": {},
-    "stderr": "awawa: <tmp:0>/agents.awawa: Permission denied (os error 13)\n",
+    "stderr": "awawa: <tmp:0>/agents.awawa: stream did not contain valid UTF-8\n",
     "stdout": ""
   },
   "run_order": [],

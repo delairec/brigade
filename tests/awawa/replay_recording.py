@@ -30,14 +30,14 @@ def _create_temporary_directory(test_case: unittest.TestCase) -> str:
 
 def _read_input(file: Path) -> str | None:
     try:
-        return file.read_text()
+        return file.read_text(errors="surrogateescape")
     except PermissionError:
         return None
 
 
 def _write_input(file: Path, content: str | None) -> None:
     file.parent.mkdir(parents=True, exist_ok=True)
-    file.write_text(content or "")
+    file.write_text(content or "", errors="surrogateescape")
     if content is None:
         file.chmod(UNREADABLE)
 

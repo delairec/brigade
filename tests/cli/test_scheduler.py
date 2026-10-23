@@ -352,20 +352,15 @@ class BrigadeSchedulerInstallWhenCrontabCannotBeListedTest(SchedulerTestCase):
         )
 
 
-@unittest.skipIf(os.geteuid() == 0, "root writes where the permissions refuse it")
-class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectoryTest(SchedulerTestCase):
+class BrigadeSchedulerInstallWhereAFileStandsForTheUnitDirectoryTest(SchedulerTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(SYSTEMD_CONFIGURED)
         self.units.parent.mkdir(parents=True)
 
-    def tearDown(self):
-        self.units.parent.chmod(0o700)
-        super().tearDown()
-
     def test_should_exit_1_naming_the_unit_directory_it_cannot_create(self):
         # Arrange
-        self.units.parent.chmod(0o500)
+        self.units.write_text("")
 
         # Act
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER], "install")
@@ -373,7 +368,7 @@ class BrigadeSchedulerInstallWhereTheMachineRefusesTheUnitDirectoryTest(Schedule
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade scheduler install: cannot write {self.units}: Permission denied\n"),
+            (1, "", f"brigade scheduler install: cannot write {self.units}: File exists\n"),
         )
 
 
