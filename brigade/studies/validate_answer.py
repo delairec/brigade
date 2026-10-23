@@ -9,6 +9,8 @@ from brigade.studies.choose_answer_form import choose_answer_form
 from brigade.studies.read_collected import read_collected
 from brigade.studies.read_study import Study
 from brigade.studies.study_run_context import ANSWER_FILE
+from brigade.system.create_directory import create_directory
+from brigade.system.delete_path import delete_path
 from brigade.system.write_text_atomically import write_text_atomically
 
 SCHEMA_FILE = "_schema.awawa"
@@ -19,7 +21,7 @@ CONFORMING_EXIT_CODE = 0
 
 
 def _prepare_corpus(runtime: Runtime, directory: Path, answer: str) -> None:
-    directory.mkdir(parents=True, exist_ok=True)
+    create_directory(directory)
     shutil.copyfile(runtime.paths.config_root / SCHEMA_FILE, directory / SCHEMA_FILE)
     write_text_atomically(directory / ANSWER_FILE, answer)
 
@@ -70,4 +72,4 @@ def validate_answer(runtime: Runtime, study: Study, run_directory: Path, answer:
     try:
         _compare_answer(runtime, study, run_directory, answer)
     finally:
-        shutil.rmtree(run_directory / VALIDATION_DIRECTORY)
+        delete_path(run_directory / VALIDATION_DIRECTORY)
