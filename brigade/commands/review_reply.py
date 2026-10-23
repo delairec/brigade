@@ -12,6 +12,7 @@ from brigade.registry.require_project_at import require_project_at
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import read_configuration
+from brigade.system.read_text_file import read_text_file
 from brigade.verify.find_opened_task import find_opened_task
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -27,10 +28,7 @@ def _render_text(document: dict) -> str:
 
 
 def _read_answers(path: Path) -> dict:
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as error:
-        raise BrigadeError(f"cannot read {path}: {error.strerror}") from None
+    text = read_text_file(path)
     try:
         return json.loads(text)
     except ValueError:

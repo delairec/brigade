@@ -3,11 +3,13 @@ from string import Template
 
 from brigade.command import Command
 from brigade.corpus.shipped_data import SHIPPED_DATA, SHIPPED_SCHEMA
-from brigade.errors import BrigadeError, CannotWrite
+from brigade.errors import BrigadeError
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
 from brigade.git.read_git_identity import read_git_identity
 from brigade.runtime import Runtime
+from brigade.system.create_directory import create_directory
+from brigade.system.write_bytes_file import write_bytes_file
 
 DOCUMENT_SCHEMA_VERSION = 1
 GITIGNORE_FILE = ".gitignore"
@@ -30,10 +32,7 @@ def _ensure_repository(runtime: Runtime) -> dict:
     item = {"name": "repository", "path": str(config_root)}
     if (config_root / ".git").exists():
         return {**item, "state": "present"}
-    try:
-        config_root.mkdir(parents=True, exist_ok=True)
-    except OSError as error:
-        raise CannotWrite(error.filename or config_root, error) from error
+    create_directory(config_root)
     create_repository(runtime.run_process, config_root)
     return {**item, "state": "created"}
 
@@ -46,10 +45,7 @@ def _render_configuration(runtime: Runtime) -> str:
 def _ensure_file(name: str, path: Path, content: bytes) -> dict:
     item = {"name": name, "path": str(path)}
     if not path.exists():
-        try:
-            path.write_bytes(content)
-        except OSError as error:
-            raise CannotWrite(error.filename or path, error) from error
+        write_bytes_file(path, content)
         return {**item, "state": "created"}
     if path.read_bytes() == content:
         return {**item, "state": "present"}

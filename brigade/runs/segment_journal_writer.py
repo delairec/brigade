@@ -8,6 +8,7 @@ from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import JOURNAL_FILE
 from brigade.runtime import Runtime
 from brigade.system.actions_request import ActionsRequest
+from brigade.system.append_line import append_line
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 
@@ -62,7 +63,6 @@ class SegmentJournalWriter:
         self._offset += len(chunk)
         actions = self._read_actions(chunk.decode("utf-8", errors="replace"))
         at = datetime.now(UTC).strftime(JOURNAL_INSTANT_FORMAT)
-        with (self._plan.run_directory / JOURNAL_FILE).open("a", encoding="utf-8") as journal:
-            journal.writelines(
-                json.dumps(self._describe_record(at, kind, summary).to_document()) + "\n" for kind, summary in actions
-            )
+        records = [json.dumps(self._describe_record(at, kind, summary).to_document()) for kind, summary in actions]
+        if records:
+            append_line(self._plan.run_directory / JOURNAL_FILE, "\n".join(records))

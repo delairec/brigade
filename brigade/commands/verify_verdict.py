@@ -11,6 +11,7 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import read_configuration
+from brigade.system.read_text_file import read_text_file
 from brigade.system.validate_document import DocumentInvalid
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.verify.record_verdict import VerdictDemand, record_verdict
@@ -27,10 +28,7 @@ def _render_text(document: dict) -> str:
 
 
 def _read_verdict(path: Path) -> dict:
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as error:
-        raise BrigadeError(f"cannot read {path}: {error.strerror}") from None
+    text = read_text_file(path)
     try:
         verdict = json.loads(text)
     except ValueError:
