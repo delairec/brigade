@@ -2,12 +2,10 @@ import contextlib
 import io
 import json
 import os
-import select
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest import mock
 
 from brigade.commands.runs_show import COMMAND
 from brigade.errors import BrigadeError, UsageError
@@ -176,7 +174,7 @@ class RunFinishingOnItsFirstRecordStdoutDouble(io.StringIO):
 
 
 JOURNAL_LINE = "2026-10-07T09:01:00Z  1  text  reads the task\n"
-NOTHING_TO_READ = ([], [], [])
+JOURNAL_POLLED_AT_ONCE = "journal_poll_s = 0.01\n"
 
 
 class RunsShowFollowingARunningRunTest(unittest.TestCase):
@@ -187,10 +185,13 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
         record_run_pid(run_directory, os.getpid())
         (run_directory / "journal.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
         printed = RunFinishingOnItsFirstRecordStdoutDouble(run_directory)
+        runtime = create_runtime(root)
+        runtime.paths.config_root.mkdir(parents=True)
+        runtime.paths.configuration_file.write_text(JOURNAL_POLLED_AT_ONCE, encoding="utf-8")
 
         # Act
-        with contextlib.redirect_stdout(printed), mock.patch.object(select, "select", return_value=NOTHING_TO_READ):
-            document = COMMAND.run(SimpleNamespace(run=FIRST_RUN, log=False, follow=True), create_runtime(root))
+        with contextlib.redirect_stdout(printed):
+            document = COMMAND.run(SimpleNamespace(run=FIRST_RUN, log=False, follow=True), runtime)
 
         # Assert
         self.assertEqual(
