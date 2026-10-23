@@ -1,9 +1,9 @@
-import os
 import signal
 import unittest
 from collections.abc import Callable
 
 from brigade.system.poll_until_signalled import poll_until_signalled
+from tests.unit.system.signal_itself import signal_itself
 
 SHORT_INTERVAL_S = 0.01
 
@@ -17,11 +17,11 @@ def answer_done() -> bool:
 
 
 def create_signalling_answer(stop_signal: int) -> Callable[[], bool]:
-    def signal_itself_and_answer_not_done() -> bool:
-        os.kill(os.getpid(), stop_signal)
+    def answer_not_done_after_signalling() -> bool:
+        signal_itself(stop_signal)
         return False
 
-    return signal_itself_and_answer_not_done
+    return answer_not_done_after_signalling
 
 
 class ScriptedPollerDouble:

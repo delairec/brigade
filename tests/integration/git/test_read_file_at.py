@@ -3,10 +3,9 @@ import unittest
 from pathlib import Path
 
 from brigade.git.read_file_at import read_file_at
+from tests.integration.repository_test_case import IDENTITY
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
-
-IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 
 
 def run_git(repository: Path, *arguments: str) -> str:

@@ -1,14 +1,10 @@
-import os
 import signal
 import unittest
 
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
+from tests.unit.system.signal_itself import signal_itself
 
 STOP_SIGNALS = [("SIGTERM", signal.SIGTERM), ("SIGINT", signal.SIGINT)]
-
-
-def signal_itself(stop_signal: int) -> None:
-    os.kill(os.getpid(), stop_signal)
 
 
 def finish_a_write_while_signalled(receiver: StopSignalReceiver, written: list[str]) -> None:

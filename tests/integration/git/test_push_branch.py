@@ -1,13 +1,11 @@
-import tempfile
-import unittest
 from pathlib import Path
 
 from brigade.git.push_branch import BranchPush, push_branch
+from tests.integration.repository_test_case import RepositoryTestCase
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
 
 NO_ENVIRONMENT = {}
-IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 
 
 def run_git(repository: Path, *arguments: str) -> str:
@@ -18,18 +16,6 @@ def run_git(repository: Path, *arguments: str) -> str:
         check=True,
     )
     return completed.stdout
-
-
-class RepositoryTestCase(unittest.TestCase):
-    def setUp(self):
-        self.root = tempfile.TemporaryDirectory()
-        self.repository = Path(self.root.name) / "repository"
-        self.repository.mkdir()
-        run_git(self.repository, "init", "--quiet", "--initial-branch=main")
-        run_git(self.repository, *IDENTITY, "commit", "--quiet", "--allow-empty", "-m", "first")
-
-    def tearDown(self):
-        self.root.cleanup()
 
 
 class PushBranchTest(RepositoryTestCase):

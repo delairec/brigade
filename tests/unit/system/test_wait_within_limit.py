@@ -1,11 +1,12 @@
-import os
 import signal
 import subprocess
 import unittest
+from functools import partial
 
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.wait_within_limit import WallLimit, wait_within_limit
 from tests.process_launcher import ProcessLauncher
+from tests.unit.system.signal_itself import signal_itself
 
 NO_TIME = 0.0
 ANY_GRACE_S = 30.0
@@ -18,10 +19,6 @@ LONG_LIMIT_S = 20.0
 
 def _poll_nothing() -> None:
     pass
-
-
-def _signal_itself() -> None:
-    os.kill(os.getpid(), signal.SIGTERM)
 
 
 class WaitWithinLimitTestCase(unittest.TestCase):
@@ -72,7 +69,7 @@ class WaitWithinLimitOfAProcessIgnoringTheStopSignalTest(WaitWithinLimitTestCase
 
         # Act
         with StopSignalReceiver() as receiver, receiver.raising(), self.assertRaises(StopRequested):
-            wait_within_limit(process, limit, _signal_itself)
+            wait_within_limit(process, limit, partial(signal_itself, signal.SIGTERM))
 
         # Assert
         self.assertEqual(process.returncode, -signal.SIGKILL)

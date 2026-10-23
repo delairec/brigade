@@ -8,6 +8,7 @@ from pathlib import Path
 
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT, ISO_INSTANT_FORMAT
 from tests.awawa.list_temporary_roots import list_temporary_roots
+from tests.awawa.read_input import read_input
 from tests.awawa.volatile_value_masker import (
     COMMIT_PLACEHOLDER,
     INSTANT_PLACEHOLDER,
@@ -27,13 +28,6 @@ def _create_temporary_directory(test_case: unittest.TestCase) -> str:
     directory = tempfile.mkdtemp()
     test_case.addCleanup(shutil.rmtree, directory)
     return directory
-
-
-def _read_input(file: Path) -> str | None:
-    try:
-        return file.read_text(errors="surrogateescape")
-    except PermissionError:
-        return None
 
 
 def _write_input(file: Path, content: str | None) -> None:
@@ -74,7 +68,7 @@ def replay_recording(test_case: unittest.TestCase, recording: dict, search_path:
         _write_input(file, None if content is None else masker.unmask(content))
     cwd = Path(masker.unmask(call["cwd"]))
     cwd.mkdir(parents=True, exist_ok=True)
-    before = {file: _read_input(file) for file in inputs}
+    before = {file: read_input(file) for file in inputs}
     completed = ProcessLauncher.run(
         ["awawa", *(masker.unmask(argument) for argument in call["arguments"])],
         cwd=cwd,
@@ -88,8 +82,8 @@ def replay_recording(test_case: unittest.TestCase, recording: dict, search_path:
         "stderr": masker.mask(completed.stderr),
         "exit_code": completed.returncode,
         "rewritten": {
-            masker.mask(str(file)): masker.mask(_read_input(file) or "")
+            masker.mask(str(file)): masker.mask(read_input(file) or "")
             for file in inputs
-            if _read_input(file) != before[file]
+            if read_input(file) != before[file]
         },
     }

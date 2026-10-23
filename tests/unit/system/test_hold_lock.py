@@ -1,4 +1,3 @@
-import fcntl
 import os
 import tempfile
 import unittest
@@ -6,15 +5,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.system.hold_lock import hold_lock
-
-
-def try_lock(path: Path) -> bool:
-    with path.open("a") as other_holder:
-        try:
-            fcntl.flock(other_holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return False
-        return True
+from tests.unit.system.try_lock import try_lock
 
 
 class HoldLockTest(unittest.TestCase):

@@ -5,15 +5,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
-
-
-def try_lock(path: Path) -> bool:
-    with path.open("a") as other_holder:
-        try:
-            fcntl.flock(other_holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return False
-        return True
+from tests.unit.system.try_lock import try_lock
 
 
 class HoldLockWithoutWaitingTest(unittest.TestCase):

@@ -8,10 +8,10 @@ from pathlib import Path
 
 from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, ReadTimeKeeper, Tree, TreeRequest, prepare_tree
 from brigade.errors import BrigadeError, CannotWrite
+from tests.integration.repository_test_case import IDENTITY
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
 
-IDENTITY = ("-c", "user.name=Ada Lovelace", "-c", "user.email=ada@example.org")
 FIRST_READ = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
 SECOND_READ = datetime(2026, 10, 6, 10, 0, tzinfo=UTC)
 THIRD_READ = datetime(2026, 10, 6, 11, 0, tzinfo=UTC)
