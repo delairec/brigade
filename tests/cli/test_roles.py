@@ -1,5 +1,4 @@
 import json
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -51,10 +50,6 @@ PLANNER_PACKAGE = (
     "// context: 2 entities, 12 lines, depth 2\n"
     "// skip matched no declaration: reasoning\n"
 )
-
-
-def read_roles(completed: subprocess.CompletedProcess) -> list[str]:
-    return [row["role"] for row in json.loads(completed.stdout)["roles"]]
 
 
 def describe_built_in_roles(model_of_deep, model_of_standard, model_of_light) -> list:
@@ -388,17 +383,17 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            read_roles(completed),
+            json.loads(completed.stdout)["roles"],
             [
-                "planner",
-                "builder",
-                "reviewer",
-                "remediator",
-                "rebaser",
-                "reporter",
-                "triager",
-                "rulewriter",
-                "explorer",
+                {"slot": "plan", "role": "planner", "source": "instructions", "model": None},
+                {"slot": "build", "role": "builder", "source": "built-in", "model": None},
+                {"slot": "review", "role": "reviewer", "source": "built-in", "model": None},
+                {"slot": "remediate", "role": "remediator", "source": "built-in", "model": None},
+                {"slot": "rebase", "role": "rebaser", "source": "built-in", "model": None},
+                {"slot": "report", "role": "reporter", "source": "built-in", "model": None},
+                {"slot": "triage", "role": "triager", "source": "built-in", "model": None},
+                {"slot": "rules", "role": "rulewriter", "source": "built-in", "model": None},
+                {"slot": "explore", "role": "explorer", "source": "built-in", "model": None},
             ],
         )
 

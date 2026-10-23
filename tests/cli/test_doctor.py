@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -10,11 +9,6 @@ from unittest.mock import ANY
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.process_launcher import ProcessLauncher
-
-
-def read_item_names(completed: subprocess.CompletedProcess) -> list[str]:
-    return [item["name"] for item in json.loads(completed.stdout)["items"]]
-
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
@@ -657,7 +651,7 @@ class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
         completed = self.run_doctor([GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB], "--json")
 
         # Assert
-        self.assertNotIn("steps", read_item_names(completed))
+        self.assertNotIn('"name": "steps"', completed.stdout)
 
     def test_should_report_no_instructions_configured_when_no_configuration_exists(self):
         # Act
@@ -1048,7 +1042,7 @@ class BrigadeDoctorReportsAnInstalledSchemaDifferingFromTheShippedOneTest(Doctor
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertNotIn("schema", read_item_names(completed))
+        self.assertNotIn('"name": "schema"', completed.stdout)
 
 
 REVIEW_FALLBACK = "GitHub refuses the approval of the review slot"
@@ -1125,7 +1119,7 @@ class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestC
 
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
-                self.assertNotIn("review", read_item_names(completed))
+                self.assertNotIn('"name": "review"', completed.stdout)
 
     def test_should_report_the_error_of_the_one_read_of_a_config_toml_that_is_not_toml(self):
         # Arrange

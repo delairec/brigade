@@ -11,11 +11,6 @@ from tests.cli.test_collect import install_executable
 from tests.cli.test_tick import WEEKLY_RUN, LiveStudyRunTestCase
 from tests.list_entry_names import list_entry_names
 
-
-def list_other_runs(runs: Path, run_id: str) -> list[str]:
-    return [name for name in list_entry_names(runs) if name != run_id]
-
-
 PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
 QUESTION = "what changed in the shop this week?"
 
@@ -730,7 +725,7 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             "--output",
             "entity:ANSWER",
         )
-        [parked] = list_other_runs(self.runs, self.run_id)
+        [parked] = set(list_entry_names(self.runs)) - {self.run_id}
 
         # Act
         completed = self.run_study("context", parked)

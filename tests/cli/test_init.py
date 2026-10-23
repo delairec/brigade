@@ -1,5 +1,4 @@
 import json
-import subprocess
 import tempfile
 import tomllib
 import unittest
@@ -8,15 +7,6 @@ from pathlib import Path
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 from tests.list_entry_names import list_entry_names
 from tests.process_launcher import ProcessLauncher
-
-
-def read_item_states(completed: subprocess.CompletedProcess) -> list[str]:
-    return [item["state"] for item in json.loads(completed.stdout)["items"]]
-
-
-def read_modification_times(paths: list[Path]) -> list[int]:
-    return [path.stat().st_mtime_ns for path in paths]
-
 
 SCHEMA_ENTRY = 1
 GITIGNORE_ENTRY = 2
@@ -264,22 +254,34 @@ class BrigadeInitRunTwiceTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        corpus = self.machine.corpus
         self.assertEqual(
-            read_item_states(completed),
-            ["present", "present", "present", "present"],
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "items": [
+                    {"name": "repository", "path": str(corpus), "state": "present"},
+                    {"name": "schema", "path": str(corpus / "_schema.awawa"), "state": "present"},
+                    {"name": ".gitignore", "path": str(corpus / ".gitignore"), "state": "present"},
+                    {"name": "config.toml", "path": str(corpus / "config.toml"), "state": "present"},
+                ],
+            },
         )
 
     def test_should_rewrite_nothing_and_commit_nothing(self):
         # Arrange
         corpus = self.machine.corpus
-        written_files = [corpus / "_schema.awawa", corpus / ".gitignore", corpus / "config.toml"]
-        modification_times = read_modification_times(written_files)
+        schema_written_at = (corpus / "_schema.awawa").stat().st_mtime_ns
+        gitignore_written_at = (corpus / ".gitignore").stat().st_mtime_ns
+        configuration_written_at = (corpus / "config.toml").stat().st_mtime_ns
 
         # Act
         self.machine.run_init()
 
         # Assert
-        self.assertEqual(read_modification_times(written_files), modification_times)
+        self.assertEqual((corpus / "_schema.awawa").stat().st_mtime_ns, schema_written_at)
+        self.assertEqual((corpus / ".gitignore").stat().st_mtime_ns, gitignore_written_at)
+        self.assertEqual((corpus / "config.toml").stat().st_mtime_ns, configuration_written_at)
         self.assertEqual(self.machine.read_git("rev-list", "--count", "HEAD"), "1\n")
 
 

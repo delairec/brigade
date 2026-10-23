@@ -4,6 +4,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from unittest.mock import ANY
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
@@ -60,14 +61,6 @@ REVIEWER_PLAY = (
 FORGE_ACCOUNTS = (
     '[forge_accounts]\ncli = "octo-cli"\nplan = "octo-plan"\nbuild = "octo-build"\nreview = "octo-review"\n'
 )
-
-
-def list_merged_tasks(events: list[dict]) -> list[str]:
-    return sorted(event["task"] for event in events if event["state"] == "merged")
-
-
-def list_runs(events: list[dict]) -> list[str]:
-    return sorted(event["run"] for event in events)
 
 
 class RehearsalOnTheFakeClientTestCase(FileWaitingTestCase):
@@ -165,10 +158,26 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(RehearsalOnTheFakeClie
 
     def test_should_merge_the_three_tasks_into_the_branch_of_the_wave(self):
         # Act
-        merged = list_merged_tasks(self.read_events("task.state"))
+        completed = self.run_brigade("wave", "show", "shop_w1", "--json")
 
         # Assert
-        self.assertEqual(merged, ["S1", "S2", "S3"])
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "wave": "shop_w1",
+                "project": "shop",
+                "branch": "integration/shop_w1",
+                "started_at": ANY,
+                "last_event": "wave.reported",
+                "pull_request": ANY,
+                "tasks": [
+                    {"task": "S1", "state": "merged", "pull_request": ANY, "run": ANY},
+                    {"task": "S2", "state": "merged", "pull_request": ANY, "run": ANY},
+                    {"task": "S3", "state": "merged", "pull_request": ANY, "run": ANY},
+                ],
+            },
+        )
 
     def test_should_open_the_integration_pull_request_wave_pr_opened_names(self):
         # Arrange
@@ -187,7 +196,8 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(RehearsalOnTheFakeClie
         runs = self.list_finished_runs()
 
         # Act
-        recorded = list_runs(self.read_events("run.finished"))
+        completed = self.run_brigade("ledger", "--json")
 
         # Assert
-        self.assertEqual(recorded, runs)
+        self.assertEqual(len(runs), 8)
+        self.assertEqual(json.loads(completed.stdout)["runs"], {"outcomes": {"done": 8}, "error_classes": {}})

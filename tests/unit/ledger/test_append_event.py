@@ -1,4 +1,3 @@
-import json
 import multiprocessing
 import tempfile
 import unittest
@@ -6,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.append_event import append_event
+from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.signal_recorded import SignalRecorded
 from tests.unit.create_test_paths import create_test_paths
 
@@ -39,10 +39,6 @@ def append_from_concurrent_writers(root: Path) -> None:
         writer.join()
 
 
-def read_distinct_runs(ledger_file: Path) -> set[str]:
-    return {json.loads(line)["run"] for line in ledger_file.read_text().splitlines()}
-
-
 class AppendEventTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -55,8 +51,12 @@ class AppendEventTestCase(unittest.TestCase):
 
 class AppendEventFromSeveralProcessesTest(AppendEventTestCase):
     def test_should_leave_every_line_whole(self):
-        # Act
+        # Arrange
         append_from_concurrent_writers(Path(self.root.name))
 
+        # Act
+        reading = read_ledger(self.paths.state_root)
+
         # Assert
-        self.assertEqual(len(read_distinct_runs(self.ledger / "2026-10.jsonl")), 200)
+        self.assertEqual(reading.skipped, ())
+        self.assertEqual(len(reading.entries), 200)

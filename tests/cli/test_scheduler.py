@@ -33,10 +33,6 @@ TIMER_UNIT = (
 from tests.list_entry_names import list_entry_names
 
 
-def read_environment_lines(unit: Path) -> list[str]:
-    return [line for line in unit.read_text().splitlines() if line.startswith("Environment=")]
-
-
 class SchedulerTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -293,15 +289,19 @@ class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSignTest(S
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        environment_lines = read_environment_lines(self.service)
         root = Path(self.root.name).resolve()
         self.assertEqual(
-            environment_lines[1:],
-            [
-                f'Environment="XDG_CONFIG_HOME={root}/a 100%% b/config"',
-                f'Environment="XDG_STATE_HOME={root}/a 100%% b/state"',
-                f'Environment="XDG_CACHE_HOME={root}/a 100%% b/cache"',
-            ],
+            self.service.read_text(),
+            "[Unit]\n"
+            "Description=brigade tick\n"
+            "\n"
+            "[Service]\n"
+            "Type=oneshot\n"
+            f'Environment="PATH={SYSTEMD_USER_MANAGER}"\n'
+            f'Environment="XDG_CONFIG_HOME={root}/a 100%% b/config"\n'
+            f'Environment="XDG_STATE_HOME={root}/a 100%% b/state"\n'
+            f'Environment="XDG_CACHE_HOME={root}/a 100%% b/cache"\n'
+            f'ExecStart="{CLONE_ENTRY_POINT}" tick --once\n',
         )
 
     def test_should_quote_them_in_the_cron_line(self):
