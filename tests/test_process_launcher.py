@@ -38,8 +38,9 @@ class ProcessLauncherRunTest(unittest.TestCase):
 class ProcessLauncherStartTest(unittest.TestCase):
     def test_should_hand_the_running_command_to_its_caller(self):
         # Act
-        process = ProcessLauncher.start([sys.executable, "-c", "print('started')"], stdout=subprocess.PIPE, text=True)
-        self.addCleanup(process.wait)
+        output = ProcessLauncher.start(
+            [sys.executable, "-c", "print('started')"], stdout=subprocess.PIPE, text=True
+        ).communicate()
 
         # Assert
-        self.assertEqual(process.communicate(), ("started\n", None))
+        self.assertEqual(output, ("started\n", None))

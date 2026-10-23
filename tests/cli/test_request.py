@@ -77,8 +77,9 @@ class RequestTestCase(FileWaitingTestCase):
     def write_requests(self, requests: str) -> None:
         (self.machine.corpus / "requests.awawa").write_text(requests)
 
-    def wait_for_result(self, run_id: str) -> None:
-        self.wait_for_file(self.runs / run_id / "result.json")
+    def wait_for_the_planner(self, completed):
+        self.wait_for_file(self.runs / json.loads(completed.stdout)["run"] / "result.json")
+        return completed
 
     def configure_fake_planner(self) -> None:
         recordings = Path(self.root.name) / "recordings"
@@ -96,14 +97,13 @@ class BrigadeRequestNewTest(RequestTestCase):
 
     def test_should_launch_the_planner_on_the_request_detached_and_print_its_run(self):
         # Act
-        completed = self.run_request("new", "shop", REQUEST_TEXT, "--json")
+        completed = self.wait_for_the_planner(self.run_request("new", "shop", REQUEST_TEXT, "--json"))
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertRegex(document["run"], RUN_ID_PATTERN)
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": ANY})
-        self.wait_for_result(document["run"])
         run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
         self.assertEqual(
             (run_record["procedure"], run_record["slot"], run_record["project"], run_record["arguments"]),

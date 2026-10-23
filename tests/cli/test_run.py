@@ -276,11 +276,10 @@ class BrigadeRunOfATaskOfAWaveTest(RunTestCase):
 
     def test_should_carry_the_wave_and_the_task_through_a_detached_run(self):
         # Act
-        completed = self.run_deliver("--detach")
+        completed = self.wait_for_the_detached_run(self.run_deliver("--detach"))
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.wait_for_file(self.runs / completed.stdout.strip() / "result.json")
         [finished] = self.read_events("run.finished")
         self.assertEqual((finished["wave"], finished["task"]), ("shop_w3", "S3"))
 
@@ -782,8 +781,8 @@ class BrigadeRunDetachedTest(RunTestCase):
         self.record("builder", DONE_RESULT)
 
         # Act
-        completed = self.run_brigade(
-            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach"
+        completed = self.wait_for_the_detached_run(
+            self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach")
         )
 
         # Assert
@@ -791,7 +790,6 @@ class BrigadeRunDetachedTest(RunTestCase):
         run_id = completed.stdout.strip()
         self.assertRegex(run_id, RUN_ID_PATTERN)
         self.assertRegex((self.runs / run_id / "pid").read_text(), r"^\d+ \d+ [0-9a-f-]{36}\n$")
-        self.wait_for_file(self.runs / run_id / "result.json")
         [finished] = self.read_events("run.finished")
         self.assertEqual(finished["run"], run_id)
 
@@ -830,6 +828,14 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         self.addCleanup(brigade.kill)
         return brigade
 
+    def terminate(self, brigade_pid: int) -> None:
+        os.kill(brigade_pid, signal.SIGTERM)
+        self.wait_for_exit(brigade_pid)
+
+    def terminate_and_list_the_runs(self, brigade_pid: int) -> list:
+        self.terminate(brigade_pid)
+        return self.list_the_runs()
+
     def test_should_stop_the_client_of_a_detached_run_sent_sigterm_and_list_the_run_finished_stopped(self):
         # Arrange
         run_id = self.start_detached()
@@ -838,15 +844,13 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         (self.runs / run_id / "progress.md").write_text("step 1 done\n")
 
         # Act
-        os.kill(brigade_pid, signal.SIGTERM)
+        [listed] = self.terminate_and_list_the_runs(brigade_pid)
 
         # Assert
-        self.wait_for_exit(brigade_pid)
         self.assert_process_gone(client_pid)
         self.assertEqual(json.loads((self.runs / run_id / "result.json").read_text())["outcome"], "stopped")
         [finished] = self.read_events("run.finished")
         self.assertEqual(finished["outcome"], "stopped")
-        [listed] = json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
         self.assertEqual((listed["state"], listed["outcome"]), ("finished", "stopped"))
 
     def test_should_stop_the_client_of_a_foreground_run_sent_sigint_and_exit_21(self):
@@ -871,10 +875,9 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         self.wait_for_client(brigade_pid)
 
         # Act
-        os.kill(brigade_pid, signal.SIGTERM)
+        self.terminate(brigade_pid)
 
         # Assert
-        self.wait_for_exit(brigade_pid)
         [finished] = self.read_events("run.finished")
         self.assertEqual(
             (finished["outcome"], finished["exit"], finished["error_class"], finished["nulls"]),
@@ -1363,13 +1366,12 @@ class BrigadeRunEndDeclarationTest(RunTestCase):
         # Arrange
         self.configure_fake(COUNTING_CLIENT)
         self.record("builder", TURN_LIMIT_RESULT)
+        run_id = json.loads(self.run_deliver().stdout)["run"]
 
         # Act
-        completed = self.run_deliver()
+        [listed] = self.list_the_runs()
 
         # Assert
-        run_id = json.loads(completed.stdout)["run"]
-        [listed] = json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
         self.assertEqual(listed["outcome"], "turn_limit")
         self.assertEqual(json.loads((self.runs / run_id / "result.json").read_text())["outcome"], "turn_limit")
         [finished] = self.read_events("run.finished")
@@ -1893,6 +1895,9 @@ class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWriteTest(RunTestCase):
 
 
 class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
+    def run_detached_and_list_the_runs(self, *arguments: str) -> tuple:
+        return self.wait_for_the_detached_run(self.run_brigade(*arguments)), self.list_the_runs()
+
     def test_should_log_the_write_refused_to_the_detached_run_and_leave_it_dead(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT)
@@ -1902,7 +1907,7 @@ class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
         (run_directory / "segments").write_text("")
 
         # Act
-        started = self.run_brigade(
+        started, [listed] = self.run_detached_and_list_the_runs(
             "run",
             str(self.procedure),
             "--slot",
@@ -1912,15 +1917,12 @@ class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
             "--run-id",
             DETACHED_REFUSED_RUN,
             "--detach",
-            "--json",
         )
 
         # Assert
         self.assertEqual(started.returncode, 0, started.stderr)
-        self.wait_for_exit(json.loads(started.stdout)["pid"])
-        listed = self.run_brigade("runs", "list", "--json")
         self.assertEqual(
-            ((run_directory / "brigade.log").read_text(), json.loads(listed.stdout)["runs"][0]["state"]),
+            ((run_directory / "brigade.log").read_text(), listed["state"]),
             (f"brigade run: cannot write {run_directory / 'segments' / '1'}: Not a directory\n", "dead"),
         )
 
@@ -1987,11 +1989,10 @@ class BrigadeRunOfASlotBoundToALoginTest(ForgeAccountRunTestCase):
 
     def test_should_write_the_token_nowhere_when_the_run_is_detached(self):
         # Act
-        started = self.run_slot("build", "--detach", "--verbose", "--json")
+        started = self.wait_for_the_detached_run(self.run_slot("build", "--detach", "--verbose", "--json"))
 
         # Assert
         self.assertEqual(started.returncode, 0, started.stderr)
-        self.wait_for_exit(json.loads(started.stdout)["pid"])
         self.assertNotIn("token-of-", started.stdout + started.stderr + self.read_every_state_file())
 
 

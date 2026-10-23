@@ -113,8 +113,10 @@ class BrigadeRunDetachedTrailTest(RunTestCase):
 
     def test_should_print_the_spawned_line_and_hand_no_verbose_to_the_process_it_re_executes(self):
         # Act
-        completed = self.run_brigade(
-            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach", "--verbose"
+        completed = self.wait_for_the_detached_run(
+            self.run_brigade(
+                "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach", "--verbose"
+            )
         )
 
         # Assert
@@ -122,8 +124,6 @@ class BrigadeRunDetachedTrailTest(RunTestCase):
         run_id = completed.stdout.strip()
         run_directory = self.runs / run_id
         pid = self.read_run_pid(run_id)
-        self.wait_for_file(run_directory / "result.json")
-        self.wait_for_exit(pid)
         self.assertRegex(
             completed.stderr,
             rf"^brigade run: ran {sys.executable} {CLONE_ENTRY_POINT} run .* --run-id {run_directory.name}, spawned pid {pid}\n$",
@@ -135,8 +135,8 @@ class BrigadeRunDetachedTrailTest(RunTestCase):
 
     def test_should_record_the_spawned_run_and_the_records_of_the_process_it_re_executes(self):
         # Act
-        completed = self.run_brigade(
-            "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach"
+        completed = self.wait_for_the_detached_run(
+            self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach")
         )
 
         # Assert
@@ -144,8 +144,6 @@ class BrigadeRunDetachedTrailTest(RunTestCase):
         run_id = completed.stdout.strip()
         run_directory = self.runs / run_id
         pid = self.read_run_pid(run_id)
-        self.wait_for_file(run_directory / "result.json")
-        self.wait_for_exit(pid)
         self.assertCountEqual(
             read_trail(run_directory / "processes.jsonl"),
             [

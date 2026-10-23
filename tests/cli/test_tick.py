@@ -280,6 +280,10 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
         self.wait_for_the_runs()
         super().tearDown()
 
+    def tick_once_until_the_runs_end(self) -> None:
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+
     def wait_for_the_runs(self) -> None:
         for record in self.read_run_records():
             self.wait_for_file(self.state / "runs" / record["run"] / "result.json")
@@ -417,10 +421,9 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
 
     def test_should_carry_the_wave_and_the_task_in_every_finished_build_run(self):
         # Act
-        self.run_tick("--once")
+        self.tick_once_until_the_runs_end()
 
         # Assert
-        self.wait_for_the_runs()
         [first, second] = self.read_events("run.finished")
         self.assertCountEqual(
             [(first["wave"], first["task"]), (second["wave"], second["task"])], [("shop_w1", "S3"), ("shop_w1", "S6")]
@@ -448,8 +451,7 @@ class BrigadeTickOnceLaunchingTheStartableTasksTest(LaunchingTickTestCase):
 
     def test_should_launch_nothing_more_at_the_next_tick(self):
         # Arrange
-        self.run_tick("--once")
-        self.wait_for_the_runs()
+        self.tick_once_until_the_runs_end()
         launched = self.read_run_records()
 
         # Act
@@ -1298,6 +1300,10 @@ class StudyTickTestCase(TickTestCase, FileWaitingTestCase):
             if event["event"].startswith(("order.", "step.")) and event["run"] in runs
         ]
 
+    def tick_once_until_the_order_ends(self, study: str) -> None:
+        self.run_tick("--once")
+        self.wait_for_order_end(study)
+
     def wait_for_order_end(self, study: str) -> None:
         deadline = time.monotonic() + ORDER_WAIT_S
         while not any(event in ORDER_END_EVENTS for event, _ in self.read_order_events(study)):
@@ -1312,10 +1318,9 @@ class BrigadeTickOnceWithADueStudyTest(StudyTickTestCase):
         self.record_study("weekly")
 
         # Act
-        self.run_tick("--once")
+        self.tick_once_until_the_order_ends("weekly")
 
         # Assert
-        self.wait_for_order_end("weekly")
         self.assertEqual(
             self.read_order_events("weekly"),
             [("order.started", None), ("step.done", "collect"), ("step.failed", "judge"), ("order.parked", "judge")],

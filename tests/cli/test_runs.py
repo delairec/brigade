@@ -122,12 +122,12 @@ class BrigadeRunsListOfARunningRunTest(RunsTestCase):
         self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n')
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver("--detach").stdout.strip()
+        self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
 
         # Act
         completed = self.run_brigade("runs", "list", "--json")
 
         # Assert
-        self.wait_for_file(self.runs / run_id / "result.json")
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [listed] = json.loads(completed.stdout)["runs"]
         self.assertEqual(listed["state"], "running")
@@ -448,13 +448,13 @@ class BrigadeRunsShowOfARunningRunTest(RunsTestCase):
         self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n')
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver("--detach").stdout.strip()
+        self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
         self.wait_for_file(self.runs / run_id / "segments" / "1" / "brief.md")
 
         # Act
         completed = self.run_brigade("runs", "show", run_id, "--log", "--json")
 
         # Assert
-        self.wait_for_file(self.runs / run_id / "result.json")
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
         self.assertEqual(
@@ -469,13 +469,13 @@ class BrigadeRunJournalOfADetachedRunTest(RunsTestCase):
         self.configure_fake(COUNTING_CLIENT + 'operations = "actions"\ninterval = "1"\n', keys="journal_poll_s = 0.1\n")
         self.record_lines("builder", ACTIONS_RECORDING)
         run_id = self.run_deliver("--detach").stdout.strip()
+        self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
 
         # Act
         self.wait_for_line(self.runs / run_id / "journal.jsonl")
 
         # Assert
         finished_before_its_first_record = (self.runs / run_id / "result.json").exists()
-        self.wait_for_file(self.runs / run_id / "result.json")
         self.assertFalse(finished_before_its_first_record)
 
 
@@ -558,18 +558,21 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
                 self.configure_fake(COUNTING_CLIENT + 'delay = "5"\n', keys="journal_poll_s = 0.1\n")
                 self.record("builder", DONE_RESULT)
                 run_id = self.run_deliver("--detach").stdout.strip()
+                self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
                 follow = self.start_follow(run_id)
                 self.read_opening(follow)
 
                 # Act
-                stdout, stderr = stop_process(follow, stop_signal, FOLLOW_WAIT_S)
+                stdout, stderr, shown = self.stop_the_follow_and_show_the_run(follow, stop_signal, run_id)
 
                 # Assert
-                shown = self.run_brigade("runs", "show", run_id, "--json")
-                self.wait_for_file(self.runs / run_id / "result.json")
                 self.assertEqual((follow.returncode, stderr), (0, ""))
                 self.assertEqual(stdout, "\nstate      running\noutcome    -\n")
                 self.assertEqual(json.loads(shown.stdout)["run"]["state"], "running")
+
+    def stop_the_follow_and_show_the_run(self, follow, stop_signal: int, run_id: str) -> tuple:
+        stdout, stderr = stop_process(follow, stop_signal, FOLLOW_WAIT_S)
+        return stdout, stderr, self.run_brigade("runs", "show", run_id, "--json")
 
 
 class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
@@ -662,15 +665,17 @@ class BrigadeRunsStopOfARunningRunTest(RunsTestCase):
         client_pid = self.wait_for_client(self.read_run_pid(run_id))
 
         # Act
-        completed = self.run_brigade("runs", "stop", run_id)
+        completed, [listed] = self.stop_the_run_and_list_the_runs(run_id)
 
         # Assert
         self.assertEqual(
             (completed.returncode, completed.stdout), (0, f"run {run_id} finished on stopped\n"), completed.stderr
         )
         self.assert_process_gone(client_pid)
-        [listed] = json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
         self.assertEqual((listed["state"], listed["outcome"]), ("finished", "stopped"))
+
+    def stop_the_run_and_list_the_runs(self, run_id: str) -> tuple:
+        return self.run_brigade("runs", "stop", run_id), self.list_the_runs()
 
 
 class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
