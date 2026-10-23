@@ -12,6 +12,7 @@ from brigade.system.paths import Paths
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 BARE_PROBE = (
     '{"schema_version": 1, "client": "bare", "version_argv": null, "operations": ["probe"], "features": [],'
@@ -55,6 +56,7 @@ class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
                 cache_root=root / "cache" / "brigade",
                 home=root,
                 executable_search_path=str(search_directory),
+                package_file=PACKAGE_FILE,
             ),
             now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
             read_clock=lambda: datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
@@ -112,6 +114,7 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
                 cache_root=root / "cache" / "brigade",
                 home=root,
                 executable_search_path=str(search_directory),
+                package_file=PACKAGE_FILE,
             ),
             now=datetime(2026, 10, 6, 9, 0, tzinfo=UTC),
             read_clock=lambda: datetime(2026, 10, 6, 9, 0, tzinfo=UTC),

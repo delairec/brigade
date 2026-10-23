@@ -5,6 +5,7 @@ from pathlib import Path
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 RUNTIME_NOW = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
 NO_SEARCH_PATH = ""
@@ -35,6 +36,7 @@ def create_scripted_runtime(
         cache_root=root / "cache",
         home=root / "home",
         executable_search_path=executable_search_path,
+        package_file=PACKAGE_FILE,
         run_directory=run_directory,
     )
     paths.config_root.mkdir(parents=True, exist_ok=True)

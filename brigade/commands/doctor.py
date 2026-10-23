@@ -2,15 +2,14 @@ import argparse
 import sys
 from pathlib import Path
 
-import brigade
 from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
 from brigade.corpus.read_entities import read_entities
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
+from brigade.git.describe_checkout_lag import describe_checkout_lag
 from brigade.git.read_git_version import read_git_version
-from brigade.git.read_upstream_lag import read_upstream_lag
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
@@ -290,22 +289,10 @@ def _check_steps(reading: Configuration | BrigadeError, runtime: Runtime) -> lis
     return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
 
 
-def _locate_checkout() -> Path | None:
-    package_parent = Path(brigade.__file__).resolve().parents[1]
-    return package_parent if package_parent.is_dir() else None
-
-
 def _check_checkout(runtime: Runtime) -> list[dict]:
-    checkout = _locate_checkout()
-    if checkout is None:
+    detail = describe_checkout_lag(runtime.run_process, runtime.paths.package_file)
+    if detail is None:
         return []
-    try:
-        lag = read_upstream_lag(runtime.run_process, checkout)
-    except ToolFailure as error:
-        return [_create_optional("checkout", "warning", f"{checkout}: {error}", CHECKOUT_FALLBACK)]
-    if lag is None:
-        return []
-    detail = f"{checkout} at {lag.commit}, {lag.behind} behind {lag.upstream} at {lag.upstream_commit}"
     return [_create_optional("checkout", "warning", detail, CHECKOUT_FALLBACK)]
 
 

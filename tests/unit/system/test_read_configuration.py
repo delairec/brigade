@@ -8,6 +8,7 @@ from brigade.system.parse_configuration import Configuration, ConfigurationMissi
 from brigade.system.paths import Paths
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 NO_PATH_NEEDED = ""
 CONFIGURATION_FILE = "config.toml"
@@ -35,6 +36,7 @@ def _create_runtime(root: Path) -> Runtime:
             cache_root=root / "cache",
             home=root / "home",
             executable_search_path=NO_PATH_NEEDED,
+            package_file=PACKAGE_FILE,
         ),
         now=datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
         read_clock=lambda: datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),

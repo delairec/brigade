@@ -8,6 +8,7 @@ from brigade.errors import BrigadeError
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.write_event_line import LedgerEventRefused, write_event_line
 from brigade.system.paths import Paths
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 PARIS_SUMMER_TIME = timezone(timedelta(hours=2))
 BUDGET_SIGNAL = SignalRecorded(
@@ -28,6 +29,7 @@ def create_paths(state_root: Path) -> Paths:
         cache_root=root / "cache" / "brigade",
         home=root,
         executable_search_path="",
+        package_file=PACKAGE_FILE,
     )
 
 

@@ -32,6 +32,7 @@ from tests.unit.commands.run_doubles import (
     STEP_COUNTING_PROBE,
     create_plugin_resolution,
 )
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 LOOP_MODE = "loop"
 NO_PATH_NEEDED = ""
@@ -64,6 +65,7 @@ def _create_runtime(root: Path, now: datetime) -> Runtime:
             cache_root=root / "cache",
             home=root / "home",
             executable_search_path=NO_PATH_NEEDED,
+            package_file=PACKAGE_FILE,
         ),
         now=now,
         read_clock=lambda: now,

@@ -11,6 +11,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.paths import Paths
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 NO_RUNTIME_NEEDED = None
 NOTHING_CONFIGURED = Configuration()
@@ -130,6 +131,7 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
             cache_root=root / "cache" / "brigade",
             home=root,
             executable_search_path="",
+            package_file=PACKAGE_FILE,
         )
 
     def create_runtime(self, run_process) -> Runtime:
@@ -241,6 +243,7 @@ class ResolveRoleBoundByTheSlotsTableTest(unittest.TestCase):
             cache_root=root / "cache" / "brigade",
             home=root,
             executable_search_path="",
+            package_file=PACKAGE_FILE,
         )
 
     def create_runtime(self, run_process) -> Runtime:
@@ -350,6 +353,7 @@ class ResolveRoleFromTheCorpusRolesetTest(ResolveRoleTestCase):
             cache_root=self.project / "cache",
             home=self.project,
             executable_search_path="",
+            package_file=PACKAGE_FILE,
         )
 
     def create_runtime(self, run_process) -> Runtime:

@@ -2,6 +2,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import brigade
+
 APPLICATION_DIRECTORY = "brigade"
 CONFIGURATION_FILE = "config.toml"
 LOCK_DIRECTORY = "locks"
@@ -18,6 +20,7 @@ class Paths:
     cache_root: Path
     home: Path
     executable_search_path: str
+    package_file: Path
     run_directory: Path | None = None
 
     @property
@@ -62,5 +65,6 @@ def build_paths() -> Paths:
         cache_root=_resolve_base("XDG_CACHE_HOME", ".cache") / APPLICATION_DIRECTORY,
         home=Path.home(),
         executable_search_path=os.environ.get("PATH", os.defpath),
+        package_file=Path(brigade.__file__),
         run_directory=_resolve_absolute_path(RUN_DIRECTORY_VARIABLE),
     )

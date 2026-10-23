@@ -9,6 +9,7 @@ from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.paths import Paths
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 FIRST_WAVE_LINE = (
     '{"schema_version": 2, "ts": "2026-10-16T08:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -30,6 +31,7 @@ class AppendDerivedEventTest(unittest.TestCase):
             cache_root=root / "cache" / "brigade",
             home=root,
             executable_search_path="",
+            package_file=PACKAGE_FILE,
         )
         self.readings = []
 

@@ -25,6 +25,7 @@ from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceive
 from brigade.system.token_usage import TokenUsage
 from brigade.system.trail_writer import TrailWriter
 from tests.process_launcher import ProcessLauncher
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 FIRST_SEGMENT = 1
 NO_PATH_NEEDED = ""
@@ -318,6 +319,7 @@ def _create_runtime(root: Path, spawn) -> Runtime:
             cache_root=root / "cache",
             home=root / "home",
             executable_search_path=NO_PATH_NEEDED,
+            package_file=PACKAGE_FILE,
         ),
         now=datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC),
         read_clock=_read_launch_instant,

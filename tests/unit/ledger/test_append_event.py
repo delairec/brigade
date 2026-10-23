@@ -8,6 +8,7 @@ from pathlib import Path
 from brigade.ledger.append_event import append_event
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.system.paths import Paths
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 PROCESS_COUNT = 4
 EVENTS_PER_PROCESS = 50
@@ -22,6 +23,7 @@ def create_paths(state_root: Path) -> Paths:
         cache_root=root / "cache" / "brigade",
         home=root,
         executable_search_path="",
+        package_file=PACKAGE_FILE,
     )
 
 

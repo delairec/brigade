@@ -23,6 +23,7 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
     spawn_as_this_process,
 )
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 NO_PATH_NEEDED = ""
 UNKNOWN_CLIENT = "no-such-client"
@@ -48,6 +49,7 @@ def _create_runtime(root: Path) -> Runtime:
             cache_root=root / "cache",
             home=root / "home",
             executable_search_path=NO_PATH_NEEDED,
+            package_file=PACKAGE_FILE,
         ),
         now=datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
         read_clock=lambda: datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),

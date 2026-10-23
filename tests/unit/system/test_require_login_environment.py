@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from brigade.errors import BrigadeError
 from brigade.system.paths import Paths
 from brigade.system.require_login_environment import LoginDemand, require_login_environment
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 COMMAND_INSTANT = datetime(2026, 10, 9, 12, 30, tzinfo=UTC)
 TOKEN_ENVIRONMENT = {"GH_TOKEN": "token-of-octo-bot"}
@@ -35,6 +36,7 @@ class RequireLoginEnvironmentTestCase(unittest.TestCase):
             cache_root=root / "cache" / "brigade",
             home=root,
             executable_search_path="",
+            package_file=PACKAGE_FILE,
         )
         self.runtime = SimpleNamespace(paths=paths, now=COMMAND_INSTANT)
         self.waits = []

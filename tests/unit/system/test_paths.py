@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import brigade
 from brigade.system.paths import Paths, build_paths
+from tests.unit.create_test_paths import PACKAGE_FILE
 
 
 def build_paths_under(environment: dict) -> Paths:
@@ -34,6 +36,7 @@ class BuildPathsTest(unittest.TestCase):
                 cache_root=Path("/srv/cache/brigade"),
                 home=Path("/home/ada"),
                 executable_search_path="/usr/local/bin:/usr/bin",
+                package_file=Path(brigade.__file__),
             ),
         )
 
@@ -66,6 +69,7 @@ class BuildPathsTest(unittest.TestCase):
                         cache_root=Path("/home/ada/.cache/brigade"),
                         home=Path("/home/ada"),
                         executable_search_path="/bin:/usr/bin",
+                        package_file=Path(brigade.__file__),
                     ),
                 )
 
@@ -79,6 +83,7 @@ class PathsSharedBySeveralComponentsTest(unittest.TestCase):
             cache_root=Path("/srv/cache/brigade"),
             home=Path("/home/ada"),
             executable_search_path="/usr/bin",
+            package_file=PACKAGE_FILE,
         )
         rows = [
             ("configuration_file", Path("/srv/config/brigade/config.toml")),
