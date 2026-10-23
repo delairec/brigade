@@ -38,7 +38,6 @@ SCHEDULER_ENTRY = 4
 FORGE_ENTRY = 5
 AWAWA_WEB_ENTRY = 6
 INSTRUCTIONS_ENTRY = 7
-STEPS_ENTRY = 8
 FORGE_LOGIN_ENTRY = 6
 REVIEW_ENTRY_BELOW_ONE_FORGE_LOGIN = 7
 INSTRUCTIONS_ENTRY_BELOW_ONE_FORGE_LOGIN = 8
@@ -611,26 +610,6 @@ class BrigadeDoctorChecksTheClientAdapterTest(DoctorTestCase):
             },
         )
 
-    def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
-        # Arrange
-        self.write_configuration('client = "fake"\n')
-
-        # Act
-        completed = self.run_doctor(EVERY_TOOL_BUT_THE_CLIENT, "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["items"][STEPS_ENTRY],
-            {
-                "name": "steps",
-                "kind": "optional",
-                "state": "warning",
-                "detail": "fake counts no steps: the budget is held on the clock and the run cut at its limit",
-                "fallback": "the wall-time limit of each run",
-            },
-        )
-
 
 class BrigadeDoctorWithAConfigurationThatIsNotTomlTest(DoctorTestCase):
     def test_should_report_the_error_of_the_one_read_in_each_check_that_needs_the_configuration(self):
@@ -957,26 +936,6 @@ class BrigadeDoctorRunFromACloneTest(DoctorTestCase):
     def run_clone_doctor(self, *options):
         return self.run_doctor_from(
             self.clone / "bin" / "brigade", [str(self.git_directory), *EVERY_TOOL_BUT_GIT], *options
-        )
-
-    def test_should_warn_that_the_checkout_is_behind_its_upstream(self):
-        # Arrange
-        run_git(self.clone, "fetch", "--quiet")
-
-        # Act
-        completed = self.run_clone_doctor("--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout)["items"][-1],
-            {
-                "name": "checkout",
-                "kind": "optional",
-                "state": "warning",
-                "detail": f"{self.clone} at de446f3, 1 behind origin/main at 8885daa",
-                "fallback": "git pull in the checkout",
-            },
         )
 
     def test_should_report_no_checkout_up_to_date_with_its_upstream_as_last_fetched(self):

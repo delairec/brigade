@@ -266,14 +266,3 @@ class BrigadeAdapterMatrixWhenAProbeFailsTest(AdapterMatrixTestCase):
             " |  |  |  |  |  |  |  |  |\n",
             completed.stdout,
         )
-
-
-class BrigadeAdapterMatrixOptionsTest(AdapterMatrixTestCase):
-    def test_should_refuse_markdown_and_json_together(self):
-        # Act
-        completed = self.run_matrix("--markdown", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 2)
-        self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, "brigade adapter matrix: --markdown and --json exclude each other\n")

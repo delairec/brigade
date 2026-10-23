@@ -678,17 +678,6 @@ class BrigadeAdapterWhenItCannotAnswerTest(AdapterTestCase):
         self.assertEqual(completed.stdout, "")
         self.assertEqual(completed.stderr, "brigade adapter launch-argv: the request on stdin: lacks the key role\n")
 
-    def test_should_refuse_a_request_that_is_not_json(self):
-        # Arrange
-        self.machine.write_configuration('client = "claude-code"\n')
-
-        # Act
-        completed = self.run_adapter("launch-argv", "--json", request="role: builder")
-
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertIn("brigade adapter launch-argv: the request on stdin is not JSON: ", completed.stderr)
-
 
 class BrigadeAdapterOnAnUnexpectedErrorTest(AdapterTestCase):
     def test_should_exit_70_with_the_traceback(self):

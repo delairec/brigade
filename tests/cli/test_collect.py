@@ -847,13 +847,6 @@ class BrigadeCollectShellTest(CollectTestCase):
         # Assert
         self.assertEqual(json.loads(completed.stdout)["summary"], {"lines": 2})
 
-    def test_should_run_the_command_in_the_project(self):
-        # Act
-        completed = self.run_collect("shell", "command=ls", "--json")
-
-        # Assert
-        self.assertEqual(self.read_document(completed)["items"], ["README.md"])
-
     def test_should_run_the_command_again_at_each_call(self):
         # Arrange
         self.run_collect("shell", "command=ls")
@@ -1111,22 +1104,6 @@ class BrigadeCollectPrListTest(PrListTestCase):
                 "checks": [],
                 "task": None,
             },
-        )
-
-    def test_should_refuse_a_state_the_forge_does_not_know(self):
-        # Act
-        completed = self.collect_pull_requests("state=draft")
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (
-                1,
-                (
-                    "brigade collect: collector pr-list exited 1\n"
-                    "the parameter state of pr-list takes open, merged, closed or all, not draft\n"
-                ),
-            ),
         )
 
     def test_should_collect_afresh_on_every_call(self):

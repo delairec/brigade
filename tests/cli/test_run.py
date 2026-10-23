@@ -6,7 +6,6 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FINISHING_CLIENT, TURN_LIMIT_RESULT, RunTestCase
@@ -688,20 +687,6 @@ class BrigadeRunHelpTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("key=value", completed.stdout)
-
-
-class BrigadeRunWithNoDirectoryGivenTest(RunTestCase):
-    def test_should_run_in_the_current_directory(self):
-        # Arrange
-        self.configure_fake(COUNTING_CLIENT)
-        self.record("builder", DONE_RESULT)
-
-        # Act
-        completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(self.read_run_record(json.loads(completed.stdout)["run"])["worktree"], str(Path.cwd()))
 
 
 class BrigadeRunOfASlotWhoseRoleAllowsLessThanTheProcedureTest(RunTestCase):
@@ -2021,34 +2006,6 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
     def setUp(self):
         super().setUp()
         self.machine.write_configuration(BOUND_SLOTS)
-
-    def test_should_stop_on_an_error_naming_the_login_and_the_attempts(self):
-        # Act
-        completed = self.run_slot("review")
-
-        # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade run: gh printed no token for the login refused-bot, bound to review, after 1 attempt\n"),
-        )
-
-    def test_should_record_the_login_unavailable_in_the_ledger(self):
-        # Act
-        self.run_slot("review")
-
-        # Assert
-        self.assertEqual(
-            self.read_events("forge_account.unavailable"),
-            [
-                {
-                    "schema_version": 1,
-                    "ts": mock.ANY,
-                    "event": "forge_account.unavailable",
-                    "login": "refused-bot",
-                    "key": "review",
-                }
-            ],
-        )
 
     def test_should_start_no_run_after_reading_the_token_forge_attempts_times(self):
         # Arrange

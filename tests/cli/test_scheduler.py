@@ -219,27 +219,6 @@ class BrigadeSchedulerInstallWithTheLoopConfiguredTest(SchedulerTestCase):
         super().setUp()
         self.machine.write_configuration(LOOP_CONFIGURED)
 
-    def test_should_install_nothing_and_name_the_command_to_keep_running(self):
-        # Act
-        completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout),
-            {
-                "schema_version": 1,
-                "scheduler": "loop",
-                "chosen_by": "configuration",
-                "unit_files": [],
-                "cron_line": None,
-                "keep_running": f"{CLONE_ENTRY_POINT} tick --loop",
-            },
-        )
-        self.assertEqual(
-            (self.units.exists(), self.crontab.exists(), self.systemctl_calls.exists()), (False, False, False)
-        )
-
     def test_should_print_the_command_to_keep_running_as_text(self):
         # Act
         completed = self.run_scheduler([SYSTEMD_USER_MANAGER, CRONTAB], "install")

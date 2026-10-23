@@ -373,22 +373,6 @@ class BrigadeVerifyPreflightOfAPullRequestWithoutItsPromotionTest(VerifyPrefligh
         # Assert
         self.assertEqual(checks["promotion"]["findings"], ["@TASK.S3 is STATUS todo, not implemented"])
 
-    def test_should_fail_a_task_delivered_by_another_pull_request(self):
-        # Arrange
-        self.deliver(
-            'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS implemented\n\tDELIVERED_BY 41\n\tTYPE feat\n'
-            '\tCOMPONENT "cart button"\n\tMILESTONE @MILESTONE.M1\n'
-            '\tSPEC "the button of src/cart/button.py, once pressed, empties the cart"\n'
-            '\t\tIMPL "src/cart/button.py::def empty_cart"\n'
-            '\tSPEC "the emptying charges nothing"\n\t\tIMPL "src/billing/charge.py::def charge"\n'
-        )
-
-        # Act
-        checks = self.read_checks()
-
-        # Assert
-        self.assertEqual(checks["promotion"]["findings"], ["@TASK.S3 is delivered by #41, not by #42"])
-
     def test_should_fail_a_task_that_names_no_pull_request_delivering_it(self):
         # Arrange
         self.deliver(

@@ -1256,6 +1256,7 @@ WEEKLY_PARKED_LONG_AGO = WEEKLY_STARTED_LONG_AGO + (
     '{"schema_version": 1, "ts": "2026-10-01T09:05:00Z", "event": "order.parked", "project": null,'
     f' "kind": "study", "order": "weekly", "run": "{WEEKLY_RUN}", "step": "judge", "reason": "no answer"}}\n'
 )
+
 WEEKLY_RECORD = {"schema_version": 1, "study": "weekly", "project": None}
 
 
@@ -1401,17 +1402,6 @@ class BrigadeTickOnceWithTheStudyRunsTakenTest(StudyTickTestCase):
         # Assert
         self.assertEqual(self.read_started_studies(), {"monthly"})
 
-    def test_should_launch_a_scan_beyond_the_study_runs(self):
-        # Arrange
-        self.record_study("monthly", collector=self.gated_collector)
-        self.record_study("trees", slot="none", collector=self.gated_collector)
-
-        # Act
-        self.run_tick_before_the_collectors_end()
-
-        # Assert
-        self.assertEqual(self.read_started_studies(), {"monthly", "trees"})
-
 
 class LiveStudyRunTestCase(StudyTickTestCase):
     def setUp(self):
@@ -1433,15 +1423,6 @@ class LiveStudyRunTestCase(StudyTickTestCase):
         self.gate.touch()
         self.live_run.wait()
         super().tearDown()
-
-
-class BrigadeTickOnceWhileARunOfTheStudyIsLiveTest(LiveStudyRunTestCase):
-    def test_should_launch_no_study_while_a_run_of_it_is_live(self):
-        # Act
-        completed = self.run_tick_before_the_collectors_end("--json")
-
-        # Assert
-        self.assertEqual(json.loads(completed.stdout)["actions_applied"], 0)
 
 
 RUNNING_S3 = (

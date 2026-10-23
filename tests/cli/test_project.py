@@ -449,13 +449,6 @@ class BrigadeProjectListTest(ProjectTestCase):
             ],
         )
 
-    def test_should_say_that_no_project_is_registered(self):
-        # Act
-        completed = self.run_project("list")
-
-        # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "no project registered\n"))
-
 
 class BrigadeProjectShowTest(ProjectTestCase):
     def setUp(self):

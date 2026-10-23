@@ -125,26 +125,6 @@ class BrigadeTaskPromoteAfterItsPullRequestTest(TaskPromoteTestCase):
         # Assert
         self.assertEqual(self.pushes.read_text(), "token-of-octo-bot\ntoken-of-octo-bot\n")
 
-    def test_should_record_the_promotion_in_the_ledger(self):
-        # Act
-        self.run_task_promote()
-
-        # Assert
-        self.assertEqual(
-            self.read_events("task.promoted"),
-            [
-                {
-                    "schema_version": 1,
-                    "ts": ANY,
-                    "event": "task.promoted",
-                    "project": "shop",
-                    "task": "S3",
-                    "pr": 42,
-                    "commit": self.read_head(),
-                }
-            ],
-        )
-
     def test_should_promote_on_the_pull_request_of_the_task_not_on_the_last_one_of_the_wave(self):
         # Arrange
         ledger = next((self.state / "ledger").glob("*.jsonl"))

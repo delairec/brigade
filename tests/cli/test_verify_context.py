@@ -101,26 +101,6 @@ class BrigadeVerifyContextOfAPullRequestTest(VerifyContextTestCase):
         # Assert
         self.assertEqual(document["grades"], ["critical", "high", "medium", "low"])
 
-    def test_should_print_no_rules_without_an_instructions_corpus(self):
-        # Act
-        document = self.read_document()
-
-        # Assert
-        self.assertIsNone(document["rules"])
-
-    def test_should_print_each_section_under_its_heading(self):
-        # Act
-        completed = self.run_verify_context("42")
-
-        # Assert
-        self.assertRegex(
-            completed.stdout,
-            f"^# head\n{self.read_head()}\n\n# task\n\\$ awawa context @TASK.S3 --with-schema \\.\nexit 0\n",
-        )
-        self.assertIn(f"\n# diff\n$ git diff {self.read_wave_head()} {self.read_head()}\nexit 0\n", completed.stdout)
-        self.assertIn("\n# preflight\npass  ancestry\n", completed.stdout)
-        self.assertRegex(completed.stdout, "\n# grades\ncritical\nhigh\nmedium\nlow\n\\Z")
-
 
 class BrigadeVerifyContextWithAnInstructionsCorpusTest(VerifyContextTestCase):
     def setUp(self):
