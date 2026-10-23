@@ -65,6 +65,8 @@ NO_AUTO_MERGE = "none"
 PASSING_VERDICT = "pass"
 SUCCESSFUL_CHECK = "success"
 OTHER_BASE_REASON = "pull request base is not the wave branch"
+RUN_DEAD_REASON = "run dead"
+RUN_NOT_STARTED_REASON = "run not started"
 
 
 def plan(snapshot: Snapshot) -> tuple:
@@ -88,6 +90,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_resumes(snapshot)
         + _plan_followed_pull_requests(snapshot)
         + _plan_blocked_task_parkings(snapshot)
+        + _plan_dead_run_parkings(snapshot)
         + _plan_branch_cuts(snapshot)
         + _plan_reports(snapshot)
         + _plan_closes(snapshot)
@@ -374,6 +377,25 @@ def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
         for wave in snapshot.waves
         for task in wave.tasks
         if wave.states.get(task.name, WAITING_STATE) == WAITING_STATE and task.blocked_by
+    )
+
+
+def _describe_dead_run(task: TaskFacts) -> str:
+    if task.last_run is None:
+        return RUN_NOT_STARTED_REASON
+    return f"{RUN_DEAD_REASON}: {task.last_run}"
+
+
+def _plan_dead_run_parkings(snapshot: Snapshot) -> tuple:
+    live_tasks = {(live.wave, live.task) for project in snapshot.projects for live in project.live_runs}
+    return tuple(
+        ParkTask(wave=wave.wave, task=task.name, reason=_describe_dead_run(task), blockers=())
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if wave.states.get(task.name) == RUNNING_STATE
+        and task.pull_request is None
+        and task.rate_limit is None
+        and (wave.wave, task.name) not in live_tasks
     )
 
 
