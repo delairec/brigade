@@ -1,5 +1,4 @@
 import dataclasses
-import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -210,14 +209,14 @@ def _run_process(
     )
     if stop.requested:
         return _record_ending_before_launch(number, STOPPED_OUTCOME, STOPPED_BY_A_SIGNAL, launch.session_id)
-    started = time.monotonic()
+    started = runtime.read_monotonic()
     process = runtime.spawn_process(request)
     journal = SegmentJournalWriter(plan, number, runtime, segment_directory / STDOUT_FILE)
     limit = WallLimit(
         limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S, poll_s=plan.configuration.journal_poll_s
     )
     exit_code, outcome = _wait_for_client(process, limit, journal.write_complete_lines, stop)
-    measured_ms = round((time.monotonic() - started) * 1000)
+    measured_ms = round((runtime.read_monotonic() - started) * 1000)
     journal.write_rest()
     runtime.trail.append(ProcessTrace(request.argv, request.cwd, outcome, exit_code=exit_code, duration_ms=measured_ms))
     if outcome == STOPPED:

@@ -38,6 +38,7 @@ def create_test_runtime(
         paths=paths,
         now=now,
         read_clock=lambda: now,
+        read_monotonic=lambda: 0.0,
         entry_point=Path("/srv/brigade/bin/brigade"),
         trail=TrailWriter(_keep_no_trace) if trail is None else trail,
         resolve_plugin=resolve_plugin,

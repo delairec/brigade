@@ -54,6 +54,7 @@ def create_runtime(
         ),
         now=NOW,
         read_clock=lambda: NOW,
+        read_monotonic=lambda: 0.0,
         entry_point=root / "bin" / "brigade",
         trail=TrailWriter(_report_nothing),
         resolve_plugin=resolve_plugin,

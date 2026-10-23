@@ -1,5 +1,4 @@
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError
@@ -62,7 +61,7 @@ class SegmentJournalWriter:
             return
         self._offset += len(chunk)
         actions = self._read_actions(chunk.decode("utf-8", errors="replace"))
-        at = datetime.now(UTC).strftime(ISO_INSTANT_FORMAT)
+        at = self._runtime.read_clock().strftime(ISO_INSTANT_FORMAT)
         records = [json.dumps(self._describe_record(at, kind, summary).to_document()) for kind, summary in actions]
         if records:
             append_line(self._plan.run_directory / JOURNAL_FILE, "\n".join(records))

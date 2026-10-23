@@ -1,5 +1,6 @@
 import functools
 import sys
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -27,6 +28,7 @@ class Runtime:
     paths: Paths
     now: datetime
     read_clock: Callable[[], datetime]
+    read_monotonic: Callable[[], float]
     entry_point: Path
     trail: TrailWriter
     resolve_plugin: Callable[..., object]
@@ -53,6 +55,7 @@ def build_runtime(invocation: Invocation) -> Runtime:
         paths=paths,
         now=datetime.now(UTC),
         read_clock=functools.partial(datetime.now, UTC),
+        read_monotonic=time.monotonic,
         entry_point=Path(sys.argv[0]).absolute(),
         trail=trail,
         resolve_plugin=functools.partial(resolve_plugin, sources=sources),

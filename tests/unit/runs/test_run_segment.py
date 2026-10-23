@@ -5,11 +5,9 @@ import os
 import signal
 import subprocess
 import tempfile
-import time
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest import mock
 from unittest.mock import ANY
 
 from brigade.adapters.documents import markdown
@@ -323,6 +321,7 @@ def _create_runtime(root: Path, spawn) -> Runtime:
         ),
         now=datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC),
         read_clock=_read_launch_instant,
+        read_monotonic=lambda: 0.0,
         entry_point=root / "bin" / "brigade",
         trail=TrailWriter(_report_nothing),
         resolve_plugin=_refuse_resolution,
@@ -658,7 +657,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             json.loads(self.journal.read_text()),
             {
                 "schema_version": 1,
-                "at": ANY,
+                "at": "2026-10-07T09:05:00Z",
                 "segment": 1,
                 "kind": "raw",
                 "summary": "the client finished the task",
@@ -678,7 +677,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             json.loads(self.journal.read_text()),
             {
                 "schema_version": 1,
-                "at": ANY,
+                "at": "2026-10-07T09:05:00Z",
                 "segment": 1,
                 "kind": "text",
                 "summary": "the client finished the task",
@@ -710,7 +709,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             [
                 {
                     "schema_version": 1,
-                    "at": ANY,
+                    "at": "2026-10-07T09:05:00Z",
                     "segment": 1,
                     "kind": "raw",
                     "summary": "Reading the task",
@@ -718,7 +717,7 @@ class RunSegmentJournalTest(unittest.TestCase):
                 },
                 {
                     "schema_version": 1,
-                    "at": ANY,
+                    "at": "2026-10-07T09:05:00Z",
                     "segment": 1,
                     "kind": "raw",
                     "summary": "Writing the test",
@@ -739,7 +738,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             json.loads(self.journal.read_text()),
             {
                 "schema_version": 1,
-                "at": ANY,
+                "at": "2026-10-07T09:05:00Z",
                 "segment": 1,
                 "kind": "raw",
                 "summary": "the client finished the task",
@@ -1024,11 +1023,12 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
         # Arrange
         clock = ClockDouble()
         plan = _create_plan(self.root, client_type=ClientAnsweringParseResultWithoutOutcomeDouble)
-        runtime = _create_runtime(self.root, SpawnRunningAWhileDouble(clock, running_s=4.2))
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, SpawnRunningAWhileDouble(clock, running_s=4.2)), read_monotonic=clock.read
+        )
 
         # Act
-        with mock.patch.object(time, "monotonic", clock.read):
-            record = run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
+        record = run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
 
         # Assert
         self.assertEqual(record.measured_ms, 4200)

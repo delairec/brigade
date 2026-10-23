@@ -41,6 +41,7 @@ def _create_runtime(root: Path) -> Runtime:
         ),
         now=datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
         read_clock=lambda: datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
+        read_monotonic=lambda: 0.0,
         entry_point=root / "bin" / "brigade",
         trail=TrailWriter(_report_nothing),
         resolve_plugin=_refuse_resolution,

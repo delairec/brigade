@@ -6,12 +6,10 @@ import json
 import os
 import signal
 import tempfile
-import time
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from unittest import mock
 from unittest.mock import ANY
 
 from brigade.commands.tick import COMMAND
@@ -69,6 +67,7 @@ def _create_runtime(root: Path, now: datetime) -> Runtime:
         ),
         now=now,
         read_clock=lambda: now,
+        read_monotonic=lambda: 0.0,
         entry_point=root / "bin" / "brigade",
         trail=TrailWriter(_report_nothing),
         resolve_plugin=_refuse_resolution,
@@ -174,9 +173,10 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         # Arrange
         request = SimpleNamespace(mode="once")
 
+        runtime = dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
+
         # Act
-        with mock.patch.object(time, "monotonic", side_effect=[100.0, 100.25]):
-            document = COMMAND.run(request, _create_quiet_runtime(self.root))
+        document = COMMAND.run(request, runtime)
 
         # Assert
         self.assertEqual(
@@ -243,12 +243,14 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_report_each_round_of_the_loop_on_stderr(self):
         # Arrange
-        create_round = _create_single_round_factory(_create_quiet_runtime(self.root))
+        create_round = _create_single_round_factory(
+            dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
+        )
         request = SimpleNamespace(mode=LOOP_MODE, create_runtime=create_round)
         reported = io.StringIO()
 
         # Act
-        with contextlib.redirect_stderr(reported), mock.patch.object(time, "monotonic", side_effect=[100.0, 100.25]):
+        with contextlib.redirect_stderr(reported):
             document = COMMAND.run(request, _create_quiet_runtime(self.root))
 
         # Assert
@@ -262,7 +264,9 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_report_a_round_of_the_loop_another_tick_holds(self):
         # Arrange
-        create_round = _create_single_round_factory(_create_quiet_runtime(self.root))
+        create_round = _create_single_round_factory(
+            dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
+        )
         request = SimpleNamespace(mode=LOOP_MODE, create_runtime=create_round)
         self.lock.parent.mkdir(parents=True)
         reported = io.StringIO()

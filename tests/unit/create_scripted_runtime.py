@@ -45,6 +45,7 @@ def create_scripted_runtime(
         paths=paths,
         now=RUNTIME_NOW,
         read_clock=lambda: RUNTIME_NOW,
+        read_monotonic=lambda: 0.0,
         entry_point=root / "bin" / "brigade",
         trail=TrailWriter(_keep_no_trace),
         resolve_plugin=_refuse_resolution,

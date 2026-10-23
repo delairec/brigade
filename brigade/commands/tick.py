@@ -2,7 +2,6 @@ import argparse
 import dataclasses
 import functools
 import sys
-import time
 from collections.abc import Callable
 
 from brigade.command import Argument, Command, ExclusiveArguments
@@ -451,7 +450,7 @@ def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Cal
 
 
 def _tick(runtime: Runtime) -> Heartbeat | None:
-    started = time.monotonic()
+    started = runtime.read_monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
             return None
@@ -473,7 +472,7 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
         )
         heartbeat = Heartbeat(
             ts=format_instant(runtime.now),
-            duration_ms=int((time.monotonic() - started) * 1000),
+            duration_ms=int((runtime.read_monotonic() - started) * 1000),
             actions_applied=outcome.actions_applied,
             actions_failed=outcome.actions_failed,
         )
