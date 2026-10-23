@@ -938,6 +938,8 @@ class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/milestones.awawa"), RECORDED_MILESTONES)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/tasks.awawa"), RECORDED_TASKS)
 
     def test_should_record_the_corrected_plan_outside_a_run(self):
         # Act
@@ -945,3 +947,5 @@ class BrigadePlanRecordAfterALintFailureInTheSameRunTest(PlanRecordTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/milestones.awawa"), RECORDED_MILESTONES)
+        self.assertEqual(self.project.run_git("show", f"{BRANCH}:corpus/tasks.awawa"), RECORDED_TASKS)
