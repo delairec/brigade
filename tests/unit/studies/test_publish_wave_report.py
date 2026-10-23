@@ -10,7 +10,7 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.convert_study import Study
 from brigade.studies.publish_wave_report import publish_wave_report
 from brigade.studies.study_run_context import StudyRunContext
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses

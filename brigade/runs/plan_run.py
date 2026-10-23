@@ -24,9 +24,9 @@ from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.name_document_plugin import EXTENSIONS_BY_DOCUMENT_PLUGIN
+from brigade.system.parse_configuration import Configuration
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import Configuration
 
 SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
 STEP_COUNT_FEATURE = "step_count"

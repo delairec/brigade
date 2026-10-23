@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 
-READER_NAMES = ("read_configuration", "read_optional_configuration", "read_configured_client")
+READER_NAMES = ("parse_configuration", "read_optional_configuration", "read_configured_client")
 READER_MODULES = tuple(("system", f"{name}.py") for name in READER_NAMES)
 PACKAGE_ALLOWED_TO_READ = "commands"
 PURGE_OF_THE_TRAILS = ("system", "remove_expired_trails.py")

@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration, ConfigurationMissing, ReasoningRow, read_configuration
+from brigade.system.parse_configuration import Configuration, ConfigurationMissing, ReasoningRow, parse_configuration
 
 
 class ReadConfigurationTestCase(unittest.TestCase):
@@ -21,7 +21,7 @@ class ReadConfigurationWhenEveryKeyIsCommentedOutTest(ReadConfigurationTestCase)
         self.path.write_text('# client = "claude-code"\n')
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(
@@ -72,7 +72,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
         )
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(
@@ -100,7 +100,7 @@ class ReadConfigurationWhenTheFileIsAbsentTest(ReadConfigurationTestCase):
     def test_should_refuse_naming_the_file_and_brigade_init(self):
         # Act
         with self.assertRaises(ConfigurationMissing) as raised:
-            read_configuration(self.path)
+            parse_configuration(self.path)
 
         # Assert
         self.assertEqual(str(raised.exception), f"no configuration at {self.path}; run brigade init")
@@ -220,7 +220,7 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    read_configuration(self.path)
+                    parse_configuration(self.path)
 
                 # Assert
                 self.assertEqual(str(raised.exception), f"{expected_problem} in {self.path}")
@@ -231,7 +231,7 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            read_configuration(self.path)
+            parse_configuration(self.path)
 
         # Assert
         self.assertIn(f"{self.path} is not valid TOML: ", str(raised.exception))
@@ -243,7 +243,7 @@ class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
         self.path.write_text('client = "fake"\n')
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.seconds_per_step, 30)
@@ -253,7 +253,7 @@ class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
         self.path.write_text("seconds_per_step = 0.5\n")
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.seconds_per_step, 0.5)
@@ -272,7 +272,7 @@ class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    read_configuration(self.path)
+                    parse_configuration(self.path)
 
                 # Assert
                 self.assertEqual(str(raised.exception), f"{expected_problem} in {self.path}")
@@ -284,7 +284,7 @@ class ReadConfigurationOfTheTrailDaysTest(ReadConfigurationTestCase):
         self.path.write_text("trail_days = 30\n")
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.trail_days, 30)
@@ -296,7 +296,7 @@ class ReadConfigurationOfTheRunsKeptTest(ReadConfigurationTestCase):
         self.path.write_text("runs_kept = 20\n")
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.runs_kept, 20)
@@ -308,7 +308,7 @@ class ReadConfigurationOfTheStudyRunsTest(ReadConfigurationTestCase):
         self.path.write_text("study_runs = 3\n")
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.study_runs, 3)
@@ -320,7 +320,7 @@ class ReadConfigurationOfTheTickStaleAfterTest(ReadConfigurationTestCase):
         self.path.write_text("tick_stale_after = 30\n")
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.tick_stale_after, 30)
@@ -332,7 +332,7 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
         self.path.write_text('client = "fake"\n')
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual((configuration.journal_poll_s, configuration.findings), (2, ()))
@@ -342,7 +342,7 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
         self.path.write_text("journal_poll_s = 0.5\n")
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.journal_poll_s, 0.5)
@@ -360,7 +360,7 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
                 self.path.write_text(content)
 
                 # Act
-                configuration = read_configuration(self.path)
+                configuration = parse_configuration(self.path)
 
                 # Assert
                 self.assertEqual(
@@ -375,7 +375,7 @@ class ReadConfigurationOfTheSoftLimitMarginTest(ReadConfigurationTestCase):
         self.path.write_text('client = "fake"\n')
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.soft_limit_margin_s, 120)
@@ -385,7 +385,7 @@ class ReadConfigurationOfTheSoftLimitMarginTest(ReadConfigurationTestCase):
         self.path.write_text("soft_limit_margin_s = 0.5\n")
 
         # Act
-        configuration = read_configuration(self.path)
+        configuration = parse_configuration(self.path)
 
         # Assert
         self.assertEqual(configuration.soft_limit_margin_s, 0.5)
@@ -405,7 +405,7 @@ class ReadConfigurationOfTheSoftLimitMarginTest(ReadConfigurationTestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    read_configuration(self.path)
+                    parse_configuration(self.path)
 
                 # Assert
                 self.assertEqual(str(raised.exception), f"{expected_problem} in {self.path}")

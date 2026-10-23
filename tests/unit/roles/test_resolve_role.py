@@ -7,8 +7,8 @@ from pathlib import Path
 from brigade.errors import BrigadeError, EntityNotDefined, ToolFailure, ToolNotFound
 from brigade.roles.resolve_role import ResolvedRole, RoleBindings, resolve_role
 from brigade.runtime import Runtime
+from brigade.system.parse_configuration import Configuration
 from brigade.system.paths import Paths
-from brigade.system.read_configuration import Configuration
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.system.trail_writer import TrailWriter
 

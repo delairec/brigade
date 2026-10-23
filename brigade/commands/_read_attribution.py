@@ -1,8 +1,8 @@
 from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
+from brigade.system.parse_configuration import Configuration
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import Configuration
 
 
 def read_attribution(configuration: Configuration, runtime: Runtime) -> list[str]:

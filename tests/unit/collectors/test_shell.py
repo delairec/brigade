@@ -5,7 +5,7 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.shell import collect
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 

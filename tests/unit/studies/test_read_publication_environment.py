@@ -7,7 +7,7 @@ from brigade.studies.convert_study import Study
 from brigade.studies.locate_study_project import StudyProject
 from brigade.studies.read_publication_environment import read_publication_environment
 from brigade.studies.study_run_context import StudyRunContext
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.require_login_environment import LoginUnavailable
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses

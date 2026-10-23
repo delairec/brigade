@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from brigade.system.read_configuration import REASONING_LEVELS, SLOTS
+from brigade.system.parse_configuration import REASONING_LEVELS, SLOTS
 
 DECLARED_KEYS = ("name", "slot", "work", "reasoning", "capabilities", "budget", "returns")
 CAPABILITIES = ("read", "write", "shell", "net")

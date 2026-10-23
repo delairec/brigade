@@ -6,7 +6,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 REPOSITORY_FIELD = "PATH"
 REFS_CACHE_DIRECTORY = "refs"

@@ -7,7 +7,7 @@ from brigade.errors import BrigadeError
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_ledger
 from tests.unit.review.test_assemble_review_context import (
     CHANGES_REQUESTED,

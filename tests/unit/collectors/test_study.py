@@ -8,7 +8,7 @@ from brigade.collectors.study import collect
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.order_done import OrderDone
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 

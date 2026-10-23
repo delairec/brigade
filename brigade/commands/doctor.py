@@ -20,9 +20,9 @@ from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
+from brigade.system.parse_configuration import CLI_KEY, Configuration, ConfigurationMissing, parse_configuration
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import CLI_KEY, Configuration, ConfigurationMissing, read_configuration
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.require_configured_client import require_configured_client
 from brigade.system.run_process import ProcessRequest
@@ -102,7 +102,7 @@ def _check_awawa(runtime: Runtime) -> dict:
 
 def _read_configuration(runtime: Runtime) -> Configuration | BrigadeError:
     try:
-        return read_configuration(runtime.paths.configuration_file)
+        return parse_configuration(runtime.paths.configuration_file)
     except BrigadeError as error:
         return error
 

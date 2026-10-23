@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 
 

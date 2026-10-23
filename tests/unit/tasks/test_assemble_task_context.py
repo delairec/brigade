@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import CommandFailed
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.tasks.assemble_task_context import assemble_task_context
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from tests.unit.create_scripted_runtime import create_scripted_runtime

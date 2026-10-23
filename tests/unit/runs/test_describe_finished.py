@@ -9,7 +9,7 @@ from brigade.runs.describe_finished import describe_finished
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import SegmentRecord
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
 

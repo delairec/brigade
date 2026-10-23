@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.ledger.task_pr_opened import TaskPrOpened
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.verify.record_verdict import VerdictDemand, record_verdict
 from tests.unit.commands.command_runtime import create_corpus_double, create_runtime
 

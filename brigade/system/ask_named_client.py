@@ -2,10 +2,10 @@ from brigade.runtime import Runtime
 from brigade.system.actions_answer import ActionsAnswer
 from brigade.system.client_command import ClientCommand
 from brigade.system.client_question import ClientQuestion
+from brigade.system.parse_configuration import Configuration
 from brigade.system.parse_result_answer import ParseResultAnswer
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.read_client_answer import read_client_answer
-from brigade.system.read_configuration import Configuration
 from brigade.system.transcripts_answer import TranscriptsAnswer
 
 

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_scripted_runtime import create_scripted_runtime

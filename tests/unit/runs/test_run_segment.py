@@ -18,9 +18,9 @@ from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
+from brigade.system.parse_configuration import Configuration
 from brigade.system.paths import Paths
 from brigade.system.process_trace import ProcessTrace
-from brigade.system.read_configuration import Configuration
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.token_usage import TokenUsage
 from brigade.system.trail_writer import TrailWriter

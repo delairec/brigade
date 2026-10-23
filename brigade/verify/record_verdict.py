@@ -7,8 +7,8 @@ from brigade.ledger.task_verdict import TaskVerdict
 from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask_pull_request_details
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_account_environment import ForgeAccount, read_account_environment
-from brigade.system.read_configuration import Configuration
 from brigade.verify.read_review_mode import APPROVAL_REVIEW, read_review_mode
 from brigade.verify.validate_verdict import PASSING_VERDICT
 

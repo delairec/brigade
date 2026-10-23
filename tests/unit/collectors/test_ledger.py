@@ -11,7 +11,7 @@ from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 

@@ -13,7 +13,7 @@ from brigade.runs.read_run_setting import read_run_setting
 from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import SLOTS, Configuration, read_configuration
+from brigade.system.parse_configuration import SLOTS, Configuration, parse_configuration
 from brigade.system.stop_signal_receiver import StopSignalReceiver
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -87,7 +87,7 @@ def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> Run
 
 
 def run(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = read_configuration(runtime.paths.configuration_file)
+    configuration = parse_configuration(runtime.paths.configuration_file)
     if request.detach:
         plan = _prepare_run(request, configuration, runtime)
         pid = detach_run(plan, runtime)

@@ -224,7 +224,7 @@ def _read_strings(document: dict, path: Path) -> dict:
     return {key: _require(document[key], STRING, key, path) for key in STRING_KEYS if key in document}
 
 
-def read_configuration(path: Path) -> Configuration:
+def parse_configuration(path: Path) -> Configuration:
     document = _parse(path)
     _refuse_unknown_keys(document, KNOWN_KEYS, "", path)
     strings = _read_strings(document, path)

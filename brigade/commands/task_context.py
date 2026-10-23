@@ -4,7 +4,7 @@ from pathlib import Path
 from brigade.command import Argument, Command
 from brigade.commands._read_attribution import read_attribution
 from brigade.runtime import Runtime
-from brigade.system.read_configuration import read_configuration
+from brigade.system.parse_configuration import parse_configuration
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tasks.assemble_task_context import assemble_task_context
 from brigade.tasks.locate_task_worktree import locate_task_worktree
@@ -59,7 +59,7 @@ def _render_text(document: dict) -> str:
 
 
 def task_context(request: argparse.Namespace, runtime: Runtime) -> dict:
-    configuration = read_configuration(runtime.paths.configuration_file)
+    configuration = parse_configuration(runtime.paths.configuration_file)
     worktree = locate_task_worktree(runtime, Path.cwd(), request.task)
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

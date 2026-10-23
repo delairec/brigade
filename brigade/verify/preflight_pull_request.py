@@ -11,7 +11,7 @@ from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask_pull_request_details
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.verify.check_ancestry import AncestryFacts, check_ancestry
 from brigade.verify.check_body import check_body
 from brigade.verify.check_check_runs import check_check_runs

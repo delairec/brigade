@@ -8,7 +8,7 @@ from brigade.git.find_branch import find_branch
 from brigade.git.push_branch import BranchPush, push_branch
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
-from brigade.system.read_configuration import CLI_KEY
+from brigade.system.parse_configuration import CLI_KEY
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.waves.locate_project_main import locate_project_main
 

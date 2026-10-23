@@ -36,7 +36,7 @@ from brigade.planning.review_plan_pull_request import review_plan_pull_request
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
-from brigade.system.read_configuration import CLI_KEY
+from brigade.system.parse_configuration import CLI_KEY
 from brigade.waves.locate_project_main import locate_project_main
 
 MILESTONE_TYPE = "MILESTONE"

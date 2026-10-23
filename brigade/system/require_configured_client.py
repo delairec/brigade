@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,7 @@ from brigade.studies.convert_study import Study
 from brigade.studies.present_answer import AnswerPublication
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer_to_file import write_answer_to_file
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses

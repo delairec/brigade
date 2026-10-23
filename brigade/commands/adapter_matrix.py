@@ -6,9 +6,9 @@ from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
 from brigade.system.list_client_adapters import SUPPORTED_CLIENT, ClientAdapter, list_client_adapters
+from brigade.system.parse_configuration import Configuration
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 
 SCHEMA_VERSION = 1

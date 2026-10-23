@@ -16,7 +16,7 @@ from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_setup_log import locate_setup_log
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask

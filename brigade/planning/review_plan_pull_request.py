@@ -1,7 +1,7 @@
 from brigade.planning.plan_publication import PlanPublication
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
-from brigade.system.read_configuration import CLI_KEY
+from brigade.system.parse_configuration import CLI_KEY
 from brigade.waves.read_plan_review import AUTOMATIC_REVIEW, read_plan_review
 
 REVIEW_SLOT = "review"

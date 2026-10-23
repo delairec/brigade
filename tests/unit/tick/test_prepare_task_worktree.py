@@ -7,7 +7,7 @@ from brigade.errors import BrigadeError
 from brigade.git.add_branch_worktree import BranchWorktree
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.tick.actions import LaunchTask
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from tests.unit.create_test_paths import create_test_paths

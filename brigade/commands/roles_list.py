@@ -8,8 +8,8 @@ from brigade.system.client_question import ClientQuestion
 from brigade.system.describe_client_answered import describe_client_answered
 from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
+from brigade.system.parse_configuration import SLOTS, Configuration
 from brigade.system.probe_request import ProbeRequest
-from brigade.system.read_configuration import SLOTS, Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.render_table import render_table
 

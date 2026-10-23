@@ -19,8 +19,8 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_started import WaveStarted
+from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
-from brigade.system.read_configuration import Configuration
 from brigade.tick.build_snapshot import (
     PreflightFailure,
     ProjectFacts,

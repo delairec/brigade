@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands._read_attribution import read_attribution
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 

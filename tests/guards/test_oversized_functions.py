@@ -44,9 +44,18 @@ class OversizedFunctionsGuardTest(unittest.TestCase):
         # Arrange
         rows = [
             ("def plan(a, b, c, d, e):\n    return a\n", "brigade/runs/plan_run.py:1 plan takes 5 parameters, over 4"),
-            ("def plan(a, b, c, *, d, e):\n    return a\n", "brigade/runs/plan_run.py:1 plan takes 5 parameters, over 4"),
-            ("def plan(a, b, c, d, *rest):\n    return a\n", "brigade/runs/plan_run.py:1 plan takes 5 parameters, over 4"),
-            ("def plan(a, b, c, d, **options):\n    return a\n", "brigade/runs/plan_run.py:1 plan takes 5 parameters, over 4"),
+            (
+                "def plan(a, b, c, *, d, e):\n    return a\n",
+                "brigade/runs/plan_run.py:1 plan takes 5 parameters, over 4",
+            ),
+            (
+                "def plan(a, b, c, d, *rest):\n    return a\n",
+                "brigade/runs/plan_run.py:1 plan takes 5 parameters, over 4",
+            ),
+            (
+                "def plan(a, b, c, d, **options):\n    return a\n",
+                "brigade/runs/plan_run.py:1 plan takes 5 parameters, over 4",
+            ),
             (
                 "class Planner:\n    def plan(self, a, b, c, d, e):\n        return a\n",
                 "brigade/runs/plan_run.py:2 plan takes 5 parameters, over 4",

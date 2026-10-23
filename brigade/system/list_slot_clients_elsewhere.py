@@ -1,4 +1,4 @@
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 
 
 def list_slot_clients_elsewhere(configuration: Configuration, client: str | None) -> dict:

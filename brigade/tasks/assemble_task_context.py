@@ -13,7 +13,7 @@ from brigade.planning.count_next_task_number import count_next_task_number
 from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
 from brigade.system.locate_setup_log import locate_setup_log
-from brigade.system.read_configuration import Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRecord
 from brigade.tasks.describe_command import describe_command
 from brigade.tasks.list_trigger_rules import list_trigger_rules

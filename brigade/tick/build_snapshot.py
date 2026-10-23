@@ -32,8 +32,8 @@ from brigade.studies.convert_study import Study
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_studies import read_studies
+from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
-from brigade.system.read_configuration import Configuration
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.reset_hour import ResetHour
 from brigade.system.run_process import ProcessRecord, ProcessRequest

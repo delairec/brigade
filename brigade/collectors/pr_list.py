@@ -7,8 +7,8 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_requests import PullRequestsQuery, ask_pull_requests
+from brigade.system.parse_configuration import CLI_KEY
 from brigade.system.read_account_environment import ForgeAccount, read_account_environment
-from brigade.system.read_configuration import CLI_KEY
 from brigade.tasks.locate_task_worktree import TASK_BRANCH
 
 NAME = "pr-list"
