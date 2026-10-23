@@ -7,8 +7,7 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.write_event_line import LedgerEventRefused, write_event_line
-from brigade.system.paths import Paths
-from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.create_test_paths import create_test_paths
 
 PARIS_SUMMER_TIME = timezone(timedelta(hours=2))
 BUDGET_SIGNAL = SignalRecorded(
@@ -21,24 +20,11 @@ BUDGET_SIGNAL = SignalRecorded(
 )
 
 
-def create_paths(state_root: Path) -> Paths:
-    root = state_root.parents[1]
-    return Paths(
-        config_root=root / "config" / "brigade",
-        state_root=state_root,
-        cache_root=root / "cache" / "brigade",
-        home=root,
-        executable_search_path="",
-        package_file=PACKAGE_FILE,
-    )
-
-
 class WriteEventLineTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
-        self.state_root = Path(self.root.name) / "state" / "brigade"
-        self.ledger = self.state_root / "ledger"
-        self.paths = create_paths(self.state_root)
+        self.paths = create_test_paths(Path(self.root.name))
+        self.ledger = self.paths.state_root / "ledger"
 
     def tearDown(self):
         self.root.cleanup()
@@ -129,7 +115,7 @@ class WriteEventLineOfAnInstantWithNoTimeZoneTest(WriteEventLineTestCase):
 class WriteEventLineWhereTheMachineRefusesTheWriteTest(WriteEventLineTestCase):
     def setUp(self):
         super().setUp()
-        self.state_root.mkdir(parents=True)
+        self.paths.state_root.mkdir(parents=True)
         self.instant = datetime(2026, 10, 6, 9, 30, tzinfo=UTC)
 
     def test_should_name_the_ledger_directory_it_cannot_create(self):

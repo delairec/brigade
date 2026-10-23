@@ -4,12 +4,9 @@ from pathlib import Path
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.refuse_to_run import refuse_to_run
 
 FIXED_NOW = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
-
-
-def _refuse_to_run(request):
-    raise AssertionError(f"{' '.join(request.argv)} should not run")
 
 
 def _refuse_to_spawn(request):
@@ -26,7 +23,7 @@ def _keep_no_trace(trace) -> None:
 
 def create_test_runtime(
     paths: Paths,
-    run_process=_refuse_to_run,
+    run_process=refuse_to_run,
     spawn_process=_refuse_to_spawn,
     resolve_plugin=_refuse_to_resolve,
     now: datetime = FIXED_NOW,

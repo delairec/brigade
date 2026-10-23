@@ -19,16 +19,15 @@ from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
-from brigade.system.paths import Paths
 from brigade.system.process_trace import ProcessTrace
 from brigade.system.stop_signal_receiver import StopRequested, StopSignalReceiver
 from brigade.system.token_usage import TokenUsage
 from brigade.system.trail_writer import TrailWriter
 from tests.process_launcher import ProcessLauncher
-from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 FIRST_SEGMENT = 1
-NO_PATH_NEEDED = ""
 NO_ARGUMENTS = {}
 NO_WAVE = None
 NO_TASK = None
@@ -289,20 +288,7 @@ class SpawnOutlivingTheLimitDouble:
         return ProcessStoppedAtTheLimitDouble()
 
 
-def _report_nothing(trace) -> None:
-    pass
-
-
-def _read_launch_instant() -> datetime:
-    return datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
-
-
-def _refuse_process(request):
-    raise AssertionError(f"run_segment ran {request.argv}")
-
-
-def _refuse_resolution(kind: str, name: str):
-    raise AssertionError(f"run_segment resolved the {kind} plugin {name}")
+LAUNCH_INSTANT = datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
 
 
 def _read_journal_records(journal: Path) -> list[dict]:
@@ -310,24 +296,7 @@ def _read_journal_records(journal: Path) -> list[dict]:
 
 
 def _create_runtime(root: Path, spawn) -> Runtime:
-    return Runtime(
-        run_process=_refuse_process,
-        spawn_process=spawn.spawn,
-        paths=Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root / "home",
-            executable_search_path=NO_PATH_NEEDED,
-            package_file=PACKAGE_FILE,
-        ),
-        now=datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC),
-        read_clock=_read_launch_instant,
-        read_monotonic=lambda: 0.0,
-        entry_point=root / "bin" / "brigade",
-        trail=TrailWriter(_report_nothing),
-        resolve_plugin=_refuse_resolution,
-    )
+    return create_test_runtime(create_test_paths(root), spawn_process=spawn.spawn, now=LAUNCH_INSTANT)
 
 
 def _create_plan(

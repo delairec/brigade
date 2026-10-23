@@ -3,12 +3,11 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.errors import BrigadeError
-from brigade.system.paths import Paths
 from brigade.system.require_login_environment import LoginDemand, require_login_environment
-from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 COMMAND_INSTANT = datetime(2026, 10, 9, 12, 30, tzinfo=UTC)
 TOKEN_ENVIRONMENT = {"GH_TOKEN": "token-of-octo-bot"}
@@ -29,16 +28,9 @@ class RequireLoginEnvironmentTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name)
-        self.state_root = root / "state" / "brigade"
-        paths = Paths(
-            config_root=root / "config" / "brigade",
-            state_root=self.state_root,
-            cache_root=root / "cache" / "brigade",
-            home=root,
-            executable_search_path="",
-            package_file=PACKAGE_FILE,
-        )
-        self.runtime = SimpleNamespace(paths=paths, now=COMMAND_INSTANT)
+        paths = create_test_paths(root)
+        self.runtime = create_test_runtime(paths, now=COMMAND_INSTANT)
+        self.state_root = paths.state_root
         self.waits = []
 
     def tearDown(self):

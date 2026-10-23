@@ -4596,7 +4596,7 @@ TASK B73
 		+ "the plugin resolver, which turns a kind and a name into the resolved plugin, and no"
 		+ "renderer"
 		IMPL "brigade/runtime.py::resolve_plugin: Callable[..., object]"
-		IMPL "tests/unit/commands/test_tick.py::resolve_plugin=_refuse_resolution,"
+		IMPL "tests/unit/commands/test_tick.py::resolve_plugin=_resolve_a_forge"
 	SPEC "build_runtime is called in brigade/cli.py alone: once per command, and tick --loop builds"
 		+ "the runtime of each round through a factory cli.py hands it, so that each round reads"
 		+ "its own clock"

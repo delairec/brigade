@@ -3,10 +3,9 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.system.paths import Paths
 from brigade.system.remove_expired_trails import remove_expired_trails
 from tests.list_entry_names import list_entry_names
-from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.create_test_paths import create_test_paths
 
 NOW = datetime(2026, 10, 7, 12, 0, 0, tzinfo=UTC)
 
@@ -16,14 +15,7 @@ class RemoveExpiredTrailsTestCase(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         root = Path(self.root.name)
-        self.paths = Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root,
-            executable_search_path="",
-            package_file=PACKAGE_FILE,
-        )
+        self.paths = create_test_paths(root)
         self.configuration = self.paths.config_root / "config.toml"
         self.ticks = self.paths.state_root / "ticks"
         self.commands = self.paths.state_root / "commands"

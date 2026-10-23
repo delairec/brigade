@@ -16,8 +16,6 @@ from unittest.mock import ANY
 from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, StandingDown, UsageError
 from brigade.runtime import Runtime
-from brigade.system.paths import Paths
-from brigade.system.trail_writer import TrailWriter
 from tests.unit.commands.command_runtime import (
     ProcessAnswer,
     ScriptedProcessRunner,
@@ -32,27 +30,15 @@ from tests.unit.commands.run_doubles import (
     STEP_COUNTING_PROBE,
     create_plugin_resolution,
 )
-from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 
 GIT_PUSH = ("git", "push")
 GIT_REBASE = ("git", "rebase")
 
 LOOP_MODE = "loop"
-NO_PATH_NEEDED = ""
 WAKE_THE_LOOP = signal.SIGUSR1
-
-
-def _report_nothing(trace) -> None:
-    pass
-
-
-def _refuse_process(request):
-    raise AssertionError(f"a round of tick ran {request.argv}")
-
-
-def _refuse_resolution(kind: str, name: str):
-    raise AssertionError(f"a round of tick resolved the {kind} plugin {name}")
 
 
 def _ignore_signal(_received, _frame) -> None:
@@ -60,24 +46,7 @@ def _ignore_signal(_received, _frame) -> None:
 
 
 def _create_runtime(root: Path, now: datetime) -> Runtime:
-    return Runtime(
-        run_process=_refuse_process,
-        spawn_process=_refuse_process,
-        paths=Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root / "home",
-            executable_search_path=NO_PATH_NEEDED,
-            package_file=PACKAGE_FILE,
-        ),
-        now=now,
-        read_clock=lambda: now,
-        read_monotonic=lambda: 0.0,
-        entry_point=root / "bin" / "brigade",
-        trail=TrailWriter(_report_nothing),
-        resolve_plugin=_refuse_resolution,
-    )
+    return create_test_runtime(create_test_paths(root), now=now)
 
 
 def _stop_the_loop_it_entered() -> Runtime:
@@ -454,8 +423,6 @@ HEALTH_STUDY = (
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
 
 
 def _record_task_state(state: str) -> dict:

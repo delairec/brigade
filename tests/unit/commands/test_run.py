@@ -5,7 +5,6 @@ import os
 import tempfile
 import unittest
 from argparse import Namespace
-from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,9 +12,7 @@ from brigade.adapters.documents import markdown
 from brigade.commands.run import COMMAND, run
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
-from brigade.system.paths import Paths
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
-from brigade.system.trail_writer import TrailWriter
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
@@ -23,41 +20,18 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
     spawn_as_this_process,
 )
-from tests.unit.create_test_paths import PACKAGE_FILE, create_test_paths
+from tests.unit.create_test_paths import NO_SEARCH_PATH, create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.refuse_to_run import refuse_to_run
 
-NO_PATH_NEEDED = ""
 UNKNOWN_CLIENT = "no-such-client"
 UNKNOWN_PROCEDURE = "no-such-procedure"
 
 
-def _report_nothing(trace) -> None:
-    pass
-
-
-def _refuse_process(request):
-    raise AssertionError(f"the run of a command ran {request.argv}")
-
-
 def _create_runtime(root: Path) -> Runtime:
-    sources = PluginSources(executable_search_path=NO_PATH_NEEDED, run_process=_refuse_process)
-    return Runtime(
-        run_process=_refuse_process,
-        spawn_process=_refuse_process,
-        paths=Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root / "home",
-            executable_search_path=NO_PATH_NEEDED,
-            package_file=PACKAGE_FILE,
-        ),
-        now=datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
-        read_clock=lambda: datetime(2026, 10, 8, 9, 0, 0, tzinfo=UTC),
-        read_monotonic=lambda: 0.0,
-        entry_point=root / "bin" / "brigade",
-        trail=TrailWriter(_report_nothing),
-        resolve_plugin=functools.partial(resolve_plugin, sources=sources),
+    sources = PluginSources(executable_search_path=NO_SEARCH_PATH, run_process=refuse_to_run)
+    return create_test_runtime(
+        create_test_paths(root), resolve_plugin=functools.partial(resolve_plugin, sources=sources)
     )
 
 

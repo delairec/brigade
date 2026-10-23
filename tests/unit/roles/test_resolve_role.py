@@ -1,17 +1,15 @@
 import json
 import tempfile
 import unittest
-from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError, EntityNotDefined, ToolFailure, ToolNotFound
 from brigade.roles.resolve_role import ResolvedRole, RoleBindings, resolve_role
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
-from brigade.system.paths import Paths
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.system.trail_writer import TrailWriter
-from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 NO_RUNTIME_NEEDED = None
 NOTHING_CONFIGURED = Configuration()
@@ -27,18 +25,6 @@ SHOP_BUILDER = (
     "---\n"
     "You build the shop.\n"
 )
-
-
-def _refuse_spawn(request):
-    raise AssertionError(f"resolve_role spawned {request.argv}")
-
-
-def _refuse_resolution(kind: str, name: str):
-    raise AssertionError(f"resolve_role resolved the {kind} plugin {name}")
-
-
-def _keep_no_trace(trace) -> None:
-    pass
 
 
 def create_bindings(roleset: str | None, project_path: Path | None = None, roles: dict | None = None) -> RoleBindings:
@@ -123,30 +109,13 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         root = Path(self.root.name)
-        self.config_root = root / "config" / "brigade"
+        self.config_root = root / "config"
         self.config_root.mkdir(parents=True)
         self.configuration = Configuration(instructions=str(root / "instructions"))
-        self.paths = Paths(
-            config_root=self.config_root,
-            state_root=root / "state" / "brigade",
-            cache_root=root / "cache" / "brigade",
-            home=root,
-            executable_search_path="",
-            package_file=PACKAGE_FILE,
-        )
+        self.paths = create_test_paths(root)
 
     def create_runtime(self, run_process) -> Runtime:
-        return Runtime(
-            run_process=run_process,
-            spawn_process=_refuse_spawn,
-            paths=self.paths,
-            now=datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 7, 9, 0, tzinfo=UTC),
-            read_monotonic=lambda: 0.0,
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
-            resolve_plugin=_refuse_resolution,
-        )
+        return create_test_runtime(self.paths, run_process=run_process)
 
     def test_should_let_a_missing_awawa_through_rather_than_look_elsewhere(self):
         # Arrange
@@ -239,27 +208,10 @@ class ResolveRoleBoundByTheSlotsTableTest(unittest.TestCase):
         self.addCleanup(self.root.cleanup)
         root = Path(self.root.name)
         self.instructions = root / "instructions"
-        self.paths = Paths(
-            config_root=root / "config" / "brigade",
-            state_root=root / "state" / "brigade",
-            cache_root=root / "cache" / "brigade",
-            home=root,
-            executable_search_path="",
-            package_file=PACKAGE_FILE,
-        )
+        self.paths = create_test_paths(root)
 
     def create_runtime(self, run_process) -> Runtime:
-        return Runtime(
-            run_process=run_process,
-            spawn_process=_refuse_spawn,
-            paths=self.paths,
-            now=datetime(2026, 10, 9, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 9, 9, 0, tzinfo=UTC),
-            read_monotonic=lambda: 0.0,
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
-            resolve_plugin=_refuse_resolution,
-        )
+        return create_test_runtime(self.paths, run_process=run_process)
 
     def test_should_resolve_the_agent_the_configuration_binds_with_no_config_toml_on_disk(self):
         # Arrange
@@ -349,27 +301,10 @@ class ResolveRoleOfASlotTwoRoleFilesDeclareTest(ResolveRoleTestCase):
 class ResolveRoleFromTheCorpusRolesetTest(ResolveRoleTestCase):
     def setUp(self):
         super().setUp()
-        self.paths = Paths(
-            config_root=self.project / "config",
-            state_root=self.project / "state",
-            cache_root=self.project / "cache",
-            home=self.project,
-            executable_search_path="",
-            package_file=PACKAGE_FILE,
-        )
+        self.paths = create_test_paths(self.project)
 
     def create_runtime(self, run_process) -> Runtime:
-        return Runtime(
-            run_process=run_process,
-            spawn_process=_refuse_spawn,
-            paths=self.paths,
-            now=datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
-            read_clock=lambda: datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
-            read_monotonic=lambda: 0.0,
-            entry_point=Path("/srv/brigade/bin/brigade"),
-            trail=TrailWriter(_keep_no_trace),
-            resolve_plugin=_refuse_resolution,
-        )
+        return create_test_runtime(self.paths, run_process=run_process)
 
     def test_should_fall_through_to_the_built_in_role_for_a_slot_the_configuration_leaves_unbound(self):
         # Act
