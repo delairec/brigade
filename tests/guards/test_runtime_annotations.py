@@ -22,7 +22,7 @@ class RuntimeAnnotationsGuardTest(unittest.TestCase):
         rows = [
             (
                 "a public function",
-                "def run_segment(plan, number: int, runtime) -> None:\n    pass\n",
+                "def run_segment(plan: RunPlan, number: int, runtime) -> None:\n    pass\n",
                 "brigade/module.py:1 run_segment takes runtime without runtime: Runtime",
             ),
             (
@@ -78,10 +78,74 @@ class RuntimeAnnotationsGuardTest(unittest.TestCase):
         # Arrange
         rows = [
             ("an annotated runtime", "def read_projects(runtime: Runtime) -> None:\n    pass\n"),
-            ("no runtime", "def plan(snapshot) -> None:\n    pass\n"),
+            ("no runtime", "def plan(snapshot: Snapshot) -> None:\n    pass\n"),
             ("an annotated variadic parameter", "def collect(*runtime: Runtime) -> None:\n    pass\n"),
             ("an annotated keyword variadic parameter", "def collect(**runtime: Runtime) -> None:\n    pass\n"),
             ("a lambda taking no runtime", "handler = lambda: None\n"),
+        ]
+        for case, source in rows:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as root:
+                # Arrange
+                module = Path(root) / "brigade" / "module.py"
+                module.parent.mkdir(parents=True)
+                module.write_text(source)
+
+                # Act
+                violations = find_unannotated_runtimes(Path(root) / "brigade")
+
+                # Assert
+                self.assertEqual(violations, [])
+
+
+class PublicSignatureAnnotationsGuardTest(unittest.TestCase):
+    def test_should_flag_a_public_parameter_or_return_without_its_annotation(self):
+        # Arrange
+        rows = [
+            (
+                "a parameter",
+                "def plan(snapshot) -> None:\n    pass\n",
+                "brigade/module.py:1 plan leaves snapshot unannotated",
+            ),
+            (
+                "a return",
+                "def plan(snapshot: Snapshot):\n    pass\n",
+                "brigade/module.py:1 plan leaves its return unannotated",
+            ),
+            (
+                "a method parameter",
+                "class Parser:\n    def error(self, message) -> NoReturn:\n        pass\n",
+                "brigade/module.py:2 error leaves message unannotated",
+            ),
+            (
+                "a keyword-only parameter",
+                "def install(request: dict, *, force) -> None:\n    pass\n",
+                "brigade/module.py:1 install leaves force unannotated",
+            ),
+            (
+                "a variadic parameter",
+                "def collect(*inputs) -> None:\n    pass\n",
+                "brigade/module.py:1 collect leaves inputs unannotated",
+            ),
+        ]
+        for case, source, expected_violation in rows:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as root:
+                # Arrange
+                module = Path(root) / "brigade" / "module.py"
+                module.parent.mkdir(parents=True)
+                module.write_text(source)
+
+                # Act
+                violations = find_unannotated_runtimes(Path(root) / "brigade")
+
+                # Assert
+                self.assertEqual(violations, [expected_violation])
+
+    def test_should_let_a_private_function_and_the_receiver_of_a_method_pass(self):
+        # Arrange
+        rows = [
+            ("a private function", "def _plan(snapshot):\n    pass\n"),
+            ("an instance method", "class Parser:\n    def error(self, message: str) -> None:\n        pass\n"),
+            ("a class method", "class Parser:\n    @classmethod\n    def build(cls) -> None:\n        pass\n"),
         ]
         for case, source in rows:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as root:

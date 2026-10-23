@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
@@ -17,7 +19,7 @@ def _is_ended(summary: WaveSummary) -> bool:
     return not summary.is_open
 
 
-def wave_list(request, runtime: Runtime) -> dict:
+def wave_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     summaries = sorted(summarize_waves(read_ledger(runtime.paths.state_root).entries), key=_is_ended)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError, UsageError
 from brigade.runtime import Runtime
@@ -151,7 +153,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def adapter_matrix(request, runtime: Runtime) -> dict:
+def adapter_matrix(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     rows = [_describe_adapter(runtime, configuration, adapter) for adapter in list_client_adapters(runtime)]
     return {"schema_version": SCHEMA_VERSION, "adapters": sorted(rows, key=_order_row), "fallbacks": FALLBACKS}

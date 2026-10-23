@@ -17,7 +17,9 @@ class SchedulerQuestion:
     request: dict
 
 
-def ask_scheduler(scheduler, question: SchedulerQuestion, runtime: Runtime) -> SchedulerInstallation | SchedulerState:
+def ask_scheduler(
+    scheduler: object, question: SchedulerQuestion, runtime: Runtime
+) -> SchedulerInstallation | SchedulerState:
     answer = getattr(scheduler, question.operation)(question.request, runtime)
     try:
         validate_document(answer, SCHEDULER_ANSWER_SHAPES[question.operation])

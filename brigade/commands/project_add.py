@@ -1,3 +1,4 @@
+import argparse
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -107,7 +108,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def project_add(request, runtime: Runtime) -> dict:
+def project_add(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     path = Path(request.path).resolve()
     name = _choose_name(request, path)

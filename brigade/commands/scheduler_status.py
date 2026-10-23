@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime, timedelta
 
 from brigade.command import Command
@@ -109,7 +110,7 @@ def _decide_exit_code(document: dict) -> int:
     return STALE_EXIT_CODE if document["stale"] else 0
 
 
-def scheduler_status(request, runtime: Runtime) -> dict:
+def scheduler_status(request: argparse.Namespace, runtime: Runtime) -> dict:
     name, status = _find_installed(runtime)
     minutes = read_optional_configuration(runtime.paths.configuration_file).tick_stale_after
     heartbeat = read_heartbeat(runtime.paths.heartbeat_file)

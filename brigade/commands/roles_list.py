@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
 from brigade.runtime import Runtime
@@ -40,7 +42,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def roles_list(request, runtime: Runtime) -> dict:
+def roles_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS, configuration) for slot in SLOTS]
     slot_clients = list_slot_clients_elsewhere(configuration, configuration.client)

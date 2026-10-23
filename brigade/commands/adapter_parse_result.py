@@ -1,3 +1,4 @@
+import argparse
 import sys
 from operator import attrgetter
 
@@ -16,7 +17,7 @@ def _read_request(options) -> str:
     return sys.stdin.read()
 
 
-def adapter_parse_result(request, runtime: Runtime) -> ConfiguredClientAnswer:
+def adapter_parse_result(request: argparse.Namespace, runtime: Runtime) -> ConfiguredClientAnswer:
     client_request = read_client_request(OPERATION, request)
     configured = read_configured_client(runtime)
     client = runtime.resolve_plugin("client", configured.name)

@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
@@ -34,7 +36,7 @@ def _find_wave_pause(entries: tuple, wave: str) -> list[tuple[str, str]]:
     return [(wave, pause.reason)]
 
 
-def wave_resume(request, runtime: Runtime) -> dict:
+def wave_resume(request: argparse.Namespace, runtime: Runtime) -> dict:
     entries = read_ledger(runtime.paths.state_root).entries
     if request.wave is None:
         paused = _list_forge_account_pauses(tuple(entry.event for entry in entries))

@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runs.describe_skipped_runs import describe_skipped_runs
 from brigade.runs.prune_runs import PruneRequest, prune_runs
@@ -23,13 +25,13 @@ def _render_text(document: dict) -> str:
     return "\n".join(f"{removal} {removed['run']} ({removed['state']})" for removed in document["runs"])
 
 
-def _choose_keep(request, runtime: Runtime) -> int:
+def _choose_keep(request: argparse.Namespace, runtime: Runtime) -> int:
     if request.keep is not None:
         return request.keep
     return read_optional_configuration(runtime.paths.configuration_file).runs_kept
 
 
-def runs_prune(request, runtime: Runtime) -> dict:
+def runs_prune(request: argparse.Namespace, runtime: Runtime) -> dict:
     prune = PruneRequest(
         paths=runtime.paths,
         keep=_choose_keep(request, runtime),

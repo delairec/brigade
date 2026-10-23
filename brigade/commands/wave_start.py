@@ -1,3 +1,4 @@
+import argparse
 import functools
 
 from brigade.command import Argument, Command
@@ -16,7 +17,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def wave_start(request, runtime: Runtime) -> dict:
+def wave_start(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     start = WaveStart(
         project=request.project,

@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.registry.change_project_status import change_project_status
 from brigade.runtime import Runtime
@@ -12,7 +14,7 @@ def _render_text(document: dict) -> str:
     return f"{target} is already {document['status']}"
 
 
-def project_pause(request, runtime: Runtime) -> dict:
+def project_pause(request: argparse.Namespace, runtime: Runtime) -> dict:
     return change_project_status(runtime, request.name, STATUS)
 
 

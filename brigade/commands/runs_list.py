@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
@@ -33,7 +35,7 @@ def _is_selected(listed: dict, request) -> bool:
     )
 
 
-def runs_list(request, runtime: Runtime) -> dict:
+def runs_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     listing = list_runs(runtime.paths.state_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

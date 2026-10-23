@@ -21,7 +21,7 @@ VERDICT_SHAPE = {
 }
 
 
-def validate_verdict(document) -> None:
+def validate_verdict(document: object) -> None:
     validate_document(document, VERDICT_SHAPE)
     if document["verdict"] == CHANGES_VERDICT and not document["findings"]:
         raise DocumentInvalid(f"a verdict {CHANGES_VERDICT} names no finding")

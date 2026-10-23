@@ -1,3 +1,4 @@
+import argparse
 import sys
 from pathlib import Path
 
@@ -50,7 +51,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def scheduler_install(request, runtime: Runtime) -> dict:
+def scheduler_install(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     if configuration.scheduler is not None:
         name, chosen_by = configuration.scheduler, "configuration"

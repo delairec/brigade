@@ -18,7 +18,7 @@ class CheckLogsQuery:
     environment: dict
 
 
-def ask_check_logs(forge, forge_name: str, query: CheckLogsQuery, runtime: Runtime) -> list[dict]:
+def ask_check_logs(forge: object, forge_name: str, query: CheckLogsQuery, runtime: Runtime) -> list[dict]:
     answer = forge.read_check_logs(
         {
             "schema_version": DOCUMENT_SCHEMA_VERSION,

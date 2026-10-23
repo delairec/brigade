@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.roles.render_role_file import render_role_file
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, resolve_role
@@ -20,7 +22,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def roles_show(request, runtime: Runtime) -> dict:
+def roles_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     resolved = resolve_role(request.slot, runtime, NO_PROJECT_BINDINGS, configuration)
     identity = {

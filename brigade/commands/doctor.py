@@ -1,3 +1,4 @@
+import argparse
 import sys
 from pathlib import Path
 
@@ -368,7 +369,7 @@ def _read_slot_clients(reading: Configuration | BrigadeError) -> dict:
     )
 
 
-def doctor(request, runtime: Runtime) -> dict:
+def doctor(request: argparse.Namespace, runtime: Runtime) -> dict:
     reading = _read_configuration(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

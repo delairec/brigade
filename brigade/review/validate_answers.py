@@ -10,7 +10,7 @@ ANSWERS_SHAPE = {
 }
 
 
-def validate_answers(document, findings: list[dict]) -> None:
+def validate_answers(document: object, findings: list[dict]) -> None:
     validate_document(document, ANSWERS_SHAPE)
     answered = Counter(answer["finding"] for answer in document["answers"])
     identifiers = [finding["id"] for finding in findings]

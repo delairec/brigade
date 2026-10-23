@@ -170,7 +170,9 @@ def _read_session(run_directory: Path, segment: int) -> str | None:
     return read_run_finished(path, "segment result").session
 
 
-def plan_run(request: RunRequest, setting: RunSetting, client_adapter, document, runtime: Runtime) -> RunPlan:
+def plan_run(
+    request: RunRequest, setting: RunSetting, client_adapter: object, document: object, runtime: Runtime
+) -> RunPlan:
     configuration = setting.configuration
     project = setting.project
     client = setting.client

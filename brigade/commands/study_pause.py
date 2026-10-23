@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runtime import Runtime
 from brigade.studies.change_study_status import change_study_status
@@ -12,7 +14,7 @@ def _render_text(document: dict) -> str:
     return f"{target} is already {document['status']}"
 
 
-def study_pause(request, runtime: Runtime) -> dict:
+def study_pause(request: argparse.Namespace, runtime: Runtime) -> dict:
     return change_study_status(runtime, request.name, STATUS)
 
 

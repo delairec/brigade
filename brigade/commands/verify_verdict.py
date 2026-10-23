@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -40,7 +41,7 @@ def _read_verdict(path: Path) -> dict:
     return verdict
 
 
-def verify_verdict(request, runtime: Runtime) -> dict:
+def verify_verdict(request: argparse.Namespace, runtime: Runtime) -> dict:
     verdict = _read_verdict(Path(request.file))
     run_process = runtime.run_process
     project = require_project_at(

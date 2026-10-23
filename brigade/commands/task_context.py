@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -57,7 +58,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
-def task_context(request, runtime: Runtime) -> dict:
+def task_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     worktree = locate_task_worktree(runtime, Path.cwd(), request.task)
     document = {

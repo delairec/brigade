@@ -1,3 +1,4 @@
+import argparse
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -53,7 +54,7 @@ def _render_text(document: dict) -> str:
     return "\n".join([f"{document['collector']} {origin}", *(f"{key:<{width}}{value}" for key, value in rows)])
 
 
-def collect(request, runtime: Runtime) -> dict:
+def collect(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = Path.cwd()
     collector = runtime.resolve_plugin(COLLECTOR_KIND, request.name, places=locate_collectors(project, runtime.paths))
     inputs = CollectorInputs(

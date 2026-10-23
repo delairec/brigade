@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.commands._launch_planner import launch_planner
 from brigade.errors import BrigadeError
@@ -20,7 +22,7 @@ def _describe_diagnostics(document: dict) -> list[str]:
     return document.get("warnings", [])
 
 
-def request_new(request, runtime: Runtime) -> dict:
+def request_new(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.project)
     if read_project_field(project, "STATUS") == PAUSED_STATUS:

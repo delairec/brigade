@@ -1,3 +1,4 @@
+import argparse
 import functools
 from pathlib import Path
 
@@ -19,7 +20,7 @@ def _render_text(document: dict) -> str:
     return f"recorded @REQUEST.{document['request']} as @MILESTONE.{document['milestone']} on {document['branch']}"
 
 
-def plan_record(request, runtime: Runtime) -> dict:
+def plan_record(request: argparse.Namespace, runtime: Runtime) -> dict:
     planning_request = read_planning_request(runtime, request.request)
     project = find_project(read_projects(runtime), planning_request.project)
     if read_project_field(project, "CORPUS") is None:

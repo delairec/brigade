@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import asdict
 from datetime import UTC, date, datetime, time, timedelta
 
@@ -132,7 +133,7 @@ def _read_request(options):
     return options
 
 
-def ledger(request, runtime: Runtime) -> dict:
+def ledger(request: argparse.Namespace, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     if request.wave is not None:
         view = describe_wave(reading, request.wave)

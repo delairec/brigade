@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.collecting.find_absence import find_absence
@@ -36,7 +37,7 @@ def _describe_collector(collector: dict, project: Entity | None) -> dict:
     return {**collector, "absent": absence}
 
 
-def collectors_list(request, runtime: Runtime) -> dict:
+def collectors_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = _find_current_project(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

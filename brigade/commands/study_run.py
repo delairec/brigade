@@ -38,13 +38,13 @@ def _decide_exit_code(document: dict) -> int:
     return PARKED_EXIT_CODE
 
 
-def _read_study_of_request(request, runtime: Runtime) -> Study:
+def _read_study_of_request(request: argparse.Namespace, runtime: Runtime) -> Study:
     if request.run_id is None:
         return read_study(runtime, request.name)
     return read_study_of_run(runtime, runtime.paths.state_root / RUNS_DIRECTORY / request.run_id)
 
 
-def study_run(request, runtime: Runtime) -> dict:
+def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     equipment = StudyEquipment(
         collector_equipment=CollectorEquipment(
             configuration=read_optional_configuration(runtime.paths.configuration_file),

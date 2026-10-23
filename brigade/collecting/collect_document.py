@@ -100,7 +100,7 @@ def _place(entry: Path, name: str, run_directory: Path | None) -> Path:
     return place
 
 
-def collect_document(collector, request: CollectionRequest, runtime: Runtime) -> Collection:
+def collect_document(collector: object, request: CollectionRequest, runtime: Runtime) -> Collection:
     inputs = request.inputs
     key = _compute_cache_key(collector, inputs, read_cache_input(collector.name, inputs.project, runtime))
     entry = runtime.paths.cache_root / CACHE_DIRECTORY / collector.name / key

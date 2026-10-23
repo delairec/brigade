@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runtime import Runtime
 from brigade.studies.build_study_context import build_study_context
@@ -19,7 +21,7 @@ def _render_text(document: dict) -> str:
     return "\n\n".join(("\n".join(head), document["answer"].rstrip("\n"), document["schema"].rstrip("\n")))
 
 
-def study_context(request, runtime: Runtime) -> dict:
+def study_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     return build_study_context(runtime, request.run)
 
 

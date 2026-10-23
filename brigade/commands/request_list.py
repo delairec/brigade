@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.corpus.read_entities import read_entities
 from brigade.registry.require_operational_corpus import require_operational_corpus
@@ -20,7 +22,7 @@ def _render_text(document: dict) -> str:
     return render_table(HEADER, [tuple(_show(row[column]) for column in COLUMNS) for row in document["requests"]])
 
 
-def request_list(request, runtime: Runtime) -> dict:
+def request_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     rows = [
         describe_request(entity)

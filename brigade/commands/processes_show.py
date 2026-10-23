@@ -1,3 +1,4 @@
+import argparse
 import shlex
 
 from brigade.command import Argument, Command
@@ -24,7 +25,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(_render_record(record) for record in document["processes"])
 
 
-def processes_show(request, runtime: Runtime) -> dict:
+def processes_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     return show_invocation(runtime.paths.state_root, request.id, failed_only=request.failed)
 
 

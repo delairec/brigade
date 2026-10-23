@@ -22,7 +22,7 @@ def _render(command: Command, document, options: argparse.Namespace) -> str:
     return command.render_text(document)
 
 
-def write_command_output(command: Command, result, options: argparse.Namespace, streams: OutputStreams) -> int:
+def write_command_output(command: Command, result: object, options: argparse.Namespace, streams: OutputStreams) -> int:
     for diagnostic in command.describe_diagnostics(result):
         streams.stderr.write(f"brigade {' '.join(command.path)}: {diagnostic}{LINE_END}")
     document = command.select_document(result)

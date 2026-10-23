@@ -1,3 +1,4 @@
+import argparse
 import functools
 from pathlib import Path
 
@@ -56,7 +57,7 @@ def _cancel_task(state_root: Path, runs: list[dict], events: tuple, wave: str, t
     }
 
 
-def wave_cancel(request, runtime: Runtime) -> dict:
+def wave_cancel(request: argparse.Namespace, runtime: Runtime) -> dict:
     state_root = runtime.paths.state_root
     append_derived_event(runtime.paths, runtime.now, functools.partial(_derive_cancellation, request.wave))
     entries = read_ledger(state_root).entries

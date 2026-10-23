@@ -83,7 +83,7 @@ def _resolve_client(name: str, sources: PluginSources):
     return plugin
 
 
-def resolve_plugin(kind: str, name: str, sources: PluginSources, places: CollectorPlaces | None = None):
+def resolve_plugin(kind: str, name: str, sources: PluginSources, places: CollectorPlaces | None = None) -> object:
     if kind == COLLECTOR_KIND:
         return resolve_collector(name, places)
     if kind in BUILT_IN_ENTRY_POINTS:

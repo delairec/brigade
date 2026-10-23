@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command, ExclusiveArguments
@@ -18,7 +19,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def corpus(request, runtime: Runtime) -> dict:
+def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     tree = prepare_project_tree(request, configuration, runtime)
     return {

@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
@@ -17,7 +19,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def project_show(request, runtime: Runtime) -> dict:
+def project_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.name)
     return {

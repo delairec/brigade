@@ -1,3 +1,4 @@
+import argparse
 from operator import attrgetter
 
 from brigade.command import Command
@@ -11,7 +12,7 @@ from brigade.system.render_json import render_json
 OPERATION = "probe"
 
 
-def adapter_probe(request, runtime: Runtime) -> ConfiguredClientAnswer:
+def adapter_probe(request: argparse.Namespace, runtime: Runtime) -> ConfiguredClientAnswer:
     configured = read_configured_client(runtime)
     client = runtime.resolve_plugin("client", configured.name)
     return ask_configured_client(client, configured, ProbeRequest(), runtime)

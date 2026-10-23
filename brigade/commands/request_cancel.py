@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runtime import Runtime
 from brigade.waves.cancel_request import cancel_request
@@ -9,7 +11,7 @@ def _render_text(document: dict) -> str:
     return f"@REQUEST.{document['request']} {document['status']}"
 
 
-def request_cancel(request, runtime: Runtime) -> dict:
+def request_cancel(request: argparse.Namespace, runtime: Runtime) -> dict:
     status = cancel_request(runtime, request.request)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "request": request.request, "status": status}
 

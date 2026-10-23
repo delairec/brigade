@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -35,7 +36,7 @@ def _read_answers(path: Path) -> dict:
         raise BrigadeError(f"the answers file {path} holds no JSON document") from None
 
 
-def review_reply(request, runtime: Runtime) -> dict:
+def review_reply(request: argparse.Namespace, runtime: Runtime) -> dict:
     answers = _read_answers(Path(request.file))
     run_process = runtime.run_process
     project = require_project_at(

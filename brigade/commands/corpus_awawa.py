@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import dataclass
 
 from brigade.command import Command
@@ -31,7 +32,7 @@ def _describe_diagnostics(passage: AwawaPassage) -> list[str]:
     return [f"@PROJECT.{passage.project} at {passage.sha}"]
 
 
-def corpus_awawa(request, runtime: Runtime) -> AwawaPassage:
+def corpus_awawa(request: argparse.Namespace, runtime: Runtime) -> AwawaPassage:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     tree = prepare_project_tree(request, configuration, runtime)
     record = run_awawa(runtime.run_process, tree.root, request.passed_arguments)

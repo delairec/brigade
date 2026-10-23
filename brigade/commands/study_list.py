@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
@@ -23,7 +25,7 @@ def _render_text(document: dict) -> str:
     return render_table(tuple(COLUMNS), [tuple(_present(study[key]) for key in COLUMNS.values()) for study in studies])
 
 
-def study_list(request, runtime: Runtime) -> dict:
+def study_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     last_orders = read_last_study_orders(runtime.paths.state_root)
     return {

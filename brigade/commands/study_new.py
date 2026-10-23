@@ -27,7 +27,7 @@ def _render_text(document: dict) -> str:
     return f"@STUDY.{document['study']} recorded, every {document['every']}"
 
 
-def study_new(request, runtime: Runtime) -> dict:
+def study_new(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     if request.project is not None:
         find_project(read_projects(runtime), request.project)

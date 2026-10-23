@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
@@ -16,7 +18,7 @@ def _render_text(document: dict) -> str:
     return f"task {document['task']} of {document['wave']} {document['state']}"
 
 
-def wave_requeue(request, runtime: Runtime) -> dict:
+def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     summary = require_wave_summary(read_ledger(runtime.paths.state_root).entries, request.wave)
     if request.task not in summary.started.tasks:
         raise BrigadeError(f"the task {request.task} is not a task of the wave {request.wave}")

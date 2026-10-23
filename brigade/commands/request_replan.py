@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.commands._launch_planner import launch_planner
 from brigade.errors import BrigadeError
@@ -29,7 +31,7 @@ def _refuse_a_live_planner(runtime: Runtime, name: str) -> None:
         raise BrigadeError(f"@REQUEST.{name} has its planner run {planner['run']} {LIVE_STATE}")
 
 
-def request_replan(request, runtime: Runtime) -> dict:
+def request_replan(request: argparse.Namespace, runtime: Runtime) -> dict:
     described = describe_request(read_wave_request(runtime, request.request))
     name = described["name"]
     if described["status"] != PLANNING_STATUS:

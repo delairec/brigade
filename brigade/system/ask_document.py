@@ -25,7 +25,7 @@ class DocumentQuestion:
 
 
 def ask_document(
-    document, question: DocumentQuestion, runtime: Runtime
+    document: object, question: DocumentQuestion, runtime: Runtime
 ) -> DocumentCreation | DocumentText | EntryDetection:
     answer = getattr(document, question.operation)(question.request.to_document(), runtime)
     try:

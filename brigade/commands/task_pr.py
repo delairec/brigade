@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -13,7 +14,7 @@ def _render_text(document: dict) -> str:
     return document["url"]
 
 
-def task_pr(request, runtime: Runtime) -> dict:
+def task_pr(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, BUILD_SLOT, runtime)

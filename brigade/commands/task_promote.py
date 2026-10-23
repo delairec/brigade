@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -12,7 +13,7 @@ def _render_text(document: dict) -> str:
     return f"@TASK.{document['task']} implemented, delivered by #{document['pr']}, in {document['commit']}"
 
 
-def task_promote(request, runtime: Runtime) -> dict:
+def task_promote(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     return promote_task(
         runtime,

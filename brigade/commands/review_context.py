@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -33,7 +34,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
-def review_context(request, runtime: Runtime) -> dict:
+def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     run_process = runtime.run_process
     project = require_project_at(

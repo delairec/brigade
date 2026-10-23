@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.runtime import Runtime
 from brigade.studies.describe_last_study_order import describe_last_study_order
@@ -24,7 +26,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def study_show(request, runtime: Runtime) -> dict:
+def study_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     entity = read_study_entity(runtime, request.name)
     last_order = read_last_study_orders(runtime.paths.state_root).get(entity.name)
     return {

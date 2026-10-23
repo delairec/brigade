@@ -554,7 +554,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(RENDERERS[document["mode"]](document))
 
 
-def tick(request, runtime: Runtime) -> dict:
+def tick(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.mode == "once":
         return _tick_once(runtime)
     if request.mode == "dry-run":

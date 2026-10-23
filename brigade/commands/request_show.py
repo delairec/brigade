@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
@@ -30,7 +32,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def request_show(request, runtime: Runtime) -> dict:
+def request_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     entity = read_wave_request(runtime, request.request)
     described = describe_request(entity)
     return {

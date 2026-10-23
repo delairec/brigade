@@ -16,7 +16,7 @@ class PullRequestsQuery:
     environment: dict
 
 
-def ask_pull_requests(forge, forge_name: str, query: PullRequestsQuery, runtime: Runtime) -> list[dict]:
+def ask_pull_requests(forge: object, forge_name: str, query: PullRequestsQuery, runtime: Runtime) -> list[dict]:
     answer = forge.list_pull_requests(
         {
             "schema_version": DOCUMENT_SCHEMA_VERSION,

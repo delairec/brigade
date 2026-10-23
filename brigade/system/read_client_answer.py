@@ -19,7 +19,7 @@ ANSWER_KINDS = {
 
 
 def read_client_answer(
-    question: ClientQuestion, answer
+    question: ClientQuestion, answer: object
 ) -> ProbeAnswer | ClientCommand | ParseResultAnswer | TranscriptsAnswer | ActionsAnswer:
     operation = question.request.operation
     try:

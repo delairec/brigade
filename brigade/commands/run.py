@@ -86,7 +86,7 @@ def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> Run
     return plan
 
 
-def run(request, runtime: Runtime) -> dict:
+def run(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     if request.detach:
         plan = _prepare_run(request, configuration, runtime)

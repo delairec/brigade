@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -31,7 +32,7 @@ def _decide_exit_code(document: dict) -> int:
     return ONE_FAILED if any(not check["passed"] for check in document["checks"]) else 0
 
 
-def task_check(request, runtime: Runtime) -> dict:
+def task_check(request: argparse.Namespace, runtime: Runtime) -> dict:
     return check_task(runtime, locate_task_worktree(runtime, Path.cwd(), request.task))
 
 

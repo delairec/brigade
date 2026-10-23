@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -27,7 +28,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def rebase_done(request, runtime: Runtime) -> dict:
+def rebase_done(request: argparse.Namespace, runtime: Runtime) -> dict:
     run_process = runtime.run_process
     worktree = locate_worktree_root(run_process, Path.cwd())
     project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))

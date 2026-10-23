@@ -76,7 +76,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
-def plan_context(request, runtime: Runtime) -> dict:
+def plan_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     planning_request = read_planning_request(runtime, request.request)
     project = find_project(read_projects(runtime), planning_request.project)
     if read_project_field(project, "CORPUS") is None:

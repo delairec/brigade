@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -27,7 +28,7 @@ def _decide_exit_code(document: dict) -> int:
     return int(any(check["verdict"] == FAILED for check in document["checks"]))
 
 
-def verify_preflight(request, runtime: Runtime) -> dict:
+def verify_preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     run_process = runtime.run_process
     project = require_project_at(

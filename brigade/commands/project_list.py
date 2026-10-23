@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.corpus.read_entities import Entity
 from brigade.registry.read_projects import read_projects
@@ -22,7 +24,7 @@ def _render_text(document: dict) -> str:
     return render_table(COLUMNS, [tuple(project[column] for column in COLUMNS) for project in projects])
 
 
-def project_list(request, runtime: Runtime) -> dict:
+def project_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

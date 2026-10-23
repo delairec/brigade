@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.processes.list_invocations import list_invocations
 from brigade.runtime import Runtime
@@ -13,7 +15,7 @@ def _render_text(document: dict) -> str:
     )
 
 
-def processes_list(request, runtime: Runtime) -> dict:
+def processes_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "invocations": list_invocations(runtime.paths.state_root)}
 
 

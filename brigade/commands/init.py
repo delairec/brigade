@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 from string import Template
 
@@ -76,7 +77,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def init(request, runtime: Runtime) -> dict:
+def init(request: argparse.Namespace, runtime: Runtime) -> dict:
     _require_identity(runtime)
     repository = _ensure_repository(runtime)
     gitignore = runtime.paths.config_root / GITIGNORE_FILE

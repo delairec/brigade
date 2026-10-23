@@ -10,7 +10,7 @@ from brigade.system.transcripts_answer import TranscriptsAnswer
 
 
 def ask_named_client(
-    client, question: ClientQuestion, configuration: Configuration, runtime: Runtime
+    client: object, question: ClientQuestion, configuration: Configuration, runtime: Runtime
 ) -> ProbeAnswer | ClientCommand | ParseResultAnswer | TranscriptsAnswer | ActionsAnswer:
     request = {
         **question.request.to_document(),

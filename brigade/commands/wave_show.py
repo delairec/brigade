@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Argument, Command
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.read_ledger import read_ledger
@@ -41,7 +43,7 @@ def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) 
     }
 
 
-def wave_show(request, runtime: Runtime) -> dict:
+def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     entries = read_ledger(runtime.paths.state_root).entries
     summary = require_wave_summary(entries, request.wave)
     events = tuple(entry.event for entry in entries)

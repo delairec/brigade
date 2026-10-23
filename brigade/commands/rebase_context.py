@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -18,7 +19,7 @@ def _render_text(document: dict) -> str:
     return f"# branch\n{document['branch']}\n\n# base\n{document['base']}\n\n# conflicts\n{conflicts}"
 
 
-def rebase_context(request, runtime: Runtime) -> dict:
+def rebase_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     worktree = locate_worktree_root(runtime.run_process, Path.cwd())
     project = require_project_at(read_projects(runtime), locate_main_checkout(runtime.run_process, worktree))
     found = find_opened_task(runtime, project.name, request.pr)

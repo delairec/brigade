@@ -1,3 +1,4 @@
+import argparse
 import sys
 from pathlib import Path
 
@@ -102,7 +103,7 @@ def _follow_run(run_id: str, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": printer.follower.run, "interrupted": interrupted}
 
 
-def runs_show(request, runtime: Runtime) -> dict:
+def runs_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.follow:
         return _follow_run(request.run, runtime)
     return show_run(runtime.paths.state_root, request.run, with_journal=request.log)

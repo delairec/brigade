@@ -6,6 +6,7 @@ import json
 import sys
 import traceback
 from pathlib import Path
+from typing import NoReturn, TextIO
 
 from brigade import VERSION
 from brigade.add_command_parsers import add_command_parsers
@@ -29,10 +30,10 @@ class _ParseDeferred(Exception):
 
 
 class _DeferringArgumentParser(argparse.ArgumentParser):
-    def error(self, message):
+    def error(self, message: str) -> NoReturn:
         raise _ParseDeferred(message)
 
-    def print_help(self, file=None):
+    def print_help(self, file: TextIO | None = None) -> NoReturn:
         raise _ParseDeferred
 
 

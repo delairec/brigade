@@ -1,3 +1,5 @@
+import argparse
+
 from brigade.command import Command
 from brigade.roles.check_front_matter import check_front_matter
 from brigade.roles.list_built_in_role_files import list_built_in_role_files
@@ -51,7 +53,7 @@ def _decide_exit_code(document: dict) -> int:
     return 0
 
 
-def roles_lint(request, runtime: Runtime) -> dict:
+def roles_lint(request: argparse.Namespace, runtime: Runtime) -> dict:
     built_in_files = [
         (f"{BUILT_IN_DIRECTORY}/{entry.name}", entry.read_text(encoding="utf-8"))
         for entry in list_built_in_role_files()

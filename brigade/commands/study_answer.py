@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -16,7 +17,7 @@ def _render_text(document: dict) -> str:
     return f"the answer of run {document['run']} recorded"
 
 
-def study_answer(request, runtime: Runtime) -> dict:
+def study_answer(request: argparse.Namespace, runtime: Runtime) -> dict:
     run_directory = runtime.paths.state_root / RUNS_DIRECTORY / request.run
     study = read_study_of_run(runtime, run_directory)
     answer = read_text_file(Path(request.file))
