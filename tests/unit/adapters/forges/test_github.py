@@ -1,6 +1,5 @@
 import json
 import unittest
-from types import SimpleNamespace
 
 from brigade.adapters.forges.github import (
     PULL_REQUESTS_QUERY,
@@ -24,6 +23,7 @@ from brigade.adapters.forges.github import (
     rewrite_pull_request_body,
 )
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
+from tests.unit.create_test_runtime import create_test_runtime
 
 UNBOUND_REQUEST = {"schema_version": 1, "environment": {}}
 LOGIN_REQUEST = {"schema_version": 1, "login": "octo-bot"}
@@ -40,28 +40,25 @@ PULL_REQUEST_REQUEST = {
 MILESTONES_REQUEST = {"repository": "/projects/shop", "environment": BOT_ENVIRONMENT}
 
 
-def create_runtime(stdout: str, exit_code: int = 0) -> SimpleNamespace:
-    requests = []
+class GhDouble:
+    def __init__(self, answer_request):
+        self.answer_request = answer_request
+        self.requests = []
 
-    def run_gh(request):
-        requests.append(request)
+    def __call__(self, request: ProcessRequest) -> ProcessRecord:
+        self.requests.append(request)
+        exit_code, stdout = self.answer_request(request, len(self.requests))
         return ProcessRecord(
             argv=request.argv, cwd=request.cwd, exit_code=exit_code, stdout=stdout, stderr="", duration_ms=0
         )
 
-    return SimpleNamespace(run_process=run_gh, requests=requests)
+
+def create_gh(stdout: str, exit_code: int = 0) -> GhDouble:
+    return GhDouble(lambda request, rank: (exit_code, stdout))
 
 
-def create_runtime_answering_by_argv(answers: dict) -> SimpleNamespace:
-    requests = []
-
-    def run_gh(request):
-        requests.append(request)
-        return ProcessRecord(
-            argv=request.argv, cwd=request.cwd, exit_code=0, stdout=answers[request.argv], stderr="", duration_ms=0
-        )
-
-    return SimpleNamespace(run_process=run_gh, requests=requests)
+def create_gh_answering_by_argv(answers: dict) -> GhDouble:
+    return GhDouble(lambda request, rank: (0, answers[request.argv]))
 
 
 class DecidePullRequestTest(unittest.TestCase):
@@ -74,7 +71,8 @@ class DecidePullRequestTest(unittest.TestCase):
         ]:
             with self.subTest(decision=decide.__name__, method=method):
                 # Arrange
-                runtime = create_runtime("")
+                gh = create_gh("")
+                runtime = create_test_runtime(run_process=gh)
                 request = {
                     "repository": "/projects/shop",
                     "number": 12,
@@ -88,7 +86,7 @@ class DecidePullRequestTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(answer, {"schema_version": 1})
                 self.assertEqual(
-                    runtime.requests,
+                    gh.requests,
                     [
                         ProcessRequest(
                             argv=expected_argv, cwd="/projects/shop", timeout_s=60.0, environment=BOT_ENVIRONMENT
@@ -100,7 +98,8 @@ class DecidePullRequestTest(unittest.TestCase):
 class RewritePullRequestBodyTest(unittest.TestCase):
     def test_should_ask_gh_to_replace_the_body_of_the_pull_request_as_the_login_of_the_environment(self):
         # Arrange
-        runtime = create_runtime("")
+        gh = create_gh("")
+        runtime = create_test_runtime(run_process=gh)
         request = {
             "repository": "/projects/shop",
             "number": 12,
@@ -114,7 +113,7 @@ class RewritePullRequestBodyTest(unittest.TestCase):
         # Assert
         self.assertEqual(answer, {"schema_version": 1})
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=("gh", "pr", "edit", "12", "--body-file", "-"),
@@ -130,9 +129,10 @@ class RewritePullRequestBodyTest(unittest.TestCase):
 class DescribeAccountTest(unittest.TestCase):
     def test_should_name_the_active_account_after_an_inactive_one(self):
         # Arrange
-        runtime = create_runtime(
+        gh = create_gh(
             '{"hosts": {"github.com": [{"login": "ada", "active": false}, {"login": "Clauche-bot", "active": true}]}}'
         )
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         account = describe_account(UNBOUND_REQUEST, runtime)
@@ -142,7 +142,8 @@ class DescribeAccountTest(unittest.TestCase):
 
     def test_should_name_no_account_when_none_is_active(self):
         # Arrange
-        runtime = create_runtime('{"hosts": {"github.com": [{"login": "ada", "active": false}]}}')
+        gh = create_gh('{"hosts": {"github.com": [{"login": "ada", "active": false}]}}')
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         account = describe_account(UNBOUND_REQUEST, runtime)
@@ -152,20 +153,22 @@ class DescribeAccountTest(unittest.TestCase):
 
     def test_should_run_gh_with_the_environment_the_request_carries(self):
         # Arrange
-        runtime = create_runtime('{"hosts": {"github.com": [{"login": "octo-bot", "active": true}]}}')
+        gh = create_gh('{"hosts": {"github.com": [{"login": "octo-bot", "active": true}]}}')
+        runtime = create_test_runtime(run_process=gh)
         request = {"schema_version": 1, "environment": {"GH_TOKEN": "token-of-octo-bot"}}
 
         # Act
         describe_account(request, runtime)
 
         # Assert
-        self.assertEqual(runtime.requests[0].environment, {"GH_TOKEN": "token-of-octo-bot"})
+        self.assertEqual(gh.requests[0].environment, {"GH_TOKEN": "token-of-octo-bot"})
 
 
 class ReadLoginEnvironmentTest(unittest.TestCase):
     def test_should_answer_the_token_gh_prints_as_gh_token(self):
         # Arrange
-        runtime = create_runtime("token-of-octo-bot\n")
+        gh = create_gh("token-of-octo-bot\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = read_login_environment(LOGIN_REQUEST, runtime)
@@ -175,14 +178,15 @@ class ReadLoginEnvironmentTest(unittest.TestCase):
 
     def test_should_ask_gh_for_the_token_of_the_login_with_no_token_of_its_own(self):
         # Arrange
-        runtime = create_runtime("token-of-octo-bot\n")
+        gh = create_gh("token-of-octo-bot\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         read_login_environment(LOGIN_REQUEST, runtime)
 
         # Assert
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=("gh", "auth", "token", "--hostname", "github.com", "--user", "octo-bot"),
@@ -202,7 +206,8 @@ class ReadLoginEnvironmentTest(unittest.TestCase):
         for case, stdout, exit_code in rows:
             with self.subTest(case=case):
                 # Arrange
-                runtime = create_runtime(stdout, exit_code)
+                gh = create_gh(stdout, exit_code)
+                runtime = create_test_runtime(run_process=gh)
 
                 # Act
                 answer = read_login_environment(LOGIN_REQUEST, runtime)
@@ -214,7 +219,8 @@ class ReadLoginEnvironmentTest(unittest.TestCase):
 class OpenPullRequestTest(unittest.TestCase):
     def test_should_answer_the_number_of_the_pull_request_gh_prints_the_address_of(self):
         # Arrange
-        runtime = create_runtime("https://github.com/acme/shop/pull/42\n")
+        gh = create_gh("https://github.com/acme/shop/pull/42\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = open_pull_request(PULL_REQUEST_REQUEST, runtime)
@@ -224,14 +230,15 @@ class OpenPullRequestTest(unittest.TestCase):
 
     def test_should_open_it_on_the_base_with_the_milestone_as_the_login_of_the_environment(self):
         # Arrange
-        runtime = create_runtime("https://github.com/acme/shop/pull/42\n")
+        gh = create_gh("https://github.com/acme/shop/pull/42\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         open_pull_request(PULL_REQUEST_REQUEST, runtime)
 
         # Assert
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=(
@@ -259,20 +266,22 @@ class OpenPullRequestTest(unittest.TestCase):
 
     def test_should_open_it_without_a_milestone_when_the_request_names_none(self):
         # Arrange
-        runtime = create_runtime("https://github.com/acme/shop/pull/42\n")
+        gh = create_gh("https://github.com/acme/shop/pull/42\n")
+        runtime = create_test_runtime(run_process=gh)
         no_milestone = None
 
         # Act
         open_pull_request({**PULL_REQUEST_REQUEST, "milestone": no_milestone}, runtime)
 
         # Assert
-        self.assertNotIn("--milestone", runtime.requests[0].argv)
+        self.assertNotIn("--milestone", gh.requests[0].argv)
 
 
 class ListMilestonesTest(unittest.TestCase):
     def test_should_answer_the_title_of_every_milestone_of_the_repository_open_or_closed(self):
         # Arrange
-        runtime = create_runtime("Empty cart\nWave engine\n")
+        gh = create_gh("Empty cart\nWave engine\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = list_milestones(MILESTONES_REQUEST, runtime)
@@ -283,14 +292,15 @@ class ListMilestonesTest(unittest.TestCase):
     def test_should_ask_the_milestones_api_of_the_repository_as_the_login_of_the_environment(self):
         # Arrange
         no_milestone_titles = ""
-        runtime = create_runtime(no_milestone_titles)
+        gh = create_gh(no_milestone_titles)
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         list_milestones(MILESTONES_REQUEST, runtime)
 
         # Assert
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=("gh", "api", "--paginate", "repos/{owner}/{repo}/milestones?state=all", "--jq", ".[].title"),
@@ -306,19 +316,21 @@ class ListPullRequestsTest(unittest.TestCase):
     def test_should_give_the_paginated_read_as_long_as_a_collector(self):
         # Arrange
         no_page = "[]"
-        runtime = create_runtime(no_page)
+        gh = create_gh(no_page)
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         list_pull_requests({"repository": "/projects/shop", "state": "all", "environment": BOT_ENVIRONMENT}, runtime)
 
         # Assert
-        self.assertEqual(runtime.requests[0].timeout_s, 600.0)
+        self.assertEqual(gh.requests[0].timeout_s, 600.0)
 
 
 class CreateMilestoneTest(unittest.TestCase):
     def test_should_post_the_title_to_the_milestones_api_of_the_repository(self):
         # Arrange
-        runtime = create_runtime("{}")
+        gh = create_gh("{}")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = create_milestone({**MILESTONES_REQUEST, "title": "Empty cart"}, runtime)
@@ -326,7 +338,7 @@ class CreateMilestoneTest(unittest.TestCase):
         # Assert
         self.assertEqual(answer, {"schema_version": 1})
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=("gh", "api", "--method", "POST", "repos/{owner}/{repo}/milestones", "-f", "title=Empty cart"),
@@ -357,22 +369,15 @@ UNREVIEWED_PULL_REQUEST = (
 )
 
 
-def create_answering_runtime(*stdouts: str) -> SimpleNamespace:
-    requests = []
-
-    def run_gh(request):
-        requests.append(request)
-        return ProcessRecord(
-            argv=request.argv, cwd=request.cwd, exit_code=0, stdout=stdouts[len(requests) - 1], stderr="", duration_ms=0
-        )
-
-    return SimpleNamespace(run_process=run_gh, requests=requests)
+def create_gh_answering(*stdouts: str) -> GhDouble:
+    return GhDouble(lambda request, rank: (0, stdouts[rank - 1]))
 
 
 class FindPullRequestTest(unittest.TestCase):
     def test_should_describe_the_pull_request_of_the_branch_with_its_check_runs_its_review_and_its_base(self):
         # Arrange
-        runtime = create_answering_runtime(OPEN_PULL_REQUEST, "3\n")
+        gh = create_gh_answering(OPEN_PULL_REQUEST, "3\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = find_pull_request(FIND_REQUEST, runtime)
@@ -396,7 +401,8 @@ class FindPullRequestTest(unittest.TestCase):
 
     def test_should_answer_no_review_and_a_base_not_past_the_head(self):
         # Arrange
-        runtime = create_answering_runtime(UNREVIEWED_PULL_REQUEST, "0\n")
+        gh = create_gh_answering(UNREVIEWED_PULL_REQUEST, "0\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = find_pull_request(FIND_REQUEST, runtime)
@@ -417,7 +423,8 @@ class FindPullRequestTest(unittest.TestCase):
 
     def test_should_answer_no_pull_request_for_a_branch_that_has_none(self):
         # Arrange
-        runtime = create_answering_runtime("[]\n")
+        gh = create_gh_answering("[]\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = find_pull_request(FIND_REQUEST, runtime)
@@ -427,14 +434,15 @@ class FindPullRequestTest(unittest.TestCase):
 
     def test_should_ask_gh_for_the_newest_pull_request_of_the_branch_then_its_base_as_the_login_of_the_request(self):
         # Arrange
-        runtime = create_answering_runtime(OPEN_PULL_REQUEST, "3\n")
+        gh = create_gh_answering(OPEN_PULL_REQUEST, "3\n")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         find_pull_request(FIND_REQUEST, runtime)
 
         # Assert
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=(
@@ -473,7 +481,8 @@ class FindPullRequestTest(unittest.TestCase):
 class DescribeAccountOfAnUnreadableHostsDocumentTest(unittest.TestCase):
     def test_should_name_no_account(self):
         # Arrange
-        runtime = create_runtime("not a hosts document")
+        gh = create_gh("not a hosts document")
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         account = describe_account(UNBOUND_REQUEST, runtime)
@@ -485,7 +494,8 @@ class DescribeAccountOfAnUnreadableHostsDocumentTest(unittest.TestCase):
 class OpenIssueTest(unittest.TestCase):
     def test_should_answer_the_url_of_the_issue_opened_under_the_account_environment(self):
         # Arrange
-        runtime = create_runtime("https://github.com/ada/shop/issues/7\n")
+        gh = create_gh("https://github.com/ada/shop/issues/7\n")
+        runtime = create_test_runtime(run_process=gh)
         request = {
             "repository": "/projects/shop",
             "title": "the cart forgets",
@@ -499,7 +509,7 @@ class OpenIssueTest(unittest.TestCase):
         # Assert
         self.assertEqual(issue, {"schema_version": 1, "url": "https://github.com/ada/shop/issues/7"})
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=("gh", "issue", "create", "--title", "the cart forgets", "--body-file", "-"),
@@ -564,7 +574,8 @@ LISTED_PAGE = {
 class ListOpenPullRequestsTest(unittest.TestCase):
     def test_should_describe_each_pull_request_of_the_state_asked(self):
         # Arrange
-        runtime = create_runtime(json.dumps([LISTED_PAGE]))
+        gh = create_gh(json.dumps([LISTED_PAGE]))
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         listing = list_pull_requests({**MILESTONES_REQUEST, "state": "open"}, runtime)
@@ -601,7 +612,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
             },
         )
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=(
@@ -630,7 +641,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
 class ReadPullRequestTest(unittest.TestCase):
     def test_should_describe_the_pull_request_its_head_and_its_checks(self):
         # Arrange
-        runtime = create_runtime(
+        gh = create_gh(
             json.dumps(
                 {
                     "number": 160,
@@ -642,6 +653,7 @@ class ReadPullRequestTest(unittest.TestCase):
                 }
             )
         )
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         details = read_pull_request({**MILESTONES_REQUEST, "number": 160}, runtime)
@@ -669,7 +681,8 @@ class PostReviewTest(unittest.TestCase):
         rows = [("approve", "event=APPROVE"), ("request_changes", "event=REQUEST_CHANGES")]
         for event, expected_field in rows:
             with self.subTest(event=event):
-                runtime = create_runtime("")
+                gh = create_gh("")
+                runtime = create_test_runtime(run_process=gh)
 
                 # Act
                 answer = post_review(
@@ -688,7 +701,7 @@ class PostReviewTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(answer, {"schema_version": 1})
                 self.assertEqual(
-                    runtime.requests,
+                    gh.requests,
                     [
                         ProcessRequest(
                             argv=(
@@ -719,7 +732,7 @@ CHECKS_OF_PULL_REQUEST_42 = ("gh", "pr", "checks", "42", "--json", "name,link")
 class ReadCheckLogsTest(unittest.TestCase):
     def test_should_keep_the_last_lines_of_the_log_of_each_check_asked(self):
         # Arrange
-        runtime = create_runtime_answering_by_argv(
+        gh = create_gh_answering_by_argv(
             {
                 CHECKS_OF_PULL_REQUEST_42: json.dumps(
                     [
@@ -730,6 +743,7 @@ class ReadCheckLogsTest(unittest.TestCase):
                 ("gh", "api", "repos/{owner}/{repo}/actions/jobs/70/logs"): "set up\nrun\nFAIL test_cart\nexit 1\n",
             }
         )
+        runtime = create_test_runtime(run_process=gh)
         request = {
             "schema_version": 1,
             "repository": "/projects/shop",
@@ -747,13 +761,14 @@ class ReadCheckLogsTest(unittest.TestCase):
 
     def test_should_hold_no_tail_for_a_check_whose_log_the_forge_does_not_keep(self):
         # Arrange
-        runtime = create_runtime_answering_by_argv(
+        gh = create_gh_answering_by_argv(
             {
                 CHECKS_OF_PULL_REQUEST_42: json.dumps(
                     [{"name": "coverage", "link": "https://app.codecov.io/gh/octo/shop"}]
                 )
             }
         )
+        runtime = create_test_runtime(run_process=gh)
         request = {
             "schema_version": 1,
             "repository": "/projects/shop",
@@ -771,7 +786,8 @@ class ReadCheckLogsTest(unittest.TestCase):
 
     def test_should_run_gh_in_the_repository_as_the_login_of_the_environment(self):
         # Arrange
-        runtime = create_runtime_answering_by_argv({CHECKS_OF_PULL_REQUEST_42: json.dumps([])})
+        gh = create_gh_answering_by_argv({CHECKS_OF_PULL_REQUEST_42: json.dumps([])})
+        runtime = create_test_runtime(run_process=gh)
         request = {
             "schema_version": 1,
             "repository": "/projects/shop",
@@ -786,7 +802,7 @@ class ReadCheckLogsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=CHECKS_OF_PULL_REQUEST_42,
@@ -813,7 +829,7 @@ def create_review_threads_page(threads: list[dict]) -> str:
 class ListReviewThreadsTest(unittest.TestCase):
     def test_should_answer_each_open_thread_by_its_identifier_with_its_first_comment(self):
         # Arrange
-        runtime = create_runtime(
+        gh = create_gh(
             create_review_threads_page(
                 [
                     {
@@ -826,6 +842,7 @@ class ListReviewThreadsTest(unittest.TestCase):
                 ]
             )
         )
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
@@ -849,7 +866,7 @@ class ListReviewThreadsTest(unittest.TestCase):
 
     def test_should_leave_out_a_resolved_thread(self):
         # Arrange
-        runtime = create_runtime(
+        gh = create_gh(
             create_review_threads_page(
                 [
                     {
@@ -862,6 +879,7 @@ class ListReviewThreadsTest(unittest.TestCase):
                 ]
             )
         )
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
@@ -871,7 +889,7 @@ class ListReviewThreadsTest(unittest.TestCase):
 
     def test_should_name_no_author_for_a_comment_of_a_deleted_account(self):
         # Arrange
-        runtime = create_runtime(
+        gh = create_gh(
             create_review_threads_page(
                 [
                     {
@@ -884,6 +902,7 @@ class ListReviewThreadsTest(unittest.TestCase):
                 ]
             )
         )
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         answer = list_review_threads(REVIEW_THREADS_REQUEST, runtime)
@@ -893,14 +912,15 @@ class ListReviewThreadsTest(unittest.TestCase):
 
     def test_should_ask_the_threads_of_the_pull_request_in_the_repository_as_the_login_of_the_environment(self):
         # Arrange
-        runtime = create_runtime(create_review_threads_page([]))
+        gh = create_gh(create_review_threads_page([]))
+        runtime = create_test_runtime(run_process=gh)
 
         # Act
         list_review_threads(REVIEW_THREADS_REQUEST, runtime)
 
         # Assert
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=(
@@ -927,7 +947,8 @@ class ListReviewThreadsTest(unittest.TestCase):
 class ReplyReviewThreadTest(unittest.TestCase):
     def test_should_reply_on_the_thread_with_the_body_as_the_login_of_the_environment(self):
         # Arrange
-        runtime = create_runtime(json.dumps({"data": {}}))
+        gh = create_gh(json.dumps({"data": {}}))
+        runtime = create_test_runtime(run_process=gh)
         request = {
             "schema_version": 1,
             "repository": "/projects/shop",
@@ -942,7 +963,7 @@ class ReplyReviewThreadTest(unittest.TestCase):
         # Assert
         self.assertEqual(answer, {"schema_version": 1})
         self.assertEqual(
-            runtime.requests,
+            gh.requests,
             [
                 ProcessRequest(
                     argv=(

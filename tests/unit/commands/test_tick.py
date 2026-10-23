@@ -10,7 +10,6 @@ import unittest
 from argparse import Namespace
 from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import ANY
 
 from brigade.commands.tick import COMMAND
@@ -32,7 +31,9 @@ from tests.unit.commands.run_doubles import (
 )
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.plugin_double import PluginDouble
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+from tests.unit.spawned_process_double import SpawnedProcessDouble
 
 GIT_PUSH = ("git", "push")
 GIT_REBASE = ("git", "rebase")
@@ -120,7 +121,7 @@ class TickWithoutAKnownModeTest(unittest.TestCase):
 
 
 def _resolve_a_forge(kind: str, name: str, **places):
-    return SimpleNamespace(kind=kind, name=name)
+    return PluginDouble(kind=kind, name=name)
 
 
 def _create_quiet_runtime(root: Path) -> Runtime:
@@ -461,7 +462,7 @@ class SpawnReadingTheLedgerDouble:
 
     def spawn(self, request):
         self.last_events_at_spawn.append(json.loads(self.ledger.read_text(encoding="utf-8").splitlines()[-1]))
-        return SimpleNamespace(pid=os.getpid())
+        return SpawnedProcessDouble(pid=os.getpid())
 
 
 class SpawnRecorderDouble:
@@ -470,7 +471,7 @@ class SpawnRecorderDouble:
 
     def spawn(self, request):
         self.argvs.append(request.argv[2:])
-        return SimpleNamespace(pid=os.getpid())
+        return SpawnedProcessDouble(pid=os.getpid())
 
 
 class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):

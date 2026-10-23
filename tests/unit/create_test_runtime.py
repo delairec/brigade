@@ -4,9 +4,11 @@ from pathlib import Path
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.trail_writer import TrailWriter
+from tests.unit.create_test_paths import create_test_paths
 from tests.unit.refuse_to_run import refuse_to_run
 
 FIXED_NOW = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
+UNWRITTEN_PATHS = create_test_paths(Path("/nonexistent"))
 
 
 def _refuse_to_spawn(request):
@@ -22,7 +24,7 @@ def _keep_no_trace(trace) -> None:
 
 
 def create_test_runtime(
-    paths: Paths,
+    paths: Paths = UNWRITTEN_PATHS,
     run_process=refuse_to_run,
     spawn_process=_refuse_to_spawn,
     resolve_plugin=_refuse_to_resolve,

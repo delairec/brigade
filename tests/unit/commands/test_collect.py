@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.collect import COMMAND, collect
+from brigade.system.run_process import ProcessRecord
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 
 NOTES_DOCUMENT = (
@@ -15,6 +15,8 @@ NOTES_DOCUMENT = (
 )
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+
+COLLECTOR_DIRECTORY = "/srv/app"
 
 
 class ScriptedCollectorDouble:
@@ -27,7 +29,9 @@ class ScriptedCollectorDouble:
 
     def collect(self, environment: dict, runtime, equipment):
         self.environments.append(environment)
-        return SimpleNamespace(exit_code=0, stdout=NOTES_DOCUMENT, stderr="", duration_ms=40)
+        return ProcessRecord(
+            argv=self.command, cwd=COLLECTOR_DIRECTORY, exit_code=0, stdout=NOTES_DOCUMENT, stderr="", duration_ms=40
+        )
 
 
 class CollectTest(unittest.TestCase):

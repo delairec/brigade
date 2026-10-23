@@ -2,20 +2,20 @@ import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.study_run import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_corpus_double, write_ledger, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.plugin_double import PluginDouble
 
 RUN_ID = "20261019T090000Z-e10d04"
 NO_STUDY_RECORDED = {}
 
 
 def _resolve_any_plugin(kind: str, name: str, **places):
-    return SimpleNamespace(kind=kind, name=name)
+    return PluginDouble(kind=kind, name=name)
 
 
 class StudyRunTextTest(unittest.TestCase):

@@ -2,13 +2,13 @@ import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.commands.task_promote import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.plugin_double import PluginDouble
 
 THE_TASK_OF_THE_BRANCH = None
 THE_LAST_PULL_REQUEST = None
@@ -19,7 +19,7 @@ MAIN_BRANCH_CHECKOUT = {
 
 
 def _resolve_a_forge(kind: str, name: str, **places):
-    return SimpleNamespace(kind=kind, name=name)
+    return PluginDouble(kind=kind, name=name)
 
 
 class TaskPromoteTextTest(unittest.TestCase):

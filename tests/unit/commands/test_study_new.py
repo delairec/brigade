@@ -2,12 +2,12 @@ import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import ANY
 
 from brigade.commands.study_new import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
+from tests.unit.plugin_double import PluginDouble
 
 TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
 MACHINE_WIDE = None
@@ -137,7 +137,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 def _resolve_no_collector(kind: str, name: str, **places):
     if kind == "collector":
         raise BrigadeError(f"no collector {name}")
-    return SimpleNamespace(kind=kind, name=name)
+    return PluginDouble(kind=kind, name=name)
 
 
 class StudyNewOfAStudyOnDemandTest(unittest.TestCase):

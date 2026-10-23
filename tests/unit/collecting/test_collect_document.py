@@ -3,13 +3,13 @@ import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.collecting.collect_document import Collection, CollectionRequest, collect_document
 from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
+from brigade.system.run_process import ProcessRecord
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -49,15 +49,24 @@ MISSHAPEN_DOCUMENT = {
 INPUTS = CollectorInputs(project=Path("/srv/oak"), since=date(2026, 10, 1), parameters={"city": "Lyon"})
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
 
+COLLECTOR_DIRECTORY = "/srv/shop"
+
 
 class CollectorDouble:
     def __init__(self, exit_code: int, stdout: str, stderr: str = ""):
         self.name = "weather"
         self.command = "brigade-collector-weather"
         self.environments = []
-        self._answer = SimpleNamespace(exit_code=exit_code, stdout=stdout, stderr=stderr, duration_ms=40)
+        self._answer = ProcessRecord(
+            argv=(self.command,),
+            cwd=COLLECTOR_DIRECTORY,
+            exit_code=exit_code,
+            stdout=stdout,
+            stderr=stderr,
+            duration_ms=40,
+        )
 
-    def collect(self, environment: dict, runtime, equipment) -> SimpleNamespace:
+    def collect(self, environment: dict, runtime, equipment) -> ProcessRecord:
         self.environments.append(environment)
         return self._answer
 

@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.adapters.documents import markdown
 from brigade.commands.run import COMMAND, run
@@ -22,6 +21,7 @@ from tests.unit.commands.run_doubles import (
 )
 from tests.unit.create_test_paths import NO_SEARCH_PATH, create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.plugin_double import PluginDouble
 from tests.unit.refuse_to_run import refuse_to_run
 
 UNKNOWN_CLIENT = "no-such-client"
@@ -278,7 +278,11 @@ def _spawn_a_client_that_exits(request):
 
 
 def _resolve_the_delivering_client(kind: str, name: str, **places):
-    plugins = {"client": ClientDeliveringTheTaskDouble(), "document": markdown, "forge": SimpleNamespace()}
+    plugins = {
+        "client": ClientDeliveringTheTaskDouble(),
+        "document": markdown,
+        "forge": PluginDouble(kind="forge", name="github"),
+    }
     return plugins[kind]
 
 

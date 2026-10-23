@@ -1,8 +1,9 @@
 import os
-from types import SimpleNamespace
 
 from brigade.adapters.documents import markdown
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
+from tests.unit.plugin_double import PluginDouble
+from tests.unit.spawned_process_double import SpawnedProcessDouble
 
 STEP_COUNTING_PROBE = {
     "schema_version": 1,
@@ -21,10 +22,10 @@ def create_plugin_resolution(probe: dict, forge=None):
         {
             ("client", "double"): ScriptedClient({"probe": probe}),
             ("document", "markdown"): markdown,
-            ("forge", "github"): forge or SimpleNamespace(),
+            ("forge", "github"): forge or PluginDouble(kind="forge", name="github"),
         }
     )
 
 
 def spawn_as_this_process(request):
-    return SimpleNamespace(pid=os.getpid())
+    return SpawnedProcessDouble(pid=os.getpid())

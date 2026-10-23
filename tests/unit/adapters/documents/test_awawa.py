@@ -1,6 +1,5 @@
 import os
 import tempfile
-import types
 import unittest
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from brigade.adapters.documents.awawa import (
 )
 from tests.awawa.provide_awawa import provide_awawa
 from tests.create_process_runner import create_process_runner
+from tests.unit.create_test_runtime import create_test_runtime
 
 SCHEMA = (
     "SCHEMA STEP\n"
@@ -36,7 +36,7 @@ class AwawaDocumentTestCase(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.path = Path(directory.name) / "progress.awawa"
-        self.runtime = types.SimpleNamespace(run_process=create_process_runner(os.environ["PATH"]))
+        self.runtime = create_test_runtime(run_process=create_process_runner(os.environ["PATH"]))
 
     def describe_request(self, *, role_has_shell: bool = True) -> dict:
         return {
@@ -129,7 +129,7 @@ class AwawaDocumentEntryTest(AwawaDocumentTestCase):
 class AwawaDocumentReadingTest(AwawaDocumentTestCase):
     def setUp(self):
         super().setUp()
-        self.runtime = types.SimpleNamespace(run_process=create_process_runner(provide_awawa(self)))
+        self.runtime = create_test_runtime(run_process=create_process_runner(provide_awawa(self)))
 
     def test_should_give_a_resuming_run_the_inventory_of_each_type_and_the_last_entity(self):
         # Arrange
@@ -193,7 +193,7 @@ class AwawaDocumentReadingTest(AwawaDocumentTestCase):
 class AwawaDocumentRenderingTest(AwawaDocumentTestCase):
     def setUp(self):
         super().setUp()
-        self.runtime = types.SimpleNamespace(run_process=create_process_runner(provide_awawa(self)))
+        self.runtime = create_test_runtime(run_process=create_process_runner(provide_awawa(self)))
 
     def test_should_render_each_entity_as_readable_text_and_as_entities(self):
         # Arrange

@@ -1,20 +1,21 @@
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.adapters.schedulers.systemd import install, read_status
 from brigade.errors import ToolNotFound
+from brigade.runtime import Runtime
 from brigade.system.run_process import ProcessRecord
+from tests.unit.create_test_runtime import create_test_runtime
 
 
-def create_runtime(exit_code: int, stdout: str) -> SimpleNamespace:
+def create_runtime(exit_code: int, stdout: str) -> Runtime:
     def run_systemctl(request):
         return ProcessRecord(
             argv=request.argv, cwd=request.cwd, exit_code=exit_code, stdout=stdout, stderr="", duration_ms=0
         )
 
-    return SimpleNamespace(run_process=run_systemctl)
+    return create_test_runtime(run_process=run_systemctl)
 
 
 class ReadStatusOfAnInstalledTimerTest(unittest.TestCase):
@@ -73,7 +74,9 @@ class ReadStatusOfANextActivationTest(ReadStatusOfAnInstalledTimerTest):
             raise ToolNotFound("systemctl is not on PATH")
 
         # Act
-        status = read_status({"unit_directory": str(self.units)}, SimpleNamespace(run_process=refuse_missing_systemctl))
+        status = read_status(
+            {"unit_directory": str(self.units)}, create_test_runtime(run_process=refuse_missing_systemctl)
+        )
 
         # Assert
         self.assertIsNone(status["next_activation"])
@@ -99,7 +102,7 @@ class InstallSystemdTest(unittest.TestCase):
         }
 
         # Act
-        installation = install(request, SimpleNamespace(run_process=self.run_systemctl))
+        installation = install(request, create_test_runtime(run_process=self.run_systemctl))
 
         # Assert
         service = (self.units / "brigade.service").read_text()
