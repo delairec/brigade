@@ -7,7 +7,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.process_launcher import ProcessLauncher
@@ -18,10 +17,10 @@ LOCK_WAIT_S = 5
 
 class CorpusTestCase(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(root / "projects" / "app", self.machine.describe_environment())
         self.project.write("corpus/tasks.awawa", "committed\n")
@@ -130,7 +129,7 @@ class BrigadeCorpusWithAwawaArgumentsTest(CorpusTestCase):
         # Arrange
         environment = {
             **self.machine.describe_environment(),
-            "PATH": f"{RELAY_EXECUTABLES}{os.pathsep}{os.environ['PATH']}",
+            "PATH": f"{RELAY_EXECUTABLES}{os.pathsep}{self.machine.search_path}",
         }
 
         # Act

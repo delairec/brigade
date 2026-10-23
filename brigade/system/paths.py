@@ -1,4 +1,5 @@
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,7 @@ SETUP_DIRECTORY = "setups"
 HEARTBEAT_FILE = "tick.json"
 SCHEMA_FILE = "_schema.awawa"
 RUN_DIRECTORY_VARIABLE = "BRIGADE_RUN_DIR"
+HOME_VARIABLE = "HOME"
 
 
 @dataclass(frozen=True)
@@ -44,27 +46,34 @@ class Paths:
         return self.config_root / SCHEMA_FILE
 
 
-def _resolve_base(variable: str, home_relative_default: str) -> Path:
-    base = Path(os.environ.get(variable, ""))
+def _resolve_base(environment: Mapping[str, str], variable: str, home: Path, home_relative_default: str) -> Path:
+    base = Path(environment.get(variable, ""))
     if base.is_absolute():
         return base
-    return Path.home() / home_relative_default
+    return home / home_relative_default
 
 
-def _resolve_absolute_path(variable: str) -> Path | None:
-    path = Path(os.environ.get(variable, ""))
+def _resolve_absolute_path(environment: Mapping[str, str], variable: str) -> Path | None:
+    path = Path(environment.get(variable, ""))
     if path.is_absolute():
         return path
     return None
 
 
-def build_paths() -> Paths:
+def _resolve_home(environment: Mapping[str, str]) -> Path:
+    if HOME_VARIABLE in environment:
+        return Path(environment[HOME_VARIABLE])
+    return Path.home()
+
+
+def build_paths(environment: Mapping[str, str]) -> Paths:
+    home = _resolve_home(environment)
     return Paths(
-        config_root=_resolve_base("XDG_CONFIG_HOME", ".config") / APPLICATION_DIRECTORY,
-        state_root=_resolve_base("XDG_STATE_HOME", ".local/state") / APPLICATION_DIRECTORY,
-        cache_root=_resolve_base("XDG_CACHE_HOME", ".cache") / APPLICATION_DIRECTORY,
-        home=Path.home(),
-        executable_search_path=os.environ.get("PATH", os.defpath),
+        config_root=_resolve_base(environment, "XDG_CONFIG_HOME", home, ".config") / APPLICATION_DIRECTORY,
+        state_root=_resolve_base(environment, "XDG_STATE_HOME", home, ".local/state") / APPLICATION_DIRECTORY,
+        cache_root=_resolve_base(environment, "XDG_CACHE_HOME", home, ".cache") / APPLICATION_DIRECTORY,
+        home=home,
+        executable_search_path=environment.get("PATH", os.defpath),
         package_file=Path(brigade.__file__),
-        run_directory=_resolve_absolute_path(RUN_DIRECTORY_VARIABLE),
+        run_directory=_resolve_absolute_path(environment, RUN_DIRECTORY_VARIABLE),
     )

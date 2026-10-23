@@ -1,9 +1,12 @@
+import os
 import unittest
 from unittest.mock import ANY
 
 from brigade.errors import ToolFailure, ToolNotFound
 from brigade.system.process_trace import ProcessTrace
 from brigade.system.run_process import ProcessRecord, ProcessRequest, run_process
+
+INHERITED_ENVIRONMENT = os.environ
 
 
 class RunProcessPastItsTimeoutTest(unittest.TestCase):
@@ -14,7 +17,7 @@ class RunProcessPastItsTimeoutTest(unittest.TestCase):
     def test_should_refuse_naming_the_command_and_its_timeout(self):
         # Act
         with self.assertRaises(ToolFailure) as refusal:
-            run_process(self.request, self.traces.append)
+            run_process(self.request, self.traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(str(refusal.exception), "sleep 30 timed out after 0.1 s")
@@ -22,7 +25,7 @@ class RunProcessPastItsTimeoutTest(unittest.TestCase):
     def test_should_trace_the_command_timed_out_with_no_exit_code(self):
         # Act
         with self.assertRaises(ToolFailure):
-            run_process(self.request, self.traces.append)
+            run_process(self.request, self.traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(
@@ -42,7 +45,7 @@ class RunProcessWithTheVariablesOfItsCallerTest(unittest.TestCase):
         )
 
         # Act
-        record = run_process(request, [].append)
+        record = run_process(request, [].append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(record.stdout, "token-of-octo-bot")
@@ -65,7 +68,7 @@ class RunProcessOfAnAcceptedExitCodeTest(unittest.TestCase):
 
     def test_should_answer_the_record_with_the_milliseconds_the_process_took(self):
         # Act
-        record = run_process(self.request, self.traces.append)
+        record = run_process(self.request, self.traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(
@@ -75,7 +78,7 @@ class RunProcessOfAnAcceptedExitCodeTest(unittest.TestCase):
 
     def test_should_trace_the_command_exited_with_its_code_and_duration(self):
         # Act
-        record = run_process(self.request, self.traces.append)
+        record = run_process(self.request, self.traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(
@@ -92,7 +95,7 @@ class RunProcessOfARefusedExitCodeTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolFailure):
-            run_process(request, traces.append)
+            run_process(request, traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(
@@ -108,7 +111,7 @@ class RunProcessInAWorkingDirectoryThatDoesNotExistTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolFailure) as refusal:
-            run_process(request, traces.append)
+            run_process(request, traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(str(refusal.exception), "true: no working directory /brigade-absent-directory")
@@ -120,7 +123,7 @@ class RunProcessInAWorkingDirectoryThatDoesNotExistTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolFailure) as refusal:
-            run_process(request, traces.append)
+            run_process(request, traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertNotIsInstance(refusal.exception, ToolNotFound)
@@ -132,7 +135,7 @@ class RunProcessInAWorkingDirectoryThatDoesNotExistTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolFailure):
-            run_process(request, traces.append)
+            run_process(request, traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(
@@ -157,7 +160,7 @@ class RunProcessOfACommandOffThePathTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolNotFound):
-            run_process(request, traces.append)
+            run_process(request, traces.append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(
@@ -176,7 +179,7 @@ class RunProcessWithAnInputTest(unittest.TestCase):
         request = ProcessRequest(argv=("cat",), cwd="/", timeout_s=10, stdin="the brief\n")
 
         # Act
-        record = run_process(request, [].append)
+        record = run_process(request, [].append, INHERITED_ENVIRONMENT)
 
         # Assert
         self.assertEqual(record.stdout, "the brief\n")

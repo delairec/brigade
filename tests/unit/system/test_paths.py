@@ -1,16 +1,9 @@
-import os
 import unittest
 from pathlib import Path
-from unittest import mock
 
 import brigade
 from brigade.system.paths import Paths, build_paths
 from tests.unit.create_test_paths import PACKAGE_FILE
-
-
-def build_paths_under(environment: dict) -> Paths:
-    with mock.patch.dict(os.environ, environment, clear=True):
-        return build_paths()
 
 
 class BuildPathsTest(unittest.TestCase):
@@ -25,7 +18,7 @@ class BuildPathsTest(unittest.TestCase):
         }
 
         # Act
-        paths = build_paths_under(environment)
+        paths = build_paths(environment)
 
         # Assert
         self.assertEqual(
@@ -58,7 +51,7 @@ class BuildPathsTest(unittest.TestCase):
         for case, environment in rows:
             with self.subTest(case=case):
                 # Act
-                paths = build_paths_under(environment)
+                paths = build_paths(environment)
 
                 # Assert
                 self.assertEqual(
@@ -72,6 +65,18 @@ class BuildPathsTest(unittest.TestCase):
                         package_file=Path(brigade.__file__),
                     ),
                 )
+
+
+class BuildPathsWithoutAHomeVariableTest(unittest.TestCase):
+    def test_should_take_the_home_of_the_account_when_no_variable_names_it(self):
+        # Arrange
+        no_variable = {}
+
+        # Act
+        paths = build_paths(no_variable)
+
+        # Assert
+        self.assertEqual(paths.home, Path.home())
 
 
 class PathsSharedBySeveralComponentsTest(unittest.TestCase):
@@ -103,7 +108,7 @@ class PathsSharedBySeveralComponentsTest(unittest.TestCase):
 class BuildPathsInsideARunTest(unittest.TestCase):
     def test_should_hold_the_run_directory_brigade_run_exported(self):
         # Act
-        paths = build_paths_under({"HOME": "/home/ada", "BRIGADE_RUN_DIR": "/srv/state/brigade/runs/r1"})
+        paths = build_paths({"HOME": "/home/ada", "BRIGADE_RUN_DIR": "/srv/state/brigade/runs/r1"})
 
         # Assert
         self.assertEqual(paths.run_directory, Path("/srv/state/brigade/runs/r1"))

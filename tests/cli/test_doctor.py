@@ -680,11 +680,17 @@ AGENT_LACKING_ITS_REASONING = 'AGENT planner\n\tWORK "the plan of a wave"\n'
 class BrigadeDoctorReportsTheInstructionsCorpusTest(DoctorTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.search_path = provide_awawa(self)
         self.instructions = Path(self.config_home.name) / "instructions"
         self.instructions.mkdir()
         (self.instructions / "_schema.awawa").write_text(INSTRUCTIONS_SCHEMA)
-        self.machine_with_awawa = [GIT, str(Path(shutil.which("awawa")).parent), SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
+        self.machine_with_awawa = [
+            GIT,
+            str(Path(shutil.which("awawa", path=self.search_path)).parent),
+            SYSTEMD_RUNNING,
+            GH_ACTIVE,
+            AWAWA_WEB,
+        ]
 
     def test_should_report_a_warning_with_its_fallback_when_none_is_configured(self):
         # Arrange
@@ -1045,7 +1051,7 @@ POLICY_UNDER_APPROVAL = "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tREVIEW a
 class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.search_path = provide_awawa(self)
         self.write_configuration('client = "fake"\n')
         corpus = self.configuration.parent
         shutil.copyfile(REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl", corpus / "_schema.awawa")
@@ -1055,7 +1061,7 @@ class BrigadeDoctorWarnsOfAReviewByApprovalWithoutDistinctLoginsTest(DoctorTestC
             SYSTEMD_RUNNING,
             GH_ACCOUNTS,
             AWAWA_WEB,
-            str(Path(shutil.which("awawa")).parent),
+            str(Path(shutil.which("awawa", path=self.search_path)).parent),
         ]
 
     def test_should_warn_naming_the_project_whose_build_and_review_slots_share_no_two_logins(self):

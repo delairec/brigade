@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 
@@ -88,10 +87,10 @@ def install_executable(path: Path, script: str) -> None:
 
 class CollectTestCase(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         self.root_path = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(self.root_path)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
             self.root_path / "projects" / "app",
@@ -113,7 +112,7 @@ class CollectTestCase(unittest.TestCase):
         return {**self.machine.describe_environment(), **variables}
 
     def describe_environment_with_collectors_on_path(self) -> dict:
-        return self.describe_environment_with(PATH=f"{self.path_collectors}{os.pathsep}{os.environ['PATH']}")
+        return self.describe_environment_with(PATH=f"{self.path_collectors}{os.pathsep}{self.machine.search_path}")
 
     def run_brigade(self, *arguments: str, environment: dict | None = None):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments, environment=environment, cwd=self.project.path)
@@ -539,7 +538,7 @@ class BrigadeCollectorsListWithoutCollectorDirectoriesTest(CollectTestCase):
         # Arrange
         awawa_alone = self.root_path / "awawa-alone"
         awawa_alone.mkdir()
-        (awawa_alone / "awawa").symlink_to(shutil.which("awawa"))
+        (awawa_alone / "awawa").symlink_to(shutil.which("awawa", path=self.machine.search_path))
 
         # Act
         completed = self.run_brigade(
@@ -950,7 +949,7 @@ class BuiltInCollectorsLaunchNoModelTest(BuiltInCollectorsTestCase):
         self.tools = self.root_path / "tools"
         self.tools.mkdir()
         (self.tools / "git").symlink_to(shutil.which("git"))
-        (self.tools / "awawa").symlink_to(shutil.which("awawa"))
+        (self.tools / "awawa").symlink_to(shutil.which("awawa", path=self.machine.search_path))
 
     def test_should_spawn_no_process_but_git_and_awawa(self):
         for collector in ["git-log", "git-diff-stat", "worktrees", "corpus", "ledger"]:
@@ -990,7 +989,7 @@ class PrListTestCase(CollectTestCase):
         self.machine.write_configuration(CLI_LOGIN_CONFIGURATION)
 
     def describe_environment_with_gh(self) -> dict:
-        return self.describe_environment_with(PATH=f"{self.tools}{os.pathsep}{os.environ['PATH']}")
+        return self.describe_environment_with(PATH=f"{self.tools}{os.pathsep}{self.machine.search_path}")
 
     def collect_pull_requests(self, *arguments: str):
         return self.run_collect("pr-list", *arguments, environment=self.describe_environment_with_gh())
@@ -1119,7 +1118,7 @@ class BrigadeCollectPrListTest(PrListTestCase):
     def test_should_spawn_no_process_but_git_awawa_and_gh(self):
         # Arrange
         (self.tools / "git").symlink_to(shutil.which("git"))
-        (self.tools / "awawa").symlink_to(shutil.which("awawa"))
+        (self.tools / "awawa").symlink_to(shutil.which("awawa", path=self.machine.search_path))
         (self.tools / "cat").symlink_to(shutil.which("cat"))
 
         # Act

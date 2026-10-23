@@ -45,12 +45,11 @@ class EnvironmentReadsGuardTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(violations, [expected_violation])
 
-    def test_should_let_the_paths_and_the_process_runner_read_the_environment(self):
+    def test_should_let_the_paths_and_the_launcher_read_the_environment(self):
         # Arrange
         rows = [
             "brigade/system/paths.py",
-            "brigade/system/run_process.py",
-            "brigade/system/build_process_environment.py",
+            "brigade/launcher.py",
         ]
         for module_path in rows:
             with self.subTest(module=module_path), tempfile.TemporaryDirectory() as root:

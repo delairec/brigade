@@ -4,7 +4,6 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 from tests.process_launcher import ProcessLauncher
 
@@ -110,12 +109,13 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_create_a_corpus_that_lints_clean(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
 
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "lint", "--strict", str(self.machine.corpus)],
+            env=self.machine.describe_environment(),
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,
@@ -127,7 +127,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_install_a_schema_whose_policy_reviews_by_approval_or_verdict_only(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         (self.machine.corpus / "projects.awawa").write_text(SHOP_PROJECT)
         rows = [
@@ -143,6 +143,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
                 # Act
                 completed = ProcessLauncher.run(
                     ["awawa", "lint", "--strict", str(self.machine.corpus)],
+                    env=self.machine.describe_environment(),
                     cwd=self.machine.corpus,
                     capture_output=True,
                     text=True,
@@ -154,12 +155,13 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_install_a_schema_whose_project_merges_by_rebase_by_default(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
 
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "show", "PROJECT", "--json", str(self.machine.corpus)],
+            env=self.machine.describe_environment(),
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,
@@ -178,7 +180,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
 
     def test_should_install_a_schema_accepting_the_report_of_a_wave(self):
         # Arrange
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         (self.machine.corpus / "reports.awawa").write_text(
             "REPORT shop_w2\n"
@@ -199,6 +201,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "lint", "--strict", str(self.machine.corpus)],
+            env=self.machine.describe_environment(),
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,

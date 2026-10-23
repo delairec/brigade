@@ -1,7 +1,6 @@
 import os
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from tests.awawa.replay_recording import replay_recording
 
@@ -25,14 +24,12 @@ RECORDING_OF_TWO_RUNS_OF_ONE_SECOND = {
 
 
 class ReplayRecordingTest(unittest.TestCase):
-    def setUp(self):
-        path = mock.patch.dict(os.environ, {"PATH": f"{SORTING_AWAWA}{os.pathsep}{os.environ['PATH']}"})
-        path.start()
-        self.addCleanup(path.stop)
-
     def test_should_replay_the_run_ids_in_the_order_they_sorted_when_recorded(self):
+        # Arrange
+        search_path_opening_on_a_sorting_awawa = f"{SORTING_AWAWA}{os.pathsep}{os.environ['PATH']}"
+
         # Act
-        outcome = replay_recording(self, RECORDING_OF_TWO_RUNS_OF_ONE_SECOND)
+        outcome = replay_recording(self, RECORDING_OF_TWO_RUNS_OF_ONE_SECOND, search_path_opening_on_a_sorting_awawa)
 
         # Assert
         self.assertEqual(outcome["stdout"], "ANSWER trees_<run_name:2>\nANSWER trees_<run_name:1>\n")

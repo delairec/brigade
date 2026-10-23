@@ -4,7 +4,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 
@@ -80,7 +79,7 @@ class TaskContextTestCase(unittest.TestCase):
         self.state = self.machine.state_home / "brigade"
         self.recordings = root / "recordings"
         self.recordings.mkdir()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.configure()
         self.project = TemporaryProject(root / "projects" / "shop", self.describe_environment())

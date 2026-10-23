@@ -7,7 +7,7 @@ from unittest.mock import ANY
 from brigade.corpus.check_corpus import CorpusCheck, check_corpus
 from brigade.system.run_process import ProcessRecord
 from tests.awawa.provide_awawa import provide_awawa
-from tests.integration.run_process_without_trail import run_process_without_trail
+from tests.create_process_runner import create_process_runner
 
 SCHEMA = 'SCHEMA TASK\n\tDESC "a change"\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n'
 CANONICAL_TASKS = "TASK S2\n\tSTATUS implemented\n"
@@ -20,7 +20,7 @@ POLICY_ASKING_FOR_WAVE_STARTS = "POLICY shop_waves\n\tPROJECT @PROJECT.shop\n\tW
 
 class CheckCorpusTest(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
+        self.run_process = create_process_runner(provide_awawa(self))
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)
         (self.corpus / "_schema.awawa").write_text(SCHEMA)
@@ -33,7 +33,7 @@ class CheckCorpusTest(unittest.TestCase):
         (self.corpus / "tasks.awawa").write_text(CANONICAL_TASKS)
 
         # Act
-        checks = check_corpus(run_process_without_trail, self.corpus)
+        checks = check_corpus(self.run_process, self.corpus)
 
         # Assert
         self.assertEqual(
@@ -69,7 +69,7 @@ class CheckCorpusTest(unittest.TestCase):
         (self.corpus / "tasks.awawa").write_text(UNFORMATTED_TASKS)
 
         # Act
-        checks = check_corpus(run_process_without_trail, self.corpus)
+        checks = check_corpus(self.run_process, self.corpus)
 
         # Assert
         self.assertEqual(checks[0].record.exit_code, 1)
@@ -79,7 +79,7 @@ class CheckCorpusTest(unittest.TestCase):
         (self.corpus / "tasks.awawa").write_text(UNDECLARED_STATUS_TASKS)
 
         # Act
-        checks = check_corpus(run_process_without_trail, self.corpus)
+        checks = check_corpus(self.run_process, self.corpus)
 
         # Assert
         self.assertEqual(checks[1].record.exit_code, 1)
@@ -91,7 +91,7 @@ class CheckCorpusTest(unittest.TestCase):
         (self.corpus / "policies.awawa").write_text(POLICY_ASKING_FOR_WAVE_STARTS)
 
         # Act
-        checks = check_corpus(run_process_without_trail, self.corpus)
+        checks = check_corpus(self.run_process, self.corpus)
 
         # Assert
         self.assertEqual(checks[1].record.exit_code, 0, checks[1].record.stdout)

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField, read_entities
 from tests.awawa.provide_awawa import provide_awawa
-from tests.integration.run_process_without_trail import run_process_without_trail
+from tests.create_process_runner import create_process_runner
 
 SHIPPED_SCHEMA = Path(__file__).resolve().parents[3] / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
 PROJECTS = (
@@ -26,7 +26,7 @@ POLICY = "POLICY alpha_policy\n\tPROJECT @PROJECT.alpha\n"
 
 class ReadEntitiesTest(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
+        self.run_process = create_process_runner(provide_awawa(self))
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)
         shutil.copyfile(SHIPPED_SCHEMA, self.corpus / "_schema.awawa")
@@ -40,7 +40,7 @@ class ReadEntitiesTest(unittest.TestCase):
         (self.corpus / "policies.awawa").write_text(POLICY)
 
         # Act
-        entities = read_entities(run_process_without_trail, self.corpus, "PROJECT")
+        entities = read_entities(self.run_process, self.corpus, "PROJECT")
 
         # Assert
         self.assertEqual(
@@ -72,7 +72,7 @@ class ReadEntitiesTest(unittest.TestCase):
         (self.corpus / "projects.awawa").write_text(PROJECTS)
 
         # Act
-        entities = read_entities(run_process_without_trail, self.corpus, "PROJECT", "MAIN==trunk")
+        entities = read_entities(self.run_process, self.corpus, "PROJECT", "MAIN==trunk")
 
         # Assert
         self.assertEqual(
@@ -91,7 +91,7 @@ class ReadEntitiesTest(unittest.TestCase):
 
     def test_should_read_none_when_no_entity_has_the_type(self):
         # Act
-        entities = read_entities(run_process_without_trail, self.corpus, "PROJECT")
+        entities = read_entities(self.run_process, self.corpus, "PROJECT")
 
         # Assert
         self.assertEqual(entities, ())

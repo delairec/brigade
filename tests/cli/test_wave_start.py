@@ -2,7 +2,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
@@ -39,10 +38,10 @@ OPEN_WAVE = (
 
 class WaveStartTestCase(FileWaitingTestCase):
     def setUp(self):
-        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
             root / "projects" / "shop", {**self.machine.describe_environment(), **PINNED_COMMIT_DATES}

@@ -6,7 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FINISHING_CLIENT, TURN_LIMIT_RESULT, RunTestCase
 from tests.cli.temporary_instructions import TemporaryInstructions
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT
@@ -393,7 +392,7 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
         # Arrange
         environment = {
             **self.machine.describe_environment(),
-            "PATH": os.pathsep.join([str(RECORDING_CLAUDE), os.environ["PATH"]]),
+            "PATH": os.pathsep.join([str(RECORDING_CLAUDE), self.machine.search_path]),
         }
 
         # Act
@@ -448,7 +447,7 @@ class BrigadeRunOnClaudeCodeTest(RunTestCase):
         # Arrange
         environment = {
             **self.machine.describe_environment(),
-            "PATH": os.pathsep.join([str(CLAUDE_AFTER_TASK_NOTIFICATION), os.environ["PATH"]]),
+            "PATH": os.pathsep.join([str(CLAUDE_AFTER_TASK_NOTIFICATION), self.machine.search_path]),
         }
 
         # Act
@@ -1525,7 +1524,7 @@ class BrigadeRunWithAClientThatGrantsNoToolsTest(RunTestCase):
 class BrigadeRunOfAReadingSlotOfAProjectTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         initialised = self.machine.run_init()
         self.assertEqual(initialised.returncode, 0, initialised.stderr)
         self.configure_fake('features = "step_count"\n')
@@ -1548,7 +1547,7 @@ class BrigadeRunOfAReadingSlotOfAProjectTest(RunTestCase):
 class BrigadeRunOfAProjectTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         initialised = self.machine.run_init()
         self.assertEqual(initialised.returncode, 0, initialised.stderr)
         self.configure_fake(COUNTING_CLIENT)
@@ -1942,7 +1941,7 @@ class ForgeAccountRunTestCase(RunTestCase):
         self.gh_record = Path(self.root.name) / "gh.txt"
         self.environment = {
             **self.machine.describe_environment(),
-            "PATH": os.pathsep.join([str(ENVIRONMENT_CLAUDE), str(ACCOUNTS_GH), os.environ["PATH"]]),
+            "PATH": os.pathsep.join([str(ENVIRONMENT_CLAUDE), str(ACCOUNTS_GH), self.machine.search_path]),
             "BRIGADE_ENVIRONMENT_RECORD": str(self.environment_record),
             "BRIGADE_GH_RECORD": str(self.gh_record),
         }
@@ -2062,7 +2061,7 @@ STEP_ENTRY = 'progress = "STEP s1\\n\\tDONE \\"read the task\\"\\n\\tNEXT \\"sec
 class BrigadeRunProgressFormTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
 
     def run_deliver(self):
         return self.run_brigade(
@@ -2332,7 +2331,7 @@ class BrigadeRunExportingItsDirectoryTest(RunTestCase):
             str(self.workspace),
             environment={
                 **self.machine.describe_environment(),
-                "PATH": os.pathsep.join([str(RUN_DIRECTORY_CLAUDE), os.environ["PATH"]]),
+                "PATH": os.pathsep.join([str(RUN_DIRECTORY_CLAUDE), self.machine.search_path]),
                 "BRIGADE_ENVIRONMENT_RECORD": str(self.environment_record),
             },
         )

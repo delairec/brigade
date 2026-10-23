@@ -6,7 +6,7 @@ from brigade.corpus.read_entities import Entity, EntityField
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import EntityNotDefined, ToolFailure
 from tests.awawa.provide_awawa import provide_awawa
-from tests.integration.run_process_without_trail import run_process_without_trail
+from tests.create_process_runner import create_process_runner
 
 NOT_UTF_8 = b"\xff\n"
 SCHEMA = 'SCHEMA AGENT\n\tDESC "a role"\n\tFIELD WORK string\n\t\tREPEATABLE\n\tFIELD BUDGET uint\n'
@@ -15,7 +15,7 @@ AGENTS = 'AGENT planner\n\tWORK "the plan of a wave"\n\tWORK "the order of its t
 
 class ReadEntityTest(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
+        self.run_process = create_process_runner(provide_awawa(self))
         self.root = tempfile.TemporaryDirectory()
         self.corpus = Path(self.root.name)
         (self.corpus / "_schema.awawa").write_text(SCHEMA)
@@ -26,7 +26,7 @@ class ReadEntityTest(unittest.TestCase):
 
     def test_should_read_the_fields_of_one_entity_unquoted_in_their_order(self):
         # Act
-        entity = read_entity(run_process_without_trail, self.corpus, "AGENT", "planner")
+        entity = read_entity(self.run_process, self.corpus, "AGENT", "planner")
 
         # Assert
         self.assertEqual(
@@ -44,7 +44,7 @@ class ReadEntityTest(unittest.TestCase):
     def test_should_refuse_an_entity_the_corpus_does_not_define_naming_it(self):
         # Act
         with self.assertRaises(EntityNotDefined) as refusal:
-            read_entity(run_process_without_trail, self.corpus, "AGENT", "nobody")
+            read_entity(self.run_process, self.corpus, "AGENT", "nobody")
 
         # Assert
         self.assertEqual(str(refusal.exception), f"@AGENT.nobody is not defined in {self.corpus}")
@@ -56,7 +56,7 @@ class ReadEntityTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(ToolFailure) as refusal:
-            read_entity(run_process_without_trail, self.corpus, "AGENT", "planner")
+            read_entity(self.run_process, self.corpus, "AGENT", "planner")
 
         # Assert
         self.assertIn(f"awawa show @AGENT.planner --json {self.corpus} exited 2: ", str(refusal.exception))

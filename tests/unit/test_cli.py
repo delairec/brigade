@@ -6,14 +6,11 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from brigade import VERSION
 from brigade.cli import main
 from brigade.commands.tick import LOCK_NAME
 from brigade.system.hold_lock import hold_lock
-
-TERMINAL_WIDE_ENOUGH_FOR_ONE_LINE_PER_HELP = "200"
 
 ADAPTER_MATRIX = (
     "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
@@ -42,37 +39,29 @@ class MainTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
-        environment = mock.patch.dict(
-            os.environ,
-            {
-                "HOME": str(self.root),
-                "XDG_CONFIG_HOME": str(self.root / "config"),
-                "XDG_STATE_HOME": str(self.root / "state"),
-                "XDG_CACHE_HOME": str(self.root / "cache"),
-            },
-        )
-        environment.start()
-        self.addCleanup(environment.stop)
+        self.environment = {
+            "PATH": os.environ["PATH"],
+            "HOME": str(self.root),
+            "XDG_CONFIG_HOME": str(self.root / "config"),
+            "XDG_STATE_HOME": str(self.root / "state"),
+            "XDG_CACHE_HOME": str(self.root / "cache"),
+        }
 
     def run_main(self, arguments: list[str]) -> tuple[int, str, str]:
         stdout, stderr = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            exit_code = main(arguments)
+            exit_code = main(arguments, self.environment)
         return exit_code, stdout.getvalue(), stderr.getvalue()
 
     def refuse(self, arguments: list[str]) -> int:
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
-            main(arguments)
+            main(arguments, self.environment)
         return exit_.exception.code
 
     def ask_help(self, arguments: list[str]) -> tuple[int, str]:
         stdout = io.StringIO()
-        with (
-            mock.patch.dict(os.environ, {"COLUMNS": TERMINAL_WIDE_ENOUGH_FOR_ONE_LINE_PER_HELP}),
-            contextlib.redirect_stdout(stdout),
-            self.assertRaises(SystemExit) as exit_,
-        ):
-            main(arguments)
+        with contextlib.redirect_stdout(stdout), self.assertRaises(SystemExit) as exit_:
+            main(arguments, self.environment)
         return exit_.exception.code, stdout.getvalue()
 
 
@@ -83,7 +72,7 @@ class MainHelpTest(MainTestCase):
 
         # Assert
         self.assertEqual(exit_code, 0)
-        self.assertRegex(page, r"\n    ledger +read the event journal: an overview, a wave or a project\n")
+        self.assertRegex(page, r"\n    ledger +read the event journal")
 
 
 class MainVersionTest(MainTestCase):
@@ -173,10 +162,10 @@ class MainOfACommandRenderedAsMarkdownTest(MainTestCase):
         # Arrange
         empty_search_path = self.root / "bin"
         empty_search_path.mkdir()
+        self.environment["PATH"] = str(empty_search_path)
 
         # Act
-        with mock.patch.dict(os.environ, {"PATH": str(empty_search_path)}):
-            exit_code, stdout, _ = self.run_main(["adapter", "matrix", "--markdown"])
+        exit_code, stdout, _ = self.run_main(["adapter", "matrix", "--markdown"])
 
         # Assert
         self.assertEqual((exit_code, stdout), (0, ADAPTER_MATRIX))

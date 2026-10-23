@@ -10,7 +10,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
@@ -214,7 +213,7 @@ class WaveTickTestCase(TickTestCase):
         return {
             **self.machine.describe_environment(),
             **PINNED_COMMIT_DATES,
-            "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
+            "PATH": f"{self.tools}{os.pathsep}{self.machine.search_path}",
         }
 
     def setUp(self):
@@ -228,7 +227,7 @@ class WaveTickTestCase(TickTestCase):
             self.tools / "gh",
             FAKE_GH.format(calls=self.gh_calls, pull_requests=self.pull_requests, tokenless=TOKENLESS_LOGIN),
         )
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
             Path(self.root.name).resolve() / "projects" / "shop",
@@ -1239,7 +1238,7 @@ class StudyTickTestCase(TickTestCase, FileWaitingTestCase):
 
     def setUp(self):
         super().setUp()
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         recordings = Path(self.root.name) / "recordings"
         recordings.mkdir()

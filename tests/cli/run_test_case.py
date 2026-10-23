@@ -83,7 +83,7 @@ class RunTestCase(FileWaitingTestCase):
     def run_brigade(self, *arguments: str, path_directories: tuple = ()):
         environment = {
             **self.machine.describe_environment(),
-            "PATH": os.pathsep.join([*path_directories, os.environ["PATH"]]),
+            "PATH": os.pathsep.join([*path_directories, self.machine.search_path]),
         }
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments, environment=environment)
 

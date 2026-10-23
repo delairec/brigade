@@ -5,6 +5,7 @@ import importlib
 import json
 import sys
 import traceback
+from collections.abc import Mapping
 from pathlib import Path
 from typing import NoReturn, TextIO
 
@@ -128,7 +129,7 @@ def _parse(arguments: list[str], module_names: list[str], parser_class):
     return options, extras, passthrough
 
 
-def main(arguments: list[str]) -> int:
+def main(arguments: list[str], environment: Mapping[str, str]) -> int:
     module_names = list_command_modules()
     try:
         options, extras, passthrough = _parse(
@@ -145,7 +146,7 @@ def main(arguments: list[str]) -> int:
     options.passed_arguments = tuple(arguments[separator + 1 :])
     options.standard_input = sys.stdin
     options.create_runtime = functools.partial(
-        build_runtime, Invocation(command=_name(command), verbose=getattr(options, "verbose", False))
+        build_runtime, Invocation(command=_name(command), verbose=getattr(options, "verbose", False)), environment
     )
     return _run_reporting_errors(command, options)
 

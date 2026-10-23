@@ -4,7 +4,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
@@ -17,10 +16,10 @@ QUESTION = "what changed in the shop this week?"
 
 class StudyTestCase(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.project = TemporaryProject(
             root / "projects" / "shop", {**self.machine.describe_environment(), **PINNED_COMMIT_DATES}
@@ -879,7 +878,7 @@ class StudyOutputTestCase(StudyRunTestCase):
         install_executable(self.tools / "gh", FAKE_GH.format(calls=self.gh_calls))
         self.environment = {
             **self.machine.describe_environment(),
-            "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}",
+            "PATH": f"{self.tools}{os.pathsep}{self.machine.search_path}",
         }
 
     def add_forge_project(self) -> TemporaryProject:

@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.process_launcher import ProcessLauncher
@@ -18,10 +17,10 @@ LOCK_WAIT_S = 5
 
 class ProjectTestCase(unittest.TestCase):
     def setUp(self):
-        provide_awawa(self)
         self.root = tempfile.TemporaryDirectory()
         root = Path(self.root.name).resolve()
         self.machine = TemporaryMachine(root)
+        self.machine.install_awawa(self)
         self.machine.run_init()
         self.projects = root / "projects"
         self.registry = self.machine.corpus / "projects.awawa"
@@ -116,6 +115,7 @@ class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "lint", "--strict", str(self.machine.corpus)],
+            env=self.machine.describe_environment(),
             cwd=self.machine.corpus,
             capture_output=True,
             text=True,

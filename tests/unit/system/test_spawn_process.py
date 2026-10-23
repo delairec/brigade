@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,6 +7,8 @@ from unittest.mock import ANY
 from brigade.errors import CannotWrite, ToolFailure, ToolNotFound
 from brigade.system.process_trace import ProcessTrace
 from brigade.system.spawn_process import SpawnRequest, spawn_process
+
+INHERITED_ENVIRONMENT = os.environ
 
 PROCESS_WAIT_S = 10.0
 LARGER_THAN_A_PIPE = "x" * 1_048_576
@@ -26,6 +29,7 @@ class SpawnProcessTestCase(unittest.TestCase):
                 argv=argv, cwd=self.root.name, environment={}, stdin=stdin, stdout=self.stdout, stderr=self.stderr
             ),
             self.traces.append,
+            INHERITED_ENVIRONMENT,
         )
         self.addCleanup(process.wait)
         self.addCleanup(process.kill)
@@ -73,6 +77,7 @@ class SpawnProcessOfAMissingToolTest(SpawnProcessTestCase):
                 stderr=self.stderr,
             ),
             self.traces.append,
+            INHERITED_ENVIRONMENT,
         )
 
     def test_should_refuse_naming_the_tool_not_on_path(self):
@@ -122,6 +127,7 @@ class SpawnProcessInAWorkingDirectoryThatDoesNotExistTest(SpawnProcessTestCase):
                 stderr=self.stderr,
             ),
             self.traces.append,
+            INHERITED_ENVIRONMENT,
         )
 
     def test_should_refuse_naming_the_directory_rather_than_the_command(self):
@@ -177,6 +183,7 @@ class SpawnProcessIntoAnUnwritableLogTest(SpawnProcessTestCase):
                     stderr=self.stderr,
                 ),
                 self.traces.append,
+                INHERITED_ENVIRONMENT,
             )
 
         # Assert

@@ -5,7 +5,6 @@ import tempfile
 import time
 from pathlib import Path
 
-from tests.awawa.provide_awawa import provide_awawa
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
@@ -72,7 +71,7 @@ class RehearsalOnTheFakeClientTestCase(FileWaitingTestCase):
         self.store = root / "forge"
         self.remote = self.store / "remote.git"
         self.tools = root / "tools"
-        provide_awawa(self)
+        self.machine.install_awawa(self)
         self.install_tools()
         self.machine.run_init()
         self.prepare_sandbox(root / "projects" / "shop")
@@ -85,7 +84,7 @@ class RehearsalOnTheFakeClientTestCase(FileWaitingTestCase):
         self.root.cleanup()
 
     def describe_environment(self) -> dict:
-        return {**self.machine.describe_environment(), "PATH": f"{self.tools}{os.pathsep}{os.environ['PATH']}"}
+        return {**self.machine.describe_environment(), "PATH": f"{self.tools}{os.pathsep}{self.machine.search_path}"}
 
     def install_tools(self) -> None:
         install_executable(self.tools / "gh", f'#!/bin/sh\nexec "{sys.executable}" "{FORGE}" "{self.store}" "$@"\n')

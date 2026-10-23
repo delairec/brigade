@@ -2,7 +2,7 @@ import contextlib
 import subprocess
 import tempfile
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -41,7 +41,9 @@ def _open_output(path: Path) -> BinaryIO:
         raise CannotWrite(error.filename or path, error) from error
 
 
-def spawn_process(request: SpawnRequest, record_trace: Callable[[ProcessTrace], None]) -> subprocess.Popen:
+def spawn_process(
+    request: SpawnRequest, record_trace: Callable[[ProcessTrace], None], environment: Mapping[str, str]
+) -> subprocess.Popen:
     started = time.monotonic()
     with (
         _open_output(request.stdout) as stdout_file,
@@ -56,7 +58,7 @@ def spawn_process(request: SpawnRequest, record_trace: Callable[[ProcessTrace], 
             process = subprocess.Popen(  # noqa: S603
                 list(request.argv),
                 cwd=request.cwd,
-                env={**build_process_environment(), **request.environment},
+                env={**build_process_environment(environment), **request.environment},
                 stdin=stdin_file,
                 stdout=stdout_file,
                 stderr=stderr_file,

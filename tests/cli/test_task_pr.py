@@ -86,7 +86,7 @@ class TaskPrTestCase(TaskCheckTestCase):
 
     def describe_environment(self) -> dict:
         tools = Path(self.root.name).resolve() / "tools"
-        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{os.environ['PATH']}"}
+        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{self.machine.search_path}"}
 
     def write_task(self, tasks: str) -> None:
         (self.worktree / "corpus" / "_schema.awawa").write_text(TYPED_SCHEMA)

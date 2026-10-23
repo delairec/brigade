@@ -1,6 +1,6 @@
 import subprocess
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 from brigade.errors import CommandFailed, ToolFailure
@@ -51,7 +51,7 @@ def _trace(request: ProcessRequest, outcome: str, exit_code: int | None, duratio
     )
 
 
-def _launch(request: ProcessRequest) -> subprocess.CompletedProcess:
+def _launch(request: ProcessRequest, environment: Mapping[str, str]) -> subprocess.CompletedProcess:
     # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
     # subprocess-injection: a Django rule whose taint source is any parameter named request, the S603 case
     # ERA001: the nosemgrep line below is the directive semgrep reads, not commented-out code
@@ -59,7 +59,7 @@ def _launch(request: ProcessRequest) -> subprocess.CompletedProcess:
     return subprocess.run(  # noqa: S603
         list(request.argv),
         cwd=request.cwd,
-        env={**build_process_environment(), **request.environment},
+        env={**build_process_environment(environment), **request.environment},
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -70,10 +70,12 @@ def _launch(request: ProcessRequest) -> subprocess.CompletedProcess:
     )
 
 
-def run_process(request: ProcessRequest, record_trace: Callable[[ProcessTrace], None]) -> ProcessRecord:
+def run_process(
+    request: ProcessRequest, record_trace: Callable[[ProcessTrace], None], environment: Mapping[str, str]
+) -> ProcessRecord:
     started = time.monotonic()
     try:
-        completed = _launch(request)
+        completed = _launch(request, environment)
     except FileNotFoundError as missing:
         outcome, refusal = explain_launch_failure(request.argv, request.cwd, missing)
         record_trace(_trace(request, outcome, None, _measure_since(started)))

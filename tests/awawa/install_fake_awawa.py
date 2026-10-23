@@ -5,7 +5,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from tests.awawa.list_temporary_roots import list_temporary_roots
 from tests.process_launcher import ProcessLauncher
@@ -25,7 +24,7 @@ def _fail_on_misses(test_case: unittest.TestCase, misses: Path) -> None:
         test_case.fail(misses.read_text())
 
 
-def install_fake_awawa(test_case: unittest.TestCase, recordings: Path, real_awawa: str | None) -> Path:
+def install_fake_awawa(test_case: unittest.TestCase, recordings: Path, real_awawa: str | None, search_path: str) -> str:
     directory = Path(tempfile.mkdtemp())
     test_case.addCleanup(shutil.rmtree, directory)
     configuration = directory / "configuration.json"
@@ -47,8 +46,5 @@ def install_fake_awawa(test_case: unittest.TestCase, recordings: Path, real_awaw
         f' "{configuration}" "$@"\n'
     )
     executable.chmod(0o755)
-    path = mock.patch.dict(os.environ, {"PATH": f"{directory}{os.pathsep}{os.environ['PATH']}"})
-    path.start()
-    test_case.addCleanup(path.stop)
     test_case.addCleanup(_fail_on_misses, test_case, misses)
-    return directory
+    return f"{directory}{os.pathsep}{search_path}"

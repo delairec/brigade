@@ -80,7 +80,7 @@ class VerifyPreflightTestCase(TaskContextTestCase):
 
     def describe_environment(self) -> dict:
         tools = Path(self.root.name).resolve() / "tools"
-        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{os.environ['PATH']}"}
+        return {**super().describe_environment(), "PATH": f"{tools}{os.pathsep}{self.machine.search_path}"}
 
     def commit_in_worktree(self, files: dict, message: str) -> None:
         for relative_path, content in files.items():

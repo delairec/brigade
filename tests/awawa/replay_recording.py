@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import tempfile
 import unittest
@@ -55,7 +56,7 @@ def _replay_run_id(placeholder: str, rank: int) -> str:
     return f"{REPLAYED_INSTANT.strftime(COMPACT_INSTANT_FORMAT)}{separator}{rank:06x}"
 
 
-def replay_recording(test_case: unittest.TestCase, recording: dict) -> dict:
+def replay_recording(test_case: unittest.TestCase, recording: dict, search_path: str) -> dict:
     call = recording["call"]
     recorded = json.dumps(call)
     placeholders = sorted(set(PLACEHOLDER.findall(recorded)), key=int)
@@ -77,6 +78,7 @@ def replay_recording(test_case: unittest.TestCase, recording: dict) -> dict:
     completed = ProcessLauncher.run(
         ["awawa", *(masker.unmask(argument) for argument in call["arguments"])],
         cwd=cwd,
+        env={**os.environ, "PATH": search_path},
         capture_output=True,
         text=True,
         check=False,
