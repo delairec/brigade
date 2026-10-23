@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.git.timeouts import TREE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-FETCH_TIMEOUT_S = 60.0
 THIS_REPOSITORY = "."
 
 
@@ -14,6 +14,6 @@ def fast_forward_branch(
         ProcessRequest(
             argv=("git", "fetch", "--quiet", THIS_REPOSITORY, f"{target}:{branch}"),
             cwd=str(repository),
-            timeout_s=FETCH_TIMEOUT_S,
+            timeout_s=TREE_TIMEOUT_S,
         )
     )

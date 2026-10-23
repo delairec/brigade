@@ -2,9 +2,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.git.timeouts import TREE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-LS_REMOTE_TIMEOUT_S = 60.0
 REMOTE = "origin"
 FOUND = 0
 NOT_FOUND = 2
@@ -30,7 +30,7 @@ def find_remote_branch(run_process: Callable[[ProcessRequest], ProcessRecord], r
                 f"refs/heads/{remote_branch.branch}",
             ),
             cwd=str(remote_branch.repository),
-            timeout_s=LS_REMOTE_TIMEOUT_S,
+            timeout_s=TREE_TIMEOUT_S,
             acceptable_exit_codes=(FOUND, NOT_FOUND),
             environment=remote_branch.environment,
         )

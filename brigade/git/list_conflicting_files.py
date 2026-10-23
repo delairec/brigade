@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.git.timeouts import TREE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-MERGE_TREE_TIMEOUT_S = 60.0
 CLEAN_OR_CONFLICTING = (0, 1)
 
 
@@ -14,7 +14,7 @@ def list_conflicting_files(
         ProcessRequest(
             argv=("git", "merge-tree", "--write-tree", "--name-only", "--no-messages", "HEAD", upstream),
             cwd=str(worktree),
-            timeout_s=MERGE_TREE_TIMEOUT_S,
+            timeout_s=TREE_TIMEOUT_S,
             acceptable_exit_codes=CLEAN_OR_CONFLICTING,
         )
     )

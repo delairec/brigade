@@ -2,9 +2,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 from brigade.git.read_current_branch import read_current_branch
+from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-READ_TIMEOUT_S = 10.0
 SYMBOLIC_OR_NOT = (0, 1)
 REMOTE_PREFIX = "origin/"
 
@@ -14,7 +14,7 @@ def _read_origin_head(run_process: Callable[[ProcessRequest], ProcessRecord], re
         ProcessRequest(
             argv=("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"),
             cwd=str(repository),
-            timeout_s=READ_TIMEOUT_S,
+            timeout_s=GIT_TIMEOUT_S,
             acceptable_exit_codes=SYMBOLIC_OR_NOT,
         )
     )

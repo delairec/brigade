@@ -2,9 +2,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.git.timeouts import TREE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-DIFF_TIMEOUT_S = 60.0
 COLUMN_SEPARATOR = "\t"
 
 
@@ -27,7 +27,7 @@ def count_changed_lines(
         ProcessRequest(
             argv=("git", "diff", "--numstat", "--text", "--end-of-options", start, end, "--"),
             cwd=str(repository),
-            timeout_s=DIFF_TIMEOUT_S,
+            timeout_s=TREE_TIMEOUT_S,
         )
     )
     return tuple(_parse_line(line) for line in record.stdout.splitlines())

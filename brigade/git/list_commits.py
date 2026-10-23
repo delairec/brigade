@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+from brigade.git.timeouts import TREE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-LOG_TIMEOUT_S = 60.0
 RECORD_SEPARATOR = "\x1e"
 FIELD_SEPARATOR = "\x1f"
 LOG_FORMAT = "%x1e%H%x1f%an%x1f%at%x1f%s"
@@ -48,7 +48,7 @@ def list_commits(
                 "--",
             ),
             cwd=str(repository),
-            timeout_s=LOG_TIMEOUT_S,
+            timeout_s=TREE_TIMEOUT_S,
         )
     )
     return tuple(_parse_record(part) for part in output.stdout.split(RECORD_SEPARATOR)[1:])

@@ -2,9 +2,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-READ_TIMEOUT_S = 10.0
 CURRENT_BRANCH_MARK = "*"
 BRANCH_FORMAT = "--format=%(HEAD)%09%(objectname:short)%09%(upstream:short)"
 FIELD_SEPARATOR = "\t"
@@ -20,7 +20,7 @@ class UpstreamLag:
 
 
 def _read(run_process: Callable[[ProcessRequest], ProcessRecord], checkout: Path, *arguments: str) -> str:
-    record = run_process(ProcessRequest(argv=("git", *arguments), cwd=str(checkout), timeout_s=READ_TIMEOUT_S))
+    record = run_process(ProcessRequest(argv=("git", *arguments), cwd=str(checkout), timeout_s=GIT_TIMEOUT_S))
     return record.stdout
 
 

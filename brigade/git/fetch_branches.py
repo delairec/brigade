@@ -2,9 +2,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.git.timeouts import REMOTE_TIMEOUT_S
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
-FETCH_TIMEOUT_S = 120.0
 REMOTE = "origin"
 
 
@@ -20,7 +20,7 @@ def fetch_branches(run_process: Callable[[ProcessRequest], ProcessRecord], fetch
         ProcessRequest(
             argv=("git", "fetch", "--quiet", REMOTE, *fetch.branches),
             cwd=str(fetch.repository),
-            timeout_s=FETCH_TIMEOUT_S,
+            timeout_s=REMOTE_TIMEOUT_S,
             environment=fetch.environment,
         )
     )
