@@ -40,12 +40,13 @@ from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
+from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.read_configuration import Configuration
 from brigade.system.read_optional_configuration import read_optional_configuration
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.repeat_until_signalled import repeat_until_signalled
 from brigade.system.run_reporting_failure import run_reporting_failure
-from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_INSTANT_FORMAT, TRAIL_SUFFIX
+from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
     CloseWave,
@@ -118,7 +119,7 @@ def _locate_lock(runtime: Runtime):
 
 
 def _locate_trail(runtime: Runtime):
-    return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(TRAIL_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
+    return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(COMPACT_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
 
 
 def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:

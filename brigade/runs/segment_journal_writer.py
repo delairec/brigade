@@ -11,10 +11,10 @@ from brigade.system.actions_request import ActionsRequest
 from brigade.system.append_line import append_line
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
+from brigade.system.instant_formats import ISO_INSTANT_FORMAT
 
 SUMMARY_LIMIT = 200
 RAW_KIND = "raw"
-JOURNAL_INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 LINE_END = b"\n"
 
 
@@ -62,7 +62,7 @@ class SegmentJournalWriter:
             return
         self._offset += len(chunk)
         actions = self._read_actions(chunk.decode("utf-8", errors="replace"))
-        at = datetime.now(UTC).strftime(JOURNAL_INSTANT_FORMAT)
+        at = datetime.now(UTC).strftime(ISO_INSTANT_FORMAT)
         records = [json.dumps(self._describe_record(at, kind, summary).to_document()) for kind, summary in actions]
         if records:
             append_line(self._plan.run_directory / JOURNAL_FILE, "\n".join(records))

@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from brigade.runs.run_locations import PROCESSES_FILE, RUNS_DIRECTORY
+from brigade.system.read_trail_instant import read_trail_instant
 from brigade.system.trail_locations import (
     COMMANDS_DIRECTORY,
     TICKS_DIRECTORY,
-    TRAIL_INSTANT_FORMAT,
-    TRAIL_INSTANT_LENGTH,
     TRAIL_SUFFIX,
 )
 
@@ -23,15 +22,8 @@ class Trail:
     path: Path
 
 
-def _read_instant(trail_id: str) -> datetime | None:
-    try:
-        return datetime.strptime(trail_id[:TRAIL_INSTANT_LENGTH], TRAIL_INSTANT_FORMAT).replace(tzinfo=UTC)
-    except ValueError:
-        return None
-
-
 def _describe_trail(kind: str, trail_id: str, path: Path) -> Trail | None:
-    instant = _read_instant(trail_id)
+    instant = read_trail_instant(trail_id)
     if instant is None:
         return None
     return Trail(kind=kind, id=trail_id, instant=instant, path=path)

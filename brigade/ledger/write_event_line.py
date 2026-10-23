@@ -21,9 +21,10 @@ from brigade.ledger.task_promoted import TaskPromoted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.append_line import append_line
+from brigade.system.instant_formats import MONTH_FORMAT
 from brigade.system.paths import Paths
 
-MONTH_FILE_FORMAT = "%Y-%m.jsonl"
+LEDGER_SUFFIX = ".jsonl"
 
 
 class LedgerEventRefused(BrigadeError):
@@ -58,5 +59,7 @@ def write_event_line(
         "event": event.name,
         **event.to_document(),
     }
-    append_line(paths.state_root / LEDGER_DIRECTORY / utc_instant.strftime(MONTH_FILE_FORMAT), json.dumps(line))
+    append_line(
+        paths.state_root / LEDGER_DIRECTORY / f"{utc_instant.strftime(MONTH_FORMAT)}{LEDGER_SUFFIX}", json.dumps(line)
+    )
     return line

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
 from brigade.errors import BrigadeError
+from brigade.system.instant_formats import ISO_INSTANT_FORMAT
 
 SCHEMA_VERSION = 1
 CLIENT_NAME = "claude-code"
@@ -42,7 +43,6 @@ SUBAGENT_TRANSCRIPTS = "*.jsonl"
 IDENTIFYING_ARGUMENTS = ("file_path", "command", "pattern", "path", "url", "query")
 END_DECLARATIONS = {f"brigade-end: {outcome}": outcome for outcome in ("done", "handed_over", "blocked")}
 UNDECLARED = "undeclared"
-STOP_AT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 HOOK_STOPPED = "hook_stopped"
 SOFT_LIMIT = "soft_limit"
 
@@ -86,7 +86,7 @@ def _build_role_options(request: dict) -> list[str]:
 
 
 def _build_stop_hook(stop_at: str) -> str:
-    epoch = round(datetime.strptime(stop_at, STOP_AT_FORMAT).replace(tzinfo=UTC).timestamp())
+    epoch = round(datetime.strptime(stop_at, ISO_INSTANT_FORMAT).replace(tzinfo=UTC).timestamp())
     stop = json.dumps({"continue": False, "stopReason": f"the soft limit {stop_at} has passed"})
     return f"[ \"$(date -u +%s)\" -ge {epoch} ] && printf '%s\\n' '{stop}'; exit 0"
 

@@ -5,6 +5,7 @@ import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT, ISO_INSTANT_FORMAT
 from tests.awawa.list_temporary_roots import list_temporary_roots
 from tests.awawa.volatile_value_masker import (
     COMMIT_PLACEHOLDER,
@@ -17,9 +18,7 @@ from tests.process_launcher import ProcessLauncher
 
 UNREADABLE = 0
 REPLAYED_INSTANT = datetime(2026, 1, 1, tzinfo=UTC)
-INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 COMMIT_NAME_FORMAT = "040x"
-RUN_INSTANT_FORMAT = "%Y%m%dT%H%M%SZ"
 RUN_ID_SEPARATORS = {"run": "-", "run_name": "_"}
 
 
@@ -44,7 +43,7 @@ def _write_input(file: Path, content: str | None) -> None:
 
 
 def _replay_instant(number: str) -> str:
-    return (REPLAYED_INSTANT + timedelta(seconds=int(number))).strftime(INSTANT_FORMAT)
+    return (REPLAYED_INSTANT + timedelta(seconds=int(number))).strftime(ISO_INSTANT_FORMAT)
 
 
 def _replay_commit_name(number: str) -> str:
@@ -53,7 +52,7 @@ def _replay_commit_name(number: str) -> str:
 
 def _replay_run_id(placeholder: str, rank: int) -> str:
     separator = RUN_ID_SEPARATORS[RUN_PLACEHOLDER.fullmatch(placeholder).group(1)]
-    return f"{REPLAYED_INSTANT.strftime(RUN_INSTANT_FORMAT)}{separator}{rank:06x}"
+    return f"{REPLAYED_INSTANT.strftime(COMPACT_INSTANT_FORMAT)}{separator}{rank:06x}"
 
 
 def replay_recording(test_case: unittest.TestCase, recording: dict) -> dict:

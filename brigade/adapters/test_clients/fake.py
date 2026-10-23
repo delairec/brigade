@@ -5,6 +5,7 @@ from pathlib import Path
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
 from brigade.errors import BrigadeError
 from brigade.runs.compose_brief import PROGRESS_SECTION
+from brigade.system.instant_formats import ISO_INSTANT_FORMAT
 
 SCHEMA_VERSION = 1
 CLIENT_NAME = "fake"
@@ -20,7 +21,6 @@ NO_PROGRESS = ""
 NO_INTERVAL = "0"
 NO_SOFT_LIMIT = "0"
 GRACEFUL_STOP = "graceful_stop"
-STOP_AT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
 TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 RESUMED_RECORDING_SUFFIX = ".resumed.json"
@@ -56,7 +56,7 @@ def _probe(request: dict) -> dict:
 def _read_soft_limit(request: dict):
     if request["stop_at"] is None or GRACEFUL_STOP not in _read_list_setting(request, "features"):
         return None
-    return str(round(datetime.strptime(request["stop_at"], STOP_AT_FORMAT).replace(tzinfo=UTC).timestamp()))
+    return str(round(datetime.strptime(request["stop_at"], ISO_INSTANT_FORMAT).replace(tzinfo=UTC).timestamp()))
 
 
 def _build_argv(settings: dict, recording: str, soft_limit) -> list[str]:
