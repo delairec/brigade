@@ -16,7 +16,6 @@ from brigade.runtime import Runtime
 from brigade.system.paths import Paths
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.trail_writer import TrailWriter
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
@@ -24,7 +23,8 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
     spawn_as_this_process,
 )
-from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.create_test_paths import PACKAGE_FILE, create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 NO_PATH_NEEDED = ""
 UNKNOWN_CLIENT = "no-such-client"
@@ -227,8 +227,8 @@ class RunDetachedTest(unittest.TestCase):
     def test_should_record_the_run_and_hand_it_to_a_process_of_its_own(self):
         # Arrange
         this_process = os.getpid()
-        runtime = create_runtime(
-            self.root,
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
             spawn_process=spawn_as_this_process,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
         )
@@ -246,8 +246,10 @@ class RunDetachedTest(unittest.TestCase):
 
     def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
         # Arrange
-        runtime = create_runtime(
-            self.root, spawn_process=spawn_as_this_process, resolve_plugin=create_plugin_resolution(CLOCK_PROBE)
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(CLOCK_PROBE),
         )
 
         # Act
@@ -325,8 +327,10 @@ class RunAttachedTest(unittest.TestCase):
             detach=False,
             resume=False,
         )
-        runtime = create_runtime(
-            root, spawn_process=_spawn_a_client_that_exits, resolve_plugin=_resolve_the_delivering_client
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=_spawn_a_client_that_exits,
+            resolve_plugin=_resolve_the_delivering_client,
         )
 
         # Act

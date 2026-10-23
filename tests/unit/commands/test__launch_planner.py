@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands._launch_planner import launch_planner
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
@@ -12,6 +12,8 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
     spawn_as_this_process,
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class LaunchPlannerTest(unittest.TestCase):
@@ -24,8 +26,8 @@ class LaunchPlannerTest(unittest.TestCase):
 
     def _create_runtime(self, probe: dict):
         corpus = {"PROJECT": {"shop": (("PATH", str(self.repository)),)}}
-        return create_runtime(
-            self.root,
+        return create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_corpus_double(corpus),
             spawn_process=spawn_as_this_process,
             resolve_plugin=create_plugin_resolution(probe),

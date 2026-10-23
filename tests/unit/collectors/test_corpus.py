@@ -7,7 +7,9 @@ from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.corpus import collect
 from brigade.errors import EntityNotDefined
 from brigade.system.parse_configuration import Configuration
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
@@ -23,7 +25,8 @@ class CorpusCollectorTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
         self.processes.answer_json(("awawa", "status", "--json", "."), STATUS)
 

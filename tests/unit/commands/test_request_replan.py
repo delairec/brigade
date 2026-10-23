@@ -8,7 +8,7 @@ from unittest.mock import ANY
 from brigade.commands.request_replan import COMMAND
 from brigade.errors import BrigadeError
 from brigade.runs.record_run_pid import record_run_pid
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.commands.run_directories import create_planner_record, create_run_result, write_run
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
@@ -31,6 +31,9 @@ PLANNING_REQUEST = (
     ("CREATED_AT", "2026-10-13T14:00:00Z"),
     ("STATUS", "planning"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 PLANNER_RUN = "20261013T140000Z-a10001"
 NO_RESULT = None
 
@@ -49,8 +52,8 @@ class RequestReplanTest(unittest.TestCase):
             "PROJECT": {"shop": project},
             "REQUEST": {"shop_r1": PLANNED_REQUEST, "shop_r2": PLANNING_REQUEST},
         }
-        return create_runtime(
-            self.root,
+        return create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_corpus_double(corpus),
             spawn_process=spawn_as_this_process,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),

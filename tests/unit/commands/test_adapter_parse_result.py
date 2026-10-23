@@ -6,8 +6,9 @@ from pathlib import Path
 
 from brigade.commands.adapter_parse_result import COMMAND, adapter_parse_result
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 PARSE_RESULT_REQUEST = '{"schema_version": 1, "exit_code": 0, "stdout": "done", "stderr": ""}'
 PARSE_RESULT_ANSWER = {
@@ -62,8 +63,9 @@ class AdapterParseResultOfTheConfiguredClientTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         client = ScriptedClient({"parse-result": PARSE_RESULT_ANSWER})
-        self.runtime = create_runtime(
-            Path(self.root.name), resolve_plugin=create_plugin_resolver({("client", "scripted"): client})
+        self.runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name)),
+            resolve_plugin=create_plugin_resolver({("client", "scripted"): client}),
         )
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.configuration_file.write_text('client = "scripted"\n')

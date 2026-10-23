@@ -4,7 +4,8 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.roles_show import COMMAND
-from tests.unit.commands.command_runtime import create_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 AUDITOR_ROLE = """---
 name: auditor
@@ -100,7 +101,7 @@ class RolesShowOfAMachineRoleTest(unittest.TestCase):
         request = Namespace(slot="review", short=False)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(
@@ -120,7 +121,7 @@ class RolesShowOfAMachineRoleTest(unittest.TestCase):
         request = Namespace(slot="review", short=True)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(

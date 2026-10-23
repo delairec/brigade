@@ -23,7 +23,6 @@ from tests.unit.commands.command_runtime import (
     ScriptedProcessRunner,
     create_corpus_double,
     create_machine_double,
-    create_runtime,
     write_ledger,
     write_operational_corpus,
 )
@@ -455,6 +454,8 @@ HEALTH_STUDY = (
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 def _record_task_state(state: str) -> dict:
@@ -520,8 +521,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), *setup)},
             "TASK": {"T7": task},
         }
-        return create_runtime(
-            self.root,
+        return create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
@@ -962,8 +963,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
-        runtime = create_runtime(
-            self.root,
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
             spawn_process=self.spawn.spawn,
             resolve_plugin=create_plugin_resolution(
@@ -1123,8 +1124,8 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
-        return create_runtime(
-            self.root,
+        return create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
@@ -1259,8 +1260,8 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
-        self.runtime = create_runtime(
-            self.root,
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, self.forge),
@@ -1333,8 +1334,8 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             ("git", "branch", "--quiet"): ProcessAnswer(),
         }
         self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
-        self.runtime = create_runtime(
-            self.root,
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=self.machine.run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=create_plugin_resolution(
@@ -1387,8 +1388,8 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
         spawn = SpawnRecorderDouble()
-        runtime = create_runtime(
-            root,
+        runtime = create_test_runtime(
+            create_test_paths(root),
             run_process=create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, MACHINE_OUTPUTS),
             spawn_process=spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
@@ -1470,8 +1471,8 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         }
         self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
         forge = RebasingForgeDouble(found)
-        return create_runtime(
-            self.root,
+        return create_test_runtime(
+            create_test_paths(self.root),
             run_process=self._observe_the_lock(self.machine.run),
             spawn_process=self.spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),

@@ -7,7 +7,6 @@ from brigade.errors import CommandFailed
 from brigade.system.parse_configuration import Configuration
 from brigade.tasks.assemble_task_context import assemble_task_context
 from brigade.tasks.locate_task_worktree import TaskWorktree
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 PROJECT = Entity(
@@ -18,6 +17,10 @@ PROJECT = Entity(
         EntityField(name="HEAVY", value="npm run e2e"),
     ),
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 ATTRIBUTION = ["Co-Authored-By: Ada <ada@example.org>"]
 TASK_SHOWN = {
     "fields": [
@@ -76,7 +79,10 @@ class AssembleTaskContextTest(unittest.TestCase):
         )
 
     def create_runtime(self, run_directory: Path | None = None):
-        runtime = create_scripted_runtime(self.root, self.processes, run_directory=run_directory)
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=run_directory), run_process=self.processes
+        )
         self.script_wave_tree(runtime)
         return runtime
 
@@ -184,7 +190,8 @@ class AssembleTaskContextTest(unittest.TestCase):
         self.processes.answer(
             ("awawa", "context", "@TASK.B12", "--with-schema", "."), exit_code=1, stderr="@TASK.B12 is not defined\n"
         )
-        runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
 
         # Act
         with self.assertRaises(CommandFailed) as refusal:

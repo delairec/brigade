@@ -5,7 +5,6 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.git_log import collect
 from brigade.system.parse_configuration import Configuration
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
@@ -13,6 +12,9 @@ LOG = (
     "\x1eabc1\x1fAda\x1f1760000000\x1fadd the parser\n\nREADME.md\nsrc/parse.py\n"
     "\x1edef2\x1fBob\x1f1760003600\x1ffix the parser\n\nsrc/parse.py\n"
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class GitLogCollectorTest(unittest.TestCase):
@@ -33,7 +35,8 @@ class GitLogCollectorTest(unittest.TestCase):
             ),
             LOG,
         )
-        runtime = create_scripted_runtime(Path(directory.name), processes)
+        write_operational_corpus(Path(directory.name))
+        runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=processes)
         environment = {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "2026-10-01", "BRIGADE_PARAMS": "{}"}
 
         # Act

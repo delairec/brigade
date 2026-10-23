@@ -7,7 +7,6 @@ from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
 from brigade.tasks.check_task import check_task
 from brigade.tasks.locate_task_worktree import TaskWorktree
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 PROJECT = Entity(
@@ -21,6 +20,10 @@ PROJECT = Entity(
 WORKTREE = TaskWorktree(
     path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave="oak_w1", wave_branch="integration/oak_w1"
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 STATUS_ARGV = ("git", "status", "--porcelain", "-z", "--no-renames", "--untracked-files=all")
 CHECK = {
     "schema_version": 1,
@@ -58,7 +61,7 @@ class CheckTaskTest(unittest.TestCase):
         self.script_checks()
 
         # Act
-        document = check_task(create_scripted_runtime(self.root, self.processes), WORKTREE)
+        document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
 
         # Assert
         self.assertEqual(document, CHECK)
@@ -68,7 +71,7 @@ class CheckTaskTest(unittest.TestCase):
         self.script_checks()
 
         # Act
-        check_task(create_scripted_runtime(self.root, self.processes), WORKTREE)
+        check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
 
         # Assert
         record = self.root / "state" / "checks" / "oak" / "B12.json"
@@ -77,7 +80,10 @@ class CheckTaskTest(unittest.TestCase):
     def test_should_keep_the_output_of_each_check_in_the_run_directory_of_a_run(self):
         # Arrange
         self.script_checks()
-        runtime = create_scripted_runtime(self.root, self.processes, run_directory=self.root / "run")
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "run"), run_process=self.processes
+        )
 
         # Act
         check_task(runtime, WORKTREE)
@@ -93,7 +99,7 @@ class CheckTaskTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            check_task(create_scripted_runtime(self.root, self.processes), WORKTREE)
+            check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
 
         # Assert
         self.assertEqual(

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from brigade.commands.project_add import COMMAND, project_add
 from brigade.errors import BrigadeError, UsageError
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 
 NO_PROJECT = json.dumps({"entities": []})
 APP_PROJECT = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
@@ -14,6 +14,8 @@ ELSEWHERE = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/elsewhere"'
 LIB_AND_APP = (
     'PROJECT lib\n\tPATH "/srv/lib"\n\tSTATUS active\n\nPROJECT app\n\tPATH "/srv/elsewhere"\n\tSTATUS active\n'
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 def _create_request(path: Path, **options) -> argparse.Namespace:
@@ -46,7 +48,7 @@ class ProjectAddTest(unittest.TestCase):
             ("git", "diff"): ProcessAnswer(exit_code=1),
             ("git", "commit"): ProcessAnswer(),
         }
-        self.runtime = create_runtime(root, run_process=ScriptedProcessRunner(self.answers).run)
+        self.runtime = create_test_runtime(create_test_paths(root), run_process=ScriptedProcessRunner(self.answers).run)
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
         self.registry = self.runtime.paths.config_root / "projects.awawa"

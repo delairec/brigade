@@ -5,7 +5,9 @@ from pathlib import Path
 
 from brigade.commands.wave_resume import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 EVERY_PAUSE = None
 WAVE_STARTED = {
@@ -76,7 +78,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_runtime(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root))
 
     def test_should_resume_every_wave_paused_on_the_forge_account_only(self):
         # Arrange

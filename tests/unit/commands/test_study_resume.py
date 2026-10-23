@@ -4,7 +4,9 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.study_resume import COMMAND
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 ACTIVE_STUDY = (("SLOT", "report"), ("OUTPUT", "file:/home/user/health.md"), ("ANSWER", "ANSWER"), ("STATUS", "active"))
 
@@ -53,7 +55,9 @@ class StudyResumeOfAnActiveStudyTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
-        runtime = create_runtime(root, run_process=create_corpus_double({"STUDY": {"health": ACTIVE_STUDY}}))
+        runtime = create_test_runtime(
+            create_test_paths(root), run_process=create_corpus_double({"STUDY": {"health": ACTIVE_STUDY}})
+        )
 
         # Act
         document = COMMAND.run(Namespace(name="health"), runtime)

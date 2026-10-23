@@ -5,7 +5,8 @@ from pathlib import Path
 
 from brigade.commands.study_context import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_runtime
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 RUN_ID = "20261019T090000Z-e10d04"
 
@@ -66,7 +67,7 @@ class StudyContextOfARunTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(run=RUN_ID), create_runtime(root))
+            COMMAND.run(Namespace(run=RUN_ID), create_test_runtime(create_test_paths(root)))
 
         # Assert
         self.assertEqual(str(raised.exception), f"{RUN_ID} is not a run of a study")

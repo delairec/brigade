@@ -6,7 +6,7 @@ from pathlib import Path
 
 from brigade.commands.study_answer import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
 
 RUN_ID = "20261019T090000Z-e10d04"
 HEALTH_STUDY = (
@@ -15,6 +15,9 @@ HEALTH_STUDY = (
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 ANSWER_TEXT = 'ANSWER health_20261019T090000Z_e10d04\n\tVERDICT "healthy"\n'
 NO_FILLED_FIELD = json.dumps({"fields": []})
 
@@ -61,8 +64,9 @@ class StudyAnswerOfAJudgingRunTest(unittest.TestCase):
         (self.run_directory / "steps").mkdir()
         (self.run_directory / "steps" / "collect.json").write_text(json.dumps({"collected": []}), encoding="utf-8")
         outputs = {("awawa", "lint"): "", ("awawa", "show", "@ANSWER.health_20261019T090000Z_e10d04"): NO_FILLED_FIELD}
-        self.runtime = create_runtime(
-            self.root, run_process=create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, outputs)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, outputs),
         )
 
     def test_should_record_an_answer_the_schema_accepts(self):

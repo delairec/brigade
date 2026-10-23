@@ -5,7 +5,9 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.scheduler_status import COMMAND
-from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 NOT_INSTALLED = {"schema_version": 1, "installed": False, "unit_files": [], "cron_line": None, "next_activation": None}
 CRON_INSTALLED = {
@@ -201,7 +203,9 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text(content, encoding="utf-8")
 
     def read_status(self, statuses: dict) -> dict:
-        runtime = create_runtime(self.root, resolve_plugin=_create_scheduler_resolution(statuses))
+        runtime = create_test_runtime(
+            create_test_paths(self.root), resolve_plugin=_create_scheduler_resolution(statuses)
+        )
         return COMMAND.run(Namespace(), runtime)
 
     def test_should_report_the_first_scheduler_installed_and_the_last_heartbeat(self):

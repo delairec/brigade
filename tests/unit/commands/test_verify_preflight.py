@@ -5,7 +5,9 @@ from pathlib import Path
 
 from brigade.commands.verify_preflight import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 TASK_WORKTREE = {
     ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool-T7\n",
@@ -97,8 +99,8 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
         self.forge = ForgeDeclineDouble()
-        self.runtime = create_runtime(
-            self.root,
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}, TASK_WORKTREE),
             resolve_plugin=lambda kind, name, **places: self.forge,
         )

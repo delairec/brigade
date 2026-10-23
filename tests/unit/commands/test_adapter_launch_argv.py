@@ -6,7 +6,6 @@ from pathlib import Path
 
 from brigade.commands.adapter_launch_argv import COMMAND, adapter_launch_argv
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 LAUNCH_REQUEST = (
@@ -15,6 +14,9 @@ LAUNCH_REQUEST = (
     ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
     ' "budget": 75}}'
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 LAUNCH_ANSWER = {
     "schema_version": 1,
     "argv": ["scripted", "--session", "s1"],
@@ -62,8 +64,9 @@ class AdapterLaunchArgvOfTheConfiguredClientTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         client = ScriptedClient({"launch-argv": LAUNCH_ANSWER})
-        self.runtime = create_runtime(
-            Path(self.root.name), resolve_plugin=create_plugin_resolver({("client", "scripted"): client})
+        self.runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name)),
+            resolve_plugin=create_plugin_resolver({("client", "scripted"): client}),
         )
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.configuration_file.write_text('client = "scripted"\n[slot_clients]\nreview = "other"\n')

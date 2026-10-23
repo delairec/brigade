@@ -5,7 +5,6 @@ from pathlib import Path
 
 from brigade.studies.convert_study import Study
 from brigade.studies.render_report_answer import render_report_answer
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 RUN_ID = "20261022T150000Z-aaaaaa"
@@ -21,6 +20,10 @@ STUDY = Study(
     status="active",
     wave="oak_w2",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 LEDGER_ITEMS = [
     {"ts": "2026-10-04T08:00:00Z", "event": "wave.started", "wave": "oak_w2", "tasks": ["B17"]},
     {"ts": "2026-10-04T10:30:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "merged"},
@@ -39,7 +42,8 @@ class RenderReportAnswerTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
 
     def write_document(self, collector: str, items: list) -> dict:
         path = self.root / f"{collector}.json"

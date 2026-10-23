@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 
 from brigade.verify.read_review_mode import read_review_mode
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 
@@ -12,7 +14,8 @@ class ReadReviewModeTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
+        write_operational_corpus(Path(directory.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=self.processes)
 
     def test_should_read_the_review_mode_the_policy_of_the_project_sets(self):
         # Arrange

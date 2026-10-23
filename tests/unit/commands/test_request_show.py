@@ -7,7 +7,7 @@ from pathlib import Path
 from brigade.commands.request_show import COMMAND
 from brigade.errors import BrigadeError
 from brigade.runs.record_run_pid import record_run_pid
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.commands.run_directories import create_planner_record, create_run_result, write_run
 
 PLANNED_REQUEST = (
@@ -24,6 +24,9 @@ PLANNING_REQUEST = (
     ("CREATED_AT", "2026-10-13T14:00:00Z"),
     ("STATUS", "planning"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 PLANNER_RUN = "20261013T140000Z-a10001"
 NO_RESULT = None
 
@@ -32,8 +35,8 @@ class RequestShowTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        self.runtime = create_runtime(
-            self.root,
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
             run_process=create_corpus_double({"REQUEST": {"shop_r1": PLANNED_REQUEST, "shop_r2": PLANNING_REQUEST}}),
         )
         self.state_root = self.root / "state"

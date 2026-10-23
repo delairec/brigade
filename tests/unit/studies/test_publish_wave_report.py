@@ -12,7 +12,6 @@ from brigade.studies.publish_wave_report import publish_wave_report
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -31,6 +30,10 @@ STUDY = Study(
     status="active",
     wave="oak_w2",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 CLI_BOUND_TO_OCTO_CLI = Configuration(forge_accounts={"cli": "octo-cli"})
 NOTHING_BOUND = Configuration()
 
@@ -58,7 +61,8 @@ class PublishWaveReportTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         self.checkout = self.run_directory / "checkout"
         self.forge = ForgeDouble()

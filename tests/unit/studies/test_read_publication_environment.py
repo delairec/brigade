@@ -9,7 +9,6 @@ from brigade.studies.read_publication_environment import read_publication_enviro
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.parse_configuration import Configuration
 from brigade.system.require_login_environment import LoginUnavailable
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -24,6 +23,10 @@ STUDY = Study(
     answer_type="FINDING",
     status="active",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 GITHUB_PROJECT = StudyProject(path=Path("/srv/oak"), forge="github")
 PROJECT_WITHOUT_FORGE = StudyProject(path=Path("/srv/oak"), forge=None)
 CLI_BOUND_TO_OCTO_CLI = Configuration(forge_accounts={"cli": "octo-cli"}, forge_attempts=1)
@@ -42,7 +45,8 @@ class ReadPublicationEnvironmentTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        self.runtime = create_scripted_runtime(Path(directory.name), ScriptedProcesses())
+        write_operational_corpus(Path(directory.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=ScriptedProcesses())
 
     def create_context(self, configuration: Configuration, forge: ForgeDouble) -> StudyRunContext:
         equipment = create_study_equipment(

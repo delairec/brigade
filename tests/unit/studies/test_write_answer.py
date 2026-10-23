@@ -7,7 +7,6 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.convert_study import Study
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer import write_answer
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -27,6 +26,9 @@ WAVE_REPORT = Study(
     status="active",
     wave="oak_w2",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 def create_study(output: str) -> Study:
@@ -61,7 +63,10 @@ class WriteAnswerTest(unittest.TestCase):
         self.bin = self.root / "bin"
         self.bin.mkdir()
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes, executable_search_path=str(self.bin))
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root, executable_search_path=str(self.bin)), run_process=self.processes
+        )
         self.config_root = self.runtime.paths.config_root
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         (self.run_directory / "steps").mkdir(parents=True)

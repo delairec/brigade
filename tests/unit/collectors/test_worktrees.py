@@ -5,13 +5,15 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.worktrees import collect
 from brigade.system.parse_configuration import Configuration
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
 WORKTREE_LIST = (
     "worktree /srv/oak\0HEAD abc1\0branch refs/heads/main\0\0worktree /srv/oak-b12\0HEAD def2\0detached\0locked\0\0"
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class WorktreesCollectorTest(unittest.TestCase):
@@ -21,7 +23,8 @@ class WorktreesCollectorTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         processes = ScriptedProcesses()
         processes.answer(("git", "worktree", "list", "--porcelain", "-z"), WORKTREE_LIST)
-        runtime = create_scripted_runtime(Path(directory.name), processes)
+        write_operational_corpus(Path(directory.name))
+        runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=processes)
         environment = {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "2026-10-01", "BRIGADE_PARAMS": "{}"}
 
         # Act

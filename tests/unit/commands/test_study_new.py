@@ -7,7 +7,7 @@ from unittest.mock import ANY
 
 from brigade.commands.study_new import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
 
 TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
 MACHINE_WIDE = None
@@ -80,7 +80,7 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(request, create_runtime(root, run_process=run_process))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(root), run_process=run_process))
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "study": "health", "every": "daily@06:00"})
@@ -103,7 +103,8 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
 
         # Act
         document = COMMAND.run(
-            request, create_runtime(root, run_process=create_machine_double({}, CORPUS_CHANGE_OUTPUTS))
+            request,
+            create_test_runtime(create_test_paths(root), run_process=create_machine_double({}, CORPUS_CHANGE_OUTPUTS)),
         )
 
         # Assert
@@ -129,6 +130,8 @@ HEALTH_STUDY = (
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 def _resolve_no_collector(kind: str, name: str, **places):
@@ -158,7 +161,8 @@ class StudyNewOfAStudyOnDemandTest(unittest.TestCase):
 
         # Act
         document = COMMAND.run(
-            request, create_runtime(root, run_process=run_process, resolve_plugin=_resolve_no_collector)
+            request,
+            create_test_runtime(create_test_paths(root), run_process=run_process, resolve_plugin=_resolve_no_collector),
         )
 
         # Assert

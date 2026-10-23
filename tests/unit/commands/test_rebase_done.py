@@ -5,13 +5,7 @@ from pathlib import Path
 
 from brigade.commands.rebase_done import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import (
-    ProcessAnswer,
-    ScriptedProcessRunner,
-    create_corpus_double,
-    create_runtime,
-    write_ledger,
-)
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 
 DESCENDING = ProcessAnswer()
@@ -24,6 +18,8 @@ PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD = (
     "origin",
     "HEAD:task/M4-tides/T7",
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 
 GIT_PUSH = ("git", "push")
@@ -66,7 +62,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
         self.machine = ScriptedProcessRunner(
             answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}})
         )
-        return create_runtime(self.root, run_process=self.machine.run)
+        return create_test_runtime(create_test_paths(self.root), run_process=self.machine.run)
 
     def test_should_push_a_branch_descending_from_the_head_of_its_base_with_a_lease_on_its_remote_head(self):
         # Arrange

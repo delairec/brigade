@@ -9,7 +9,7 @@ from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.read_ledger import read_ledger
 from brigade.studies.convert_study import Study
 from brigade.studies.start_study_run import start_study_run
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from tests.unit.create_test_runtime import FIXED_NOW
 from tests.unit.scripted_processes import ScriptedProcesses
 
 RUN_ID = "20261019T090000Z-c0ffee"
@@ -24,6 +24,9 @@ STUDY = Study(
     answer_type="FINDING",
     status="active",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class StartStudyRunTest(unittest.TestCase):
@@ -31,7 +34,8 @@ class StartStudyRunTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_scripted_runtime(self.root, ScriptedProcesses())
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=ScriptedProcesses())
 
     def test_should_record_the_study_of_the_new_run_in_its_directory(self):
         # Act
@@ -67,7 +71,7 @@ class StartStudyRunTest(unittest.TestCase):
             read_ledger(self.root / "state").entries,
             (
                 LedgerEntry(
-                    instant=RUNTIME_NOW,
+                    instant=FIXED_NOW,
                     event=OrderStarted(project="oak", kind="study", order="trees", run=RUN_ID),
                 ),
             ),

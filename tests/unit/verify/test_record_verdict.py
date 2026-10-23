@@ -7,12 +7,15 @@ from brigade.errors import BrigadeError
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.record_verdict import VerdictDemand, record_verdict
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime
+from tests.unit.commands.command_runtime import create_corpus_double
 
 TIDEPOOL = "tidepool"
 OPENED = TaskPrOpened(
     project=TIDEPOOL, task="T7", wave="tidepool_w16", branch="task/M4-tides/T7", pr=42, login="tidepool-bot"
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 BROKEN_SPEC = {"grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}
 CHANGES = {"head": "8885daa", "verdict": "changes", "findings": [BROKEN_SPEC]}
 REVIEW_ACCOUNTS = Configuration(forge_accounts={"review": "tidepool-review"})
@@ -58,7 +61,9 @@ class RecordVerdictTestCase(unittest.TestCase):
         self.forge = ForgeDouble()
 
     def record(self, policies: dict, verdict: dict) -> dict:
-        runtime = create_runtime(self.root, run_process=create_corpus_double({"POLICY": policies}))
+        runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_corpus_double({"POLICY": policies})
+        )
         return record_verdict(
             runtime,
             VerdictDemand(

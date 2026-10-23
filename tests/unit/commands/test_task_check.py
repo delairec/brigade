@@ -5,7 +5,9 @@ from pathlib import Path
 
 from brigade.commands.task_check import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime
+from tests.unit.commands.command_runtime import create_machine_double
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
@@ -70,7 +72,9 @@ class TaskCheckOutsideATaskTest(unittest.TestCase):
     def test_should_refuse_a_branch_that_is_not_the_branch_of_a_task(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        runtime = create_runtime(root, run_process=create_machine_double({}, MAIN_BRANCH_CHECKOUT))
+        runtime = create_test_runtime(
+            create_test_paths(root), run_process=create_machine_double({}, MAIN_BRANCH_CHECKOUT)
+        )
 
         # Act
         with self.assertRaises(BrigadeError) as raised:

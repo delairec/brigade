@@ -7,7 +7,7 @@ from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.build_study_context import build_study_context
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from tests.unit.create_test_runtime import FIXED_NOW
 from tests.unit.scripted_processes import ScriptedProcesses
 
 RUN_ID = "20261019T090000Z-aaaaaa"
@@ -54,6 +54,9 @@ REPORT_ANSWER = (
     '\tSTATISTIC "insertions 0"\n'
     '\tSTATISTIC "deletions 0"\n'
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class BuildStudyContextTest(unittest.TestCase):
@@ -62,7 +65,8 @@ class BuildStudyContextTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         (self.run_directory / "steps").mkdir(parents=True)
 
@@ -132,7 +136,7 @@ class BuildStudyContextTest(unittest.TestCase):
         config_root = self.runtime.paths.config_root
         append_event(
             self.runtime.paths,
-            RUNTIME_NOW,
+            FIXED_NOW,
             WaveStarted(wave="oak_w2", project="oak", branch="integration/oak_w2", tasks=("B17",)),
         )
         (self.run_directory / "study.json").write_text(

@@ -8,7 +8,6 @@ from brigade.studies.convert_study import Study
 from brigade.studies.hand_answer_to_output import hand_answer_to_output
 from brigade.studies.present_answer import AnswerPublication
 from brigade.studies.study_run_context import StudyRunContext
-from tests.unit.create_scripted_runtime import create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 RUN_ID = "20261019T090000Z-aaaaaa"
@@ -23,6 +22,10 @@ STUDY = Study(
     answer_type="FINDING",
     status="active",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 PUBLICATION = AnswerPublication(title="Study trees, run 1", markdown="# FINDING trees_1\n")
 
 
@@ -35,7 +38,10 @@ class HandAnswerToOutputTest(unittest.TestCase):
         self.bin.mkdir()
         self.executable = self.bin / "brigade-output-slack"
         self.processes = ScriptedProcesses()
-        runtime = create_scripted_runtime(self.root, self.processes, executable_search_path=str(self.bin))
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, executable_search_path=str(self.bin)), run_process=self.processes
+        )
         self.context = StudyRunContext(
             runtime=runtime, study=STUDY, run_id=RUN_ID, run_directory=self.root / "run", equipment=None
         )

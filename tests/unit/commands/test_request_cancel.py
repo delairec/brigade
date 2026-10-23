@@ -4,7 +4,9 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.request_cancel import COMMAND
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 
@@ -13,7 +15,8 @@ class RequestCancelTest(unittest.TestCase):
         # Arrange
         directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
         processes = ScriptedProcesses()
-        runtime = create_scripted_runtime(directory, processes)
+        write_operational_corpus(directory)
+        runtime = create_test_runtime(create_test_paths(directory), run_process=processes)
         config_root = runtime.paths.config_root
         (config_root / "requests.awawa").write_text("REQUEST shop_r2\n\tSTATUS planning\n", encoding="utf-8")
         processes.answer_entity(config_root, "REQUEST", "shop_r2", (("STATUS", "planning"),))

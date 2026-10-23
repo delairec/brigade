@@ -5,7 +5,9 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.git_diff_stat import collect
 from brigade.system.parse_configuration import Configuration
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
@@ -17,7 +19,8 @@ class GitDiffStatCollectorTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(Path(directory.name), self.processes)
+        write_operational_corpus(Path(directory.name))
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=self.processes)
 
     def test_should_count_the_lines_changed_between_the_two_refs_it_is_given(self):
         # Arrange

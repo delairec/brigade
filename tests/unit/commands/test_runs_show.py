@@ -10,8 +10,9 @@ from pathlib import Path
 from brigade.commands.runs_show import COMMAND
 from brigade.errors import BrigadeError, UsageError
 from brigade.runs.record_run_pid import record_run_pid
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 FINISHED_RUN = {
     "run": FIRST_RUN,
@@ -185,7 +186,7 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
         record_run_pid(run_directory, os.getpid())
         (run_directory / "journal.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
         printed = RunFinishingOnItsFirstRecordStdoutDouble(run_directory)
-        runtime = create_runtime(root)
+        runtime = create_test_runtime(create_test_paths(root))
         runtime.paths.config_root.mkdir(parents=True)
         runtime.paths.configuration_file.write_text(JOURNAL_POLLED_AT_ONCE, encoding="utf-8")
 
@@ -229,7 +230,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
         request = Namespace(run=FIRST_RUN, log=True, follow=False)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(
@@ -244,7 +245,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stdout(printed):
-            document = COMMAND.run(request, create_runtime(self.root))
+            document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False})
@@ -271,7 +272,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(request, create_runtime(self.root))
+            COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(str(raised.exception), "no run 20261009T090000Z-d90c03")

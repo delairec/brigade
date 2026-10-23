@@ -11,7 +11,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.wave_started import WaveStarted
 from brigade.tasks.open_task_pull_request import TaskPullRequestDemand, open_task_pull_request
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from tests.unit.create_test_runtime import FIXED_NOW
 from tests.unit.scripted_processes import ScriptedProcesses
 
 WAVE_START = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
@@ -35,6 +35,9 @@ FAILED_CHECK = (
     '{"schema_version": 1, "project": "oak", "task": "B12", "head": "c0ffee",'
     ' "checks": [{"command": "ruff check .", "passed": false, "duration_ms": 30, "tail": []}]}'
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class ForgeDouble:
@@ -60,7 +63,8 @@ class OpenTaskPullRequestArrangement:
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout="/srv/oak-b12\n")
         self.processes.answer(("git", "branch", "--show-current"), stdout="task/f0-parser/B12\n")
@@ -155,7 +159,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
             (
                 LedgerEntry(instant=WAVE_START, event=WAVE_STARTED),
                 LedgerEntry(
-                    instant=RUNTIME_NOW,
+                    instant=FIXED_NOW,
                     event=TaskPrOpened(
                         project="oak",
                         task="B12",
@@ -191,9 +195,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries[1],
-            LedgerEntry(
-                instant=RUNTIME_NOW, event=MilestoneCreated(project="oak", title="Parser", login="clauche-bot")
-            ),
+            LedgerEntry(instant=FIXED_NOW, event=MilestoneCreated(project="oak", title="Parser", login="clauche-bot")),
         )
 
     def test_should_open_the_title_on_the_type_alone_for_a_task_with_no_component(self):

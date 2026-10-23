@@ -7,13 +7,14 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from brigade.commands.collect import COMMAND, collect
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 
 NOTES_DOCUMENT = (
     '{"schema_version": 1, "collector": "notes", "collected_at": "2026-10-19T09:00:00Z",'
     ' "summary": {"open": 3}, "items": []}'
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class ScriptedCollectorDouble:
@@ -38,8 +39,8 @@ class CollectTest(unittest.TestCase):
         self.project.mkdir()
         self.enterContext(contextlib.chdir(self.project))
         self.collector = ScriptedCollectorDouble()
-        self.runtime = create_runtime(
-            root,
+        self.runtime = create_test_runtime(
+            create_test_paths(root),
             resolve_plugin=create_plugin_resolver(
                 {("collector", "notes"): self.collector, ("forge", "github"): object()}
             ),

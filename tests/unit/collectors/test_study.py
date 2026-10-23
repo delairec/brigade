@@ -9,7 +9,9 @@ from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.order_done import OrderDone
 from brigade.system.parse_configuration import Configuration
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
@@ -26,7 +28,8 @@ class StudyCollectorTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
 
     def record_answer(self, run: str) -> None:
         append_event(

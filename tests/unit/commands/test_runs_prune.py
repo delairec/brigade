@@ -4,7 +4,6 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.runs_prune import COMMAND
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_directories import (
     FIRST_RUN,
     SECOND_RUN,
@@ -12,6 +11,8 @@ from tests.unit.commands.run_directories import (
     create_run_result,
     write_run,
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 NO_DAY = None
 KEEP_FROM_CONFIGURATION = None
@@ -111,7 +112,7 @@ class RunsPruneOfTwoFinishedRunsTest(unittest.TestCase):
         request = Namespace(keep=1, before=NO_DAY, resumable=False, dry_run=True)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(
@@ -126,7 +127,7 @@ class RunsPruneOfTwoFinishedRunsTest(unittest.TestCase):
         request = Namespace(keep=KEEP_FROM_CONFIGURATION, before=NO_DAY, resumable=False, dry_run=False)
 
         # Act
-        document = COMMAND.run(request, create_runtime(self.root))
+        document = COMMAND.run(request, create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(

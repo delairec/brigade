@@ -7,8 +7,9 @@ from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
-from tests.unit.commands.command_runtime import write_ledger
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_ledger, write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 from tests.unit.select_requests_opening_on import select_requests_opening_on
@@ -64,7 +65,8 @@ class StartProjectWaveTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         tree = self.root / "cache" / "refs" / "shop" / MAIN_SHA
         tree.mkdir(parents=True)
         self.processes.answer(

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from brigade.commands.plan_context import COMMAND, plan_context
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 
 REQUEST = json.dumps(
     {
@@ -74,6 +74,9 @@ DECISION_D1 = json.dumps(
         "fields": [{"name": "TITLE", "atoms": ['"Tides run on the clock"'], "fields": []}],
     }
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 TASK_SCHEMA = json.dumps({"fields": [{"name": "FIELD", "atoms": ["TITLE"]}]})
 FORGE = object()
 
@@ -103,7 +106,9 @@ class PlanContextTest(unittest.TestCase):
             ("awawa", "show", "MILESTONE"): ProcessAnswer(exit_code=1),
         }
         self.runner = ScriptedProcessRunner(self.answers)
-        self.runtime = create_runtime(Path(self.root.name), run_process=self.runner.run, resolve_plugin=resolve_forge)
+        self.runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name)), run_process=self.runner.run, resolve_plugin=resolve_forge
+        )
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA REQUEST\n")
         self.runtime.paths.configuration_file.write_text("")

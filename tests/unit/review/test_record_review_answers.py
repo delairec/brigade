@@ -8,7 +8,9 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
 from brigade.system.parse_configuration import Configuration
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_ledger
+from tests.unit.commands.command_runtime import create_corpus_double, write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.review.test_assemble_review_context import (
     CHANGES_REQUESTED,
     OPENED,
@@ -34,7 +36,9 @@ class RecordReviewAnswersTestCase(unittest.TestCase):
         write_ledger(self.root, [CHANGES_REQUESTED, VERDICT_CHANGES])
 
     def record(self, policies: dict, answers: dict) -> dict:
-        runtime = create_runtime(self.root, run_process=create_corpus_double({"POLICY": policies}))
+        runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_corpus_double({"POLICY": policies})
+        )
         return record_review_answers(
             runtime,
             AnswersDemand(

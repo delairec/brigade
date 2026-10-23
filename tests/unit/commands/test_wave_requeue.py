@@ -7,7 +7,9 @@ from brigade.commands.wave_requeue import COMMAND
 from brigade.errors import BrigadeError
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
-from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 WAVE_STARTED = {
     "schema_version": 2,
@@ -86,7 +88,7 @@ class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_runtime(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root))
 
     def test_should_record_the_parked_task_queued(self):
         for case, parking in [
@@ -122,7 +124,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_runtime(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root))
 
     def test_should_refuse_a_task_that_is_not_parked_naming_its_state(self):
         for case, events, expected_refusal in [

@@ -5,7 +5,9 @@ from pathlib import Path
 
 from brigade.commands.wave_start import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.waves.test_start_project_wave import StartProjectWaveTestCase
 
 NO_PROJECTS = {"PROJECT": {}}
@@ -67,7 +69,8 @@ class WaveStartOfAnUnknownProjectTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
-        runtime = create_runtime(root, run_process=create_corpus_double(NO_PROJECTS))
+        write_operational_corpus(root)
+        runtime = create_test_runtime(create_test_paths(root), run_process=create_corpus_double(NO_PROJECTS))
         every_startable_task = []
 
         # Act

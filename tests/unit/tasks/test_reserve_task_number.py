@@ -4,7 +4,9 @@ import unittest
 from pathlib import Path
 
 from brigade.tasks.reserve_task_number import reserve_task_number
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 
@@ -13,7 +15,8 @@ class ReserveTaskNumberTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.paths = create_scripted_runtime(self.root, ScriptedProcesses()).paths
+        write_operational_corpus(self.root)
+        self.paths = create_test_runtime(create_test_paths(self.root), run_process=ScriptedProcesses()).paths
 
     def test_should_reserve_the_next_number_of_the_corpus_when_none_is_reserved(self):
         # Act

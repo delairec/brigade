@@ -7,7 +7,9 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_state import TaskState
 from brigade.waves.read_task_states import read_task_states
-from tests.unit.create_scripted_runtime import create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 INSTANT = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
@@ -16,7 +18,8 @@ INSTANT = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
 class ReadTaskStatesTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.paths = create_scripted_runtime(self.root, ScriptedProcesses()).paths
+        write_operational_corpus(self.root)
+        self.paths = create_test_runtime(create_test_paths(self.root), run_process=ScriptedProcesses()).paths
 
     def test_should_read_a_task_parked_by_its_blockers_as_parked(self):
         # Arrange

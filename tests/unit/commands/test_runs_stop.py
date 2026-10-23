@@ -5,8 +5,9 @@ from pathlib import Path
 
 from brigade.commands.runs_stop import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_runtime
 from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class RunsStopTextTest(unittest.TestCase):
@@ -55,7 +56,7 @@ class RunsStopOfAFinishedRunTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(run=FIRST_RUN), create_runtime(root))
+            COMMAND.run(Namespace(run=FIRST_RUN), create_test_runtime(create_test_paths(root)))
 
         # Assert
         self.assertEqual(str(raised.exception), f"run {FIRST_RUN} has already finished on done")

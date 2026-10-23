@@ -6,7 +6,9 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.collectors_list import COMMAND, collectors_list
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
 
@@ -35,7 +37,9 @@ class CollectorsListTest(unittest.TestCase):
                 ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=app),
             }
         )
-        self.runtime = create_runtime(root, run_process=runner.run, executable_search_path=str(root / "bin"))
+        self.runtime = create_test_runtime(
+            create_test_paths(root, executable_search_path=str(root / "bin")), run_process=runner.run
+        )
         _place_executable(self.runtime.paths.config_root / "collectors" / "backlog")
         self.no_option = argparse.Namespace()
 

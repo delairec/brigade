@@ -13,7 +13,7 @@ from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from brigade.studies.convert_study import Study
 from brigade.studies.run_study import run_study
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from tests.unit.create_test_runtime import FIXED_NOW
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -53,6 +53,9 @@ SCAN_INTO_THE_INBOX = Study(
     answer_type="FINDING",
     status="active",
 )
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 def refuse_collector(name: str, project: Path):
@@ -65,12 +68,13 @@ class RunStudyArrangement:
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.live_run_directories = set()
         self.held_run_directories = []
         self.equipment = create_study_equipment(
             resolve_collector=refuse_collector,
-            name_run={RUNTIME_NOW: "20261019T090000Z-c0ffee"}.__getitem__,
+            name_run={FIXED_NOW: "20261019T090000Z-c0ffee"}.__getitem__,
             is_run_alive=self.live_run_directories.__contains__,
             record_own_pid=self.held_run_directories.append,
         )
@@ -119,12 +123,10 @@ class RunStudyTest(RunStudyArrangement, unittest.TestCase):
         self.assertEqual(
             read_ledger(self.root / "state").entries,
             (
-                LedgerEntry(instant=RUNTIME_NOW, event=StepDone(kind="study", run=RUN_ID, step="collect")),
-                LedgerEntry(instant=RUNTIME_NOW, event=StepDone(kind="study", run=RUN_ID, step="judge")),
-                LedgerEntry(instant=RUNTIME_NOW, event=StepDone(kind="study", run=RUN_ID, step="output")),
-                LedgerEntry(
-                    instant=RUNTIME_NOW, event=OrderDone(project=None, kind="study", order="trees", run=RUN_ID)
-                ),
+                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="collect")),
+                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="judge")),
+                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="output")),
+                LedgerEntry(instant=FIXED_NOW, event=OrderDone(project=None, kind="study", order="trees", run=RUN_ID)),
             ),
         )
 
@@ -199,11 +201,11 @@ class RunStudyParkingTest(RunStudyArrangement, unittest.TestCase):
             read_ledger(self.root / "state").entries,
             (
                 LedgerEntry(
-                    instant=RUNTIME_NOW,
+                    instant=FIXED_NOW,
                     event=StepFailed(kind="study", run=RUN_ID, step="collect", reason="no collector weather"),
                 ),
                 LedgerEntry(
-                    instant=RUNTIME_NOW,
+                    instant=FIXED_NOW,
                     event=OrderParked(
                         project=None,
                         kind="study",

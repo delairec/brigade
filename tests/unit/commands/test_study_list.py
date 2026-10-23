@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.commands.study_list import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_corpus_double, create_runtime, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 
 HEALTH_STUDY = (
     ("TITLE", "the health of the machine"),
@@ -16,6 +16,8 @@ HEALTH_STUDY = (
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 
 class StudyListTextTest(unittest.TestCase):
@@ -84,7 +86,9 @@ class StudyListOfTheOperationalCorpusTest(unittest.TestCase):
     def test_should_list_each_study_with_its_schedule(self):
         # Arrange
         write_operational_corpus(self.root)
-        runtime = create_runtime(self.root, run_process=create_corpus_double({"STUDY": {"health": HEALTH_STUDY}}))
+        runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_corpus_double({"STUDY": {"health": HEALTH_STUDY}})
+        )
 
         # Act
         document = COMMAND.run(Namespace(), runtime)
@@ -100,7 +104,7 @@ class StudyListOfTheOperationalCorpusTest(unittest.TestCase):
 
     def test_should_refuse_a_machine_with_no_operational_corpus(self):
         # Arrange
-        runtime = create_runtime(self.root)
+        runtime = create_test_runtime(create_test_paths(self.root))
 
         # Act
         with self.assertRaises(BrigadeError) as raised:

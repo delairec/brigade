@@ -10,7 +10,6 @@ from tests.unit.commands.command_runtime import (
     ProcessAnswer,
     ScriptedProcessRunner,
     create_corpus_double,
-    create_runtime,
     write_operational_corpus,
 )
 from tests.unit.commands.run_doubles import (
@@ -19,6 +18,8 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
     spawn_as_this_process,
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 CORPUS_CHANGE_OUTPUTS = {
     ("awawa", "fmt"): ProcessAnswer(),
@@ -40,8 +41,8 @@ class RequestNewTest(unittest.TestCase):
     def _create_runtime(self, project: tuple, probe: dict):
         corpus = {"PROJECT": {"shop": project}}
         runner = ScriptedProcessRunner(CORPUS_CHANGE_OUTPUTS, fallback=create_corpus_double(corpus))
-        return create_runtime(
-            self.root,
+        return create_test_runtime(
+            create_test_paths(self.root),
             run_process=runner.run,
             spawn_process=spawn_as_this_process,
             resolve_plugin=create_plugin_resolution(probe),

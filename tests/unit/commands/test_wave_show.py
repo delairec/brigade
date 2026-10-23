@@ -5,8 +5,10 @@ from pathlib import Path
 
 from brigade.commands.wave_show import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.commands.run_directories import create_run_result
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 WAVE_STARTED = {
     "schema_version": 2,
@@ -124,7 +126,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_RUNNING, T7_PR_OPENED, T7_RUN_FINISHED, T7_PR_OPEN])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_runtime(self.root))
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(
@@ -149,7 +151,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, WAVE_PR_OPENED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_runtime(self.root))
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(document["pull_request"], 77)
@@ -159,7 +161,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_runtime(self.root))
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(document["tasks"][1], {"task": "T8", "state": "parked", "pull_request": None, "run": None})
@@ -170,7 +172,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(wave="tidepool_w17"), create_runtime(self.root))
+            COMMAND.run(Namespace(wave="tidepool_w17"), create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")

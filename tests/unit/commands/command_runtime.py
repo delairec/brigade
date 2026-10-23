@@ -3,11 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.runtime import Runtime
-from brigade.system.paths import Paths
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.system.trail_writer import TrailWriter
-from tests.unit.create_test_paths import PACKAGE_FILE
 
 NOW = datetime(2026, 10, 19, 9, 0, 0, tzinfo=UTC)
 NO_PATH_NEEDED = ""
@@ -21,46 +17,12 @@ class ProcessAnswer:
     stderr: str = ""
 
 
-def _report_nothing(trace) -> None:
-    pass
-
-
 def refuse_process(request):
     raise AssertionError(f"the command ran {request.argv}")
 
 
 def refuse_resolution(kind: str, name: str, **places):
     raise AssertionError(f"the command resolved the {kind} plugin {name}")
-
-
-def create_runtime(
-    root: Path,
-    *,
-    run_process=refuse_process,
-    spawn_process=refuse_process,
-    resolve_plugin=refuse_resolution,
-    run_directory: Path | None = None,
-    executable_search_path: str = NO_PATH_NEEDED,
-) -> Runtime:
-    return Runtime(
-        run_process=run_process,
-        spawn_process=spawn_process,
-        paths=Paths(
-            config_root=root / "config",
-            state_root=root / "state",
-            cache_root=root / "cache",
-            home=root / "home",
-            executable_search_path=executable_search_path,
-            package_file=PACKAGE_FILE,
-            run_directory=run_directory,
-        ),
-        now=NOW,
-        read_clock=lambda: NOW,
-        read_monotonic=lambda: 0.0,
-        entry_point=root / "bin" / "brigade",
-        trail=TrailWriter(_report_nothing),
-        resolve_plugin=resolve_plugin,
-    )
 
 
 def answer(request: ProcessRequest, stdout: str, exit_code: int = 0, stderr: str = "") -> ProcessRecord:

@@ -5,7 +5,9 @@ from pathlib import Path
 
 from brigade.commands.task_pr import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, create_runtime
+from tests.unit.commands.command_runtime import create_machine_double
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
@@ -59,8 +61,8 @@ class TaskPrOutsideATaskTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (root / "config").mkdir()
         (root / "config" / "config.toml").write_text('attribution = ["Co-Authored-By: a model"]\n', encoding="utf-8")
-        runtime = create_runtime(
-            root,
+        runtime = create_test_runtime(
+            create_test_paths(root),
             run_process=create_machine_double({}, MAIN_BRANCH_CHECKOUT),
             resolve_plugin=_resolve_the_forge_double,
         )

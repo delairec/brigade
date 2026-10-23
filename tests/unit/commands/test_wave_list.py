@@ -4,7 +4,9 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.wave_list import COMMAND
-from tests.unit.commands.command_runtime import create_runtime, write_ledger
+from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 EVERY_PROJECT = None
 TIDES_STARTED = {
@@ -90,7 +92,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_ledger(root, [TIDES_STARTED, TIDES_CANCELLED, GAUGES_STARTED])
-        runtime = create_runtime(root)
+        runtime = create_test_runtime(create_test_paths(root))
         rows = [
             ("every project", EVERY_PROJECT, [GAUGES_ROW, TIDES_ROW]),
             ("one project", "tidepool", [TIDES_ROW]),
@@ -106,7 +108,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
     def test_should_list_no_wave_of_a_ledger_holding_none(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        runtime = create_runtime(root)
+        runtime = create_test_runtime(create_test_paths(root))
 
         # Act
         document = COMMAND.run(Namespace(project=EVERY_PROJECT), runtime)

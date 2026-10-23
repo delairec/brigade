@@ -12,7 +12,9 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.planning.read_planning_request import PlanningRequest
 from brigade.planning.record_plan import PlanRecording, record_plan
 from brigade.system.run_process import ProcessRequest
-from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 from tests.unit.select_requests_opening_on import select_requests_opening_on
@@ -87,7 +89,10 @@ class RecordPlanArrangement:
         self.plan_file = self.root / "plan.awawa"
         self.plan_file.write_text(PLAN, encoding="utf-8")
         self.processes = ScriptedProcesses()
-        self.runtime = create_scripted_runtime(self.root, self.processes, run_directory=self.root / "runs" / "r1")
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "runs" / "r1"), run_process=self.processes
+        )
         self.worktree = self.root / "cache" / "plans" / "oak_r1"
         (self.worktree / "corpus").mkdir(parents=True)
         (self.worktree / "corpus" / "tasks.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
@@ -538,12 +543,13 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries,
-            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_r1", run="r1")),),
+            (LedgerEntry(instant=FIXED_NOW, event=PlanLintFailed(request="oak_r1", run="r1")),),
         )
 
     def test_should_record_the_lint_round_of_a_recording_outside_a_run_with_no_run(self):
         # Arrange
-        self.runtime = create_scripted_runtime(self.root, self.processes)
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.script_refused_lint()
 
         # Act
@@ -553,7 +559,7 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.root / "state").entries,
-            (LedgerEntry(instant=RUNTIME_NOW, event=PlanLintFailed(request="oak_r1", run=None)),),
+            (LedgerEntry(instant=FIXED_NOW, event=PlanLintFailed(request="oak_r1", run=None)),),
         )
 
     def test_should_refuse_a_second_lint_round_in_the_same_run(self):

@@ -8,7 +8,7 @@ from pathlib import Path
 from brigade.commands.doctor import COMMAND, doctor
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import ToolFailure, ToolNotFound
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_runtime
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 GIT_ANSWERS = {
@@ -36,6 +36,9 @@ APPROVAL_POLICY = json.dumps(
 COMMENT_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.lib"]}, {"name": "REVIEW", "atoms": ["comment"]}]}
 )
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
+
 TOKEN = {"GH_TOKEN": "t0k3n"}
 
 
@@ -79,8 +82,8 @@ class DoctorTestCase(unittest.TestCase):
         self.probe = dict(PROBE)
         self.forge = ScriptedForgeDouble({"ada-bot": TOKEN, "rev-bot": TOKEN}, "ada-bot")
         plugins = {("client", "scripted"): ScriptedClient({"probe": self.probe}), ("forge", "github"): self.forge}
-        self.runtime = create_runtime(
-            Path(self.root.name),
+        self.runtime = create_test_runtime(
+            create_test_paths(Path(self.root.name)),
             run_process=ScriptedProcessRunner(self.answers).run,
             resolve_plugin=create_plugin_resolver(plugins),
         )
