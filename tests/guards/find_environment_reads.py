@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 MODULES_ALLOWED_TO_READ = ("system/paths.py", "launcher.py")
 OS_READS = ("environ", "getenv")
 EXPANDUSER = "expanduser"
@@ -35,20 +37,17 @@ def _describe_reads(node: ast.AST) -> list[str]:
     return []
 
 
-def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
-    location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
-    findings = [
-        (node.lineno, node.col_offset, f"{location}:{node.lineno} reads {read}")
-        for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8")))
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    return [
+        (node.lineno, node.col_offset, f"reads {read}")
+        for node in ast.walk(module.tree)
         for read in _describe_reads(node)
     ]
-    return [violation for _, _, violation in sorted(findings)]
+
+
+def _is_inspected(relative_path: Path) -> bool:
+    return relative_path.as_posix() not in MODULES_ALLOWED_TO_READ
 
 
 def find_environment_reads(package_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(package_root.rglob("*.py"))
-        if module_path.relative_to(package_root).as_posix() not in MODULES_ALLOWED_TO_READ
-        for violation in _inspect_module(package_root, module_path)
-    ]
+    return find_violations(package_root, _find_in_module, is_inspected=_is_inspected)

@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 MOCK_MODULE = "mock"
 PATCH = "patch"
 PRIVATE_PREFIX = "_"
@@ -22,19 +24,12 @@ def _describe_violations(node: ast.AST) -> list[str]:
     return [f"imports the private name {alias.name}" for alias in node.names if alias.name.startswith(PRIVATE_PREFIX)]
 
 
-def _inspect_module(tests_root: Path, module_path: Path) -> list[str]:
-    location = Path(tests_root.name, module_path.relative_to(tests_root)).as_posix()
+def _find_in_module(module: GuardedModule) -> list[Finding]:
     findings = {
-        (node.lineno, f"{location}:{node.lineno} {violation}")
-        for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8")))
-        for violation in _describe_violations(node)
+        (node.lineno, 0, violation) for node in ast.walk(module.tree) for violation in _describe_violations(node)
     }
-    return [violation for _, violation in sorted(findings)]
+    return list(findings)
 
 
 def find_patches_and_private_imports(tests_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(tests_root.rglob("*.py"))
-        for violation in _inspect_module(tests_root, module_path)
-    ]
+    return find_violations(tests_root, _find_in_module)

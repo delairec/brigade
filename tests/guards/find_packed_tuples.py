@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 
 def _compares_a_packed_tuple(node: ast.AST) -> bool:
     return (
@@ -12,16 +14,10 @@ def _compares_a_packed_tuple(node: ast.AST) -> bool:
     )
 
 
-def _inspect_module(tests_root: Path, module_path: Path) -> list[str]:
-    location = Path(tests_root.name, module_path.relative_to(tests_root)).as_posix()
-    tree = ast.parse(module_path.read_text(encoding="utf-8"))
-    lines = sorted({node.lineno for node in ast.walk(tree) if _compares_a_packed_tuple(node)})
-    return [f"{location}:{line} compares a packed tuple" for line in lines]
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    lines = {node.lineno for node in ast.walk(module.tree) if _compares_a_packed_tuple(node)}
+    return [(line, 0, "compares a packed tuple") for line in lines]
 
 
 def find_packed_tuples(tests_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(tests_root.rglob("*.py"))
-        for violation in _inspect_module(tests_root, module_path)
-    ]
+    return find_violations(tests_root, _find_in_module)

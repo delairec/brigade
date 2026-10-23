@@ -3,6 +3,8 @@ import io
 import tokenize
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 OPENING_DELIMITERS = ("# Arrange", "# Act")
 ASSERT_DELIMITER = "# Assert"
 BLOCKS_HOLDING_THE_DELIMITERS = (ast.For, ast.With)
@@ -45,25 +47,23 @@ def _opens_on_a_delimiter(block: ast.AST, delimiter_lines: list[int]) -> bool:
     )
 
 
-def _inspect_module(tests_root: Path, module_path: Path) -> list[str]:
-    location = Path(tests_root.name, module_path.relative_to(tests_root)).as_posix()
-    source = module_path.read_text(encoding="utf-8")
-    delimiter_lines = _delimiter_lines(source, OPENING_DELIMITERS)
-    assert_lines = _delimiter_lines(source, (ASSERT_DELIMITER,))
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    delimiter_lines = _delimiter_lines(module.source, OPENING_DELIMITERS)
+    assert_lines = _delimiter_lines(module.source, (ASSERT_DELIMITER,))
     methods = [
         statement
-        for node in ast.walk(ast.parse(source))
+        for node in ast.walk(module.tree)
         if isinstance(node, ast.ClassDef)
         for statement in node.body
         if isinstance(statement, ast.FunctionDef) and statement.name.startswith("test")
     ]
     preparations = [
-        f"{location}:{method.lineno} {method.name} prepares something before its first delimiter"
+        (method.lineno, 0, f"{method.name} prepares something before its first delimiter")
         for method in methods
         if not _opens_on_a_delimiter(method, delimiter_lines)
     ]
     gestures = [
-        f"{location}:{line} {method.name} acts after its last # Assert"
+        (line, 0, f"{method.name} acts after its last # Assert")
         for method in methods
         for line in _gesture_lines_after_the_last_assert(method, assert_lines)
     ]
@@ -71,8 +71,4 @@ def _inspect_module(tests_root: Path, module_path: Path) -> list[str]:
 
 
 def find_preparations_before_delimiters(tests_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(tests_root.rglob("test_*.py"))
-        for violation in _inspect_module(tests_root, module_path)
-    ]
+    return find_violations(tests_root, _find_in_module, pattern="test_*.py")

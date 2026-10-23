@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 GUARDED_TOOLS = ("awawa", "git")
 GATEWAY_PACKAGES = ("corpus", "git")
 
@@ -14,23 +16,18 @@ def _opened_tool(node: ast.AST) -> str | None:
     return None
 
 
-def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
-    location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
-    tree = ast.parse(module_path.read_text(encoding="utf-8"))
+def _find_in_module(module: GuardedModule) -> list[Finding]:
     findings = []
-    for node in ast.walk(tree):
+    for node in ast.walk(module.tree):
         tool = _opened_tool(node)
         if tool:
-            findings.append(
-                (node.lineno, node.col_offset, f"{location}:{node.lineno} builds an argv opening on {tool}")
-            )
-    return [violation for _, _, violation in sorted(findings)]
+            findings.append((node.lineno, node.col_offset, f"builds an argv opening on {tool}"))
+    return findings
+
+
+def _is_inspected(relative_path: Path) -> bool:
+    return relative_path.parts[0] not in GATEWAY_PACKAGES
 
 
 def find_tool_argvs(package_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(package_root.rglob("*.py"))
-        if module_path.relative_to(package_root).parts[0] not in GATEWAY_PACKAGES
-        for violation in _inspect_module(package_root, module_path)
-    ]
+    return find_violations(package_root, _find_in_module, is_inspected=_is_inspected)

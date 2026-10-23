@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
 TEST_PREFIX = "test"
 
@@ -20,29 +22,24 @@ def _describe_violation(node: ast.AST, method: str) -> str | None:
     return None
 
 
-def _inspect_method(location: str, method: ast.FunctionDef) -> list[tuple[int, str]]:
+def _inspect_method(method: ast.FunctionDef) -> list[Finding]:
     findings = []
     for node in ast.walk(method):
         violation = _describe_violation(node, method.name)
         if violation is not None:
-            findings.append((node.lineno, f"{location}:{node.lineno} {violation}"))
+            findings.append((node.lineno, 0, violation))
     return findings
 
 
-def _inspect_module(tests_root: Path, module_path: Path) -> list[str]:
-    location = Path(tests_root.name, module_path.relative_to(tests_root)).as_posix()
+def _find_in_module(module: GuardedModule) -> list[Finding]:
     findings = {
         finding
-        for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8")))
+        for node in ast.walk(module.tree)
         if isinstance(node, ast.FunctionDef) and node.name.startswith(TEST_PREFIX)
-        for finding in _inspect_method(location, node)
+        for finding in _inspect_method(node)
     }
-    return [violation for _, violation in sorted(findings)]
+    return list(findings)
 
 
 def find_projections(tests_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(tests_root.rglob("*.py"))
-        for violation in _inspect_module(tests_root, module_path)
-    ]
+    return find_violations(tests_root, _find_in_module)

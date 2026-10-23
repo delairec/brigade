@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 PACKAGE_ALLOWED_TO_WRITE = "system"
 WRITING_METHODS = ("write_text", "write_bytes", "mkdir", "rename")
 WRITING_FUNCTIONS = {("os", "rename"), ("os", "replace"), ("shutil", "rmtree"), ("tempfile", "mkdtemp")}
@@ -52,22 +54,19 @@ def _name_write(call: ast.Call, imported: dict[str, str]) -> str | None:
     return None
 
 
-def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
-    location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
-    tree = ast.parse(module_path.read_text(encoding="utf-8"))
-    imported = _imported_functions(tree)
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    imported = _imported_functions(module.tree)
     findings = []
-    for node in ast.walk(tree):
+    for node in ast.walk(module.tree):
         write = _name_write(node, imported) if isinstance(node, ast.Call) else None
         if write:
-            findings.append((node.lineno, node.col_offset, f"{location}:{node.lineno} writes through {write}"))
-    return [violation for _, _, violation in sorted(findings)]
+            findings.append((node.lineno, node.col_offset, f"writes through {write}"))
+    return findings
+
+
+def _is_inspected(relative_path: Path) -> bool:
+    return relative_path.parts[0] != PACKAGE_ALLOWED_TO_WRITE
 
 
 def find_filesystem_writes(package_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(package_root.rglob("*.py"))
-        if module_path.relative_to(package_root).parts[0] != PACKAGE_ALLOWED_TO_WRITE
-        for violation in _inspect_module(package_root, module_path)
-    ]
+    return find_violations(package_root, _find_in_module, is_inspected=_is_inspected)

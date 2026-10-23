@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 PACKAGE_ALLOWED_TO_READ = "system"
 MODULE_ALLOWED_TO_READ = "runtime.py"
 CLOCK_READS = {("time", "monotonic"): "time.monotonic", ("datetime", "now"): "datetime.now"}
@@ -33,27 +35,20 @@ def _name_clock_read(call: ast.Call, imported: dict[str, str]) -> str | None:
     return None
 
 
-def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
-    location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
-    tree = ast.parse(module_path.read_text(encoding="utf-8"))
-    imported = _imported_clock_reads(tree)
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    imported = _imported_clock_reads(module.tree)
     findings = []
-    for node in ast.walk(tree):
+    for node in ast.walk(module.tree):
         clock_read = _name_clock_read(node, imported) if isinstance(node, ast.Call) else None
         if clock_read:
-            findings.append((node.lineno, node.col_offset, f"{location}:{node.lineno} reads {clock_read}"))
-    return [violation for _, _, violation in sorted(findings)]
+            findings.append((node.lineno, node.col_offset, f"reads {clock_read}"))
+    return findings
 
 
-def _may_read_the_clock(package_root: Path, module_path: Path) -> bool:
-    parts = module_path.relative_to(package_root).parts
-    return parts[0] == PACKAGE_ALLOWED_TO_READ or parts == (MODULE_ALLOWED_TO_READ,)
+def _is_inspected(relative_path: Path) -> bool:
+    parts = relative_path.parts
+    return not (parts[0] == PACKAGE_ALLOWED_TO_READ or parts == (MODULE_ALLOWED_TO_READ,))
 
 
 def find_clock_reads(package_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(package_root.rglob("*.py"))
-        if not _may_read_the_clock(package_root, module_path)
-        for violation in _inspect_module(package_root, module_path)
-    ]
+    return find_violations(package_root, _find_in_module, is_inspected=_is_inspected)

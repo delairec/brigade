@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 RUNTIME_PARAMETER = "runtime"
 RUNTIME_TYPE = "Runtime"
 FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
@@ -38,45 +40,38 @@ def _describe(function: ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda) -> 
     return function.name
 
 
-def _describe_public_signature(function: ast.FunctionDef | ast.AsyncFunctionDef, location: str) -> list[str]:
+def _describe_public_signature(function: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
     if function.name.startswith(PRIVATE_PREFIX):
         return []
     unannotated = [
-        f"{location}:{function.lineno} {function.name} leaves {parameter.arg} unannotated"
+        f"{function.name} leaves {parameter.arg} unannotated"
         for parameter in _list_parameters(function)
         if parameter.annotation is None and parameter.arg not in (*RECEIVERS, RUNTIME_PARAMETER)
     ]
     if function.returns is None:
-        unannotated.append(f"{location}:{function.lineno} {function.name} leaves its return unannotated")
+        unannotated.append(f"{function.name} leaves its return unannotated")
     return unannotated
 
 
-def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
-    location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
-    nodes = list(ast.walk(ast.parse(module_path.read_text(encoding="utf-8"))))
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    nodes = list(ast.walk(module.tree))
     findings = [
         (
             function.lineno,
-            (
-                f"{location}:{function.lineno} {_describe(function)} takes {RUNTIME_PARAMETER} without"
-                f" {RUNTIME_PARAMETER}: {RUNTIME_TYPE}"
-            ),
+            0,
+            f"{_describe(function)} takes {RUNTIME_PARAMETER} without {RUNTIME_PARAMETER}: {RUNTIME_TYPE}",
         )
         for function in nodes
         if _takes_unannotated_runtime(function)
     ]
     findings.extend(
-        (function.lineno, violation)
+        (function.lineno, rank, violation)
         for function in nodes
         if isinstance(function, NAMED_FUNCTION_NODES)
-        for violation in _describe_public_signature(function, location)
+        for rank, violation in enumerate(_describe_public_signature(function), start=1)
     )
-    return [violation for _, violation in sorted(findings, key=lambda finding: finding[0])]
+    return findings
 
 
 def find_unannotated_runtimes(package_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(package_root.rglob("*.py"))
-        for violation in _inspect_module(package_root, module_path)
-    ]
+    return find_violations(package_root, _find_in_module)

@@ -1,13 +1,15 @@
 import ast
 from pathlib import Path
 
+from tests.guards.find_violations import Finding, GuardedModule, find_violations
+
 RESOLVER_NAME = "resolve_plugin"
 MODULES_ALLOWED_TO_RESOLVE = ("cli.py", "runtime.py")
 PACKAGE_ALLOWED_TO_RESOLVE = "commands"
 
 
-def _may_resolve(package_root: Path, module_path: Path) -> bool:
-    parts = module_path.relative_to(package_root).parts
+def _may_resolve(relative_path: Path) -> bool:
+    parts = relative_path.parts
     return parts in ((name,) for name in MODULES_ALLOWED_TO_RESOLVE) or parts[0] == PACKAGE_ALLOWED_TO_RESOLVE
 
 
@@ -20,16 +22,17 @@ def _names_the_resolver(node: ast.AST) -> bool:
     return isinstance(called, ast.Name) and called.id == RESOLVER_NAME
 
 
-def _inspect_module(package_root: Path, module_path: Path) -> list[str]:
-    location = Path(package_root.name, module_path.relative_to(package_root)).as_posix()
-    calls = [node for node in ast.walk(ast.parse(module_path.read_text(encoding="utf-8"))) if _names_the_resolver(node)]
-    return [f"{location}:{node.lineno} calls {RESOLVER_NAME}" for node in sorted(calls, key=lambda call: call.lineno)]
+def _find_in_module(module: GuardedModule) -> list[Finding]:
+    return [
+        (node.lineno, node.col_offset, f"calls {RESOLVER_NAME}")
+        for node in ast.walk(module.tree)
+        if _names_the_resolver(node)
+    ]
+
+
+def _is_inspected(relative_path: Path) -> bool:
+    return not _may_resolve(relative_path)
 
 
 def find_resolver_calls(package_root: Path) -> list[str]:
-    return [
-        violation
-        for module_path in sorted(package_root.rglob("*.py"))
-        if not _may_resolve(package_root, module_path)
-        for violation in _inspect_module(package_root, module_path)
-    ]
+    return find_violations(package_root, _find_in_module, is_inspected=_is_inspected)
