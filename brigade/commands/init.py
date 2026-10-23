@@ -80,14 +80,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def init(request, runtime: Runtime) -> dict:
     _require_identity(runtime)
     repository = _ensure_repository(runtime)
@@ -116,7 +108,5 @@ COMMAND = Command(
     path=("init",),
     help="create the operational corpus repository, its schema and config.toml",
     run=init,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

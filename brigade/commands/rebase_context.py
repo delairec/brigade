@@ -13,17 +13,9 @@ from brigade.verify.find_opened_task import find_opened_task
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     conflicts = "\n".join(document["conflicts"])
     return f"# branch\n{document['branch']}\n\n# base\n{document['base']}\n\n# conflicts\n{conflicts}"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def rebase_context(request, runtime: Runtime) -> dict:
@@ -47,7 +39,5 @@ COMMAND = Command(
     group_help="put the pull request of a task back on its base",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=rebase_context,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

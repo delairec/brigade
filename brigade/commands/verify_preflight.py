@@ -15,10 +15,6 @@ CLI_KEY = "cli"
 FAILED = "fail"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     lines = [f"preflight of #{document['pr']}, @TASK.{document['task']} at {document['head']}"]
     for check in document["checks"]:
@@ -58,7 +54,6 @@ COMMAND = Command(
     group_help="check the pull request of a task",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=verify_preflight,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

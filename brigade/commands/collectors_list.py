@@ -15,10 +15,6 @@ HEADER = ("name", "source", "absent")
 PRESENT = "-"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return render_table(
         HEADER,
@@ -27,10 +23,6 @@ def _render_text(document: dict) -> str:
             for collector in document["collectors"]
         ],
     )
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _find_current_project(runtime: Runtime) -> Entity | None:
@@ -60,7 +52,5 @@ COMMAND = Command(
     help="list every collector found, its name and its source",
     group_help="list the collectors brigade collect resolves",
     run=collectors_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

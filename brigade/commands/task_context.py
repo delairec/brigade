@@ -57,14 +57,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def task_context(request, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime.paths.configuration_file)
     worktree = locate_task_worktree(runtime, Path.cwd(), request.task)
@@ -83,7 +75,5 @@ COMMAND = Command(
     group_help="work on a task of a wave from its worktree",
     arguments=(Argument(("task",), {"nargs": "?"}),),
     run=task_context,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

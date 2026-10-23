@@ -18,20 +18,12 @@ DOCUMENT_SCHEMA_VERSION = 1
 PATH_FIELD = "PATH"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     findings = ", ".join(answer["finding"] for answer in document["answers"])
     text = f"findings answered on #{document['pr']}, @TASK.{document['task']} at {document['head']}: {findings}"
     if document["login"] is None:
         return text
     return f"{text}, posted as {document['login']}"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _read_answers(path: Path) -> dict:
@@ -70,7 +62,5 @@ COMMAND = Command(
         Argument(("--file",), {"required": True, "help": "the file holding the answers, a JSON document"}),
     ),
     run=review_reply,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

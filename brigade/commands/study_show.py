@@ -24,14 +24,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def study_show(request, runtime: Runtime) -> dict:
     entity = read_study_entity(runtime, request.name)
     last_order = read_last_study_orders(runtime.paths.state_root).get(entity.name)
@@ -50,7 +42,5 @@ COMMAND = Command(
     help="print the fields of a study, its last run and its outcome",
     arguments=(Argument(("name",)),),
     run=study_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

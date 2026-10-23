@@ -107,14 +107,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def project_add(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     path = Path(request.path).resolve()
@@ -153,7 +145,5 @@ COMMAND = Command(
         Argument(("--force",), {"action": "store_true", "help": "replace the project already registered"}),
     ),
     run=project_add,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

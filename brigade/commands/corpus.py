@@ -18,14 +18,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def corpus(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     tree = prepare_project_tree(request, configuration, runtime)
@@ -61,7 +53,5 @@ COMMAND = Command(
         ),
     ),
     run=corpus,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

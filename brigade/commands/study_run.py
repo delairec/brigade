@@ -26,10 +26,6 @@ DOCUMENT_KIND = "document"
 ANSWER_DOCUMENT = "awawa"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     if document["state"] == DONE:
         return f"@STUDY.{document['study']} run {document['run']} done"
@@ -80,7 +76,6 @@ COMMAND = Command(
         Argument(("--run-id",), {"help": argparse.SUPPRESS}),
     ),
     run=study_run,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

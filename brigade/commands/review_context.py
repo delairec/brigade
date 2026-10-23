@@ -18,10 +18,6 @@ PATH_FIELD = "PATH"
 IDENTIFIER_FIELD = "id"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_finding(finding: dict) -> str:
     fields = "".join(f"{name}: {value}\n" for name, value in finding.items() if name != IDENTIFIER_FIELD)
     return f"## {finding[IDENTIFIER_FIELD]}\n{fields}"
@@ -35,10 +31,6 @@ def _render_text(document: dict) -> str:
         "# findings\n" + "".join(_render_finding(finding) for finding in document["findings"]),
     ]
     return "\n".join(sections).removesuffix("\n")
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def review_context(request, runtime: Runtime) -> dict:
@@ -62,7 +54,5 @@ COMMAND = Command(
     group_help="answer the review of the pull request of a task",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=review_context,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

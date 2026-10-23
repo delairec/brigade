@@ -45,10 +45,6 @@ def _render_text(document: dict) -> str:
     return "\n".join([*(_render_finding(finding) for finding in document["findings"]), "", _summarise(document)])
 
 
-def _read_request(options):
-    return options
-
-
 def _decide_exit_code(document: dict) -> int:
     if document["findings"]:
         return 1
@@ -80,7 +76,6 @@ COMMAND = Command(
     help="check the built-in and the machine role files",
     group_help="list, show and lint the roles each slot resolves to",
     run=roles_lint,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

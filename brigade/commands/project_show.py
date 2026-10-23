@@ -17,14 +17,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def project_show(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.name)
@@ -43,7 +35,5 @@ COMMAND = Command(
     group_help="register the projects brigade works on, list and show them",
     arguments=(Argument(("name",)),),
     run=project_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

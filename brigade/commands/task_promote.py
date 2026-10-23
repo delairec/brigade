@@ -8,16 +8,8 @@ from brigade.system.read_configuration import read_configuration
 from brigade.tasks.promote_task import TaskPromotionDemand, promote_task
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"@TASK.{document['task']} implemented, delivered by #{document['pr']}, in {document['commit']}"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def task_promote(request, runtime: Runtime) -> dict:
@@ -42,7 +34,5 @@ COMMAND = Command(
         Argument(("--pr",), {"type": int, "help": "the pull request that delivers the task, when not the last opened"}),
     ),
     run=task_promote,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

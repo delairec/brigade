@@ -10,10 +10,6 @@ DOCUMENT_SCHEMA_VERSION = 1
 NO_RUN_REMOVED = "no run removed"
 
 
-def _read_request(options):
-    return options
-
-
 def _name_removal(document: dict) -> str:
     if document["dry_run"]:
         return "would remove"
@@ -25,10 +21,6 @@ def _render_text(document: dict) -> str:
         return NO_RUN_REMOVED
     removal = _name_removal(document)
     return "\n".join(f"{removal} {removed['run']} ({removed['state']})" for removed in document["runs"])
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _choose_keep(request, runtime: Runtime) -> int:
@@ -77,8 +69,6 @@ COMMAND = Command(
         Argument(("--dry-run",), {"action": "store_true", "help": "print what would go and remove nothing"}),
     ),
     run=runs_prune,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=_describe_diagnostics,
 )

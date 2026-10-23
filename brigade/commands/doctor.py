@@ -352,10 +352,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
 def _decide_exit_code(document: dict) -> int:
     if any(item["state"] == "finding" for item in document["items"]):
         return 1
@@ -400,7 +396,6 @@ COMMAND = Command(
     path=("doctor",),
     help="check the prerequisites and report the optional items with their fallback",
     run=doctor,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

@@ -27,14 +27,6 @@ def _describe_skipped_runs(document: dict) -> list[str]:
     return [f"skipped run {skipped['run']}: {skipped['reason']}" for skipped in document["skipped"]]
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def _is_selected(listed: dict, request) -> bool:
     return (request.wave is None or listed["wave"] == request.wave) and (
         request.task is None or listed["task"] == request.task
@@ -59,8 +51,6 @@ COMMAND = Command(
         Argument(("--task",), {"help": "keep the runs of this task"}),
     ),
     run=runs_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=_describe_skipped_runs,
 )

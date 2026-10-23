@@ -20,14 +20,6 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def roles_show(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     resolved = resolve_role(request.slot, runtime, NO_PROJECT_BINDINGS, configuration)
@@ -56,7 +48,5 @@ COMMAND = Command(
         Argument(("--short",), {"action": "store_true", "help": "print the front matter and the size of the body"}),
     ),
     run=roles_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

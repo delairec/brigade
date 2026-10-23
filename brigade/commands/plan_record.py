@@ -15,16 +15,8 @@ from brigade.system.read_configuration import read_configuration
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"recorded @REQUEST.{document['request']} as @MILESTONE.{document['milestone']} on {document['branch']}"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def plan_record(request, runtime: Runtime) -> dict:
@@ -48,7 +40,5 @@ COMMAND = Command(
     help="record the plan of a request, one MILESTONE and its tasks, on plan/<request> and deliver it to the main branch",
     arguments=(Argument(("request",)), Argument(("--file",), {"required": True})),
     run=plan_record,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

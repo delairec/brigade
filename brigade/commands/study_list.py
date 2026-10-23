@@ -23,14 +23,6 @@ def _render_text(document: dict) -> str:
     return render_table(tuple(COLUMNS), [tuple(_present(study[key]) for key in COLUMNS.values()) for study in studies])
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def study_list(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     last_orders = read_last_study_orders(runtime.paths.state_root)
@@ -52,7 +44,5 @@ COMMAND = Command(
     path=("study", "list"),
     help="list every study with its schedule, its last run and its outcome",
     run=study_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

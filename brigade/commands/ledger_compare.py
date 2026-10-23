@@ -39,14 +39,6 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def ledger_compare(request, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     return {
@@ -61,8 +53,6 @@ COMMAND = Command(
     help="the runs before a day against the runs from that day on",
     arguments=(Argument(("--before",), {"type": read_day, "required": True, "help": "a day YYYY-MM-DD in UTC"}),),
     run=ledger_compare,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=describe_skipped_lines,
 )

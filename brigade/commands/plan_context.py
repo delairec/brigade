@@ -76,14 +76,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def plan_context(request, runtime: Runtime) -> dict:
     planning_request = read_planning_request(runtime, request.request)
     project = find_project(read_projects(runtime), planning_request.project)
@@ -110,7 +102,5 @@ COMMAND = Command(
     group_help="plan the waves of the registered projects",
     arguments=(Argument(("request",)),),
     run=plan_context,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

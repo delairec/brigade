@@ -20,14 +20,6 @@ def _render_text(document: dict) -> str:
     return render_table(HEADER, [tuple(_show(row[column]) for column in COLUMNS) for row in document["requests"]])
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def request_list(request, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     rows = [
@@ -47,7 +39,5 @@ COMMAND = Command(
     help="print one row per request",
     arguments=(Argument(("--project",), {"help": "only the requests of this registered project"}),),
     run=request_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

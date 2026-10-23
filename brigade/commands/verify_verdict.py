@@ -19,19 +19,11 @@ from brigade.verify.validate_verdict import validate_verdict
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     text = f"verdict {document['verdict']} of #{document['pr']}, @TASK.{document['task']} at {document['head']}"
     if document["login"] is None:
         return text
     return f"{text}, posted as {document['login']}"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _read_verdict(path: Path) -> dict:
@@ -75,7 +67,5 @@ COMMAND = Command(
         Argument(("--file",), {"required": True, "help": "the file holding the verdict, a JSON document"}),
     ),
     run=verify_verdict,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

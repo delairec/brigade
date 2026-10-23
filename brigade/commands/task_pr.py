@@ -9,16 +9,8 @@ from brigade.system.read_configuration import read_configuration
 from brigade.tasks.open_task_pull_request import TaskPullRequestDemand, open_task_pull_request
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return document["url"]
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def task_pr(request, runtime: Runtime) -> dict:
@@ -47,7 +39,5 @@ COMMAND = Command(
         Argument(("--subject",), {"help": "the subject of the pull request, in the imperative"}),
     ),
     run=task_pr,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

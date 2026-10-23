@@ -12,16 +12,8 @@ from brigade.system.write_text_atomically import write_text_atomically
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"the answer of run {document['run']} recorded"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _read_answer(path: Path) -> str:
@@ -48,7 +40,5 @@ COMMAND = Command(
         Argument(("--file",), {"required": True, "help": "the file holding the answer entity"}),
     ),
     run=study_answer,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

@@ -50,14 +50,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def scheduler_install(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     if configuration.scheduler is not None:
@@ -84,7 +76,5 @@ COMMAND = Command(
     help="install the scheduler config.toml names, or the default",
     group_help="install what fires the tick, and report it",
     run=scheduler_install,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

@@ -30,14 +30,6 @@ def _render_text(document: dict) -> str:
     return "\n".join([heading, render_table(TASK_HEADER, rows)])
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) -> dict:
     opened = find_last_task_event(events, TaskPrOpened, wave, task)
     finished = find_last_task_event(events, RunFinished, wave, task)
@@ -72,7 +64,5 @@ COMMAND = Command(
     help="print a wave and each of its tasks with its state, its pull request and its run",
     arguments=(Argument(("wave",), {"help": "the name of a wave of the ledger"}),),
     run=wave_show,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

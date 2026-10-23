@@ -11,10 +11,6 @@ MS_PER_S = 1000
 ONE_FAILED = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _describe_verdict(check: dict) -> str:
     verdict = PASSED if check["passed"] else FAILED
     return f"{verdict}  {check['command']}  {check['duration_ms'] / MS_PER_S:.1f} s\n"
@@ -44,7 +40,6 @@ COMMAND = Command(
     help="run the acceptance commands and the checks of the corpus in the worktree of a task",
     arguments=(Argument(("task",), {"nargs": "?"}),),
     run=task_check,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

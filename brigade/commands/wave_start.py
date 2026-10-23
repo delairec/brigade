@@ -9,19 +9,11 @@ from brigade.waves.start_project_wave import WaveStart, start_project_wave
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return (
         f"wave {document['wave']} of @PROJECT.{document['project']} on {document['branch']}:"
         f" {', '.join(document['tasks'])}"
     )
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def wave_start(request, runtime: Runtime) -> dict:
@@ -47,7 +39,5 @@ COMMAND = Command(
         ),
     ),
     run=wave_start,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

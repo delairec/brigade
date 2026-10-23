@@ -132,10 +132,6 @@ def _read_request(options):
     return options
 
 
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def ledger(request, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     if request.wave is not None:
@@ -165,6 +161,5 @@ COMMAND = Command(
     run=ledger,
     read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=describe_skipped_lines,
 )

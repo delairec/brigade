@@ -12,16 +12,8 @@ DOCUMENT_SCHEMA_VERSION = 1
 QUEUED_STATE = "queued"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"task {document['task']} of {document['wave']} {document['state']}"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def wave_requeue(request, runtime: Runtime) -> dict:
@@ -48,7 +40,5 @@ COMMAND = Command(
         Argument(("task",), {"help": "the task of the wave to queue again"}),
     ),
     run=wave_requeue,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

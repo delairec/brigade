@@ -16,10 +16,6 @@ DOCUMENT_SCHEMA_VERSION = 1
 CLI_KEY = "cli"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_commands(entries: list[dict]) -> str:
     return "".join(
         f"$ {entry['command']}\nexit {entry['exit_code']}\n{entry['stderr']}{entry['output']}" for entry in entries
@@ -43,10 +39,6 @@ def _render_text(document: dict) -> str:
         "# grades\n" + "".join(f"{grade}\n" for grade in document["grades"]),
     ]
     return "\n".join(sections).removesuffix("\n")
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def verify_context(request, runtime: Runtime) -> dict:
@@ -74,7 +66,5 @@ COMMAND = Command(
     group_help="check the pull request of a task",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=verify_context,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

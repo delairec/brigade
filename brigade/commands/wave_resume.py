@@ -13,16 +13,8 @@ FORGE_ACCOUNT_REASON = "forge_account"
 NOTHING_RESUMED = "no wave is paused on the forge account"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return "\n".join(f"wave {resumed['wave']} resumed" for resumed in document["resumed"]) or NOTHING_RESUMED
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _list_forge_account_pauses(events: tuple) -> list[tuple[str, str]]:
@@ -61,7 +53,5 @@ COMMAND = Command(
     help="resume the wave named, or every wave paused on the forge account",
     arguments=(Argument(("wave",), {"nargs": "?", "help": "the name of the wave to resume"}),),
     run=wave_resume,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

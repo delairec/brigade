@@ -105,10 +105,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def _read_request(options):
-    return options
-
-
 def _decide_exit_code(document: dict) -> int:
     return STALE_EXIT_CODE if document["stale"] else 0
 
@@ -139,7 +135,6 @@ COMMAND = Command(
     help="report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
     group_help="install what fires the tick, and report it",
     run=scheduler_status,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
 )

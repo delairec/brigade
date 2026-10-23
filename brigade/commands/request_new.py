@@ -12,16 +12,8 @@ DOCUMENT_SCHEMA_VERSION = 1
 PAUSED_STATUS = "paused"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade runs show {document['run']} --log"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _describe_diagnostics(document: dict) -> list[str]:
@@ -46,8 +38,6 @@ COMMAND = Command(
         Argument(("text",), {"help": "what the request asks, in the user's words"}),
     ),
     run=request_new,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=_describe_diagnostics,
 )

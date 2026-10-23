@@ -5,17 +5,9 @@ from brigade.runtime import Runtime
 DOCUMENT_SCHEMA_VERSION = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     run = document["run"]
     return f"run {run['run']} {run['state']} on {run['outcome']}"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def runs_stop(request, runtime: Runtime) -> dict:
@@ -31,7 +23,5 @@ COMMAND = Command(
     group_help="list the runs, show one, stop one and prune them",
     arguments=(Argument(("run",)),),
     run=runs_stop,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

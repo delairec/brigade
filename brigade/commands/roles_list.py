@@ -40,14 +40,6 @@ def _render_text(document: dict) -> str:
     )
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def roles_list(request, runtime: Runtime) -> dict:
     configuration = read_optional_configuration(runtime.paths.configuration_file)
     resolved_roles = [resolve_role(slot, runtime, NO_PROJECT_BINDINGS, configuration) for slot in SLOTS]
@@ -79,7 +71,5 @@ COMMAND = Command(
     help="list the role, the source and the model of each slot",
     group_help="list, show and lint the roles each slot resolves to",
     run=roles_list,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

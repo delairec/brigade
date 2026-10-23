@@ -15,10 +15,6 @@ class AwawaPassage:
     record: ProcessRecord
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(passage: AwawaPassage) -> str:
     return passage.record.stdout
 
@@ -46,7 +42,6 @@ COMMAND = Command(
     path=("corpus",),
     help="-- <awawa args>: run awawa in a registered project's tree and pass its stdout, stderr and exit code through",
     run=corpus_awawa,
-    read_request=_read_request,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
     describe_diagnostics=_describe_diagnostics,

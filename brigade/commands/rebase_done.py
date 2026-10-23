@@ -20,19 +20,11 @@ ENVIRONMENT_OF_THE_RUN = {}
 NOT_AN_ANCESTOR = 1
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return (
         f"{document['branch']} pushed at {document['head']} on top of {document['base']}"
         f" for #{document['pr']}, @TASK.{document['task']}"
     )
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def rebase_done(request, runtime: Runtime) -> dict:
@@ -72,7 +64,5 @@ COMMAND = Command(
     group_help="put the pull request of a task back on its base",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=rebase_done,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )

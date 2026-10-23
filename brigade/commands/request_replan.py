@@ -15,16 +15,8 @@ PAUSED_STATUS = "paused"
 LIVE_STATE = "live"
 
 
-def _read_request(options):
-    return options
-
-
 def _render_text(document: dict) -> str:
     return f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade runs show {document['run']} --log"
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
 
 
 def _describe_diagnostics(document: dict) -> list[str]:
@@ -54,8 +46,6 @@ COMMAND = Command(
     help="relaunch the planner of a planning request whose planner run is no longer live",
     arguments=(Argument(("request",), {"help": "the name of a REQUEST planning"}),),
     run=request_replan,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
     describe_diagnostics=_describe_diagnostics,
 )

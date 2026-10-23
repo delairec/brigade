@@ -554,14 +554,6 @@ def _render_text(document: dict) -> str:
     return "\n".join(RENDERERS[document["mode"]](document))
 
 
-def _read_request(options):
-    return options
-
-
-def _decide_exit_code(document: dict) -> int:
-    return 0
-
-
 def tick(request, runtime: Runtime) -> dict:
     if request.mode == "once":
         return _tick_once(runtime)
@@ -604,7 +596,5 @@ COMMAND = Command(
         ),
     ),
     run=tick,
-    read_request=_read_request,
     render_text=_render_text,
-    decide_exit_code=_decide_exit_code,
 )
