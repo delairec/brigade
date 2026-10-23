@@ -95,12 +95,12 @@ class WaitWithinLimitOfAProcessThatRunsForSeveralPollsTest(WaitWithinLimitTestCa
         self.assertGreaterEqual(len(polls), 2)
 
 
-class PollFailure(Exception):
+class PollFailureDouble(Exception):
     pass
 
 
 def _fail_to_poll() -> None:
-    raise PollFailure("the journal could not be read")
+    raise PollFailureDouble("the journal could not be read")
 
 
 class WaitWithinLimitOfAProcessWhosePollFailsTest(WaitWithinLimitTestCase):
@@ -109,7 +109,7 @@ class WaitWithinLimitOfAProcessWhosePollFailsTest(WaitWithinLimitTestCase):
         process = self.start(["sleep", "5"], start_new_session=True)
 
         # Act
-        with self.assertRaises(PollFailure):
+        with self.assertRaises(PollFailureDouble):
             wait_within_limit(
                 process,
                 WallLimit(limit_s=LONG_LIMIT_S, grace_before_kill_s=SHORT_GRACE_S, poll_s=SHORT_POLL_S),

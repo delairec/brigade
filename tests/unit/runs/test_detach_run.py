@@ -17,7 +17,7 @@ class SpawnedProcessDouble:
     pid = os.getpid()
 
 
-class SpawnRecorder:
+class SpawnRecorderDouble:
     def __init__(self):
         self.requests = []
 
@@ -30,7 +30,7 @@ class DetachRunTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
-        self.spawn = SpawnRecorder()
+        self.spawn = SpawnRecorderDouble()
         self.traces = []
         self.runtime = create_test_runtime(
             create_test_paths(self.root), spawn_process=self.spawn, trail=TrailWriter(self.traces.append)

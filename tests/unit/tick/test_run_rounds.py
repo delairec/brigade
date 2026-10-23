@@ -11,7 +11,7 @@ THIRD_SNAPSHOT = Snapshot(now=datetime(2026, 10, 6, 12, 2, tzinfo=UTC))
 NO_ACTION = ()
 
 
-class SnapshotBuilder:
+class SnapshotBuilderDouble:
     def __init__(self, snapshots: list):
         self.snapshots = iter(snapshots)
 
@@ -19,7 +19,7 @@ class SnapshotBuilder:
         return next(self.snapshots)
 
 
-class PlannerBySnapshot:
+class PlannerBySnapshotDouble:
     def __init__(self, plans: dict):
         self.plans = plans
         self.snapshots_seen = []
@@ -29,7 +29,7 @@ class PlannerBySnapshot:
         return self.plans[snapshot]
 
 
-class RecordingExecutor:
+class RecordingExecutorDouble:
     def __init__(self):
         self.plans_applied = []
 
@@ -38,7 +38,7 @@ class RecordingExecutor:
         return AppliedActions(applied=len(actions), failed=())
 
 
-class ExecutorFailingOn:
+class ExecutorFailingOnDouble:
     def __init__(self, failing: str):
         self.failing = failing
         self.plans_applied = []
@@ -49,15 +49,17 @@ class ExecutorFailingOn:
         return AppliedActions(applied=len(actions) - len(failed), failed=failed)
 
 
-def create_rounds(snapshots: list, planner: PlannerBySnapshot, executor, cap: int = 10) -> Rounds:
-    return Rounds(build_snapshot=SnapshotBuilder(snapshots).build, plan=planner.plan, apply=executor.apply, cap=cap)
+def create_rounds(snapshots: list, planner: PlannerBySnapshotDouble, executor, cap: int = 10) -> Rounds:
+    return Rounds(
+        build_snapshot=SnapshotBuilderDouble(snapshots).build, plan=planner.plan, apply=executor.apply, cap=cap
+    )
 
 
 class RunRoundsTest(unittest.TestCase):
     def test_should_stop_at_a_first_empty_plan_having_applied_nothing(self):
         # Arrange
-        executor = RecordingExecutor()
-        planner = PlannerBySnapshot({FIRST_SNAPSHOT: NO_ACTION})
+        executor = RecordingExecutorDouble()
+        planner = PlannerBySnapshotDouble({FIRST_SNAPSHOT: NO_ACTION})
 
         # Act
         outcome = run_rounds(create_rounds([FIRST_SNAPSHOT], planner, executor))
@@ -67,8 +69,8 @@ class RunRoundsTest(unittest.TestCase):
 
     def test_should_apply_each_plan_until_the_plan_is_empty(self):
         # Arrange
-        executor = RecordingExecutor()
-        planner = PlannerBySnapshot(
+        executor = RecordingExecutorDouble()
+        planner = PlannerBySnapshotDouble(
             {FIRST_SNAPSHOT: ("merge", "launch"), SECOND_SNAPSHOT: ("launch",), THIRD_SNAPSHOT: NO_ACTION}
         )
 
@@ -81,20 +83,20 @@ class RunRoundsTest(unittest.TestCase):
 
     def test_should_plan_every_round_on_a_snapshot_built_afresh(self):
         # Arrange
-        planner = PlannerBySnapshot(
+        planner = PlannerBySnapshotDouble(
             {FIRST_SNAPSHOT: ("merge",), SECOND_SNAPSHOT: ("launch",), THIRD_SNAPSHOT: NO_ACTION}
         )
 
         # Act
-        run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT], planner, RecordingExecutor()))
+        run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT], planner, RecordingExecutorDouble()))
 
         # Assert
         self.assertEqual(planner.snapshots_seen, [FIRST_SNAPSHOT, SECOND_SNAPSHOT, THIRD_SNAPSHOT])
 
     def test_should_stop_at_the_cap_when_the_plan_never_empties(self):
         # Arrange
-        executor = RecordingExecutor()
-        planner = PlannerBySnapshot(
+        executor = RecordingExecutorDouble()
+        planner = PlannerBySnapshotDouble(
             {FIRST_SNAPSHOT: ("launch",), SECOND_SNAPSHOT: ("launch",), THIRD_SNAPSHOT: ("launch",)}
         )
 
@@ -108,8 +110,8 @@ class RunRoundsTest(unittest.TestCase):
 class RunRoundsWithAFailedActionTest(unittest.TestCase):
     def test_should_count_the_failed_actions_apart_from_the_applied_ones(self):
         # Arrange
-        executor = ExecutorFailingOn("merge")
-        planner = PlannerBySnapshot({FIRST_SNAPSHOT: ("merge", "launch"), SECOND_SNAPSHOT: NO_ACTION})
+        executor = ExecutorFailingOnDouble("merge")
+        planner = PlannerBySnapshotDouble({FIRST_SNAPSHOT: ("merge", "launch"), SECOND_SNAPSHOT: NO_ACTION})
 
         # Act
         outcome = run_rounds(create_rounds([FIRST_SNAPSHOT, SECOND_SNAPSHOT], planner, executor))
@@ -119,8 +121,8 @@ class RunRoundsWithAFailedActionTest(unittest.TestCase):
 
     def test_should_not_apply_again_in_the_same_tick_an_action_that_failed(self):
         # Arrange
-        executor = ExecutorFailingOn("merge")
-        planner = PlannerBySnapshot(
+        executor = ExecutorFailingOnDouble("merge")
+        planner = PlannerBySnapshotDouble(
             {FIRST_SNAPSHOT: ("merge", "launch"), SECOND_SNAPSHOT: ("merge", "report"), THIRD_SNAPSHOT: ("merge",)}
         )
 

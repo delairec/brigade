@@ -90,7 +90,7 @@ def _read_forge_environment(slot: str) -> dict:
     return FORGE_ENVIRONMENT
 
 
-class PullRequestReader:
+class PullRequestReaderDouble:
     def __init__(self):
         self.branches = []
 
@@ -110,7 +110,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
         self.wave_tree.mkdir(parents=True)
         self.main_tree = self.paths.cache_root / "refs" / "shop" / MAIN_SHA
         self.main_tree.mkdir(parents=True)
-        self.reader = PullRequestReader()
+        self.reader = PullRequestReaderDouble()
         self.shop_forge = "none"
         self.remote_answers = {}
 

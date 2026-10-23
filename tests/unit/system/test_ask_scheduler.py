@@ -7,7 +7,7 @@ from brigade.system.scheduler_state import SchedulerState
 NO_RUNTIME_NEEDED = None
 
 
-class StatusReaderOmittingTheUnitFiles:
+class StatusReaderOmittingTheUnitFilesDouble:
     def read_status(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "installed": False, "cron_line": None, "next_activation": None}
 
@@ -19,7 +19,7 @@ class AskSchedulerWhenTheAnswerBreaksItsShapeTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            ask_scheduler(StatusReaderOmittingTheUnitFiles(), question, NO_RUNTIME_NEEDED)
+            ask_scheduler(StatusReaderOmittingTheUnitFilesDouble(), question, NO_RUNTIME_NEEDED)
 
         # Assert
         self.assertEqual(
@@ -27,7 +27,7 @@ class AskSchedulerWhenTheAnswerBreaksItsShapeTest(unittest.TestCase):
         )
 
 
-class StatusReaderOfAnInstalledTimer:
+class StatusReaderOfAnInstalledTimerDouble:
     def read_status(self, request: dict, runtime) -> dict:
         return {
             "schema_version": 1,
@@ -44,7 +44,7 @@ class AskSchedulerForItsStatusTest(unittest.TestCase):
         question = SchedulerQuestion(scheduler_name="systemd", operation="read_status", request={})
 
         # Act
-        state = ask_scheduler(StatusReaderOfAnInstalledTimer(), question, NO_RUNTIME_NEEDED)
+        state = ask_scheduler(StatusReaderOfAnInstalledTimerDouble(), question, NO_RUNTIME_NEEDED)
 
         # Assert
         self.assertIsInstance(state, SchedulerState)

@@ -24,7 +24,7 @@ def create_signalling_answer(stop_signal: int) -> Callable[[], bool]:
     return signal_itself_and_answer_not_done
 
 
-class ScriptedPoller:
+class ScriptedPollerDouble:
     def __init__(self, answers: list[Callable[[], bool]]):
         self.answers = iter(answers)
         self.calls = 0
@@ -44,7 +44,7 @@ class PollUntilSignalledTest(unittest.TestCase):
 
     def test_should_stop_once_the_poll_answers_done_and_answer_that_no_signal_stopped_it(self):
         # Arrange
-        poller = ScriptedPoller([answer_not_done, answer_not_done, answer_done])
+        poller = ScriptedPollerDouble([answer_not_done, answer_not_done, answer_done])
 
         # Act
         signalled = poll_until_signalled(poller, SHORT_INTERVAL_S)
@@ -58,7 +58,7 @@ class PollUntilSignalledTest(unittest.TestCase):
         for name, stop_signal in rows:
             with self.subTest(signal=name):
                 # Arrange
-                poller = ScriptedPoller([answer_not_done, create_signalling_answer(stop_signal), answer_done])
+                poller = ScriptedPollerDouble([answer_not_done, create_signalling_answer(stop_signal), answer_done])
 
                 # Act
                 signalled = poll_until_signalled(poller, SHORT_INTERVAL_S)
@@ -68,7 +68,7 @@ class PollUntilSignalledTest(unittest.TestCase):
 
     def test_should_restore_the_signal_handlers_it_replaced(self):
         # Arrange
-        poller = ScriptedPoller([create_signalling_answer(signal.SIGTERM)])
+        poller = ScriptedPollerDouble([create_signalling_answer(signal.SIGTERM)])
 
         # Act
         poll_until_signalled(poller, SHORT_INTERVAL_S)

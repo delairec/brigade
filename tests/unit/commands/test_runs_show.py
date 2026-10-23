@@ -162,7 +162,7 @@ class RunsShowRequestTest(unittest.TestCase):
         self.assertIs(request, options)
 
 
-class RunFinishingOnItsFirstRecordStdout(io.StringIO):
+class RunFinishingOnItsFirstRecordStdoutDouble(io.StringIO):
     def __init__(self, run_directory: Path):
         super().__init__()
         self.run_directory = run_directory
@@ -186,7 +186,7 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
         run_directory = write_run(root / "state", create_run_record(FIRST_RUN, None, None), None)
         record_run_pid(run_directory, os.getpid())
         (run_directory / "journal.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
-        printed = RunFinishingOnItsFirstRecordStdout(run_directory)
+        printed = RunFinishingOnItsFirstRecordStdoutDouble(run_directory)
 
         # Act
         with contextlib.redirect_stdout(printed), mock.patch.object(select, "select", return_value=NOTHING_TO_READ):

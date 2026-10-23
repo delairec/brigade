@@ -16,7 +16,7 @@ NOTES_DOCUMENT = (
 )
 
 
-class ScriptedCollector:
+class ScriptedCollectorDouble:
     name = "notes"
     source = "project"
     command = ("/srv/app/.brigade/collectors/notes",)
@@ -37,7 +37,7 @@ class CollectTest(unittest.TestCase):
         self.project = root / "app"
         self.project.mkdir()
         self.enterContext(contextlib.chdir(self.project))
-        self.collector = ScriptedCollector()
+        self.collector = ScriptedCollectorDouble()
         self.runtime = create_runtime(
             root,
             resolve_plugin=create_plugin_resolver(

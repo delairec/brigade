@@ -16,7 +16,7 @@ def signal_itself() -> None:
     os.kill(os.getpid(), signal.SIGTERM)
 
 
-class ScriptedAction:
+class ScriptedActionDouble:
     def __init__(self, steps: list[Callable[[], None]]):
         self.steps = iter(steps)
 
@@ -34,7 +34,7 @@ class RepeatUntilSignalledTest(unittest.TestCase):
 
     def test_should_count_the_repetitions_up_to_the_one_under_way_when_the_signal_came(self):
         # Arrange
-        action = ScriptedAction([do_nothing, do_nothing, signal_itself])
+        action = ScriptedActionDouble([do_nothing, do_nothing, signal_itself])
 
         # Act
         repetitions = repeat_until_signalled(action, SHORT_INTERVAL_S)

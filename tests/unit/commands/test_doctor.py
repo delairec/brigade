@@ -40,7 +40,7 @@ COMMENT_POLICY = json.dumps(
 TOKEN = {"GH_TOKEN": "t0k3n"}
 
 
-class ScriptedForge:
+class ScriptedForgeDouble:
     def __init__(self, environments: dict, account):
         self.environments = environments
         self.account = account
@@ -78,7 +78,7 @@ class DoctorTestCase(unittest.TestCase):
         self.addCleanup(self.root.cleanup)
         self.answers = _create_doctor_answers()
         self.probe = dict(PROBE)
-        self.forge = ScriptedForge({"ada-bot": TOKEN, "rev-bot": TOKEN}, "ada-bot")
+        self.forge = ScriptedForgeDouble({"ada-bot": TOKEN, "rev-bot": TOKEN}, "ada-bot")
         plugins = {("client", "scripted"): ScriptedClient({"probe": self.probe}), ("forge", "github"): self.forge}
         self.runtime = create_runtime(
             Path(self.root.name),
