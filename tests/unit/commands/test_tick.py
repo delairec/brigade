@@ -955,6 +955,34 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             },
         )
 
+    def test_should_pause_the_wave_of_a_task_whose_run_hit_the_quota(self):
+        # Arrange
+        rate_limited = {
+            **create_run_result(FIRST_RUN, "failed", "2026-10-19T08:50:00Z"),
+            "wave": WAVE,
+            "task": "T7",
+            "error_class": "rate_limit",
+        }
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), rate_limited])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        first_event_of_the_tick = 3
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_event(first_event_of_the_tick),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.paused",
+                "wave": "tidepool_w16",
+                "reason": "quota",
+                "resume_at": "2026-10-19T09:30:00Z",
+            },
+        )
+
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])

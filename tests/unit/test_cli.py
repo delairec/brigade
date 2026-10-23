@@ -76,6 +76,14 @@ class MainHelpTest(MainTestCase):
 
 
 class MainVersionTest(MainTestCase):
+    def test_should_print_the_version_as_a_line_of_text(self):
+        # Act
+        exit_code, stdout, _ = self.run_main(["--version"])
+
+        # Assert
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout, f"brigade {VERSION}\n")
+
     def test_should_print_the_version_as_a_json_document_when_asked(self):
         # Act
         exit_code, stdout, _ = self.run_main(["--version", "--json"])

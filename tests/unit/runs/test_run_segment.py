@@ -158,6 +158,13 @@ class ClientRefusingToReadActionsDouble(ClientDouble):
         return super().answer(operation, request)
 
 
+class ClientReadingNoActionsDouble(ClientDouble):
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "actions":
+            return {"schema_version": 1, "actions": []}
+        return super().answer(operation, request)
+
+
 class ClientAnsweringLaunchArgvWithoutSessionDouble(ClientDouble):
     def answer(self, operation: str, request: dict) -> dict:
         if operation == "launch-argv":
@@ -693,6 +700,16 @@ class RunSegmentJournalTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_journal_nothing_of_an_output_in_which_the_client_reads_no_action(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=True, client_type=ClientReadingNoActionsDouble)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertFalse(self.journal.exists())
 
     def test_should_journal_raw_records_of_an_output_whose_actions_the_client_fails_to_read(self):
         # Arrange

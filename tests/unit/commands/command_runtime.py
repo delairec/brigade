@@ -6,7 +6,6 @@ from pathlib import Path
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
 NOW = datetime(2026, 10, 19, 9, 0, 0, tzinfo=UTC)
-NO_PATH_NEEDED = ""
 ENTITY_NOT_SHOWN = 1
 
 
@@ -19,10 +18,6 @@ class ProcessAnswer:
 
 def refuse_process(request):
     raise AssertionError(f"the command ran {request.argv}")
-
-
-def refuse_resolution(kind: str, name: str, **places):
-    raise AssertionError(f"the command resolved the {kind} plugin {name}")
 
 
 def answer(request: ProcessRequest, stdout: str, exit_code: int = 0, stderr: str = "") -> ProcessRecord:
