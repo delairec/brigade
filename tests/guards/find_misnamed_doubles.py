@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tests.guards.find_violations import Finding, GuardedModule, find_violations
 
-ACCEPTED_SUFFIXES = ("Test", "TestCase", "Double", "Arrangement")
+ACCEPTED_SUFFIXES = ("Test", "TestCase", "Double")
 
 
 def _find_misnamed_classes(module: GuardedModule) -> list[Finding]:

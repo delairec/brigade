@@ -24,12 +24,11 @@ class DoubleNamesGuardTest(unittest.TestCase):
             module.write_text(source)
             return find_misnamed_doubles(Path(root) / "tests")
 
-    def test_should_let_a_test_case_a_double_and_an_arrangement_pass(self):
+    def test_should_let_a_test_a_test_case_and_a_double_pass(self):
         for case, source in [
             ("a test", "class GreeterTest(unittest.TestCase):\n    pass\n"),
             ("a test case", "class GreeterTestCase(unittest.TestCase):\n    pass\n"),
             ("a double", "class ClockDouble:\n    pass\n"),
-            ("an arrangement", "class GreeterArrangement:\n    pass\n"),
         ]:
             with self.subTest(case=case):
                 # Act
@@ -47,6 +46,16 @@ class DoubleNamesGuardTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(violations, ["tests/test_greeter.py:5 ScriptedPoller lacks the Double suffix"])
+
+    def test_should_flag_a_shared_set_up_named_as_an_arrangement(self):
+        # Arrange
+        source = "class GreeterArrangement:\n    pass\n"
+
+        # Act
+        violations = self.inspect("test_greeter.py", source)
+
+        # Assert
+        self.assertEqual(violations, ["tests/test_greeter.py:1 GreeterArrangement lacks the Double suffix"])
 
     def test_should_leave_a_helper_module_of_the_tests(self):
         # Arrange
