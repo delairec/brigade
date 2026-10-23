@@ -30,6 +30,11 @@ TIMER_UNIT = (
     "[Install]\n"
     "WantedBy=timers.target\n"
 )
+from tests.list_entry_names import list_entry_names
+
+
+def read_environment_lines(unit: Path) -> list[str]:
+    return [line for line in unit.read_text().splitlines() if line.startswith("Environment=")]
 
 
 class SchedulerTestCase(unittest.TestCase):
@@ -143,7 +148,7 @@ class BrigadeSchedulerInstallWithSystemdConfiguredTest(SchedulerTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(sorted(path.name for path in self.units.iterdir()), ["brigade.service", "brigade.timer"])
+        self.assertEqual(list_entry_names(self.units), ["brigade.service", "brigade.timer"])
 
 
 class BrigadeSchedulerInstallWithCronConfiguredTest(SchedulerTestCase):
@@ -287,7 +292,7 @@ class BrigadeSchedulerInstallOnAMachineWhosePathsHoldASpaceAndAPercentSignTest(S
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        environment_lines = [line for line in self.service.read_text().splitlines() if line.startswith("Environment=")]
+        environment_lines = read_environment_lines(self.service)
         root = Path(self.root.name).resolve()
         self.assertEqual(
             environment_lines[1:],

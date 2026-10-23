@@ -1,11 +1,22 @@
 import json
+import subprocess
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
+from tests.list_entry_names import list_entry_names
 from tests.process_launcher import ProcessLauncher
+
+
+def read_item_states(completed: subprocess.CompletedProcess) -> list[str]:
+    return [item["state"] for item in json.loads(completed.stdout)["items"]]
+
+
+def read_modification_times(paths: list[Path]) -> list[int]:
+    return [path.stat().st_mtime_ns for path in paths]
+
 
 SCHEMA_ENTRY = 1
 GITIGNORE_ENTRY = 2
@@ -233,7 +244,7 @@ class BrigadeInitWithoutXdgVariablesTest(unittest.TestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            sorted(path.name for path in (self.machine.home / ".config" / "brigade").iterdir()),
+            list_entry_names(self.machine.home / ".config" / "brigade"),
             [".git", ".gitignore", "_schema.awawa", "config.toml"],
         )
 
@@ -254,7 +265,7 @@ class BrigadeInitRunTwiceTest(unittest.TestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            [item["state"] for item in json.loads(completed.stdout)["items"]],
+            read_item_states(completed),
             ["present", "present", "present", "present"],
         )
 
@@ -262,13 +273,13 @@ class BrigadeInitRunTwiceTest(unittest.TestCase):
         # Arrange
         corpus = self.machine.corpus
         written_files = [corpus / "_schema.awawa", corpus / ".gitignore", corpus / "config.toml"]
-        modification_times = [path.stat().st_mtime_ns for path in written_files]
+        modification_times = read_modification_times(written_files)
 
         # Act
         self.machine.run_init()
 
         # Assert
-        self.assertEqual([path.stat().st_mtime_ns for path in written_files], modification_times)
+        self.assertEqual(read_modification_times(written_files), modification_times)
         self.assertEqual(self.machine.read_git("rev-list", "--count", "HEAD"), "1\n")
 
 

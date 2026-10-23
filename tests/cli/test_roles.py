@@ -1,4 +1,5 @@
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -50,6 +51,10 @@ PLANNER_PACKAGE = (
     "// context: 2 entities, 12 lines, depth 2\n"
     "// skip matched no declaration: reasoning\n"
 )
+
+
+def read_roles(completed: subprocess.CompletedProcess) -> list[str]:
+    return [row["role"] for row in json.loads(completed.stdout)["roles"]]
 
 
 def describe_built_in_roles(model_of_deep, model_of_standard, model_of_light) -> list:
@@ -384,7 +389,7 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            [row["role"] for row in json.loads(completed.stdout)["roles"]],
+            read_roles(completed),
             [
                 "planner",
                 "builder",

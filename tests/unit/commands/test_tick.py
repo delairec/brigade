@@ -33,6 +33,10 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
 )
 from tests.unit.create_test_paths import PACKAGE_FILE
+from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+
+GIT_PUSH = ("git", "push")
+GIT_REBASE = ("git", "rebase")
 
 LOOP_MODE = "loop"
 NO_PATH_NEEDED = ""
@@ -1205,8 +1209,29 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [argv[:3] for argv in self.spawn.argvs],
-            [("run", "build-task", "task=@TASK.T8")],
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "task=@TASK.T8",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.root / "tidepool" / ".brigade" / "worktrees" / "T8"),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T8.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T8",
+                    "--run-id",
+                    ANY,
+                )
+            ],
         )
 
 
@@ -1488,7 +1513,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [argv for argv in self.machine.argvs if argv[:2] in {("git", "rebase"), ("git", "push")}],
+            select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH),
             [
                 REBASE_ONTO_THE_WAVE_BRANCH,
                 ("git", "push", "--quiet", "--force-with-lease=task/M4/T7:8885daa", "origin", "HEAD:task/M4/T7"),
@@ -1565,44 +1590,44 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (
-                [argv for argv in self.machine.argvs if argv[:2] in {("git", "rebase"), ("git", "push")}],
-                self.spawn.argvs,
-                self._read_events()[4:],
-            ),
-            (
-                [REBASE_ONTO_THE_WAVE_BRANCH, ("git", "rebase", "--abort")],
-                [
-                    (
-                        "run",
-                        "rebase-on-base",
-                        "pr=42",
-                        "task=@TASK.T7",
-                        "--slot",
-                        "rebase",
-                        "--cwd",
-                        str(self.worktree),
-                        "--project",
-                        "tidepool",
-                        "--wave",
-                        "tidepool_w16",
-                        "--task",
-                        "T7",
-                        "--run-id",
-                        ANY,
-                    )
-                ],
-                [
-                    {
-                        "schema_version": 1,
-                        "ts": "2026-10-19T09:00:00Z",
-                        "event": "task.state",
-                        "wave": "tidepool_w16",
-                        "task": "T7",
-                        "state": "fixing",
-                    }
-                ],
-            ),
+            select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH),
+            [REBASE_ONTO_THE_WAVE_BRANCH, ("git", "rebase", "--abort")],
+        )
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+        self.assertEqual(
+            self._read_events()[4:],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "fixing",
+                }
+            ],
         )
 
     def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):

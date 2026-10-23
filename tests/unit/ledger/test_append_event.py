@@ -43,6 +43,19 @@ def append_signals(state_root: Path, writer: int) -> None:
         )
 
 
+def append_from_concurrent_writers(state_root: Path) -> None:
+    context = multiprocessing.get_context("fork")
+    writers = [context.Process(target=append_signals, args=(state_root, writer)) for writer in range(PROCESS_COUNT)]
+    for writer in writers:
+        writer.start()
+    for writer in writers:
+        writer.join()
+
+
+def read_distinct_runs(ledger_file: Path) -> set[str]:
+    return {json.loads(line)["run"] for line in ledger_file.read_text().splitlines()}
+
+
 class AppendEventTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -56,18 +69,8 @@ class AppendEventTestCase(unittest.TestCase):
 
 class AppendEventFromSeveralProcessesTest(AppendEventTestCase):
     def test_should_leave_every_line_whole(self):
-        # Arrange
-        context = multiprocessing.get_context("fork")
-        writers = [
-            context.Process(target=append_signals, args=(self.state_root, writer)) for writer in range(PROCESS_COUNT)
-        ]
-
         # Act
-        for writer in writers:
-            writer.start()
-        for writer in writers:
-            writer.join()
+        append_from_concurrent_writers(self.state_root)
 
         # Assert
-        lines = (self.ledger / "2026-10.jsonl").read_text().splitlines()
-        self.assertEqual(len({json.loads(line)["run"] for line in lines}), PROCESS_COUNT * EVENTS_PER_PROCESS)
+        self.assertEqual(len(read_distinct_runs(self.ledger / "2026-10.jsonl")), 200)

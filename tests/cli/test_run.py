@@ -40,6 +40,7 @@ MACHINE_BUILDER = (
     "---\n"
     "You build on this machine.\n"
 )
+from tests.list_file_paths import list_file_paths
 
 
 class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
@@ -151,7 +152,7 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         self.assertEqual(
-            sorted(path.relative_to(run_directory).as_posix() for path in run_directory.rglob("*") if path.is_file()),
+            list_file_paths(run_directory),
             [
                 "journal.jsonl",
                 "pid",

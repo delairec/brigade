@@ -54,6 +54,20 @@ MERGED_S3_STOPPED_BY_A_RATE_LIMIT_LONG_AGO = (
     '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "merged"}\n'
 )
+
+
+def list_runs(records: list[dict]) -> list[str]:
+    return [record["run"] for record in records]
+
+
+def list_waves(events: list[dict]) -> list[str]:
+    return [event["wave"] for event in events]
+
+
+def list_waves_and_reasons(events: list[dict]) -> list[tuple[str, str]]:
+    return [(event["wave"], event["reason"]) for event in events]
+
+
 HANDED_OVER_RESULT = {**DONE_RESULT, "outcome": "handed_over", "session_id": None}
 
 
@@ -148,7 +162,7 @@ class BrigadeTickPausingOnARateLimitTest(RateLimitedRunTestCase):
         self.run_tick("--once")
 
         # Assert
-        self.assertEqual([record["run"] for record in self.read_run_records()], [self.rate_limited_run])
+        self.assertEqual(list_runs(self.read_run_records()), [self.rate_limited_run])
 
 
 class BrigadeTickPausingOnARateLimitWithoutResetTest(RateLimitedRunTestCase):
@@ -341,7 +355,7 @@ class BrigadeTickOnAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Launchi
 
         # Assert
         self.assertEqual(
-            [(event["wave"], event["reason"]) for event in self.read_events("wave.paused")],
+            list_waves_and_reasons(self.read_events("wave.paused")),
             [("shop_w1", "forge_account")],
         )
 
@@ -359,7 +373,7 @@ class BrigadeTickAfterTheForgeAccountResumeTest(LaunchingTickTestCase):
         self.run_tick("--once")
 
         # Assert
-        self.assertEqual([event["wave"] for event in self.read_events("wave.paused")], ["shop_w1"])
+        self.assertEqual(list_waves(self.read_events("wave.paused")), ["shop_w1"])
 
     def test_should_launch_the_tasks_of_the_resumed_wave(self):
         # Act
@@ -412,7 +426,7 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stdout, "wave shop_w1 resumed\n")
-        self.assertEqual([event["wave"] for event in self.read_events("wave.resumed")], ["shop_w1"])
+        self.assertEqual(list_waves(self.read_events("wave.resumed")), ["shop_w1"])
 
     def test_should_exit_1_naming_the_state_of_a_wave_that_is_not_paused(self):
         # Arrange

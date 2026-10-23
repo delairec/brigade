@@ -62,6 +62,14 @@ FORGE_ACCOUNTS = (
 )
 
 
+def list_merged_tasks(events: list[dict]) -> list[str]:
+    return sorted(event["task"] for event in events if event["state"] == "merged")
+
+
+def list_runs(events: list[dict]) -> list[str]:
+    return sorted(event["run"] for event in events)
+
+
 class RehearsalOnTheFakeClientTestCase(FileWaitingTestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -157,7 +165,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(RehearsalOnTheFakeClie
 
     def test_should_merge_the_three_tasks_into_the_branch_of_the_wave(self):
         # Act
-        merged = sorted(event["task"] for event in self.read_events("task.state") if event["state"] == "merged")
+        merged = list_merged_tasks(self.read_events("task.state"))
 
         # Assert
         self.assertEqual(merged, ["S1", "S2", "S3"])
@@ -180,7 +188,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(RehearsalOnTheFakeClie
         runs = self.list_finished_runs()
 
         # Act
-        recorded = sorted(event["run"] for event in self.read_events("run.finished"))
+        recorded = list_runs(self.read_events("run.finished"))
 
         # Assert
         self.assertEqual(recorded, runs)

@@ -74,7 +74,27 @@ class TrailWriterNotYetLocatedTest(TrailWriterTestCase):
         self.trail.locate(self.destination)
 
         # Assert
-        self.assertEqual([line["argv"] for line in self.read_lines()], [["git", "--version"], ["awawa", "lint"]])
+        self.assertEqual(
+            self.read_lines(),
+            [
+                {
+                    "schema_version": 1,
+                    "argv": ["git", "--version"],
+                    "cwd": "/",
+                    "exit": 0,
+                    "duration_ms": 3,
+                    "outcome": "exited",
+                },
+                {
+                    "schema_version": 1,
+                    "argv": ["awawa", "lint"],
+                    "cwd": "/",
+                    "exit": 1,
+                    "duration_ms": 40,
+                    "outcome": "exited",
+                },
+            ],
+        )
 
     def test_should_settle_the_records_it_held_on_the_fallback(self):
         # Arrange
@@ -84,7 +104,19 @@ class TrailWriterNotYetLocatedTest(TrailWriterTestCase):
         self.trail.settle(self.destination)
 
         # Assert
-        self.assertEqual([line["argv"] for line in self.read_lines()], [["git", "--version"]])
+        self.assertEqual(
+            self.read_lines(),
+            [
+                {
+                    "schema_version": 1,
+                    "argv": ["git", "--version"],
+                    "cwd": "/",
+                    "exit": 0,
+                    "duration_ms": 3,
+                    "outcome": "exited",
+                }
+            ],
+        )
 
     def test_should_settle_nothing_when_it_held_no_record(self):
         # Act

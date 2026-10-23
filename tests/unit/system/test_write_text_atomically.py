@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.system.write_text_atomically import write_text_atomically
+from tests.list_entry_names import list_entry_names
 
 UNENCODABLE_TEXT = "\udc80"
 
@@ -40,6 +41,5 @@ class WriteTextAtomicallyTest(unittest.TestCase):
             write_text_atomically(self.path, UNENCODABLE_TEXT)
 
         # Assert
-        self.assertEqual(
-            (self.path.read_text(encoding="utf-8"), [path.name for path in self.state.iterdir()]), ("4242\n", ["pid"])
-        )
+        self.assertEqual(self.path.read_text(encoding="utf-8"), "4242\n")
+        self.assertEqual(list_entry_names(self.state), ["pid"])

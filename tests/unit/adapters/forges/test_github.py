@@ -434,10 +434,10 @@ class FindPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in runtime.requests],
+            runtime.requests,
             [
-                (
-                    (
+                ProcessRequest(
+                    argv=(
                         "gh",
                         "pr",
                         "list",
@@ -450,19 +450,21 @@ class FindPullRequestTest(unittest.TestCase):
                         "--json",
                         "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup",
                     ),
-                    "/projects/shop",
-                    {"GH_TOKEN": "token-of-octo-cli"},
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment={"GH_TOKEN": "token-of-octo-cli"},
                 ),
-                (
-                    (
+                ProcessRequest(
+                    argv=(
                         "gh",
                         "api",
                         "repos/{owner}/{repo}/compare/integration/M1-empty-cart...0123abc",
                         "--jq",
                         ".behind_by",
                     ),
-                    "/projects/shop",
-                    {"GH_TOKEN": "token-of-octo-cli"},
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment={"GH_TOKEN": "token-of-octo-cli"},
                 ),
             ],
         )

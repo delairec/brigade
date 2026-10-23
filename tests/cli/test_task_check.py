@@ -144,7 +144,7 @@ class BrigadeTaskCheckWithALineShlexRefusesTest(TaskCheckTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertIn(f"the command {UNSPLITTABLE_LINE} cannot be split into an argv", completed.stderr)
-        self.assertEqual(sorted((self.state / "checks").glob("**/*.json")), no_check_record)
+        self.assertEqual(list((self.state / "checks").glob("**/*.json")), no_check_record)
 
 
 class BrigadeTaskCheckInARunTest(TaskCheckTestCase):
@@ -176,4 +176,4 @@ class BrigadeTaskCheckOfAWorktreeHoldingChangesTest(TaskCheckTestCase):
             " commit them, then run brigade task check",
             completed.stderr,
         )
-        self.assertEqual(sorted((self.state / "checks").glob("**/*.json")), no_check_record)
+        self.assertEqual(list((self.state / "checks").glob("**/*.json")), no_check_record)

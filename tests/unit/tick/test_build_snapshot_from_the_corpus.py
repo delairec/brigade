@@ -45,6 +45,8 @@ FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
 PULL_REQUEST = PullRequestFacts(
     number=7, state="open", checks=(), review=None, behind=False, head="4f2a9c1", base="integration/w1"
 )
+from brigade.system.run_process import ProcessRequest
+from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 
 def answer_entities(root: Path, entity_type: str, entities: dict[str, list[dict]], *conditions: str) -> dict:
@@ -379,10 +381,16 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.build()
 
         # Assert
-        fetches = [request for request in self.runner.requests if request.argv[:2] == ("git", "fetch")]
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in fetches],
-            [(("git", "fetch", "--quiet", "origin", "main"), str(self.repository), FORGE_ENVIRONMENT)],
+            select_requests_opening_on(self.runner.requests, ("git", "fetch")),
+            [
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "main"),
+                    cwd=str(self.repository),
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                )
+            ],
         )
 
     def test_should_mark_a_wave_whose_branch_is_gone(self):

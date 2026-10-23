@@ -9,6 +9,12 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.cli.test_collect import install_executable
 from tests.cli.test_tick import WEEKLY_RUN, LiveStudyRunTestCase
+from tests.list_entry_names import list_entry_names
+
+
+def list_other_runs(runs: Path, run_id: str) -> list[str]:
+    return [name for name in list_entry_names(runs) if name != run_id]
+
 
 PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
 QUESTION = "what changed in the shop this week?"
@@ -316,7 +322,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         steps = self.runs / json.loads(completed.stdout)["run"] / "steps"
-        self.assertEqual(sorted(path.name for path in steps.iterdir()), ["collect.json", "judge.json", "output.json"])
+        self.assertEqual(list_entry_names(steps), ["collect.json", "judge.json", "output.json"])
 
     def test_should_record_the_order_and_its_steps_in_the_ledger(self):
         # Arrange
@@ -583,7 +589,7 @@ class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
 
         # Assert
         self.assertEqual((completed.returncode, completed.stdout), (0, "no run removed\n"), completed.stderr)
-        self.assertEqual([path.name for path in self.runs.iterdir()], [parked])
+        self.assertEqual(list_entry_names(self.runs), [parked])
 
 
 class BrigadeStudyContextTest(StudyRunTestCase):
@@ -729,7 +735,7 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             "--output",
             "entity:ANSWER",
         )
-        [parked] = [path.name for path in self.runs.iterdir() if path.name != self.run_id]
+        [parked] = list_other_runs(self.runs, self.run_id)
 
         # Act
         completed = self.run_study("context", parked)
@@ -825,7 +831,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         self.run_study("answer", self.run_id, "--file", str(self.answer_file))
 
         # Assert
-        self.assertEqual(sorted(path.name for path in (self.runs / self.run_id).glob("*.awawa")), [])
+        self.assertEqual(list((self.runs / self.run_id).glob("*.awawa")), [])
 
     def test_should_refuse_an_answer_that_names_another_entity(self):
         # Arrange

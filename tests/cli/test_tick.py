@@ -67,6 +67,7 @@ WAVE_EVENTS = (
     '{"schema_version": 1, "ts": "2026-10-13T10:30:00Z", "event": "task.state", "wave": "cafe_w1", "task": "S6",'
     ' "state": "running"}\n'
 )
+from tests.list_entry_names import list_entry_names
 
 
 class TickTestCase(unittest.TestCase):
@@ -123,7 +124,7 @@ class BrigadeTickOnceTest(TickTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(sorted(path.name for path in self.state.iterdir()), ["locks", "tick.json", "ticks"])
+        self.assertEqual(list_entry_names(self.state), ["locks", "tick.json", "ticks"])
 
     def test_should_report_the_tick_it_recorded_in_the_versioned_document(self):
         # Act

@@ -24,6 +24,9 @@ PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD = (
     "origin",
     "HEAD:task/M4-tides/T7",
 )
+from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+
+GIT_PUSH = ("git", "push")
 DONE_DOCUMENT = {
     "schema_version": 1,
     "project": "tidepool",
@@ -73,10 +76,8 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
         document = COMMAND.run(SimpleNamespace(pr=42), runtime)
 
         # Assert
-        self.assertEqual(
-            (document["head"], [argv for argv in self.machine.argvs if argv[:2] == ("git", "push")]),
-            ("9a9a9a9", [PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD]),
-        )
+        self.assertEqual(document["head"], "9a9a9a9")
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_PUSH), [PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD])
 
     def test_should_refuse_a_branch_that_does_not_descend_from_the_head_of_its_base_and_push_nothing(self):
         # Arrange
@@ -88,9 +89,10 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (str(raised.exception), [argv for argv in self.machine.argvs if argv[:2] == ("git", "push")]),
-            ("task/M4-tides/T7 does not descend from the head of integration/M4-tides: rebase it first", []),
+            str(raised.exception),
+            "task/M4-tides/T7 does not descend from the head of integration/M4-tides: rebase it first",
         )
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_PUSH), [])
 
 
 class RebaseDoneRequestTest(unittest.TestCase):

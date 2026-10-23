@@ -11,8 +11,15 @@ from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.read_ledger import read_ledger
 from brigade.planning.read_planning_request import PlanningRequest
 from brigade.planning.record_plan import PlanRecording, record_plan
+from brigade.system.run_process import ProcessRequest
 from tests.unit.create_scripted_runtime import RUNTIME_NOW, create_scripted_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+from tests.unit.select_requests_opening_on import select_requests_opening_on
+
+GIT_FETCH = ("git", "fetch")
+GIT_MERGE = ("git", "merge")
+GIT_WORKTREE_ADD = ("git", "worktree", "add")
 
 PLAN = 'MILESTONE F1\n\tTITLE "Printer"\n\nTASK B20\n\tTITLE "the printer"\n\tMILESTONE @MILESTONE.F1\n'
 BRANCH = "plan/oak_r1"
@@ -328,9 +335,9 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording())
 
         # Assert
-        worktree_add = next(argv for argv in self.processes.list_argvs() if argv[:3] == ("git", "worktree", "add"))
         self.assertEqual(
-            worktree_add, ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main")
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_WORKTREE_ADD),
+            [("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main")],
         )
 
     def test_should_fetch_the_main_branch_with_the_environment_of_the_forge(self):
@@ -341,10 +348,16 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording())
 
         # Assert
-        fetches = [request for request in self.processes.requests if request.argv[:2] == ("git", "fetch")]
         self.assertEqual(
-            [(request.argv, request.cwd, request.environment) for request in fetches],
-            [(("git", "fetch", "--quiet", "origin", "main"), "/srv/oak", {"GH_TOKEN": "token-of-cli"})],
+            select_requests_opening_on(self.processes.requests, GIT_FETCH),
+            [
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "main"),
+                    cwd="/srv/oak",
+                    timeout_s=120.0,
+                    environment={"GH_TOKEN": "token-of-cli"},
+                )
+            ],
         )
 
 
@@ -362,8 +375,10 @@ class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording("none"))
 
         # Assert
-        worktree_add = next(argv for argv in self.processes.list_argvs() if argv[:3] == ("git", "worktree", "add"))
-        self.assertEqual(worktree_add, ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_WORKTREE_ADD),
+            [("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main")],
+        )
 
     def test_should_merge_the_plan_branch_into_the_main_branch_no_worktree_holds(self):
         # Arrange
@@ -386,8 +401,10 @@ class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
         record_plan(self.runtime, self.create_recording("none"))
 
         # Assert
-        merge = next(request for request in self.processes.requests if request.argv[:2] == ("git", "merge"))
-        self.assertEqual(merge.cwd, "/srv/oak")
+        self.assertEqual(
+            select_requests_opening_on(self.processes.requests, GIT_MERGE),
+            [ProcessRequest(argv=("git", "merge", "--quiet", "--ff-only", BRANCH), cwd="/srv/oak", timeout_s=60.0)],
+        )
 
     def test_should_mark_the_request_planned_with_no_pull_request_and_push_nothing(self):
         # Arrange
