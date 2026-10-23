@@ -17,13 +17,8 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
         (self.state / "ledger" / "2026-10.jsonl").write_text(S3_PARKED_ON_A_DEAD_RUN)
 
     def test_should_queue_the_parked_task_again_for_the_next_tick_to_launch_it(self):
-        # Arrange
-        requeued = self.machine.run_brigade(
-            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
-        )
-
         # Act
-        self.run_tick("--once")
+        requeued = self.requeue_then_tick()
 
         # Assert
         self.assertEqual((requeued.returncode, requeued.stdout), (0, "task S3 of shop_w1 queued\n"), requeued.stderr)
@@ -48,3 +43,10 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                 },
             ],
         )
+
+    def requeue_then_tick(self):
+        requeued = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+        self.run_tick("--once")
+        return requeued
