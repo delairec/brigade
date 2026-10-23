@@ -70,7 +70,7 @@ def create_forge(found_pull_requests: list[dict]) -> ForgeDouble:
     )
 
 
-class RecordPlanArrangement:
+class RecordPlanTestCase(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -176,7 +176,7 @@ class RecordPlanArrangement:
         )
 
 
-class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanTest(RecordPlanTestCase):
     def test_should_record_the_plan_on_its_plan_branch_and_its_pull_request(self):
         # Arrange
         self.script_recording()
@@ -355,7 +355,7 @@ class RecordPlanTest(RecordPlanArrangement, unittest.TestCase):
         )
 
 
-class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanWithoutForgeTest(RecordPlanTestCase):
     def setUp(self):
         super().setUp()
         self.script_recording()
@@ -416,7 +416,7 @@ class RecordPlanWithoutForgeTest(RecordPlanArrangement, unittest.TestCase):
         self.assertNotIn(PUSH, self.processes.list_argvs())
 
 
-class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanReplayTest(RecordPlanTestCase):
     def setUp(self):
         super().setUp()
         self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}, {"type": "TASK", "name": "B20"}])
@@ -519,7 +519,7 @@ class RecordPlanReplayTest(RecordPlanArrangement, unittest.TestCase):
         self.assertIn(("git", "fetch", "--quiet", ".", f"{BRANCH}:main"), self.processes.list_argvs())
 
 
-class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanLintTest(RecordPlanTestCase):
     def test_should_record_the_lint_round_the_plan_spent(self):
         # Arrange
         self.script_refused_lint()
@@ -564,7 +564,7 @@ class RecordPlanLintTest(RecordPlanArrangement, unittest.TestCase):
         self.assertEqual(str(refusal.exception), "@REQUEST.oak_r1 spent its lint round in run r1; the run ends blocked")
 
 
-class RecordPlanRefusalTest(RecordPlanArrangement, unittest.TestCase):
+class RecordPlanRefusalTest(RecordPlanTestCase):
     def setUp(self):
         super().setUp()
         self.script_plan_branch(BRANCH_NOT_FOUND)

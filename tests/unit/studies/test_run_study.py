@@ -62,7 +62,7 @@ def refuse_collector(name: str, project: Path):
     raise BrigadeError(f"no collector {name}")
 
 
-class RunStudyArrangement:
+class RunStudyTestCase(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -93,7 +93,7 @@ class RunStudyArrangement:
         self.live_run_directories.add(run_directory)
 
 
-class RunStudyTest(RunStudyArrangement, unittest.TestCase):
+class RunStudyTest(RunStudyTestCase):
     def test_should_answer_the_run_done(self):
         # Act
         ran = run_study(self.runtime, SCAN, self.equipment, RUN_ID)
@@ -169,7 +169,7 @@ class RunStudyTest(RunStudyArrangement, unittest.TestCase):
         self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
 
 
-class RunStudyStartTest(RunStudyArrangement, unittest.TestCase):
+class RunStudyStartTest(RunStudyTestCase):
     def test_should_start_a_new_run_after_a_run_done(self):
         # Arrange
         self.record_order(OrderDone(project=None, kind="study", order="trees", run=RUN_ID))
@@ -181,7 +181,7 @@ class RunStudyStartTest(RunStudyArrangement, unittest.TestCase):
         self.assertEqual(ran, {"study": "trees", "run": "20261019T090000Z-c0ffee", "state": "done"})
 
 
-class RunStudyParkingTest(RunStudyArrangement, unittest.TestCase):
+class RunStudyParkingTest(RunStudyTestCase):
     def test_should_park_the_run_at_the_step_that_failed(self):
         # Act
         ran = run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, self.equipment, RUN_ID)

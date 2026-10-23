@@ -51,7 +51,7 @@ def create_forge(milestones: list[str]) -> ForgeDouble:
     )
 
 
-class OpenTaskPullRequestArrangement:
+class OpenTaskPullRequestTestCase(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -96,7 +96,7 @@ class OpenTaskPullRequestArrangement:
         )
 
 
-class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase):
+class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
     def setUp(self):
         super().setUp()
         self.record_check(PASSING_CHECK)
@@ -209,7 +209,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestArrangement, unittest.TestCase)
         self.assertEqual(opened["title"], "fix: add the parser (@TASK.B12)")
 
 
-class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestArrangement, unittest.TestCase):
+class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
     def test_should_refuse_a_task_whose_check_is_not_recorded(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
