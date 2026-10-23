@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -91,6 +92,71 @@ def _ensure_milestone(runtime: Runtime, session: ForgeSession, title: str) -> No
     )
 
 
+@dataclasses.dataclass(frozen=True)
+class _TaskPullRequest:
+    branch: str
+    title: str
+    body: str
+    milestone: str
+
+
+def _compose_body(task: Entity, check: object, attribution: tuple[str, ...]) -> str:
+    return describe_pull_request_body(
+        PullRequestBodyParts(
+            title=read_project_field(task, "TITLE"),
+            specs=tuple(field.value for field in task.fields if field.name == "SPEC"),
+            check=check,
+            attribution=attribution,
+        )
+    )
+
+
+def _open_on_forge(runtime: Runtime, session: ForgeSession, opened: _TaskPullRequest) -> dict:
+    return session.forge.open_pull_request(
+        {
+            "repository": str(session.worktree.path),
+            "base": session.worktree.wave_branch,
+            "branch": opened.branch,
+            "title": opened.title,
+            "body": opened.body,
+            "milestone": opened.milestone,
+            "environment": session.environment,
+        },
+        runtime,
+    )
+
+
+def _record_opening(runtime: Runtime, session: ForgeSession, branch: str, pr: int) -> None:
+    worktree = session.worktree
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskPrOpened(
+            project=worktree.project.name,
+            task=worktree.task,
+            wave=worktree.wave,
+            branch=branch,
+            pr=pr,
+            login=session.login,
+        ),
+    )
+
+
+def _describe_opening(session: ForgeSession, opened: _TaskPullRequest, pull_request: dict) -> dict:
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "project": session.worktree.project.name,
+        "task": session.worktree.task,
+        "branch": opened.branch,
+        "base": session.worktree.wave_branch,
+        "title": opened.title,
+        "milestone": opened.milestone,
+        "pr": pull_request["number"],
+        "url": pull_request["url"],
+        "login": session.login,
+    }
+
+
 def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
     check = _require_passing_check(runtime, worktree)
@@ -103,47 +169,9 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
         runtime.run_process, BranchPush(repository=worktree.path, branch=branch, environment=demand.environment)
     )
     _ensure_milestone(runtime, session, milestone)
-    body = describe_pull_request_body(
-        PullRequestBodyParts(
-            title=read_project_field(task, "TITLE"),
-            specs=tuple(field.value for field in task.fields if field.name == "SPEC"),
-            check=check,
-            attribution=demand.attribution,
-        )
+    opened = _TaskPullRequest(
+        branch=branch, title=title, body=_compose_body(task, check, demand.attribution), milestone=milestone
     )
-    pull_request = demand.forge.open_pull_request(
-        {
-            "repository": str(worktree.path),
-            "base": worktree.wave_branch,
-            "branch": branch,
-            "title": title,
-            "body": body,
-            "milestone": milestone,
-            "environment": demand.environment,
-        },
-        runtime,
-    )
-    append_event(
-        runtime.paths,
-        runtime.now,
-        TaskPrOpened(
-            project=worktree.project.name,
-            task=worktree.task,
-            wave=worktree.wave,
-            branch=branch,
-            pr=pull_request["number"],
-            login=session.login,
-        ),
-    )
-    return {
-        "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "project": worktree.project.name,
-        "task": worktree.task,
-        "branch": branch,
-        "base": worktree.wave_branch,
-        "title": title,
-        "milestone": milestone,
-        "pr": pull_request["number"],
-        "url": pull_request["url"],
-        "login": session.login,
-    }
+    pull_request = _open_on_forge(runtime, session, opened)
+    _record_opening(runtime, session, branch, pull_request["number"])
+    return _describe_opening(session, opened, pull_request)

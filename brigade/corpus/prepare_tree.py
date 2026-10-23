@@ -154,13 +154,14 @@ def _prune(cache: Path, bound_bytes: int, kept: Path, keeper: ReadTimeKeeper) ->
         total_bytes -= tree.size_bytes
 
 
+def _locate_cached_tree(request: TreeRequest, sha: str) -> Path:
+    return request.cache / request.project / sha
+
+
 def _extract_tree(
-    run_process: Callable[[ProcessRequest], ProcessRecord],
-    keeper: ReadTimeKeeper,
-    request: TreeRequest,
-    sha: str,
-    root: Path,
+    run_process: Callable[[ProcessRequest], ProcessRecord], keeper: ReadTimeKeeper, request: TreeRequest, sha: str
 ) -> None:
+    root = _locate_cached_tree(request, sha)
     create_directory(root.parent)
     with stage_directory(root) as staging:
         staged_tree = _stage_tree(run_process, request, sha, staging)
@@ -184,9 +185,9 @@ def _read_archive(
     sha = resolve_commit(run_process, request.repository, request.ref)
     if sha is None:
         raise BrigadeError(f"the ref {request.ref} is not a commit of @PROJECT.{request.project}")
-    root = request.cache / request.project / sha
+    root = _locate_cached_tree(request, sha)
     if not _reuse_cached_tree(root, request, keeper):
-        _extract_tree(run_process, keeper, request, sha, root)
+        _extract_tree(run_process, keeper, request, sha)
     return Tree(project=request.project, ref=request.ref, sha=sha, kind=ARCHIVE_KIND, root=root)
 
 

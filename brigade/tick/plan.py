@@ -1,3 +1,4 @@
+import dataclasses
 from datetime import datetime
 
 from brigade.errors import BrigadeError
@@ -174,58 +175,76 @@ def _is_pushed_since_preflight(state: str, task: TaskFacts) -> bool:
     return state in AWAITING_PUSH_STATES and task.preflighted_head != task.pull_request.head
 
 
+@dataclasses.dataclass(frozen=True)
+class _Occupancy:
+    worktrees: frozenset
+    tasks: frozenset
+
+
+def _read_occupancy(snapshot: Snapshot) -> _Occupancy:
+    live_runs = [live for project in snapshot.projects for live in project.live_runs]
+    return _Occupancy(
+        worktrees=frozenset(live.worktree for live in live_runs),
+        tasks=frozenset((live.wave, live.task) for live in live_runs),
+    )
+
+
+def _decide_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> RunPreflight | None:
+    if not _is_ready_for_preflight(wave, task, project):
+        return None
+    return RunPreflight(
+        project=wave.project, wave=wave.wave, branch=wave.branch, task=task.name, pr=task.pull_request.number
+    )
+
+
+def _decide_worktree_removal(wave: WaveFacts, task: TaskFacts, occupancy: _Occupancy) -> RemoveTaskWorktree | None:
+    if (
+        task.pull_request.state not in SETTLED_PULL_REQUESTS
+        or task.worktree is None
+        or task.worktree in occupancy.worktrees
+    ):
+        return None
+    return RemoveTaskWorktree(project=wave.project, task=task.name, worktree=task.worktree)
+
+
+def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy) -> tuple:
+    record = _decide_task_state(wave, task)
+    recorded = () if record is None else (record,)
+    catch_up = _decide_catch_up(wave, task, project, occupancy)
+    if catch_up is not None:
+        return (*recorded, catch_up)
+    decided = (
+        _decide_preflight(wave, task, project),
+        _decide_verification(wave, task, occupancy),
+        _decide_repair(wave, task, project, occupancy),
+        _decide_merge(wave, task, project),
+        _decide_worktree_removal(wave, task, occupancy),
+    )
+    return (*recorded, *(action for action in decided if action is not None))
+
+
 def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
-    held = {live.worktree for project in snapshot.projects for live in project.live_runs}
-    live_tasks = {(live.wave, live.task) for project in snapshot.projects for live in project.live_runs}
+    occupancy = _read_occupancy(snapshot)
     projects = {project.name: project for project in snapshot.projects}
-    actions = []
-    for wave in snapshot.waves:
-        for task in (task for task in wave.tasks if task.pull_request is not None):
-            record = _decide_task_state(wave, task)
-            if record is not None:
-                actions.append(record)
-            catch_up = _decide_catch_up(wave, task, projects[wave.project], held, live_tasks)
-            if catch_up is not None:
-                actions.append(catch_up)
-                continue
-            if _is_ready_for_preflight(wave, task, projects[wave.project]):
-                actions.append(
-                    RunPreflight(
-                        project=wave.project,
-                        wave=wave.wave,
-                        branch=wave.branch,
-                        task=task.name,
-                        pr=task.pull_request.number,
-                    )
-                )
-            verification = _decide_verification(wave, task, held, live_tasks)
-            if verification is not None:
-                actions.append(verification)
-            repair = _decide_repair(wave, task, projects[wave.project], held, live_tasks)
-            if repair is not None:
-                actions.append(repair)
-            merge = _decide_merge(wave, task, projects[wave.project])
-            if merge is not None:
-                actions.append(merge)
-            if (
-                task.pull_request.state in SETTLED_PULL_REQUESTS
-                and task.worktree is not None
-                and task.worktree not in held
-            ):
-                actions.append(RemoveTaskWorktree(project=wave.project, task=task.name, worktree=task.worktree))
-    return tuple(actions)
+    return tuple(
+        action
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if task.pull_request is not None
+        for action in _plan_followed_task(wave, task, projects[wave.project], occupancy)
+    )
 
 
 def _decide_catch_up(
-    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, held: set, live_tasks: set
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy
 ) -> RebaseTask | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
     if (
         not task.pull_request.behind
         or task.pull_request.state != OPEN_PULL_REQUEST
         or wave.states.get(task.name) not in REBASED_STATES
         or task.worktree is None
-        or task.worktree in held
-        or (wave.wave, task.name) in live_tasks
+        or task.worktree in occupancy.worktrees
+        or (wave.wave, task.name) in occupancy.tasks
     ):
         return None
     if task.holds_uncommitted_changes:
@@ -252,7 +271,7 @@ def _describe_spent_rounds(task: TaskFacts, project: ProjectFacts) -> str | None
 
 
 def _decide_verification(
-    wave: WaveFacts, task: TaskFacts, held: set, live_tasks: set
+    wave: WaveFacts, task: TaskFacts, occupancy: _Occupancy
 ) -> RecordTaskState | LaunchVerification | None:
     state = wave.states.get(task.name)
     if (
@@ -268,8 +287,8 @@ def _decide_verification(
     if (
         task.reviewed_head != task.pull_request.head
         and task.worktree is not None
-        and task.worktree not in held
-        and (wave.wave, task.name) not in live_tasks
+        and task.worktree not in occupancy.worktrees
+        and (wave.wave, task.name) not in occupancy.tasks
     ):
         return LaunchVerification(
             project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree
@@ -303,15 +322,15 @@ def _launch_repair(wave: WaveFacts, task: TaskFacts) -> LaunchRemediation | Laun
 
 
 def _decide_repair(
-    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, held: set, live_tasks: set
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy
 ) -> RecordTaskState | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
     state = wave.states.get(task.name)
     if (
         state not in REPAIRED_STATES
         or task.pull_request.state != OPEN_PULL_REQUEST
         or task.preflighted_head != task.pull_request.head
-        or task.worktree in held
-        or (wave.wave, task.name) in live_tasks
+        or task.worktree in occupancy.worktrees
+        or (wave.wave, task.name) in occupancy.tasks
     ):
         return None
     failed = {failure.name for failure in task.preflight_failures}

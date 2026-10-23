@@ -44,11 +44,15 @@ class TreeDemand:
     worktree: None = None
 
 
-def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
-    run_process = runtime.run_process
-    project = demand.project
-    wave_branch = demand.wave_branch
-    repository = Path(read_project_field(project, "PATH"))
+@dataclass(frozen=True)
+class _ComparedCommits:
+    repository: Path
+    wave_head: str
+    base: str
+    head: str
+
+
+def _fetch_pull_request(runtime: Runtime, demand: PreflightDemand, repository: Path) -> dict:
     pull_request = ask_pull_request_details(
         demand.forge,
         FORGE_NAME,
@@ -56,40 +60,62 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
         runtime,
     )
     fetch_branches(
-        run_process,
+        runtime.run_process,
         BranchesFetch(
-            repository=repository, branches=(pull_request["head"], wave_branch), environment=demand.environment
+            repository=repository, branches=(pull_request["head"], demand.wave_branch), environment=demand.environment
         ),
     )
-    head = pull_request["head_sha"]
-    wave_head = resolve_commit(run_process, repository, f"{REMOTE_BRANCH_PREFIX}{wave_branch}")
-    base = find_merge_base(run_process, repository, wave_head, head)
-    head_tree = prepare_project_tree(TreeDemand(project=project.name, ref=head), demand.configuration, runtime).root
-    base_tree = prepare_project_tree(TreeDemand(project=project.name, ref=base), demand.configuration, runtime).root
-    changed = count_changed_lines(run_process, repository, base, head)
-    privacy_patterns = PrivacyPatterns(
+    return pull_request
+
+
+def _compare_commits(runtime: Runtime, repository: Path, wave_branch: str, head: str) -> _ComparedCommits:
+    wave_head = resolve_commit(runtime.run_process, repository, f"{REMOTE_BRANCH_PREFIX}{wave_branch}")
+    base = find_merge_base(runtime.run_process, repository, wave_head, head)
+    return _ComparedCommits(repository=repository, wave_head=wave_head, base=base, head=head)
+
+
+def _read_privacy_patterns(project: Entity) -> PrivacyPatterns:
+    return PrivacyPatterns(
         private=tuple(field.value for field in project.fields if field.name == "PRIVATE"),
         public=tuple(field.value for field in project.fields if field.name == "PUBLIC"),
     )
+
+
+def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, commits: _ComparedCommits) -> list:
+    run_process = runtime.run_process
+    project = demand.project.name
+    head_tree = prepare_project_tree(TreeDemand(project=project, ref=commits.head), demand.configuration, runtime).root
+    base_tree = prepare_project_tree(TreeDemand(project=project, ref=commits.base), demand.configuration, runtime).root
+    changed = count_changed_lines(run_process, commits.repository, commits.base, commits.head)
+    ancestry = AncestryFacts(
+        repository=commits.repository, wave_branch=demand.wave_branch, wave_head=commits.wave_head, head=commits.head
+    )
+    return [
+        check_ancestry(run_process, ancestry),
+        check_check_runs(pull_request["checks"]),
+        check_corpus_at_head(run_process, head_tree),
+        check_promotion(run_process, PromotionFacts(head_tree=head_tree, task=demand.task, pr=demand.pr)),
+        check_untouched_files(
+            run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
+        ),
+        check_privacy(
+            _read_privacy_patterns(demand.project),
+            list_added_lines(run_process, commits.repository, commits.base, commits.head),
+        ),
+        check_body(pull_request["body"]),
+        measure_size(changed),
+    ]
+
+
+def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
+    repository = Path(read_project_field(demand.project, "PATH"))
+    pull_request = _fetch_pull_request(runtime, demand, repository)
+    commits = _compare_commits(runtime, repository, demand.wave_branch, pull_request["head_sha"])
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "project": project.name,
+        "project": demand.project.name,
         "pr": demand.pr,
         "task": demand.task,
-        "head": head,
-        "checks": [
-            check_ancestry(
-                run_process,
-                AncestryFacts(repository=repository, wave_branch=wave_branch, wave_head=wave_head, head=head),
-            ),
-            check_check_runs(pull_request["checks"]),
-            check_corpus_at_head(run_process, head_tree),
-            check_promotion(run_process, PromotionFacts(head_tree=head_tree, task=demand.task, pr=demand.pr)),
-            check_untouched_files(
-                run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
-            ),
-            check_privacy(privacy_patterns, list_added_lines(run_process, repository, base, head)),
-            check_body(pull_request["body"]),
-            measure_size(changed),
-        ],
+        "head": commits.head,
+        "checks": _run_checks(runtime, demand, pull_request, commits),
     }

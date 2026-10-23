@@ -422,19 +422,21 @@ def _is_reported(reading: WaveReading, wave: str) -> bool:
     return any(isinstance(event, WaveReported) and event.wave == wave for event in reading.events)
 
 
-def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
+@dataclass(frozen=True)
+class _OpenWave:
+    started: WaveStarted
+    tree_root: Path
+    followed: FollowedWave
+
+
+def _locate_wave_repository(reading: WaveReading, started: WaveStarted) -> Path:
+    return Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD))
+
+
+def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, states: dict) -> FollowedWave:
     wave = started.wave
-    project = find_project(reading.projects, started.project)
-    repository = Path(read_project_field(project, PATH_FIELD))
-    cut = WaveBranchCut(project=project, branch=started.branch, read_environment=reading.read_environment)
-    if is_wave_branch_missing(runtime.run_process, cut):
-        return WaveFacts(project=started.project, wave=wave, branch=started.branch, branch_missing=True)
-    tree = prepare_wave_tree(runtime, reading.configuration, started)
-    tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
-    states = read_task_states(runtime.paths.state_root, wave)
-    reported = _is_reported(reading, wave)
-    followed = FollowedWave(
-        repository=repository,
+    return FollowedWave(
+        repository=_locate_wave_repository(reading, started),
         worktree_root=reading.configuration.worktree_root,
         branch=started.branch,
         states=states,
@@ -461,27 +463,40 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         read_pull_request=reading.read_pull_request,
         run_process=runtime.run_process,
     )
+
+
+def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
+    wave = open_wave.started.wave
+    followed = _follow_task(_read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed)
+    return _note_last_run(_note_quota(followed, reading, wave, open_wave.followed.states), reading, wave)
+
+
+def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
+    project = find_project(reading.projects, started.project)
+    cut = WaveBranchCut(project=project, branch=started.branch, read_environment=reading.read_environment)
+    if is_wave_branch_missing(runtime.run_process, cut):
+        return WaveFacts(project=started.project, wave=started.wave, branch=started.branch, branch_missing=True)
+    tree = prepare_wave_tree(runtime, reading.configuration, started)
+    tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
+    states = read_task_states(runtime.paths.state_root, started.wave)
+    open_wave = _OpenWave(
+        started=started, tree_root=tree.root, followed=_follow_wave(runtime, reading, started, states)
+    )
+    reported = _is_reported(reading, started.wave)
     return WaveFacts(
         project=started.project,
-        wave=wave,
+        wave=started.wave,
         branch=started.branch,
-        tasks=tuple(
-            _note_last_run(
-                _note_quota(
-                    _follow_task(_read_task_facts(runtime, tree.root, tasks[task]), followed), reading, wave, states
-                ),
-                reading,
-                wave,
-            )
-            for task in started.tasks
-        ),
+        tasks=tuple(_read_wave_task(runtime, reading, open_wave, tasks[task]) for task in started.tasks),
         states=states,
         implemented=read_implemented_tasks(runtime.run_process, tree.root),
-        pause=read_wave_pause(reading.events, wave),
-        forge_account_unavailable=_is_forge_account_unavailable(reading.entries, wave),
+        pause=read_wave_pause(reading.events, started.wave),
+        forge_account_unavailable=_is_forge_account_unavailable(reading.entries, started.wave),
         reported=reported,
-        integration_pull_request=(reading.read_pull_request(str(repository), started.branch) if reported else None),
-        opened_integration_pull_request=find_integration_pull_request(reading.events, wave),
+        integration_pull_request=(
+            reading.read_pull_request(str(open_wave.followed.repository), started.branch) if reported else None
+        ),
+        opened_integration_pull_request=find_integration_pull_request(reading.events, started.wave),
     )
 
 
@@ -537,6 +552,47 @@ def _describe_study(study: Study, last_order: LastStudyOrder | None) -> StudyFac
     )
 
 
+def _assemble_reading(
+    runtime: Runtime,
+    configuration: Configuration,
+    read_pull_request: Callable[[str, str], PullRequestFacts | None],
+    read_environment: Callable[[str], dict],
+) -> WaveReading:
+    entries = read_ledger(runtime.paths.state_root).entries
+    runs = list_runs(runtime.paths.state_root)["runs"]
+    return WaveReading(
+        configuration=configuration,
+        entries=entries,
+        events=tuple(entry.event for entry in entries),
+        live_runs=frozenset(run["run"] for run in runs if run["state"] == LIVE_RUN_STATE),
+        runs=tuple(runs),
+        projects=read_projects(runtime),
+        read_pull_request=read_pull_request,
+        read_environment=read_environment,
+    )
+
+
+def _read_open_waves(runtime: Runtime, reading: WaveReading) -> tuple[WaveFacts, ...]:
+    return tuple(
+        facts
+        for facts in (
+            _read_wave_facts(runtime, reading, summary.started)
+            for summary in summarize_waves(reading.entries)
+            if summary.is_open
+        )
+        if facts is not None
+    )
+
+
+def _read_registered_projects(runtime: Runtime, reading: WaveReading) -> tuple[ProjectFacts, ...]:
+    runs = list(reading.runs)
+    return tuple(
+        facts
+        for facts in (_read_readable_project_facts(runtime, reading, project, runs) for project in reading.projects)
+        if facts is not None
+    )
+
+
 def build_snapshot(
     runtime: Runtime,
     configuration: Configuration,
@@ -545,38 +601,12 @@ def build_snapshot(
 ) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
-    registered = read_projects(runtime)
-    entries = read_ledger(runtime.paths.state_root).entries
-    runs = list_runs(runtime.paths.state_root)["runs"]
-    reading = WaveReading(
-        configuration=configuration,
-        entries=entries,
-        events=tuple(entry.event for entry in entries),
-        live_runs=frozenset(run["run"] for run in runs if run["state"] == LIVE_RUN_STATE),
-        runs=tuple(runs),
-        projects=registered,
-        read_pull_request=read_pull_request,
-        read_environment=read_environment,
-    )
-    waves = tuple(
-        facts
-        for facts in (
-            _read_wave_facts(runtime, reading, summary.started)
-            for summary in summarize_waves(entries)
-            if summary.is_open
-        )
-        if facts is not None
-    )
-    projects = tuple(
-        facts
-        for facts in (_read_readable_project_facts(runtime, reading, project, runs) for project in registered)
-        if facts is not None
-    )
+    reading = _assemble_reading(runtime, configuration, read_pull_request, read_environment)
     last_orders = read_last_study_orders(runtime.paths.state_root)
     return Snapshot(
         now=runtime.now.astimezone(),
-        waves=waves,
-        projects=projects,
+        waves=_read_open_waves(runtime, reading),
+        projects=_read_registered_projects(runtime, reading),
         studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,

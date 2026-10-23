@@ -1,3 +1,5 @@
+import dataclasses
+
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.force_push_branch import force_push_branch
@@ -20,22 +22,28 @@ NO_PULL_REQUEST = None
 NO_MILESTONE = None
 
 
+@dataclasses.dataclass(frozen=True)
+class _AnswerBranch:
+    name: str
+    base: str
+
+
 def _open_pull_request(
-    context: StudyRunContext, project: StudyProject, branch: str, base: str, publication: AnswerPublication
+    context: StudyRunContext, project: StudyProject, branch: _AnswerBranch, publication: AnswerPublication
 ) -> str | None:
     if project.forge is None:
         return NO_PULL_REQUEST
     checkout = context.run_directory / CHECKOUT_DIRECTORY
     environment = read_publication_environment(context, project)
     force_push_branch(
-        context.runtime.run_process, BranchPush(repository=checkout, branch=branch, environment=environment)
+        context.runtime.run_process, BranchPush(repository=checkout, branch=branch.name, environment=environment)
     )
     forge = context.equipment.resolve_forge(project.forge)
     pull_request = forge.open_pull_request(
         {
             "repository": str(checkout),
-            "base": base,
-            "branch": branch,
+            "base": branch.base,
+            "branch": branch.name,
             "title": publication.title,
             "body": publication.markdown,
             "milestone": NO_MILESTONE,
@@ -66,7 +74,7 @@ def write_answer_to_file(context: StudyRunContext, publication: AnswerPublicatio
                 message=f"docs(studies): add the answer of {context.study.name}, run {context.run_id}",
             ),
         )
-        pull_request = _open_pull_request(context, project, branch, base, publication)
+        pull_request = _open_pull_request(context, project, _AnswerBranch(name=branch, base=base), publication)
     finally:
         remove_worktree(run_process, project.path, checkout)
     return {"branch": branch, "pull_request": pull_request}

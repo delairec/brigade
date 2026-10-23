@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 import functools
 from pathlib import Path
 
@@ -44,10 +45,18 @@ def _stop_live_run(state_root: Path, task_runs: list[dict]) -> dict | None:
     return None if live is None else stop_run(state_root, live["run"], SYSTEM_PROCESS_SIGNALLER)
 
 
-def _cancel_task(state_root: Path, runs: list[dict], events: tuple, wave: str, task: str) -> dict:
-    task_runs = [run for run in runs if run["wave"] == wave and run["task"] == task]
-    stopped = _stop_live_run(state_root, task_runs)
-    opened = find_last_task_event(events, TaskPrOpened, wave, task)
+@dataclasses.dataclass(frozen=True)
+class _CancelledWave:
+    state_root: Path
+    runs: list[dict]
+    events: tuple
+    wave: str
+
+
+def _cancel_task(cancelled: _CancelledWave, task: str) -> dict:
+    task_runs = [run for run in cancelled.runs if run["wave"] == cancelled.wave and run["task"] == task]
+    stopped = _stop_live_run(cancelled.state_root, task_runs)
+    opened = find_last_task_event(cancelled.events, TaskPrOpened, cancelled.wave, task)
     return {
         "task": task,
         "stopped_run": None if stopped is None else stopped["run"],
@@ -62,12 +71,16 @@ def wave_cancel(request: argparse.Namespace, runtime: Runtime) -> dict:
     append_derived_event(runtime.paths, runtime.now, functools.partial(_derive_cancellation, request.wave))
     entries = read_ledger(state_root).entries
     started = require_wave_summary(entries, request.wave).started
-    events = tuple(entry.event for entry in entries)
-    runs = list_runs(state_root)["runs"]
+    cancelled = _CancelledWave(
+        state_root=state_root,
+        runs=list_runs(state_root)["runs"],
+        events=tuple(entry.event for entry in entries),
+        wave=started.wave,
+    )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "wave": started.wave,
-        "tasks": [_cancel_task(state_root, runs, events, started.wave, task) for task in started.tasks],
+        "tasks": [_cancel_task(cancelled, task) for task in started.tasks],
     }
 
 
