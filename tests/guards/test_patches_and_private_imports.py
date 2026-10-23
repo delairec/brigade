@@ -38,7 +38,7 @@ class PatchesAndPrivateImportsGuardTest(unittest.TestCase):
                 violations = self.inspect(source)
 
                 # Assert
-                self.assertEqual(violations, [f"tests/unit/test_greeter.py:{line} patches through mock.patch"])
+                self.assertEqual(violations, [f"tests/unit/test_greeter.py:{line} patches a name through unittest.mock"])
 
     def test_should_flag_the_import_of_an_underscored_name(self):
         # Arrange

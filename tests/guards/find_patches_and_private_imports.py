@@ -14,11 +14,11 @@ def _names_the_mock_module(node: ast.expr) -> bool:
 
 def _describe_violations(node: ast.AST) -> list[str]:
     if isinstance(node, ast.Attribute) and node.attr == PATCH and _names_the_mock_module(node.value):
-        return ["patches through mock.patch"]
+        return ["patches a name through unittest.mock"]
     if not isinstance(node, ast.ImportFrom):
         return []
     if node.module is not None and node.module.endswith(MOCK_MODULE):
-        return ["patches through mock.patch" for alias in node.names if alias.name == PATCH]
+        return ["patches a name through unittest.mock" for alias in node.names if alias.name == PATCH]
     return [f"imports the private name {alias.name}" for alias in node.names if alias.name.startswith(PRIVATE_PREFIX)]
 
 
