@@ -9,7 +9,7 @@ from brigade.adapters.test_clients import fake
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError, UsageError
 from brigade.roles.resolve_role import ResolvedRole
-from brigade.runs.plan_run import RunPlan, RunRequest, plan_run
+from brigade.runs.plan_run import RunPlan, RunPlugins, RunRequest, plan_run
 from brigade.runs.read_run_setting import RunSetting
 from brigade.runs.resolve_procedure import Procedure
 from brigade.system.read_configuration import Configuration
@@ -111,7 +111,12 @@ class PlanRunTestCase(unittest.TestCase):
     def plan(self, request: RunRequest, settings: dict, project: Entity | None = None, run_process=None):
         configuration = Configuration(client="fake", clients={"fake": settings}, seconds_per_step=20)
         runtime = create_test_runtime(self.paths, **({} if run_process is None else {"run_process": run_process}))
-        return plan_run(request, RunSetting(configuration, project, "fake"), fake, markdown, runtime)
+        return plan_run(
+            request,
+            RunSetting(configuration, project, "fake"),
+            RunPlugins(client_adapter=fake, document=markdown),
+            runtime,
+        )
 
 
 class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
