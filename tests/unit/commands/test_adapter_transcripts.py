@@ -3,7 +3,6 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from brigade.commands.adapter_transcripts import COMMAND, adapter_transcripts
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
@@ -42,11 +41,10 @@ class AdapterTranscriptsTextTest(unittest.TestCase):
 class AdapterTranscriptsRequestTest(unittest.TestCase):
     def test_should_read_the_request_on_stdin(self):
         # Arrange
-        no_option = argparse.Namespace()
+        options = argparse.Namespace(standard_input=io.StringIO(TRANSCRIPTS_REQUEST))
 
         # Act
-        with mock.patch("sys.stdin", io.StringIO(TRANSCRIPTS_REQUEST)):
-            request = COMMAND.read_request(no_option)
+        request = COMMAND.read_request(options)
 
         # Assert
         self.assertEqual(request, TRANSCRIPTS_REQUEST)

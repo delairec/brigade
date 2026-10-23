@@ -143,6 +143,7 @@ def main(arguments: list[str]) -> int:
     command = options.command if passthrough is None else passthrough
     options.extra_arguments = extras
     options.passed_arguments = tuple(arguments[separator + 1 :])
+    options.standard_input = sys.stdin
     options.create_runtime = functools.partial(
         build_runtime, Invocation(command=_name(command), verbose=getattr(options, "verbose", False))
     )

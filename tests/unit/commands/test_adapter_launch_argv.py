@@ -3,7 +3,6 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from brigade.commands.adapter_launch_argv import COMMAND, adapter_launch_argv
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
@@ -40,11 +39,10 @@ class AdapterLaunchArgvTextTest(unittest.TestCase):
 class AdapterLaunchArgvRequestTest(unittest.TestCase):
     def test_should_read_the_request_on_stdin(self):
         # Arrange
-        no_option = argparse.Namespace()
+        options = argparse.Namespace(standard_input=io.StringIO(LAUNCH_REQUEST))
 
         # Act
-        with mock.patch("sys.stdin", io.StringIO(LAUNCH_REQUEST)):
-            request = COMMAND.read_request(no_option)
+        request = COMMAND.read_request(options)
 
         # Assert
         self.assertEqual(request, LAUNCH_REQUEST)

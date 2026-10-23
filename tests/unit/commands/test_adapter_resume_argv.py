@@ -3,7 +3,6 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from brigade.commands.adapter_resume_argv import COMMAND, adapter_resume_argv
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
@@ -40,11 +39,10 @@ class AdapterResumeArgvTextTest(unittest.TestCase):
 class AdapterResumeArgvRequestTest(unittest.TestCase):
     def test_should_read_the_request_on_stdin(self):
         # Arrange
-        no_option = argparse.Namespace()
+        options = argparse.Namespace(standard_input=io.StringIO(RESUME_REQUEST))
 
         # Act
-        with mock.patch("sys.stdin", io.StringIO(RESUME_REQUEST)):
-            request = COMMAND.read_request(no_option)
+        request = COMMAND.read_request(options)
 
         # Assert
         self.assertEqual(request, RESUME_REQUEST)
