@@ -545,10 +545,8 @@ class DescribeFinishedOfASegmentStoppedByAUsageLimitTest(unittest.TestCase):
         finished = describe_finished(_create_plan(), record)
 
         # Assert
-        self.assertEqual(
-            (finished.message, finished.reset),
-            ("You've hit your session limit · resets 11:30pm", ResetHour(hour="23:30", timezone="Europe/Paris")),
-        )
+        self.assertEqual(finished.message, "You've hit your session limit · resets 11:30pm")
+        self.assertEqual(finished.reset, ResetHour(hour="23:30", timezone="Europe/Paris"))
 
 
 class DescribeFinishedOfARunOfNoProjectInAWaveTest(unittest.TestCase):
@@ -570,15 +568,13 @@ class DescribeFinishedOfARunOfNoProjectInAWaveTest(unittest.TestCase):
         finished = describe_finished(plan, record)
 
         # Assert
+        self.assertEqual(finished.wave, "w1")
+        self.assertEqual(finished.task, "B1")
         self.assertEqual(
-            (finished.wave, finished.task, finished.nulls),
-            (
-                "w1",
-                "B1",
-                {
-                    "project": "no project given",
-                    "usage": "the client reported no usage",
-                    "error_class": "the run did not fail",
-                },
-            ),
+            finished.nulls,
+            {
+                "project": "no project given",
+                "usage": "the client reported no usage",
+                "error_class": "the run did not fail",
+            },
         )

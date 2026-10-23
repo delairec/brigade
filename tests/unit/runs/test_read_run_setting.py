@@ -40,7 +40,8 @@ class ReadRunSettingTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual((setting.project.name, setting.client), ("tidepool", "codex"))
+        self.assertEqual(setting.project.name, "tidepool")
+        self.assertEqual(setting.client, "codex")
 
     def test_should_refuse_a_run_no_configuration_names_a_client_for(self):
         # Arrange

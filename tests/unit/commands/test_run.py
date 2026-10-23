@@ -239,14 +239,9 @@ class RunDetachedTest(unittest.TestCase):
         record = json.loads(
             (self.root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "run.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(
-            (document, record["procedure"], record["arguments"]),
-            (
-                {"schema_version": 1, "run": "20261019T090000Z-a1b2c3", "pid": this_process},
-                "wave-plan",
-                {"request": "tidepool_1"},
-            ),
-        )
+        self.assertEqual(document, {"schema_version": 1, "run": "20261019T090000Z-a1b2c3", "pid": this_process})
+        self.assertEqual(record["procedure"], "wave-plan")
+        self.assertEqual(record["arguments"], {"request": "tidepool_1"})
 
     def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
         # Arrange

@@ -34,10 +34,9 @@ class BuildRuntimeTest(unittest.TestCase):
         runtime = build_runtime(Invocation(command="runs list", verbose=False), self.environment)
 
         # Assert
-        self.assertEqual(
-            (runtime.paths.config_root, runtime.paths.state_root, runtime.entry_point.is_absolute()),
-            (self.root / "config" / "brigade", self.root / "state" / "brigade", True),
-        )
+        self.assertEqual(runtime.paths.config_root, self.root / "config" / "brigade")
+        self.assertEqual(runtime.paths.state_root, self.root / "state" / "brigade")
+        self.assertEqual(runtime.entry_point.is_absolute(), True)
 
     def test_should_report_each_process_on_stderr_when_verbose(self):
         # Act

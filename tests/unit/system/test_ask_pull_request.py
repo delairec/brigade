@@ -43,25 +43,26 @@ class AskPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (forge.requests, pull_request),
-            (
-                [
-                    {
-                        "schema_version": 1,
-                        "repository": "/projects/shop",
-                        "branch": "task/M1-empty-cart/S3",
-                        "environment": {"GH_TOKEN": "token-of-octo-cli"},
-                    }
-                ],
-                PullRequestFacts(
-                    number=42,
-                    state="open",
-                    checks=(CheckVerdict(name="tests", verdict="success"),),
-                    review="approved",
-                    behind=False,
-                    head="0123abc",
-                    base="integration/M1-empty-cart",
-                ),
+            forge.requests,
+            [
+                {
+                    "schema_version": 1,
+                    "repository": "/projects/shop",
+                    "branch": "task/M1-empty-cart/S3",
+                    "environment": {"GH_TOKEN": "token-of-octo-cli"},
+                }
+            ],
+        )
+        self.assertEqual(
+            pull_request,
+            PullRequestFacts(
+                number=42,
+                state="open",
+                checks=(CheckVerdict(name="tests", verdict="success"),),
+                review="approved",
+                behind=False,
+                head="0123abc",
+                base="integration/M1-empty-cart",
             ),
         )
 

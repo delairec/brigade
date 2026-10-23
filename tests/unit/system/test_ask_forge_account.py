@@ -27,9 +27,8 @@ class AskForgeAccountTest(unittest.TestCase):
         account = ask_forge_account(forge, "github", UNBOUND_ENVIRONMENT, NO_RUNTIME_NEEDED)
 
         # Assert
-        self.assertEqual(
-            (forge.requests, account), ([{"schema_version": 1, "environment": {}}], AccountAnswer(login="Clauche-bot"))
-        )
+        self.assertEqual(forge.requests, [{"schema_version": 1, "environment": {}}])
+        self.assertEqual(account, AccountAnswer(login="Clauche-bot"))
 
     def test_should_refuse_an_answer_lacking_the_login_naming_the_forge(self):
         # Arrange

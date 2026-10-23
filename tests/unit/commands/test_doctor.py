@@ -356,7 +356,8 @@ class DoctorOfAnUnreadableConfigurationTest(DoctorTestCase):
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertEqual((document["client"], document["slot_clients"]), (None, {}))
+        self.assertEqual(document["client"], None)
+        self.assertEqual(document["slot_clients"], {})
 
 
 class DoctorClientsTest(DoctorTestCase):
@@ -368,7 +369,8 @@ class DoctorClientsTest(DoctorTestCase):
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertEqual((document["client"], document["slot_clients"]), ("scripted", {"review": "other"}))
+        self.assertEqual(document["client"], "scripted")
+        self.assertEqual(document["slot_clients"], {"review": "other"})
 
 
 class DoctorReviewTest(DoctorTestCase):

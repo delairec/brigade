@@ -444,7 +444,5 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         completed = self.run_wave_resume("shop_w9")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade wave resume: no wave.started names the wave shop_w9\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade wave resume: no wave.started names the wave shop_w9\n")

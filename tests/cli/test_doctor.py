@@ -254,7 +254,8 @@ class BrigadeDoctorWithNoConfigurationTest(DoctorTestCase):
 
         # Assert
         document = json.loads(completed.stdout)
-        self.assertEqual((document["client"], document["slot_clients"]), (None, no_slot_bound))
+        self.assertEqual(document["client"], None)
+        self.assertEqual(document["slot_clients"], no_slot_bound)
 
 
 class BrigadeDoctorWhenAPrerequisiteFailsTest(DoctorTestCase):

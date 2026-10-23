@@ -105,10 +105,10 @@ class BrigadeRequestNewTest(RequestTestCase):
         self.assertRegex(document["run"], RUN_ID_PATTERN)
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": ANY})
         run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
-        self.assertEqual(
-            (run_record["procedure"], run_record["slot"], run_record["project"], run_record["arguments"]),
-            ("wave-plan", "plan", "shop", {"request": "shop_r1"}),
-        )
+        self.assertEqual(run_record["procedure"], "wave-plan")
+        self.assertEqual(run_record["slot"], "plan")
+        self.assertEqual(run_record["project"], "shop")
+        self.assertEqual(run_record["arguments"], {"request": "shop_r1"})
 
 
 class BrigadeWaveNewTest(RequestTestCase):

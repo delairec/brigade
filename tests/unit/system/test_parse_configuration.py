@@ -335,7 +335,8 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual((configuration.journal_poll_s, configuration.findings), (2, ()))
+        self.assertEqual(configuration.journal_poll_s, 2)
+        self.assertEqual(configuration.findings, ())
 
     def test_should_answer_the_seconds_the_key_sets(self):
         # Arrange
@@ -363,9 +364,9 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
                 configuration = parse_configuration(self.path)
 
                 # Assert
+                self.assertEqual(configuration.journal_poll_s, 2)
                 self.assertEqual(
-                    (configuration.journal_poll_s, configuration.findings),
-                    (2, (f"{expected_problem} in {self.path}; the default of 2 s holds",)),
+                    configuration.findings, (f"{expected_problem} in {self.path}; the default of 2 s holds",)
                 )
 
 

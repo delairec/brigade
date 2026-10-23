@@ -66,7 +66,8 @@ class ApplyActionsTest(unittest.TestCase):
         applied = apply_actions((first, second), {LaunchStudyDouble: executed.append}, failures.append)
 
         # Assert
-        self.assertEqual((applied, executed), (AppliedActions(applied=2, failed=()), [first, second]))
+        self.assertEqual(applied, AppliedActions(applied=2, failed=()))
+        self.assertEqual(executed, [first, second])
 
 
 class ApplyActionsWithAFailingActionTest(unittest.TestCase):
@@ -83,7 +84,8 @@ class ApplyActionsWithAFailingActionTest(unittest.TestCase):
         applied = apply_actions((failing, following), {LaunchRunDouble: executor.execute}, failures.append)
 
         # Assert
-        self.assertEqual((applied, executor.executed), (AppliedActions(applied=1, failed=(failing,)), [following]))
+        self.assertEqual(applied, AppliedActions(applied=1, failed=(failing,)))
+        self.assertEqual(executor.executed, [following])
 
     def test_should_record_the_failed_action_its_project_wave_and_task_and_the_error(self):
         # Arrange

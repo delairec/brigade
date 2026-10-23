@@ -30,7 +30,8 @@ class HoldLockWithoutWaitingTest(unittest.TestCase):
             acquired_by_another = try_lock(self.lock_path)
 
         # Assert
-        self.assertEqual((acquired, acquired_by_another), (True, False))
+        self.assertEqual(acquired, True)
+        self.assertEqual(acquired_by_another, False)
 
     def test_should_give_up_at_once_when_another_holds_the_lock(self):
         # Arrange

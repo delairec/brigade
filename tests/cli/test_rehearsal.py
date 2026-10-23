@@ -178,10 +178,9 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(RehearsalOnTheFakeClie
         pull_request = self.read_pull_request(opened["pr"])
 
         # Assert
-        self.assertEqual(
-            (opened["wave"], pull_request["headRefName"], pull_request["baseRefName"]),
-            ("shop_w1", "integration/shop_w1", "main"),
-        )
+        self.assertEqual(opened["wave"], "shop_w1")
+        self.assertEqual(pull_request["headRefName"], "integration/shop_w1")
+        self.assertEqual(pull_request["baseRefName"], "main")
 
     def test_should_record_every_run_in_the_ledger(self):
         # Arrange

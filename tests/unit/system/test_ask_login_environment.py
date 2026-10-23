@@ -25,10 +25,8 @@ class AskLoginEnvironmentTest(unittest.TestCase):
         environment = ask_login_environment(forge, "github", "octo-bot", NO_RUNTIME_NEEDED)
 
         # Assert
-        self.assertEqual(
-            (forge.requests, environment),
-            ([{"schema_version": 1, "login": "octo-bot"}], {"GH_TOKEN": "token-of-octo-bot"}),
-        )
+        self.assertEqual(forge.requests, [{"schema_version": 1, "login": "octo-bot"}])
+        self.assertEqual(environment, {"GH_TOKEN": "token-of-octo-bot"})
 
     def test_should_answer_none_when_the_forge_holds_no_token_for_the_login(self):
         # Arrange

@@ -215,13 +215,8 @@ class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_directory = self.runs / json.loads(completed.stdout)["run"]
         [finished] = self.read_events("run.finished")
-        self.assertEqual(
-            (
-                json.loads((run_directory / "segments" / "1" / "result.json").read_text()),
-                json.loads((run_directory / "result.json").read_text()),
-            ),
-            (finished, finished),
-        )
+        self.assertEqual(json.loads((run_directory / "segments" / "1" / "result.json").read_text()), finished)
+        self.assertEqual(json.loads((run_directory / "result.json").read_text()), finished)
 
 
 class BrigadeRunOfATaskOfAWaveTest(RunTestCase):
@@ -252,7 +247,8 @@ class BrigadeRunOfATaskOfAWaveTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         run_record = self.read_run_record(json.loads(completed.stdout)["run"])
-        self.assertEqual((run_record["wave"], run_record["task"]), ("shop_w3", "S3"))
+        self.assertEqual(run_record["wave"], "shop_w3")
+        self.assertEqual(run_record["task"], "S3")
 
     def test_should_carry_the_wave_and_the_task_in_the_finished_run_with_no_reason_for_them(self):
         # Act
@@ -261,17 +257,15 @@ class BrigadeRunOfATaskOfAWaveTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["wave"], "shop_w3")
+        self.assertEqual(finished["task"], "S3")
         self.assertEqual(
-            (finished["wave"], finished["task"], finished["nulls"]),
-            (
-                "shop_w3",
-                "S3",
-                {
-                    "project": "no project given",
-                    "total_steps": "the client reads no transcript",
-                    "error_class": "the run did not fail",
-                },
-            ),
+            finished["nulls"],
+            {
+                "project": "no project given",
+                "total_steps": "the client reads no transcript",
+                "error_class": "the run did not fail",
+            },
         )
 
     def test_should_carry_the_wave_and_the_task_through_a_detached_run(self):
@@ -281,7 +275,8 @@ class BrigadeRunOfATaskOfAWaveTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [finished] = self.read_events("run.finished")
-        self.assertEqual((finished["wave"], finished["task"]), ("shop_w3", "S3"))
+        self.assertEqual(finished["wave"], "shop_w3")
+        self.assertEqual(finished["task"], "S3")
 
 
 class BrigadeRunWithOneOfTheWaveAndTheTaskTest(RunTestCase):
@@ -300,18 +295,16 @@ class BrigadeRunWithOneOfTheWaveAndTheTaskTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["wave"], "shop_w3")
+        self.assertEqual(finished["task"], None)
         self.assertEqual(
-            (finished["wave"], finished["task"], finished["nulls"]),
-            (
-                "shop_w3",
-                None,
-                {
-                    "project": "no project given",
-                    "task": "not launched for a task",
-                    "total_steps": "the client reads no transcript",
-                    "error_class": "the run did not fail",
-                },
-            ),
+            finished["nulls"],
+            {
+                "project": "no project given",
+                "task": "not launched for a task",
+                "total_steps": "the client reads no transcript",
+                "error_class": "the run did not fail",
+            },
         )
 
     def test_should_explain_the_missing_wave_of_a_run_of_a_task(self):
@@ -321,18 +314,16 @@ class BrigadeRunWithOneOfTheWaveAndTheTaskTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["wave"], None)
+        self.assertEqual(finished["task"], "S3")
         self.assertEqual(
-            (finished["wave"], finished["task"], finished["nulls"]),
-            (
-                None,
-                "S3",
-                {
-                    "project": "no project given",
-                    "wave": "not launched by a wave",
-                    "total_steps": "the client reads no transcript",
-                    "error_class": "the run did not fail",
-                },
-            ),
+            finished["nulls"],
+            {
+                "project": "no project given",
+                "wave": "not launched by a wave",
+                "total_steps": "the client reads no transcript",
+                "error_class": "the run did not fail",
+            },
         )
 
 
@@ -630,7 +621,8 @@ class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
                 completed = self.run_brigade("run", str(self.procedure), "--slot", "build", *options)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stderr), (1, f"brigade run: {refusal}\n"))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, f"brigade run: {refusal}\n")
 
     def test_should_exit_2_for_a_run_id_off_its_pattern(self):
         # Arrange
@@ -642,7 +634,8 @@ class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
         )
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stderr), (2, "brigade run: latest is not a run id\n"))
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(completed.stderr, "brigade run: latest is not a run id\n")
 
     def test_should_exit_1_when_config_toml_names_no_client(self):
         # Arrange
@@ -652,9 +645,9 @@ class BrigadeRunOfARequestItCannotPlanTest(RunTestCase):
         completed = self.run_brigade("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace))
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade run: config.toml names no client: set the client key in {configuration}\n"),
+            completed.stderr, f"brigade run: config.toml names no client: set the client key in {configuration}\n"
         )
 
 
@@ -851,7 +844,8 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         self.assertEqual(json.loads((self.runs / run_id / "result.json").read_text())["outcome"], "stopped")
         [finished] = self.read_events("run.finished")
         self.assertEqual(finished["outcome"], "stopped")
-        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "stopped"))
+        self.assertEqual(listed["state"], "finished")
+        self.assertEqual(listed["outcome"], "stopped")
 
     def test_should_stop_the_client_of_a_foreground_run_sent_sigint_and_exit_21(self):
         # Arrange
@@ -879,28 +873,26 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
 
         # Assert
         [finished] = self.read_events("run.finished")
+        self.assertEqual(finished["outcome"], "stopped")
+        self.assertEqual(finished["exit"], None)
+        self.assertEqual(finished["error_class"], None)
         self.assertEqual(
-            (finished["outcome"], finished["exit"], finished["error_class"], finished["nulls"]),
-            (
-                "stopped",
-                None,
-                None,
-                {
-                    "project": "no project given",
-                    "wave": NOT_IN_A_WAVE,
-                    "task": NOT_FOR_A_TASK,
-                    "main_steps": "the client reads no transcript",
-                    "total_steps": "the client reads no transcript",
-                    "usage": "the client reads no transcript",
-                    "error_class": STOPPED,
-                    "exit": STOPPED,
-                },
-            ),
+            finished["nulls"],
+            {
+                "project": "no project given",
+                "wave": NOT_IN_A_WAVE,
+                "task": NOT_FOR_A_TASK,
+                "main_steps": "the client reads no transcript",
+                "total_steps": "the client reads no transcript",
+                "usage": "the client reads no transcript",
+                "error_class": STOPPED,
+                "exit": STOPPED,
+            },
         )
         client_record = json.loads((self.runs / run_id / "processes.jsonl").read_text().splitlines()[-1])
-        self.assertEqual(
-            (client_record["argv"][0], client_record["outcome"], client_record["exit"]), ("sh", "stopped", None)
-        )
+        self.assertEqual(client_record["argv"][0], "sh")
+        self.assertEqual(client_record["outcome"], "stopped")
+        self.assertEqual(client_record["exit"], None)
 
 
 class BrigadeRunHandOverTest(RunTestCase):
@@ -1190,12 +1182,13 @@ class BrigadeRunAtTheSoftLimitTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["segments"], document["outcome"]), (2, "done"))
+        self.assertEqual(document["segments"], 2)
+        self.assertEqual(document["outcome"], "done")
         first, _ = self.read_events("run.finished")
-        self.assertEqual(
-            (first["outcome"], first["exit"], first["session"], first["cost_usd"]),
-            ("soft_limit", 0, "fake-session", 0.42),
-        )
+        self.assertEqual(first["outcome"], "soft_limit")
+        self.assertEqual(first["exit"], 0)
+        self.assertEqual(first["session"], "fake-session")
+        self.assertEqual(first["cost_usd"], 0.42)
 
     def test_should_record_that_the_clock_ended_the_segment_stopped_at_the_soft_limit(self):
         # Act
@@ -1265,7 +1258,8 @@ class BrigadeRunEndDeclarationTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["segments"], document["outcome"]), (2, "done"))
+        self.assertEqual(document["segments"], 2)
+        self.assertEqual(document["outcome"], "done")
         second_brief = (self.runs / document["run"] / "segments" / "2" / "brief.md").read_text()
         self.assertRegex(second_brief, r"\A# Progress so far\n\nstep 1 done\n")
 
@@ -1280,7 +1274,8 @@ class BrigadeRunEndDeclarationTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 20, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["segments"], document["outcome"]), (3, "handed_over"))
+        self.assertEqual(document["segments"], 3)
+        self.assertEqual(document["outcome"], "handed_over")
 
     def test_should_exit_10_after_one_segment_declaring_blocked_whatever_its_progress(self):
         # Arrange
@@ -1305,7 +1300,8 @@ class BrigadeRunEndDeclarationTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 3, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["segments"], document["outcome"]), (3, "undeclared"))
+        self.assertEqual(document["segments"], 3)
+        self.assertEqual(document["outcome"], "undeclared")
 
     def test_should_exit_3_after_one_undeclared_segment_with_an_empty_progress_file(self):
         # Arrange
@@ -1330,7 +1326,8 @@ class BrigadeRunEndDeclarationTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["segments"], document["outcome"]), (1, "failed"))
+        self.assertEqual(document["segments"], 1)
+        self.assertEqual(document["outcome"], "failed")
 
     def test_should_record_a_signal_naming_how_a_segment_ended_without_delivery(self):
         # Arrange
@@ -1407,7 +1404,8 @@ class BrigadeRunOfAClientAnsweringParseResultOutsideItsContractTest(RunTestCase)
         # Assert
         self.assertEqual(completed.returncode, 1, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual((document["segments"], document["outcome"]), (1, "failed"))
+        self.assertEqual(document["segments"], 1)
+        self.assertEqual(document["outcome"], "failed")
 
     def test_should_write_the_result_of_the_run_naming_the_adapter_the_operation_and_the_problem(self):
         # Act
@@ -1415,10 +1413,8 @@ class BrigadeRunOfAClientAnsweringParseResultOutsideItsContractTest(RunTestCase)
 
         # Assert
         result = json.loads((self.runs / json.loads(completed.stdout)["run"] / "result.json").read_text())
-        self.assertEqual(
-            (result["outcome"], result["message"]),
-            ("failed", "client adapter fake answered parse-result: lacks the key outcome"),
-        )
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(result["message"], "client adapter fake answered parse-result: lacks the key outcome")
 
     def test_should_append_the_end_of_the_run_on_the_outcome_failed(self):
         # Act
@@ -1643,9 +1639,8 @@ class BrigadeRunOfAProjectTest(RunTestCase):
         completed = self.run_slot()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr), (1, "brigade run: @PROJECT.shop has ROLE build, not slot=name\n")
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade run: @PROJECT.shop has ROLE build, not slot=name\n")
 
     def test_should_resolve_the_role_a_project_binds_to_an_agent_entity_of_the_instructions_corpus(self):
         # Arrange
@@ -1836,10 +1831,9 @@ class BrigadeRunWhereAFileStandsForTheRunsDirectoryTest(RunTestCase):
         )
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade run: cannot write {self.runs / REFUSED_RUN}: Not a directory\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade run: cannot write {self.runs / REFUSED_RUN}: Not a directory\n")
 
 
 class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWriteTest(RunTestCase):
@@ -1873,9 +1867,10 @@ class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWriteTest(RunTestCase):
                 completed = self.run_deliver(run_id, *options)
 
                 # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
                 self.assertEqual(
-                    (completed.returncode, completed.stdout, completed.stderr),
-                    (1, "", f"brigade run: cannot write {self.runs / run_id / entry}: Is a directory\n"),
+                    completed.stderr, f"brigade run: cannot write {self.runs / run_id / entry}: Is a directory\n"
                 )
 
     def test_should_exit_1_naming_the_segment_directory_it_cannot_create(self):
@@ -1888,10 +1883,9 @@ class BrigadeRunOverAnEntryOfItsRunDirectoryItCannotWriteTest(RunTestCase):
         completed = self.run_deliver(SEGMENT_REFUSED_RUN)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade run: cannot write {segments / '1'}: Not a directory\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade run: cannot write {segments / '1'}: Not a directory\n")
 
 
 class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
@@ -1922,9 +1916,10 @@ class BrigadeRunDetachedWhereTheMachineRefusesASegmentTest(RunTestCase):
         # Assert
         self.assertEqual(started.returncode, 0, started.stderr)
         self.assertEqual(
-            ((run_directory / "brigade.log").read_text(), listed["state"]),
-            (f"brigade run: cannot write {run_directory / 'segments' / '1'}: Not a directory\n", "dead"),
+            (run_directory / "brigade.log").read_text(),
+            f"brigade run: cannot write {run_directory / 'segments' / '1'}: Not a directory\n",
         )
+        self.assertEqual(listed["state"], "dead")
 
 
 ENVIRONMENT_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-environment"
@@ -1973,11 +1968,8 @@ class BrigadeRunOfASlotBoundToALoginTest(ForgeAccountRunTestCase):
         completed = self.run_slot("build")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, self.environment_record.read_text()),
-            (3, "token-of-octo-builder\n"),
-            completed.stderr,
-        )
+        self.assertEqual(completed.returncode, 3, completed.stderr)
+        self.assertEqual(self.environment_record.read_text(), "token-of-octo-builder\n", completed.stderr)
 
     def test_should_write_the_token_nowhere(self):
         # Act
@@ -2010,9 +2002,9 @@ class BrigadeRunOfASlotWhoseLoginHasNoTokenTest(ForgeAccountRunTestCase):
 
         # Assert
         self.assertEqual(
-            (self.gh_record.read_text().splitlines(), list(self.runs.glob("*"))),
-            (["auth token --hostname github.com --user refused-bot"] * 2, []),
+            self.gh_record.read_text().splitlines(), ["auth token --hostname github.com --user refused-bot"] * 2
         )
+        self.assertEqual(list(self.runs.glob("*")), [])
 
 
 class BrigadeRunOfASlotBoundToNoLoginTest(ForgeAccountRunTestCase):
@@ -2024,9 +2016,8 @@ class BrigadeRunOfASlotBoundToNoLoginTest(ForgeAccountRunTestCase):
         completed = self.run_slot("build")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, self.environment_record.read_text()), (3, "no GH_TOKEN\n"), completed.stderr
-        )
+        self.assertEqual(completed.returncode, 3, completed.stderr)
+        self.assertEqual(self.environment_record.read_text(), "no GH_TOKEN\n", completed.stderr)
 
 
 PROGRESS_SCHEMA = (
@@ -2306,10 +2297,8 @@ class BrigadeRunOfASlotTheSlotClientsTableBindsTest(RunTestCase):
                 completed = self.run_slot("build")
 
                 # Assert
-                self.assertEqual(
-                    (completed.returncode, completed.stderr),
-                    (1, f"brigade run: {expected_error} in {configuration}\n"),
-                )
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, f"brigade run: {expected_error} in {configuration}\n")
 
 
 RUN_DIRECTORY_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "executables" / "claude-run-directory"

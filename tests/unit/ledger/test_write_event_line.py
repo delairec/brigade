@@ -122,10 +122,8 @@ class WriteEventLineOfAnInstantWithNoTimeZoneTest(WriteEventLineTestCase):
             write_event_line(self.paths, naive_instant, BUDGET_SIGNAL)
 
         # Assert
-        self.assertEqual(
-            (str(refusal.exception), self.ledger.exists()),
-            ("the instant of the event signal.recorded carries no time zone", False),
-        )
+        self.assertEqual(str(refusal.exception), "the instant of the event signal.recorded carries no time zone")
+        self.assertEqual(self.ledger.exists(), False)
 
 
 class WriteEventLineWhereTheMachineRefusesTheWriteTest(WriteEventLineTestCase):

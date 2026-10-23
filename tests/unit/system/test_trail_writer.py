@@ -137,7 +137,8 @@ class TrailWriterAlreadyLocatedTest(TrailWriterTestCase):
         self.trail.settle(fallback)
 
         # Assert
-        self.assertEqual((len(self.read_lines()), fallback.exists()), (1, False))
+        self.assertEqual(len(self.read_lines()), 1)
+        self.assertEqual(fallback.exists(), False)
 
 
 class TrailWriterThatCannotWriteTest(TrailWriterTestCase):

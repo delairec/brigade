@@ -45,13 +45,8 @@ class ChangeProjectStatusOfAnActiveProjectTest(ChangeProjectStatusTestCase):
         document = change_project_status(runtime, "shop", "paused")
 
         # Assert
-        self.assertEqual(
-            (document, self.registry.read_text()),
-            (
-                {"schema_version": 1, "project": "shop", "status": "paused", "changed": True},
-                'PROJECT shop\n\tPATH "/srv/shop"\n\tSTATUS paused\n',
-            ),
-        )
+        self.assertEqual(document, {"schema_version": 1, "project": "shop", "status": "paused", "changed": True})
+        self.assertEqual(self.registry.read_text(), 'PROJECT shop\n\tPATH "/srv/shop"\n\tSTATUS paused\n')
 
 
 class ChangeProjectStatusAlreadySetTest(ChangeProjectStatusTestCase):
@@ -64,10 +59,8 @@ class ChangeProjectStatusAlreadySetTest(ChangeProjectStatusTestCase):
         document = change_project_status(runtime, "shop", "active")
 
         # Assert
-        self.assertEqual(
-            (document, self.registry.read_text()),
-            ({"schema_version": 1, "project": "shop", "status": "active", "changed": False}, ACTIVE_SHOP),
-        )
+        self.assertEqual(document, {"schema_version": 1, "project": "shop", "status": "active", "changed": False})
+        self.assertEqual(self.registry.read_text(), ACTIVE_SHOP)
 
 
 class ChangeProjectStatusOfAProjectTheFileDoesNotWriteTest(ChangeProjectStatusTestCase):

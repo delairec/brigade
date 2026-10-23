@@ -186,25 +186,26 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (document, json.loads((self.root / "state" / "tick.json").read_text(encoding="utf-8"))),
-            (
-                {
-                    "schema_version": 1,
-                    "mode": "once",
-                    "ts": "2026-10-07T09:00:00Z",
-                    "duration_ms": 250,
-                    "actions_applied": 0,
-                    "actions_failed": 0,
-                    "heartbeat": str(self.root / "state" / "tick.json"),
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-07T09:00:00Z",
-                    "duration_ms": 250,
-                    "actions_applied": 0,
-                    "actions_failed": 0,
-                },
-            ),
+            document,
+            {
+                "schema_version": 1,
+                "mode": "once",
+                "ts": "2026-10-07T09:00:00Z",
+                "duration_ms": 250,
+                "actions_applied": 0,
+                "actions_failed": 0,
+                "heartbeat": str(self.root / "state" / "tick.json"),
+            },
+        )
+        self.assertEqual(
+            json.loads((self.root / "state" / "tick.json").read_text(encoding="utf-8")),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-07T09:00:00Z",
+                "duration_ms": 250,
+                "actions_applied": 0,
+                "actions_failed": 0,
+            },
         )
 
     def test_should_stand_down_while_another_tick_holds_the_lock(self):
@@ -260,12 +261,9 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
             document = COMMAND.run(request, _create_quiet_runtime(self.root))
 
         # Assert
+        self.assertEqual(document, {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
         self.assertEqual(
-            (document, reported.getvalue()),
-            (
-                {"schema_version": 1, "mode": "loop", "ticks_attempted": 1},
-                "brigade tick: 2026-10-07T09:00:00Z: 0 actions applied, 0 failed in 250 ms\n",
-            ),
+            reported.getvalue(), "brigade tick: 2026-10-07T09:00:00Z: 0 actions applied, 0 failed in 250 ms\n"
         )
 
     def test_should_report_a_round_of_the_loop_another_tick_holds(self):
@@ -546,33 +544,31 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         document = COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
         # Assert
+        self.assertEqual(document["actions_applied"], 1)
         self.assertEqual(
-            (document["actions_applied"], self.spawn.argvs),
-            (
-                1,
-                [
-                    (
-                        "run",
-                        "build-task",
-                        "task=@TASK.T7",
-                        "base=integration/M4",
-                        "--slot",
-                        "build",
-                        "--cwd",
-                        str(self.worktree),
-                        "--project",
-                        "tidepool",
-                        "--brief",
-                        str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
-                        "--wave",
-                        "tidepool_w16",
-                        "--task",
-                        "T7",
-                        "--run-id",
-                        ANY,
-                    )
-                ],
-            ),
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
         )
 
     def test_should_record_the_task_running_before_its_build_run_is_spawned(self):
@@ -611,26 +607,22 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         document = COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
         # Assert
+        self.assertEqual(document["actions_failed"], 1)
         self.assertEqual(
-            (
-                document["actions_failed"],
-                json.loads((self.root / "state" / "tick.json").read_text(encoding="utf-8"))["actions_failed"],
-                self._read_event(first_event_of_the_tick + 1),
-            ),
-            (
-                1,
-                1,
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-19T09:00:00Z",
-                    "event": "tick.action_failed",
-                    "action": "LaunchTask",
-                    "project": "tidepool",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "error": 'the setup of @TASK.T7 failed: the line make "deps splits into no argv: No closing quotation',
-                },
-            ),
+            json.loads((self.root / "state" / "tick.json").read_text(encoding="utf-8"))["actions_failed"], 1
+        )
+        self.assertEqual(
+            self._read_event(first_event_of_the_tick + 1),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "tick.action_failed",
+                "action": "LaunchTask",
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "error": 'the setup of @TASK.T7 failed: the line make "deps splits into no argv: No closing quotation',
+            },
         )
 
     def test_should_resume_the_run_of_a_task_paused_on_the_quota(self):
@@ -800,37 +792,38 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (self.spawn.argvs, self._read_last_event()),
-            (
-                [
-                    (
-                        "run",
-                        "remediate-pr",
-                        "pr=42",
-                        "task=@TASK.T7",
-                        "--slot",
-                        "remediate",
-                        "--cwd",
-                        str(self.worktree),
-                        "--project",
-                        "tidepool",
-                        "--wave",
-                        "tidepool_w16",
-                        "--task",
-                        "T7",
-                        "--run-id",
-                        ANY,
-                    )
-                ],
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-19T09:00:00Z",
-                    "event": "task.state",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "state": "fixing",
-                },
-            ),
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "remediate-pr",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "remediate",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "fixing",
+            },
         )
 
     def test_should_ask_the_forge_for_the_last_200_lines_of_the_log_of_each_failing_check(self):
@@ -867,59 +860,61 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Assert
         brief = self.root / "state" / "briefs" / "tidepool_w16-T7-checks.md"
         self.assertEqual(
-            (self.spawn.argvs, brief.read_text(), self._read_last_event()),
-            (
-                [
-                    (
-                        "run",
-                        "build-task",
-                        "task=@TASK.T7",
-                        "base=integration/M4",
-                        "--slot",
-                        "build",
-                        "--cwd",
-                        str(self.worktree),
-                        "--project",
-                        "tidepool",
-                        "--brief",
-                        str(brief),
-                        "--wave",
-                        "tidepool_w16",
-                        "--task",
-                        "T7",
-                        "--run-id",
-                        ANY,
-                    )
-                ],
+            self.spawn.argvs,
+            [
                 (
-                    "Repair the failing checks of the pull request #42, which delivers @TASK.T7 of @PROJECT.tidepool,"
-                    " in the wave tidepool_w16.\n"
-                    "\n"
-                    "- Base branch: integration/M4.\n"
-                    f"- Worktree: {self.worktree}, on the branch task/M4/T7.\n"
-                    "\n"
-                    "The tail of the log of each failing check:\n"
-                    "\n"
-                    "## ci\n"
-                    "\n"
-                    "```\n"
-                    "FAIL test_cart\n"
-                    "exit 1\n"
-                    "```\n"
-                    "\n"
-                    "## coverage\n"
-                    "\n"
-                    "The forge keeps no log of this check.\n"
-                ),
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-19T09:00:00Z",
-                    "event": "task.state",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "state": "fixing",
-                },
-            ),
+                    "run",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(brief),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+        self.assertEqual(
+            brief.read_text(),
+            "Repair the failing checks of the pull request #42, which delivers @TASK.T7 of @PROJECT.tidepool,"
+            " in the wave tidepool_w16.\n"
+            "\n"
+            "- Base branch: integration/M4.\n"
+            f"- Worktree: {self.worktree}, on the branch task/M4/T7.\n"
+            "\n"
+            "The tail of the log of each failing check:\n"
+            "\n"
+            "## ci\n"
+            "\n"
+            "```\n"
+            "FAIL test_cart\n"
+            "exit 1\n"
+            "```\n"
+            "\n"
+            "## coverage\n"
+            "\n"
+            "The forge keeps no log of this check.\n",
+        )
+        self.assertEqual(
+            self._read_last_event(),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "fixing",
+            },
         )
 
     def test_should_record_the_verdict_passed_at_the_head_of_the_pull_request(self):
@@ -1639,20 +1634,18 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         COMMAND.run(SimpleNamespace(mode="once"), runtime)
 
         # Assert
+        self.assertEqual(self.spawn.argvs, [("study", "run", "wave-report", "--run-id", ANY)])
         self.assertEqual(
-            (self.spawn.argvs, self._read_events()[7:8]),
-            (
-                [("study", "run", "wave-report", "--run-id", ANY)],
-                [
-                    {
-                        "schema_version": 1,
-                        "ts": "2026-10-19T09:00:00Z",
-                        "event": "task.parked",
-                        "wave": "tidepool_w16",
-                        "task": "T7",
-                        "reason": "past 2 repair rounds",
-                        "blockers": [],
-                    }
-                ],
-            ),
+            self._read_events()[7:8],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.parked",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "reason": "past 2 repair rounds",
+                    "blockers": [],
+                }
+            ],
         )

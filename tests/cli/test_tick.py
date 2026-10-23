@@ -167,10 +167,9 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (0, "", f"brigade tick: another tick holds {self.lock}\n"),
-        )
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade tick: another tick holds {self.lock}\n")
         self.assertEqual(list(self.state.iterdir()), [self.state / "locks"])
 
 
@@ -1073,7 +1072,8 @@ class BrigadeTickLoopTest(TickTestCase):
         stdout, stderr = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        self.assertEqual((loop.returncode, stdout), (0, "tick --loop: 1 ticks attempted\n"), stderr)
+        self.assertEqual(loop.returncode, 0, stderr)
+        self.assertEqual(stdout, "tick --loop: 1 ticks attempted\n", stderr)
 
     def test_should_write_the_trail_of_its_first_round(self):
         # Arrange
@@ -1099,14 +1099,9 @@ class BrigadeTickLoopWhileAnotherTickHoldsTheLockTest(TickTestCase):
         stdout, _ = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        self.assertEqual(
-            (stand_down_line, loop.returncode, json.loads(stdout)),
-            (
-                f"brigade tick: another tick holds {self.lock}\n",
-                0,
-                {"schema_version": 1, "mode": "loop", "ticks_attempted": 1},
-            ),
-        )
+        self.assertEqual(stand_down_line, f"brigade tick: another tick holds {self.lock}\n")
+        self.assertEqual(loop.returncode, 0)
+        self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
         self.assertFalse(self.heartbeat.exists())
 
 
@@ -1129,10 +1124,9 @@ class BrigadeTickOnceWhereAFileStandsForTheStateDirectoryTest(TickTestCase):
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n")
 
 
 class BrigadeTickOnceWhereAnEntryOfTheStateDirectoryStandsInTheWayTest(TickTestCase):
@@ -1148,10 +1142,9 @@ class BrigadeTickOnceWhereAnEntryOfTheStateDirectoryStandsInTheWayTest(TickTestC
         completed = self.run_tick("--once")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade tick: cannot write {self.lock}: Is a directory\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade tick: cannot write {self.lock}: Is a directory\n")
 
     def test_should_exit_1_naming_the_trail_directory_it_cannot_create_and_write_no_heartbeat(self):
         # Arrange
@@ -1193,10 +1186,10 @@ class BrigadeTickLoopWhereAFileStandsForTheStateDirectoryTest(TickTestCase):
         stdout, later_reports = stop_process(loop, signal.SIGTERM, STOP_WAIT_S)
 
         # Assert
-        self.assertEqual(
-            (failure_line, later_reports, loop.returncode, self.state.exists()),
-            (f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n", "", 0, False),
-        )
+        self.assertEqual(failure_line, f"brigade tick: cannot write {self.state / 'locks'}: Not a directory\n")
+        self.assertEqual(later_reports, "")
+        self.assertEqual(loop.returncode, 0)
+        self.assertEqual(self.state.exists(), False)
         self.assertEqual(json.loads(stdout), {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
 
 
@@ -1515,9 +1508,10 @@ class BrigadeTickDryRunFollowingThePullRequestOfARunningTaskTest(FollowingTickTe
         completed = self.run_tick("--dry-run", "--json")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, f"brigade tick: gh printed no token for the login {TOKENLESS_LOGIN}, bound to cli, after 1 attempt\n"),
+            completed.stderr,
+            f"brigade tick: gh printed no token for the login {TOKENLESS_LOGIN}, bound to cli, after 1 attempt\n",
         )
 
 
@@ -1692,7 +1686,8 @@ class BrigadeTickOnceFollowingThePullRequestOfARunningTaskTest(FollowingTickTest
             waiting = self.detect_waiting("--once")
 
         # Assert
-        self.assertEqual((waiting, self.worktree.is_dir()), (True, True))
+        self.assertEqual(waiting, True)
+        self.assertEqual(self.worktree.is_dir(), True)
 
     def detect_waiting(self, *options: str) -> bool:
         try:
@@ -1762,7 +1757,8 @@ class BrigadeTickDryRunWithTheLoginOfTheKeyCliWithoutATokenTest(LaunchingTickTes
         completed = self.run_tick("--dry-run", "--json")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stderr), (0, ""))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, "")
 
 
 class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTickTestCase):
@@ -1795,16 +1791,12 @@ class BrigadeTickDryRunWhereTheForgeRefusesTheReadOfOneProjectTest(FollowingTick
         completed = self.run_tick("--dry-run", "--json")
 
         # Assert
+        self.assertEqual(completed.returncode, 0)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (
-                0,
-                (
-                    "brigade tick: the wave cafe_w1 skipped: gh pr list --head task/M1-menu/S6 --state all --limit 1"
-                    " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup exited 1:"
-                    " HTTP 502: Bad Gateway\n"
-                ),
-            ),
+            completed.stderr,
+            "brigade tick: the wave cafe_w1 skipped: gh pr list --head task/M1-menu/S6 --state all --limit 1"
+            " --json number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup exited 1:"
+            " HTTP 502: Bad Gateway\n",
         )
         self.assertEqual(
             json.loads(completed.stdout)["plan"],

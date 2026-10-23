@@ -144,9 +144,8 @@ class BrigadeTaskPrAfterAPassingCheckTest(TaskPrTestCase):
         completed = self.run_task_pr("--subject", SUBJECT)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout), (0, "https://github.com/acme/shop/pull/42\n"), completed.stderr
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "https://github.com/acme/shop/pull/42\n", completed.stderr)
         self.assertIn(PULL_REQUEST_CREATION, self.read_gh_calls())
 
     def test_should_fill_the_body_with_the_task_its_criteria_its_checks_and_the_attribution(self):

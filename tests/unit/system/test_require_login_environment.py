@@ -80,7 +80,8 @@ class RequireLoginEnvironmentWhenGhPrintsTheTokenAtTheLastAttemptTest(RequireLog
         environment = self.require(forge)
 
         # Assert
-        self.assertEqual((self.waits, environment), ([1.0, 2.0], {"GH_TOKEN": "token-of-octo-bot"}))
+        self.assertEqual(self.waits, [1.0, 2.0])
+        self.assertEqual(environment, {"GH_TOKEN": "token-of-octo-bot"})
 
 
 class RequireLoginEnvironmentWhenGhNeverPrintsTheTokenTest(RequireLoginEnvironmentTestCase):

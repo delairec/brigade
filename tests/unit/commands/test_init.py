@@ -66,16 +66,16 @@ class InitTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (document["items"], self.runner.argvs),
-            (
-                [
-                    {"name": "repository", "path": str(self.config_root), "state": "present"},
-                    {"name": "schema", "path": str(self.config_root / "_schema.awawa"), "state": "present"},
-                    {"name": ".gitignore", "path": str(self.config_root / ".gitignore"), "state": "present"},
-                    {"name": "config.toml", "path": str(self.config_root / "config.toml"), "state": "present"},
-                ],
-                [("git", "config", "--get", "user.name"), ("git", "config", "--get", "user.email")],
-            ),
+            document["items"],
+            [
+                {"name": "repository", "path": str(self.config_root), "state": "present"},
+                {"name": "schema", "path": str(self.config_root / "_schema.awawa"), "state": "present"},
+                {"name": ".gitignore", "path": str(self.config_root / ".gitignore"), "state": "present"},
+                {"name": "config.toml", "path": str(self.config_root / "config.toml"), "state": "present"},
+            ],
+        )
+        self.assertEqual(
+            self.runner.argvs, [("git", "config", "--get", "user.name"), ("git", "config", "--get", "user.email")]
         )
 
     def test_should_leave_a_file_that_differs_from_the_shipped_one(self):

@@ -49,10 +49,8 @@ class WriteJsonAtomicallyTest(unittest.TestCase):
             write_json_atomically(self.path, {"schema_version": 1, "actions_applied": 0})
 
         # Assert
-        self.assertEqual(
-            (str(refusal.exception), list(self.state.iterdir())),
-            (f"cannot write {self.path}: Is a directory", [self.path]),
-        )
+        self.assertEqual(str(refusal.exception), f"cannot write {self.path}: Is a directory")
+        self.assertEqual(list(self.state.iterdir()), [self.path])
 
 
 class WriteJsonAtomicallyWhereTheMachineRefusesTheWriteTest(unittest.TestCase):

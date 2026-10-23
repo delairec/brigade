@@ -81,10 +81,8 @@ class BrigadeWaveStartOnAProjectOfTheGithubForgeTest(WaveStartTestCase):
         completed = self.run_wave_start("shop")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout),
-            (0, "wave shop_w2 of @PROJECT.shop on integration/shop_w2: S3, S4, S10\n"),
-        )
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "wave shop_w2 of @PROJECT.shop on integration/shop_w2: S3, S4, S10\n")
         self.assertIn("refs/heads/integration/shop_w2", self.project.run_git("ls-remote", "--heads", "origin"))
 
 

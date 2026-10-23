@@ -103,14 +103,9 @@ class PrepareTreeAtABranchOrAShaTest(PrepareTreeTestCase):
 
         # Assert
         root = self.cache / "app" / self.sha
-        self.assertEqual(
-            (tree, (root / "corpus" / "tasks.awawa").read_text(), (root / "src" / "app.py").read_text()),
-            (
-                Tree(project="app", ref="main", sha=self.sha, kind="archive", root=root),
-                "committed\n",
-                "print('app')\n",
-            ),
-        )
+        self.assertEqual(tree, Tree(project="app", ref="main", sha=self.sha, kind="archive", root=root))
+        self.assertEqual((root / "corpus" / "tasks.awawa").read_text(), "committed\n")
+        self.assertEqual((root / "src" / "app.py").read_text(), "print('app')\n")
 
     def test_should_resolve_an_abbreviated_sha_to_the_whole_sha(self):
         # Act
@@ -215,10 +210,8 @@ class PrepareTreeWhenAnotherExtractionWinsTheRaceTest(PrepareTreeTestCase):
         )
 
         # Assert
-        self.assertEqual(
-            ((tree.root / "corpus" / "tasks.awawa").read_text(), list((self.cache / "app").iterdir())),
-            ("extracted by the winner\n", [self.cache / "app" / self.sha]),
-        )
+        self.assertEqual((tree.root / "corpus" / "tasks.awawa").read_text(), "extracted by the winner\n")
+        self.assertEqual(list((self.cache / "app").iterdir()), [self.cache / "app" / self.sha])
 
 
 class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
@@ -243,14 +236,10 @@ class PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(
-            (tree, (tree.root / "corpus" / "tasks.awawa").read_text()),
-            (
-                Tree(
-                    project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree
-                ),
-                "edited on feature, not committed\n",
-            ),
+            tree,
+            Tree(project="app", ref="worktree:feature", sha=self.feature_sha, kind="worktree", root=self.feature_tree),
         )
+        self.assertEqual((tree.root / "corpus" / "tasks.awawa").read_text(), "edited on feature, not committed\n")
 
     def test_should_read_a_worktree_on_a_detached_head_by_its_path(self):
         # Arrange

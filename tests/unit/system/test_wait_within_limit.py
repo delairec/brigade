@@ -59,7 +59,8 @@ class WaitWithinLimitOfAProcessIgnoringTheStopSignalTest(WaitWithinLimitTestCase
         )
 
         # Assert
-        self.assertEqual((exit_code, process.returncode), (CUT, -signal.SIGKILL))
+        self.assertEqual(exit_code, CUT)
+        self.assertEqual(process.returncode, -signal.SIGKILL)
 
     def test_should_kill_the_group_once_the_grace_is_over_when_the_run_is_stopped(self):
         # Arrange

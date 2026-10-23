@@ -42,7 +42,9 @@ class PollUntilStoppedWithoutStopTest(unittest.TestCase):
         stopped = poll_until_stopped(poller, INTERVAL_S, watcher)
 
         # Assert
-        self.assertEqual((stopped, poller.calls, watcher.waits), (False, 3, [5.0, 5.0]))
+        self.assertEqual(stopped, False)
+        self.assertEqual(poller.calls, 3)
+        self.assertEqual(watcher.waits, [5.0, 5.0])
 
 
 class PollUntilStoppedOnAStopTest(unittest.TestCase):
@@ -55,7 +57,9 @@ class PollUntilStoppedOnAStopTest(unittest.TestCase):
         stopped = poll_until_stopped(poller, INTERVAL_S, watcher)
 
         # Assert
-        self.assertEqual((stopped, poller.calls, watcher.waits), (True, 1, []))
+        self.assertEqual(stopped, True)
+        self.assertEqual(poller.calls, 1)
+        self.assertEqual(watcher.waits, [])
 
     def test_should_stop_without_polling_again_on_a_stop_received_while_waiting(self):
         # Arrange
@@ -66,4 +70,6 @@ class PollUntilStoppedOnAStopTest(unittest.TestCase):
         stopped = poll_until_stopped(poller, INTERVAL_S, watcher)
 
         # Assert
-        self.assertEqual((stopped, poller.calls, watcher.waits), (True, 1, [5.0]))
+        self.assertEqual(stopped, True)
+        self.assertEqual(poller.calls, 1)
+        self.assertEqual(watcher.waits, [5.0])

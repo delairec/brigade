@@ -192,7 +192,8 @@ class BrigadeProcessesShowTest(ProcessesTestCase):
                 completed = self.run_brigade("show", invocation_id)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout), (0, expected), completed.stderr)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(completed.stdout, expected, completed.stderr)
 
     def test_should_exit_1_naming_an_id_no_trail_holds(self):
         # Arrange
@@ -203,10 +204,8 @@ class BrigadeProcessesShowTest(ProcessesTestCase):
                 completed = self.run_brigade("show", invocation_id)
 
                 # Assert
-                self.assertEqual(
-                    (completed.returncode, completed.stderr),
-                    (1, f"brigade processes show: no run, tick or command {invocation_id}\n"),
-                )
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stderr, f"brigade processes show: no run, tick or command {invocation_id}\n")
 
 
 class BrigadeProcessesUnreadableTrailTest(ProcessesTestCase):
@@ -248,15 +247,11 @@ class BrigadeProcessesUnreadableTrailTest(ProcessesTestCase):
                 completed = self.run_brigade(*arguments)
 
                 # Assert
+                self.assertEqual(completed.returncode, 1)
                 self.assertEqual(
-                    (completed.returncode, completed.stderr),
-                    (
-                        1,
-                        (
-                            f"brigade processes {subcommand}: line 2 of {self.tick_trail} is not a process record:"
-                            " not a JSON document\n"
-                        ),
-                    ),
+                    completed.stderr,
+                    f"brigade processes {subcommand}: line 2 of {self.tick_trail} is not a process record:"
+                    " not a JSON document\n",
                 )
 
 
@@ -277,17 +272,13 @@ class BrigadeProcessesStrayFileTest(ProcessesTestCase):
                 completed = self.run_brigade("list")
 
                 # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assertEqual(
-                    (completed.returncode, completed.stdout),
-                    (
-                        0,
-                        (
-                            "kind     id                                 instant               processes  failed\n"
-                            "command  20261010T110000Z-scheduler-status  2026-10-10T11:00:00Z  1          1\n"
-                            "tick     20261009T100000Z                   2026-10-09T10:00:00Z  2          1\n"
-                            "run      20261008T090000Z-a1b2c3            2026-10-08T09:00:00Z  3          2\n"
-                        ),
-                    ),
+                    completed.stdout,
+                    "kind     id                                 instant               processes  failed\n"
+                    "command  20261010T110000Z-scheduler-status  2026-10-10T11:00:00Z  1          1\n"
+                    "tick     20261009T100000Z                   2026-10-09T10:00:00Z  2          1\n"
+                    "run      20261008T090000Z-a1b2c3            2026-10-08T09:00:00Z  3          2\n",
                     completed.stderr,
                 )
 

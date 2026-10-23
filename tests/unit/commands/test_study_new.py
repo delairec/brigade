@@ -106,21 +106,17 @@ class StudyNewOfAScheduledStudyTest(unittest.TestCase):
         )
 
         # Assert
+        self.assertEqual(document, {"schema_version": 1, "study": "health", "every": "daily@06:00"})
         self.assertEqual(
-            (document, (root / "config" / "studies.awawa").read_text(encoding="utf-8")),
-            (
-                {"schema_version": 1, "study": "health", "every": "daily@06:00"},
-                (
-                    "STUDY health\n"
-                    '\tTITLE "the health of the machine"\n'
-                    '\tCOLLECTOR "runs-list"\n'
-                    "\tSLOT report\n"
-                    '\tEVERY "daily@06:00"\n'
-                    '\tOUTPUT "file:/home/user/health.md"\n'
-                    '\tANSWER "ANSWER"\n'
-                    "\tSTATUS active\n"
-                ),
-            ),
+            (root / "config" / "studies.awawa").read_text(encoding="utf-8"),
+            "STUDY health\n"
+            '\tTITLE "the health of the machine"\n'
+            '\tCOLLECTOR "runs-list"\n'
+            "\tSLOT report\n"
+            '\tEVERY "daily@06:00"\n'
+            '\tOUTPUT "file:/home/user/health.md"\n'
+            '\tANSWER "ANSWER"\n'
+            "\tSTATUS active\n",
         )
 
 

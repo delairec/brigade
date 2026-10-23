@@ -378,9 +378,8 @@ class BrigadeRolesFromTheInstructionsCorpusTest(RolesTestCase):
         completed = self.run_roles("list")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr), (1, "brigade roles list: @AGENT.planner: budget is missing\n")
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade roles list: @AGENT.planner: budget is missing\n")
 
     def test_should_leave_an_agent_entity_no_row_names_without_a_slot(self):
         # Act

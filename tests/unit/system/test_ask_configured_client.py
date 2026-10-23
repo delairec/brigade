@@ -32,6 +32,6 @@ class AskConfiguredClientTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(
-            (answer.client, answer.slot_clients, answer.document["client"]), ("fake", {"review": "codex"}, "fake")
-        )
+        self.assertEqual(answer.client, "fake")
+        self.assertEqual(answer.slot_clients, {"review": "codex"})
+        self.assertEqual(answer.document["client"], "fake")

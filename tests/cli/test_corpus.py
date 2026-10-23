@@ -118,10 +118,8 @@ class BrigadeCorpusOfAWorktreeTest(CorpusTestCase):
         completed = self.run_corpus("app", "--ref", "main", "--worktree", str(self.project.path))
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout),
-            (2, ""),
-        )
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(completed.stdout, "")
 
 
 class BrigadeCorpusWithAwawaArgumentsTest(CorpusTestCase):
@@ -136,14 +134,9 @@ class BrigadeCorpusWithAwawaArgumentsTest(CorpusTestCase):
         completed = self.run_corpus("app", "--ref", "main", "--", "lint", "--strict", ".", environment=environment)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                3,
-                f"awawa lint --strict . in {self.refs / 'app' / self.sha}\n",
-                f"brigade corpus: @PROJECT.app at {self.sha}\nawawa diagnostic\n",
-            ),
-        )
+        self.assertEqual(completed.returncode, 3)
+        self.assertEqual(completed.stdout, f"awawa lint --strict . in {self.refs / 'app' / self.sha}\n")
+        self.assertEqual(completed.stderr, f"brigade corpus: @PROJECT.app at {self.sha}\nawawa diagnostic\n")
 
 
 class BrigadeCorpusUnderACacheBoundTest(CorpusTestCase):
@@ -231,7 +224,9 @@ class BrigadeCorpusOnWhatItCannotReadTest(CorpusTestCase):
                 completed = self.run_corpus(*arguments)
 
                 # Assert
-                self.assertEqual((completed.returncode, completed.stdout, completed.stderr), (1, "", expected_error))
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
+                self.assertEqual(completed.stderr, expected_error)
 
 
 class BrigadeCorpusWithAConfigurationThatIsNotTomlTest(CorpusTestCase):
@@ -247,7 +242,8 @@ class BrigadeCorpusWithAConfigurationThatIsNotTomlTest(CorpusTestCase):
         completed = self.run_corpus("app", "--ref", "main")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (1, ""))
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertIn(f"brigade corpus: {self.configuration} is not valid TOML: ", completed.stderr)
 
     def test_should_report_the_configuration_before_an_unknown_project(self):
@@ -255,7 +251,8 @@ class BrigadeCorpusWithAConfigurationThatIsNotTomlTest(CorpusTestCase):
         completed = self.run_corpus("ghost", "--ref", "main")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (1, ""))
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertIn(f"brigade corpus: {self.configuration} is not valid TOML: ", completed.stderr)
 
 
@@ -268,11 +265,9 @@ class BrigadeCorpusWhereAFileStandsForTheCacheTest(CorpusTestCase):
         completed = self.run_corpus("app", "--ref", "main")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                1,
-                "",
-                f"brigade corpus: cannot write {self.machine.cache_home / 'brigade' / 'refs' / 'app'}: Not a directory\n",
-            ),
+            completed.stderr,
+            f"brigade corpus: cannot write {self.machine.cache_home / 'brigade' / 'refs' / 'app'}: Not a directory\n",
         )

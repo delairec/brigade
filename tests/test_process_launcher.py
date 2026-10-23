@@ -24,7 +24,8 @@ class ProcessLauncherRunTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, f"{directory} request\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, f"{directory} request\n")
 
     def test_should_raise_on_a_failed_command_whose_caller_asks_for_the_check(self):
         # Act

@@ -93,31 +93,29 @@ class DetachRunWithNoOptionTest(DetachRunTestCase):
 
         # Assert
         request = self.spawn.requests[0]
+        self.assertEqual(pid, os.getpid())
+        self.assertEqual(request.stdout, plan.run_directory / "brigade.log")
         self.assertEqual(
-            (pid, request.stdout, self.traces),
-            (
-                os.getpid(),
-                plan.run_directory / "brigade.log",
-                [
-                    ProcessTrace(
-                        argv=(
-                            sys.executable,
-                            "/srv/brigade/bin/brigade",
-                            "run",
-                            "build-task",
-                            "--slot",
-                            "build",
-                            "--cwd",
-                            str(self.root / "project"),
-                            "--run-id",
-                            RUN_ID,
-                        ),
-                        cwd=str(self.root / "project"),
-                        outcome=SPAWNED,
-                        exit_code=None,
-                        duration_ms=None,
-                        pid=os.getpid(),
-                    )
-                ],
-            ),
+            self.traces,
+            [
+                ProcessTrace(
+                    argv=(
+                        sys.executable,
+                        "/srv/brigade/bin/brigade",
+                        "run",
+                        "build-task",
+                        "--slot",
+                        "build",
+                        "--cwd",
+                        str(self.root / "project"),
+                        "--run-id",
+                        RUN_ID,
+                    ),
+                    cwd=str(self.root / "project"),
+                    outcome=SPAWNED,
+                    exit_code=None,
+                    duration_ms=None,
+                    pid=os.getpid(),
+                )
+            ],
         )

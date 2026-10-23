@@ -38,18 +38,16 @@ class InstallCronTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (installation, runtime.run_process.requests[-1].stdin),
-            (
-                {
-                    "schema_version": 1,
-                    "scheduler": "cron",
-                    "unit_files": [],
-                    "cron_line": CRON_LINE,
-                    "keep_running": None,
-                },
-                f"0 3 * * * backup\n{CRON_LINE}\n",
-            ),
+            installation,
+            {
+                "schema_version": 1,
+                "scheduler": "cron",
+                "unit_files": [],
+                "cron_line": CRON_LINE,
+                "keep_running": None,
+            },
         )
+        self.assertEqual(runtime.run_process.requests[-1].stdin, f"0 3 * * * backup\n{CRON_LINE}\n")
 
     def test_should_start_the_crontab_of_a_user_who_has_none(self):
         # Arrange
@@ -95,4 +93,5 @@ class ReadCronStatusTest(unittest.TestCase):
         status = read_status({}, runtime)
 
         # Assert
-        self.assertEqual((status["installed"], status["cron_line"]), (False, None))
+        self.assertEqual(status["installed"], False)
+        self.assertEqual(status["cron_line"], None)

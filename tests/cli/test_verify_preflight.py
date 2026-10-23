@@ -524,7 +524,8 @@ class BrigadeVerifyPreflightOfAPullRequestOfNoTaskTest(VerifyPreflightTestCase):
         completed = self.run_preflight("43")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade verify preflight: no task.pr_opened of @PROJECT.shop names the pull request #43\n"),
+            completed.stderr,
+            "brigade verify preflight: no task.pr_opened of @PROJECT.shop names the pull request #43\n",
         )

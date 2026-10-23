@@ -139,13 +139,10 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(
-            (tree, (self.cache / "shop" / "abc123" / "README.md").read_text(), list(self.cache.iterdir())),
-            (
-                Tree(project="shop", ref="v1", sha="abc123", kind="archive", root=self.cache / "shop" / "abc123"),
-                "# shop\n",
-                [self.cache / "shop"],
-            ),
+            tree, Tree(project="shop", ref="v1", sha="abc123", kind="archive", root=self.cache / "shop" / "abc123")
         )
+        self.assertEqual((self.cache / "shop" / "abc123" / "README.md").read_text(), "# shop\n")
+        self.assertEqual(list(self.cache.iterdir()), [self.cache / "shop"])
 
     def test_should_reuse_the_tree_already_cached_and_mark_it_read(self):
         # Arrange
@@ -158,12 +155,10 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
 
         # Assert
         self.assertEqual(
-            (git.commands, cached.stat().st_mtime),
-            (
-                [("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "v1^{commit}"))],
-                NOW.timestamp(),
-            ),
+            git.commands,
+            [("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "v1^{commit}"))],
         )
+        self.assertEqual(cached.stat().st_mtime, NOW.timestamp())
 
     def test_should_keep_the_tree_another_extraction_placed_meanwhile(self):
         # Arrange
@@ -188,10 +183,8 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
         prepare_tree(ArchivingGitDouble("abc123", [README]), FILESYSTEM_READ_TIME_KEEPER, self.create_request("v1"))
 
         # Assert
-        self.assertEqual(
-            (list((self.cache / "tidepool").iterdir()), list((self.cache / "shop").iterdir())),
-            ([], [self.cache / "shop" / "abc123"]),
-        )
+        self.assertEqual(list((self.cache / "tidepool").iterdir()), [])
+        self.assertEqual(list((self.cache / "shop").iterdir()), [self.cache / "shop" / "abc123"])
 
     def test_should_stop_evicting_once_the_cache_is_back_within_its_bound(self):
         # Arrange

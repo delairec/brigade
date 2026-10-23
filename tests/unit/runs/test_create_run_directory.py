@@ -30,38 +30,36 @@ class CreateRunDirectoryOfANewRunTest(CreateRunDirectoryTestCase):
 
         # Assert
         self.assertEqual(
-            (
-                json.loads((plan.run_directory / "run.json").read_text()),
-                sorted(plan.run_directory.iterdir()),
-            ),
-            (
-                {
-                    "schema_version": 1,
-                    "run": RUN_ID,
-                    "procedure": "build-task",
-                    "procedure_path": "built-in",
-                    "slot": "build",
-                    "role": "builder",
-                    "role_source": "built-in",
-                    "client": "fake",
-                    "project": "tidepool",
-                    "cwd": str(self.root / "project"),
-                    "worktree": str(self.root / "project"),
-                    "capabilities": ["read", "write"],
-                    "budget": 40,
-                    "wall_limit_s": 1500.0,
-                    "arguments": {},
-                    "wave": "w1",
-                    "task": "TP1",
-                    "brief": None,
-                },
-                [
-                    plan.run_directory / "pid",
-                    plan.run_directory / "progress.md",
-                    plan.run_directory / "role.md",
-                    plan.run_directory / "run.json",
-                ],
-            ),
+            json.loads((plan.run_directory / "run.json").read_text()),
+            {
+                "schema_version": 1,
+                "run": RUN_ID,
+                "procedure": "build-task",
+                "procedure_path": "built-in",
+                "slot": "build",
+                "role": "builder",
+                "role_source": "built-in",
+                "client": "fake",
+                "project": "tidepool",
+                "cwd": str(self.root / "project"),
+                "worktree": str(self.root / "project"),
+                "capabilities": ["read", "write"],
+                "budget": 40,
+                "wall_limit_s": 1500.0,
+                "arguments": {},
+                "wave": "w1",
+                "task": "TP1",
+                "brief": None,
+            },
+        )
+        self.assertCountEqual(
+            plan.run_directory.iterdir(),
+            [
+                plan.run_directory / "pid",
+                plan.run_directory / "progress.md",
+                plan.run_directory / "role.md",
+                plan.run_directory / "run.json",
+            ],
         )
 
     def test_should_record_the_process_holding_the_run(self):
@@ -87,7 +85,5 @@ class CreateRunDirectoryOfAResumedRunTest(CreateRunDirectoryTestCase):
         create_run_directory(plan, self.runtime)
 
         # Assert
-        self.assertEqual(
-            (sorted(plan.run_directory.iterdir()), read_run_pid(plan.run_directory).pid),
-            ([plan.run_directory / "pid"], os.getpid()),
-        )
+        self.assertCountEqual(plan.run_directory.iterdir(), [plan.run_directory / "pid"])
+        self.assertEqual(read_run_pid(plan.run_directory).pid, os.getpid())

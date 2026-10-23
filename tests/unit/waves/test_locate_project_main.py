@@ -67,4 +67,5 @@ class LocateProjectMainTest(unittest.TestCase):
         main = locate_project_main(self.processes, project, _read_forge_environment)
 
         # Assert
-        self.assertEqual((main, self.processes.requests), ("trunk", []))
+        self.assertEqual(main, "trunk")
+        self.assertEqual(self.processes.requests, [])

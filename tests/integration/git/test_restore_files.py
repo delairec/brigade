@@ -39,10 +39,8 @@ class RestoreFilesTest(unittest.TestCase):
         restore_files(run_process_without_trail, self.repository, ("projects.awawa",))
 
         # Assert
-        self.assertEqual(
-            ((self.repository / "projects.awawa").read_text(), run_git(self.repository, "status", "--porcelain")),
-            ("committed\n", ""),
-        )
+        self.assertEqual((self.repository / "projects.awawa").read_text(), "committed\n")
+        self.assertEqual(run_git(self.repository, "status", "--porcelain"), "")
 
     def test_should_remove_a_file_the_repository_does_not_hold(self):
         # Arrange
@@ -52,7 +50,5 @@ class RestoreFilesTest(unittest.TestCase):
         restore_files(run_process_without_trail, self.repository, ("policies.awawa",))
 
         # Assert
-        self.assertEqual(
-            ((self.repository / "policies.awawa").exists(), run_git(self.repository, "status", "--porcelain")),
-            (False, ""),
-        )
+        self.assertEqual((self.repository / "policies.awawa").exists(), False)
+        self.assertEqual(run_git(self.repository, "status", "--porcelain"), "")

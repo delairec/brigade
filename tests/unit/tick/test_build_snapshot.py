@@ -70,21 +70,19 @@ class SnapshotTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (document["studies"], document["live_study_runs"]),
-            (
-                [
-                    {
-                        "study": "weekly",
-                        "slot": "report",
-                        "every": "daily@09:00",
-                        "status": "active",
-                        "last_started": "2026-10-05T07:00:02Z",
-                        "parked": False,
-                    }
-                ],
-                [{"study": "weekly", "run": "20261006T110000Z-a1b2c3"}],
-            ),
+            document["studies"],
+            [
+                {
+                    "study": "weekly",
+                    "slot": "report",
+                    "every": "daily@09:00",
+                    "status": "active",
+                    "last_started": "2026-10-05T07:00:02Z",
+                    "parked": False,
+                }
+            ],
         )
+        self.assertEqual(document["live_study_runs"], [{"study": "weekly", "run": "20261006T110000Z-a1b2c3"}])
 
     def test_should_carry_the_pause_of_a_wave_and_the_rate_limit_of_its_task_in_its_document(self):
         # Arrange
@@ -178,7 +176,8 @@ class ProjectFactsTest(unittest.TestCase):
         document = project.to_document()
 
         # Assert
-        self.assertEqual((document["awaits_check_runs"], document["on_github"]), (False, True))
+        self.assertEqual(document["awaits_check_runs"], False)
+        self.assertEqual(document["on_github"], True)
 
 
 class WaveFactsTest(unittest.TestCase):
@@ -202,9 +201,8 @@ class TaskFactsTest(unittest.TestCase):
         document = task.to_document()
 
         # Assert
-        self.assertEqual(
-            (document["verdict"], document["reviewed_head"]), ({"head": "4f2a9c1", "verdict": "pass"}, "4f2a9c1")
-        )
+        self.assertEqual(document["verdict"], {"head": "4f2a9c1", "verdict": "pass"})
+        self.assertEqual(document["reviewed_head"], "4f2a9c1")
 
     def test_should_carry_the_failures_of_its_last_preflight_and_its_repair_rounds_in_its_document(self):
         # Arrange
@@ -218,10 +216,8 @@ class TaskFactsTest(unittest.TestCase):
         document = task.to_document()
 
         # Assert
-        self.assertEqual(
-            (document["preflight_failures"], document["repair_rounds"]),
-            ([{"name": "checks", "findings": ["tests: failure"]}], 1),
-        )
+        self.assertEqual(document["preflight_failures"], [{"name": "checks", "findings": ["tests: failure"]}])
+        self.assertEqual(document["repair_rounds"], 1)
 
     def test_should_carry_the_last_run_naming_it_in_its_document(self):
         # Arrange

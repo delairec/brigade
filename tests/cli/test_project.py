@@ -166,17 +166,15 @@ class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
+        self.assertEqual(document["project"]["name"], "app")
         self.assertEqual(
-            (document["project"]["name"], document["project"]["fields"][4:8]),
-            (
-                "app",
-                [
-                    {"name": "ACCEPTANCE", "value": "make check", "guessed": False},
-                    {"name": "ACCEPTANCE", "value": "make lint", "guessed": False},
-                    {"name": "HEAVY", "value": "make e2e", "guessed": False},
-                    {"name": "SETUP", "value": "npm ci", "guessed": True},
-                ],
-            ),
+            document["project"]["fields"][4:8],
+            [
+                {"name": "ACCEPTANCE", "value": "make check", "guessed": False},
+                {"name": "ACCEPTANCE", "value": "make lint", "guessed": False},
+                {"name": "HEAVY", "value": "make e2e", "guessed": False},
+                {"name": "SETUP", "value": "npm ci", "guessed": True},
+            ],
         )
 
     def test_should_write_the_setup_commands_given_by_flags(self):
@@ -269,10 +267,10 @@ class BrigadeProjectAddWhenThePathIsNotARepositoryTest(ProjectTestCase):
         completed = self.run_project("add", str(plain_directory))
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr, self.registry.exists()),
-            (1, "", f"brigade project add: {plain_directory} is not a git repository\n", False),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade project add: {plain_directory} is not a git repository\n")
+        self.assertEqual(self.registry.exists(), False)
 
 
 class BrigadeProjectAddWhenNoMainBranchCanBeToldTest(ProjectTestCase):
@@ -288,18 +286,14 @@ class BrigadeProjectAddWhenNoMainBranchCanBeToldTest(ProjectTestCase):
         completed = self.run_project("add", str(project.path))
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr, self.registry.exists()),
-            (
-                1,
-                "",
-                (
-                    f"brigade project add: {project.path} has neither an origin/HEAD nor a branch checked out;"
-                    " check out its main branch\n"
-                ),
-                False,
-            ),
+            completed.stderr,
+            f"brigade project add: {project.path} has neither an origin/HEAD nor a branch checked out;"
+            " check out its main branch\n",
         )
+        self.assertEqual(self.registry.exists(), False)
 
 
 class BrigadeProjectAddWithANameThatIsNotAnIdentifierTest(ProjectTestCase):
@@ -311,15 +305,12 @@ class BrigadeProjectAddWithANameThatIsNotAnIdentifierTest(ProjectTestCase):
         completed = self.run_project("add", str(project.path), "--name", "my-app.v2")
 
         # Assert
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr, self.registry.exists()),
-            (
-                2,
-                "",
-                "brigade project add: --name my-app.v2 is not an identifier: letters, digits and _ only\n",
-                False,
-            ),
+            completed.stderr, "brigade project add: --name my-app.v2 is not an identifier: letters, digits and _ only\n"
         )
+        self.assertEqual(self.registry.exists(), False)
 
 
 class BrigadeProjectAddWhenAlreadyRegisteredTest(ProjectTestCase):
@@ -334,15 +325,14 @@ class BrigadeProjectAddWhenAlreadyRegisteredTest(ProjectTestCase):
         completed = self.run_project("add", str(self.project.path), "--name", "other")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                1,
-                "",
-                f"brigade project add: {self.project.path} is already registered as @PROJECT.app; --force replaces it\n",
-            ),
+            completed.stderr,
+            f"brigade project add: {self.project.path} is already registered as @PROJECT.app; --force replaces it\n",
         )
-        self.assertEqual((self.registry.read_text(), self.count_commits()), (self.registered, "2\n"))
+        self.assertEqual(self.registry.read_text(), self.registered)
+        self.assertEqual(self.count_commits(), "2\n")
 
     def test_should_refuse_a_name_already_registered_naming_its_entity(self):
         # Arrange
@@ -352,11 +342,13 @@ class BrigadeProjectAddWhenAlreadyRegisteredTest(ProjectTestCase):
         completed = self.run_project("add", str(namesake.path))
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade project add: @PROJECT.app is already registered; --force replaces it\n"),
+            completed.stderr, "brigade project add: @PROJECT.app is already registered; --force replaces it\n"
         )
-        self.assertEqual((self.registry.read_text(), self.count_commits()), (self.registered, "2\n"))
+        self.assertEqual(self.registry.read_text(), self.registered)
+        self.assertEqual(self.count_commits(), "2\n")
 
     def test_should_replace_the_entity_when_forced(self):
         # Act
@@ -395,10 +387,9 @@ class BrigadeProjectAddWhenTheCorpusFailsItsLintTest(ProjectTestCase):
             ),
             completed.stderr,
         )
-        self.assertEqual(
-            (self.registry.exists(), self.count_commits(), self.machine.read_git("status", "--porcelain")),
-            (False, "2\n", ""),
-        )
+        self.assertEqual(self.registry.exists(), False)
+        self.assertEqual(self.count_commits(), "2\n")
+        self.assertEqual(self.machine.read_git("status", "--porcelain"), "")
 
 
 class BrigadeProjectListTest(ProjectTestCase):
@@ -501,10 +492,9 @@ class BrigadeProjectShowTest(ProjectTestCase):
         completed = self.run_project("show", "ghost")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", "brigade project show: @PROJECT.ghost is not registered\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, "brigade project show: @PROJECT.ghost is not registered\n")
 
 
 class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
@@ -536,7 +526,8 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
         completed = self.run_project("resume", "app")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stdout), (0, "resumed @PROJECT.app\n"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "resumed @PROJECT.app\n")
         self.assertEqual(self.registry.read_text().splitlines()[-1], "\tSTATUS active")
 
     def test_should_leave_a_project_already_in_that_status_as_it_is(self):
@@ -554,15 +545,10 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
                 completed = self.run_project(action, "app")
 
                 # Assert
-                self.assertEqual(
-                    (
-                        completed.returncode,
-                        completed.stdout,
-                        self.registry.read_text().splitlines()[-1],
-                        self.count_commits(),
-                    ),
-                    (0, text, f"\tSTATUS {status}", commits),
-                )
+                self.assertEqual(completed.returncode, 0)
+                self.assertEqual(completed.stdout, text)
+                self.assertEqual(self.registry.read_text().splitlines()[-1], f"\tSTATUS {status}")
+                self.assertEqual(self.count_commits(), commits)
 
     def test_should_exit_1_for_an_unknown_name(self):
         for action in ["pause", "resume"]:
@@ -571,10 +557,9 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
                 completed = self.run_project(action, "ghost")
 
                 # Assert
-                self.assertEqual(
-                    (completed.returncode, completed.stdout, completed.stderr),
-                    (1, "", f"brigade project {action}: @PROJECT.ghost is not registered\n"),
-                )
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
+                self.assertEqual(completed.stderr, f"brigade project {action}: @PROJECT.ghost is not registered\n")
 
     def test_should_exit_1_for_a_project_written_outside_the_registry_file(self):
         # Arrange
@@ -586,10 +571,8 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
         completed = self.run_project("pause", "ghost")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade project pause: @PROJECT.ghost is not written in projects.awawa\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "brigade project pause: @PROJECT.ghost is not written in projects.awawa\n")
 
 
 class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
@@ -605,9 +588,9 @@ class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
             waiting = self.detect_waiting(["project", "pause", "app"])
 
         # Assert
-        self.assertEqual(
-            (len(lock_files), waiting, self.registry.read_text().splitlines()[-1]), (1, True, "\tSTATUS active")
-        )
+        self.assertEqual(len(lock_files), 1)
+        self.assertEqual(waiting, True)
+        self.assertEqual(self.registry.read_text().splitlines()[-1], "\tSTATUS active")
 
     def detect_waiting(self, arguments: list) -> bool:
         try:
@@ -637,9 +620,10 @@ class BrigadeProjectWhereAFileStandsForTheLockDirectoryTest(ProjectTestCase):
         completed = self.run_project("add", str(project.path))
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade project add: cannot write {self.state_root / 'locks'}: File exists\n"),
+            completed.stderr, f"brigade project add: cannot write {self.state_root / 'locks'}: File exists\n"
         )
 
 
@@ -662,7 +646,9 @@ class BrigadeProjectBeforeInitTest(unittest.TestCase):
                 completed = machine.run_brigade(CLONE_ENTRY_POINT, "project", *arguments, "--json")
 
                 # Assert
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
                 self.assertEqual(
-                    (completed.returncode, completed.stdout, completed.stderr),
-                    (1, "", f"brigade project {action}: the operational corpus is missing; run brigade init first\n"),
+                    completed.stderr,
+                    f"brigade project {action}: the operational corpus is missing; run brigade init first\n",
                 )

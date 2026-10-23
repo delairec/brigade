@@ -105,16 +105,12 @@ class ProjectAddTest(unittest.TestCase):
         document = project_add(request, self.runtime)
 
         # Assert
+        self.assertEqual(document["action"], "replaced")
         self.assertEqual(
-            (document["action"], self.registry.read_text()),
-            (
-                "replaced",
-                (
-                    f'PROJECT lib\n\tPATH "/srv/lib"\n\tSTATUS active\n\nPROJECT app\n\tPATH "{self.repository}"\n'
-                    '\tREMOTE "acme/app"\n\tMAIN "main"\n\tCORPUS "corpus"\n\tACCEPTANCE "python3 -m unittest"\n'
-                    '\tFORGE "github"\n\tSTATUS active\n'
-                ),
-            ),
+            self.registry.read_text(),
+            f'PROJECT lib\n\tPATH "/srv/lib"\n\tSTATUS active\n\nPROJECT app\n\tPATH "{self.repository}"\n'
+            '\tREMOTE "acme/app"\n\tMAIN "main"\n\tCORPUS "corpus"\n\tACCEPTANCE "python3 -m unittest"\n'
+            '\tFORGE "github"\n\tSTATUS active\n',
         )
 
     def test_should_refuse_a_name_already_registered_unless_forced(self):

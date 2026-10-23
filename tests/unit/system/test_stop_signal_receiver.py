@@ -120,7 +120,8 @@ class StopSignalReceivedWhileHoldingTest(StopSignalReceiverTestCase):
             finish_a_write_while_signalled(receiver, written)
 
         # Assert
-        self.assertEqual((written, receiver.requested), (["the whole write"], True))
+        self.assertEqual(written, ["the whole write"])
+        self.assertEqual(receiver.requested, True)
 
 
 class StopSignalReceiverLeftTest(StopSignalReceiverTestCase):
@@ -133,7 +134,8 @@ class StopSignalReceiverLeftTest(StopSignalReceiverTestCase):
             pass
 
         # Assert
-        self.assertEqual((signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT)), self.handlers_before)
+        self.assertEqual(signal.getsignal(signal.SIGTERM), self.handlers_before[0])
+        self.assertEqual(signal.getsignal(signal.SIGINT), self.handlers_before[1])
 
     def test_should_start_with_no_stop_requested(self):
         # Act

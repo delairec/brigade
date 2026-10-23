@@ -27,7 +27,8 @@ class ReadAccountEnvironmentTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual((environment, forge.logins), ({"GH_TOKEN": "token-of-octo-builder"}, ["octo-builder"]))
+        self.assertEqual(environment, {"GH_TOKEN": "token-of-octo-builder"})
+        self.assertEqual(forge.logins, ["octo-builder"])
 
     def test_should_answer_no_variable_for_a_key_bound_to_no_login(self):
         # Act

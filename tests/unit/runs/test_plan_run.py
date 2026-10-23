@@ -130,36 +130,18 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
         plan = self.plan(request, {"features": "step_count"})
 
         # Assert
-        self.assertEqual(
-            (
-                plan.run_directory,
-                plan.procedure.name,
-                plan.role.role,
-                plan.capabilities,
-                plan.arguments,
-                plan.brief,
-                plan.worktree,
-                plan.disposable_worktree,
-                plan.warnings,
-                plan.handovers,
-                plan.first_segment,
-                plan.resumed_session,
-            ),
-            (
-                self.paths.state_root / "runs" / RUN_ID,
-                "build-task",
-                "builder",
-                ("read", "write", "shell"),
-                {"task": "@TASK.B1"},
-                "Start from the base.\n",
-                self.project,
-                False,
-                (),
-                2,
-                1,
-                None,
-            ),
-        )
+        self.assertEqual(plan.run_directory, self.paths.state_root / "runs" / RUN_ID)
+        self.assertEqual(plan.procedure.name, "build-task")
+        self.assertEqual(plan.role.role, "builder")
+        self.assertEqual(plan.capabilities, ("read", "write", "shell"))
+        self.assertEqual(plan.arguments, {"task": "@TASK.B1"})
+        self.assertEqual(plan.brief, "Start from the base.\n")
+        self.assertEqual(plan.worktree, self.project)
+        self.assertEqual(plan.disposable_worktree, False)
+        self.assertEqual(plan.warnings, ())
+        self.assertEqual(plan.handovers, 2)
+        self.assertEqual(plan.first_segment, 1)
+        self.assertEqual(plan.resumed_session, None)
 
     def test_should_name_a_new_run_by_its_instant(self):
         # Act
@@ -179,17 +161,15 @@ class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
         plan = self.plan(self.create_request(procedure=str(procedure), run_id=RUN_ID), {})
 
         # Assert
+        self.assertEqual(plan.worktree, self.paths.state_root / "runs" / RUN_ID / "worktree")
+        self.assertEqual(plan.disposable_worktree, True)
+        self.assertEqual(plan.counts_steps, False)
         self.assertEqual(
-            (plan.worktree, plan.disposable_worktree, plan.counts_steps, plan.warnings),
+            plan.warnings,
             (
-                self.paths.state_root / "runs" / RUN_ID / "worktree",
-                True,
-                False,
                 (
-                    (
-                        "fake counts no steps: the budget of 10 steps is held on the clock"
-                        " and the run cut at its limit of 260 s"
-                    ),
+                    "fake counts no steps: the budget of 10 steps is held on the clock"
+                    " and the run cut at its limit of 260 s"
                 ),
             ),
         )
@@ -206,7 +186,9 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
         plan = self.plan(self.create_request(run_id=RUN_ID, resume=True), {"operations": "resume"})
 
         # Assert
-        self.assertEqual((plan.resumed, plan.first_segment, plan.resumed_session), (True, 2, "s1"))
+        self.assertEqual(plan.resumed, True)
+        self.assertEqual(plan.first_segment, 2)
+        self.assertEqual(plan.resumed_session, "s1")
 
 
 class PlanRunOfARegisteredProjectTest(PlanRunTestCase):
@@ -233,7 +215,9 @@ class PlanRunOfARegisteredProjectTest(PlanRunTestCase):
         plan = self.plan(self.create_request(project="shop", cwd=None), {}, project, self.create_policies())
 
         # Assert
-        self.assertEqual((plan.cwd, plan.role.role, plan.project), (self.project, "builder", "shop"))
+        self.assertEqual(plan.cwd, self.project)
+        self.assertEqual(plan.role.role, "builder")
+        self.assertEqual(plan.project, "shop")
 
     def test_should_refuse_a_role_binding_off_the_slot_name_form(self):
         # Arrange

@@ -65,7 +65,8 @@ class RunRoundsTest(unittest.TestCase):
         outcome = run_rounds(create_rounds([FIRST_SNAPSHOT], planner, executor))
 
         # Assert
-        self.assertEqual((outcome, executor.plans_applied), (RoundsOutcome(actions_applied=0, actions_failed=0), []))
+        self.assertEqual(outcome, RoundsOutcome(actions_applied=0, actions_failed=0))
+        self.assertEqual(executor.plans_applied, [])
 
     def test_should_apply_each_plan_until_the_plan_is_empty(self):
         # Arrange

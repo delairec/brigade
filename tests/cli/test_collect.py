@@ -868,15 +868,11 @@ class BrigadeCollectShellTest(CollectTestCase):
         completed = self.run_collect("shell", "command=printf 'oak")
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (
-                1,
-                (
-                    "brigade collect: collector shell exited 1\n"
-                    "the command printf 'oak cannot be split into an argv: No closing quotation\n"
-                ),
-            ),
+            completed.stderr,
+            "brigade collect: collector shell exited 1\n"
+            "the command printf 'oak cannot be split into an argv: No closing quotation\n",
         )
 
     def test_should_name_the_exit_code_and_the_stderr_of_a_failing_command(self):
@@ -911,9 +907,9 @@ class BrigadeCollectShellTest(CollectTestCase):
         completed = self.run_collect("shell", empty_command)
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade collect: collector shell exited 1\nthe shell collector takes command=<line>\n"),
+            completed.stderr, "brigade collect: collector shell exited 1\nthe shell collector takes command=<line>\n"
         )
 
 
@@ -1141,9 +1137,9 @@ class BrigadeCollectPrListUnderNoForgeTest(PrListTestCase):
         completed = self.collect_pull_requests()
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (1, "brigade collect: collector pr-list exited 1\npr-list is absent: FORGE none\n"),
+            completed.stderr, "brigade collect: collector pr-list exited 1\npr-list is absent: FORGE none\n"
         )
 
     def test_should_ask_nothing_of_the_forge(self):

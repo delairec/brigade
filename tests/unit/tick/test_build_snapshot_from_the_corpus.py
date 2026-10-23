@@ -308,10 +308,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
         # Assert
         wave = snapshot.waves[0]
-        self.assertEqual(
-            (wave.wave, wave.implemented, wave.forge_account_unavailable, wave.reported),
-            ("w1", ("B0",), True, False),
-        )
+        self.assertEqual(wave.wave, "w1")
+        self.assertEqual(wave.implemented, ("B0",))
+        self.assertEqual(wave.forge_account_unavailable, True)
+        self.assertEqual(wave.reported, False)
 
     def test_should_follow_no_wave_closed_or_cancelled(self):
         # Arrange
@@ -445,16 +445,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
+        self.assertEqual(len(snapshot.rate_limits), 2)
         self.assertEqual(
-            (len(snapshot.rate_limits), snapshot.studies),
-            (
-                2,
-                (
-                    StudyFacts(
-                        name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False
-                    ),
-                ),
-            ),
+            snapshot.studies,
+            (StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),),
         )
 
     def test_should_skip_a_wave_or_a_project_whose_tree_cannot_be_read(self):

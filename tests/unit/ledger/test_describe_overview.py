@@ -55,4 +55,5 @@ class DescribeOverviewTest(unittest.TestCase):
         overview = describe_overview(empty_reading)
 
         # Assert
-        self.assertEqual((overview["first"], overview["last"]), (None, None))
+        self.assertEqual(overview["first"], None)
+        self.assertEqual(overview["last"], None)

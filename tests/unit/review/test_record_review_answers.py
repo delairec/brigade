@@ -118,10 +118,8 @@ class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):
             self.record(NO_POLICY, no_answer)
 
         # Assert
-        self.assertEqual(
-            (str(refusal.exception), self.read_last_event()["event"]),
-            ("the answers are refused: finding 1 has no answer", "task.verdict"),
-        )
+        self.assertEqual(str(refusal.exception), "the answers are refused: finding 1 has no answer")
+        self.assertEqual(self.read_last_event()["event"], "task.verdict")
 
 
 class RecordReviewAnswersUnderTheApprovalModeTest(RecordReviewAnswersTestCase):

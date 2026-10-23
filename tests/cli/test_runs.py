@@ -343,10 +343,10 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual(
-            (document["run"]["state"], document["run"]["message"], document["segments"], document["journal"]),
-            ("dead", None, [], []),
-        )
+        self.assertEqual(document["run"]["state"], "dead")
+        self.assertEqual(document["run"]["message"], None)
+        self.assertEqual(document["segments"], [])
+        self.assertEqual(document["journal"], [])
 
 
 class BrigadeRunJournalOfAClientWithNoActionsOperationTest(RunsTestCase):
@@ -407,7 +407,8 @@ class BrigadeRunsOfADetachedRunWhoseClientAnsweredOutsideItsContractTest(RunsTes
 
         # Assert
         [listed] = json.loads(completed.stdout)["runs"]
-        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "failed"))
+        self.assertEqual(listed["state"], "finished")
+        self.assertEqual(listed["outcome"], "failed")
 
     def test_should_show_the_message_naming_the_adapter_the_operation_and_the_problem(self):
         # Act
@@ -457,10 +458,9 @@ class BrigadeRunsShowOfARunningRunTest(RunsTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
-        self.assertEqual(
-            (document["run"]["state"], document["segments"], document["journal"]),
-            ("running", [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}], []),
-        )
+        self.assertEqual(document["run"]["state"], "running")
+        self.assertEqual(document["segments"], [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}])
+        self.assertEqual(document["journal"], [])
 
 
 class BrigadeRunJournalOfADetachedRunTest(RunsTestCase):
@@ -566,7 +566,8 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
                 stdout, stderr, shown = self.stop_the_follow_and_show_the_run(follow, stop_signal, run_id)
 
                 # Assert
-                self.assertEqual((follow.returncode, stderr), (0, ""))
+                self.assertEqual(follow.returncode, 0)
+                self.assertEqual(stderr, "")
                 self.assertEqual(stdout, "\nstate      running\noutcome    -\n")
                 self.assertEqual(json.loads(shown.stdout)["run"]["state"], "running")
 
@@ -650,10 +651,9 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
         completed = self.run_brigade("runs", "show", run_id, "--follow", "--json")
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (2, "", "brigade runs show: --follow and --json exclude each other\n"),
-        )
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, "brigade runs show: --follow and --json exclude each other\n")
 
 
 class BrigadeRunsStopOfARunningRunTest(RunsTestCase):
@@ -668,11 +668,11 @@ class BrigadeRunsStopOfARunningRunTest(RunsTestCase):
         completed, [listed] = self.stop_the_run_and_list_the_runs(run_id)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout), (0, f"run {run_id} finished on stopped\n"), completed.stderr
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, f"run {run_id} finished on stopped\n", completed.stderr)
         self.assert_process_gone(client_pid)
-        self.assertEqual((listed["state"], listed["outcome"]), ("finished", "stopped"))
+        self.assertEqual(listed["state"], "finished")
+        self.assertEqual(listed["outcome"], "stopped")
 
     def stop_the_run_and_list_the_runs(self, run_id: str) -> tuple:
         return self.run_brigade("runs", "stop", run_id), self.list_the_runs()
@@ -692,10 +692,9 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         completed = self.run_brigade("runs", "stop", run_id)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs stop: run {run_id} has already finished on done\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade runs stop: run {run_id} has already finished on done\n")
 
     def test_should_refuse_a_run_holding_no_pid_file(self):
         # Arrange
@@ -707,10 +706,9 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         completed = self.run_brigade("runs", "stop", run_id)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs stop: run {run_id} holds no pid file naming its process\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade runs stop: run {run_id} holds no pid file naming its process\n")
 
     def test_should_refuse_a_dead_run_naming_the_pid_no_process_holds(self):
         # Arrange
@@ -724,9 +722,11 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         completed = self.run_brigade("runs", "stop", run_id)
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs stop: run {run_id} is dead: no process of its identity holds its pid {gone.pid}\n"),
+            completed.stderr,
+            f"brigade runs stop: run {run_id} is dead: no process of its identity holds its pid {gone.pid}\n",
         )
 
     def test_should_refuse_a_run_whose_pid_holds_a_process_of_another_start_time_and_signal_none(self):
@@ -743,13 +743,11 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         completed = self.run_brigade("runs", "stop", run_id)
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                1,
-                "",
-                f"brigade runs stop: run {run_id} is dead: no process of its identity holds its pid {stranger.pid}\n",
-            ),
+            completed.stderr,
+            f"brigade runs stop: run {run_id} is dead: no process of its identity holds its pid {stranger.pid}\n",
         )
         self.assertIsNone(stranger.poll())
 
@@ -758,10 +756,9 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         completed = self.run_brigade("runs", "stop", UNKNOWN_RUN)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs stop: no run {UNKNOWN_RUN}\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade runs stop: no run {UNKNOWN_RUN}\n")
 
     def test_should_report_a_run_its_signal_left_dead_and_exit_1(self):
         # Arrange
@@ -785,10 +782,9 @@ class BrigadeRunsStopOfARunItCannotStopTest(RunsTestCase):
         completed = self.run_brigade("runs", "stop", run_id)
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs stop: run {run_id} ended dead, not stopped\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade runs stop: run {run_id} ended dead, not stopped\n")
 
 
 class BrigadeRunsOfARunWhoseResultIsOfAnOlderShapeTest(RunsTestCase):
@@ -807,16 +803,12 @@ class BrigadeRunsOfARunWhoseResultIsOfAnOlderShapeTest(RunsTestCase):
         completed = self.run_brigade("runs", "list")
 
         # Assert
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "no runs\n")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                0,
-                "no runs\n",
-                (
-                    f"brigade runs list: skipped run {self.run_id}: {self.run_result} is not a run result:"
-                    " schema_version is 1, not one of 2\n"
-                ),
-            ),
+            completed.stderr,
+            f"brigade runs list: skipped run {self.run_id}: {self.run_result} is not a run result:"
+            " schema_version is 1, not one of 2\n",
         )
 
     def test_should_give_the_run_left_out_and_its_reason_in_the_document(self):
@@ -844,16 +836,11 @@ class BrigadeRunsOfARunWhoseResultIsOfAnOlderShapeTest(RunsTestCase):
         completed = self.run_brigade("runs", "show", self.run_id)
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                1,
-                "",
-                (
-                    f"brigade runs show: {self.segment_result} is not a segment result:"
-                    " schema_version is 1, not one of 2\n"
-                ),
-            ),
+            completed.stderr,
+            f"brigade runs show: {self.segment_result} is not a segment result: schema_version is 1, not one of 2\n",
         )
 
 
@@ -874,13 +861,11 @@ class BrigadeRunsOfARunRecordWithoutItsWaveAndItsTaskTest(RunsTestCase):
         completed = self.run_brigade("runs", "list")
 
         # Assert
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "no runs\n")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                0,
-                "no runs\n",
-                f"brigade runs list: skipped run {self.run_id}: {self.run_record} is not a run record: lacks the key wave\n",
-            ),
+            completed.stderr,
+            f"brigade runs list: skipped run {self.run_id}: {self.run_record} is not a run record: lacks the key wave\n",
         )
 
     def test_should_give_the_run_left_out_and_its_reason_in_the_document(self):
@@ -905,9 +890,10 @@ class BrigadeRunsOfARunRecordWithoutItsWaveAndItsTaskTest(RunsTestCase):
         completed = self.run_brigade("runs", "show", self.run_id)
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade runs show: {self.run_record} is not a run record: lacks the key wave\n"),
+            completed.stderr, f"brigade runs show: {self.run_record} is not a run record: lacks the key wave\n"
         )
 
 
@@ -1062,7 +1048,8 @@ class BrigadeRunsOfAFinishedRunWithoutSegmentsTest(RunsTestCase):
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 [listed] = json.loads(completed.stdout)["runs"]
-                self.assertEqual((listed["state"], listed["outcome"]), ("finished", "done"))
+                self.assertEqual(listed["state"], "finished")
+                self.assertEqual(listed["outcome"], "done")
 
     def test_should_show_its_outcome_and_no_segment(self):
         for case, leave_segments in self.rows:
@@ -1077,4 +1064,5 @@ class BrigadeRunsOfAFinishedRunWithoutSegmentsTest(RunsTestCase):
                 # Assert
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 document = json.loads(completed.stdout)
-                self.assertEqual((document["run"]["outcome"], document["segments"]), ("done", []))
+                self.assertEqual(document["run"]["outcome"], "done")
+                self.assertEqual(document["segments"], [])

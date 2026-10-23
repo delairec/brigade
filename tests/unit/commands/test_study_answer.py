@@ -75,12 +75,9 @@ class StudyAnswerOfAJudgingRunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (document, (self.run_directory / "answer.awawa").read_text(encoding="utf-8")),
-            (
-                {"schema_version": 1, "run": RUN_ID, "answer": str(self.run_directory / "answer.awawa")},
-                ANSWER_TEXT,
-            ),
+            document, {"schema_version": 1, "run": RUN_ID, "answer": str(self.run_directory / "answer.awawa")}
         )
+        self.assertEqual((self.run_directory / "answer.awawa").read_text(encoding="utf-8"), ANSWER_TEXT)
 
     def test_should_refuse_an_answer_file_it_cannot_read(self):
         # Arrange

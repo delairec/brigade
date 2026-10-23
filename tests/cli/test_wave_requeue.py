@@ -21,7 +21,8 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
         requeued = self.requeue_then_tick()
 
         # Assert
-        self.assertEqual((requeued.returncode, requeued.stdout), (0, "task S3 of shop_w1 queued\n"), requeued.stderr)
+        self.assertEqual(requeued.returncode, 0, requeued.stderr)
+        self.assertEqual(requeued.stdout, "task S3 of shop_w1 queued\n", requeued.stderr)
         self.assertEqual(
             self.read_events("task.state"),
             [

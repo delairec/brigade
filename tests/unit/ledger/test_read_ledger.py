@@ -134,7 +134,8 @@ class ReadLedgerWhenTheLastLineWasNotEndedTest(ReadLedgerTestCase):
         reading = read_ledger(self.state_root)
 
         # Assert
-        self.assertEqual((len(reading.entries), reading.skipped), (2, ()))
+        self.assertEqual(len(reading.entries), 2)
+        self.assertEqual(reading.skipped, ())
 
 
 class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
@@ -202,10 +203,8 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                 reading = read_ledger(self.state_root)
 
                 # Assert
-                self.assertEqual(
-                    (len(reading.entries), reading.skipped),
-                    (1, (SkippedLine(file=str(october), line=2, reason=expected_reason),)),
-                )
+                self.assertEqual(len(reading.entries), 1)
+                self.assertEqual(reading.skipped, (SkippedLine(file=str(october), line=2, reason=expected_reason),))
 
 
 class ReadLedgerOfRunsFinishedTest(ReadLedgerTestCase):

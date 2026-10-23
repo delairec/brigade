@@ -194,25 +194,21 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
             document = COMMAND.run(SimpleNamespace(run=FIRST_RUN, log=False, follow=True), runtime)
 
         # Assert
+        self.assertEqual(document, {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False})
         self.assertEqual(
-            (document, printed.getvalue()),
-            (
-                {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False},
-                (
-                    f"run        {FIRST_RUN}\n"
-                    "procedure  deliver\n"
-                    "slot       build\n"
-                    "role       builder\n"
-                    "project    -\n"
-                    "state      running\n"
-                    "outcome    -\n"
-                    "message    -\n"
-                    "\n"
-                    "segment  outcome  steps  duration\n"
-                    "\n"
-                    f"{JOURNAL_LINE}"
-                ),
-            ),
+            printed.getvalue(),
+            f"run        {FIRST_RUN}\n"
+            "procedure  deliver\n"
+            "slot       build\n"
+            "role       builder\n"
+            "project    -\n"
+            "state      running\n"
+            "outcome    -\n"
+            "message    -\n"
+            "\n"
+            "segment  outcome  steps  duration\n"
+            "\n"
+            f"{JOURNAL_LINE}",
         )
 
 
@@ -251,26 +247,22 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
             document = COMMAND.run(request, create_runtime(self.root))
 
         # Assert
+        self.assertEqual(document, {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False})
         self.assertEqual(
-            (document, printed.getvalue()),
-            (
-                {"schema_version": 1, "run": FOLLOWED_RUN, "interrupted": False},
-                (
-                    f"run        {FIRST_RUN}\n"
-                    "procedure  deliver\n"
-                    "slot       build\n"
-                    "role       builder\n"
-                    "project    -\n"
-                    "state      finished\n"
-                    "outcome    done\n"
-                    "message    the task is delivered\n"
-                    "\n"
-                    "segment  outcome  steps  duration\n"
-                    "1        done     12     0m04s\n"
-                    "\n"
-                    "2026-10-07T09:01:00Z  1  text  reads the task\n"
-                ),
-            ),
+            printed.getvalue(),
+            f"run        {FIRST_RUN}\n"
+            "procedure  deliver\n"
+            "slot       build\n"
+            "role       builder\n"
+            "project    -\n"
+            "state      finished\n"
+            "outcome    done\n"
+            "message    the task is delivered\n"
+            "\n"
+            "segment  outcome  steps  duration\n"
+            "1        done     12     0m04s\n"
+            "\n"
+            "2026-10-07T09:01:00Z  1  text  reads the task\n",
         )
 
     def test_should_refuse_a_run_never_started(self):

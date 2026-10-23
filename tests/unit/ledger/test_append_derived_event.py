@@ -66,25 +66,26 @@ class AppendDerivedEventTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (line, json.loads((self.ledger / "2026-10.jsonl").read_text().splitlines()[1])),
-            (
-                {
-                    "schema_version": 2,
-                    "ts": "2026-10-17T09:00:00Z",
-                    "event": "wave.started",
-                    "wave": "shop_w2",
-                    "project": "shop",
-                    "branch": "integration/M2-undo",
-                    "tasks": ["S5", "S6"],
-                },
-                {
-                    "schema_version": 2,
-                    "ts": "2026-10-17T09:00:00Z",
-                    "event": "wave.started",
-                    "wave": "shop_w2",
-                    "project": "shop",
-                    "branch": "integration/M2-undo",
-                    "tasks": ["S5", "S6"],
-                },
-            ),
+            line,
+            {
+                "schema_version": 2,
+                "ts": "2026-10-17T09:00:00Z",
+                "event": "wave.started",
+                "wave": "shop_w2",
+                "project": "shop",
+                "branch": "integration/M2-undo",
+                "tasks": ["S5", "S6"],
+            },
+        )
+        self.assertEqual(
+            json.loads((self.ledger / "2026-10.jsonl").read_text().splitlines()[1]),
+            {
+                "schema_version": 2,
+                "ts": "2026-10-17T09:00:00Z",
+                "event": "wave.started",
+                "wave": "shop_w2",
+                "project": "shop",
+                "branch": "integration/M2-undo",
+                "tasks": ["S5", "S6"],
+            },
         )

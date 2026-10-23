@@ -104,7 +104,8 @@ class ResolveRoleOfARolesetDirectoryThatDoesNotExistTest(ResolveRoleTestCase):
         resolved = resolve_role("build", NO_RUNTIME_NEEDED, create_bindings(missing_roleset), NOTHING_CONFIGURED)
 
         # Assert
-        self.assertEqual((resolved.role, resolved.source), ("builder", "built-in"))
+        self.assertEqual(resolved.role, "builder")
+        self.assertEqual(resolved.source, "built-in")
 
 
 class ResolveRoleOfASlotNoRoleDeclaresTest(ResolveRoleTestCase):
@@ -179,7 +180,8 @@ class ResolveRoleBoundByNameWhenAwawaAnswersNoAgentTest(unittest.TestCase):
         resolved = resolve_role("build", self.create_runtime(answer_unknown_entity), bindings, self.configuration)
 
         # Assert
-        self.assertEqual((resolved.role, resolved.source), ("planner", "built-in"))
+        self.assertEqual(resolved.role, "planner")
+        self.assertEqual(resolved.source, "built-in")
 
     def test_should_stop_on_a_failure_of_awawa_show_rather_than_look_elsewhere(self):
         # Arrange

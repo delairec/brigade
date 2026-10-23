@@ -81,7 +81,8 @@ class MainVersionTest(MainTestCase):
         exit_code, stdout, _ = self.run_main(["--version", "--json"])
 
         # Assert
-        self.assertEqual((exit_code, json.loads(stdout)), (0, {"schema_version": 1, "version": VERSION}))
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(json.loads(stdout), {"schema_version": 1, "version": VERSION})
 
 
 class MainOfACommandTest(MainTestCase):
@@ -90,7 +91,8 @@ class MainOfACommandTest(MainTestCase):
         exit_code, stdout, _ = self.run_main(["processes", "list", "--json"])
 
         # Assert
-        self.assertEqual((exit_code, json.loads(stdout)["schema_version"]), (0, 1))
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(json.loads(stdout)["schema_version"], 1)
 
     def test_should_print_the_text_of_the_command(self):
         # Act
@@ -104,7 +106,8 @@ class MainOfACommandTest(MainTestCase):
         exit_code, _, stderr = self.run_main(["runs", "show", "20261019T090000Z-c0ffee"])
 
         # Assert
-        self.assertEqual((exit_code, stderr), (1, "brigade runs show: no run 20261019T090000Z-c0ffee\n"))
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stderr, "brigade runs show: no run 20261019T090000Z-c0ffee\n")
 
 
 class MainOfACommandWithDiagnosticsTest(MainTestCase):
@@ -118,7 +121,8 @@ class MainOfACommandWithDiagnosticsTest(MainTestCase):
         exit_code, _, stderr = self.run_main(["ledger"])
 
         # Assert
-        self.assertEqual((exit_code, stderr), (0, f"brigade ledger: skipped {ledger / '2026-10.jsonl'}:1: not JSON\n"))
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr, f"brigade ledger: skipped {ledger / '2026-10.jsonl'}:1: not JSON\n")
 
 
 class MainOfAMisusedCommandTest(MainTestCase):
@@ -127,7 +131,8 @@ class MainOfAMisusedCommandTest(MainTestCase):
         exit_code, _, stderr = self.run_main(["ledger", "--since", "2026-10-01"])
 
         # Assert
-        self.assertEqual((exit_code, stderr), (2, "brigade ledger: --since needs --project\n"))
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(stderr, "brigade ledger: --since needs --project\n")
 
 
 class MainOfACommandFailingUnexpectedlyTest(MainTestCase):
@@ -141,7 +146,8 @@ class MainOfACommandFailingUnexpectedlyTest(MainTestCase):
         exit_code, _, stderr = self.run_main(["processes", "show", "20261019T090000Z"])
 
         # Assert
-        self.assertEqual((exit_code, stderr.splitlines()[-1].split(":")[0]), (70, "UnicodeDecodeError"))
+        self.assertEqual(exit_code, 70)
+        self.assertEqual(stderr.splitlines()[-1].split(":")[0], "UnicodeDecodeError")
 
 
 class MainOfACommandStandingDownTest(MainTestCase):
@@ -154,7 +160,8 @@ class MainOfACommandStandingDownTest(MainTestCase):
             exit_code, _, stderr = self.run_main(["tick", "--once"])
 
         # Assert
-        self.assertEqual((exit_code, stderr), (0, f"brigade tick: another tick holds {lock}\n"))
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr, f"brigade tick: another tick holds {lock}\n")
 
 
 class MainOfACommandRenderedAsMarkdownTest(MainTestCase):
@@ -168,7 +175,8 @@ class MainOfACommandRenderedAsMarkdownTest(MainTestCase):
         exit_code, stdout, _ = self.run_main(["adapter", "matrix", "--markdown"])
 
         # Assert
-        self.assertEqual((exit_code, stdout), (0, ADAPTER_MATRIX))
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout, ADAPTER_MATRIX)
 
 
 class MainRefusalTest(MainTestCase):

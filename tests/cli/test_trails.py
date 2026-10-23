@@ -88,7 +88,8 @@ class BrigadeRunTrailTest(RunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 11, completed.stderr)
         [record] = read_trail(self.runs / json.loads(completed.stdout)["run"] / "processes.jsonl")
-        self.assertEqual((record["outcome"], record["exit"]), ("cut", None))
+        self.assertEqual(record["outcome"], "cut")
+        self.assertEqual(record["exit"], None)
 
     def test_should_render_the_record_on_stderr_under_verbose(self):
         # Arrange
@@ -218,10 +219,9 @@ class BrigadeTickTrailTest(TrailTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            (old_tick.exists(), old_command.exists(), future_command.exists()),
-            (False, False, True),
-        )
+        self.assertEqual(old_tick.exists(), False)
+        self.assertEqual(old_command.exists(), False)
+        self.assertEqual(future_command.exists(), True)
 
     def test_should_keep_the_trails_younger_than_the_trail_days_of_config_toml(self):
         # Arrange
@@ -273,18 +273,14 @@ class BrigadeCommandTrailTest(TrailTestCase):
         completed = self.run_status("--json", "--verbose")
 
         # Assert
+        self.assertEqual(completed.returncode, 0)
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (
-                0,
-                (
-                    '{"schema_version": 1, "scheduler": "none", "unit_files": [], "cron_line": null,'
-                    ' "next_activation": null, "last_tick": null, "tick_stale_after": 15, "stale": false,'
-                    ' "paused_waves": [], "parked_tasks": []}\n'
-                ),
-                "brigade scheduler status: ran crontab -l, not on PATH\n",
-            ),
+            completed.stdout,
+            '{"schema_version": 1, "scheduler": "none", "unit_files": [], "cron_line": null,'
+            ' "next_activation": null, "last_tick": null, "tick_stale_after": 15, "stale": false,'
+            ' "paused_waves": [], "parked_tasks": []}\n',
         )
+        self.assertEqual(completed.stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")
 
     def test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):
         # Act
@@ -293,14 +289,13 @@ class BrigadeCommandTrailTest(TrailTestCase):
         )
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stderr),
-            (0, "brigade scheduler status: ran crontab -l, not on PATH\n"),
-        )
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")
 
     def test_should_print_no_record_on_stderr_without_verbose(self):
         # Act
         completed = self.run_status("--json")
 
         # Assert
-        self.assertEqual((completed.returncode, completed.stderr), (0, ""))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, "")

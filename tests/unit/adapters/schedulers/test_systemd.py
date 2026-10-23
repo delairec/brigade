@@ -104,22 +104,18 @@ class InstallSystemdTest(unittest.TestCase):
         # Assert
         service = (self.units / "brigade.service").read_text()
         self.assertEqual(
-            (
-                installation,
-                'Environment="BRIGADE_NOTE=100%%"' in service,
-                '/opt/my \\"brigade\\"/bin/brigade$$' in service,
-                self.commands,
-            ),
-            (
-                {
-                    "schema_version": 1,
-                    "scheduler": "systemd",
-                    "unit_files": [str(self.units / "brigade.service"), str(self.units / "brigade.timer")],
-                    "cron_line": None,
-                    "keep_running": None,
-                },
-                True,
-                True,
-                [("systemctl", "--user", "daemon-reload"), ("systemctl", "--user", "enable", "--now", "brigade.timer")],
-            ),
+            installation,
+            {
+                "schema_version": 1,
+                "scheduler": "systemd",
+                "unit_files": [str(self.units / "brigade.service"), str(self.units / "brigade.timer")],
+                "cron_line": None,
+                "keep_running": None,
+            },
+        )
+        self.assertEqual('Environment="BRIGADE_NOTE=100%%"' in service, True)
+        self.assertEqual('/opt/my \\"brigade\\"/bin/brigade$$' in service, True)
+        self.assertEqual(
+            self.commands,
+            [("systemctl", "--user", "daemon-reload"), ("systemctl", "--user", "enable", "--now", "brigade.timer")],
         )

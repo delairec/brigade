@@ -50,7 +50,8 @@ class PollUntilSignalledTest(unittest.TestCase):
         signalled = poll_until_signalled(poller, SHORT_INTERVAL_S)
 
         # Assert
-        self.assertEqual((signalled, poller.calls), (False, 3))
+        self.assertEqual(signalled, False)
+        self.assertEqual(poller.calls, 3)
 
     def test_should_finish_the_poll_under_way_and_stop_on_a_signal(self):
         # Arrange
@@ -64,7 +65,8 @@ class PollUntilSignalledTest(unittest.TestCase):
                 signalled = poll_until_signalled(poller, SHORT_INTERVAL_S)
 
                 # Assert
-                self.assertEqual((signalled, poller.calls), (True, 2))
+                self.assertEqual(signalled, True)
+                self.assertEqual(poller.calls, 2)
 
     def test_should_restore_the_signal_handlers_it_replaced(self):
         # Arrange
@@ -74,4 +76,5 @@ class PollUntilSignalledTest(unittest.TestCase):
         poll_until_signalled(poller, SHORT_INTERVAL_S)
 
         # Assert
-        self.assertEqual((signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT)), self.handlers_before)
+        self.assertEqual(signal.getsignal(signal.SIGTERM), self.handlers_before[0])
+        self.assertEqual(signal.getsignal(signal.SIGINT), self.handlers_before[1])

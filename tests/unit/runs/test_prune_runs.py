@@ -55,19 +55,20 @@ class PruneRunsBeyondTheKeptOnesTest(PruneRunsTestCase):
 
         # Assert
         self.assertEqual(
-            (outcome, sorted(self.runs.iterdir())),
-            (
-                PruneOutcome(
-                    removed=[{"run": OLDEST, "state": "finished"}, {"run": OLDER, "state": "finished"}],
-                    skipped=[
-                        {
-                            "run": UNREADABLE,
-                            "reason": f"{self.runs / UNREADABLE / 'run.json'} is not a run record: not a JSON document",
-                        }
-                    ],
-                ),
-                [self.runs / DEAD, self.runs / RUNNING, self.runs / UNREADABLE, self.runs / "notes"],
+            outcome,
+            PruneOutcome(
+                removed=[{"run": OLDEST, "state": "finished"}, {"run": OLDER, "state": "finished"}],
+                skipped=[
+                    {
+                        "run": UNREADABLE,
+                        "reason": f"{self.runs / UNREADABLE / 'run.json'} is not a run record: not a JSON document",
+                    }
+                ],
             ),
+        )
+        self.assertCountEqual(
+            self.runs.iterdir(),
+            [self.runs / DEAD, self.runs / RUNNING, self.runs / UNREADABLE, self.runs / "notes"],
         )
 
     def test_should_remove_nothing_on_a_dry_run(self):
@@ -75,19 +76,17 @@ class PruneRunsBeyondTheKeptOnesTest(PruneRunsTestCase):
         outcome = self.prune(1, dry_run=True)
 
         # Assert
-        self.assertEqual(
-            (outcome.removed, sorted(self.runs.iterdir())),
-            (
-                [{"run": OLDEST, "state": "finished"}, {"run": OLDER, "state": "finished"}],
-                [
-                    self.runs / OLDEST,
-                    self.runs / OLDER,
-                    self.runs / DEAD,
-                    self.runs / RUNNING,
-                    self.runs / UNREADABLE,
-                    self.runs / "notes",
-                ],
-            ),
+        self.assertEqual(outcome.removed, [{"run": OLDEST, "state": "finished"}, {"run": OLDER, "state": "finished"}])
+        self.assertCountEqual(
+            self.runs.iterdir(),
+            [
+                self.runs / OLDEST,
+                self.runs / OLDER,
+                self.runs / DEAD,
+                self.runs / RUNNING,
+                self.runs / UNREADABLE,
+                self.runs / "notes",
+            ],
         )
 
     def test_should_remove_the_runs_settled_before_the_day(self):

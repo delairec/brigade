@@ -422,10 +422,10 @@ class BrigadeInitWithoutAGitIdentityTest(unittest.TestCase):
                 completed = machine.run_init("--json")
 
                 # Assert
-                self.assertEqual(
-                    (completed.returncode, completed.stdout, completed.stderr, machine.config_home.exists()),
-                    (1, "", message, False),
-                )
+                self.assertEqual(completed.returncode, 1)
+                self.assertEqual(completed.stdout, "")
+                self.assertEqual(completed.stderr, message)
+                self.assertEqual(machine.config_home.exists(), False)
 
 
 class BrigadeInitWhereAFileStandsForTheConfigurationDirectoryTest(unittest.TestCase):
@@ -442,10 +442,9 @@ class BrigadeInitWhereAFileStandsForTheConfigurationDirectoryTest(unittest.TestC
         completed = self.machine.run_init()
 
         # Assert
-        self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade init: cannot write {self.machine.corpus}: Not a directory\n"),
-        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(completed.stderr, f"brigade init: cannot write {self.machine.corpus}: Not a directory\n")
 
 
 class BrigadeInitWhereADirectoryStandsForAFileOfTheCorpusTest(unittest.TestCase):
@@ -466,7 +465,8 @@ class BrigadeInitWhereADirectoryStandsForAFileOfTheCorpusTest(unittest.TestCase)
         completed = self.machine.run_init()
 
         # Assert
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stdout, "")
         self.assertEqual(
-            (completed.returncode, completed.stdout, completed.stderr),
-            (1, "", f"brigade init: cannot write {self.machine.corpus / 'config.toml'}: Is a directory\n"),
+            completed.stderr, f"brigade init: cannot write {self.machine.corpus / 'config.toml'}: Is a directory\n"
         )
