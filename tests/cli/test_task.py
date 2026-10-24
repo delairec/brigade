@@ -36,7 +36,7 @@ WAVE_STARTED = (
 ACCEPTANCE_COMMAND = "python3 -m unittest"
 HEAVY_COMMAND = "python3 -m unittest discover tests/e2e"
 SETUP_LOG = "$ touch setup-ran\n"
-FAKE_CLIENT = 'client = "fake"\n[clients.fake]\nrecordings = "{recordings}"\n'
+FAKE_CLIENT = 'client = "fake"\n{keys}[clients.fake]\nrecordings = "{recordings}"\n{settings}'
 
 
 class TaskContextTestCase(unittest.TestCase):
@@ -49,7 +49,7 @@ class TaskContextTestCase(unittest.TestCase):
         self.recordings.mkdir()
         self.machine.install_awawa(self)
         self.machine.run_init()
-        self.machine.write_configuration(FAKE_CLIENT.format(recordings=self.recordings))
+        self.configure()
         self.project = TemporaryProject(root / "projects" / "shop", self.describe_environment())
         self.project.write("corpus/_schema.awawa", PROJECT_SCHEMA)
         self.project.write("corpus/tasks.awawa", MAIN_TASKS)
@@ -85,6 +85,9 @@ class TaskContextTestCase(unittest.TestCase):
 
     def describe_project_commands(self) -> tuple[str, ...]:
         return ("--acceptance", ACCEPTANCE_COMMAND, "--heavy", HEAVY_COMMAND)
+
+    def configure(self, keys: str = "", settings: str = "") -> None:
+        self.machine.write_configuration(FAKE_CLIENT.format(keys=keys, recordings=self.recordings, settings=settings))
 
     def run_task_context(self):
         return self.machine.run_brigade(
