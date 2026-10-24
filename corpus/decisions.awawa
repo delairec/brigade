@@ -71,11 +71,17 @@ DECISION AVerifierRunOnEveryPullRequestAndOneHumanGate
 	TITLE "every pull request passes a deterministic preflight then one prudence run before merging"
 		+ "into integration; the user merges integration into main"
 	STATUS active
+	DESC "the integration pull request is merged into main by the user alone, never by brigade, a"
+		+ "run or a session; a session following a wave reports the pull request open and ready for"
+		+ "review with its CI state, or a task parked, never a merge it awaits"
 	REJECTED "the user reviewing every diff: the rung the user asked to leave"
 	REJECTED "sampling that blocks: sampling stays a suggestion in the report"
 	RATIONALE "the user's answers on autonomy and review; delivered work is never verified by the"
 		+ "run that produced it"
 	SOURCE "the Artifact Brigade Blueprint, plan section 7"
+	SOURCE "the user's words of 2026-10-25, correcting the session's \"Je te préviens quand la PR"
+		+ "d'intégration de M2 est mergée sur main\": \"non le merge sur main est uniquement fait"
+		+ "par moi\""
 
 DECISION QuotaPausesTheWaveAndResumesTheSameSession
 	TITLE "a rate-limit result pauses the wave; the resume is the adapter's resume of the suspended"
