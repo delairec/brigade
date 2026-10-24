@@ -2,6 +2,7 @@ import argparse
 import functools
 import json
 import os
+import sys
 import tempfile
 import unittest
 from argparse import Namespace
@@ -220,6 +221,48 @@ class RunDetachedTest(unittest.TestCase):
         self.assertEqual(record["procedure"], "wave-plan")
         self.assertEqual(record["arguments"], {"request": "tidepool_1"})
 
+    def test_should_write_the_spawned_run_in_the_trail_of_its_run(self):
+        # Arrange
+        this_process = os.getpid()
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+        )
+
+        # Act
+        run(self.request, runtime)
+
+        # Assert
+        self.assertEqual(
+            json.loads(
+                (self.root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "processes.jsonl").read_text(
+                    encoding="utf-8"
+                )
+            ),
+            {
+                "schema_version": 1,
+                "argv": [
+                    sys.executable,
+                    "/srv/brigade/bin/brigade",
+                    "run",
+                    "wave-plan",
+                    "request=tidepool_1",
+                    "--slot",
+                    "plan",
+                    "--cwd",
+                    str(self.root),
+                    "--run-id",
+                    "20261019T090000Z-a1b2c3",
+                ],
+                "cwd": str(self.root),
+                "exit": None,
+                "duration_ms": None,
+                "outcome": "spawned",
+                "pid": this_process,
+            },
+        )
+
     def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
         # Arrange
         runtime = create_test_runtime(
@@ -330,6 +373,44 @@ class RunAttachedTest(unittest.TestCase):
                 "segments": 1,
                 "outcome": "done",
             },
+        )
+
+    def test_should_append_its_records_to_the_trail_the_process_that_detached_it_began(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        trail = root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "processes.jsonl"
+        trail.parent.mkdir(parents=True)
+        trail.write_text('{"outcome": "spawned"}\n', encoding="utf-8")
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=_spawn_a_client_that_exits,
+            resolve_plugin=_resolve_the_delivering_client,
+        )
+
+        # Act
+        run(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            trail.read_text(encoding="utf-8"),
+            '{"outcome": "spawned"}\n'
+            f'{{"schema_version": 1, "argv": ["double-client", "--print"], "cwd": "{root}", "exit": 0,'
+            ' "duration_ms": 0, "outcome": "exited"}\n',
         )
 
 

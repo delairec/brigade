@@ -623,6 +623,21 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         self.assertEqual(record.outcome, "wall_limit")
         self.assertEqual(record.message, "cut at the wall-time limit of 0 s")
 
+    def test_should_record_the_client_cut_in_the_trail(self):
+        # Arrange
+        traces = []
+        plan = _create_plan(self.root, wall_limit_s=LIMIT_ALREADY_REACHED_S)
+        runtime = dataclasses.replace(_create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append))
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            traces,
+            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "cut", None, ANY)],
+        )
+
     def test_should_leave_a_cut_segment_unmeasured_with_its_reason(self):
         # Arrange
         rows = [

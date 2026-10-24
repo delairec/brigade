@@ -4489,7 +4489,13 @@ TASK B71
 TASK B72
 	TITLE "every subprocess leaves a structured record in the trail of its run, its tick or its"
 		+ "command, and --verbose renders the records on stderr"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B206 makes false its SPEC that tests/cli prove the record"
+		+ "of a subprocess whose exit code is refused in the trail of a run, the trails of a tick"
+		+ "and of another command, the trails older than trail_days removed and the --verbose"
+		+ "lines; they are proven in tests/unit/commands, tests/unit/runs, tests/unit/system and"
+		+ "tests/unit/test_cli.py, and tests/cli keeps one flow of the trail of brigade run, one of"
+		+ "brigade tick and one of brigade scheduler status --verbose"
 	MILESTONE @MILESTONE.F0
 	COMPONENT "system"
 	ROLE ada
@@ -4555,14 +4561,17 @@ TASK B72
 			+ "test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):"
 	SPEC "brigade run --detach --verbose prints the spawned line of the run, and the process it"
 		+ "re-executes receives no --verbose"
-		IMPL "tests/cli/test_trails.py::def"
-			+ "test_should_print_the_spawned_line_and_hand_no_verbose_to_the_process_it_re_executes(self):"
+		IMPL "tests/unit/runs/test_detach_run.py::class"
+			+ "DetachRunWithEveryOptionTest(DetachRunTestCase):"
+		IMPL "tests/unit/commands/test_run.py::def"
+			+ "test_should_write_the_spawned_run_in_the_trail_of_its_run(self):"
 	SPEC "tests/cli prove, through the fake adapter in a temporary state directory, the record of a"
 		+ "subprocess whose exit code is refused in the trail of a run, the trail of a tick written"
 		+ "and the trails older than trail_days removed, the trail of another command, and the"
 		+ "--verbose lines on stderr with stdout unchanged"
 		IMPL "tests/cli/test_trails.py::class BrigadeRunTrailTest(RunTestCase):"
-		IMPL "tests/cli/test_trails.py::class BrigadeRunDetachedTrailTest(RunTestCase):"
+		IMPL "tests/unit/commands/test_run.py::def"
+			+ "test_should_append_its_records_to_the_trail_the_process_that_detached_it_began(self):"
 		IMPL "tests/cli/test_trails.py::class BrigadeCommandTrailTest(TrailTestCase):"
 	AFTER @TASK.B82
 	RATIONALE "F2 of the foundations review: run_process.py:19-25 declares ProcessRecord with argv,"
@@ -4676,7 +4685,6 @@ TASK B73
 		IMPL "brigade/adapters/forges/github.py::def describe_account(request: dict, runtime:"
 			+ "Runtime) -> dict:"
 	AFTER @TASK.B82
-	AFTER @TASK.B72
 	DELIVERED_BY 65
 	RATIONALE "F3 of the foundations review, checked on the code @TASK.B82 delivered:"
 		+ "run_segment.py:62-63 and plan_run.py:164 resolve the client by name at each call through"
@@ -4935,7 +4943,6 @@ TASK B75
 			+ "test_should_name_the_login_of_cli_on_the_forge_line_and_report_each_login(self):"
 		IMPL "tests/cli/test_run.py::def"
 			+ "test_should_start_no_run_after_reading_the_token_forge_attempts_times(self):"
-	AFTER @TASK.B72
 	AFTER @TASK.B73
 	AFTER @TASK.B77
 	RATIONALE "F5 of the foundations review, medium: the verify verdict and the merges of M1,"
@@ -6546,7 +6553,6 @@ TASK B97
 		+ "show with and without --failed, and an id no trail holds"
 		IMPL "tests/cli/test_processes.py::class BrigadeProcessesListTest(ProcessesTestCase):"
 		IMPL "tests/cli/test_processes.py::class BrigadeProcessesShowTest(ProcessesTestCase):"
-	AFTER @TASK.B72
 	RATIONALE "by @DECISION.EveryTraceIsAStructuredRecordThatABrigadeCommandReads a trail is read"
 		+ "through a brigade command, never searched with grep, sed or awk; @TASK.B72 writes the"
 		+ "trails, this task reads them; at 2026-10-10 brigade/system/trail_writer.py,"
