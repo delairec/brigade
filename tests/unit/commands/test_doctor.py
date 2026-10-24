@@ -46,14 +46,17 @@ class ScriptedForgeDouble:
     def __init__(self, environments: dict, account):
         self.environments = environments
         self.account = account
+        self.questions = []
 
     def read_login_environment(self, request: dict, runtime) -> dict:
+        self.questions.append(("read_login_environment", request["login"]))
         environment = self.environments[request["login"]]
         if isinstance(environment, Exception):
             raise environment
         return {"schema_version": 1, "environment": environment}
 
     def describe_account(self, request: dict, runtime) -> dict:
+        self.questions.append(("describe_account",))
         if isinstance(self.account, Exception):
             raise self.account
         return {"schema_version": 1, "login": self.account}
@@ -147,6 +150,7 @@ class DoctorPrerequisitesTest(DoctorTestCase):
                 "finding",
                 "scripted: scripted --version timed out after 10 s",
             ),
+            (ToolNotFound("scripted not on PATH"), "finding", "scripted: scripted not on PATH"),
         ]
         for answer, state, detail in rows:
             with self.subTest(detail=detail):
@@ -196,6 +200,36 @@ class DoctorPrerequisitesTest(DoctorTestCase):
             },
             document["items"],
         )
+
+    def test_should_report_the_error_of_the_configuration_as_a_finding_of_the_client(self):
+        # Arrange
+        file = self.runtime.paths.configuration_file
+        rows = [
+            ("a key unknown", 'colour = "blue"\n', f"unknown key colour in {file}"),
+            (
+                "no client",
+                'instructions = "/srv/instructions"\n',
+                f"config.toml names no client: set the client key in {file}",
+            ),
+            ("a client off its shape", "client = 1\n", f"client is an integer, not a string, in {file}"),
+            (
+                "a trail of zero days",
+                'client = "scripted"\ntrail_days = 0\n',
+                f"trail_days is 0, not 1 or more, in {file}",
+            ),
+        ]
+        for case, configuration, detail in rows:
+            with self.subTest(case=case):
+                self.configure(configuration)
+
+                # Act
+                document = doctor(self.no_option, self.runtime)
+
+                # Assert
+                self.assertIn(
+                    {"name": "client", "kind": "prerequisite", "state": "finding", "detail": detail, "fallback": None},
+                    document["items"],
+                )
 
     def test_should_report_each_finding_of_the_configuration(self):
         # Arrange
@@ -326,6 +360,38 @@ class DoctorForgeTest(DoctorTestCase):
                     document["items"],
                 )
 
+    def test_should_name_every_key_bound_to_one_login(self):
+        # Arrange
+        self.configure(CONFIGURATION)
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "forge login",
+                "kind": "optional",
+                "state": "ok",
+                "detail": "ada-bot for cli, build",
+                "fallback": "the commands acting as it stop",
+            },
+            document["items"],
+        )
+
+    def test_should_read_the_token_of_each_login_once_before_asking_the_account(self):
+        # Arrange
+        self.configure(CONFIGURATION)
+
+        # Act
+        doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.forge.questions,
+            [("read_login_environment", "ada-bot"), ("read_login_environment", "rev-bot"), ("describe_account",)],
+        )
+
 
 class DoctorOfAnUnreadableConfigurationTest(DoctorTestCase):
     def test_should_warn_with_the_error_wherever_the_configuration_is_read(self):
@@ -350,6 +416,16 @@ class DoctorOfAnUnreadableConfigurationTest(DoctorTestCase):
                     {"name": name, "kind": "optional", "state": "warning", "detail": detail, "fallback": fallback},
                     document["items"],
                 )
+
+    def test_should_ask_the_forge_nothing(self):
+        # Arrange
+        self.configure('colour = "blue"\n')
+
+        # Act
+        doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.forge.questions, [])
 
     def test_should_name_no_client_and_no_slot_client(self):
         # Arrange
@@ -391,12 +467,50 @@ class DoctorReviewTest(DoctorTestCase):
     def test_should_warn_of_a_project_reviewed_by_approval_without_distinct_logins(self):
         # Arrange
         self.runtime.paths.schema_file.write_text("SCHEMA POLICY\n")
+        rows = [
+            ("both slots on one login", '[forge_accounts]\nbuild = "ada-bot"\nreview = "ada-bot"\n'),
+            ("the review slot unbound", '[forge_accounts]\nbuild = "ada-bot"\n'),
+            ("the build slot unbound", '[forge_accounts]\nreview = "ada-bot"\n'),
+        ]
+        for case, forge_accounts in rows:
+            with self.subTest(case=case):
+                self.configure('client = "scripted"\n' + forge_accounts)
+
+                # Act
+                document = doctor(self.no_option, self.runtime)
+
+                # Assert
+                self.assertIn(self.approval_warning, document["items"])
+
+    def test_should_warn_of_a_project_reviewed_by_approval_when_no_configuration_binds_the_slots(self):
+        # Arrange
+        self.runtime.paths.schema_file.write_text("SCHEMA POLICY\n")
+        self.runtime.paths.configuration_file.unlink()
 
         # Act
         document = doctor(self.no_option, self.runtime)
 
         # Assert
         self.assertIn(self.approval_warning, document["items"])
+
+    def test_should_not_warn_of_a_project_reviewed_otherwise_than_by_approval(self):
+        # Arrange
+        self.runtime.paths.schema_file.write_text("SCHEMA POLICY\n")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(
+            {
+                "name": "review",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "lib reviews by approval without distinct logins for build and review",
+                "fallback": "GitHub refuses the approval of the review slot",
+            },
+            document["items"],
+        )
 
     def test_should_not_read_the_policies_with_distinct_logins(self):
         # Arrange
@@ -536,6 +650,25 @@ class DoctorStepsTest(DoctorTestCase):
         # Assert
         self.assertIn(self.steps_warning, document["items"])
 
+    def test_should_not_warn_when_no_client_could_be_probed(self):
+        # Arrange
+        self.runtime.paths.configuration_file.unlink()
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["items"][-1],
+            {
+                "name": "instructions",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "none configured",
+                "fallback": "built-in roles and no instructions package",
+            },
+        )
+
     def test_should_not_warn_of_a_client_counting_steps(self):
         # Act
         document = doctor(self.no_option, self.runtime)
@@ -602,6 +735,32 @@ class DoctorCheckOfACheckoutTest(DoctorTestCase):
             document["items"],
         )
 
+    def test_should_report_nothing_of_a_checkout_up_to_date(self):
+        # Arrange
+        self.configure(CONFIGURATION)
+        checkout = Path(self.root.name).resolve() / "checkout"
+        (checkout / "brigade").mkdir(parents=True)
+        paths = dataclasses.replace(self.runtime.paths, package_file=checkout / "brigade" / "__init__.py")
+        runtime = dataclasses.replace(self.runtime, paths=paths)
+        self.answers.update(GIT_ANSWERS)
+        self.answers["git", "rev-parse"] = ProcessAnswer(stdout="de446f3\n")
+        self.answers["git", "rev-list"] = ProcessAnswer(stdout="0\t0\n")
+
+        # Act
+        document = doctor(self.no_option, runtime)
+
+        # Assert
+        self.assertEqual(
+            document["items"][-1],
+            {
+                "name": "instructions",
+                "kind": "optional",
+                "state": "ok",
+                "detail": "lint --strict clean in /srv/instructions",
+                "fallback": "built-in roles and no instructions package",
+            },
+        )
+
 
 class DoctorRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_they_are(self):
@@ -660,6 +819,34 @@ class DoctorTextTest(unittest.TestCase):
             "slot review runs on other\n"
             "\n"
             "doctor: 1 of 2 prerequisites ok · 2 optional items on their fallback",
+        )
+
+    def test_should_print_a_detail_wider_than_its_column_whole(self):
+        # Arrange
+        document = {
+            "slot_clients": {},
+            "items": [
+                {
+                    "name": "instructions",
+                    "kind": "optional",
+                    "state": "ok",
+                    "detail": "lint --strict clean in /home/ada/.ai/instructions",
+                    "fallback": "built-in roles",
+                }
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "prerequisites\n"
+            "optional\n"
+            "ok       instructions lint --strict clean in /home/ada/.ai/instructions else: built-in roles\n"
+            "\n"
+            "doctor: 0 of 0 prerequisites ok · 0 optional items on their fallback",
         )
 
     def test_should_count_a_single_optional_item_on_its_fallback(self):

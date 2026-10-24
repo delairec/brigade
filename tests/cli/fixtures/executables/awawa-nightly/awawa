@@ -1,5 +1,0 @@
-#!/bin/sh
-case "$*" in
-  "--version") echo "awawa nightly" ;;
-  *) exit 2 ;;
-esac
