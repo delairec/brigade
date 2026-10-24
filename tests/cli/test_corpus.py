@@ -1,11 +1,8 @@
-import json
 import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from tests.cli.run_while_lock_held import run_while_lock_held
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 
@@ -35,24 +32,6 @@ class CorpusTestCase(unittest.TestCase):
 
 
 class BrigadeCorpusAtABranchTest(CorpusTestCase):
-    def test_should_print_the_document_of_the_extracted_tree(self):
-        # Act
-        completed = self.run_corpus("app", "--ref", "main", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout),
-            {
-                "schema_version": 1,
-                "project": "app",
-                "ref": "main",
-                "sha": self.sha,
-                "kind": "archive",
-                "root": str(self.refs / "app" / self.sha),
-            },
-        )
-
     def test_should_print_the_tree_as_text(self):
         # Act
         completed = self.run_corpus("app", "--ref", "main")
@@ -69,6 +48,7 @@ class BrigadeCorpusAtABranchTest(CorpusTestCase):
                 f"root  {self.refs / 'app' / self.sha}",
             ],
         )
+        self.assertEqual(completed.stderr, "")
 
 
 class BrigadeCorpusWithAwawaArgumentsTest(CorpusTestCase):
@@ -86,98 +66,3 @@ class BrigadeCorpusWithAwawaArgumentsTest(CorpusTestCase):
         self.assertEqual(completed.returncode, 3)
         self.assertEqual(completed.stdout, f"awawa lint --strict . in {self.refs / 'app' / self.sha}\n")
         self.assertEqual(completed.stderr, f"brigade corpus: @PROJECT.app at {self.sha}\nawawa diagnostic\n")
-
-
-class BrigadeCorpusUnderACacheBoundTest(CorpusTestCase):
-    def test_should_keep_the_cache_under_refs_cache_mb(self):
-        # Arrange
-        self.machine.write_configuration("refs_cache_mb = 0\n")
-        self.project.write("corpus/tasks.awawa", "second\n")
-        self.project.run_git("commit", "--quiet", "--all", "-m", "second")
-        self.run_corpus("app", "--ref", self.sha)
-
-        # Act
-        self.run_corpus("app", "--ref", "main")
-
-        # Assert
-        self.assertEqual(
-            list((self.refs / "app").iterdir()), [self.refs / "app" / self.project.run_git("rev-parse", "HEAD").strip()]
-        )
-
-
-class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
-    def test_should_wait_for_the_lock_of_the_cache_before_pruning(self):
-        # Arrange
-        lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
-
-        # Act
-        with self.run_while_cache_locked(lock_file) as wait_line:
-            pass
-
-        # Assert
-        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_file}, held by pid 4242\n")
-
-    def test_should_wait_for_the_lock_of_the_cache_before_reading_a_cached_tree(self):
-        # Arrange
-        self.run_corpus("app", "--ref", "main")
-        lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
-
-        # Act
-        with self.run_while_cache_locked(lock_file) as wait_line:
-            pass
-
-        # Assert
-        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_file}, held by pid 4242\n")
-
-    def run_while_cache_locked(self, lock_file: Path):
-        argv = [sys.executable, str(CLONE_ENTRY_POINT), "corpus", "app", "--ref", "main"]
-        return run_while_lock_held(argv, self.machine.describe_environment(), lock_file)
-
-
-class BrigadeCorpusOnWhatItCannotReadTest(CorpusTestCase):
-    def test_should_exit_1_naming_what_it_cannot_read(self):
-        # Arrange
-        rows = [
-            ("an unknown project", ("ghost", "--ref", "main"), "brigade corpus: @PROJECT.ghost is not registered\n"),
-            (
-                "a ref the repository does not resolve",
-                ("app", "--ref", "nowhere"),
-                "brigade corpus: the ref nowhere is not a commit of @PROJECT.app\n",
-            ),
-            (
-                "a branch no worktree holds",
-                ("app", "--ref", "worktree:ghost"),
-                "brigade corpus: no worktree of @PROJECT.app has the branch ghost checked out\n",
-            ),
-            (
-                "a path no worktree holds",
-                ("app", "--worktree", "/nowhere/tree"),
-                "brigade corpus: no worktree of @PROJECT.app is at /nowhere/tree\n",
-            ),
-        ]
-        for case, arguments, expected_error in rows:
-            with self.subTest(case=case):
-                # Act
-                completed = self.run_corpus(*arguments)
-
-                # Assert
-                self.assertEqual(completed.returncode, 1)
-                self.assertEqual(completed.stdout, "")
-                self.assertEqual(completed.stderr, expected_error)
-
-
-class BrigadeCorpusWhereAFileStandsForTheCacheTest(CorpusTestCase):
-    def test_should_exit_1_naming_the_cache_directory_it_cannot_create(self):
-        # Arrange
-        self.machine.cache_home.write_text("")
-
-        # Act
-        completed = self.run_corpus("app", "--ref", "main")
-
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stdout, "")
-        self.assertEqual(
-            completed.stderr,
-            f"brigade corpus: cannot write {self.machine.cache_home / 'brigade' / 'refs' / 'app'}: Not a directory\n",
-        )

@@ -5,8 +5,11 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.corpus_awawa import COMMAND, AwawaPassage, corpus_awawa
+from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
 APP = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}]})
@@ -19,8 +22,6 @@ LINT_RECORD = ProcessRecord(
     stderr="1 finding\n",
     duration_ms=0,
 )
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
 
 
 class CorpusAwawaTest(unittest.TestCase):
@@ -52,6 +53,23 @@ class CorpusAwawaTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(passage, AwawaPassage(project="app", sha="de446f3", record=LINT_RECORD))
+
+
+class CorpusAwawaWithAConfigurationThatIsNotTomlTest(unittest.TestCase):
+    def test_should_report_the_configuration_before_a_missing_operational_corpus(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        runtime = create_test_runtime(create_test_paths(root))
+        runtime.paths.config_root.mkdir(parents=True)
+        runtime.paths.configuration_file.write_text('client = "claude-code\n', encoding="utf-8")
+        request = argparse.Namespace(project="app", ref="main", worktree=None, passed_arguments=("lint",))
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            corpus_awawa(request, runtime)
+
+        # Assert
+        self.assertIn(f"{runtime.paths.configuration_file} is not valid TOML: ", str(raised.exception))
 
 
 class CorpusAwawaRequestTest(unittest.TestCase):

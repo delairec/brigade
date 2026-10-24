@@ -103,3 +103,13 @@ class WriteCommandOutputOfAPassthroughTest(WriteCommandOutputTestCase):
 
         # Assert
         self.assertEqual(written, (3, "2 runs", "1 warning\n"))
+
+    def test_should_write_the_diagnostics_before_the_passed_error_output(self):
+        # Act
+        written = self.write(
+            create_command(describe_diagnostics=describe_skipped, render_passed_stderr=render_passed_warning),
+            argparse.Namespace(json=True),
+        )
+
+        # Assert
+        self.assertEqual(written, (3, "2 runs", "brigade runs list: run r9 skipped\n1 warning\n"))
