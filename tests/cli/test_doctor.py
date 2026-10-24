@@ -151,6 +151,13 @@ class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
                         "fallback": "a cron line, or brigade tick --loop",
                     },
                     {
+                        "name": "linger",
+                        "kind": "optional",
+                        "state": "ok",
+                        "detail": "the user systemd instance lingers",
+                        "fallback": "the tick fires only while a session of the user is open",
+                    },
+                    {
                         "name": "forge",
                         "kind": "optional",
                         "state": "ok",
@@ -213,6 +220,7 @@ class BrigadeDoctorAsTextWithAFindingAndAWarningTest(DoctorTestCase):
                 "ok       client       claude-code: 2.1.291 (Claude Code)",
                 "optional",
                 "ok       scheduler    user systemd instance running       else: a cron line, or brigade tick --loop",
+                "ok       linger       the user systemd instance lingers   else: the tick fires only while a session of the user is open",
                 "ok       forge        gh as octo-bot                      else: local mode without a forge",
                 "warning  awawa-web    not on PATH                         fallback: the dashboard's corpus view only",
                 "warning  instructions none configured                     fallback: built-in roles and no instructions package",

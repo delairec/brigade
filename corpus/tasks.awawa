@@ -750,7 +750,7 @@ TASK B07
 		+ "systemd, cron or loop; without the key, systemd where the user instance is running or"
 		+ "degraded as brigade doctor probes it, else cron; loop installs nothing and prints the"
 		+ "command to keep running"
-		IMPL "brigade/commands/scheduler_install.py::def _probe_scheduler(runtime: Runtime) -> str:"
+		IMPL "brigade/system/choose_scheduler.py::def _probe_scheduler("
 		IMPL "brigade/adapters/schedulers/loop.py::def install(request: dict, runtime: Runtime) ->"
 			+ "dict:"
 		IMPL "tests/unit/commands/test_scheduler_install.py::def"
@@ -10881,7 +10881,8 @@ TASK B171
 TASK B172
 	TITLE "brigade doctor checks that the user systemd instance lingers, so that the timer survives"
 		+ "the end of the session"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 195
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "doctor"
@@ -10889,12 +10890,34 @@ TASK B172
 	SPEC "brigade doctor reports an optional item linger when the scheduler is systemd, chosen as"
 		+ "brigade scheduler install chooses it: the scheduler key of config.toml, else the probe"
 		+ "of the user systemd instance; no item linger for any other scheduler"
+		IMPL "brigade/commands/doctor.py::def _check_linger("
+		IMPL "brigade/system/choose_scheduler.py::def choose_scheduler("
+		IMPL "tests/unit/commands/test_doctor.py::def"
+			+ "test_should_read_the_linger_of_the_user_when_the_configuration_names_systemd(self):"
+		IMPL "tests/unit/commands/test_doctor.py::def"
+			+ "test_should_not_read_the_linger_for_another_scheduler(self):"
+		IMPL "tests/unit/system/test_choose_scheduler.py::class"
+			+ "ChooseSchedulerTest(unittest.TestCase):"
 	SPEC "the item linger reads loginctl show-user -p Linger: ok on yes, warning on no with a"
 		+ "detail naming loginctl enable-linger, warning when loginctl is not on PATH; the exit"
 		+ "code of brigade doctor is unchanged by it"
+		IMPL "brigade/system/describe_linger_warning.py::def describe_linger_warning("
+		IMPL "tests/unit/system/test_describe_linger_warning.py::class"
+			+ "DescribeLingerWarningTest(unittest.TestCase):"
+		IMPL "tests/unit/commands/test_doctor.py::def"
+			+ "test_should_read_the_linger_of_the_user_when_the_probe_chooses_systemd(self):"
+		IMPL "tests/unit/commands/test_doctor.py::def"
+			+ "test_should_leave_the_exit_code_at_0_when_the_user_does_not_linger(self):"
 	SPEC "brigade scheduler install, having installed the systemd timer, carries in its document a"
 		+ "list warnings holding the same warning and prints it as one line of its text; empty for"
 		+ "another scheduler or on Linger=yes; exit 0 in every case"
+		IMPL "brigade/commands/scheduler_install.py::def _list_warnings("
+		IMPL "tests/unit/commands/test_scheduler_install.py::def"
+			+ "test_should_warn_that_the_user_does_not_linger_once_the_systemd_timer_is_installed(self):"
+		IMPL "tests/unit/commands/test_scheduler_install.py::def"
+			+ "test_should_carry_the_warning_of_the_linger_of_the_user(self):"
+		IMPL "tests/unit/commands/test_scheduler_install.py::def"
+			+ "test_should_print_each_warning_on_a_line_of_its_own(self):"
 	AFTER @TASK.B153
 	RATIONALE "without lingering, the user systemd instance stops with the last session of the"
 		+ "user, and the timer with it: the tick no longer fires once the user logs out; today"

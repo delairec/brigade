@@ -33,7 +33,8 @@ Below Python 3.11.4, brigade exits non-zero and names the version it needs and t
 
 `brigade doctor` (or `brigade doctor --json`) tells whether brigade can run on the machine: Python 3.11.4 or later, git,
 awawa 2.7 or later and the probe of the client adapter `config.toml` names are checked, a missing one is a finding and
-the exit code is 1; a user systemd instance, gh
+the exit code is 1; a user systemd instance, the linger of the user, read from `loginctl show-user -p Linger`
+where the scheduler is `systemd` as `scheduler install` chooses it, without which the timer stops at logout, gh
 and the account it is logged in as, awawa-web and the instructions corpus `config.toml` names, `awawa lint --strict`
 clean or not, are optional, each reported with its fallback, a missing one a warning; so is an installed
 `_schema.awawa` that differs from the shipped one: brigade supports no operational corpus of an older schema,
@@ -387,7 +388,9 @@ attempted, stand-downs included. Every mode prints text or, with `--json`, a JSO
 `scheduler install` installs what fires `brigade tick --once` every five minutes, chosen by the `scheduler` key of
 `config.toml`, else, without the key or without `config.toml`, by a probe: `systemd` where `systemctl --user
 is-system-running` answers `running` or `degraded`, `cron` otherwise. `systemd` writes `brigade.service` and
-`brigade.timer` in `$XDG_CONFIG_HOME/systemd/user/`, then reloads the user manager and enables the timer now; `cron`
+`brigade.timer` in `$XDG_CONFIG_HOME/systemd/user/`, then reloads the user manager and enables the timer now, and warns, in the `warnings` list of its document and one
+line of its text, when `loginctl show-user -p Linger` does not answer `Linger=yes`: without `loginctl enable-linger`
+the user manager stops with the last session, and the timer with it; the exit code stays 0; `cron`
 replaces the crontab line marked `# brigade scheduler install`, keeping every other line, appends the stderr of each
 tick to `$XDG_STATE_HOME/brigade/tick.log` and discards its stdout, the heartbeat keeping the last tick; `loop` installs
 nothing and names the `brigade tick --loop` command to keep running. The unit and the cron line run the brigade that
