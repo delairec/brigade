@@ -127,7 +127,7 @@ class AssembleVerifyContextTest(unittest.TestCase):
         self.assertEqual(document["task"], "B1")
         self.assertEqual(document["head"], HEAD)
 
-    def test_should_print_the_closure_of_the_task_under_its_command_line(self):
+    def test_should_print_the_closure_of_the_task_read_in_the_tree_of_the_head(self):
         # Arrange
         self.answers[("awawa", "lint", "--closure", "@TASK.B1", ".")] = ProcessAnswer(stdout="closure of B1\n")
 

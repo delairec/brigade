@@ -237,6 +237,7 @@ class MainOfACommandRenderedAsMarkdownTest(MainTestCase):
 
 class MainRefusalTest(MainTestCase):
     def test_should_refuse_a_misused_command_line_with_the_usage_error_naming_what_is_wrong(self):
+        # Arrange
         rows = [
             ([], r"^usage: brigade "),
             (["--frobnicate"], r"unrecognized arguments: --frobnicate\n$"),
