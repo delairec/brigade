@@ -163,6 +163,27 @@ class PlanRunOfAProcedureOnTheSlotOfARoleHoldingFewerCapabilitiesTest(PlanRunTes
         self.assertEqual(plan.capabilities, ("read", "shell"))
 
 
+class PlanRunOfASlotTheSlotClientsTableBindsTest(PlanRunTestCase):
+    def test_should_name_the_client_of_the_slot_over_the_client_key(self):
+        # Arrange
+        configuration = Configuration(
+            client="claude-code", clients={"codex": {"features": "step_count"}}, slot_clients={"build": "codex"}
+        )
+        no_project = None
+        setting = RunSetting(configuration, no_project, "codex")
+
+        # Act
+        plan = plan_run(
+            self.create_request(),
+            setting,
+            RunPlugins(client_adapter=fake, document=markdown),
+            create_test_runtime(self.paths),
+        )
+
+        # Assert
+        self.assertEqual(plan.client, "codex")
+
+
 class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
     def test_should_hold_the_budget_on_the_clock_in_a_disposable_worktree(self):
         # Arrange
