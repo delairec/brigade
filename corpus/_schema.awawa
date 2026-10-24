@@ -29,7 +29,7 @@ SCHEMA MILESTONE
 	DESC "a delivery the tasks are planned against"
 	FIELD TITLE string
 		REQUIRED
-	FIELD STATUS planned|reached
+	FIELD STATUS planned|active|reached
 		REQUIRED
 	WHEN STATUS reached
 		GATE error
