@@ -53,10 +53,15 @@ class MainTestCase(unittest.TestCase):
             exit_code = main(arguments, self.environment)
         return exit_code, stdout.getvalue(), stderr.getvalue()
 
-    def refuse(self, arguments: list[str]) -> int:
-        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
+    def refuse(self, arguments: list[str]) -> tuple[int, str, str]:
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with (
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+            self.assertRaises(SystemExit) as exit_,
+        ):
             main(arguments, self.environment)
-        return exit_.exception.code
+        return exit_.exception.code, stdout.getvalue(), stderr.getvalue()
 
     def ask_help(self, arguments: list[str]) -> tuple[int, str]:
         stdout = io.StringIO()
@@ -231,11 +236,32 @@ class MainOfACommandRenderedAsMarkdownTest(MainTestCase):
 
 
 class MainRefusalTest(MainTestCase):
-    def test_should_refuse_a_command_line_naming_no_command_or_an_unknown_argument(self):
-        for arguments in [[], ["--version", "--frobnicate"]]:
+    def test_should_refuse_a_misused_command_line_with_the_usage_error_naming_what_is_wrong(self):
+        rows = [
+            ([], r"^usage: brigade "),
+            (["--frobnicate"], r"unrecognized arguments: --frobnicate\n$"),
+            (["--version", "--frobnicate"], r"unrecognized arguments: --frobnicate\n$"),
+            (["--json"], r"\nbrigade: error: no option given\n$"),
+            (
+                ["runs"],
+                (
+                    r"^usage: brigade runs \[-h\] \[--json\] \[--verbose\] action \.\.\.\n"
+                    r"brigade runs: error: the following arguments are required: action\n$"
+                ),
+            ),
+            (
+                ["runs", "frobnicate"],
+                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?stop'?\)\n$",
+            ),
+            (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
+            (["runs", "show"], r"\nbrigade runs show: error: the following arguments are required: run\n$"),
+        ]
+        for arguments, expected_error in rows:
             with self.subTest(arguments=arguments):
                 # Act
-                exit_code = self.refuse(arguments)
+                exit_code, stdout, stderr = self.refuse(arguments)
 
                 # Assert
                 self.assertEqual(exit_code, 2)
+                self.assertEqual(stdout, "")
+                self.assertRegex(stderr, expected_error)
