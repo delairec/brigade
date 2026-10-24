@@ -159,3 +159,30 @@ class ReadInboxOfALineItCannotReadTest(ReadInboxTestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), f"{self.signals}:1: schema_version is 2, not one of 1")
+
+    def test_should_refuse_a_line_whose_ts_is_not_an_instant(self):
+        # Arrange
+        self.write_signals('{"schema_version": 1, "ts": "yesterday", "event": "dismissed", "fingerprint": "rt:1"}\n')
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_inbox(self.state_root, NOW)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"{self.signals}:1: ts 'yesterday' is not an ISO 8601 UTC instant")
+
+    def test_should_refuse_a_line_whose_ts_has_no_zone(self):
+        # Arrange
+        self.write_signals(
+            '{"schema_version": 1, "ts": "2026-10-24T08:00:00", "event": "recorded", "kind": "note",'
+            ' "project": null, "fingerprint": "rt:1", "evidence": {}}\n'
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_inbox(self.state_root, NOW)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception), f"{self.signals}:1: ts '2026-10-24T08:00:00' is not an ISO 8601 UTC instant"
+        )
