@@ -93,7 +93,7 @@ class HoldLockHeldByAnotherProcessTest(unittest.TestCase):
         # Assert
         self.assertEqual(stderr.lines, [f"brigade: waiting for the lock {self.lock_path}, held by pid 4242\n"])
 
-    def test_should_hold_the_lock_once_the_other_process_released_it(self):
+    def test_should_write_its_pid_over_the_one_of_the_holder_it_waited_for(self):
         # Arrange
         stderr = StderrReleasingTheHolderDouble(self.holder)
 
@@ -103,9 +103,23 @@ class HoldLockHeldByAnotherProcessTest(unittest.TestCase):
         # Assert
         self.assertEqual(content, f"{os.getpid()}\n")
 
+    def test_should_exclude_every_other_holder_once_the_other_process_released_it(self):
+        # Arrange
+        stderr = StderrReleasingTheHolderDouble(self.holder)
+
+        # Act
+        acquired_by_another = self.try_lock_inside_the_lock(stderr)
+
+        # Assert
+        self.assertFalse(acquired_by_another)
+
     def enter_the_lock(self, stderr: StderrReleasingTheHolderDouble) -> str:
         with contextlib.redirect_stderr(stderr), hold_lock(self.lock_path):
             return self.lock_path.read_text()
+
+    def try_lock_inside_the_lock(self, stderr: StderrReleasingTheHolderDouble) -> bool:
+        with contextlib.redirect_stderr(stderr), hold_lock(self.lock_path):
+            return try_lock(self.lock_path)
 
 
 class HoldLockLeftFreeTest(unittest.TestCase):
