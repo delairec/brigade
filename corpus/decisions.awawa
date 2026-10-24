@@ -3699,3 +3699,28 @@ DECISION TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
 		+ "occurrence as the ledger does"
 	SOURCE "the user's rulings of 2026-10-24 in the refinement of @TASK.B22"
 		REF @TASK.B22
+
+DECISION ConnectorsRunAtEachTickAndRecordAFactOnce
+	TITLE "a connector is a built-in collector the tick runs for every active project at each tick,"
+		+ "recording each fact the inbox does not hold yet, under a fingerprint naming the fact"
+		+ "itself"
+	STATUS active
+	DESC "a fact seen again at a later tick is not recorded again, so the count of a signal is its"
+		+ "real occurrences and not the number of ticks that saw it"
+	DESC "a review thread is fingerprinted rt:<thread id>, the forge's stable id; a failing check"
+		+ "run cr:<project>:<pull request or branch>:<check name>:<head SHA>, a failure on a new"
+		+ "head being a new fact"
+	DESC "binds @TASK.B23 and @TASK.B24"
+		REF @TASK.B23
+		REF @TASK.B24
+	REJECTED "the connectors as scans, studies with SLOT none and OUTPUT inbox: the scans arrive"
+		+ "with task B33 in M4, and M2 would wait on them"
+	REJECTED "a recording at each tick that sees the fact: the count would measure how long a fact"
+		+ "lived, not how often it happened"
+	REJECTED "rt:<pull request>:<path>:<line>, the Blueprint's example: two threads on one line"
+		+ "would be one signal"
+	RATIONALE "the inbox counts repetitions for the triage to see a pattern; a connector that polls"
+		+ "must not turn its own polling into repetitions"
+	SOURCE "the user's rulings of 2026-10-24 in the refinement of @TASK.B23 to @TASK.B26"
+		REF @TASK.B23
+		REF @TASK.B26

@@ -2248,62 +2248,113 @@ TASK B22
 
 TASK B23
 	TITLE "Connector: review threads"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
 	ROLE ada
-	DESC "delivered as the built-in collector pr-threads, run every tick and reused by studies and"
-		+ "recipes"
-	SPEC "unresolved review threads on open pull requests of registered projects become signals"
-		+ "every tick, read through the forge adapter, GraphQL reviewThreads on GitHub"
-	SPEC "the built-in collector pr-threads, under the contract of B47, prints through the forge"
-		+ "adapter the unresolved review threads of the open pull requests of the project, each"
-		+ "with its pull request, path, line, author login and comments; summary counts them per"
-		+ "pull request"
+	SPEC "the built-in collector pr-threads, under the contract of brigade collect, prints through"
+		+ "the forge adapter the unresolved review threads of the open pull requests of the"
+		+ "project, each with its thread id, pull request, path, line, author login and first"
+		+ "comment; summary counts them per pull request"
+	SPEC "each tick runs pr-threads for every active project and records each thread the inbox does"
+		+ "not hold yet as a signal of kind review_thread, fingerprint rt:<thread id>, evidence the"
+		+ "pull request, path, line, author and comment; a thread already held is not recorded"
+		+ "again"
+	SPEC "a forge error of the collector is recorded in the tick's outcome for the project and"
+		+ "stops neither the tick nor the other projects"
 	AFTER @TASK.B22
 	AFTER @TASK.B14
+	RATIONALE "a review comment left by the user on a pull request is the first signal the outer"
+		+ "loop of M2 turns into a constraint; the forge adapter already reads reviewThreads for"
+		+ "one pull request; the tick step, the single recording and the fingerprint are those of"
+		+ "@DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce"
+		REF @DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce
+	SOURCE "the Blueprint, plan section 9, sources phased; the user's rulings of 2026-10-24 in the"
+		+ "refinement of B23 to B26"
 
 TASK B24
 	TITLE "Connector: check runs"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
 	ROLE ada
-	DESC "delivered as the built-in collector check-runs, run every tick and reused by studies and"
-		+ "recipes"
-	SPEC "failing check runs on open pull requests and on main become signals carrying the first"
-		+ "failing step"
-	SPEC "the built-in collector check-runs, under the contract of B47, prints through the forge"
-		+ "adapter the failing check runs of the open pull requests and of PROJECT.MAIN, each with"
-		+ "its pull request or branch, name, conclusion and first failing step; summary counts them"
-		+ "per pull request"
+	SPEC "the built-in collector check-runs, under the contract of brigade collect, prints through"
+		+ "the forge adapter the failing check runs of the open pull requests and of the head of"
+		+ "PROJECT.MAIN, each with its pull request or branch, head SHA, name, conclusion, link and"
+		+ "first failing step; summary counts them per pull request"
+	SPEC "the first failing step is the name of the first step whose conclusion is failure in the"
+		+ "job the check run links to, read through the forge adapter; a check run with no job has"
+		+ "none"
+	SPEC "each tick runs check-runs for every active project and records each failing check run the"
+		+ "inbox does not hold yet as a signal of kind check_run, fingerprint cr:<project>:<pull"
+		+ "request or branch>:<check name>:<head SHA>, evidence the fields of the collector; a"
+		+ "check run already held is not recorded again"
+	SPEC "a forge error of the collector is recorded in the tick's outcome for the project and"
+		+ "stops neither the tick nor the other projects"
 	AFTER @TASK.B22
 	AFTER @TASK.B14
+	RATIONALE "a check failing on a new head is a new fact, and the family same check name of the"
+		+ "triage groups those facts; the forge adapter already reads the conclusion of each check"
+		+ "and the tail of a job log, not the steps of a job; the tick step, the single recording"
+		+ "and the fingerprint are those of @DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce"
+		REF @DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce
+	SOURCE "the Blueprint, plan section 9, sources phased; the user's rulings of 2026-10-24 in the"
+		+ "refinement of B23 to B26"
 
 TASK B25
 	TITLE "Built-in study triage"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "studies"
 	ROLE ada
-	SPEC "the collector inbox-families groups the signals deterministically, same rule cited, same"
-		+ "file, same check name, same correction marker, with their evidence"
-	SPEC "the triage slot writes PATTERN entities with evidence and an ACTION through study answer,"
-		+ "OUTPUT entity:PATTERN, which validates, writes, formats, lints and commits"
-	SPEC "brigade study run triage runs it on demand; the tick runs it daily by default"
+	SPEC "the built-in collector inbox-families prints the signals of status new that no PATTERN"
+		+ "cites in its EVIDENCE, grouped deterministically into families, same rule cited in the"
+		+ "evidence, same file, same check name, a signal in no family being a family of one; each"
+		+ "family carries its signals with their id, fingerprint and evidence"
+	SPEC "the built-in study triage runs inbox-families then one run of the triage slot, which"
+		+ "answers with PATTERN entities, each with its TITLE, an EVIDENCE per signal naming its"
+		+ "fingerprint, and an ACTION; OUTPUT entity:PATTERN validates, writes, formats, lints and"
+		+ "commits them to the operational corpus, STATUS new"
+	SPEC "brigade study run triage runs it on demand; the built-in study is due once a day by"
+		+ "default, so the tick runs it daily"
 	AFTER @TASK.B22
 	AFTER @TASK.B48
+	RATIONALE "the buffer groups thirty similar signals into one structural problem, and only the"
+		+ "triage needs a model; the family same correction marker of the Blueprint reads"
+		+ "transcripts, which @TASK.B35 brings in M5 and adds to the collector then; a signal cited"
+		+ "by a PATTERN is never proposed twice"
+		REF @TASK.B35
+	SOURCE "the Blueprint, plan section 9, signal shape and triage; the user's rulings of"
+		+ "2026-10-24 in the refinement of B23 to B26"
 
 TASK B26
 	TITLE "Ratification into a wave"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "triage"
 	ROLE ada
-	SPEC "inbox ratify <P> turns a pattern into a REQUEST on its target, or into a CONSTRAINT with"
-		+ "its request"
-	SPEC "the wave engine delivers it and the report lists the constraint with its reason"
+	SPEC "brigade inbox ratify <pattern> ratifies a PATTERN of STATUS new by its ACTION: wave"
+		+ "records a REQUEST on the project of its TARGET, TEXT its TITLE and evidence, FROM the"
+		+ "pattern; constraint records a CONSTRAINT, STATUS proposed, FROM the pattern, and the"
+		+ "REQUEST that delivers it; order records an ORDER of its RECIPE on the project of its"
+		+ "TARGET, STATUS active and no EVERY; the PATTERN goes ratified"
+	SPEC "brigade inbox dismiss <pattern> sets a PATTERN dismissed; ratifying or dismissing a"
+		+ "pattern dismisses every signal its EVIDENCE cites"
+	SPEC "a pattern that is not new, an ACTION missing, a TARGET naming no registered project or an"
+		+ "order with no RECIPE exits 1 naming it, and nothing is written"
+	SPEC "the wave report lists each task whose REQUEST comes FROM a pattern with its constraint"
+		+ "and its reason, and the PATTERN and its CONSTRAINT go delivered once the wave that"
+		+ "delivers the request is delivered"
 	AFTER @TASK.B25
+	RATIONALE "the user ratifies, the POC never auto-ratifies; a ratified wave or constraint"
+		+ "becomes a REQUEST, which the planner and the wave engine of M1 then deliver without the"
+		+ "user; a ratified order is recorded for the recipes to run once orders exist"
+	SOURCE "the Blueprint, plan section 9, signal shape and triage; the user's rulings of"
+		+ "2026-10-24 in the refinement of B23 to B26"
 
 TASK B27
 	TITLE "brigade serve and the JSON API"
