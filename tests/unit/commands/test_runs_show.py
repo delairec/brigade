@@ -213,6 +213,34 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
         )
 
 
+class PollOnceDouble:
+    def __init__(self):
+        self.intervals_s = []
+
+    def poll_until_signalled(self, poll, interval_s: float) -> bool:
+        self.intervals_s.append(interval_s)
+        poll()
+        return False
+
+
+class RunsShowFollowIntervalTest(unittest.TestCase):
+    def test_should_read_the_run_again_every_journal_poll_s_seconds_of_the_configuration(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_run(root / "state", create_run_record(FIRST_RUN, None, None), None)
+        polls = PollOnceDouble()
+        runtime = create_test_runtime(create_test_paths(root), poll_until_signalled=polls.poll_until_signalled)
+        runtime.paths.config_root.mkdir(parents=True)
+        runtime.paths.configuration_file.write_text("journal_poll_s = 3600\n", encoding="utf-8")
+
+        # Act
+        with contextlib.redirect_stdout(io.StringIO()):
+            COMMAND.run(Namespace(run=FIRST_RUN, log=False, follow=True), runtime)
+
+        # Assert
+        self.assertEqual(polls.intervals_s, [3600])
+
+
 class RunsShowOfAFinishedRunTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()

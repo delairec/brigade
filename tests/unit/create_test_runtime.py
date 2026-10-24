@@ -3,6 +3,7 @@ from pathlib import Path
 
 from brigade.runtime import Runtime
 from brigade.system.paths import Paths
+from brigade.system.poll_until_signalled import poll_until_signalled as poll_until_really_signalled
 from brigade.system.trail_writer import TrailWriter
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.refuse_to_run import refuse_to_run
@@ -30,6 +31,7 @@ def create_test_runtime(
     resolve_plugin=_refuse_to_resolve,
     now: datetime = FIXED_NOW,
     trail: TrailWriter | None = None,
+    poll_until_signalled=poll_until_really_signalled,
 ) -> Runtime:
     return Runtime(
         run_process=run_process,
@@ -41,4 +43,5 @@ def create_test_runtime(
         entry_point=Path("/srv/brigade/bin/brigade"),
         trail=TrailWriter(_keep_no_trace) if trail is None else trail,
         resolve_plugin=resolve_plugin,
+        poll_until_signalled=poll_until_signalled,
     )

@@ -1,4 +1,3 @@
-import contextlib
 import json
 import shutil
 import signal
@@ -21,7 +20,6 @@ ACTIONS_RECORDING = (
     ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
 )
 FOLLOW_WAIT_S = 30
-LONGER_THAN_THE_DEFAULT_POLL_S = 3
 BLANK_LINE = "\n"
 END_OF_OUTPUT = ""
 ANOTHER_START_TIME = 1
@@ -462,22 +460,6 @@ class BrigadeRunsShowOfARunningRunTest(RunsTestCase):
         self.assertEqual(document["journal"], [])
 
 
-class BrigadeRunJournalOfADetachedRunTest(RunsTestCase):
-    def test_should_gain_records_while_the_client_writes_its_lines(self):
-        # Arrange
-        self.configure_fake(COUNTING_CLIENT + 'operations = "actions"\ninterval = "1"\n', keys="journal_poll_s = 0.1\n")
-        self.record_lines("builder", ACTIONS_RECORDING)
-        run_id = self.run_deliver("--detach").stdout.strip()
-        self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
-
-        # Act
-        self.wait_for_line(self.runs / run_id / "journal.jsonl")
-
-        # Assert
-        finished_before_its_first_record = (self.runs / run_id / "result.json").exists()
-        self.assertFalse(finished_before_its_first_record)
-
-
 class RunsFollowTestCase(RunsTestCase):
     def start_follow(self, run_id: str) -> subprocess.Popen:
         follow = ProcessLauncher.start(
@@ -489,12 +471,6 @@ class RunsFollowTestCase(RunsTestCase):
         )
         self.addCleanup(follow.kill)
         return follow
-
-    def interrupt_after(self, follow: subprocess.Popen, delay_s: float) -> str:
-        with contextlib.suppress(subprocess.TimeoutExpired):
-            follow.wait(timeout=delay_s)
-        follow.send_signal(signal.SIGINT)
-        return follow.communicate(timeout=FOLLOW_WAIT_S)[0]
 
     def read_through_blank_line(self, follow: subprocess.Popen) -> None:
         while follow.stdout.readline() not in (BLANK_LINE, END_OF_OUTPUT):
@@ -533,21 +509,6 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n"
             r"\nstate      finished\noutcome    done\n$",
         )
-
-    def test_should_read_the_run_again_only_every_journal_poll_s_seconds(self):
-        # Arrange
-        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="journal_poll_s = 3600\n")
-        self.record("builder", DONE_RESULT)
-        run_id = self.run_deliver("--detach").stdout.strip()
-        follow = self.start_follow(run_id)
-        self.read_opening(follow)
-        self.release_the_run(run_id)
-
-        # Act
-        stdout = self.interrupt_after(follow, LONGER_THAN_THE_DEFAULT_POLL_S)
-
-        # Assert
-        self.assertEqual(stdout, "\nstate      running\noutcome    -\n")
 
     def test_should_exit_0_on_a_signal_and_leave_the_run_running(self):
         # Arrange

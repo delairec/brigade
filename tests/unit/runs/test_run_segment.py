@@ -269,6 +269,35 @@ class SpawnStoppingMidLineDouble:
         return ProcessEndingItsLineAfterAPollDouble(request.stdout)
 
 
+class ProcessReadingTheJournalAfterAPollDouble:
+    pid = 4242
+
+    def __init__(self, journal: Path):
+        self._journal = journal
+        self._answers = [self._keep_running, self._read_the_journal]
+        self.journal_while_running = None
+
+    def wait(self, timeout: float) -> int:
+        return self._answers.pop(0)(timeout)
+
+    def _keep_running(self, timeout: float) -> int:
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _read_the_journal(self, _timeout: float) -> int:
+        self.journal_while_running = _read_journal_records(self._journal)
+        return 0
+
+
+class SpawnReadingTheJournalWhileRunningDouble:
+    def __init__(self, journal: Path):
+        self.process = ProcessReadingTheJournalAfterAPollDouble(journal)
+
+    def spawn(self, request):
+        request.stdout.write_text("Reading the task\n", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return self.process
+
+
 class SpawnDouble:
     def __init__(self, output: str = "the client finished the task"):
         self.requests = []
@@ -696,6 +725,29 @@ class RunSegmentJournalTest(unittest.TestCase):
                     "segment": 1,
                     "kind": "raw",
                     "summary": "Writing the test",
+                    "cut": False,
+                },
+            ],
+        )
+
+    def test_should_journal_a_whole_line_while_the_client_is_still_running(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+        spawn = SpawnReadingTheJournalWhileRunningDouble(self.journal)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            spawn.process.journal_while_running,
+            [
+                {
+                    "schema_version": 1,
+                    "at": "2026-10-07T09:05:00Z",
+                    "segment": 1,
+                    "kind": "raw",
+                    "summary": "Reading the task",
                     "cut": False,
                 },
             ],

@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.system.paths import Paths, build_paths
+from brigade.system.poll_until_signalled import poll_until_signalled
 from brigade.system.process_trace import ProcessTrace
 from brigade.system.render_trace import render_trace
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
@@ -32,6 +33,7 @@ class Runtime:
     entry_point: Path
     trail: TrailWriter
     resolve_plugin: Callable[..., object]
+    poll_until_signalled: Callable[[Callable[[], bool], float], bool]
 
 
 def _report_nothing(trace: ProcessTrace) -> None:
@@ -59,4 +61,5 @@ def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Run
         entry_point=Path(sys.argv[0]).absolute(),
         trail=trail,
         resolve_plugin=functools.partial(resolve_plugin, sources=sources),
+        poll_until_signalled=poll_until_signalled,
     )
