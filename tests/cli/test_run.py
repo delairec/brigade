@@ -1,12 +1,12 @@
 import json
 import os
-import re
 import signal
 import sys
 from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
+from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
@@ -16,28 +16,6 @@ CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
 UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 1\n---\nAnswer at once.\n"
-
-
-class PatternMatcher:
-    def __init__(self, pattern: str):
-        self.pattern = pattern
-
-    def __eq__(self, text: object) -> bool:
-        return isinstance(text, str) and re.fullmatch(self.pattern, text) is not None
-
-    def __repr__(self) -> str:
-        return f"PatternMatcher({self.pattern!r})"
-
-
-class DurationUnderMatcher:
-    def __init__(self, limit_ms: int):
-        self.limit_ms = limit_ms
-
-    def __eq__(self, duration_ms: object) -> bool:
-        return isinstance(duration_ms, int) and 0 <= duration_ms < self.limit_ms
-
-    def __repr__(self) -> str:
-        return f"DurationUnderMatcher({self.limit_ms})"
 
 
 class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):

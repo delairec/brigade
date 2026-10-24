@@ -1,5 +1,4 @@
 import json
-import re
 import shutil
 import signal
 import tempfile
@@ -15,6 +14,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import RecordingProcessRunner
 from tests.unit.runs.create_run_plan import RUN_ID, create_run_plan
+from tests.value_matchers import PatternMatcher
 
 PID_HELD_BY_NO_PROCESS = 2**31 - 1
 LIMIT_ALREADY_REACHED_S = 0.0
@@ -43,11 +43,6 @@ LAUNCH = {
     "stdin": "the brief of the run",
     "session_id": None,
 }
-
-
-class GeneratedSessionIdMatcher:
-    def __eq__(self, session_id: object) -> bool:
-        return isinstance(session_id, str) and re.fullmatch(UUID_PATTERN, session_id) is not None
 
 
 class ClientAnsweringOutcomesDouble:
@@ -454,7 +449,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                         "budget": 40,
                     },
                     "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
-                    "session_id": GeneratedSessionIdMatcher(),
+                    "session_id": PatternMatcher(UUID_PATTERN),
                     "stop_at": "2026-10-19T09:23:00Z",
                     "reasoning_table": {},
                     "settings": {},
@@ -537,7 +532,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                         "budget": 40,
                     },
                     "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
-                    "session_id": GeneratedSessionIdMatcher(),
+                    "session_id": PatternMatcher(UUID_PATTERN),
                     "stop_at": "2026-10-19T09:23:00Z",
                     "reasoning_table": {},
                     "settings": {},
