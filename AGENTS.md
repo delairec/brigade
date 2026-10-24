@@ -45,16 +45,21 @@ which already has write access to this repository: there is nothing to request.
 
 ## Bootstrap
 
-Brigade delivers its own waves, one pull request per task: a wave launched by `/awawa-plan-wave-start` cuts one
-worktree per task from the base, `git worktree add .claude/worktrees/<id> -b <branch> origin/<base>`, and starts
-each task as a brigade run, never as an `Agent` call:
+From M2, brigade delivers its own milestones through its tick, as it does for any registered project: the timer
+fires `brigade tick --once` every five minutes, the tick starts a wave of the ratified tasks on
+`integration/<wave>`, merges each verified task pull request into that branch, and opens the integration pull
+request into `main`; the milestone is delivered when the user merges it. A session launches no wave and no task
+run by hand.
 
 ```
-brigade run awawa-task --slot build --project brigade --cwd .claude/worktrees/<id> --brief <file> --detach task=@TASK.X base=<base>
+brigade scheduler install                   # writes the timer; again after every change to the unit templates
+brigade wave show <wave>                    # the tasks of a wave, their state and their runs
+brigade wave requeue <wave> <task>          # a parked task queued again for the next tick
+brigade tick --dry-run                      # the snapshot and the plan the next tick would apply
 ```
 
-`--brief` carries what the session established; `brigade runs list` follows the runs.
-`awawa status TASK --where MILESTONE==@MILESTONE.F0 .` lists the tasks of a milestone.
+The tick runs from the main checkout through `bin/brigade`: a fix to brigade reaches the tick once `main` is pulled
+there. `awawa status TASK --where MILESTONE==@MILESTONE.M2 .` lists the tasks of a milestone.
 
 ## Commands
 
