@@ -75,6 +75,49 @@ class MainHelpTest(MainTestCase):
         self.assertRegex(page, r"\n    ledger +read the event journal")
 
 
+class MainGroupHelpTest(MainTestCase):
+    def assert_listed(self, page: str, action: str, expected_help: str) -> None:
+        self.assertIn(f" {action} {expected_help} ", " ".join(page.split()) + " ")
+
+    def test_should_list_each_action_with_the_help_its_record_declares(self):
+        # Arrange
+        rows = [
+            ("adapter", "actions", "answer actions, the request read on stdin"),
+            ("adapter", "launch-argv", "answer launch-argv, the request read on stdin"),
+            ("adapter", "matrix", "print the capabilities every client adapter declares"),
+            ("adapter", "parse-result", "answer parse-result, the request read on stdin"),
+            ("adapter", "probe", "answer probe, the request read on stdin"),
+            ("adapter", "resume-argv", "answer resume-argv, the request read on stdin"),
+            ("adapter", "transcripts", "answer transcripts, the request read on stdin"),
+            ("ledger", "budgets", "p50 and p90 steps per procedure over its last runs"),
+            ("ledger", "compare", "the runs before a day against the runs from that day on"),
+            ("project", "add", "register a git repository in the operational corpus"),
+            ("project", "list", "list every registered project"),
+            ("project", "pause", "pause a project"),
+            ("project", "resume", "resume a paused project"),
+            ("project", "show", "print the fields of a project"),
+            ("roles", "lint", "check the built-in and the machine role files"),
+            ("roles", "list", "list the role, the source and the model of each slot"),
+            ("roles", "show", "print the role file a slot resolves to"),
+            ("runs", "list", "list every run with its state and outcome"),
+            ("runs", "show", "print the summary of a run and its segments, and with --log its journal"),
+            ("scheduler", "install", "install the scheduler config.toml names, or the default"),
+            (
+                "scheduler",
+                "status",
+                "report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
+            ),
+        ]
+        for group, action, expected_help in rows:
+            with self.subTest(group=group, action=action):
+                # Act
+                exit_code, page = self.ask_help([group, "--help"])
+
+                # Assert
+                self.assertEqual(exit_code, 0)
+                self.assert_listed(page, action, expected_help)
+
+
 class MainVersionTest(MainTestCase):
     def test_should_print_the_version_as_a_line_of_text(self):
         # Act

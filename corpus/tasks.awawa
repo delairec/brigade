@@ -6155,7 +6155,11 @@ TASK B88
 TASK B89
 	TITLE "The help strings, the message of --since and the modes of brigade tick are guarded by"
 		+ "tests; an unknown tick mode is refused"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B206 makes false its SPEC that tests/cli/test_help.py reads"
+		+ "the help of each group; that help is asserted in-process by tests/unit/test_cli.py"
+		+ "MainGroupHelpTest, and tests/cli/test_help.py keeps the flow of brigade --help"
+		REF @TASK.B206
 	MILESTONE @MILESTONE.F0
 	COMPONENT "tests"
 	ROLE ada
@@ -8241,7 +8245,6 @@ TASK B129
 		IMPL "brigade/cli.py::parser = _create_parser(commands, parser_class)"
 		IMPL "tests/unit/test_add_command_parsers.py::class"
 			+ "AddCommandParsersOfAPassthroughRecordTest(unittest.TestCase):"
-	AFTER @TASK.B89
 	RATIONALE "brigade/cli.py:119-120 at 67812ad builds its parser from the records whose"
 		+ "render_passed_stderr is None, so the help of the passthrough record reaches no parser:"
 		+ "brigade corpus --help prints a usage without -- and no description, and only the help of"
