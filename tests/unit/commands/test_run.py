@@ -23,6 +23,8 @@ from tests.unit.create_test_paths import NO_SEARCH_PATH, create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.refuse_to_run import refuse_to_run
+from tests.unit.runs.write_run_record import write_run_record
+from tests.unit.runs.write_run_result import write_run_result
 
 UNKNOWN_CLIENT = "no-such-client"
 UNKNOWN_PROCEDURE = "no-such-procedure"
@@ -328,4 +330,62 @@ class RunAttachedTest(unittest.TestCase):
                 "segments": 1,
                 "outcome": "done",
             },
+        )
+
+
+class RunAttachedBoundingTheRunsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text(
+            f"runs_kept = 1\n{CLIENT_AND_DOCUMENT_CONFIGURATION}", encoding="utf-8"
+        )
+        self.runs = self.root / "state" / "runs"
+
+    def run_attached(self) -> dict:
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(self.root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            spawn_process=_spawn_a_client_that_exits,
+            resolve_plugin=_resolve_the_delivering_client,
+        )
+        return run(request, runtime)
+
+    def test_should_remove_the_oldest_finished_run_beyond_the_runs_kept_of_the_configuration(self):
+        # Arrange
+        write_run_result(self.runs / "20261018T090000Z-0ld001" / "result.json")
+        write_run_record(self.runs / "20261018T090000Z-0ld001")
+
+        # Act
+        self.run_attached()
+
+        # Assert
+        self.assertEqual(list(self.runs.iterdir()), [self.runs / "20261019T090000Z-a1b2c3"])
+
+    def test_should_warn_of_an_unreadable_run_it_skipped(self):
+        # Arrange
+        (self.runs / "20261018T090000Z-unread").mkdir(parents=True)
+        (self.runs / "20261018T090000Z-unread" / "run.json").write_text("not json", encoding="utf-8")
+
+        unreadable_record = self.runs / "20261018T090000Z-unread" / "run.json"
+
+        # Act
+        document = self.run_attached()
+
+        # Assert
+        self.assertEqual(
+            document["warnings"],
+            [f"run 20261018T090000Z-unread skipped, {unreadable_record} is not a run record: not a JSON document"],
         )

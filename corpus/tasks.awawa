@@ -3081,7 +3081,6 @@ TASK B48
 	AFTER @TASK.B43
 	AFTER @TASK.B47
 	AFTER @TASK.B106
-	AFTER @TASK.B60
 	RATIONALE "the answer is designed as an entity from the start, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
 		+ "sets: no code of the studies exists yet, and SCHEMA STUDY of"
@@ -3592,7 +3591,11 @@ TASK B57
 TASK B60
 	TITLE "retention of runs/: after each result written, the runs beyond runs_kept that nothing"
 		+ "will resume are removed, and brigade runs prune removes them on demand"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B206 makes false its SPEC that tests/cli prove the removal"
+		+ "beyond the bound, the runs kept, the bound of config.toml and each option of brigade"
+		+ "runs prune; they are proven in tests/unit/runs/test_prune_runs.py and"
+		+ "tests/unit/commands/test_run.py, and tests/cli keeps one flow of brigade runs prune"
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
 	ROLE ada
