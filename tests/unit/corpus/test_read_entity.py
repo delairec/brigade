@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from brigade.corpus.read_entity import read_entity
+from brigade.corpus.read_entity import EntityField, read_entity
 from brigade.errors import EntityNotDefined, ToolFailure
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
@@ -60,3 +60,19 @@ class ReadEntityOfAnAwawaTimedOutTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception), "awawa show @AGENT.planner --json /srv/instructions timed out after 30 s"
         )
+
+
+class ReadEntityOfAFieldHoldingABackslashAwawaKeepsTest(unittest.TestCase):
+    def test_should_keep_the_backslash_in_the_value(self):
+        # Arrange
+        def show(request: ProcessRequest) -> ProcessRecord:
+            stdout = '{"fields": [{"name": "WORK", "atoms": ["\\"grep \\\\.py\\""]}]}'
+            return ProcessRecord(
+                argv=request.argv, cwd=request.cwd, exit_code=0, stdout=stdout, stderr="", duration_ms=1
+            )
+
+        # Act
+        entity = read_entity(show, INSTRUCTIONS, "AGENT", "planner")
+
+        # Assert
+        self.assertEqual(entity.fields, (EntityField(name="WORK", value=r"grep \.py"),))

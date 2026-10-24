@@ -1,9 +1,9 @@
-import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.collect_anchors import collect_anchors
+from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.verify.judge_findings import judge_findings
@@ -23,7 +23,7 @@ class PromotionFacts:
 
 def _read_atom(field: dict) -> str:
     atom = field["atoms"][0]
-    return json.loads(atom) if atom.startswith('"') else atom
+    return decode_atom(atom)
 
 
 def _read_value(fields: list, name: str) -> str | None:

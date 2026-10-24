@@ -1,6 +1,6 @@
-import json
 from dataclasses import dataclass
 
+from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.quote_awawa_string import quote_awawa_string
 
 ANSWER_TYPE = "REPORT"
@@ -35,7 +35,7 @@ def _read_last_states(events: list[dict]) -> dict[str, str]:
 
 
 def _read_text(field: dict) -> str:
-    return "".join(json.loads(atom) for atom in field["atoms"])
+    return "".join(map(decode_atom, field["atoms"]))
 
 
 def _read_predecessors(task: dict) -> list[str]:

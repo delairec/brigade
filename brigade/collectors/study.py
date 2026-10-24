@@ -3,6 +3,7 @@ import json
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.describe_collection import describe_collection
 from brigade.collecting.read_collector_environment import read_collector_environment
+from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.run_awawa import run_awawa
 from brigade.errors import BrigadeError
 from brigade.ledger.order_done import OrderDone
@@ -36,10 +37,7 @@ def _read_answer(runtime: Runtime, study: str, run_id: str) -> dict:
     shown = json.loads(
         run_awawa(runtime.run_process, path.parent, ("show", f"@{answer_type}.{name}", "--json", str(path))).stdout
     )
-    fields = [
-        {"name": field["name"], "value": "".join(json.loads(atom) for atom in field["atoms"])}
-        for field in shown["fields"]
-    ]
+    fields = [{"name": field["name"], "value": "".join(map(decode_atom, field["atoms"]))} for field in shown["fields"]]
     return {"type": answer_type, "name": name, "fields": fields}
 
 

@@ -1,8 +1,8 @@
 import argparse
-import json
 from pathlib import Path
 
 from brigade.corpus.collect_anchors import collect_anchors
+from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.corpus.read_entity import Entity
@@ -48,7 +48,7 @@ def _list_task_paths(task: dict) -> list[str]:
         token.rstrip(TRAILING_PUNCTUATION)
         for field in task["fields"]
         if field["name"] == SPEC_FIELD
-        for token in "".join(json.loads(atom) for atom in field["atoms"]).split()
+        for token in "".join(map(decode_atom, field["atoms"])).split()
     ]
     return [*anchored, *named]
 

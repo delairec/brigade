@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.format_and_lint_file import format_and_lint_file
 from brigade.corpus.run_awawa import run_awawa
 from brigade.runtime import Runtime
@@ -15,7 +16,7 @@ SCHEMA_VERSION = 1
 
 
 def _read_schema_types(schema: str) -> list[tuple[str, str]]:
-    return [(name, json.loads(description)) for name, description in SCHEMA_TYPE_PATTERN.findall(schema)]
+    return [(name, decode_atom(description)) for name, description in SCHEMA_TYPE_PATTERN.findall(schema)]
 
 
 def _run_awawa(runtime: Runtime, path: Path, arguments: tuple[str, ...]) -> str:
@@ -47,10 +48,7 @@ def _describe_lint_failure(path: Path, output: str) -> str:
 def _read_entity(runtime: Runtime, path: Path, entity: dict) -> dict:
     target = f"@{entity['type']}.{entity['name']}"
     shown = json.loads(_run_awawa(runtime, path, ("show", target, "--json", str(path))))
-    fields = [
-        {"name": field["name"], "value": "".join(json.loads(atom) for atom in field["atoms"])}
-        for field in shown["fields"]
-    ]
+    fields = [{"name": field["name"], "value": "".join(map(decode_atom, field["atoms"]))} for field in shown["fields"]]
     return {"type": entity["type"], "name": entity["name"], "fields": fields}
 
 

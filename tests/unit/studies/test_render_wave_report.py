@@ -37,7 +37,7 @@ TASKS = [
         "name": "B17",
         "fields": [
             {"name": "STATUS", "atoms": ["implemented"]},
-            {"name": "SPEC", "atoms": ['"the tick merges "', '"a verified task"']},
+            {"name": "SPEC", "atoms": ['"the tick merges "', r'"a verified task, grep a\.b"']},
         ],
     },
     {
@@ -89,7 +89,7 @@ class RenderWaveReportTest(unittest.TestCase):
             '\tSTATISTIC "insertions 13"\n'
             '\tSTATISTIC "deletions 1"\n'
             '\tGRAPH "B21 after B17"\n'
-            '\tMANUAL_TEST "B17: the tick merges a verified task"\n'
+            '\tMANUAL_TEST "B17: the tick merges a verified task, grep a\\\\.b"\n'
             '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n'
             '\tPARKED_QUESTION "B21 blocked by @OPEN_QUESTION.Q4"\n',
         )

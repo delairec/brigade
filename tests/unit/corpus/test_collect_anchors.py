@@ -21,3 +21,13 @@ class CollectAnchorsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(anchors, ["brigade/cli.py::main", "brigade/runtime.py::build_runtime"])
+
+    def test_should_keep_in_an_anchor_the_backslash_awawa_keeps(self):
+        # Arrange
+        fields = [{"name": "IMPL", "atoms": ['"tests/unit/test_x.py::grep a\\.b"'], "fields": []}]
+
+        # Act
+        anchors = collect_anchors(fields)
+
+        # Assert
+        self.assertEqual(anchors, ["tests/unit/test_x.py::grep a\\.b"])
