@@ -190,6 +190,20 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
         self.assertEqual(plan.first_segment, 2)
         self.assertEqual(plan.resumed_session, "s1")
 
+    def test_should_resume_after_its_last_segment_in_a_session_of_its_own_when_the_client_cannot_resume(self):
+        # Arrange
+        write_run_result(
+            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json", "failed", session="s1"
+        )
+        client_without_operations = {}
+
+        # Act
+        plan = self.plan(self.create_request(run_id=RUN_ID, resume=True), client_without_operations)
+
+        # Assert
+        self.assertEqual(plan.first_segment, 2)
+        self.assertIsNone(plan.resumed_session)
+
 
 class PlanRunOfARegisteredProjectTest(PlanRunTestCase):
     def create_policies(self) -> RecordingProcessRunner:

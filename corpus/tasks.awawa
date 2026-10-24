@@ -1889,7 +1889,13 @@ TASK B18
 
 TASK B19
 	TITLE "Wave pause and resume: quota and forge account"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B206 makes false its SPEC that tests/cli prove the pause on"
+		+ "a rate limit, the resume by resume-argv and by a fresh launch and the pause on"
+		+ "forge_account.unavailable; they are proven in tests/unit/commands/test_tick.py,"
+		+ "tests/unit/tick/test_build_snapshot_from_the_corpus.py,"
+		+ "tests/unit/runs/test_run_segments.py and tests/unit/runs/test_plan_run.py, and tests/cli"
+		+ "keeps one flow of brigade wave resume"
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "runs"
@@ -1905,14 +1911,14 @@ TASK B19
 			+ "None:"
 		IMPL "brigade/tick/build_snapshot.py::def _read_rate_limits(reading: WaveReading, now:"
 			+ "datetime)"
-		IMPL "tests/cli/test_wave_pause.py::class"
-			+ "BrigadeTickPausingOnARateLimitOfARunOutsideAWaveTest"
+		IMPL "tests/unit/tick/test_plan.py::def"
+			+ "test_should_pause_every_running_wave_on_a_rate_limit_of_a_run_of_no_task(self):"
 		IMPL "brigade/tick/decide_resume_at.py::WAIT_WITHOUT_RESET = timedelta(minutes=30)"
 		IMPL "brigade/tick/build_snapshot.py::def _read_rate_limit("
-		IMPL "tests/cli/test_wave_pause.py::class"
-			+ "BrigadeTickPausingOnARateLimitTest(RateLimitedRunTestCase):"
-		IMPL "tests/cli/test_wave_pause.py::class"
-			+ "BrigadeTickPausingOnARateLimitWithoutResetTest(RateLimitedRunTestCase):"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_pause_the_wave_until_the_hour_the_quota_resets(self):"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_pause_the_wave_of_a_task_whose_run_hit_the_quota(self):"
 	SPEC "the first tick after resume_at resumes each run a rate limit stopped as a next segment of"
 		+ "the same run, through resume-argv with the session id of its last segment, or as a fresh"
 		+ "launch from its progress file when the client adapter declares no resume; it records"
@@ -1921,10 +1927,10 @@ TASK B19
 		IMPL "brigade/commands/tick.py::def _resume_task_run(runtime: Runtime, action:"
 			+ "ResumeTaskRun) -> None:"
 		IMPL "brigade/runs/run_segment.py::def _describe_launch("
-		IMPL "tests/cli/test_wave_pause.py::class"
-			+ "BrigadeTickResumingThroughResumeArgvTest(RateLimitedRunTestCase):"
-		IMPL "tests/cli/test_wave_pause.py::class"
-			+ "BrigadeTickResumingThroughAFreshLaunchTest(RateLimitedRunTestCase):"
+		IMPL "tests/unit/runs/test_run_segments.py::class"
+			+ "RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):"
+		IMPL "tests/unit/runs/test_plan_run.py::def"
+			+ "test_should_resume_after_its_last_segment_in_a_session_of_its_own_when_the_client_cannot_resume(self):"
 	SPEC "the ledger events wave.paused and wave.resumed, declared today with the field wave alone,"
 		+ "gain reason, quota or forge_account, and wave.paused gains resume_at, null under"
 		+ "forge_account; a wave is paused while its last wave.paused has no wave.resumed after it"
@@ -1937,15 +1943,14 @@ TASK B19
 		+ "paused on forge_account; a wave not paused exits 1 naming its state"
 		IMPL "brigade/tick/build_snapshot.py::def _is_forge_account_unavailable("
 		IMPL "brigade/commands/wave_resume.py::def wave_resume("
-		IMPL "tests/cli/test_wave_pause.py::class"
-			+ "BrigadeTickPausingOnAnUnavailableForgeAccountTest(LaunchingTickTestCase):"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_pause_the_wave_on_an_unavailable_forge_account_and_launch_none_of_its_tasks(self):"
 		IMPL "tests/cli/test_wave_pause.py::class BrigadeWaveResumeTest(WaveTickTestCase):"
-		IMPL "tests/cli/test_wave_pause.py::class"
-			+ "BrigadeTickOnAWaveStartedAfterTheForgeAccountBecameUnavailableTest"
+		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::class"
+			+ "BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(BuildSnapshotTestCase):"
 	SPEC "tests/cli proves the pause on a rate limit with and without reset, the resume at"
 		+ "resume_at by resume-argv and by a fresh launch, the pause on forge_account.unavailable"
 		+ "and brigade wave resume with and without a wave, through the fake adapter"
-		IMPL "tests/cli/test_wave_pause.py::class RateLimitedRunTestCase(LaunchingTickTestCase):"
 		IMPL "brigade/adapters/test_clients/fake.py::RESUME_OPERATION = \"resume\""
 	DELIVERED_BY 156
 	AFTER @TASK.B14
@@ -2114,7 +2119,6 @@ TASK B21
 	AFTER @TASK.B142
 	AFTER @TASK.B18
 	AFTER @TASK.B143
-	AFTER @TASK.B19
 	AFTER @TASK.B20
 	AFTER @TASK.B71
 	AFTER @TASK.B141
@@ -9030,7 +9034,6 @@ TASK B144
 		+ "the fallback, and the ledger records the switch with the client and model left and taken"
 	SPEC "without a fallback configured, the run ends as @TASK.B19 sets"
 		REF @TASK.B19
-	AFTER @TASK.B19
 	SOURCE "the user's ruling of 2026-10-12 in the refinement of B19: \"toutes les vagues, mais je"
 		+ "pense qu'on doit prévoir un client fallback configurable (qui sera implémenté plus tard"
 		+ "en ADD0)\""
@@ -10651,7 +10654,6 @@ TASK B170
 			+ "SchedulerStatusOfTheMachineTest(unittest.TestCase):"
 		IMPL "tests/unit/system/test_read_tick_stale_after.py::class"
 			+ "ReadTickStaleAfterTest(unittest.TestCase):"
-	AFTER @TASK.B19
 	AFTER @TASK.B187
 	RATIONALE "the tick runs every five minutes, OnCalendar=*:0/5 and */5; 15 minutes, three"
 		+ "intervals, leaves one missed or slow tick unreported; the waves are read by the name of"

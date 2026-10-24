@@ -18,6 +18,11 @@ from tests.unit.runs.create_run_plan import RUN_ID, create_run_plan
 
 PID_HELD_BY_NO_PROCESS = 2**31 - 1
 LIMIT_ALREADY_REACHED_S = 0.0
+LAUNCH_OPERATIONS = ("launch-argv", "resume-argv")
+RATE_LIMITED_SESSION = "rate-limited-session"
+NO_SESSION_TO_RESUME = None
+TASK_BRIEF = "Deliver S3 behind the feature flag of the shop.\n"
+PROGRESS_OF_THE_FIRST_SEGMENT = "- the first segment is done\n"
 LAUNCH = {
     "schema_version": 1,
     "argv": ["double-client", "--print"],
@@ -131,6 +136,60 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
         self.assertEqual(records[0].outcome, "handed_over")
         self.assertEqual(records[1].number, 2)
         self.assertEqual(records[1].outcome, "done")
+
+
+class ClientRecordingLaunchesDouble(ClientAnsweringOutcomesDouble):
+    def __init__(self, outcomes: list[str]):
+        super().__init__(outcomes)
+        self.launches = []
+
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation in LAUNCH_OPERATIONS:
+            self.launches.append(request)
+            return LAUNCH
+        return super().answer(operation, request)
+
+
+class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
+    def create_resumed_plan(self, client: ClientRecordingLaunchesDouble, resumed_session: str | None):
+        plan = create_run_plan(
+            self.root,
+            client_adapter=client,
+            first_segment=2,
+            resumed_session=resumed_session,
+            handovers=2,
+            brief=TASK_BRIEF,
+        )
+        plan.run_directory.mkdir(parents=True)
+        ask_progress(plan, "create_document", self.runtime)
+        plan.progress_file.write_text(PROGRESS_OF_THE_FIRST_SEGMENT)
+        return plan
+
+    def test_should_resume_its_first_segment_in_the_session_it_left_and_the_next_in_one_of_its_own(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["handed_over", "done"])
+        plan = self.create_resumed_plan(client, RATE_LIMITED_SESSION)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(client.launches[0]["session_id"], "rate-limited-session")
+        self.assertNotEqual(client.launches[1]["session_id"], "rate-limited-session")
+
+    def test_should_relaunch_a_run_without_its_session_on_a_brief_opening_on_its_progress(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["done"])
+        plan = self.create_resumed_plan(client, NO_SESSION_TO_RESUME)
+
+        # Act
+        records = run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(records[0].number, 2)
+        self.assertEqual(records[0].outcome, "done")
+        self.assertRegex(client.launches[0]["brief"], r"^# Progress so far\n\n- the first segment is done\n")
+        self.assertIn("# Brief\n\nDeliver S3 behind the feature flag of the shop.\n", client.launches[0]["brief"])
 
 
 class ProcessCutAtTheLimitDouble:

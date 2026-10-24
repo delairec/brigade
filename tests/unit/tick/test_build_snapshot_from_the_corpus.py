@@ -18,6 +18,7 @@ from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
+from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
@@ -451,6 +452,36 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             (StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),),
         )
 
+    def test_should_carry_no_rate_limit_whose_reset_has_passed(self):
+        # Arrange
+        self.record(120, create_run_finished("r9", outcome="failed", error_class="rate_limit"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
+
+    def test_should_note_no_rate_limit_on_a_merged_task_whose_last_run_hit_one(self):
+        # Arrange
+        self.record(3, create_run_finished("r3", wave="w1", task="B3", outcome="failed", error_class="rate_limit"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[2], TaskFacts(name="B3"))
+
+    def test_should_clear_the_unavailable_forge_account_of_a_wave_resumed_from_it(self):
+        # Arrange
+        self.record(10, WaveResumed(wave="w1", reason="forge_account"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].forge_account_unavailable, False)
+
     def test_should_skip_a_wave_or_a_project_whose_tree_cannot_be_read(self):
         # Act
         _, stderr = self.build()
@@ -483,6 +514,20 @@ def create_verdict(task: str, head: str, verdict: str) -> TaskVerdict:
 
 def create_preflight(task: str) -> TaskPreflighted:
     return TaskPreflighted(project="shop", wave="w1", task=task, pr=7, head="4f2a9c1", checks=())
+
+
+class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(BuildSnapshotTestCase):
+    def test_should_mark_the_forge_account_of_the_wave_unavailable(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(90, ForgeAccountUnavailable(login="octo-builder", key="build"))
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].forge_account_unavailable, True)
 
 
 class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
