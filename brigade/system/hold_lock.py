@@ -23,7 +23,6 @@ def _wait_for_the_holder(lock_file: TextIO, path: Path) -> None:
     except BlockingIOError:
         holder = path.read_text(encoding="utf-8").strip()
         sys.stderr.write(f"brigade: waiting for the lock {path}, held by pid {holder}\n")
-        sys.stderr.flush()
         fcntl.flock(lock_file, fcntl.LOCK_EX)
 
 
