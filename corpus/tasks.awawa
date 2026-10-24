@@ -12157,7 +12157,8 @@ TASK B206
 TASK B207
 	TITLE "no function of a test module projects the output it asserts on: helper methods and"
 		+ "module functions hand the value whole, as the test methods do since B153"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 196
 	TYPE test
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tests"
@@ -12168,6 +12169,8 @@ TASK B207
 		+ "reader of produced output, read_events, read_run_records or list_kept_runs among them,"
 		+ "returns the value whole and the test compares it whole, the rules test_static_data SPEC"
 		+ "2 and assertion_matcher_on_value SPEC 2 of the instructions corpus"
+		IMPL "tests/cli/test_study.py::return list(map(json.loads, month.read_text().splitlines()))"
+		IMPL "tests/unit/runs/test_record_run_pid.py::listings.append(list_runs(state_root))"
 	SPEC "an arrangement writes the input of a test as literals: setUp, _create_runtime,"
 		+ "write_trail and register among them hold no comprehension, the rule test_static_data"
 		+ "SPEC 1; only a method of a class whose name carries the Double suffix, a double"
@@ -12175,15 +12178,28 @@ TASK B207
 		+ "module function answering as a double, answer_entities, describe_task and"
 		+ "answer_no_incoming_refs of tests/unit/tick/test_build_snapshot_from_the_corpus.py among"
 		+ "them, becomes a method of such a class"
+		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::class"
+			+ "AwawaAnswerWriterDouble:"
+		IMPL "tests/unit/commands/test_tick.py::class CheckLogsReaderDouble:"
+		IMPL "tests/unit/registry/test_read_policy_field.py::def _create_policy(name: str, *fields:"
+			+ "EntityField) -> Entity:"
 	SPEC "a guard of tests/guards, widening tests/guards/find_projections.py from the test methods"
 		+ "to every function of a test module, refuses a comprehension or the comparison of a"
 		+ "sorted value in any function outside a class carrying the Double suffix, and lets the"
 		+ "method of such a class pass; its test proves both on modules written for it"
+		IMPL "tests/guards/find_projections.py::def _inspect_node(node: ast.AST, function: str |"
+			+ "None) -> list[Finding]:"
+		IMPL "tests/guards/test_projections.py::def"
+			+ "test_should_flag_every_comprehension_of_a_function_outside_a_double(self):"
+		IMPL "tests/guards/test_projections.py::def"
+			+ "test_should_let_a_comprehension_of_a_double_or_of_a_module_constant_pass(self):"
 	SPEC "the ast.walk over the tests/**/test_*.py of fc08b5c and of 675b27b, guards left out,"
 		+ "finds 10 module functions and 38 helper methods of TestCases in 27 files holding a"
 		+ "comprehension, 28 of the methods in tests/cli; each is rewritten to hand the value whole"
 		+ "or to write its input as literals, or is a method of a double the guard lets pass,"
 		+ "tests/unit/tick/test_run_rounds.py:46 ExecutorFailingOnDouble.apply among them"
+		IMPL "tests/guards/test_projections.py::def"
+			+ "test_should_find_no_projection_in_the_tests(self):"
 	RATIONALE "the module functions of fc08b5c: tests/cli/test_trails.py:17 read_trail,"
 		+ "tests/unit/commands/test_tick.py:441 create_forge, ledger/test_append_event.py:33"
 		+ "append_from_concurrent_writers, ledger/test_describe_budgets.py:10 create_reading,"

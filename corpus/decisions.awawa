@@ -3646,3 +3646,26 @@ DECISION ARehearsalReplaysItsWaveOnceForTheTestsThatReadIt
 		+ "no test"
 	SOURCE "taken in the delivery of @TASK.B206, pull request 194"
 		REF @TASK.B206
+
+DECISION AReaderOfATestDecodesEveryLineWholeAndFiltersNone
+	TITLE "a function of a test module that reads a JSON Lines output decodes every line whole,"
+		+ "list(map(json.loads, lines)), and neither filters, picks nor sorts what it decoded"
+	STATUS active
+	DESC "the test compares the whole decoded list against literals; an arranged event the file"
+		+ "already held is written again as a literal of the expected value"
+	DESC "a test that must read every file of a directory joins them whole the same way,"
+		+ "map(Path.read_bytes, ...), and asserts on the joined text"
+	DESC "binds @TASK.B207"
+		REF @TASK.B207
+	REJECTED "a comprehension decoding the lines: tests/guards/find_projections.py cannot tell it"
+		+ "from a projection, and an exception for it would need a list of names"
+	REJECTED "the production readers, read_ledger or read_trail_records: the test of a writer would"
+		+ "then rest on a reader that has its own tests, and compare its types instead of the file"
+		+ "the writer wrote"
+	REJECTED "a decoding helper in a support module outside the test modules: the move the review"
+		+ "of pull request 192 refused, the projection kept out of the guard's sight"
+	RATIONALE "decoding hands each record whole: the projection the rules"
+		+ "assertion_matcher_on_value SPEC 2 and test_static_data SPEC 2 of the instructions corpus"
+		+ "refuse is the filter by event, the picked field and the sort, which the readers lost"
+	SOURCE "taken in the delivery of @TASK.B207, pull request 196"
+		REF @TASK.B207
