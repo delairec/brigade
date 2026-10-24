@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -130,6 +131,16 @@ class RunStudyTest(RunStudyTestCase):
             ),
         )
 
+    def test_should_write_the_result_of_each_step_under_the_run_directory(self):
+        # Act
+        run_study(self.runtime, SCAN, self.equipment, RUN_ID)
+
+        # Assert
+        self.assertEqual(
+            sorted(os.listdir(self.root / "state" / "runs" / RUN_ID / "steps")),
+            ["collect.json", "judge.json", "output.json"],
+        )
+
     def test_should_resume_a_run_past_the_steps_it_completed(self):
         # Arrange
         steps = self.root / "state" / "runs" / RUN_ID / "steps"
@@ -228,6 +239,25 @@ class RunStudyParkingTest(RunStudyTestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), f"@STUDY.trees is running in run {RUN_ID}")
+
+    def test_should_start_no_run_of_a_study_whose_run_is_alive(self):
+        # Arrange
+        self.create_live_run(RUN_ID, "trees")
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            run_study(self.runtime, SCAN, self.equipment, None)
+
+        # Assert
+        self.assertEqual(read_ledger(self.root / "state").entries, ())
+
+    def test_should_start_no_run_of_a_study_whose_output_is_the_inbox(self):
+        # Act
+        with self.assertRaises(BrigadeError):
+            run_study(self.runtime, SCAN_INTO_THE_INBOX, self.equipment, None)
+
+        # Assert
+        self.assertEqual(read_ledger(self.root / "state").entries, ())
 
     def test_should_refuse_a_study_whose_output_is_the_inbox(self):
         # Act
