@@ -132,6 +132,7 @@ class CreateRunDirectoryOverAnEntryItCannotWriteTest(CreateRunDirectoryTestCase)
         self.assertEqual(str(refusal.exception), f"cannot write {plan.run_directory}: File exists")
 
     def test_should_name_the_file_of_the_run_it_cannot_write(self):
+        # Arrange
         rows = ["pid", "role.md", "progress.md"]
         for entry in rows:
             with self.subTest(entry=entry):

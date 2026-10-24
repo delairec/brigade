@@ -1,7 +1,12 @@
 import argparse
+import contextlib
 import functools
+import io
+import itertools
 import json
 import os
+import signal
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -9,10 +14,12 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.adapters.documents import markdown
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.run import COMMAND, run
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, ToolFailure
 from brigade.runtime import Runtime
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
+from brigade.system.run_process import ProcessRequest
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
@@ -470,3 +477,138 @@ class RunAttachedBoundingTheRunsTest(unittest.TestCase):
             document["warnings"],
             [f"run 20261018T090000Z-unread skipped, {unreadable_record} is not a run record: not a JSON document"],
         )
+
+
+PID_HELD_BY_NO_PROCESS = 2**31 - 1
+
+
+class ClientInterruptedWhileItRunsDouble:
+    pid = PID_HELD_BY_NO_PROCESS
+
+    def __init__(self):
+        self._answers = itertools.chain([self._interrupt_brigade], itertools.repeat(self._end_stopped))
+
+    def wait(self, timeout: float) -> int:
+        return next(self._answers)(timeout)
+
+    def _interrupt_brigade(self, timeout: float) -> int:
+        os.kill(os.getpid(), signal.SIGINT)
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _end_stopped(self, _timeout: float) -> int:
+        return -signal.SIGTERM
+
+
+def _spawn_a_client_interrupted_while_it_runs(request):
+    request.stdout.write_text("Reading the task\n", encoding="utf-8")
+    request.stderr.write_text("", encoding="utf-8")
+    return ClientInterruptedWhileItRunsDouble()
+
+
+class RunAttachedInterruptedTest(unittest.TestCase):
+    def test_should_stop_the_client_and_report_the_run_stopped(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=_spawn_a_client_interrupted_while_it_runs,
+            resolve_plugin=_resolve_the_delivering_client,
+        )
+
+        # Act
+        document = run(request, runtime)
+
+        # Assert
+        self.assertEqual(document["outcome"], "stopped")
+
+
+def _fail_awawa(request: ProcessRequest):
+    raise ToolFailure("awawa show @AGENT.reviewer --json /srv/instructions exited 2: awawa: unreadable root")
+
+
+class RunOfASlotBoundInAnUnreadableInstructionsCorpusTest(unittest.TestCase):
+    def test_should_refuse_the_run_before_launching_any_client(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(
+            f'{CLIENT_AND_DOCUMENT_CONFIGURATION}instructions = "/srv/instructions"\n[slots]\nbuild = "reviewer"\n',
+            encoding="utf-8",
+        )
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=(),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root), run_process=_fail_awawa, resolve_plugin=_resolve_the_delivering_client
+        )
+
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            run(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "awawa show @AGENT.reviewer --json /srv/instructions exited 2: awawa: unreadable root",
+        )
+
+
+def _create_run_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="brigade")
+    add_command_parsers(parser, [COMMAND], argparse.ArgumentParser(add_help=False))
+    return parser
+
+
+class RunParserTest(unittest.TestCase):
+    def test_should_leave_the_procedure_every_key_value_argument_wherever_it_stands_among_the_options(self):
+        # Arrange
+        rows = [
+            ("after the options", ["run", "build-task", "--slot", "build", "a=1", "b=2"]),
+            ("before the options", ["run", "build-task", "a=1", "b=2", "--slot", "build"]),
+            ("on both sides of an option", ["run", "build-task", "a=1", "--slot", "build", "b=2"]),
+        ]
+        for case, words in rows:
+            with self.subTest(case=case):
+                # Act
+                options, extras = _create_run_parser().parse_known_args(words)
+
+                # Assert
+                self.assertEqual(options.procedure, "build-task")
+                self.assertEqual(options.slot, "build")
+                self.assertEqual(extras, ["a=1", "b=2"])
+
+    def test_should_name_the_key_value_arguments_of_the_procedure_in_its_help(self):
+        # Arrange
+        page = io.StringIO()
+
+        # Act
+        with contextlib.suppress(SystemExit), contextlib.redirect_stdout(page):
+            _create_run_parser().parse_args(["run", "--help"])
+
+        # Assert
+        self.assertIn("key=value words, follow it before or after the options", " ".join(page.getvalue().split()))

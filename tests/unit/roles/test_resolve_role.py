@@ -386,7 +386,9 @@ class ResolveRoleOfAnAbsoluteRolesetTest(ResolveRoleTestCase):
         )
 
         # Assert
-        self.assertEqual((resolved.role, resolved.source), ("shopbuilder", "roleset"))
+        self.assertEqual(resolved.role, "shopbuilder")
+        self.assertEqual(resolved.source, "roleset")
+
 
 class ResolveRoleFromTheMachineRolesDirectoryTest(unittest.TestCase):
     def setUp(self):
@@ -433,7 +435,8 @@ class ResolveRoleFromTheMachineRolesDirectoryTest(unittest.TestCase):
         resolved = resolve_role("plan", create_test_runtime(self.paths), create_bindings("builtin"), NOTHING_CONFIGURED)
 
         # Assert
-        self.assertEqual((resolved.role, resolved.source), ("planner", "built-in"))
+        self.assertEqual(resolved.role, "planner")
+        self.assertEqual(resolved.source, "built-in")
 
     def test_should_prefer_the_machine_role_file_to_the_agent_entity(self):
         # Arrange

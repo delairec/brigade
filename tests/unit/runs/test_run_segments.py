@@ -466,7 +466,8 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
     def test_should_relaunch_a_segment_ended_on_the_step_cap_with_progress_up_to_the_last_hand_over(self):
         # Arrange
         plan = self.create_plan(
-            ["turn_limit", "turn_limit", "turn_limit"], progress=PROGRESS_OF_THE_FIRST_SEGMENT,
+            ["turn_limit", "turn_limit", "turn_limit"],
+            progress=PROGRESS_OF_THE_FIRST_SEGMENT,
             handovers=2,
             client_double=ClientFailingOnAnErrorClassDouble,
         )
@@ -481,7 +482,8 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
     def test_should_append_one_finished_run_per_segment(self):
         # Arrange
         plan = self.create_plan(
-            ["turn_limit", "turn_limit", "turn_limit"], progress=PROGRESS_OF_THE_FIRST_SEGMENT,
+            ["turn_limit", "turn_limit", "turn_limit"],
+            progress=PROGRESS_OF_THE_FIRST_SEGMENT,
             handovers=2,
             client_double=ClientFailingOnAnErrorClassDouble,
         )
@@ -520,8 +522,9 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
+        [_started, exceeded, reached] = read_ledger(self.paths.state_root).entries
         self.assertEqual(
-            [entry.event for entry in read_ledger(self.paths.state_root).entries[1:]],
+            [exceeded.event, reached.event],
             [
                 SignalRecorded(
                     signal="budget_exceeded",
@@ -630,14 +633,13 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.paths.state_root).entries[1].event,
-            SignalRecorded(
-                signal="undeclared", project=None, procedure="build-task", run=RUN_ID, segment=1, budget=40
-            ),
+            SignalRecorded(signal="undeclared", project=None, procedure="build-task", run=RUN_ID, segment=1, budget=40),
         )
 
 
 class RunSegmentsOfASegmentEndedWithoutRelaunchTest(RunSegmentsTestCase):
     def test_should_stop_after_one_segment_whatever_its_progress(self):
+        # Arrange
         rows = [
             ("blocked", "blocked", ClientAnsweringOutcomesDouble),
             ("failed on a client error", "execution", ClientFailingOnAnErrorClassDouble),
