@@ -14,6 +14,7 @@ from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from brigade.studies.convert_study import Study
 from brigade.studies.run_study import run_study
+from tests.list_entry_names import list_entry_names
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
@@ -142,7 +143,7 @@ class RunStudyTest(RunStudyTestCase):
             ),
         )
 
-    def test_should_write_the_result_of_each_step_under_the_run_directory(self):
+    def test_should_keep_the_result_of_each_step_in_the_run(self):
         # Arrange
         steps = self.root / "state" / "runs" / RUN_ID / "steps"
 
@@ -150,7 +151,7 @@ class RunStudyTest(RunStudyTestCase):
         run_study(self.runtime, SCAN, self.equipment, RUN_ID)
 
         # Assert
-        self.assertEqual(sorted(steps.iterdir()), [steps / "collect.json", steps / "judge.json", steps / "output.json"])
+        self.assertEqual(list_entry_names(steps), ["collect.json", "judge.json", "output.json"])
 
     def test_should_resume_a_run_past_the_steps_it_completed(self):
         # Arrange
