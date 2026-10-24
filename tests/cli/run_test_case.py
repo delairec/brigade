@@ -68,12 +68,21 @@ class RunTestCase(FileWaitingTestCase):
         self.procedure.write_text(PROCEDURE)
         self.runs = self.machine.state_home / "brigade" / "runs"
         self.ledger = self.machine.state_home / "brigade" / "ledger"
+        self.hold = root / "hold"
 
     def configure_fake(self, settings: str = "", keys: str = "", document: str | None = "markdown") -> None:
         document_key = "" if document is None else f'document = "{document}"\n'
         self.machine.write_configuration(
             f'client = "fake"\n{document_key}{keys}[clients.fake]\nrecordings = "{self.recordings}"\n{settings}'
         )
+
+    def hold_the_client(self) -> str:
+        self.hold.touch()
+        return f'hold = "{self.hold}"\n'
+
+    def release_the_run(self, run_id: str) -> None:
+        self.hold.unlink(missing_ok=True)
+        self.wait_for_file(self.runs / run_id / "result.json")
 
     def record(self, role: str, result: dict) -> None:
         (self.recordings / f"{role}.json").write_text(json.dumps(result))

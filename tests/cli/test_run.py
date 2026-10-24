@@ -25,7 +25,6 @@ NOT_IN_A_WAVE = "not launched by a wave"
 NOT_FOR_A_TASK = "not launched for a task"
 CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
-CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
 STOP_WAIT_S = 60
 UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 1\n---\nAnswer at once.\n"
@@ -790,7 +789,7 @@ class BrigadeRunDetachedTest(RunTestCase):
 class BrigadeRunStoppedBySignalTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        self.configure_fake(COUNTING_CLIENT + CLIENT_OUTLIVING_THE_TEST)
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client())
         self.record("builder", DONE_RESULT)
 
     def start_detached(self) -> str:
@@ -1071,7 +1070,7 @@ class BrigadeRunOverItsBudgetTest(RunTestCase):
 class BrigadeRunOnTheClockTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        self.configure_fake(COUNTING_CLIENT + 'delay = "10"\n', keys="seconds_per_step = 0.2\n")
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.2\n")
         self.record("builder", DONE_RESULT)
         self.quick = self.procedure.with_name("quick.md")
         self.quick.write_text(QUICK_PROCEDURE)
@@ -1216,7 +1215,7 @@ class BrigadeRunAtTheSoftLimitTest(RunTestCase):
     def test_should_cut_at_the_wall_time_limit_a_client_declaring_no_graceful_stop(self):
         # Arrange
         self.configure_fake(
-            COUNTING_CLIENT + 'delay = "10"\n', keys="seconds_per_step = 0.2\nsoft_limit_margin_s = 0.1\n"
+            COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.2\nsoft_limit_margin_s = 0.1\n"
         )
 
         # Act

@@ -17,7 +17,6 @@ RATE_LIMIT_RESULT = {
     "reset": None,
     "message": "You've hit your limit",
 }
-CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
 JANUARY_2020 = 1577836800
 JANUARY_2026 = 1767225600
 UNREADABLE_RUN = "unreadable-run"
@@ -36,7 +35,7 @@ class RunsPruneTestCase(RunTestCase):
         return json.loads(completed.stdout)["run"]
 
     def start_running_run(self) -> str:
-        self.configure_fake(COUNTING_CLIENT + CLIENT_OUTLIVING_THE_TEST)
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client())
         self.record("builder", DONE_RESULT)
         completed = self.run_brigade(
             "run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), "--detach"

@@ -77,7 +77,7 @@ class BrigadeRunTrailTest(RunTestCase):
 
     def test_should_record_a_client_segment_cut_at_its_wall_limit(self):
         # Arrange
-        self.configure_fake(COUNTING_CLIENT + 'delay = "10"\n', keys="seconds_per_step = 0.2\n")
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.2\n")
         self.record("builder", DONE_RESULT)
         quick = self.procedure.with_name("quick.md")
         quick.write_text(QUICK_PROCEDURE)

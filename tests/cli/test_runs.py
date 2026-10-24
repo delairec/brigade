@@ -21,7 +21,6 @@ ACTIONS_RECORDING = (
     ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
 )
 FOLLOW_WAIT_S = 30
-CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
 LONGER_THAN_THE_DEFAULT_POLL_S = 3
 BLANK_LINE = "\n"
 END_OF_OUTPUT = ""
@@ -119,10 +118,10 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
 class BrigadeRunsListOfARunningRunTest(RunsTestCase):
     def test_should_list_a_detached_run_whose_client_has_not_finished_as_running(self):
         # Arrange
-        self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n')
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client())
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver("--detach").stdout.strip()
-        self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
+        self.addCleanup(self.release_the_run, run_id)
 
         # Act
         completed = self.run_brigade("runs", "list", "--json")
@@ -446,10 +445,10 @@ class BrigadeRunsShowOfARunHandedOverTest(RunsTestCase):
 class BrigadeRunsShowOfARunningRunTest(RunsTestCase):
     def test_should_show_the_running_segment_with_no_outcome_and_no_record_yet(self):
         # Arrange
-        self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n')
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client())
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver("--detach").stdout.strip()
-        self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
+        self.addCleanup(self.release_the_run, run_id)
         self.wait_for_file(self.runs / run_id / "segments" / "1" / "brief.md")
 
         # Act
@@ -510,7 +509,7 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
     def test_should_print_a_record_written_after_it_started_and_exit_0_once_the_run_is_done(self):
         # Arrange
         self.configure_fake(
-            COUNTING_CLIENT + 'operations = "actions"\ndelay = "1"\ninterval = "1"\n', keys="journal_poll_s = 0.1\n"
+            COUNTING_CLIENT + 'operations = "actions"\n' + self.hold_the_client(), keys="journal_poll_s = 0.1\n"
         )
         self.record_lines("builder", ACTIONS_RECORDING)
         run_id = self.run_deliver("--detach").stdout.strip()
@@ -519,6 +518,7 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
         follow = self.start_follow(run_id)
         self.read_opening(follow)
         journal_at_opening = journal_path.read_text()
+        self.hold.unlink()
 
         # Act
         stdout, stderr = follow.communicate(timeout=FOLLOW_WAIT_S)
@@ -536,12 +536,12 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
 
     def test_should_read_the_run_again_only_every_journal_poll_s_seconds(self):
         # Arrange
-        self.configure_fake(COUNTING_CLIENT + 'delay = "2"\n', keys="journal_poll_s = 3600\n")
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="journal_poll_s = 3600\n")
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver("--detach").stdout.strip()
         follow = self.start_follow(run_id)
         self.read_opening(follow)
-        self.wait_for_file(self.runs / run_id / "result.json")
+        self.release_the_run(run_id)
 
         # Act
         stdout = self.interrupt_after(follow, LONGER_THAN_THE_DEFAULT_POLL_S)
@@ -555,10 +555,10 @@ class BrigadeRunsShowFollowOfARunningRunTest(RunsFollowTestCase):
         for name, stop_signal in rows:
             with self.subTest(signal=name):
                 # Arrange
-                self.configure_fake(COUNTING_CLIENT + 'delay = "5"\n', keys="journal_poll_s = 0.1\n")
+                self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="journal_poll_s = 0.1\n")
                 self.record("builder", DONE_RESULT)
                 run_id = self.run_deliver("--detach").stdout.strip()
-                self.addCleanup(self.wait_for_file, self.runs / run_id / "result.json")
+                self.addCleanup(self.release_the_run, run_id)
                 follow = self.start_follow(run_id)
                 self.read_opening(follow)
 
@@ -659,7 +659,7 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
 class BrigadeRunsStopOfARunningRunTest(RunsTestCase):
     def test_should_stop_a_detached_run_and_exit_0_once_it_finished_stopped(self):
         # Arrange
-        self.configure_fake(COUNTING_CLIENT + CLIENT_OUTLIVING_THE_TEST)
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client())
         self.record("builder", DONE_RESULT)
         run_id = self.run_deliver("--detach").stdout.strip()
         client_pid = self.wait_for_client(self.read_run_pid(run_id))
