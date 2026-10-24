@@ -107,3 +107,91 @@ class CheckTaskTest(unittest.TestCase):
             "the worktree of @TASK.B12 holds changes HEAD does not: src/parse.py, notes.md;"
             " commit them, then run brigade task check",
         )
+
+
+class CheckTaskOfAFailingCommandWithALongOutputTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.processes = ScriptedProcesses()
+
+    def test_should_keep_the_last_twenty_lines_of_its_output(self):
+        # Arrange
+        self.processes.answer(STATUS_ARGV)
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="c0ffee\n"
+        )
+        self.processes.answer(
+            ("python3", "-m", "unittest"),
+            exit_code=1,
+            stdout="line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\n"
+            "line 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\n"
+            "line 22\nline 23\nline 24\nline 25\n",
+        )
+        self.processes.answer(("ruff", "check", "."))
+        self.processes.answer(("awawa", "fmt", "--check", "."))
+        self.processes.answer(("awawa", "lint", "--strict", "."))
+
+        # Act
+        document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
+
+        # Assert
+        self.assertEqual(
+            document["checks"][0]["tail"],
+            [
+                "line 6",
+                "line 7",
+                "line 8",
+                "line 9",
+                "line 10",
+                "line 11",
+                "line 12",
+                "line 13",
+                "line 14",
+                "line 15",
+                "line 16",
+                "line 17",
+                "line 18",
+                "line 19",
+                "line 20",
+                "line 21",
+                "line 22",
+                "line 23",
+                "line 24",
+                "line 25",
+            ],
+        )
+
+
+class CheckTaskOfALineThatCannotBeSplitTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.processes = ScriptedProcesses()
+        project = Entity(
+            name="oak",
+            fields=(
+                EntityField(name="PATH", value="/srv/oak"),
+                EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
+                EntityField(name="ACCEPTANCE", value="printf 'oak"),
+            ),
+        )
+        self.worktree = TaskWorktree(
+            path=Path("/srv/oak-b12"), task="B12", project=project, wave="oak_w1", wave_branch="integration/oak_w1"
+        )
+
+    def test_should_refuse_the_line_by_name_before_any_command_runs(self):
+        # Arrange
+        self.processes.answer(STATUS_ARGV)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), self.worktree)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception), "the command printf 'oak cannot be split into an argv: No closing quotation"
+        )
+        self.assertEqual(self.processes.list_argvs(), [STATUS_ARGV])
