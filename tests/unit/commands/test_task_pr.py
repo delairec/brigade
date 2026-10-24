@@ -163,5 +163,27 @@ class TaskPrPushTest(unittest.TestCase):
         COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, subject="add the parser"), self.runtime)
 
         # Assert
-        (opening,) = self.forge.list_requests("open_pull_request")
-        self.assertEqual(opening["body"].splitlines()[-1], "Co-Authored-By: Ada <ada@example.org>")
+        self.assertEqual(
+            self.forge.list_requests("open_pull_request"),
+            [
+                {
+                    "repository": "/srv/oak-b12",
+                    "base": "integration/oak_w1",
+                    "branch": "task/oak_w1/B12",
+                    "title": "feat(the-parser): add the parser (@TASK.B12)",
+                    "body": "The parser\n"
+                    "\n"
+                    "## Acceptance criteria\n"
+                    "\n"
+                    "- parses a line\n"
+                    "\n"
+                    "## Checks of d00d\n"
+                    "\n"
+                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "\n"
+                    "Co-Authored-By: Ada <ada@example.org>\n",
+                    "milestone": "Parser",
+                    "environment": {"GH_TOKEN": "token-of-octo-bot"},
+                }
+            ],
+        )

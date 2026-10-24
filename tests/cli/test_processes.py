@@ -9,47 +9,72 @@ TRAILS_KEPT_FOR_EVER = "trail_days = 100000\n"
 RUN_ID = "20261008T090000Z-a1b2c3"
 TICK_ID = "20261009T100000Z"
 COMMAND_ID = "20261010T110000Z-scheduler-status"
-GIT_STATUS_EXITED_0 = {
-    "schema_version": 1,
-    "argv": ["git", "status"],
-    "cwd": "/work",
-    "exit": 0,
-    "duration_ms": 12,
-    "outcome": "exited",
-}
-GIT_FETCH_EXITED_128 = {
-    "schema_version": 1,
-    "argv": ["git", "fetch", "origin"],
-    "cwd": "/work",
-    "exit": 128,
-    "duration_ms": 340,
-    "outcome": "exited",
-}
-CLIENT_CUT = {
-    "schema_version": 1,
-    "argv": ["claude", "-p", "deliver the task"],
-    "cwd": "/work",
-    "exit": None,
-    "duration_ms": 600000,
-    "outcome": "cut",
-}
-RUN_SPAWNED = {
-    "schema_version": 1,
-    "argv": ["brigade", "run", "awawa-task", "--detach"],
-    "cwd": "/work",
-    "exit": None,
-    "duration_ms": None,
-    "outcome": "spawned",
-    "pid": 4242,
-}
-CRONTAB_NOT_FOUND = {
-    "schema_version": 1,
-    "argv": ["crontab", "-l"],
-    "cwd": "/",
-    "exit": None,
-    "duration_ms": 3,
-    "outcome": "not_found",
-}
+GIT_STATUS_EXITED_0 = (
+    json.dumps(
+        {
+            "schema_version": 1,
+            "argv": ["git", "status"],
+            "cwd": "/work",
+            "exit": 0,
+            "duration_ms": 12,
+            "outcome": "exited",
+        }
+    )
+    + "\n"
+)
+GIT_FETCH_EXITED_128 = (
+    json.dumps(
+        {
+            "schema_version": 1,
+            "argv": ["git", "fetch", "origin"],
+            "cwd": "/work",
+            "exit": 128,
+            "duration_ms": 340,
+            "outcome": "exited",
+        }
+    )
+    + "\n"
+)
+CLIENT_CUT = (
+    json.dumps(
+        {
+            "schema_version": 1,
+            "argv": ["claude", "-p", "deliver the task"],
+            "cwd": "/work",
+            "exit": None,
+            "duration_ms": 600000,
+            "outcome": "cut",
+        }
+    )
+    + "\n"
+)
+RUN_SPAWNED = (
+    json.dumps(
+        {
+            "schema_version": 1,
+            "argv": ["brigade", "run", "awawa-task", "--detach"],
+            "cwd": "/work",
+            "exit": None,
+            "duration_ms": None,
+            "outcome": "spawned",
+            "pid": 4242,
+        }
+    )
+    + "\n"
+)
+CRONTAB_NOT_FOUND = (
+    json.dumps(
+        {
+            "schema_version": 1,
+            "argv": ["crontab", "-l"],
+            "cwd": "/",
+            "exit": None,
+            "duration_ms": 3,
+            "outcome": "not_found",
+        }
+    )
+    + "\n"
+)
 
 
 class ProcessesTestCase(unittest.TestCase):
@@ -60,17 +85,17 @@ class ProcessesTestCase(unittest.TestCase):
         self.state = self.machine.state_home / "brigade"
         self.tick_trail = self.state / "ticks" / f"{TICK_ID}.jsonl"
         self.write_trail(
-            self.state / "runs" / RUN_ID / "processes.jsonl", [GIT_STATUS_EXITED_0, GIT_FETCH_EXITED_128, CLIENT_CUT]
+            self.state / "runs" / RUN_ID / "processes.jsonl", GIT_STATUS_EXITED_0 + GIT_FETCH_EXITED_128 + CLIENT_CUT
         )
-        self.write_trail(self.tick_trail, [GIT_STATUS_EXITED_0, RUN_SPAWNED])
-        self.write_trail(self.state / "commands" / f"{COMMAND_ID}.jsonl", [CRONTAB_NOT_FOUND])
+        self.write_trail(self.tick_trail, GIT_STATUS_EXITED_0 + RUN_SPAWNED)
+        self.write_trail(self.state / "commands" / f"{COMMAND_ID}.jsonl", CRONTAB_NOT_FOUND)
 
     def tearDown(self):
         self.root.cleanup()
 
-    def write_trail(self, path: Path, records: list[dict]) -> None:
+    def write_trail(self, path: Path, lines: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("".join(f"{json.dumps(record)}\n" for record in records))
+        path.write_text(lines)
 
     def run_brigade(self, *arguments: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "processes", *arguments)

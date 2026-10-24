@@ -203,7 +203,7 @@ class MainOfACommandFailingUnexpectedlyTest(MainTestCase):
 
         # Assert
         self.assertEqual(exit_code, 70)
-        self.assertEqual(stderr.splitlines()[-1].split(":")[0], "UnicodeDecodeError")
+        self.assertRegex(stderr, r"\ATraceback \(most recent call last\):\n(.*\n)*UnicodeDecodeError: [^\n]*\n\Z")
 
 
 class MainOfACommandStandingDownTest(MainTestCase):

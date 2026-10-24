@@ -54,22 +54,34 @@ from brigade.system.run_process import ProcessRequest
 from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 
-def answer_entities(root: Path, entity_type: str, entities: dict[str, list[dict]], *conditions: str) -> dict:
-    filters = tuple(argument for condition in conditions for argument in ("--where", condition))
-    status = {"entities": [{"type": entity_type, "name": name} for name in entities]}
-    return {
-        ("awawa", "status", entity_type, *filters, "--json", str(root)): ProcessAnswer(stdout=json.dumps(status)),
-        **{
-            ("awawa", "show", f"@{entity_type}.{name}", "--json", str(root)): ProcessAnswer(
-                stdout=json.dumps({"fields": fields})
-            )
-            for name, fields in entities.items()
-        },
-    }
+class AwawaAnswerWriterDouble:
+    def answer_entities(self, root: Path, entity_type: str, entities: dict[str, list[dict]], *conditions: str) -> dict:
+        filters = tuple(argument for condition in conditions for argument in ("--where", condition))
+        status = {"entities": [{"type": entity_type, "name": name} for name in entities]}
+        return {
+            ("awawa", "status", entity_type, *filters, "--json", str(root)): ProcessAnswer(stdout=json.dumps(status)),
+            **{
+                ("awawa", "show", f"@{entity_type}.{name}", "--json", str(root)): ProcessAnswer(
+                    stdout=json.dumps({"fields": fields})
+                )
+                for name, fields in entities.items()
+            },
+        }
+
+    def describe_task(self, status: str, *after: str) -> list[dict]:
+        return [
+            {"name": "STATUS", "atoms": [status]},
+            *({"name": "AFTER", "atoms": [f"@TASK.{task}"]} for task in after),
+        ]
+
+    def answer_no_incoming_refs(self, root: Path, *tasks: str) -> dict:
+        return {
+            ("awawa", "refs", f"@TASK.{task}", "--json", str(root)): ProcessAnswer(stdout=json.dumps({"incoming": []}))
+            for task in tasks
+        }
 
 
-def describe_task(status: str, *after: str) -> list[dict]:
-    return [{"name": "STATUS", "atoms": [status]}, *({"name": "AFTER", "atoms": [f"@TASK.{task}"]} for task in after)]
+AWAWA_ANSWERS = AwawaAnswerWriterDouble()
 
 
 def answer_tree(ref: str, sha: str) -> dict:
@@ -84,13 +96,6 @@ def answer_main_of_the_forge(sha: str) -> dict:
 def answer_unreadable_tree(ref: str) -> dict:
     argv = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
     return {argv: ProcessAnswer(exit_code=128, stderr="fatal: bad revision")}
-
-
-def answer_no_incoming_refs(root: Path, *tasks: str) -> dict:
-    return {
-        ("awawa", "refs", f"@TASK.{task}", "--json", str(root)): ProcessAnswer(stdout=json.dumps({"incoming": []}))
-        for task in tasks
-    }
 
 
 def _read_forge_environment(slot: str) -> dict:
@@ -154,7 +159,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                         "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk"},
                     },
                 ),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     config_root,
                     "POLICY",
                     {
@@ -166,7 +171,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                         ]
                     },
                 ),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     config_root,
                     "STUDY",
                     {
@@ -181,25 +186,25 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/w4"): ProcessAnswer(exit_code=1),
                 **answer_tree("integration/w1", WAVE_SHA),
                 **answer_unreadable_tree("integration/w5"),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     self.wave_tree,
                     "TASK",
-                    {"B1": describe_task("todo", "B0"), "B2": [], "B3": [], "B4": []},
+                    {"B1": AWAWA_ANSWERS.describe_task("todo", "B0"), "B2": [], "B3": [], "B4": []},
                 ),
-                **answer_no_incoming_refs(self.wave_tree, "B1", "B2", "B3", "B4"),
-                **answer_entities(self.wave_tree, "TASK", {"B0": []}, "STATUS==implemented"),
+                **AWAWA_ANSWERS.answer_no_incoming_refs(self.wave_tree, "B1", "B2", "B3", "B4"),
+                **AWAWA_ANSWERS.answer_entities(self.wave_tree, "TASK", {"B0": []}, "STATUS==implemented"),
                 **answer_tree("main", MAIN_SHA),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     self.main_tree,
                     "TASK",
                     {
-                        "B0": describe_task("implemented"),
-                        "B1": describe_task("todo", "B0"),
-                        "B5": describe_task("todo", "B0"),
-                        "B6": describe_task("draft"),
+                        "B0": AWAWA_ANSWERS.describe_task("implemented"),
+                        "B1": AWAWA_ANSWERS.describe_task("todo", "B0"),
+                        "B5": AWAWA_ANSWERS.describe_task("todo", "B0"),
+                        "B6": AWAWA_ANSWERS.describe_task("draft"),
                     },
                 ),
-                **answer_no_incoming_refs(self.main_tree, "B5"),
+                **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5"),
                 **answer_unreadable_tree("trunk"),
                 **self.remote_answers,
             }
@@ -336,7 +341,132 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(len(snapshot.waves), 2)
+        self.assertEqual(
+            snapshot.waves,
+            (
+                WaveFacts(
+                    project="shop",
+                    wave="w1",
+                    branch="integration/w1",
+                    tasks=(
+                        TaskFacts(
+                            name="B1",
+                            after=("B0",),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=f"{self.root}/shop/.brigade/worktrees/B1",
+                            rate_limit=RateLimit(reset=None),
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B2",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run="r2",
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B3",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=None,
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B4",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                    ),
+                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    implemented=("B0",),
+                    pause=None,
+                    forge_account_unavailable=True,
+                    branch_missing=False,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+                WaveFacts(
+                    project="shop",
+                    wave="w4",
+                    branch="integration/w4",
+                    tasks=(),
+                    states={},
+                    implemented=(),
+                    pause=None,
+                    forge_account_unavailable=False,
+                    branch_missing=True,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+            ),
+        )
 
     def test_should_carry_the_integration_pull_request_of_a_reported_wave(self):
         # Arrange
@@ -346,7 +476,140 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.waves[0].integration_pull_request, PULL_REQUEST)
+        self.assertEqual(
+            snapshot.waves,
+            (
+                WaveFacts(
+                    project="shop",
+                    wave="w1",
+                    branch="integration/w1",
+                    tasks=(
+                        TaskFacts(
+                            name="B1",
+                            after=("B0",),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=f"{self.root}/shop/.brigade/worktrees/B1",
+                            rate_limit=RateLimit(reset=None),
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B2",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run="r2",
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B3",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=None,
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B4",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                    ),
+                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    implemented=("B0",),
+                    pause=None,
+                    forge_account_unavailable=True,
+                    branch_missing=False,
+                    reported=True,
+                    integration_pull_request=PullRequestFacts(
+                        number=7,
+                        state="open",
+                        checks=(),
+                        review=None,
+                        behind=False,
+                        head="4f2a9c1",
+                        base="integration/w1",
+                    ),
+                    opened_integration_pull_request=None,
+                ),
+                WaveFacts(
+                    project="shop",
+                    wave="w4",
+                    branch="integration/w4",
+                    tasks=(),
+                    states={},
+                    implemented=(),
+                    pause=None,
+                    forge_account_unavailable=False,
+                    branch_missing=True,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+            ),
+        )
 
     def test_should_carry_the_integration_pull_request_the_ledger_records_as_opened(self):
         # Arrange
@@ -356,7 +619,132 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.waves[0].opened_integration_pull_request, 77)
+        self.assertEqual(
+            snapshot.waves,
+            (
+                WaveFacts(
+                    project="shop",
+                    wave="w1",
+                    branch="integration/w1",
+                    tasks=(
+                        TaskFacts(
+                            name="B1",
+                            after=("B0",),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=f"{self.root}/shop/.brigade/worktrees/B1",
+                            rate_limit=RateLimit(reset=None),
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B2",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run="r2",
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B3",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=None,
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B4",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                    ),
+                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    implemented=("B0",),
+                    pause=None,
+                    forge_account_unavailable=True,
+                    branch_missing=False,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=77,
+                ),
+                WaveFacts(
+                    project="shop",
+                    wave="w4",
+                    branch="integration/w4",
+                    tasks=(),
+                    states={},
+                    implemented=(),
+                    pause=None,
+                    forge_account_unavailable=False,
+                    branch_missing=True,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+            ),
+        )
 
     def test_should_describe_a_project_on_the_github_forge(self):
         # Arrange
@@ -457,7 +845,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(len(snapshot.rate_limits), 2)
+        self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
         self.assertEqual(
             snapshot.studies,
             (StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),),
@@ -481,7 +869,132 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.waves[0].tasks[2], TaskFacts(name="B3"))
+        self.assertEqual(
+            snapshot.waves,
+            (
+                WaveFacts(
+                    project="shop",
+                    wave="w1",
+                    branch="integration/w1",
+                    tasks=(
+                        TaskFacts(
+                            name="B1",
+                            after=("B0",),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=f"{self.root}/shop/.brigade/worktrees/B1",
+                            rate_limit=RateLimit(reset=None),
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B2",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run="r2",
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B3",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=None,
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B4",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                    ),
+                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    implemented=("B0",),
+                    pause=None,
+                    forge_account_unavailable=True,
+                    branch_missing=False,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+                WaveFacts(
+                    project="shop",
+                    wave="w4",
+                    branch="integration/w4",
+                    tasks=(),
+                    states={},
+                    implemented=(),
+                    pause=None,
+                    forge_account_unavailable=False,
+                    branch_missing=True,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+            ),
+        )
 
     def test_should_clear_the_unavailable_forge_account_of_a_wave_resumed_from_it(self):
         # Arrange
@@ -491,7 +1004,132 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.waves[0].forge_account_unavailable, False)
+        self.assertEqual(
+            snapshot.waves,
+            (
+                WaveFacts(
+                    project="shop",
+                    wave="w1",
+                    branch="integration/w1",
+                    tasks=(
+                        TaskFacts(
+                            name="B1",
+                            after=("B0",),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=f"{self.root}/shop/.brigade/worktrees/B1",
+                            rate_limit=RateLimit(reset=None),
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B2",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run="r2",
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B3",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=None,
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                        TaskFacts(
+                            name="B4",
+                            after=(),
+                            blocked_by=(),
+                            pull_request=PullRequestFacts(
+                                number=7,
+                                state="open",
+                                checks=(),
+                                review=None,
+                                behind=False,
+                                head="4f2a9c1",
+                                base="integration/w1",
+                            ),
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                    ),
+                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    implemented=("B0",),
+                    pause=None,
+                    forge_account_unavailable=False,
+                    branch_missing=False,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+                WaveFacts(
+                    project="shop",
+                    wave="w4",
+                    branch="integration/w4",
+                    tasks=(),
+                    states={},
+                    implemented=(),
+                    pause=None,
+                    forge_account_unavailable=False,
+                    branch_missing=True,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+            ),
+        )
 
     def test_should_read_no_pull_request_of_a_settled_task_whose_worktree_is_gone(self):
         # Act
@@ -526,7 +1164,37 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.projects[1].live_runs, ())
+        self.assertEqual(
+            snapshot.projects,
+            (
+                ProjectFacts(
+                    name="depot",
+                    slots=4,
+                    live_runs=(),
+                    awaits_check_runs=True,
+                    wave_start="auto",
+                    candidates=(),
+                    merge="rebase",
+                    review="verdict",
+                    auto_merge="integration",
+                    verify_rounds=2,
+                    on_github=False,
+                ),
+                ProjectFacts(
+                    name="shop",
+                    slots=2,
+                    live_runs=(),
+                    awaits_check_runs=False,
+                    wave_start="auto",
+                    candidates=("B5",),
+                    merge="squash",
+                    review="approval",
+                    auto_merge="none",
+                    verify_rounds=3,
+                    on_github=False,
+                ),
+            ),
+        )
 
     def test_should_skip_a_wave_whose_pull_request_the_forge_refuses_to_read_and_follow_the_others(self):
         # Arrange
@@ -540,7 +1208,25 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             stderr.splitlines()[0],
             "brigade tick: the wave w1 skipped: gh pr list --head task/w1/B1 exited 1: HTTP 502: Bad Gateway",
         )
-        self.assertEqual(snapshot.waves[0].wave, "w4")
+        self.assertEqual(
+            snapshot.waves,
+            (
+                WaveFacts(
+                    project="shop",
+                    wave="w4",
+                    branch="integration/w4",
+                    tasks=(),
+                    states={},
+                    implemented=(),
+                    pause=None,
+                    forge_account_unavailable=False,
+                    branch_missing=True,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+            ),
+        )
 
     def test_should_skip_a_wave_or_a_project_whose_tree_cannot_be_read(self):
         # Act
@@ -587,7 +1273,43 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.waves[0].forge_account_unavailable, True)
+        self.assertEqual(
+            snapshot.waves,
+            (
+                WaveFacts(
+                    project="shop",
+                    wave="w1",
+                    branch="integration/w1",
+                    tasks=(
+                        TaskFacts(
+                            name="B1",
+                            after=("B0",),
+                            blocked_by=(),
+                            pull_request=None,
+                            worktree=None,
+                            rate_limit=None,
+                            stopped_run=None,
+                            opened_pull_request=None,
+                            preflighted_head=None,
+                            verdict=None,
+                            reviewed_head=None,
+                            preflight_failures=(),
+                            repair_rounds=0,
+                            holds_uncommitted_changes=False,
+                            last_run=None,
+                        ),
+                    ),
+                    states={},
+                    implemented=("B0",),
+                    pause=None,
+                    forge_account_unavailable=True,
+                    branch_missing=False,
+                    reported=False,
+                    integration_pull_request=None,
+                    opened_integration_pull_request=None,
+                ),
+            ),
+        )
 
 
 class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):

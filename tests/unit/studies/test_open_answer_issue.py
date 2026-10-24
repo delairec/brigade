@@ -112,7 +112,17 @@ class OpenAnswerIssueTest(unittest.TestCase):
         open_answer_issue(self.create_context("oak", CLI_BOUND_TO_OCTO_CLI), PUBLICATION)
 
         # Assert
-        self.assertEqual(self.forges["github"].list_requests("open_issue")[0]["environment"], {"GH_TOKEN": "cli-token"})
+        self.assertEqual(
+            self.forges["github"].list_requests("open_issue"),
+            [
+                {
+                    "repository": "/srv/oak",
+                    "title": "Study trees, run 1",
+                    "body": "# FINDING trees_1\n",
+                    "environment": {"GH_TOKEN": "cli-token"},
+                }
+            ],
+        )
 
     def test_should_refuse_a_project_without_a_forge(self):
         # Arrange

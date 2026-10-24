@@ -74,9 +74,9 @@ class RecordVerdictTestCase(unittest.TestCase):
         )
 
     def read_ledger(self) -> list[dict]:
-        return [
-            json.loads(line) for line in (self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines()
-        ]
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
 
     def list_posted_reviews(self) -> list[dict]:
         return self.forge.list_requests("post_review")
@@ -169,14 +169,44 @@ class RecordVerdictUnderTheApprovalModeTest(RecordVerdictTestCase):
         self.record(POLICY_UNDER_APPROVAL, {"head": "8885daa", "verdict": "pass", "findings": []})
 
         # Assert
-        self.assertEqual(self.list_posted_reviews()[0]["event"], "approve")
+        self.assertEqual(
+            self.list_posted_reviews(),
+            [
+                {
+                    "schema_version": 1,
+                    "repository": "/home/user/tidepool",
+                    "number": 42,
+                    "event": "approve",
+                    "commit": "8885daa",
+                    "body": "verdict pass\n",
+                    "environment": {"GH_TOKEN": "token-of-tidepool-review"},
+                }
+            ],
+        )
 
     def test_should_record_the_login_the_review_ran_as(self):
         # Act
         self.record(POLICY_UNDER_APPROVAL, CHANGES)
 
         # Assert
-        self.assertEqual(self.read_ledger()[0]["login"], "tidepool-review")
+        self.assertEqual(
+            self.read_ledger(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "verdict": "changes",
+                    "findings": [{"grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}],
+                    "login": "tidepool-review",
+                }
+            ],
+        )
 
 
 class RecordVerdictOfAHeadNoLongerTheHeadTest(RecordVerdictTestCase):

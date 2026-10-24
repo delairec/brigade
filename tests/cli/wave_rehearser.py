@@ -130,18 +130,22 @@ class WaveRehearser:
     def run_brigade(self, *arguments: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments, environment=self.describe_environment())
 
-    def read_events(self, name: str) -> list:
+    def read_events(self) -> list:
         lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
-        return [event for event in map(json.loads, lines) if event["event"] == name]
+        return list(map(json.loads, lines))
 
     def is_wave_integrated(self) -> bool:
-        merged = [event for event in self.read_events("task.state") if event["state"] == "merged"]
-        return len(merged) == 3 and bool(self.read_events("wave.pr_opened")) and bool(self.read_events("wave.reported"))
+        events = self.read_events()
+        merged = [event for event in events if event["event"] == "task.state" and event["state"] == "merged"]
+        opened = [event for event in events if event["event"] == "wave.pr_opened"]
+        reported = [event for event in events if event["event"] == "wave.reported"]
+        return len(merged) == 3 and bool(opened) and bool(reported)
 
     def has_the_report_ended(self) -> bool:
-        [reported] = self.read_events("wave.reported")
-        ended = self.read_events("order.done") + self.read_events("order.parked")
-        return reported["run"] in [event["run"] for event in ended]
+        events = self.read_events()
+        [reported] = [event for event in events if event["event"] == "wave.reported"]
+        ended = [event["run"] for event in events if event["event"] in ("order.done", "order.parked")]
+        return reported["run"] in ended
 
     def tick_until_the_wave_is_integrated(self) -> None:
         deadline = time.monotonic() + REHEARSAL_WAIT_S

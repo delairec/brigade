@@ -5,8 +5,9 @@ from pathlib import Path
 from tests.guards.find_violations import Finding, GuardedModule, find_violations
 
 
-def _find_assignments(module: GuardedModule) -> list[Finding]:
-    return [(node.lineno, node.col_offset, f"assigns in {module.relative_path.name}") for node in module.tree.body]
+class AssignmentFinderDouble:
+    def find(self, module: GuardedModule) -> list[Finding]:
+        return [(node.lineno, node.col_offset, f"assigns in {module.relative_path.name}") for node in module.tree.body]
 
 
 def _find_names_in_reverse(module: GuardedModule) -> list[Finding]:
@@ -35,7 +36,7 @@ class FindViolationsTest(unittest.TestCase):
         self.write_module("runs/read_run.py", "import json\nrun = 1\n")
 
         # Act
-        violations = find_violations(self.root, _find_assignments)
+        violations = find_violations(self.root, AssignmentFinderDouble().find)
 
         # Assert
         self.assertEqual(
@@ -66,7 +67,7 @@ class FindViolationsTest(unittest.TestCase):
         self.write_module("runs/read_run.py", "run = 1\n")
 
         # Act
-        violations = find_violations(self.root, _find_assignments)
+        violations = find_violations(self.root, AssignmentFinderDouble().find)
 
         # Assert
         self.assertEqual(
@@ -79,7 +80,7 @@ class FindViolationsTest(unittest.TestCase):
         self.write_module("vendor/read_toml.py", "toml = 1\n")
 
         # Act
-        violations = find_violations(self.root, _find_assignments, is_inspected=_inspect_outside_vendor)
+        violations = find_violations(self.root, AssignmentFinderDouble().find, is_inspected=_inspect_outside_vendor)
 
         # Assert
         self.assertEqual(violations, [])
@@ -90,7 +91,7 @@ class FindViolationsTest(unittest.TestCase):
         self.write_module("test_run.py", "test = 1\n")
 
         # Act
-        violations = find_violations(self.root, _find_assignments, pattern="test_*.py")
+        violations = find_violations(self.root, AssignmentFinderDouble().find, pattern="test_*.py")
 
         # Assert
         self.assertEqual(violations, ["brigade/test_run.py:1 assigns in test_run.py"])

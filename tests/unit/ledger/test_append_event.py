@@ -3,9 +3,11 @@ import multiprocessing
 import tempfile
 import unittest
 from datetime import UTC, datetime
+from multiprocessing.synchronize import Barrier
 from pathlib import Path
 
 from brigade.ledger.append_event import append_event
+from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.signal_recorded import SignalRecorded
@@ -13,12 +15,12 @@ from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from tests.unit.create_test_paths import create_test_paths
 
-PROCESS_COUNT = 4
-EVENTS_PER_PROCESS = 50
+EVENTS_PER_PROCESS = 2
 PADDING_LONGER_THAN_A_PIPE_BUFFER = "x" * 20000
 
 
-def append_signals(root: Path, writer: int) -> None:
+def append_signals(root: Path, writer: int, start: Barrier) -> None:
+    start.wait()
     for index in range(EVENTS_PER_PROCESS):
         append_event(
             create_test_paths(root),
@@ -36,7 +38,13 @@ def append_signals(root: Path, writer: int) -> None:
 
 def append_from_concurrent_writers(root: Path) -> None:
     context = multiprocessing.get_context("fork")
-    writers = [context.Process(target=append_signals, args=(root, writer)) for writer in range(PROCESS_COUNT)]
+    start = context.Barrier(4)
+    writers = (
+        context.Process(target=append_signals, args=(root, 0, start)),
+        context.Process(target=append_signals, args=(root, 1, start)),
+        context.Process(target=append_signals, args=(root, 2, start)),
+        context.Process(target=append_signals, args=(root, 3, start)),
+    )
     for writer in writers:
         writer.start()
     for writer in writers:
@@ -63,7 +71,100 @@ class AppendEventFromSeveralProcessesTest(AppendEventTestCase):
 
         # Assert
         self.assertEqual(reading.skipped, ())
-        self.assertEqual(len(reading.entries), 200)
+        self.assertEqual(reading.files, (str(self.ledger / "2026-10.jsonl"),))
+        self.assertCountEqual(
+            reading.entries,
+            [
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w0-0",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w0-1",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w1-0",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w1-1",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w2-0",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w2-1",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w3-0",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 6, 9, 30, tzinfo=UTC),
+                    event=SignalRecorded(
+                        signal="budget_reached",
+                        project="tidepool",
+                        procedure=PADDING_LONGER_THAN_A_PIPE_BUFFER,
+                        run="w3-1",
+                        segment=1,
+                        budget=40,
+                    ),
+                ),
+            ],
+        )
 
 
 class AppendEventOfAStudyRunTest(AppendEventTestCase):

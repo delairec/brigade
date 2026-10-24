@@ -113,9 +113,10 @@ class StartProjectWaveTestCase(unittest.TestCase):
         )
         return start_project_wave(self.runtime, start)
 
-    def read_started_waves(self) -> list[str]:
-        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
-        return [event["wave"] for event in map(json.loads, lines) if event["event"] == "wave.started"]
+    def read_events(self) -> list[dict]:
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
 
 
 class StartProjectWaveOfTheStartableTasksTest(StartProjectWaveTestCase):
@@ -134,7 +135,29 @@ class StartProjectWaveOfTheStartableTasksTest(StartProjectWaveTestCase):
         self.start_wave(EVERY_STARTABLE_TASK)
 
         # Assert
-        self.assertEqual(self.read_started_waves(), ["shop_w1", "shop_w2"])
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-13T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": "integration/shop_w1",
+                    "tasks": ["S7"],
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "shop_w2",
+                    "project": "shop",
+                    "branch": "integration/shop_w2",
+                    "tasks": ["S3", "S4", "S10"],
+                },
+            ],
+        )
 
     def test_should_cut_the_branch_of_every_open_wave_missing_it_from_the_main_branch(self):
         # Act
@@ -193,7 +216,20 @@ class StartProjectWaveOfNamedTasksTest(StartProjectWaveTestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_message)
-                self.assertEqual(self.read_started_waves(), ["shop_w1"])
+                self.assertEqual(
+                    self.read_events(),
+                    [
+                        {
+                            "schema_version": 2,
+                            "ts": "2026-10-13T09:00:00Z",
+                            "event": "wave.started",
+                            "wave": "shop_w1",
+                            "project": "shop",
+                            "branch": "integration/shop_w1",
+                            "tasks": ["S7"],
+                        }
+                    ],
+                )
 
 
 class StartProjectWaveOnABranchNoWaveStartedNamesTest(StartProjectWaveTestCase):
@@ -207,7 +243,20 @@ class StartProjectWaveOnABranchNoWaveStartedNamesTest(StartProjectWaveTestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "the branch integration/shop_w2 exists and no wave.started names it")
-        self.assertEqual(self.read_started_waves(), ["shop_w1"])
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-13T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": "integration/shop_w1",
+                    "tasks": ["S7"],
+                }
+            ],
+        )
 
     def test_should_refuse_a_remote_branch_of_the_name_on_the_github_forge(self):
         # Arrange

@@ -102,7 +102,15 @@ class ChangeCorpusFileRefusedByLintTest(ChangeCorpusFileTestCase):
             str(refusal.exception),
             "awawa lint --strict refused the change; the corpus is restored\ntasks.awawa:2: L001",
         )
-        self.assertEqual(runner.commands[-1][1], ("git", "checkout", "HEAD", "--", "tasks.awawa"))
+        self.assertEqual(
+            runner.commands,
+            [
+                (str(self.repository), ("awawa", "fmt", str(self.repository / "tasks.awawa"))),
+                (str(self.repository), ("awawa", "lint", "--strict", str(self.repository))),
+                (str(self.repository), ("git", "ls-tree", "--name-only", "HEAD", "--", "tasks.awawa")),
+                (str(self.repository), ("git", "checkout", "HEAD", "--", "tasks.awawa")),
+            ],
+        )
 
 
 class ChangeCorpusFileUnwritableTest(ChangeCorpusFileTestCase):

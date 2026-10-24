@@ -167,7 +167,14 @@ class PruneRunsResumableTest(PruneRunsTestCase):
         outcome = self.prune(0, resumable=True)
 
         # Assert
-        self.assertEqual(outcome.removed[0], {"run": OLDEST, "state": "finished"})
+        self.assertEqual(
+            outcome.removed,
+            [
+                {"run": "20261001T090000Z-aaaaaa", "state": "finished"},
+                {"run": "20261002T090000Z-bbbbbb", "state": "finished"},
+                {"run": "20261003T090000Z-cccccc", "state": "dead"},
+            ],
+        )
 
 
 class PruneRunsResumingTheNewestRunTest(PruneRunsTestCase):

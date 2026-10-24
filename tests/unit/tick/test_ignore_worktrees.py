@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.system.run_process import ProcessRequest
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
@@ -33,8 +34,67 @@ class IgnoreWorktreesNotYetIgnoredTest(unittest.TestCase):
         ignore_worktrees(git, Path("/srv/shop"), "integration/w1")
 
         # Assert
-        self.assertEqual(git.requests[3].argv, HASH_OBJECT)
-        self.assertEqual(git.requests[3].stdin, "node_modules/\n.brigade/worktrees/\n")
+        self.assertEqual(
+            git.requests,
+            [
+                ProcessRequest(
+                    argv=("git", "cat-file", "-p", "integration/w1:.gitignore"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0, 128),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "worktree", "list", "--porcelain", "-z"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "rev-parse", "--verify", "refs/heads/integration/w1"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "hash-object", "-w", "--stdin"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin="node_modules/\n.brigade/worktrees/\n",
+                ),
+                ProcessRequest(
+                    argv=("git", "ls-tree", "-z", ""),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "mktree", "-z"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin="100644 blob \t.gitignore\x00",
+                ),
+                ProcessRequest(
+                    argv=("git", "commit-tree", "", "-p", "", "-m", "brigade tick: ignore .brigade/worktrees/"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "update-ref", "refs/heads/integration/w1", "", ""),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+            ],
+        )
 
     def test_should_commit_the_ignore_file_on_the_wave_branch_under_a_message_of_its_own(self):
         # Arrange

@@ -68,8 +68,8 @@ class DoctorTestCase(unittest.TestCase):
         self.configuration.write_text(content)
 
     def read_every_state_file(self) -> str:
-        files = sorted(path for path in self.state_home.rglob("*") if path.is_file())
-        return "".join(path.read_text(encoding="utf-8", errors="replace") for path in files)
+        every_file = filter(Path.is_file, self.state_home.rglob("*"))
+        return b"".join(map(Path.read_bytes, every_file)).decode("utf-8", errors="replace")
 
     def run_doctor(self, path_directories, *options):
         return self.run_doctor_from(CLONE_ENTRY_POINT, path_directories, *options)

@@ -7,6 +7,7 @@ from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.corpus import collect
 from brigade.errors import EntityNotDefined
 from brigade.system.parse_configuration import Configuration
+from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -70,7 +71,53 @@ class CorpusCollectorTest(unittest.TestCase):
         collect(environment, self.runtime, EQUIPMENT)
 
         # Assert
-        self.assertEqual(self.processes.requests[-1].cwd, str(self.root / "cache" / "refs" / "oak" / "bead"))
+        self.assertEqual(
+            self.processes.requests,
+            [
+                ProcessRequest(
+                    argv=("awawa", "status", "PROJECT", "--json", f"{self.root}/config"),
+                    cwd=f"{self.root}/config",
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("awawa", "show", "@PROJECT.oak", "--json", f"{self.root}/config"),
+                    cwd=f"{self.root}/config",
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0, 1),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("awawa", "status", "PROJECT", "--json", f"{self.root}/config"),
+                    cwd=f"{self.root}/config",
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("awawa", "show", "@PROJECT.oak", "--json", f"{self.root}/config"),
+                    cwd=f"{self.root}/config",
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0, 1),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "v1^{commit}"),
+                    cwd="/srv/oak",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0, 1),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("awawa", "status", "--json", "."),
+                    cwd=f"{self.root}/cache/refs/oak/bead",
+                    timeout_s=300.0,
+                    acceptable_exit_codes=EVERY_EXIT_CODE,
+                    stdin=None,
+                ),
+            ],
+        )
 
     def test_should_list_each_entity_it_is_given_whole(self):
         # Arrange

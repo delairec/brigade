@@ -6,6 +6,7 @@ from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.shell import collect
 from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
+from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -54,7 +55,18 @@ class ShellCollectorTest(unittest.TestCase):
         collect(create_environment('{"command": "ls"}'), self.runtime, EQUIPMENT)
 
         # Assert
-        self.assertEqual(self.processes.requests[0].cwd, "/srv/oak")
+        self.assertEqual(
+            self.processes.requests,
+            [
+                ProcessRequest(
+                    argv=("ls",),
+                    cwd="/srv/oak",
+                    timeout_s=600.0,
+                    acceptable_exit_codes=EVERY_EXIT_CODE,
+                    stdin=None,
+                )
+            ],
+        )
 
     def test_should_report_a_command_that_failed_with_its_errors(self):
         # Arrange

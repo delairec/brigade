@@ -87,7 +87,10 @@ class PrListCollectorTest(unittest.TestCase):
         collect(create_environment('{"state": "all"}'), self.runtime, self.create_equipment(forge))
 
         # Assert
-        self.assertEqual(forge.list_requests("list_pull_requests")[0]["state"], "all")
+        self.assertEqual(
+            forge.list_requests("list_pull_requests"),
+            [{"schema_version": 1, "repository": "/srv/oak", "state": "all", "environment": {}}],
+        )
 
     def test_should_refuse_a_state_the_forge_does_not_know(self):
         # Arrange

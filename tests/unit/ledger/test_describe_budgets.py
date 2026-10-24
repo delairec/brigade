@@ -7,11 +7,7 @@ from brigade.ledger.read_ledger import LedgerReading
 from tests.unit.ledger.create_run_finished import create_run_finished
 
 
-def create_reading(*events) -> LedgerReading:
-    entries = tuple(
-        LedgerEntry(instant=datetime(2026, 10, 10, 9, minute, tzinfo=UTC), event=event)
-        for minute, event in enumerate(events)
-    )
+def create_reading(*entries: LedgerEntry) -> LedgerReading:
     return LedgerReading(entries=entries, files=(), skipped=())
 
 
@@ -19,9 +15,18 @@ class DescribeBudgetsTest(unittest.TestCase):
     def test_should_summarize_the_last_runs_of_each_procedure_as_an_estimate_below_five(self):
         # Arrange
         reading = create_reading(
-            create_run_finished("r1", procedure="awawa-task", main_steps=10),
-            create_run_finished("r2", procedure="awawa-task", main_steps=30),
-            create_run_finished("r3", procedure="awawa-review", main_steps=8),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 0, tzinfo=UTC),
+                event=create_run_finished("r1", procedure="awawa-task", main_steps=10),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 1, tzinfo=UTC),
+                event=create_run_finished("r2", procedure="awawa-task", main_steps=30),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 2, tzinfo=UTC),
+                event=create_run_finished("r3", procedure="awawa-review", main_steps=8),
+            ),
         )
 
         # Act
@@ -50,11 +55,26 @@ class DescribeBudgetsTest(unittest.TestCase):
     def test_should_drop_the_estimate_mark_from_five_measured_runs(self):
         # Arrange
         reading = create_reading(
-            create_run_finished("r1", main_steps=10),
-            create_run_finished("r2", main_steps=11),
-            create_run_finished("r3", main_steps=12),
-            create_run_finished("r4", main_steps=13),
-            create_run_finished("r5", main_steps=14),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 0, tzinfo=UTC),
+                event=create_run_finished("r1", main_steps=10),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 1, tzinfo=UTC),
+                event=create_run_finished("r2", main_steps=11),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 2, tzinfo=UTC),
+                event=create_run_finished("r3", main_steps=12),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 3, tzinfo=UTC),
+                event=create_run_finished("r4", main_steps=13),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 10, 10, 9, 4, tzinfo=UTC),
+                event=create_run_finished("r5", main_steps=14),
+            ),
         )
 
         # Act

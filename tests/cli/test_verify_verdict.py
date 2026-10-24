@@ -40,13 +40,9 @@ class VerifyVerdictTestCase(VerifyPreflightTestCase):
             cwd=self.project.path,
         )
 
-    def read_verdicts(self) -> list[dict]:
-        lines = [
-            json.loads(line)
-            for month in sorted((self.state / "ledger").glob("*.jsonl"))
-            for line in month.read_text().splitlines()
-        ]
-        return [line for line in lines if line["event"] == "task.verdict"]
+    def read_events(self) -> list[dict]:
+        [month] = (self.state / "ledger").glob("*.jsonl")
+        return list(map(json.loads, month.read_text().splitlines()))
 
 
 class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
@@ -58,8 +54,28 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stderr, "")
         self.assertEqual(
-            self.read_verdicts(),
+            self.read_events(),
             [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-17T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": "integration/M1-empty-cart",
+                    "tasks": ["S3"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-17T12:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "shop",
+                    "task": "S3",
+                    "wave": "shop_w1",
+                    "branch": "task/M1-empty-cart/S3",
+                    "pr": 42,
+                    "login": "octo-bot",
+                },
                 {
                     "schema_version": 1,
                     "ts": ANY,
@@ -74,6 +90,6 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
                         {"grade": "high", "file": "src/cart/button.py", "line": 2, "broken": "SPEC 1 of @TASK.S3"}
                     ],
                     "login": None,
-                }
+                },
             ],
         )

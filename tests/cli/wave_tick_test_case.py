@@ -74,9 +74,9 @@ class WaveTickTestCase(unittest.TestCase):
     def run_tick(self, *options: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "tick", *options, environment=self.describe_environment())
 
-    def read_events(self, name: str) -> list:
+    def read_events(self) -> list:
         lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
-        return [event for event in map(json.loads, lines) if event["event"] == name]
+        return list(map(json.loads, lines))
 
     def describe_environment(self) -> dict:
         return {

@@ -34,19 +34,19 @@ WRITE_CALL = "write"
 PID_HELD_BY_NO_PROCESS = 2**31 - 1
 
 
-def list_state_at_the_first_write(state_root: Path, run_directory: Path, pid: int) -> list[str]:
-    states = []
+def list_runs_at_the_first_write(state_root: Path, run_directory: Path, pid: int) -> list[dict]:
+    listings = []
 
     def list_runs_on_the_first_write(_frame, event, called) -> None:
-        if event == "c_call" and called.__name__ == WRITE_CALL and not states:
-            states.extend(run["state"] for run in list_runs(state_root)["runs"])
+        if event == "c_call" and called.__name__ == WRITE_CALL and not listings:
+            listings.append(list_runs(state_root))
 
     sys.setprofile(list_runs_on_the_first_write)
     try:
         record_run_pid(run_directory, pid)
     finally:
         sys.setprofile(None)
-    return states
+    return listings
 
 
 class RecordRunPidTest(unittest.TestCase):
@@ -84,7 +84,28 @@ class RecordRunPidTest(unittest.TestCase):
         record_run_pid(self.run_directory, living_pid)
 
         # Act
-        states = list_state_at_the_first_write(self.state_root, self.run_directory, living_pid)
+        listings = list_runs_at_the_first_write(self.state_root, self.run_directory, living_pid)
 
         # Assert
-        self.assertEqual(states, ["running"])
+        self.assertEqual(
+            listings,
+            [
+                {
+                    "runs": [
+                        {
+                            "run": "20261006T120000Z-abcdef",
+                            "procedure": "deliver",
+                            "slot": "build",
+                            "role": "builder",
+                            "project": None,
+                            "worktree": "/home/user/tidepool",
+                            "state": "running",
+                            "outcome": None,
+                            "wave": None,
+                            "task": None,
+                        }
+                    ],
+                    "skipped": [],
+                }
+            ],
+        )

@@ -3,6 +3,7 @@ import unittest
 from brigade.adapters.schedulers.cron import install, read_status
 from brigade.errors import CommandFailed, ToolNotFound
 from brigade.runtime import Runtime
+from brigade.system.run_process import ProcessRequest
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
@@ -48,7 +49,24 @@ class InstallCronTest(unittest.TestCase):
                 "keep_running": None,
             },
         )
-        self.assertEqual(runtime.run_process.requests[-1].stdin, f"0 3 * * * backup\n{CRON_LINE}\n")
+        self.assertEqual(
+            runtime.run_process.requests,
+            [
+                ProcessRequest(
+                    argv=("crontab", "-l"), cwd="/", timeout_s=30.0, acceptable_exit_codes=(0, 1), stdin=None
+                ),
+                ProcessRequest(
+                    argv=("crontab", "-"),
+                    cwd="/",
+                    timeout_s=30.0,
+                    acceptable_exit_codes=(0,),
+                    stdin="0 3 * * * backup\n"
+                    "*/5 * * * * mkdir -p /home/ada/.local/state/brigade && PATH=/usr/bin:/bin "
+                    "BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade tick --once >/dev/null "
+                    "2>>/home/ada/.local/state/brigade/tick.log # brigade scheduler install\n",
+                ),
+            ],
+        )
 
     def test_should_start_the_crontab_of_a_user_who_has_none(self):
         # Arrange
@@ -58,7 +76,23 @@ class InstallCronTest(unittest.TestCase):
         install(REQUEST, runtime)
 
         # Assert
-        self.assertEqual(runtime.run_process.requests[-1].stdin, f"{CRON_LINE}\n")
+        self.assertEqual(
+            runtime.run_process.requests,
+            [
+                ProcessRequest(
+                    argv=("crontab", "-l"), cwd="/", timeout_s=30.0, acceptable_exit_codes=(0, 1), stdin=None
+                ),
+                ProcessRequest(
+                    argv=("crontab", "-"),
+                    cwd="/",
+                    timeout_s=30.0,
+                    acceptable_exit_codes=(0,),
+                    stdin="*/5 * * * * mkdir -p /home/ada/.local/state/brigade && PATH=/usr/bin:/bin "
+                    "BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade tick --once >/dev/null "
+                    "2>>/home/ada/.local/state/brigade/tick.log # brigade scheduler install\n",
+                ),
+            ],
+        )
 
     def test_should_refuse_a_crontab_that_cannot_be_listed(self):
         # Arrange

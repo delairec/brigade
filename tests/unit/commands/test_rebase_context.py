@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.commands.rebase_context import COMMAND
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TIDEPOOL_PROJECT, WAVE_STARTED
 
 MERGE_TREE = (
     "git",
@@ -58,7 +58,10 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, merge: ProcessAnswer):
         answers = {
-            **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in TASK_WORKTREE.items()},
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
+                stdout="/home/user/tidepool/.git\n"
+            ),
             MERGE_TREE: merge,
         }
         machine = ScriptedProcessRunner(

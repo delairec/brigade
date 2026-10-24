@@ -4,7 +4,8 @@ from pathlib import Path
 from tests.guards.find_violations import Finding, GuardedModule, find_violations
 
 COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
-TEST_PREFIX = "test"
+DOUBLE_SUFFIX = "Double"
+FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
 
 
 def _compares_a_sorted_value(node: ast.AST) -> bool:
@@ -14,32 +15,29 @@ def _compares_a_sorted_value(node: ast.AST) -> bool:
     return isinstance(compared, ast.Call) and isinstance(compared.func, ast.Name) and compared.func.id == "sorted"
 
 
-def _describe_violation(node: ast.AST, method: str) -> str | None:
+def _describe_violation(node: ast.AST, function: str) -> str | None:
     if isinstance(node, COMPREHENSIONS):
-        return f"projects a value in {method}"
+        return f"projects a value in {function}"
     if _compares_a_sorted_value(node):
-        return f"compares a sorted value in {method}"
+        return f"compares a sorted value in {function}"
     return None
 
 
-def _inspect_method(method: ast.FunctionDef) -> list[Finding]:
-    findings = []
-    for node in ast.walk(method):
-        violation = _describe_violation(node, method.name)
-        if violation is not None:
-            findings.append((node.lineno, 0, violation))
+def _inspect_node(node: ast.AST, function: str | None) -> list[Finding]:
+    if isinstance(node, ast.ClassDef) and node.name.endswith(DOUBLE_SUFFIX):
+        return []
+    if function is None and isinstance(node, FUNCTIONS):
+        function = node.name
+    violation = None if function is None else _describe_violation(node, function)
+    findings = [] if violation is None else [(node.lineno, 0, violation)]
+    for child in ast.iter_child_nodes(node):
+        findings.extend(_inspect_node(child, function))
     return findings
 
 
 def _find_in_module(module: GuardedModule) -> list[Finding]:
-    findings = {
-        finding
-        for node in ast.walk(module.tree)
-        if isinstance(node, ast.FunctionDef) and node.name.startswith(TEST_PREFIX)
-        for finding in _inspect_method(node)
-    }
-    return list(findings)
+    return _inspect_node(module.tree, None)
 
 
 def find_projections(tests_root: Path) -> list[str]:
-    return find_violations(tests_root, _find_in_module)
+    return find_violations(tests_root, _find_in_module, pattern="test_*.py")

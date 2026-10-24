@@ -164,7 +164,13 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
 
         # Assert
-        self.assertEqual(document["tasks"][1], {"task": "T8", "state": "parked", "pull_request": None, "run": None})
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None},
+                {"task": "T8", "state": "parked", "pull_request": None, "run": None},
+            ],
+        )
 
     def test_should_refuse_a_wave_no_wave_started_names(self):
         # Arrange

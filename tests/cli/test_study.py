@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import ANY
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
@@ -116,9 +117,9 @@ class StudyRunTestCase(StudyTestCase):
             "entity:ANSWER",
         )
 
-    def read_events(self, name: str) -> list:
-        lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
-        return [event for event in map(json.loads, lines) if event["event"] == name]
+    def read_events(self) -> list:
+        [month] = self.ledger.glob("*.jsonl")
+        return list(map(json.loads, month.read_text().splitlines()))
 
 
 class BrigadeStudyRunTest(StudyRunTestCase):
@@ -192,10 +193,97 @@ class BrigadeStudyRunTest(StudyRunTestCase):
 
         # Assert
         document = json.loads(completed.stdout)
-        [judging] = self.read_events("run.finished")
-        self.assertEqual(document["state"], "parked")
-        self.assertEqual(document["reason"], f"the judging run {judging['run']} gave no answer")
-        self.assertEqual(judging["procedure"], "study")
+        events = self.read_events()
+        [_, _, judging, _, _] = events
+        study_run = document["run"]
+        reason = f"the judging run {judging['run']} gave no answer"
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "study": "weekly",
+                "run": study_run,
+                "state": "parked",
+                "step": "judge",
+                "reason": reason,
+            },
+        )
+        self.assertEqual(
+            events,
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "order.started",
+                    "project": "shop",
+                    "kind": "study",
+                    "order": "weekly",
+                    "run": study_run,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "step.done",
+                    "kind": "study",
+                    "run": study_run,
+                    "step": "collect",
+                },
+                {
+                    "schema_version": 2,
+                    "ts": ANY,
+                    "event": "run.finished",
+                    "run": judging["run"],
+                    "segment": 1,
+                    "procedure": "study",
+                    "slot": "report",
+                    "role": "reporter",
+                    "client": "fake",
+                    "project": "shop",
+                    "session": "fake-session",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": ANY,
+                    "usage": {
+                        "input_tokens": 120,
+                        "output_tokens": 3400,
+                        "cache_creation_input_tokens": 16778,
+                        "cache_read_input_tokens": 98000,
+                    },
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "error_class": "the run did not fail",
+                    },
+                    "cost_usd": 0.42,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "step.failed",
+                    "kind": "study",
+                    "run": study_run,
+                    "step": "judge",
+                    "reason": reason,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "order.parked",
+                    "project": "shop",
+                    "kind": "study",
+                    "order": "weekly",
+                    "run": study_run,
+                    "step": "judge",
+                    "reason": reason,
+                },
+            ],
+        )
 
     def test_should_exit_1_naming_a_study_that_is_not_defined(self):
         # Act
@@ -570,7 +658,18 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
         self.assertEqual(
             json.loads(completed.stdout), {"schema_version": 1, "study": "trees", "status": "paused", "changed": True}
         )
-        self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS paused")
+        self.assertEqual(
+            self.read_studies(),
+            "STUDY trees\n"
+            '\tTITLE "the trees"\n'
+            "\tPROJECT @PROJECT.shop\n"
+            '\tCOLLECTOR "shell: true"\n'
+            "\tSLOT none\n"
+            '\tEVERY "1h"\n'
+            '\tOUTPUT "entity:ANSWER"\n'
+            '\tANSWER "ANSWER"\n'
+            "\tSTATUS paused\n",
+        )
         self.assertEqual(
             self.machine.read_git("log", "-1", "--format=%s", "--name-only"),
             "brigade study pause: trees\n\nstudies.awawa\n",
@@ -586,4 +685,15 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(completed.stdout, "resumed @STUDY.trees\n")
-        self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS active")
+        self.assertEqual(
+            self.read_studies(),
+            "STUDY trees\n"
+            '\tTITLE "the trees"\n'
+            "\tPROJECT @PROJECT.shop\n"
+            '\tCOLLECTOR "shell: true"\n'
+            "\tSLOT none\n"
+            '\tEVERY "1h"\n'
+            '\tOUTPUT "entity:ANSWER"\n'
+            '\tANSWER "ANSWER"\n'
+            "\tSTATUS active\n",
+        )

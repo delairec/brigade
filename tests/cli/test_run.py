@@ -1,9 +1,12 @@
 import json
 import os
 import signal
+import sys
 from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
+from tests.cli.temporary_machine import CLONE_ENTRY_POINT
+from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
@@ -122,8 +125,46 @@ class BrigadeRunDetachedTest(RunTestCase):
         run_id = completed.stdout.strip()
         self.assertRegex(run_id, RUN_ID_PATTERN)
         self.assertRegex((self.runs / run_id / "pid").read_text(), r"^\d+ \d+ [0-9a-f-]{36}\n$")
-        [finished] = self.read_events("run.finished")
-        self.assertEqual(finished["run"], run_id)
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": PatternMatcher(INSTANT_PATTERN),
+                    "event": "run.finished",
+                    "run": run_id,
+                    "segment": 1,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "fake-session",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": DurationUnderMatcher(10000),
+                    "usage": {
+                        "input_tokens": 120,
+                        "output_tokens": 3400,
+                        "cache_creation_input_tokens": 16778,
+                        "cache_read_input_tokens": 98000,
+                    },
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": NOT_IN_A_WAVE,
+                        "task": NOT_FOR_A_TASK,
+                        "total_steps": "the client reads no transcript",
+                        "error_class": "the run did not fail",
+                    },
+                    "cost_usd": 0.42,
+                }
+            ],
+        )
 
 
 class BrigadeRunStoppedBySignalTest(RunTestCase):
@@ -152,27 +193,91 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         self.terminate(brigade_pid)
 
         # Assert
-        [finished] = self.read_events("run.finished")
-        self.assertEqual(finished["outcome"], "stopped")
-        self.assertEqual(finished["exit"], None)
-        self.assertEqual(finished["error_class"], None)
         self.assertEqual(
-            finished["nulls"],
-            {
-                "project": "no project given",
-                "wave": NOT_IN_A_WAVE,
-                "task": NOT_FOR_A_TASK,
-                "main_steps": "the client reads no transcript",
-                "total_steps": "the client reads no transcript",
-                "usage": "the client reads no transcript",
-                "error_class": STOPPED,
-                "exit": STOPPED,
-            },
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": PatternMatcher(INSTANT_PATTERN),
+                    "event": "run.finished",
+                    "run": run_id,
+                    "segment": 1,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": PatternMatcher(UUID_PATTERN),
+                    "main_steps": None,
+                    "total_steps": None,
+                    "duration_ms": DurationUnderMatcher(10000),
+                    "usage": None,
+                    "outcome": "stopped",
+                    "error_class": None,
+                    "exit": None,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": NOT_IN_A_WAVE,
+                        "task": NOT_FOR_A_TASK,
+                        "main_steps": "the client reads no transcript",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reads no transcript",
+                        "error_class": STOPPED,
+                        "exit": STOPPED,
+                    },
+                    "message": STOPPED,
+                }
+            ],
         )
-        client_record = json.loads((self.runs / run_id / "processes.jsonl").read_text().splitlines()[-1])
-        self.assertEqual(client_record["argv"][0], "sh")
-        self.assertEqual(client_record["outcome"], "stopped")
-        self.assertEqual(client_record["exit"], None)
+        self.assertEqual(
+            list(map(json.loads, (self.runs / run_id / "processes.jsonl").read_text().splitlines())),
+            [
+                {
+                    "schema_version": 1,
+                    "argv": [
+                        sys.executable,
+                        str(CLONE_ENTRY_POINT),
+                        "run",
+                        str(self.procedure),
+                        "--slot",
+                        "build",
+                        "--cwd",
+                        str(self.workspace),
+                        "--run-id",
+                        run_id,
+                    ],
+                    "cwd": str(self.workspace),
+                    "exit": None,
+                    "duration_ms": None,
+                    "outcome": "spawned",
+                    "pid": brigade_pid,
+                },
+                {
+                    "schema_version": 1,
+                    "argv": [
+                        "sh",
+                        "-c",
+                        (
+                            'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ];'
+                            ' do sleep 0.1; done; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
+                            ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
+                        ),
+                        "fake",
+                        str(self.hold),
+                        "",
+                        str(self.recordings / "builder.json"),
+                        "0",
+                        "0",
+                    ],
+                    "cwd": str(self.workspace),
+                    "exit": None,
+                    "duration_ms": DurationUnderMatcher(10000),
+                    "outcome": "stopped",
+                },
+            ],
+        )
 
 
 class BrigadeRunOnTheClockTest(RunTestCase):
@@ -192,40 +297,53 @@ class BrigadeRunOnTheClockTest(RunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 11, completed.stderr)
-        [finished] = self.read_events("run.finished")
-        self.assertRegex(finished.pop("ts"), INSTANT_PATTERN)
-        self.assertLess(finished.pop("duration_ms"), 10000)
-        self.assertRegex(finished.pop("session"), UUID_PATTERN)
         self.assertEqual(
-            finished,
-            {
-                "schema_version": 2,
-                "event": "run.finished",
-                "run": json.loads(completed.stdout)["run"],
-                "segment": 1,
-                "procedure": "quick",
-                "slot": "build",
-                "role": "builder",
-                "client": "fake",
-                "project": None,
-                "main_steps": None,
-                "total_steps": None,
-                "usage": None,
-                "outcome": "wall_limit",
-                "error_class": None,
-                "exit": None,
-                "wave": None,
-                "task": None,
-                "nulls": {
-                    "project": "no project given",
-                    "wave": NOT_IN_A_WAVE,
-                    "task": NOT_FOR_A_TASK,
-                    "main_steps": "the client reads no transcript",
-                    "total_steps": "the client reads no transcript",
-                    "usage": "the client reads no transcript",
-                    "error_class": CUT,
-                    "exit": CUT,
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": PatternMatcher(INSTANT_PATTERN),
+                    "event": "run.finished",
+                    "run": json.loads(completed.stdout)["run"],
+                    "segment": 1,
+                    "procedure": "quick",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": PatternMatcher(UUID_PATTERN),
+                    "main_steps": None,
+                    "total_steps": None,
+                    "duration_ms": DurationUnderMatcher(10000),
+                    "usage": None,
+                    "outcome": "wall_limit",
+                    "error_class": None,
+                    "exit": None,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": NOT_IN_A_WAVE,
+                        "task": NOT_FOR_A_TASK,
+                        "main_steps": "the client reads no transcript",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reads no transcript",
+                        "error_class": CUT,
+                        "exit": CUT,
+                    },
+                    "message": "cut at the wall-time limit of 0.4 s",
                 },
-                "message": "cut at the wall-time limit of 0.4 s",
-            },
+                {
+                    "schema_version": 1,
+                    "ts": PatternMatcher(INSTANT_PATTERN),
+                    "event": "signal.recorded",
+                    "signal": "wall_limit_reached",
+                    "project": None,
+                    "procedure": "quick",
+                    "run": json.loads(completed.stdout)["run"],
+                    "segment": 1,
+                    "budget": 1,
+                    "wall_limit_s": 0.4,
+                },
+            ],
         )

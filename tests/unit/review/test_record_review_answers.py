@@ -1,11 +1,15 @@
 import json
 import tempfile
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.ledger.task_review_answered import TaskReviewAnswered
+from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_verdict import TaskVerdict
 from brigade.review.record_review_answers import AnswersDemand, record_review_answers
 from brigade.system.parse_configuration import Configuration
 from tests.unit.commands.command_runtime import create_corpus_double, write_ledger
@@ -49,8 +53,8 @@ class RecordReviewAnswersTestCase(unittest.TestCase):
             ),
         )
 
-    def read_last_event(self) -> dict:
-        return json.loads((self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines()[-1])
+    def read_events(self) -> list[dict]:
+        return list(map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines()))
 
     def list_replies(self) -> list[dict]:
         return self.forge.list_requests("reply_review_thread")
@@ -66,19 +70,43 @@ class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):
 
         # Assert
         self.assertEqual(
-            self.read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.review_answered",
-                "project": "tidepool",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "pr": 42,
-                "head": "8885daa",
-                "answers": [{"finding": "1", "answer": "fixed by 8885daa"}],
-                "login": None,
-            },
+            self.read_events(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T12:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "changes_requested",
+                    "reason": "body: the body keeps the placeholder $checks",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T13:00:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "verdict": "changes",
+                    "findings": [{"grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}],
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.review_answered",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "answers": [{"finding": "1", "answer": "fixed by 8885daa"}],
+                    "login": None,
+                },
+            ],
         )
 
     def test_should_record_answers_the_ledger_reads_back_as_the_answers_to_the_review(self):
@@ -90,15 +118,48 @@ class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.root / "state").entries[-1].event,
-            TaskReviewAnswered(
-                project="tidepool",
-                wave="tidepool_w16",
-                task="T7",
-                pr=42,
-                head="8885daa",
-                answers=({"finding": "1", "answer": "fixed by 8885daa"},),
-                login=None,
+            read_ledger(self.root / "state"),
+            LedgerReading(
+                entries=(
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 18, 12, 0, tzinfo=UTC),
+                        event=TaskState(
+                            wave="tidepool_w16",
+                            task="T7",
+                            state="changes_requested",
+                            reason="body: the body keeps the placeholder $checks",
+                        ),
+                    ),
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 18, 13, 0, tzinfo=UTC),
+                        event=TaskVerdict(
+                            project="tidepool",
+                            wave="tidepool_w16",
+                            task="T7",
+                            pr=42,
+                            head="8885daa",
+                            verdict="changes",
+                            findings=(
+                                {"grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"},
+                            ),
+                            login=None,
+                        ),
+                    ),
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
+                        event=TaskReviewAnswered(
+                            project="tidepool",
+                            wave="tidepool_w16",
+                            task="T7",
+                            pr=42,
+                            head="8885daa",
+                            answers=({"finding": "1", "answer": "fixed by 8885daa"},),
+                            login=None,
+                        ),
+                    ),
+                ),
+                files=(str(self.root / "state" / "ledger" / "2026-10.jsonl"),),
+                skipped=(),
             ),
         )
 
@@ -122,7 +183,33 @@ class RecordReviewAnswersUnderTheVerdictModeTest(RecordReviewAnswersTestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the answers are refused: finding 1 has no answer")
-        self.assertEqual(self.read_last_event()["event"], "task.verdict")
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T12:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "changes_requested",
+                    "reason": "body: the body keeps the placeholder $checks",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T13:00:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "verdict": "changes",
+                    "findings": [{"grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}],
+                    "login": None,
+                },
+            ],
+        )
 
 
 class RecordReviewAnswersUnderTheApprovalModeTest(RecordReviewAnswersTestCase):

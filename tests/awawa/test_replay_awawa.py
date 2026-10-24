@@ -79,7 +79,7 @@ class FakeAwawaTestCase(unittest.TestCase):
             check=False,
         )
 
-    def run_inner_case(self, *arguments: str) -> str:
+    def run_inner_case(self, *arguments: str) -> list:
         recordings = self.recordings
         run_awawa_on = self.run_awawa_on
 
@@ -93,7 +93,7 @@ class FakeAwawaTestCase(unittest.TestCase):
 
         result = unittest.TestResult()
         CallingAwawaTest("test_call").run(result)
-        return "".join(trace for _, trace in result.failures)
+        return result.failures
 
 
 class FakeAwawaReplayTest(FakeAwawaTestCase):
@@ -142,10 +142,10 @@ class FakeAwawaReplayTest(FakeAwawaTestCase):
 class FakeAwawaWithoutARecordingTest(FakeAwawaTestCase):
     def test_should_fail_the_test_naming_the_arguments_of_a_call_never_recorded(self):
         # Act
-        failures = self.run_inner_case("show", "@AGENT.ghost", "--json", str(self.corpus))
+        [(_, failure)] = self.run_inner_case("show", "@AGENT.ghost", "--json", str(self.corpus))
 
         # Assert
-        self.assertIn(f"awawa has no recording of: awawa show @AGENT.ghost --json {self.corpus}", failures)
+        self.assertIn(f"awawa has no recording of: awawa show @AGENT.ghost --json {self.corpus}", failure)
 
     def test_should_fail_the_test_of_a_call_whose_input_files_differ_from_the_recording(self):
         # Arrange
@@ -153,10 +153,10 @@ class FakeAwawaWithoutARecordingTest(FakeAwawaTestCase):
         (self.corpus / "tasks.awawa").write_text("TASK B2\n")
 
         # Act
-        failures = self.run_inner_case("lint", "--strict", str(self.corpus))
+        [(_, failure)] = self.run_inner_case("lint", "--strict", str(self.corpus))
 
         # Assert
-        self.assertIn(f"awawa has no recording of: awawa lint --strict {self.corpus}", failures)
+        self.assertIn(f"awawa has no recording of: awawa lint --strict {self.corpus}", failure)
 
 
 class FakeAwawaRecordingTest(FakeAwawaTestCase):
@@ -201,7 +201,25 @@ class FakeAwawaRecordingTest(FakeAwawaTestCase):
 
         # Assert
         self.assertEqual(
-            json.loads(next(self.recordings.iterdir()).read_text())["run_order"], ["<run_name:2>", "<run_name:1>"]
+            json.loads(next(self.recordings.iterdir()).read_text()),
+            {
+                "call": {
+                    "arguments": ["fmt", "<tmp:0>/corpus/answers.awawa"],
+                    "cwd": "<tmp:0>",
+                    "directories": [],
+                    "inputs": {
+                        "<tmp:0>/corpus/answers.awawa": "ANSWER trees_<run_name:1>\nANSWER trees_<run_name:2>\n"
+                    },
+                },
+                "outcome": {
+                    "exit_code": 0,
+                    "rewritten": {"<tmp:0>/corpus/answers.awawa": "TASK B1\n"},
+                    "stderr": "1 file rewritten\n",
+                    "stdout": "<tmp:0>/corpus/answers.awawa\n",
+                },
+                "run_order": ["<run_name:2>", "<run_name:1>"],
+                "version": "awawa 2.7.0",
+            },
         )
 
     def test_should_answer_the_call_with_what_the_real_awawa_answered(self):

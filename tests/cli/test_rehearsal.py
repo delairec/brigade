@@ -35,25 +35,64 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
             },
         )
 
-    def test_should_open_the_integration_pull_request_wave_pr_opened_names(self):
+    def test_should_open_the_integration_pull_request_the_wave_names(self):
         # Arrange
-        opened = self.rehearser.read_events("wave.pr_opened")[0]
+        shown = json.loads(self.rehearser.run_brigade("wave", "show", "shop_w1", "--json").stdout)
 
         # Act
-        pull_request = self.rehearser.read_pull_request(opened["pr"])
+        pull_request = self.rehearser.read_pull_request(shown["pull_request"])
 
         # Assert
-        self.assertEqual(opened["wave"], "shop_w1")
-        self.assertEqual(pull_request["headRefName"], "integration/shop_w1")
-        self.assertEqual(pull_request["baseRefName"], "main")
+        self.assertEqual(
+            pull_request,
+            {
+                "number": shown["pull_request"],
+                "title": "chore(wave): merge the wave shop_w1 into main",
+                "body": "Integrates the wave shop_w1 of @PROJECT.shop into main: @TASK.S1, @TASK.S2, @TASK.S3.",
+                "headRefName": "integration/shop_w1",
+                "baseRefName": "main",
+                "state": "OPEN",
+                "reviewDecision": None,
+                "author": "octo-build",
+            },
+        )
 
     def test_should_record_every_run_in_the_ledger(self):
         # Arrange
-        runs = self.rehearser.list_finished_runs()
+        self.rehearser.list_finished_runs()
 
         # Act
         completed = self.rehearser.run_brigade("ledger", "--json")
 
         # Assert
-        self.assertEqual(len(runs), 8)
-        self.assertEqual(json.loads(completed.stdout)["runs"], {"outcomes": {"done": 8}, "error_classes": {}})
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "schema_version": 1,
+                "view": "overview",
+                "events": {
+                    "milestone.created": 3,
+                    "order.parked": 1,
+                    "order.started": 1,
+                    "pr.merged": 3,
+                    "run.finished": 8,
+                    "step.done": 1,
+                    "step.failed": 1,
+                    "task.pr_opened": 3,
+                    "task.preflighted": 3,
+                    "task.promoted": 3,
+                    "task.rebased": 1,
+                    "task.state": 16,
+                    "task.verdict": 3,
+                    "wave.pr_opened": 1,
+                    "wave.reported": 1,
+                    "wave.started": 1,
+                },
+                "first": ANY,
+                "last": ANY,
+                "files": [ANY],
+                "runs": {"outcomes": {"done": 8}, "error_classes": {}},
+                "segments": {"outcomes": {"done": 8}, "error_classes": {}},
+                "skipped": [],
+            },
+        )
