@@ -256,6 +256,26 @@ class MainRefusalTest(MainTestCase):
             ),
             (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
             (["runs", "show"], r"\nbrigade runs show: error: the following arguments are required: run\n$"),
+            (
+                ["ledger", "--wave", "tidepool_w16", "--project", "tidepool"],
+                r"\nbrigade ledger: error: argument --project: not allowed with argument --wave\n$",
+            ),
+            (
+                ["ledger", "--project", "tidepool", "--since", "yesterday"],
+                r"\nbrigade ledger: error: argument --since: 'yesterday' is neither <n>d nor a day YYYY-MM-DD\n$",
+            ),
+            (
+                ["ledger", "budgets", "--last", "0"],
+                r"\nbrigade ledger budgets: error: argument --last: '0' is not a count of 1 or more\n$",
+            ),
+            (
+                ["ledger", "compare"],
+                r"\nbrigade ledger compare: error: the following arguments are required: --before\n$",
+            ),
+            (
+                ["ledger", "compare", "--before", "2026-13-01"],
+                r"\nbrigade ledger compare: error: argument --before: '2026-13-01' is not a day YYYY-MM-DD\n$",
+            ),
         ]
         for arguments, expected_error in rows:
             with self.subTest(arguments=arguments):

@@ -38,6 +38,33 @@ class DescribeComparisonTest(unittest.TestCase):
             },
         )
 
+    def test_should_date_a_run_by_its_last_segment_and_count_its_segments_with_it(self):
+        # Arrange
+        first_segment = LedgerEntry(
+            instant=datetime(2026, 10, 4, 9, 0, tzinfo=UTC), event=create_run_finished("r3", segment=1, main_steps=10)
+        )
+        last_segment = LedgerEntry(
+            instant=datetime(2026, 10, 6, 9, 0, tzinfo=UTC), event=create_run_finished("r3", segment=2)
+        )
+
+        # Act
+        comparison = describe_comparison(create_reading(EARLIER, first_segment, last_segment), BOUNDARY)
+
+        # Assert
+        self.assertEqual(
+            comparison["periods"]["from"],
+            {
+                "runs": 1,
+                "segments": 2,
+                "steps": {
+                    "runs": {"measured": 1, "unmeasured": 0, "p50": 10, "p90": 10, "partial": 1},
+                    "segments": {"measured": 1, "unmeasured": 1, "p50": 10, "p90": 10},
+                },
+                "steps_to_first_edit": None,
+                "oversized_output_steps": None,
+            },
+        )
+
     def test_should_report_a_measure_the_period_measured(self):
         # Act
         comparison = describe_comparison(create_reading(EARLIER, LATER), BOUNDARY)
