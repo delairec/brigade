@@ -137,6 +137,7 @@ PROJECT_OCTOBER_LINES = (
     '{"schema_version": 1, "ts": "2026-10-02T15:00:00Z", "event": "constraint.delivered", "project": "tidepool"}\n'
 )
 
+
 class LedgerTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -195,7 +196,6 @@ class BrigadeLedgerWaveTest(LedgerTestCase):
         self.write_ledger("2026-09", WAVE_SEPTEMBER_LINES)
         self.october = self.write_ledger("2026-10", WAVE_OCTOBER_LINES)
 
-
     def test_should_print_the_wave_as_text(self):
         # Act
         completed = self.run_ledger("--wave", "tidepool_w16")
@@ -237,7 +237,6 @@ class BrigadeLedgerProjectTest(LedgerTestCase):
         self.write_ledger("2026-09", PROJECT_SEPTEMBER_LINES)
         self.write_ledger("2026-10", PROJECT_OCTOBER_LINES)
 
-
     def test_should_print_the_counts_as_text(self):
         # Act
         completed = self.run_ledger("--project", "tidepool", "--since", "2026-10-01")
@@ -264,7 +263,6 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
         super().setUp()
         self.write_ledger("2026-10", BUDGET_LINES)
 
-
     def test_should_print_the_budgets_as_text(self):
         # Act
         completed = self.run_ledger("budgets")
@@ -290,7 +288,6 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
     def setUp(self):
         super().setUp()
         self.write_ledger("2026-10", COMPARISON_LINES)
-
 
     def test_should_print_the_comparison_as_text(self):
         # Act

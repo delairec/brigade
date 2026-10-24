@@ -135,6 +135,7 @@ class BrigadeProjectShowTest(ProjectTestCase):
             ],
         )
 
+
 class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
@@ -154,8 +155,10 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
         self.assertEqual(completed.stderr, "")
         self.assertEqual(self.registry.read_text().splitlines()[-1], "\tSTATUS active")
         self.assertEqual(
-            self.machine.read_git("log", "-2", "--format=%s"), "brigade project resume: app\nbrigade project pause: app\n"
+            self.machine.read_git("log", "-2", "--format=%s"),
+            "brigade project resume: app\nbrigade project pause: app\n",
         )
+
 
 class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
     def test_should_wait_for_the_lock_of_the_corpus_repository(self):

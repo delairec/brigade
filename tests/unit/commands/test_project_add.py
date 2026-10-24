@@ -170,7 +170,6 @@ class ProjectAddTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), f"{absent} is not a git repository")
 
-
     def test_should_guess_the_commands_no_flag_gives_and_take_the_others_as_given(self):
         # Arrange
         (self.repository / "package.json").write_text('{"scripts": {"test": "vitest", "lint": "eslint ."}}')

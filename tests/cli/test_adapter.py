@@ -66,7 +66,8 @@ class BrigadeAdapterLaunchArgvTest(AdapterTestCase):
     def test_should_take_the_reasoning_row_config_toml_sets(self):
         # Arrange
         self.machine.write_configuration(
-            'client = "claude-code"\n[reasoning.standard]\nmodel = "sonnet"\neffort = "low"\n' + REVIEW_ON_ANOTHER_CLIENT
+            'client = "claude-code"\n[reasoning.standard]\nmodel = "sonnet"\neffort = "low"\n'
+            + REVIEW_ON_ANOTHER_CLIENT
         )
 
         # Act

@@ -71,7 +71,6 @@ class InstallCronTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), "crontab -l exited 1: crontab: permission denied")
 
-
     def test_should_quote_the_paths_holding_a_space_and_a_percent_sign(self):
         # Arrange
         request = {
@@ -91,6 +90,7 @@ class InstallCronTest(unittest.TestCase):
             " '/srv/a 100\\% b/bin/brigade' tick --once >/dev/null 2>>'/srv/a 100\\% b/state/brigade/tick.log'"
             " # brigade scheduler install",
         )
+
 
 class ReadCronStatusTest(unittest.TestCase):
     def test_should_read_the_line_of_brigade_when_installed(self):

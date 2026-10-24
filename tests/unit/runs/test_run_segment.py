@@ -307,6 +307,7 @@ LINE_OF_201_CHARACTERS_CUT_TO_200 = (
     "then the tests of that component, then the procedure of the role, before the first edit of the run."
 )
 
+
 class SpawnDouble:
     def __init__(self, output: str = "the client finished the task"):
         self.requests = []

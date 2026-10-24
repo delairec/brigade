@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
@@ -13,7 +12,6 @@ CHECKED_TASKS = (
     "\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n"
 )
 PASSING_LINE = "python3 -c \"print('the cart is empty')\""
-FAILING_LINE = "python3 -c \"import sys; [print(f'line {n}') for n in range(1, 26)]; sys.exit(3)\""
 
 
 class TaskCheckTestCase(TaskContextTestCase):
@@ -37,9 +35,6 @@ class TaskCheckTestCase(TaskContextTestCase):
 
     def read_head(self) -> str:
         return self.project.run_git("-C", str(self.worktree), "rev-parse", "HEAD").strip()
-
-    def locate_record(self) -> Path:
-        return self.state / "checks" / "shop" / "S3.json"
 
 
 class BrigadeTaskCheckOfPassingCommandsTest(TaskCheckTestCase):

@@ -261,8 +261,8 @@ class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
         super().setUp()
         self.configure_fake(COUNTING_CLIENT)
         self.record("builder", DONE_RESULT)
-        self.s3_of_shop = self.run_task_of_wave("shop_w1", "S3")
-        self.s4_of_shop = self.run_task_of_wave("shop_w1", "S4")
+        self.run_task_of_wave("shop_w1", "S3")
+        self.run_task_of_wave("shop_w1", "S4")
         self.s3_of_cafe = self.run_task_of_wave("cafe_w1", "S3")
         self.run_deliver_to_its_end()
 
