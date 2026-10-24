@@ -3734,8 +3734,8 @@ DECISION AnAtomOfAwawaIsDecodedByAwawasGrammarAndNeverByJson
 		REF @TASK.B208
 	REJECTED "json.loads on the atom: JSON refuses \\. or \\( that awawa keeps, and turns \\n or a"
 		+ "\\u escape into a character awawa does not hold"
-	REJECTED "a decoding of its own in each reader: the eight json.loads this decision replaced"
-		+ "were such decodings, none tested against the grammar awawa follows"
+	REJECTED "a decoding of its own in each reader: the nine json.loads this decision replaced were"
+		+ "such decodings, none tested against the grammar awawa follows"
 	RATIONALE "awawa 2.7.0 decodes \\\" and \\\\ in a string and keeps every other backslash,"
 		+ "proven by awawa status --where on a scratch corpus; the tick of 2026-10-24 exited 70 on"
 		+ "a SPEC of @TASK.B152 that json.loads refused"
