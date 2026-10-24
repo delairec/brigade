@@ -80,10 +80,6 @@ class RunTestCase(FileWaitingTestCase):
         self.hold.touch()
         return f'hold = "{self.hold}"\n'
 
-    def release_the_run(self, run_id: str) -> None:
-        self.hold.unlink(missing_ok=True)
-        self.wait_for_file(self.runs / run_id / "result.json")
-
     def record(self, role: str, result: dict) -> None:
         (self.recordings / f"{role}.json").write_text(json.dumps(result))
 
@@ -103,13 +99,6 @@ class RunTestCase(FileWaitingTestCase):
 
     def read_run_record(self, run_id: str) -> dict:
         return json.loads((self.runs / run_id / "run.json").read_text())
-
-    def wait_for_line(self, path: Path) -> None:
-        deadline = time.monotonic() + FILE_WAIT_S
-        while not path.exists() or not path.read_text().strip():
-            if time.monotonic() > deadline:
-                self.fail(f"{path} never held a line")
-            time.sleep(FILE_POLL_S)
 
     def wait_for_exit(self, pid: int) -> None:
         deadline = time.monotonic() + FILE_WAIT_S
