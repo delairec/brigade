@@ -341,6 +341,10 @@ def _read_journal_records(journal: Path) -> list[dict]:
     return [json.loads(line) for line in journal.read_text(encoding="utf-8").splitlines()]
 
 
+def _read_every_file(directory: Path) -> str:
+    return "".join(path.read_text(encoding="utf-8") for path in sorted(directory.rglob("*")) if path.is_file())
+
+
 def _create_runtime(root: Path, spawn) -> Runtime:
     return create_test_runtime(create_test_paths(root), spawn_process=spawn.spawn, now=LAUNCH_INSTANT)
 
@@ -1135,3 +1139,109 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.measured_ms, 4200)
+
+
+class RunSegmentFilesTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.spawn = SpawnDouble()
+        self.segment_directory = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "segments" / "1"
+
+    def test_should_keep_the_brief_and_the_output_of_the_client_in_the_directory_of_the_segment(self):
+        # Arrange
+        plan = _create_plan(self.root)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        [request] = self.spawn.requests
+        self.assertEqual(request.stdout, self.segment_directory / "stdout.log")
+        self.assertEqual(request.stderr, self.segment_directory / "stderr.log")
+        self.assertEqual(
+            (self.segment_directory / "brief.md").read_text(), plan.client_adapter.requests["launch-argv"]["brief"]
+        )
+
+    def test_should_send_the_client_the_procedure_the_arguments_the_brief_and_the_progress_file(self):
+        # Arrange
+        plan = dataclasses.replace(
+            _create_plan(self.root), arguments={"task": "@TASK.B73", "base": "main"}, brief="Deliver S3 first.\n"
+        )
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            plan.client_adapter.requests["launch-argv"]["brief"],
+            "# Procedure deliver\n\n"
+            "Deliver the task.\n\n"
+            "# Arguments\n\n"
+            "task=@TASK.B73\n"
+            "base=main\n\n"
+            "# Brief\n\n"
+            "Deliver S3 first.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+    def test_should_name_the_directory_of_the_segment_it_cannot_create(self):
+        # Arrange
+        plan = _create_plan(self.root)
+        self.segment_directory.parent.parent.mkdir(parents=True)
+        self.segment_directory.parent.write_text("a file where the segments go")
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.segment_directory}: Not a directory")
+
+    def test_should_name_the_brief_of_the_segment_it_cannot_write(self):
+        # Arrange
+        plan = _create_plan(self.root)
+        (self.segment_directory / "brief.md").mkdir(parents=True)
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.segment_directory / 'brief.md'}: Is a directory")
+
+
+class RunSegmentOfASlotBoundToALoginTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.spawn = SpawnDouble()
+        self.plan = dataclasses.replace(_create_plan(self.root), forge_environment={"GH_TOKEN": "ghp_builder_token"})
+
+    def test_should_hand_the_client_the_token_of_the_login_of_its_slot(self):
+        # Act
+        run_segment(self.plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        [request] = self.spawn.requests
+        self.assertEqual(request.environment["GH_TOKEN"], "ghp_builder_token")
+
+    def test_should_write_the_token_in_no_file_of_the_segment(self):
+        # Act
+        run_segment(self.plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertNotIn("ghp_builder_token", _read_every_file(self.root / "state"))

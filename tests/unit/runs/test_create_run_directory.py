@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import CannotWrite
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.read_run_pid import read_run_pid
 from brigade.system.read_process_identity import read_process_identity
@@ -100,3 +101,48 @@ class CreateRunDirectoryOfAResumedRunTest(CreateRunDirectoryTestCase):
         # Assert
         self.assertCountEqual(plan.run_directory.iterdir(), [plan.run_directory / "pid"])
         self.assertEqual(read_run_pid(plan.run_directory).pid, os.getpid())
+
+
+class CreateRunDirectoryOfTheRoleTest(CreateRunDirectoryTestCase):
+    def test_should_keep_the_package_of_the_resolved_role(self):
+        # Arrange
+        plan = create_run_plan(self.root)
+
+        # Act
+        create_run_directory(plan, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            (plan.run_directory / "role.md").read_text(), "---\nname: builder\nreasoning: standard\n---\nYou build."
+        )
+
+
+class CreateRunDirectoryOverAnEntryItCannotWriteTest(CreateRunDirectoryTestCase):
+    def test_should_name_the_run_directory_it_cannot_create(self):
+        # Arrange
+        plan = create_run_plan(self.root)
+        plan.run_directory.parent.mkdir(parents=True)
+        plan.run_directory.write_text("a file where the run goes")
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            create_run_directory(plan, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {plan.run_directory}: File exists")
+
+    def test_should_name_the_file_of_the_run_it_cannot_write(self):
+        rows = ["pid", "role.md", "progress.md"]
+        for entry in rows:
+            with self.subTest(entry=entry):
+                # Arrange
+                shutil.rmtree(self.root / "state", ignore_errors=True)
+                plan = create_run_plan(self.root)
+                (plan.run_directory / entry).mkdir(parents=True)
+
+                # Act
+                with self.assertRaises(CannotWrite) as refusal:
+                    create_run_directory(plan, self.runtime)
+
+                # Assert
+                self.assertRegex(str(refusal.exception), rf"^cannot write {plan.run_directory / entry}: ")
