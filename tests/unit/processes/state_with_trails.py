@@ -16,6 +16,8 @@ class StateWithTrailsTestCase(unittest.TestCase):
         self.write_trail("ticks/20261010T100000Z.jsonl", TIMED_OUT)
         self.write_trail("commands/20261010T080000Z-ab12.jsonl", SUCCEEDED)
         self.write_trail("commands/notes.jsonl", SUCCEEDED)
+        self.write_trail("ticks/notes.jsonl", SUCCEEDED)
+        self.write_trail("runs/notes/processes.jsonl", SUCCEEDED)
 
     def write_trail(self, relative: str, text: str) -> Path:
         path = self.state_root / relative

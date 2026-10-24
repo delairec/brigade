@@ -6515,7 +6515,11 @@ TASK B96
 TASK B97
 	TITLE "brigade processes returns the subprocesses a run, a tick or a command started, the"
 		+ "failed ones alone on request"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B206 makes false its SPEC that tests/cli prove list over a"
+		+ "run, a tick and a command, show with and without --failed, and an id no trail holds;"
+		+ "they are proven in tests/unit/processes and tests/unit/commands, and tests/cli keeps one"
+		+ "flow of brigade processes list and one of brigade processes show"
 	MILESTONE @MILESTONE.F0
 	COMPONENT "runs"
 	ROLE ada
