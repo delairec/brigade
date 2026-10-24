@@ -1122,42 +1122,6 @@ class BrigadeRunOnTheClockTest(RunTestCase):
             },
         )
 
-    def test_should_record_that_the_clock_cut_the_run_at_its_limit(self):
-        # Act
-        completed = self.run_quick()
-
-        # Assert
-        self.assertEqual(completed.returncode, 11, completed.stderr)
-        [signal] = self.read_events("signal.recorded")
-        self.assertRegex(signal.pop("ts"), INSTANT_PATTERN)
-        self.assertEqual(
-            signal,
-            {
-                "schema_version": 1,
-                "event": "signal.recorded",
-                "signal": "wall_limit_reached",
-                "project": None,
-                "procedure": "quick",
-                "run": json.loads(completed.stdout)["run"],
-                "segment": 1,
-                "budget": 1,
-                "wall_limit_s": 0.4,
-            },
-        )
-
-    def test_should_relaunch_a_segment_cut_on_the_clock_with_progress_up_to_two_hand_overs(self):
-        # Arrange
-        self.configure_fake(
-            COUNTING_CLIENT + 'progress = "step 1 done"\ninterval = "10"\n', keys="seconds_per_step = 0.2\n"
-        )
-
-        # Act
-        completed = self.run_quick()
-
-        # Assert
-        self.assertEqual(completed.returncode, 11, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["segments"], 3)
-
 
 class BrigadeRunAtTheSoftLimitTest(RunTestCase):
     def setUp(self):

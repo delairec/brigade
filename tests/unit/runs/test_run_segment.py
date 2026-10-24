@@ -612,6 +612,17 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         self.assertIsNone(record.uncounted)
         self.assertIsNone(record.cost_usd)
 
+    def test_should_end_the_segment_on_the_wall_time_limit_it_names(self):
+        # Arrange
+        plan = _create_plan(self.root, wall_limit_s=LIMIT_ALREADY_REACHED_S)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.outcome, "wall_limit")
+        self.assertEqual(record.message, "cut at the wall-time limit of 0 s")
+
     def test_should_leave_a_cut_segment_unmeasured_with_its_reason(self):
         # Arrange
         rows = [

@@ -1,5 +1,6 @@
 import json
 import shutil
+import signal
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,8 @@ from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import RecordingProcessRunner
 from tests.unit.runs.create_run_plan import RUN_ID, create_run_plan
 
+PID_HELD_BY_NO_PROCESS = 2**31 - 1
+LIMIT_ALREADY_REACHED_S = 0.0
 LAUNCH = {
     "schema_version": 1,
     "argv": ["double-client", "--print"],
@@ -128,6 +131,95 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
         self.assertEqual(records[0].outcome, "handed_over")
         self.assertEqual(records[1].number, 2)
         self.assertEqual(records[1].outcome, "done")
+
+
+class ProcessCutAtTheLimitDouble:
+    pid = PID_HELD_BY_NO_PROCESS
+
+    def wait(self, timeout: float) -> int:
+        return -signal.SIGTERM
+
+
+def spawn_a_client_outliving_the_limit(request) -> ProcessCutAtTheLimitDouble:
+    request.stdout.write_text("Reading the task\n", encoding="utf-8")
+    request.stderr.write_text("", encoding="utf-8")
+    return ProcessCutAtTheLimitDouble()
+
+
+class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.runtime = create_test_runtime(
+            self.paths, run_process=self.git, spawn_process=spawn_a_client_outliving_the_limit
+        )
+
+    def test_should_record_that_the_clock_cut_the_segment_at_the_wall_time_limit(self):
+        # Arrange
+        plan = self.create_plan(["done"], wall_limit_s=LIMIT_ALREADY_REACHED_S)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.paths.state_root).entries[1].event,
+            SignalRecorded(
+                signal="wall_limit_reached",
+                project=None,
+                procedure="build-task",
+                run=RUN_ID,
+                segment=1,
+                budget=40,
+                wall_limit_s=0.0,
+            ),
+        )
+
+    def test_should_relaunch_a_segment_cut_on_the_clock_with_progress_up_to_the_last_hand_over(self):
+        # Arrange
+        plan = self.create_plan(
+            ["done"], progress="- the test is written\n", handovers=2, wall_limit_s=LIMIT_ALREADY_REACHED_S
+        )
+
+        # Act
+        records = run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(records[-1].number, 3)
+        self.assertEqual(records[-1].outcome, "wall_limit")
+
+
+class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
+    def test_should_record_that_the_clock_ended_the_segment_with_its_wall_time_limit(self):
+        # Arrange
+        plan = self.create_plan(["soft_limit"], wall_limit_s=4.0)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.paths.state_root).entries[1].event,
+            SignalRecorded(
+                signal="wall_limit_reached",
+                project=None,
+                procedure="build-task",
+                run=RUN_ID,
+                segment=1,
+                budget=40,
+                wall_limit_s=4.0,
+            ),
+        )
+
+    def test_should_resume_a_segment_stopped_at_the_soft_limit_with_progress(self):
+        # Arrange
+        plan = self.create_plan(["soft_limit", "done"], progress="- the test is written\n", handovers=1)
+
+        # Act
+        records = run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(records[-1].number, 2)
+        self.assertEqual(records[-1].outcome, "done")
 
 
 class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
