@@ -137,7 +137,19 @@ class TrailWriterAlreadyLocatedTest(TrailWriterTestCase):
         self.trail.settle(fallback)
 
         # Assert
-        self.assertEqual(len(self.read_lines()), 1)
+        self.assertEqual(
+            self.read_lines(),
+            [
+                {
+                    "schema_version": 1,
+                    "argv": ["git", "--version"],
+                    "cwd": "/",
+                    "exit": 0,
+                    "duration_ms": 3,
+                    "outcome": "exited",
+                }
+            ],
+        )
         self.assertEqual(fallback.exists(), False)
 
 
