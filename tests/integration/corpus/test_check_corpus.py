@@ -87,7 +87,33 @@ class CheckCorpusTest(unittest.TestCase):
         checks = check_corpus(self.run_process, self.corpus)
 
         # Assert
-        self.assertEqual(checks[0].record.exit_code, 1)
+        self.assertEqual(
+            checks,
+            (
+                CorpusCheck(
+                    command="awawa fmt --check .",
+                    record=ProcessRecord(
+                        argv=("awawa", "fmt", "--check", "."),
+                        cwd=str(self.corpus),
+                        exit_code=1,
+                        stdout=ANY,
+                        stderr=ANY,
+                        duration_ms=ANY,
+                    ),
+                ),
+                CorpusCheck(
+                    command="awawa lint --strict .",
+                    record=ProcessRecord(
+                        argv=("awawa", "lint", "--strict", "."),
+                        cwd=str(self.corpus),
+                        exit_code=1,
+                        stdout=ANY,
+                        stderr=ANY,
+                        duration_ms=ANY,
+                    ),
+                ),
+            ),
+        )
 
     def test_should_answer_the_failing_exit_code_of_a_corpus_lint_refuses(self):
         # Arrange
@@ -97,7 +123,33 @@ class CheckCorpusTest(unittest.TestCase):
         checks = check_corpus(self.run_process, self.corpus)
 
         # Assert
-        self.assertEqual(checks[1].record.exit_code, 1)
+        self.assertEqual(
+            checks,
+            (
+                CorpusCheck(
+                    command="awawa fmt --check .",
+                    record=ProcessRecord(
+                        argv=("awawa", "fmt", "--check", "."),
+                        cwd=str(self.corpus),
+                        exit_code=0,
+                        stdout=ANY,
+                        stderr=ANY,
+                        duration_ms=ANY,
+                    ),
+                ),
+                CorpusCheck(
+                    command="awawa lint --strict .",
+                    record=ProcessRecord(
+                        argv=("awawa", "lint", "--strict", "."),
+                        cwd=str(self.corpus),
+                        exit_code=1,
+                        stdout=ANY,
+                        stderr=ANY,
+                        duration_ms=ANY,
+                    ),
+                ),
+            ),
+        )
 
     def test_should_lint_clean_a_policy_asking_for_the_wave_starts_of_its_project_under_the_shipped_schema(self):
         # Arrange

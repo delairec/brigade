@@ -658,7 +658,18 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
         self.assertEqual(
             json.loads(completed.stdout), {"schema_version": 1, "study": "trees", "status": "paused", "changed": True}
         )
-        self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS paused")
+        self.assertEqual(
+            self.read_studies(),
+            "STUDY trees\n"
+            '\tTITLE "the trees"\n'
+            "\tPROJECT @PROJECT.shop\n"
+            '\tCOLLECTOR "shell: true"\n'
+            "\tSLOT none\n"
+            '\tEVERY "1h"\n'
+            '\tOUTPUT "entity:ANSWER"\n'
+            '\tANSWER "ANSWER"\n'
+            "\tSTATUS paused\n",
+        )
         self.assertEqual(
             self.machine.read_git("log", "-1", "--format=%s", "--name-only"),
             "brigade study pause: trees\n\nstudies.awawa\n",
@@ -674,4 +685,15 @@ class BrigadeStudyPauseAndResumeTest(StudyRunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(completed.stdout, "resumed @STUDY.trees\n")
-        self.assertEqual(self.read_studies().splitlines()[-1], "\tSTATUS active")
+        self.assertEqual(
+            self.read_studies(),
+            "STUDY trees\n"
+            '\tTITLE "the trees"\n'
+            "\tPROJECT @PROJECT.shop\n"
+            '\tCOLLECTOR "shell: true"\n'
+            "\tSLOT none\n"
+            '\tEVERY "1h"\n'
+            '\tOUTPUT "entity:ANSWER"\n'
+            '\tANSWER "ANSWER"\n'
+            "\tSTATUS active\n",
+        )

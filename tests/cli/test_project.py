@@ -153,7 +153,10 @@ class BrigadeProjectPauseAndResumeTest(ProjectTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stdout, "resumed @PROJECT.app\n")
         self.assertEqual(completed.stderr, "")
-        self.assertEqual(self.registry.read_text().splitlines()[-1], "\tSTATUS active")
+        self.assertEqual(
+            self.registry.read_text(),
+            f'PROJECT app\n\tPATH "{self.project.path}"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n',
+        )
         self.assertEqual(
             self.machine.read_git("log", "-2", "--format=%s"),
             "brigade project resume: app\nbrigade project pause: app\n",
@@ -165,14 +168,16 @@ class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
         # Arrange
         project = self.create_project("app")
         self.run_project("add", str(project.path))
-        lock_files = list((self.machine.state_home / "brigade" / "locks").iterdir())
+        (lock_file,) = (self.machine.state_home / "brigade" / "locks").iterdir()
         argv = [sys.executable, str(CLONE_ENTRY_POINT), "project", "pause", "app"]
 
         # Act
-        with run_while_lock_held(argv, self.machine.describe_environment(), lock_files[0]) as wait_line:
-            status_while_waiting = self.registry.read_text().splitlines()[-1]
+        with run_while_lock_held(argv, self.machine.describe_environment(), lock_file) as wait_line:
+            registry_while_waiting = self.registry.read_text()
 
         # Assert
-        self.assertEqual(len(lock_files), 1)
-        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_files[0]}, held by pid 4242\n")
-        self.assertEqual(status_while_waiting, "\tSTATUS active")
+        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_file}, held by pid 4242\n")
+        self.assertEqual(
+            registry_while_waiting,
+            f'PROJECT app\n\tPATH "{project.path}"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n',
+        )
