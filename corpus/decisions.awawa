@@ -3018,7 +3018,9 @@ DECISION TheOutputStepOfAStudyRunWritesTheAnswerStudyAnswerRecorded
 DECISION TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore
 	TITLE "brigade study new and brigade study run refuse the output inbox until task B22 gives the"
 		+ "inbox a store"
-	STATUS active
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B22 gives the inbox its store and accepts the output inbox"
+		+ "of a study, which records the answer as a signal"
 	DESC "study new refuses OUTPUT inbox before it records the study, and study run refuses it"
 		+ "before its run starts, for a study recorded earlier; each exits 1 naming the output and"
 		+ "@TASK.B22"
@@ -3742,3 +3744,33 @@ DECISION AnAtomOfAwawaIsDecodedByAwawasGrammarAndNeverByJson
 		REF @TASK.B152
 	SOURCE "taken in the delivery of @TASK.B208, pull request 199"
 		REF @TASK.B208
+
+DECISION TheInboxRefusesALineItCannotReadWhereTheLedgerSkipsIt
+	TITLE "a line of the inbox that is not JSON, lacks a field or carries another schema_version"
+		+ "stops every inbox command, exit 1 naming its file and its number"
+	STATUS active
+	DESC "binds @TASK.B22"
+		REF @TASK.B22
+	REJECTED "skipping the line and reporting it, as the ledger does: a skipped dismissal would"
+		+ "turn a dismissed signal back to new"
+	RATIONALE "the fold decides the status of a signal, and a dismissed fingerprint never returns"
+		+ "as new; a line lost to the fold is a status gone wrong, where a line lost to the ledger"
+		+ "is one event fewer in a count"
+	SOURCE "taken in the delivery of @TASK.B22"
+		REF @TASK.B22
+
+DECISION ANoteHashesItsProjectANewlineAndItsTextAndAStudyAnswerItsMarkdown
+	TITLE "the fingerprint of a note hashes its project, a newline and its text, the project empty"
+		+ "when none is given; that of a study answer hashes the Markdown brigade renders from the"
+		+ "answer entity"
+	STATUS active
+	DESC "binds @TASK.B22"
+		REF @TASK.B22
+	REJECTED "the project and the text joined without a separator: the project oak with the text x"
+		+ "would hash as the project oa with the text kx"
+	REJECTED "the awawa text of the answer: the inbox hands the answer to a person through inbox"
+		+ "show, as every output but entity: does, so its evidence and its hash are the Markdown"
+	RATIONALE "a fingerprint names the fact once recorded: changing what it hashes makes every"
+		+ "signal already in the inbox new again"
+	SOURCE "taken in the delivery of @TASK.B22"
+		REF @TASK.B22

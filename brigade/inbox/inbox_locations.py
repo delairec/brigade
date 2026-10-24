@@ -1,0 +1,7 @@
+INBOX_DIRECTORY = "inbox"
+SIGNALS_FILE = "signals.jsonl"
+LOCK_FILE = "inbox.lock"
+SIGNALS_SCHEMA_VERSION = 1
+RECORDED_EVENT = "recorded"
+DISMISSED_EVENT = "dismissed"
+SHOWN_ID_LENGTH = 7

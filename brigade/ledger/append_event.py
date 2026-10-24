@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
+from brigade.ledger.inbox_dismissed import InboxDismissed
+from brigade.ledger.inbox_recorded import InboxRecorded
 from brigade.ledger.ledger_locations import LOCK_FILE
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.order_done import OrderDone
@@ -28,11 +30,8 @@ from brigade.ledger.write_event_line import write_event_line
 from brigade.system.hold_lock import hold_lock
 from brigade.system.paths import Paths
 
-
-def append_event(
-    paths: Paths,
-    instant: datetime,
-    event: RunFinished
+AppendedEvent = (
+    RunFinished
     | SignalRecorded
     | ForgeAccountUnavailable
     | PlanLintFailed
@@ -54,7 +53,12 @@ def append_event(
     | TaskReviewAnswered
     | WaveReported
     | WaveClosed
-    | TickActionFailed,
-) -> dict:
+    | TickActionFailed
+    | InboxRecorded
+    | InboxDismissed
+)
+
+
+def append_event(paths: Paths, instant: datetime, event: AppendedEvent) -> dict:
     with hold_lock(paths.lock_directory / LOCK_FILE):
         return write_event_line(paths, instant, event)
