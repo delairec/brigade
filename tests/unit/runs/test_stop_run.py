@@ -61,6 +61,11 @@ class RunProcessDouble:
         )
 
 
+class RunProcessEndingWithoutResultDouble(RunProcessDouble):
+    def signal_process(self, pid: int, signal_number: int) -> None:
+        self.calls.append(("signal", pid, signal_number))
+
+
 class LaunchedRunProcessDouble(RunProcessDouble):
     def __init__(self, result: Path, identities: dict[int, Iterator[str | None]], outcome_on_signal: str):
         super().__init__(result, identities, outcome_on_signal=outcome_on_signal)
@@ -181,6 +186,34 @@ class StopRunOfARunThatEndsOtherwiseThanStoppedTest(StopRunTestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), f"run {RUN_ID} ended finished, not stopped")
+
+
+class StopRunOfARunItsSignalLeavesDeadTest(StopRunTestCase):
+    def test_should_refuse_the_run_naming_the_dead_state_it_ended_in(self):
+        # Arrange
+        write_pid_file(self.run_directory, RUN_PID, RUN_IDENTITY)
+        process = RunProcessEndingWithoutResultDouble(self.result, {RUN_PID: iter([RUN_IDENTITY, None])})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            stop_run(self.state_root, RUN_ID, process.create_signaller())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"run {RUN_ID} ended dead, not stopped")
+
+
+class StopRunOfNoRunTest(StopRunTestCase):
+    def test_should_refuse_an_id_naming_no_run(self):
+        # Arrange
+        process = RunProcessDouble(self.result, {})
+        unknown_run = "20261019T100000Z-0dd000"
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            stop_run(self.state_root, unknown_run, process.create_signaller())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "no run 20261019T100000Z-0dd000")
 
 
 class StopRunOfARunAlreadyFinishedTest(StopRunTestCase):

@@ -298,6 +298,15 @@ class SpawnReadingTheJournalWhileRunningDouble:
         return self.process
 
 
+LINE_OF_201_CHARACTERS = (
+    "Reading the task, the corpus and the decisions it names, then the files of the component it changes, "
+    "then the tests of that component, then the procedure of the role, before the first edit of the run.."
+)
+LINE_OF_201_CHARACTERS_CUT_TO_200 = (
+    "Reading the task, the corpus and the decisions it names, then the files of the component it changes, "
+    "then the tests of that component, then the procedure of the role, before the first edit of the run."
+)
+
 class SpawnDouble:
     def __init__(self, output: str = "the client finished the task"):
         self.requests = []
@@ -692,6 +701,27 @@ class RunSegmentJournalTest(unittest.TestCase):
                 "kind": "raw",
                 "summary": "the client finished the task",
                 "cut": False,
+            },
+        )
+
+    def test_should_cut_a_raw_record_to_200_characters(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+        spawn = SpawnDouble(output=LINE_OF_201_CHARACTERS)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            json.loads(self.journal.read_text()),
+            {
+                "schema_version": 1,
+                "at": "2026-10-07T09:05:00Z",
+                "segment": 1,
+                "kind": "raw",
+                "summary": LINE_OF_201_CHARACTERS_CUT_TO_200,
+                "cut": True,
             },
         )
 

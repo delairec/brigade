@@ -128,6 +128,26 @@ class RunsShowExitCodeTest(unittest.TestCase):
             ("a run followed until a signal", {"run": {**FINISHED_RUN, "outcome": "failed"}, "interrupted": True}, 0),
             ("a run followed to its failure", {"run": {**FINISHED_RUN, "outcome": "failed"}, "interrupted": False}, 1),
             ("a run followed to its end", {"run": FINISHED_RUN, "interrupted": False}, 0),
+            (
+                "a run followed to no outcome declared",
+                {"run": {**FINISHED_RUN, "outcome": "undeclared"}, "interrupted": False},
+                3,
+            ),
+            (
+                "a run followed to its block",
+                {"run": {**FINISHED_RUN, "outcome": "blocked"}, "interrupted": False},
+                10,
+            ),
+            (
+                "a run followed to its turn limit",
+                {"run": {**FINISHED_RUN, "outcome": "turn_limit"}, "interrupted": False},
+                12,
+            ),
+            (
+                "a run followed to its soft limit",
+                {"run": {**FINISHED_RUN, "outcome": "soft_limit"}, "interrupted": False},
+                13,
+            ),
         ]
         for case, document, expected_exit_code in rows:
             with self.subTest(case=case):
