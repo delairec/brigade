@@ -24,8 +24,26 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
         self.assertEqual(requeued.returncode, 0, requeued.stderr)
         self.assertEqual(requeued.stdout, "task S3 of shop_w1 queued\n", requeued.stderr)
         self.assertEqual(
-            self.read_events("task.state"),
+            self.read_events(),
             [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-13T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": "integration/M1-empty-cart",
+                    "tasks": ["S3"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:00:00Z",
+                    "event": "task.parked",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "reason": "run dead: 20261013T093000Z-a00001",
+                    "blockers": [],
+                },
                 {
                     "schema_version": 1,
                     "ts": ANY,

@@ -80,9 +80,9 @@ class RunTestCase(FileWaitingTestCase):
     def record_lines(self, role: str, recording: str) -> None:
         (self.recordings / f"{role}.json").write_text(recording)
 
-    def read_events(self, name: str) -> list:
+    def read_events(self) -> list:
         lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
-        return [event for event in map(json.loads, lines) if event["event"] == name]
+        return list(map(json.loads, lines))
 
     def wait_for_exit(self, pid: int) -> None:
         deadline = time.monotonic() + FILE_WAIT_S

@@ -2143,7 +2143,7 @@ TASK B21
 		IMPL "tests/cli/test_rehearsal.py::def"
 			+ "test_should_merge_the_three_tasks_into_the_branch_of_the_wave("
 		IMPL "tests/cli/test_rehearsal.py::def"
-			+ "test_should_open_the_integration_pull_request_wave_pr_opened_names("
+			+ "test_should_open_the_integration_pull_request_the_wave_names("
 	SPEC "the ledger holds every run"
 		IMPL "tests/cli/test_rehearsal.py::def test_should_record_every_run_in_the_ledger("
 	SPEC "the budget of the front matter of each built-in procedure the wave ran stays as the real"
