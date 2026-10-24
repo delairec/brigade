@@ -1,4 +1,3 @@
-import os
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -132,14 +131,14 @@ class RunStudyTest(RunStudyTestCase):
         )
 
     def test_should_write_the_result_of_each_step_under_the_run_directory(self):
+        # Arrange
+        steps = self.root / "state" / "runs" / RUN_ID / "steps"
+
         # Act
         run_study(self.runtime, SCAN, self.equipment, RUN_ID)
 
         # Assert
-        self.assertEqual(
-            sorted(os.listdir(self.root / "state" / "runs" / RUN_ID / "steps")),
-            ["collect.json", "judge.json", "output.json"],
-        )
+        self.assertEqual(sorted(steps.iterdir()), [steps / "collect.json", steps / "judge.json", steps / "output.json"])
 
     def test_should_resume_a_run_past_the_steps_it_completed(self):
         # Arrange
