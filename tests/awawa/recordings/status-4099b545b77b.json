@@ -1,0 +1,26 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "TASK",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD TYPE feat|fix|test|docs\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|active|reached\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": "TASK S0\n\tTITLE \"Show the cart\"\n\tSTATUS implemented\n\tTYPE feat\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"implemented\"], \"types\": [{\"type\": \"MILESTONE\", \"counts\": {\"implemented\": 0}, \"unset\": 0, \"total\": 0}, {\"type\": \"SCHEMA\", \"counts\": {\"implemented\": 0}, \"unset\": 2, \"total\": 2}, {\"type\": \"TASK\", \"counts\": {\"implemented\": 1}, \"unset\": 0, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"SCHEMA\", \"name\": \"MILESTONE\", \"target\": \"@SCHEMA.MILESTONE\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa\", \"line\": 14, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"SCHEMA\", \"name\": \"TASK\", \"target\": \"@SCHEMA.TASK\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"TASK\", \"name\": \"S0\", \"target\": \"@TASK.S0\", \"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": \"implemented\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 2, \"entities\": 3}}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
