@@ -13,7 +13,6 @@ from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from tests.unit.create_test_paths import create_test_paths
 
-PROCESS_COUNT = 4
 EVENTS_PER_PROCESS = 50
 PADDING_LONGER_THAN_A_PIPE_BUFFER = "x" * 20000
 
