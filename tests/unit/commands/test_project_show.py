@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.project_show import COMMAND, project_show
+from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -86,3 +87,21 @@ class ProjectShowTextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(text, "@PROJECT.app\nPATH        /srv/app\nSTATUS      active")
+
+
+class ProjectShowBeforeInitTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
+
+    def test_should_refuse_without_the_operational_corpus(self):
+        # Arrange
+        request = argparse.Namespace(name="app")
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            project_show(request, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
