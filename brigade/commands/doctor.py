@@ -16,7 +16,9 @@ from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_login_environment import ask_login_environment
 from brigade.system.ask_named_client import ask_named_client
+from brigade.system.choose_scheduler import choose_scheduler
 from brigade.system.client_question import ClientQuestion
+from brigade.system.describe_linger_warning import describe_linger_warning
 from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
 from brigade.system.parse_configuration import CLI_KEY, Configuration, ConfigurationMissing
@@ -32,6 +34,7 @@ AWAWA_FLOOR = (2, 7)
 PROBE_DIRECTORY = "/"
 PROBE_TIMEOUT_S = 10.0
 SCHEDULER_FALLBACK = "a cron line, or brigade tick --loop"
+LINGER_FALLBACK = "the tick fires only while a session of the user is open"
 FORGE_FALLBACK = "local mode without a forge"
 FORGE_NAME = "github"
 FORGE_LOGIN_FALLBACK = "the commands acting as it stop"
@@ -148,6 +151,16 @@ def _check_scheduler(runtime: Runtime) -> dict:
     if not systemd_state:
         return _create_optional("scheduler", "warning", "no user systemd instance", SCHEDULER_FALLBACK)
     return _create_optional("scheduler", "warning", f"no user systemd instance ({systemd_state})", SCHEDULER_FALLBACK)
+
+
+def _check_linger(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+    configured = None if isinstance(reading, BrigadeError) else reading.scheduler
+    if choose_scheduler(configured, runtime.run_process).name != "systemd":
+        return []
+    warning = describe_linger_warning(runtime.run_process)
+    if warning is None:
+        return [_create_optional("linger", "ok", "the user systemd instance lingers", LINGER_FALLBACK)]
+    return [_create_optional("linger", "warning", warning, LINGER_FALLBACK)]
 
 
 def _is_unreadable(reading: Configuration | BrigadeError) -> bool:
@@ -369,6 +382,7 @@ def doctor(request: argparse.Namespace, runtime: Runtime) -> dict:
             _check_awawa(runtime),
             _check_client(reading, runtime),
             _check_scheduler(runtime),
+            *_check_linger(reading, runtime),
             *_check_forge_and_its_logins(reading, runtime),
             *_check_review_logins(reading, runtime),
             _check_awawa_web(runtime),

@@ -8,6 +8,7 @@ from brigade.errors import ToolNotFound
 from tests.unit.commands.command_runtime import answer
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 
 class SchedulerDouble:
@@ -36,18 +37,34 @@ def _refuse_systemctl(request):
     raise ToolNotFound("systemctl is not on PATH")
 
 
+def _refuse_loginctl(request):
+    raise ToolNotFound("loginctl is not on PATH")
+
+
 class SchedulerInstallTextTest(unittest.TestCase):
     def test_should_print_what_was_installed(self):
         # Arrange
         rows = [
             (
                 "units",
-                {"scheduler": "systemd", "chosen_by": "probe", "unit_files": ["/u/brigade.timer"], "cron_line": None},
+                {
+                    "scheduler": "systemd",
+                    "chosen_by": "probe",
+                    "unit_files": ["/u/brigade.timer"],
+                    "cron_line": None,
+                    "warnings": [],
+                },
                 "systemd installed, chosen by the probe of the user systemd instance\nunit  /u/brigade.timer",
             ),
             (
                 "a cron line",
-                {"scheduler": "cron", "chosen_by": "configuration", "unit_files": [], "cron_line": "*/5 * * * * b"},
+                {
+                    "scheduler": "cron",
+                    "chosen_by": "configuration",
+                    "unit_files": [],
+                    "cron_line": "*/5 * * * * b",
+                    "warnings": [],
+                },
                 "cron installed, chosen by config.toml\ncron line  */5 * * * * b",
             ),
         ]
@@ -68,6 +85,7 @@ class SchedulerInstallTextTest(unittest.TestCase):
             "unit_files": [],
             "cron_line": None,
             "keep_running": "brigade tick --loop",
+            "warnings": [],
         }
 
         # Act
@@ -76,6 +94,29 @@ class SchedulerInstallTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text, "loop chosen by config.toml: nothing installed; keep this command running\nbrigade tick --loop"
+        )
+
+    def test_should_print_each_warning_on_a_line_of_its_own(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "scheduler": "systemd",
+            "chosen_by": "configuration",
+            "unit_files": ["/u/brigade.timer"],
+            "cron_line": None,
+            "keep_running": None,
+            "warnings": ["no linger: the timer stops at logout; run loginctl enable-linger"],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "systemd installed, chosen by config.toml\n"
+            "unit  /u/brigade.timer\n"
+            "warning  no linger: the timer stops at logout; run loginctl enable-linger",
         )
 
 
@@ -125,6 +166,7 @@ class SchedulerInstallChoiceTest(unittest.TestCase):
                 "unit_files": ["/home/user/.config/systemd/user/brigade-cron.timer"],
                 "cron_line": None,
                 "keep_running": None,
+                "warnings": [],
             },
         )
 
@@ -148,3 +190,63 @@ class SchedulerInstallChoiceTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(document["scheduler"], expected_scheduler)
+
+
+class SchedulerInstallWarningsTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / "config").mkdir()
+
+    def test_should_warn_that_the_user_does_not_linger_once_the_systemd_timer_is_installed(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text('scheduler = "systemd"\n', encoding="utf-8")
+        loginctl = RecordingProcessRunner(
+            {("loginctl", "show-user", "-p", "Linger"): ProcessAnswer(stdout="Linger=no\n")}
+        )
+        runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=loginctl, resolve_plugin=_resolve_a_scheduler_double
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "scheduler": "systemd",
+                "chosen_by": "configuration",
+                "unit_files": ["/home/user/.config/systemd/user/brigade-systemd.timer"],
+                "cron_line": None,
+                "keep_running": None,
+                "warnings": ["no linger: the timer stops at logout; run loginctl enable-linger"],
+            },
+        )
+
+    def test_should_carry_the_warning_of_the_linger_of_the_user(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text('scheduler = "systemd"\n', encoding="utf-8")
+        rows = [
+            (
+                "a lingering user",
+                RecordingProcessRunner(
+                    {("loginctl", "show-user", "-p", "Linger"): ProcessAnswer(stdout="Linger=yes\n")}
+                ),
+                [],
+            ),
+            ("no loginctl", _refuse_loginctl, ["loginctl not on PATH"]),
+        ]
+        for case, run_process, expected_warnings in rows:
+            with self.subTest(case=case):
+                runtime = create_test_runtime(
+                    create_test_paths(self.root), run_process=run_process, resolve_plugin=_resolve_a_scheduler_double
+                )
+
+                # Act
+                document = COMMAND.run(Namespace(), runtime)
+
+                # Assert
+                self.assertEqual(document["warnings"], expected_warnings)

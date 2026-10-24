@@ -68,6 +68,7 @@ def _create_doctor_answers() -> dict:
         ("awawa", "--version"): ProcessAnswer(stdout="awawa 2.8.1\n"),
         ("scripted", "--version"): ProcessAnswer(stdout="scripted 1.4.2\nbuild 5\n"),
         ("systemctl",): ProcessAnswer(stdout="running\n"),
+        ("loginctl",): ProcessAnswer(stdout="Linger=yes\n"),
         ("awawa-web",): ProcessAnswer(),
         ("awawa", "lint"): ProcessAnswer(),
         ("git", "for-each-ref"): ProcessAnswer(),
@@ -280,6 +281,88 @@ class DoctorSchedulerTest(DoctorTestCase):
                     },
                     document["items"],
                 )
+
+
+class DoctorLingerTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.lingering = {
+            "name": "linger",
+            "kind": "optional",
+            "state": "ok",
+            "detail": "the user systemd instance lingers",
+            "fallback": "the tick fires only while a session of the user is open",
+        }
+
+    def test_should_read_the_linger_of_the_user_when_the_probe_chooses_systemd(self):
+        # Arrange
+        self.configure(CONFIGURATION)
+        rows = [
+            (ProcessAnswer(stdout="Linger=yes\n"), "ok", "the user systemd instance lingers"),
+            (
+                ProcessAnswer(stdout="Linger=no\n"),
+                "warning",
+                "no linger: the timer stops at logout; run loginctl enable-linger",
+            ),
+            (ToolNotFound("loginctl"), "warning", "loginctl not on PATH"),
+        ]
+        for answer, state, detail in rows:
+            with self.subTest(detail=detail):
+                self.answers["loginctl",] = answer
+
+                # Act
+                document = doctor(self.no_option, self.runtime)
+
+                # Assert
+                self.assertIn(
+                    {
+                        "name": "linger",
+                        "kind": "optional",
+                        "state": state,
+                        "detail": detail,
+                        "fallback": "the tick fires only while a session of the user is open",
+                    },
+                    document["items"],
+                )
+
+    def test_should_read_the_linger_of_the_user_when_the_configuration_names_systemd(self):
+        # Arrange
+        self.configure('scheduler = "systemd"\n' + CONFIGURATION)
+        self.answers["systemctl",] = ProcessAnswer(stdout="offline\n")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(self.lingering, document["items"])
+
+    def test_should_not_read_the_linger_for_another_scheduler(self):
+        # Arrange
+        rows = [
+            ("cron in the configuration", 'scheduler = "cron"\n' + CONFIGURATION, "running\n"),
+            ("cron by the probe", CONFIGURATION, "offline\n"),
+        ]
+        for case, configuration, systemd_state in rows:
+            with self.subTest(case=case):
+                self.configure(configuration)
+                self.answers["systemctl",] = ProcessAnswer(stdout=systemd_state)
+
+                # Act
+                document = doctor(self.no_option, self.runtime)
+
+                # Assert
+                self.assertNotIn(self.lingering, document["items"])
+
+    def test_should_leave_the_exit_code_at_0_when_the_user_does_not_linger(self):
+        # Arrange
+        self.configure(CONFIGURATION)
+        self.answers["loginctl",] = ProcessAnswer(stdout="Linger=no\n")
+
+        # Act
+        exit_code = COMMAND.decide_exit_code(doctor(self.no_option, self.runtime))
+
+        # Assert
+        self.assertEqual(exit_code, 0)
 
 
 class DoctorForgeTest(DoctorTestCase):

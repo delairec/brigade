@@ -67,7 +67,12 @@ class BrigadeSchedulerInstallWithSystemdConfiguredTest(SchedulerTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout.splitlines(),
-            ["systemd installed, chosen by config.toml", f"unit  {self.service}", f"unit  {self.timer}"],
+            [
+                "systemd installed, chosen by config.toml",
+                f"unit  {self.service}",
+                f"unit  {self.timer}",
+                "warning  no linger: the timer stops at logout; run loginctl enable-linger",
+            ],
         )
         self.assertEqual(completed.stderr, "")
         self.assertEqual(self.service.read_text(), self.describe_service_unit(SYSTEMD_USER_MANAGER))

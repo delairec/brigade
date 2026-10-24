@@ -750,7 +750,7 @@ TASK B07
 		+ "systemd, cron or loop; without the key, systemd where the user instance is running or"
 		+ "degraded as brigade doctor probes it, else cron; loop installs nothing and prints the"
 		+ "command to keep running"
-		IMPL "brigade/commands/scheduler_install.py::def _probe_scheduler(runtime: Runtime) -> str:"
+		IMPL "brigade/system/choose_scheduler.py::def _probe_scheduler("
 		IMPL "brigade/adapters/schedulers/loop.py::def install(request: dict, runtime: Runtime) ->"
 			+ "dict:"
 		IMPL "tests/unit/commands/test_scheduler_install.py::def"

@@ -1,0 +1,5 @@
+#!/bin/sh
+case "$*" in
+  "show-user -p Linger") echo "Linger=no" ;;
+  *) exit 2 ;;
+esac
