@@ -82,3 +82,13 @@ class ProcessesShowTextTest(unittest.TestCase):
             text,
             "exited  1  git commit -m 'a message'\nkilled  5 ms  claude -p\nrunning  -  sleep 10",
         )
+
+    def test_should_print_an_exit_code_of_0(self):
+        # Arrange
+        document = {"processes": [{"argv": ["git", "status"], "outcome": "exited", "exit": 0, "duration_ms": 12}]}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, "exited  0  git status")

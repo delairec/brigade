@@ -269,6 +269,45 @@ class SpawnStoppingMidLineDouble:
         return ProcessEndingItsLineAfterAPollDouble(request.stdout)
 
 
+class ProcessReadingTheJournalAfterAPollDouble:
+    pid = 4242
+
+    def __init__(self, journal: Path):
+        self._journal = journal
+        self._answers = [self._keep_running, self._read_the_journal]
+        self.journal_while_running = None
+
+    def wait(self, timeout: float) -> int:
+        return self._answers.pop(0)(timeout)
+
+    def _keep_running(self, timeout: float) -> int:
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _read_the_journal(self, _timeout: float) -> int:
+        self.journal_while_running = _read_journal_records(self._journal)
+        return 0
+
+
+class SpawnReadingTheJournalWhileRunningDouble:
+    def __init__(self, journal: Path):
+        self.process = ProcessReadingTheJournalAfterAPollDouble(journal)
+
+    def spawn(self, request):
+        request.stdout.write_text("Reading the task\n", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return self.process
+
+
+LINE_OF_201_CHARACTERS = (
+    "Reading the task, the corpus and the decisions it names, then the files of the component it changes, "
+    "then the tests of that component, then the procedure of the role, before the first edit of the run.."
+)
+LINE_OF_201_CHARACTERS_CUT_TO_200 = (
+    "Reading the task, the corpus and the decisions it names, then the files of the component it changes, "
+    "then the tests of that component, then the procedure of the role, before the first edit of the run."
+)
+
+
 class SpawnDouble:
     def __init__(self, output: str = "the client finished the task"):
         self.requests = []
@@ -300,6 +339,10 @@ LAUNCH_INSTANT = datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
 
 def _read_journal_records(journal: Path) -> list[dict]:
     return [json.loads(line) for line in journal.read_text(encoding="utf-8").splitlines()]
+
+
+def _read_every_file(directory: Path) -> str:
+    return "".join(path.read_text(encoding="utf-8") for path in sorted(directory.rglob("*")) if path.is_file())
 
 
 def _create_runtime(root: Path, spawn) -> Runtime:
@@ -583,6 +626,32 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         self.assertIsNone(record.uncounted)
         self.assertIsNone(record.cost_usd)
 
+    def test_should_end_the_segment_on_the_wall_time_limit_it_names(self):
+        # Arrange
+        plan = _create_plan(self.root, wall_limit_s=LIMIT_ALREADY_REACHED_S)
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.outcome, "wall_limit")
+        self.assertEqual(record.message, "cut at the wall-time limit of 0 s")
+
+    def test_should_record_the_client_cut_in_the_trail(self):
+        # Arrange
+        traces = []
+        plan = _create_plan(self.root, wall_limit_s=LIMIT_ALREADY_REACHED_S)
+        runtime = dataclasses.replace(_create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append))
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            traces,
+            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "cut", None, ANY)],
+        )
+
     def test_should_leave_a_cut_segment_unmeasured_with_its_reason(self):
         # Arrange
         rows = [
@@ -637,6 +706,27 @@ class RunSegmentJournalTest(unittest.TestCase):
                 "kind": "raw",
                 "summary": "the client finished the task",
                 "cut": False,
+            },
+        )
+
+    def test_should_cut_a_raw_record_to_200_characters(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+        spawn = SpawnDouble(output=LINE_OF_201_CHARACTERS)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            json.loads(self.journal.read_text()),
+            {
+                "schema_version": 1,
+                "at": "2026-10-07T09:05:00Z",
+                "segment": 1,
+                "kind": "raw",
+                "summary": LINE_OF_201_CHARACTERS_CUT_TO_200,
+                "cut": True,
             },
         )
 
@@ -696,6 +786,29 @@ class RunSegmentJournalTest(unittest.TestCase):
                     "segment": 1,
                     "kind": "raw",
                     "summary": "Writing the test",
+                    "cut": False,
+                },
+            ],
+        )
+
+    def test_should_journal_a_whole_line_while_the_client_is_still_running(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_actions=False)
+        spawn = SpawnReadingTheJournalWhileRunningDouble(self.journal)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            spawn.process.journal_while_running,
+            [
+                {
+                    "schema_version": 1,
+                    "at": "2026-10-07T09:05:00Z",
+                    "segment": 1,
+                    "kind": "raw",
+                    "summary": "Reading the task",
                     "cut": False,
                 },
             ],
@@ -1026,3 +1139,109 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.measured_ms, 4200)
+
+
+class RunSegmentFilesTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.spawn = SpawnDouble()
+        self.segment_directory = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "segments" / "1"
+
+    def test_should_keep_the_brief_and_the_output_of_the_client_in_the_directory_of_the_segment(self):
+        # Arrange
+        plan = _create_plan(self.root)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        [request] = self.spawn.requests
+        self.assertEqual(request.stdout, self.segment_directory / "stdout.log")
+        self.assertEqual(request.stderr, self.segment_directory / "stderr.log")
+        self.assertEqual(
+            (self.segment_directory / "brief.md").read_text(), plan.client_adapter.requests["launch-argv"]["brief"]
+        )
+
+    def test_should_send_the_client_the_procedure_the_arguments_the_brief_and_the_progress_file(self):
+        # Arrange
+        plan = dataclasses.replace(
+            _create_plan(self.root), arguments={"task": "@TASK.B73", "base": "main"}, brief="Deliver S3 first.\n"
+        )
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            plan.client_adapter.requests["launch-argv"]["brief"],
+            "# Procedure deliver\n\n"
+            "Deliver the task.\n\n"
+            "# Arguments\n\n"
+            "task=@TASK.B73\n"
+            "base=main\n\n"
+            "# Brief\n\n"
+            "Deliver S3 first.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+    def test_should_name_the_directory_of_the_segment_it_cannot_create(self):
+        # Arrange
+        plan = _create_plan(self.root)
+        self.segment_directory.parent.parent.mkdir(parents=True)
+        self.segment_directory.parent.write_text("a file where the segments go")
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.segment_directory}: Not a directory")
+
+    def test_should_name_the_brief_of_the_segment_it_cannot_write(self):
+        # Arrange
+        plan = _create_plan(self.root)
+        (self.segment_directory / "brief.md").mkdir(parents=True)
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.segment_directory / 'brief.md'}: Is a directory")
+
+
+class RunSegmentOfASlotBoundToALoginTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.spawn = SpawnDouble()
+        self.plan = dataclasses.replace(_create_plan(self.root), forge_environment={"GH_TOKEN": "ghp_builder_token"})
+
+    def test_should_hand_the_client_the_token_of_the_login_of_its_slot(self):
+        # Act
+        run_segment(self.plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        [request] = self.spawn.requests
+        self.assertEqual(request.environment["GH_TOKEN"], "ghp_builder_token")
+
+    def test_should_write_the_token_in_no_file_of_the_segment(self):
+        # Act
+        run_segment(self.plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertNotIn("ghp_builder_token", _read_every_file(self.root / "state"))

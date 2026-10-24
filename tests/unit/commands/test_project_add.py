@@ -170,6 +170,35 @@ class ProjectAddTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), f"{absent} is not a git repository")
 
+    def test_should_guess_the_commands_no_flag_gives_and_take_the_others_as_given(self):
+        # Arrange
+        (self.repository / "package.json").write_text('{"scripts": {"test": "vitest", "lint": "eslint ."}}')
+        (self.repository / "package-lock.json").write_text("{}")
+        no_acceptance_given = []
+        request = argparse.Namespace(
+            path=str(self.repository),
+            name=None,
+            acceptance=no_acceptance_given,
+            heavy=["make e2e"],
+            setup=["make deps", "make tools"],
+            force=False,
+        )
+
+        # Act
+        document = project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["project"]["fields"][4:9],
+            [
+                {"name": "ACCEPTANCE", "value": "npm run test", "guessed": True},
+                {"name": "ACCEPTANCE", "value": "npm run lint", "guessed": True},
+                {"name": "HEAVY", "value": "make e2e", "guessed": False},
+                {"name": "SETUP", "value": "make deps", "guessed": False},
+                {"name": "SETUP", "value": "make tools", "guessed": False},
+            ],
+        )
+
 
 class ProjectAddRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_they_are(self):
@@ -233,3 +262,21 @@ class ProjectAddTextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(text, "replaced @PROJECT.app\nPATH        /srv/app")
+
+
+class ProjectAddBeforeInitTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
+
+    def test_should_refuse_without_the_operational_corpus(self):
+        # Arrange
+        request = _create_request(Path("/srv/app"))
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")

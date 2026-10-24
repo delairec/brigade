@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -34,6 +35,22 @@ class ResolvePluginRefusalTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), "no forge plugin gitlab")
 
+    def test_should_refuse_a_scheduler_brigade_does_not_ship(self):
+        # Arrange
+        rows = [
+            ("launchd", "no scheduler plugin launchd"),
+            ("data", "no scheduler plugin data"),
+            ("__init__", "no scheduler plugin __init__"),
+        ]
+        for name, expected_refusal in rows:
+            with self.subTest(name=name):
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    resolve_plugin("scheduler", name, NO_SOURCES_NEEDED)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), expected_refusal)
+
     def test_should_refuse_a_document_plugin_brigade_does_not_ship(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -49,6 +66,57 @@ class ResolvePluginRefusalTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "no plugin kind check")
+
+    def test_should_refuse_a_client_found_neither_among_the_modules_nor_on_path(self):
+        # Arrange
+        sources = PluginSources(executable_search_path=NO_EXECUTABLE_DIRECTORY, run_process=refuse_to_run)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            resolve_plugin("client", "frobnicate", sources)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "no client adapter frobnicate: no built-in module and no brigade-client-frobnicate on PATH",
+        )
+
+    def test_should_not_take_a_helper_module_of_the_adapters_for_a_client_adapter(self):
+        # Arrange
+        sources = PluginSources(executable_search_path=NO_EXECUTABLE_DIRECTORY, run_process=refuse_to_run)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            resolve_plugin("client", "describe-unreadable-output", sources)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "no client adapter describe-unreadable-output: no built-in module and no"
+            " brigade-client-describe-unreadable-output on PATH",
+        )
+
+
+class ResolvePluginOfAnExecutableClientTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.executable = Path(self.root.name) / "brigade-client-scripted"
+        self.executable.write_text("#!/bin/sh\n")
+        self.executable.chmod(0o755)
+
+    def test_should_answer_through_the_executable_of_the_client_on_path(self):
+        # Arrange
+        sources = PluginSources(executable_search_path=self.root.name, run_process=refuse_to_run)
+
+        # Act
+        client = resolve_plugin("client", "scripted", sources)
+
+        # Assert
+        self.assertEqual(
+            client,
+            ClientExecutableCaller(name="scripted", executable=str(self.executable), run_process=refuse_to_run),
+        )
 
 
 class ResolvePluginOfACollectorTest(unittest.TestCase):

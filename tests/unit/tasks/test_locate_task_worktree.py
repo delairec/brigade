@@ -59,6 +59,17 @@ class LocateTaskWorktreeTest(unittest.TestCase):
             ),
         )
 
+    def test_should_accept_the_task_of_the_branch_named_as_its_argument(self):
+        # Arrange
+        self.check_out("task/oak_w1/B12")
+        write_ledger(self.root, [OAK_WAVE_STARTED])
+
+        # Act
+        worktree = locate_task_worktree(self.runtime, Path("/srv/oak-b12"), "B12")
+
+        # Assert
+        self.assertEqual(worktree.task, "B12")
+
     def test_should_refuse_a_branch_that_is_not_a_task_branch(self):
         # Arrange
         self.check_out("main")

@@ -2,12 +2,14 @@ import contextlib
 import dataclasses
 import io
 import json
+import os
 import shutil
 import tempfile
 import unittest
 from datetime import timedelta
 from pathlib import Path
 
+from brigade.errors import CommandFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.run_finished import RunFinished
@@ -18,10 +20,13 @@ from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
+from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
+from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tick.build_snapshot import (
+    LiveRun,
     PreflightFailure,
     ProjectFacts,
     RateLimit,
@@ -32,7 +37,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
-from tests.unit.commands.run_directories import create_run_record, write_run
+from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.ledger.create_run_finished import create_run_finished
@@ -99,6 +104,13 @@ class PullRequestReaderDouble:
     def __call__(self, repository: str, branch: str) -> PullRequestFacts:
         self.branches.append(branch)
         return PULL_REQUEST
+
+
+class PullRequestReaderFailingOnOneWaveDouble(PullRequestReaderDouble):
+    def __call__(self, repository: str, branch: str) -> PullRequestFacts:
+        if branch == "task/w1/B1":
+            raise CommandFailed(("gh", "pr", "list", "--head", branch), 1, "HTTP 502: Bad Gateway")
+        return super().__call__(repository, branch)
 
 
 class BuildSnapshotTestCase(unittest.TestCase):
@@ -451,6 +463,85 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             (StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),),
         )
 
+    def test_should_carry_no_rate_limit_whose_reset_has_passed(self):
+        # Arrange
+        self.record(120, create_run_finished("r9", outcome="failed", error_class="rate_limit"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
+
+    def test_should_note_no_rate_limit_on_a_merged_task_whose_last_run_hit_one(self):
+        # Arrange
+        self.record(3, create_run_finished("r3", wave="w1", task="B3", outcome="failed", error_class="rate_limit"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[2], TaskFacts(name="B3"))
+
+    def test_should_clear_the_unavailable_forge_account_of_a_wave_resumed_from_it(self):
+        # Arrange
+        self.record(10, WaveResumed(wave="w1", reason="forge_account"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].forge_account_unavailable, False)
+
+    def test_should_read_no_pull_request_of_a_settled_task_whose_worktree_is_gone(self):
+        # Act
+        self.build()
+
+        # Assert
+        self.assertEqual(self.reader.branches, ["task/w1/B1", "task/w1/B2", "task/w1/B4"])
+
+    def test_should_count_the_live_build_runs_of_the_project(self):
+        # Arrange
+        live_run = {**create_run_record(FIRST_RUN, "w1", "B1"), "project": "shop", "worktree": "/srv/shop/B1"}
+        record_run_pid(write_run(self.paths.state_root, live_run, None), os.getpid())
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].live_runs,
+            (LiveRun(run=FIRST_RUN, slot="build", worktree="/srv/shop/B1", wave="w1", task="B1"),),
+        )
+
+    def test_should_leave_out_the_finished_runs_and_the_runs_of_no_project(self):
+        # Arrange
+        finished_run = {**create_run_record(FIRST_RUN, "w1", "B1"), "project": "shop"}
+        write_run(self.paths.state_root, finished_run, create_run_result(FIRST_RUN, "done", "2026-10-19T08:00:00Z"))
+        record_run_pid(self.paths.state_root / "runs" / FIRST_RUN, os.getpid())
+        run_of_no_project = create_run_record(SECOND_RUN, None, None)
+        record_run_pid(write_run(self.paths.state_root, run_of_no_project, None), os.getpid())
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.projects[1].live_runs, ())
+
+    def test_should_skip_a_wave_whose_pull_request_the_forge_refuses_to_read_and_follow_the_others(self):
+        # Arrange
+        self.reader = PullRequestReaderFailingOnOneWaveDouble()
+
+        # Act
+        snapshot, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines()[0],
+            "brigade tick: the wave w1 skipped: gh pr list --head task/w1/B1 exited 1: HTTP 502: Bad Gateway",
+        )
+        self.assertEqual(snapshot.waves[0].wave, "w4")
+
     def test_should_skip_a_wave_or_a_project_whose_tree_cannot_be_read(self):
         # Act
         _, stderr = self.build()
@@ -483,6 +574,20 @@ def create_verdict(task: str, head: str, verdict: str) -> TaskVerdict:
 
 def create_preflight(task: str) -> TaskPreflighted:
     return TaskPreflighted(project="shop", wave="w1", task=task, pr=7, head="4f2a9c1", checks=())
+
+
+class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(BuildSnapshotTestCase):
+    def test_should_mark_the_forge_account_of_the_wave_unavailable(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(90, ForgeAccountUnavailable(login="octo-builder", key="build"))
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].forge_account_unavailable, True)
 
 
 class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
@@ -574,3 +679,16 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 TaskFacts(name="B2", pull_request=PULL_REQUEST),
             ),
         )
+
+
+class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):
+    def test_should_read_no_pull_request_of_a_queued_task(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1", "B2", "B3", "B4")))
+
+        # Act
+        self.build()
+
+        # Assert
+        self.assertEqual(self.reader.branches, [])

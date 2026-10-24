@@ -118,3 +118,26 @@ class LedgerCompareTextTest(unittest.TestCase):
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
             "  oversized output steps: not reported",
         )
+
+    def test_should_present_a_period_whose_runs_count_more_segments_than_runs(self):
+        # Arrange
+        steps = {
+            "runs": {"p50": 30, "p90": 30, "measured": 1, "partial": 1, "unmeasured": 0},
+            "segments": {"p50": 30, "p90": 30, "measured": 1, "unmeasured": 1},
+        }
+        period = {"runs": 1, "segments": 2, "steps": steps, "steps_to_first_edit": None, "oversized_output_steps": None}
+        document = {"before": "2026-10-05", "periods": {"before": period, "from": period}}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text.splitlines()[:4],
+            [
+                "before 2026-10-05: 1 runs finished, 2 segments",
+                "  steps:",
+                "    runs p50 30  p90 30  measured 1  partial 1  unmeasured 0",
+                "    segments p50 30  p90 30  measured 1  unmeasured 1",
+            ],
+        )

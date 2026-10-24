@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.errors import ToolFailure
+from brigade.errors import ToolFailure, ToolNotFound
 from brigade.git.describe_checkout_lag import describe_checkout_lag
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 
@@ -32,13 +32,23 @@ class DescribeCheckoutLagTest(unittest.TestCase):
 
     def test_should_describe_the_failure_of_git_on_the_checkout(self):
         # Arrange
-        git = ScriptedProcessRunner({("git", "for-each-ref"): ToolFailure("git for-each-ref timed out after 10 s")})
+        rows = [
+            (
+                "git timed out",
+                ToolFailure("git for-each-ref timed out after 10 s"),
+                "git for-each-ref timed out after 10 s",
+            ),
+            ("git missing", ToolNotFound("git not on PATH"), "git not on PATH"),
+        ]
+        for case, failure, problem in rows:
+            with self.subTest(case=case):
+                git = ScriptedProcessRunner({("git", "for-each-ref"): failure})
 
-        # Act
-        lag = describe_checkout_lag(git.run, self.package_file)
+                # Act
+                lag = describe_checkout_lag(git.run, self.package_file)
 
-        # Assert
-        self.assertEqual(lag, f"{self.checkout}: git for-each-ref timed out after 10 s")
+                # Assert
+                self.assertEqual(lag, f"{self.checkout}: {problem}")
 
     def test_should_describe_no_lag_for_a_checkout_up_to_date(self):
         # Arrange

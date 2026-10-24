@@ -1,3 +1,4 @@
+import json
 import multiprocessing
 import tempfile
 import unittest
@@ -5,8 +6,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.append_event import append_event
+from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.ledger.step_done import StepDone
+from brigade.ledger.step_failed import StepFailed
 from tests.unit.create_test_paths import create_test_paths
 
 PROCESS_COUNT = 4
@@ -60,3 +64,56 @@ class AppendEventFromSeveralProcessesTest(AppendEventTestCase):
         # Assert
         self.assertEqual(reading.skipped, ())
         self.assertEqual(len(reading.entries), 200)
+
+
+class AppendEventOfAStudyRunTest(AppendEventTestCase):
+    def test_should_write_one_line_naming_the_event(self):
+        for event, expected in [
+            (
+                StepDone(kind="study", run="r1", step="collect"),
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "step.done",
+                    "kind": "study",
+                    "run": "r1",
+                    "step": "collect",
+                },
+            ),
+            (
+                StepFailed(kind="study", run="r1", step="judge", reason="quota"),
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "step.failed",
+                    "kind": "study",
+                    "run": "r1",
+                    "step": "judge",
+                    "reason": "quota",
+                },
+            ),
+            (
+                OrderParked(project=None, kind="study", order="trees", run="r1", step="judge", reason="quota"),
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.parked",
+                    "project": None,
+                    "kind": "study",
+                    "order": "trees",
+                    "run": "r1",
+                    "step": "judge",
+                    "reason": "quota",
+                },
+            ),
+        ]:
+            with self.subTest(event=expected["event"]):
+                # Arrange
+                month = self.ledger / "2026-10.jsonl"
+                month.unlink(missing_ok=True)
+
+                # Act
+                append_event(self.paths, datetime(2026, 10, 19, 9, 0, tzinfo=UTC), event)
+
+                # Assert
+                self.assertEqual(json.loads(month.read_text()), expected)

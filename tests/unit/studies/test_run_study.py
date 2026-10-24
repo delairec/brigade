@@ -1,3 +1,4 @@
+import dataclasses
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -13,7 +14,10 @@ from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from brigade.studies.convert_study import Study
 from brigade.studies.run_study import run_study
-from tests.unit.create_test_runtime import FIXED_NOW
+from tests.list_entry_names import list_entry_names
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -53,9 +57,18 @@ SCAN_INTO_THE_INBOX = Study(
     answer_type="FINDING",
     status="active",
 )
-from tests.unit.commands.command_runtime import write_operational_corpus
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
+JUDGED_STUDY = Study(
+    name="trees",
+    project=None,
+    question="are the trees healthy?",
+    collectors=(),
+    slot="report",
+    every=None,
+    output="entity:FINDING",
+    answer_type="FINDING",
+    status="active",
+)
+RECORDED_ANSWER = 'FINDING trees_20261019T090000Z_aaaaaa\n\tVERDICT "healthy"\n'
 
 
 def refuse_collector(name: str, project: Path):
@@ -129,6 +142,16 @@ class RunStudyTest(RunStudyTestCase):
                 LedgerEntry(instant=FIXED_NOW, event=OrderDone(project=None, kind="study", order="trees", run=RUN_ID)),
             ),
         )
+
+    def test_should_keep_the_result_of_each_step_in_the_run(self):
+        # Arrange
+        steps = self.root / "state" / "runs" / RUN_ID / "steps"
+
+        # Act
+        run_study(self.runtime, SCAN, self.equipment, RUN_ID)
+
+        # Assert
+        self.assertEqual(list_entry_names(steps), ["collect.json", "judge.json", "output.json"])
 
     def test_should_resume_a_run_past_the_steps_it_completed(self):
         # Arrange
@@ -229,6 +252,25 @@ class RunStudyParkingTest(RunStudyTestCase):
         # Assert
         self.assertEqual(str(refusal.exception), f"@STUDY.trees is running in run {RUN_ID}")
 
+    def test_should_start_no_run_of_a_study_whose_run_is_alive(self):
+        # Arrange
+        self.create_live_run(RUN_ID, "trees")
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            run_study(self.runtime, SCAN, self.equipment, None)
+
+        # Assert
+        self.assertEqual(read_ledger(self.root / "state").entries, ())
+
+    def test_should_start_no_run_of_a_study_whose_output_is_the_inbox(self):
+        # Act
+        with self.assertRaises(BrigadeError):
+            run_study(self.runtime, SCAN_INTO_THE_INBOX, self.equipment, None)
+
+        # Assert
+        self.assertEqual(read_ledger(self.root / "state").entries, ())
+
     def test_should_refuse_a_study_whose_output_is_the_inbox(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -236,3 +278,32 @@ class RunStudyParkingTest(RunStudyTestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the output inbox is refused: the inbox has no store until @TASK.B22")
+
+
+class RunStudyParkedAtItsJudgingRunTest(RunStudyTestCase):
+    def test_should_finish_the_run_once_its_answer_is_recorded(self):
+        # Arrange
+        run_directory = self.root / "state" / "runs" / RUN_ID
+        (run_directory / "steps").mkdir(parents=True)
+        (run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        (run_directory / "answer.awawa").write_text(RECORDED_ANSWER, encoding="utf-8")
+        self.record_order(
+            OrderParked(
+                project=None,
+                kind="study",
+                order="trees",
+                run=RUN_ID,
+                step="judge",
+                reason="the judging run 20261019T080000Z-dddddd gave no answer",
+            )
+        )
+        equipment = dataclasses.replace(
+            self.equipment, launch_run=lambda request, runtime: {"run": "20261019T090500Z-eeeeee"}
+        )
+
+        # Act
+        ran = run_study(self.runtime, JUDGED_STUDY, equipment, None)
+
+        # Assert
+        self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
+        self.assertEqual((self.config_root / "findings.awawa").read_text(encoding="utf-8"), RECORDED_ANSWER)

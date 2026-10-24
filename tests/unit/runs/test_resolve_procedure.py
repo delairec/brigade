@@ -89,6 +89,25 @@ class ResolveTheBuildProcedureBrigadeShipsTest(unittest.TestCase):
         self.assertEqual(procedure.budget, 75)
 
 
+class ResolveTheReviewAndPlanProceduresBrigadeShipsTest(unittest.TestCase):
+    def test_should_resolve_each_with_the_capabilities_and_the_budget_of_its_slot(self):
+        # Arrange
+        rows = [
+            ("wave-plan", ("read", "write", "shell"), 30),
+            ("verify-pr", ("read", "shell"), 40),
+        ]
+        no_instructions_corpus = None
+        directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=no_instructions_corpus)
+        for name, capabilities, budget in rows:
+            with self.subTest(procedure=name):
+                # Act
+                procedure = resolve_procedure(name, directories)
+
+                # Assert
+                self.assertEqual(procedure.capabilities, capabilities)
+                self.assertEqual(procedure.budget, budget)
+
+
 class ResolveProcedureGivenByPathTest(ResolveProcedureByNameTestCase):
     def test_should_refuse_a_path_to_no_file(self):
         # Arrange

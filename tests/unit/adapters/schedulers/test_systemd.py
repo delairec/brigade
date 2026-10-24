@@ -3,9 +3,10 @@ import unittest
 from pathlib import Path
 
 from brigade.adapters.schedulers.systemd import install, read_status
-from brigade.errors import ToolNotFound
+from brigade.errors import CannotWrite, ToolNotFound
 from brigade.runtime import Runtime
 from brigade.system.run_process import ProcessRecord
+from tests.list_entry_names import list_entry_names
 from tests.unit.create_test_runtime import create_test_runtime
 
 
@@ -122,3 +123,44 @@ class InstallSystemdTest(unittest.TestCase):
             self.commands,
             [("systemctl", "--user", "daemon-reload"), ("systemctl", "--user", "enable", "--now", "brigade.timer")],
         )
+
+    def test_should_leave_one_pair_of_units_when_installed_over_an_earlier_install(self):
+        # Arrange
+        request = {"unit_directory": str(self.units), "brigade": "/opt/brigade/bin/brigade", "environment": {}}
+        install(request, create_test_runtime(run_process=self.run_systemctl))
+
+        # Act
+        install(request, create_test_runtime(run_process=self.run_systemctl))
+
+        # Assert
+        self.assertEqual(list_entry_names(self.units), ["brigade.service", "brigade.timer"])
+
+    def test_should_refuse_naming_the_unit_directory_a_file_stands_for(self):
+        # Arrange
+        self.units.parent.mkdir(parents=True)
+        self.units.write_text("")
+        request = {"unit_directory": str(self.units), "brigade": "/opt/brigade/bin/brigade", "environment": {}}
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            install(request, create_test_runtime(run_process=self.run_systemctl))
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.units}: File exists")
+
+    def test_should_refuse_naming_the_unit_a_directory_stands_for(self):
+        # Arrange
+        rows = ["brigade.service", "brigade.timer"]
+        for unit in rows:
+            with self.subTest(unit=unit):
+                # Arrange
+                units = Path(self.root.name) / unit / "systemd" / "user"
+                (units / unit).mkdir(parents=True)
+                request = {"unit_directory": str(units), "brigade": "/opt/brigade/bin/brigade", "environment": {}}
+
+                # Act
+                with self.assertRaises(CannotWrite) as refusal:
+                    install(request, create_test_runtime(run_process=self.run_systemctl))
+
+                # Assert
+                self.assertEqual(str(refusal.exception), f"cannot write {units / unit}: Is a directory")

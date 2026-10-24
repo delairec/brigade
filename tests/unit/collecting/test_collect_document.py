@@ -39,6 +39,13 @@ FRESH_DOCUMENT = {
     "summary": {"days": 1},
     "items": ["sun"],
 }
+CLOUDY_FRESH_DOCUMENT = {
+    "schema_version": 1,
+    "collector": "weather",
+    "collected_at": "2026-10-19T09:00:00Z",
+    "summary": {"days": 1},
+    "items": ["clouds"],
+}
 MISSHAPEN_DOCUMENT = {
     "schema_version": 1,
     "collector": "weather",
@@ -53,9 +60,9 @@ COLLECTOR_DIRECTORY = "/srv/shop"
 
 
 class CollectorDouble:
-    def __init__(self, exit_code: int, stdout: str, stderr: str = ""):
-        self.name = "weather"
-        self.command = "brigade-collector-weather"
+    def __init__(self, exit_code: int, stdout: str, stderr: str = "", name: str = "weather"):
+        self.name = name
+        self.command = f"brigade-collector-{name}"
         self.environments = []
         self._answer = ProcessRecord(
             argv=(self.command,),
@@ -238,6 +245,108 @@ class CollectDocumentTest(unittest.TestCase):
         # Assert
         copy = self.root / "run" / "collect" / "weather" / "document.json"
         self.assertEqual(json.loads(copy.read_text(encoding="utf-8")), CACHED_DOCUMENT)
+
+    def test_should_copy_the_sidecar_of_a_cached_document_into_the_run_directory_of_a_run(self):
+        # Arrange
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "run"), run_process=ScriptedProcesses()
+        )
+
+        # Act
+        collect_document(CollectorDouble(0, json.dumps(CACHED_DOCUMENT)), create_request(), runtime)
+
+        # Assert
+        copy = self.root / "run" / "collect" / "weather" / "sidecar.json"
+        self.assertEqual(
+            json.loads(copy.read_text(encoding="utf-8")),
+            {
+                "schema_version": 1,
+                "collector": "weather",
+                "command": "brigade-collector-weather",
+                "parameters": {"city": "Lyon"},
+                "since": "2026-10-01",
+                "duration_ms": 40,
+                "exit_code": 0,
+                "cache_key": CACHE_KEY,
+            },
+        )
+
+    def test_should_collect_again_for_another_since(self):
+        # Arrange
+        collect_document(CollectorDouble(0, json.dumps(CACHED_DOCUMENT)), create_request(), self.runtime)
+        next_day = CollectorInputs(project=Path("/srv/oak"), since=date(2026, 10, 2), parameters={"city": "Lyon"})
+
+        # Act
+        collection = collect_document(
+            CollectorDouble(0, json.dumps(SNOWY_CACHED_DOCUMENT)),
+            CollectionRequest(inputs=next_day, refresh=False, equipment=EQUIPMENT),
+            self.runtime,
+        )
+
+        # Assert
+        self.assertEqual(collection.document, SNOWY_CACHED_DOCUMENT)
+
+    def test_should_collect_again_once_its_cache_input_changed(self):
+        # Arrange
+        ledger_month = self.root / "state" / "ledger" / "2026-10.jsonl"
+        ledger_month.parent.mkdir(parents=True)
+        ledger_month.write_text('{"event": "run.started"}\n')
+        collect_document(CollectorDouble(0, json.dumps(CACHED_DOCUMENT), name="ledger"), create_request(), self.runtime)
+        with ledger_month.open("a") as ledger:
+            ledger.write('{"event": "run.finished"}\n')
+
+        # Act
+        collection = collect_document(
+            CollectorDouble(0, json.dumps(SNOWY_CACHED_DOCUMENT), name="ledger"), create_request(), self.runtime
+        )
+
+        # Assert
+        self.assertEqual(collection.document, SNOWY_CACHED_DOCUMENT)
+
+    def test_should_run_a_collector_declaring_no_cache_again_at_each_call(self):
+        # Arrange
+        collect_document(CollectorDouble(0, json.dumps(FRESH_DOCUMENT)), create_request(), self.runtime)
+
+        # Act
+        collection = collect_document(
+            CollectorDouble(0, json.dumps(CLOUDY_FRESH_DOCUMENT)), create_request(), self.runtime
+        )
+
+        # Assert
+        self.assertEqual(
+            collection,
+            Collection(
+                document_path=self.root / "state" / "collect" / "weather" / "document.json",
+                document=CLOUDY_FRESH_DOCUMENT,
+                cached=False,
+            ),
+        )
+
+    def test_should_leave_nothing_in_the_cache_of_a_document_declaring_no_cache(self):
+        # Arrange
+        collector = CollectorDouble(0, json.dumps(FRESH_DOCUMENT))
+
+        # Act
+        collect_document(collector, create_request(), self.runtime)
+
+        # Assert
+        self.assertEqual(list(self.root.glob("cache/collectors")), [])
+
+    def test_should_run_the_collector_again_after_a_failure(self):
+        # Arrange
+        with self.assertRaises(BrigadeError):
+            collect_document(CollectorDouble(3, "", "no forecast"), create_request(), self.runtime)
+        second_collector = CollectorDouble(0, json.dumps(CACHED_DOCUMENT))
+
+        # Act
+        collection = collect_document(second_collector, create_request(), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            collection,
+            Collection(document_path=self.cache_entry / "document.json", document=CACHED_DOCUMENT, cached=False),
+        )
 
 
 class CollectDocumentRefusalTest(unittest.TestCase):

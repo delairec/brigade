@@ -143,12 +143,61 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
         self.assertEqual(plan.first_segment, 1)
         self.assertEqual(plan.resumed_session, None)
 
+    def test_should_hold_the_capabilities_of_the_procedure_to_those_the_role_of_its_slot_allows(self):
+        # Arrange
+        rows = [
+            ("explore", "explorer", ("read", "shell")),
+            ("review", "reviewer", ("read", "shell")),
+            ("remediate", "remediator", ("read", "write", "shell")),
+        ]
+        for slot, role, capabilities in rows:
+            with self.subTest(slot=slot):
+                # Act
+                plan = self.plan(self.create_request(slot=slot), {"features": "step_count"})
+
+                # Assert
+                self.assertEqual(plan.role.role, role)
+                self.assertEqual(plan.capabilities, capabilities)
+
     def test_should_name_a_new_run_by_its_instant(self):
         # Act
         plan = self.plan(self.create_request(), {"features": "step_count"})
 
         # Assert
         self.assertRegex(plan.run_id, r"^20261019T090000Z-[0-9a-f]{6}$")
+
+
+class PlanRunOfAProcedureOnTheSlotOfARoleHoldingFewerCapabilitiesTest(PlanRunTestCase):
+    def test_should_grant_the_capabilities_the_procedure_and_the_role_both_hold(self):
+        # Arrange
+        request = self.create_request(procedure="build-task", slot="review")
+
+        # Act
+        plan = self.plan(request, {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(plan.capabilities, ("read", "shell"))
+
+
+class PlanRunOfASlotTheSlotClientsTableBindsTest(PlanRunTestCase):
+    def test_should_name_the_client_of_the_slot_over_the_client_key(self):
+        # Arrange
+        configuration = Configuration(
+            client="claude-code", clients={"codex": {"features": "step_count"}}, slot_clients={"build": "codex"}
+        )
+        no_project = None
+        setting = RunSetting(configuration, no_project, "codex")
+
+        # Act
+        plan = plan_run(
+            self.create_request(),
+            setting,
+            RunPlugins(client_adapter=fake, document=markdown),
+            create_test_runtime(self.paths),
+        )
+
+        # Assert
+        self.assertEqual(plan.client, "codex")
 
 
 class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
@@ -189,6 +238,20 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
         self.assertEqual(plan.resumed, True)
         self.assertEqual(plan.first_segment, 2)
         self.assertEqual(plan.resumed_session, "s1")
+
+    def test_should_resume_after_its_last_segment_in_a_session_of_its_own_when_the_client_cannot_resume(self):
+        # Arrange
+        write_run_result(
+            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json", "failed", session="s1"
+        )
+        client_without_operations = {}
+
+        # Act
+        plan = self.plan(self.create_request(run_id=RUN_ID, resume=True), client_without_operations)
+
+        # Assert
+        self.assertEqual(plan.first_segment, 2)
+        self.assertIsNone(plan.resumed_session)
 
 
 class PlanRunOfARegisteredProjectTest(PlanRunTestCase):

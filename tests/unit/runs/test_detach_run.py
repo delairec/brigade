@@ -95,6 +95,7 @@ class DetachRunWithNoOptionTest(DetachRunTestCase):
         request = self.spawn.requests[0]
         self.assertEqual(pid, os.getpid())
         self.assertEqual(request.stdout, plan.run_directory / "brigade.log")
+        self.assertEqual(request.stderr, plan.run_directory / "brigade.log")
         self.assertEqual(
             self.traces,
             [
@@ -118,4 +119,33 @@ class DetachRunWithNoOptionTest(DetachRunTestCase):
                     pid=os.getpid(),
                 )
             ],
+        )
+
+
+class DetachRunOfASlotBoundToALoginTest(DetachRunTestCase):
+    def test_should_hand_the_detached_run_neither_the_token_nor_any_variable(self):
+        # Arrange
+        plan = create_run_plan(self.root, forge_environment={"GH_TOKEN": "token-of-octo-builder"})
+        plan.run_directory.mkdir(parents=True)
+
+        # Act
+        detach_run(plan, self.runtime)
+
+        # Assert
+        request = self.spawn.requests[0]
+        self.assertEqual(request.environment, {})
+        self.assertEqual(
+            request.argv,
+            (
+                sys.executable,
+                "/srv/brigade/bin/brigade",
+                "run",
+                "build-task",
+                "--slot",
+                "build",
+                "--cwd",
+                str(self.root / "project"),
+                "--run-id",
+                RUN_ID,
+            ),
         )

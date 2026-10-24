@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.studies.collect_evidence import collect_evidence
 from brigade.studies.convert_study import Study
 from brigade.studies.study_run_context import StudyRunContext
@@ -45,12 +46,15 @@ class CollectorDouble:
         )
 
 
-def create_study(project: str | None) -> Study:
+WEATHER_OF_LYON = ("weather city=Lyon",)
+
+
+def create_study(project: str | None, collectors: tuple[str, ...] = WEATHER_OF_LYON) -> Study:
     return Study(
         name="trees",
         project=project,
         question=None,
-        collectors=("weather city=Lyon",),
+        collectors=collectors,
         slot="none",
         every=None,
         output="entity:FINDING",
@@ -75,13 +79,13 @@ class CollectEvidenceTest(unittest.TestCase):
         self.resolved.append((name, project))
         return self.collector
 
-    def create_context(self, project: str | None) -> StudyRunContext:
+    def create_context(self, project: str | None, collectors: tuple[str, ...] = WEATHER_OF_LYON) -> StudyRunContext:
         equipment = create_study_equipment(
             resolve_collector=self.resolve_collector, working_directory=WORKING_DIRECTORY
         )
         return StudyRunContext(
             runtime=self.runtime,
-            study=create_study(project),
+            study=create_study(project, collectors),
             run_id=RUN_ID,
             run_directory=self.run_directory,
             equipment=equipment,
@@ -142,3 +146,14 @@ class CollectEvidenceTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.resolved, [("weather", Path("/srv/elm"))])
+
+    def test_should_run_no_collector_of_a_study_holding_a_command_it_cannot_split(self):
+        # Arrange
+        collectors = ("weather city=Lyon", "shell: echo 'unclosed")
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            collect_evidence(self.create_context(None, collectors))
+
+        # Assert
+        self.assertEqual(self.resolved, [])

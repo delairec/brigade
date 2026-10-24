@@ -4,7 +4,7 @@ from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_collect import install_executable
-from tests.cli.test_verify_preflight import CLI_KEYS, VerifyPreflightTestCase
+from tests.cli.test_verify_preflight import VerifyPreflightTestCase
 
 REVIEWING_GH = (
     "#!/bin/sh\n"
@@ -15,8 +15,6 @@ REVIEWING_GH = (
     '  "pr view") cat "{pull_request}" ;;\n'
     "esac\n"
 )
-REVIEW_KEYS = f'{CLI_KEYS}review = "review-bot"\n'
-POLICY_UNDER_APPROVAL = "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tREVIEW approval\n"
 BROKEN_SPEC = {"grade": "high", "file": "src/cart/button.py", "line": 2, "broken": "SPEC 1 of @TASK.S3"}
 
 
@@ -58,6 +56,7 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stderr, "")
         self.assertEqual(
             self.read_verdicts(),
             [
@@ -77,32 +76,4 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
                     "login": None,
                 }
             ],
-        )
-
-    def test_should_refuse_changes_without_a_finding_and_record_nothing(self):
-        # Act
-        completed = self.run_verify_verdict({"head": self.read_head(), "verdict": "changes", "findings": []})
-
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertIn(f"the verdict file {self.verdict}: a verdict changes names no finding", completed.stderr)
-        self.assertEqual(self.read_verdicts(), [])
-
-
-class BrigadeVerifyVerdictUnderTheApprovalModeTest(VerifyVerdictTestCase):
-    def setUp(self):
-        super().setUp()
-        self.configure(keys=REVIEW_KEYS)
-        (self.machine.corpus / "policies.awawa").write_text(POLICY_UNDER_APPROVAL)
-
-    def test_should_post_a_review_requesting_changes(self):
-        # Act
-        completed = self.run_verify_verdict({"head": self.read_head(), "verdict": "changes", "findings": [BROKEN_SPEC]})
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertIn(
-            "api repos/{owner}/{repo}/pulls/42/reviews --method POST -f event=REQUEST_CHANGES "
-            f"-f commit_id={self.read_head()} -F body=@-\n",
-            self.gh_calls.read_text(),
         )

@@ -76,6 +76,34 @@ class LedgerTest(unittest.TestCase):
                 self.assertEqual(document["since"], expected)
 
 
+class LedgerOfNoJournalTest(unittest.TestCase):
+    def test_should_give_an_empty_overview_when_the_ledger_directory_does_not_exist(self):
+        # Arrange
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        runtime = create_test_runtime(create_test_paths(Path(directory.name)))
+        request = argparse.Namespace(wave=None, project=None, since=None)
+
+        # Act
+        document = ledger(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "view": "overview",
+                "events": {},
+                "first": None,
+                "last": None,
+                "files": [],
+                "skipped": [],
+                "runs": {"outcomes": {}, "error_classes": {}},
+                "segments": {"outcomes": {}, "error_classes": {}},
+            },
+        )
+
+
 class LedgerRequestTest(unittest.TestCase):
     def test_should_refuse_since_without_a_project(self):
         # Arrange
@@ -161,6 +189,33 @@ class LedgerOverviewTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(text, "events: 0\nfiles read: 0\nlines skipped: 0")
 
+    def test_should_count_the_runs_apart_from_their_segments(self):
+        # Arrange
+        document = {
+            "view": "overview",
+            "events": {"run.finished": 3},
+            "first": "2026-10-01T09:00:00Z",
+            "last": "2026-10-02T09:00:00Z",
+            "files": ["2026-10.jsonl"],
+            "skipped": [],
+            "runs": {"outcomes": {"done": 2}, "error_classes": {}},
+            "segments": {"outcomes": {"done": 2, "wall_limit": 1}, "error_classes": {}},
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "events: 3, from 2026-10-01T09:00:00Z to 2026-10-02T09:00:00Z\n"
+            "files read: 1\n"
+            "lines skipped: 0\n"
+            "  run.finished  3\n"
+            "runs finished: 2, done 2\n"
+            "segments finished: 3, done 2, wall_limit 1",
+        )
+
 
 class LedgerWaveTextTest(unittest.TestCase):
     def test_should_present_the_course_of_the_wave(self):
@@ -206,6 +261,80 @@ class LedgerWaveTextTest(unittest.TestCase):
             "  2026-10-01T02:00:00Z, still paused\n"
             "hand-overs: T7 ada build segment 2\n"
             "parked: none",
+        )
+
+    def test_should_print_none_for_what_the_wave_did_not_do(self):
+        # Arrange
+        document = {
+            "view": "wave",
+            "wave": "tidepool_w17",
+            "first": "2026-10-02T09:00:00Z",
+            "last": "2026-10-03T09:00:00Z",
+            "wall_time_ms": 86400000,
+            "tasks": [],
+            "pull_requests": [],
+            "steps": {"by_slot": {}, "by_role": {}},
+            "pauses": [{"paused_at": "2026-10-02T10:00:00Z", "resumed_at": None, "duration_ms": None}],
+            "paused_ms": 0,
+            "hand_overs": [],
+            "parked": [],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "wave tidepool_w17: 2026-10-02T09:00:00Z to 2026-10-03T09:00:00Z, wall time 24h00m\n"
+            "tasks: none\n"
+            "pull requests: none\n"
+            "steps by slot: none\n"
+            "steps by role: none\n"
+            "pauses: 1, 0h00m in all\n"
+            "  2026-10-02T10:00:00Z, still paused\n"
+            "hand-overs: none\n"
+            "parked: none",
+        )
+
+    def test_should_present_the_steps_of_each_role_and_the_parked_tasks(self):
+        # Arrange
+        ada_steps = {
+            "runs": {"p50": 40, "p90": 40, "measured": 1, "partial": 1, "unmeasured": 0},
+            "segments": {"p50": 40, "p90": 40, "measured": 1, "unmeasured": 1},
+        }
+        document = {
+            "view": "wave",
+            "wave": "tidepool_w18",
+            "first": "2026-10-04T09:00:00Z",
+            "last": "2026-10-04T10:00:00Z",
+            "wall_time_ms": 3600000,
+            "tasks": ["TP147"],
+            "pull_requests": [],
+            "steps": {"by_slot": {}, "by_role": {"ada": ada_steps}},
+            "pauses": [],
+            "paused_ms": 0,
+            "hand_overs": [],
+            "parked": ["TP147"],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "wave tidepool_w18: 2026-10-04T09:00:00Z to 2026-10-04T10:00:00Z, wall time 1h00m\n"
+            "tasks: TP147\n"
+            "pull requests: none\n"
+            "steps by slot: none\n"
+            "steps by role:\n"
+            "  ada\n"
+            "    runs p50 40  p90 40  measured 1  partial 1  unmeasured 0\n"
+            "    segments p50 40  p90 40  measured 1  unmeasured 1\n"
+            "pauses: 0, 0h00m in all\n"
+            "hand-overs: none\n"
+            "parked: TP147",
         )
 
 

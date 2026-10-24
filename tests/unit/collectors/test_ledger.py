@@ -1,3 +1,4 @@
+import dataclasses
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -142,6 +143,18 @@ class LedgerCollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["summary"]["events"], {"order.started": 2, "order.done": 1, "run.finished": 1})
+
+    def test_should_count_the_finished_runs_by_outcome(self):
+        # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
+        failed_run = dataclasses.replace(FINISHED_RUN, run="20261003T110000Z-bbbbbb", outcome="failed", exit=1)
+        append_event(self.runtime.paths, datetime(2026, 10, 3, 11, 0, tzinfo=UTC), failed_run)
+
+        # Act
+        document = collect(ENVIRONMENT, self.runtime, EQUIPMENT)
+
+        # Assert
+        self.assertEqual(document["summary"]["outcomes"], {"done": 1, "failed": 1})
 
     def test_should_keep_the_events_of_the_wave_it_names_whatever_their_project(self):
         # Arrange

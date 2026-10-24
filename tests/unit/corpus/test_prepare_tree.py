@@ -1,4 +1,5 @@
 import errno
+import fcntl
 import io
 import os
 import shutil
@@ -10,7 +11,13 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, Tree, TreeRequest, prepare_tree
+from brigade.corpus.prepare_tree import (
+    FILESYSTEM_READ_TIME_KEEPER,
+    ReadTimeKeeper,
+    Tree,
+    TreeRequest,
+    prepare_tree,
+)
 from brigade.errors import BrigadeError, CannotWrite
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
@@ -57,6 +64,32 @@ def create_refusing_stamp_reader(refusal: OSError) -> Callable[[Path], int]:
         raise refusal
 
     return read_stamp
+
+
+class LockWitnessingKeeperDouble:
+    def __init__(self, lock_file: Path):
+        self.lock_file = lock_file
+        self.witnessed: list[tuple[str, bool]] = []
+
+    def create_keeper(self) -> ReadTimeKeeper:
+        return ReadTimeKeeper(stamp_read=self.stamp_read, read_stamp=self.read_stamp)
+
+    def stamp_read(self, tree: Path, read_ns: int) -> None:
+        self.witnessed.append(("stamp_read", self.find_lock_held()))
+        FILESYSTEM_READ_TIME_KEEPER.stamp_read(tree, read_ns)
+
+    def read_stamp(self, tree: Path) -> int:
+        self.witnessed.append(("read_stamp", self.find_lock_held()))
+        return FILESYSTEM_READ_TIME_KEEPER.read_stamp(tree)
+
+    def find_lock_held(self) -> bool:
+        with self.lock_file.open("a", encoding="utf-8") as probe:
+            try:
+                fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return True
+            fcntl.flock(probe, fcntl.LOCK_UN)
+            return False
 
 
 class ArchivingGitDouble(RecordingProcessRunner):
@@ -219,6 +252,29 @@ class PrepareTreeOfACommitTest(PrepareTreeTestCase):
             str(refusal.exception),
             "the archive of @PROJECT.shop holds ../evil, a member tarfile's data filter refuses",
         )
+
+
+class PrepareTreeUnderTheLockOfTheCacheTest(PrepareTreeTestCase):
+    def test_should_stamp_and_prune_the_extracted_tree_under_the_lock(self):
+        # Arrange
+        witness = LockWitnessingKeeperDouble(self.root / "locks" / "refs-cache.lock")
+
+        # Act
+        prepare_tree(ArchivingGitDouble("abc123", [README]), witness.create_keeper(), self.create_request("v1"))
+
+        # Assert
+        self.assertEqual(witness.witnessed, [("stamp_read", True), ("read_stamp", True)])
+
+    def test_should_stamp_a_cached_tree_under_the_lock(self):
+        # Arrange
+        write_tree(self.cache / "shop" / "abc123", 8, LONG_AGO)
+        witness = LockWitnessingKeeperDouble(self.root / "locks" / "refs-cache.lock")
+
+        # Act
+        prepare_tree(ArchivingGitDouble("abc123", [README]), witness.create_keeper(), self.create_request("v1"))
+
+        # Assert
+        self.assertEqual(witness.witnessed, [("stamp_read", True)])
 
 
 class PrepareTreeThatCannotWriteTest(PrepareTreeTestCase):

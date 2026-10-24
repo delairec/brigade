@@ -22,8 +22,12 @@ class WriteBuildBriefTest(unittest.TestCase):
         path = write_build_brief(state_root, action, worktree)
 
         # Assert
-        brief = path.read_text()
         self.assertEqual(path, state_root / "briefs" / "shop_w1-B1.md")
-        self.assertIn("/srv/shop/.brigade/worktrees/B1", brief)
-        self.assertIn("task/shop_w1/B1", brief)
-        self.assertNotIn("$", brief)
+        self.assertEqual(
+            path.read_text(encoding="utf-8"),
+            "Deliver @TASK.B1 of @PROJECT.shop, in the wave shop_w1.\n"
+            "\n"
+            "- Base branch: integration/shop_w1.\n"
+            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch task/shop_w1/B1,"
+            " cut from the head of integration/shop_w1.\n",
+        )

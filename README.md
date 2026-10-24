@@ -431,7 +431,7 @@ of that adapter; the fake reads `recordings`, the directory whose `<role>.json` 
 when that file exists and its brief opens on the `Progress so far` section, `features`, the
 comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by
 default), and, for
-tests of the clock and of the hand-over, `delay`, the seconds it waits before answering, `progress`, a text it
+tests of the clock and of the hand-over, `hold`, a file whose presence it waits out before answering, `progress`, a text it
 appends as it is to the progress file of the run, in either form, and `interval`, the seconds it waits after each line of its recording;
 `operations`, comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result
 document is a result and any other line a text; with `transcripts`, it answers the document

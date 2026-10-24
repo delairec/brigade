@@ -109,6 +109,99 @@ class AdapterMatrixWhenAProbeTimesOutTest(unittest.TestCase):
         )
 
 
+def _answer_a_probe_lacking_its_version_argv(request: ProcessRequest) -> ProcessRecord:
+    return ProcessRecord(
+        argv=request.argv,
+        cwd=request.cwd,
+        exit_code=0,
+        stdout='{"schema_version": 1, "client": "broken", "operations": ["probe"], "features": [], "models": {}}',
+        stderr="",
+        duration_ms=0,
+    )
+
+
+class AdapterMatrixWhenAProbeAnswersOffItsShapeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        root = Path(self.root.name)
+        search_directory = root / "bin"
+        search_directory.mkdir()
+        executable = search_directory / "brigade-client-broken"
+        executable.write_text("#!/bin/sh\n")
+        executable.chmod(0o755)
+        sources = PluginSources(
+            executable_search_path=str(search_directory), run_process=_answer_a_probe_lacking_its_version_argv
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(root, executable_search_path=str(search_directory)),
+            run_process=_answer_a_probe_lacking_its_version_argv,
+            resolve_plugin=functools.partial(resolve_plugin, sources=sources),
+        )
+
+    def test_should_name_the_key_the_answer_lacks_in_the_row_of_the_adapter(self):
+        # Arrange
+        no_option = argparse.Namespace()
+
+        # Act
+        document = adapter_matrix(no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["adapters"][0],
+            {
+                "name": "broken",
+                "audience": "supported_client",
+                "capabilities": None,
+                "error": "client adapter broken answered probe: lacks the key version_argv",
+            },
+        )
+
+
+class AdapterMatrixOfAnAdapterWithSettingsInTheConfigurationTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        root = Path(self.root.name)
+        search_directory = root / "bin"
+        search_directory.mkdir()
+        paths = create_test_paths(root, executable_search_path=str(search_directory))
+        paths.configuration_file.parent.mkdir(parents=True)
+        paths.configuration_file.write_text('[clients.fake]\nfeatures = "step_count"\n')
+        sources = PluginSources(executable_search_path=str(search_directory), run_process=_answer_the_bare_probe)
+        self.runtime = create_test_runtime(
+            paths, run_process=_answer_the_bare_probe, resolve_plugin=functools.partial(resolve_plugin, sources=sources)
+        )
+
+    def test_should_probe_the_adapter_with_its_settings(self):
+        # Arrange
+        no_option = argparse.Namespace()
+
+        # Act
+        document = adapter_matrix(no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["adapters"][1],
+            {
+                "name": "fake",
+                "audience": "test_suite",
+                "capabilities": {
+                    "launch": "full",
+                    "result": "full",
+                    "resume": "fallback",
+                    "transcripts": "fallback",
+                    "actions": "fallback",
+                    "step_count": "full",
+                    "tool_grants": "fallback",
+                    "reset_hour": "fallback",
+                    "graceful_stop": "fallback",
+                },
+                "error": None,
+            },
+        )
+
+
 MATRIX = {
     "schema_version": 1,
     "adapters": [

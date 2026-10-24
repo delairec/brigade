@@ -114,3 +114,15 @@ class PrListCollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "pr-list is absent: FORGE none")
+
+    def test_should_ask_nothing_of_the_forge_for_a_project_without_a_forge(self):
+        # Arrange
+        self.register_project("none")
+        forge = ForgeDouble({"list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []}})
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            collect(create_environment("{}"), self.runtime, self.create_equipment(forge))
+
+        # Assert
+        self.assertEqual(forge.list_requests("list_pull_requests"), [])

@@ -31,3 +31,14 @@ class CheckPrivacyTest(unittest.TestCase):
                 ],
             },
         )
+
+    def test_should_fail_a_match_that_a_public_pattern_covers_only_in_part(self):
+        # Arrange
+        patterns = PrivacyPatterns(private=(), public=("/home/alice",))
+        added_lines = (AddedLine(path="src/notes.py", line=4, text="ARCHIVE = '/home/alice.old/shop'"),)
+
+        # Act
+        check = check_privacy(patterns, added_lines)
+
+        # Assert
+        self.assertEqual(check, {"name": "privacy", "verdict": "fail", "findings": ["src/notes.py:4: a home path"]})

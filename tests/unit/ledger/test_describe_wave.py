@@ -82,6 +82,31 @@ class DescribeWaveTest(unittest.TestCase):
             {"measured": 1, "unmeasured": 0, "p50": 15, "p90": 15, "partial": 0},
         )
 
+    def test_should_summarize_the_runs_and_the_segments_of_each_role_an_unmeasured_segment_left_partial(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(at_minute(0), create_run_finished("r1", segment=1, main_steps=10, wave="w1", task="TP1")),
+                LedgerEntry(at_minute(1), create_run_finished("r1", segment=2, wave="w1", task="TP1")),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        wave = describe_wave(reading, "w1")
+
+        # Assert
+        self.assertEqual(
+            wave["steps"]["by_role"],
+            {
+                "builder": {
+                    "runs": {"measured": 1, "unmeasured": 0, "p50": 10, "p90": 10, "partial": 1},
+                    "segments": {"measured": 1, "unmeasured": 1, "p50": 10, "p90": 10},
+                }
+            },
+        )
+
     def test_should_refuse_a_wave_no_event_names(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:

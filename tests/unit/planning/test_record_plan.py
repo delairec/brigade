@@ -23,6 +23,7 @@ from tests.unit.select_requests_opening_on import select_requests_opening_on
 GIT_FETCH = ("git", "fetch")
 GIT_MERGE = ("git", "merge")
 GIT_WORKTREE_ADD = ("git", "worktree", "add")
+GIT_SWITCH = ("git", "switch")
 
 PLAN = 'MILESTONE F1\n\tTITLE "Printer"\n\nTASK B20\n\tTITLE "the printer"\n\tMILESTONE @MILESTONE.F1\n'
 BRANCH = "plan/oak_r1"
@@ -271,6 +272,16 @@ class RecordPlanTest(RecordPlanTestCase):
                 },
             ),
         )
+
+    def test_should_merge_the_plan_pull_request_without_approving_it_where_the_forge_requires_no_review(self):
+        # Arrange
+        self.script_recording()
+
+        # Act
+        record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(self.forge.list_operations(), ["open_pull_request", "find_pull_request", "merge_pull_request"])
 
     def test_should_leave_the_plan_pull_request_to_the_user_under_the_asking_review(self):
         # Arrange
@@ -563,6 +574,72 @@ class RecordPlanLintTest(RecordPlanTestCase):
         # Assert
         self.assertEqual(str(refusal.exception), "@REQUEST.oak_r1 spent its lint round in run r1; the run ends blocked")
 
+    def test_should_refuse_a_second_lint_round_before_any_command(self):
+        # Arrange
+        append_event(
+            self.runtime.paths, datetime(2026, 10, 19, 8, 0, tzinfo=UTC), PlanLintFailed(request="oak_r1", run="r1")
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(self.processes.list_argvs(), [])
+
+    def test_should_record_the_corrected_plan_in_another_run(self):
+        # Arrange
+        append_event(
+            self.runtime.paths, datetime(2026, 10, 19, 8, 0, tzinfo=UTC), PlanLintFailed(request="oak_r1", run="r0")
+        )
+        self.script_recording()
+
+        # Act
+        recorded = record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(recorded, {"request": "oak_r1", "milestone": "F1", "branch": BRANCH, "pr": 42})
+
+    def test_should_record_the_corrected_plan_outside_a_run(self):
+        # Arrange
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
+        append_event(
+            self.runtime.paths, datetime(2026, 10, 19, 8, 0, tzinfo=UTC), PlanLintFailed(request="oak_r1", run="r1")
+        )
+        self.script_recording()
+
+        # Act
+        recorded = record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(recorded, {"request": "oak_r1", "milestone": "F1", "branch": BRANCH, "pr": 42})
+
+    def test_should_leave_neither_the_plan_branch_nor_its_worktree_when_the_lint_refuses_the_plan(self):
+        # Arrange
+        self.script_refused_lint()
+
+        # Act
+        with self.assertRaises(CorpusLintFailed):
+            record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(select_argvs_opening_on(self.processes.list_argvs(), GIT_SWITCH), [])
+        self.assertIn(("git", "worktree", "remove", "--force", str(self.worktree)), self.processes.list_argvs())
+
+    def test_should_leave_the_request_planning_when_the_lint_refuses_the_plan(self):
+        # Arrange
+        self.script_refused_lint()
+
+        # Act
+        with self.assertRaises(CorpusLintFailed):
+            record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(
+            (self.config_root / "requests.awawa").read_text(encoding="utf-8"), "REQUEST oak_r1\n\tSTATUS planning\n"
+        )
+
 
 class RecordPlanRefusalTest(RecordPlanTestCase):
     def setUp(self):
@@ -582,6 +659,43 @@ class RecordPlanRefusalTest(RecordPlanTestCase):
         # Assert
         self.assertEqual(str(refusal.exception), "@TASK.B19 already exists at corpus/tasks.awawa:1")
 
+    def test_should_name_every_planned_entity_the_corpus_already_holds_in_one_refusal(self):
+        # Arrange
+        self.script_plan_entities([{"type": "MILESTONE", "name": "F0"}, {"type": "TASK", "name": "B19"}])
+        self.script_plan_entity("@MILESTONE.F0", [{"name": "TITLE", "atoms": ['"Parser"']}])
+        self.script_plan_entity("@TASK.B19", [{"name": "TITLE", "atoms": ['"again"']}])
+        self.script_corpus_sites(
+            [
+                {"type": "MILESTONE", "name": "F0", "file": "corpus/milestones.awawa", "line": 1},
+                {"type": "TASK", "name": "B19", "file": "corpus/tasks.awawa", "line": 1},
+            ]
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "@MILESTONE.F0 already exists at corpus/milestones.awawa:1,"
+            " @TASK.B19 already exists at corpus/tasks.awawa:1",
+        )
+
+    def test_should_refuse_a_planned_entity_the_corpus_already_holds_before_any_write_or_lint_round(self):
+        # Arrange
+        self.script_plan_entities([{"type": "TASK", "name": "B19"}])
+        self.script_plan_entity("@TASK.B19", [{"name": "TITLE", "atoms": ['"again"']}])
+        self.script_corpus_sites([{"type": "TASK", "name": "B19", "file": "corpus/tasks.awawa", "line": 1}])
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(select_argvs_opening_on(self.processes.list_argvs(), GIT_SWITCH), [])
+        self.assertEqual(read_ledger(self.root / "state").entries, ())
+
     def test_should_refuse_a_planned_field_the_schema_does_not_declare(self):
         # Arrange
         self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}])
@@ -599,6 +713,27 @@ class RecordPlanRefusalTest(RecordPlanTestCase):
         self.assertEqual(
             str(refusal.exception),
             "the schema of the corpus of @PROJECT.oak does not declare the field OWNER of MILESTONE",
+        )
+
+    def test_should_name_every_undeclared_field_and_type_in_one_refusal(self):
+        # Arrange
+        self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}, {"type": "EPIC", "name": "E1"}])
+        self.script_plan_entity(
+            "@MILESTONE.F1", [{"name": "TITLE", "atoms": ['"Printer"']}, {"name": "OWNER", "atoms": ['"ada"']}]
+        )
+        self.script_plan_entity("@EPIC.E1", [{"name": "TITLE", "atoms": ['"Printing"']}])
+        self.script_corpus_sites([])
+        self.script_skeletons()
+        self.processes.answer(("awawa", "new", "EPIC", "E1", str(self.worktree)), exit_code=1)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "the schema of the corpus of @PROJECT.oak does not declare the field OWNER of MILESTONE, the type EPIC",
         )
 
     def test_should_refuse_a_plan_holding_neither_a_milestone_nor_a_task(self):

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from brigade.commands.verify_verdict import COMMAND
 from brigade.errors import BrigadeError
+from brigade.ledger.read_ledger import read_ledger
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
@@ -13,6 +14,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.verify.test_record_verdict import create_review_forge
 
 PASS = {"head": "8885daa", "verdict": "pass", "findings": []}
+CHANGES_WITHOUT_A_FINDING = {"head": "8885daa", "verdict": "changes", "findings": []}
 
 
 def create_document(login: str | None) -> dict:
@@ -104,6 +106,18 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_message)
+
+    def test_should_record_nothing_on_a_verdict_changes_naming_no_finding(self):
+        # Arrange
+        self.verdict.write_text(json.dumps(CHANGES_WITHOUT_A_FINDING), encoding="utf-8")
+        events_before_the_verdict = 2
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(Namespace(pr=42, file=str(self.verdict)), self.runtime)
+
+        # Assert
+        self.assertEqual(len(read_ledger(self.root / "state").entries), events_before_the_verdict)
 
     def test_should_refuse_a_pull_request_no_task_opened(self):
         # Arrange

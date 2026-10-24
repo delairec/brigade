@@ -181,11 +181,11 @@ class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
 
 
 class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
-    def test_should_wait_append_the_progress_line_then_print_the_recording(self):
+    def test_should_hold_while_its_file_stands_append_the_progress_line_then_print_the_recording(self):
         # Arrange
         request = {
             **LAUNCH_REQUEST,
-            "settings": {"recordings": "/srv/recordings", "delay": "5", "progress": "step 1 done"},
+            "settings": {"recordings": "/srv/recordings", "hold": "/srv/hold", "progress": "step 1 done"},
         }
 
         # Act
@@ -200,12 +200,12 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                     "sh",
                     "-c",
                     (
-                        'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+                        'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
                         ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
                         ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
                     ),
                     "fake",
-                    "5",
+                    "/srv/hold",
                     "step 1 done",
                     "/srv/recordings/builder.json",
                     "0",
@@ -237,12 +237,12 @@ class FakeLaunchOfAClientStoppingAtItsSoftLimitTest(unittest.TestCase):
                 "sh",
                 "-c",
                 (
-                    'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+                    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
                     ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
                     ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
                 ),
                 "fake",
-                "0",
+                "",
                 "",
                 "/srv/recordings/builder.json",
                 "0",
@@ -374,12 +374,12 @@ class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
                 "sh",
                 "-c",
                 (
-                    'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+                    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
                     ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
                     ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
                 ),
                 "fake",
-                "0",
+                "",
                 "",
                 "/srv/recordings/builder.json",
                 "1",

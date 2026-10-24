@@ -52,46 +52,6 @@ class BrigadeHelpTest(HelpTestCase):
                 self.assert_listed(completed.stdout, name, expected_help)
 
 
-class BrigadeGroupHelpTest(HelpTestCase):
-    def test_should_list_each_action_with_the_help_its_record_declares(self):
-        # Arrange
-        rows = [
-            ("adapter", "actions", "answer actions, the request read on stdin"),
-            ("adapter", "launch-argv", "answer launch-argv, the request read on stdin"),
-            ("adapter", "matrix", "print the capabilities every client adapter declares"),
-            ("adapter", "parse-result", "answer parse-result, the request read on stdin"),
-            ("adapter", "probe", "answer probe, the request read on stdin"),
-            ("adapter", "resume-argv", "answer resume-argv, the request read on stdin"),
-            ("adapter", "transcripts", "answer transcripts, the request read on stdin"),
-            ("ledger", "budgets", "p50 and p90 steps per procedure over its last runs"),
-            ("ledger", "compare", "the runs before a day against the runs from that day on"),
-            ("project", "add", "register a git repository in the operational corpus"),
-            ("project", "list", "list every registered project"),
-            ("project", "pause", "pause a project"),
-            ("project", "resume", "resume a paused project"),
-            ("project", "show", "print the fields of a project"),
-            ("roles", "lint", "check the built-in and the machine role files"),
-            ("roles", "list", "list the role, the source and the model of each slot"),
-            ("roles", "show", "print the role file a slot resolves to"),
-            ("runs", "list", "list every run with its state and outcome"),
-            ("runs", "show", "print the summary of a run and its segments, and with --log its journal"),
-            ("scheduler", "install", "install the scheduler config.toml names, or the default"),
-            (
-                "scheduler",
-                "status",
-                "report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
-            ),
-        ]
-        for group, action, expected_help in rows:
-            with self.subTest(group=group, action=action):
-                # Act
-                completed = self.run_help(group)
-
-                # Assert
-                self.assertEqual(completed.returncode, 0, completed.stderr)
-                self.assert_listed(completed.stdout, action, expected_help)
-
-
 class BrigadeCorpusHelpTest(HelpTestCase):
     def test_should_print_the_help_of_the_awawa_passthrough_under_its_options(self):
         # Act

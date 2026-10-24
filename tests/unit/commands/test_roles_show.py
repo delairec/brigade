@@ -1,8 +1,12 @@
+import argparse
+import contextlib
+import io
 import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
 
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.roles_show import COMMAND
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -86,6 +90,22 @@ class RolesShowRequestTest(unittest.TestCase):
 
         # Assert
         self.assertIs(request, options)
+
+
+class RolesShowArgumentsTest(unittest.TestCase):
+    def test_should_refuse_a_slot_outside_the_nine(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (COMMAND,), argparse.ArgumentParser(add_help=False))
+        errors = io.StringIO()
+
+        # Act
+        with self.assertRaises(SystemExit) as refusal, contextlib.redirect_stderr(errors):
+            parser.parse_args(["roles", "show", "cook"])
+
+        # Assert
+        self.assertEqual(refusal.exception.code, 2)
+        self.assertIn("invalid choice: 'cook'", errors.getvalue())
 
 
 class RolesShowOfAMachineRoleTest(unittest.TestCase):

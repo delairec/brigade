@@ -1,17 +1,25 @@
 import argparse
+import contextlib
 import functools
+import io
+import itertools
 import json
 import os
+import signal
+import subprocess
+import sys
 import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
 
 from brigade.adapters.documents import markdown
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.run import COMMAND, run
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, ToolFailure
 from brigade.runtime import Runtime
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
+from brigade.system.run_process import ProcessRequest
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
@@ -23,6 +31,8 @@ from tests.unit.create_test_paths import NO_SEARCH_PATH, create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.refuse_to_run import refuse_to_run
+from tests.unit.runs.write_run_record import write_run_record
+from tests.unit.runs.write_run_result import write_run_result
 
 UNKNOWN_CLIENT = "no-such-client"
 UNKNOWN_PROCEDURE = "no-such-procedure"
@@ -218,6 +228,48 @@ class RunDetachedTest(unittest.TestCase):
         self.assertEqual(record["procedure"], "wave-plan")
         self.assertEqual(record["arguments"], {"request": "tidepool_1"})
 
+    def test_should_write_the_spawned_run_in_the_trail_of_its_run(self):
+        # Arrange
+        this_process = os.getpid()
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+        )
+
+        # Act
+        run(self.request, runtime)
+
+        # Assert
+        self.assertEqual(
+            json.loads(
+                (self.root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "processes.jsonl").read_text(
+                    encoding="utf-8"
+                )
+            ),
+            {
+                "schema_version": 1,
+                "argv": [
+                    sys.executable,
+                    "/srv/brigade/bin/brigade",
+                    "run",
+                    "wave-plan",
+                    "request=tidepool_1",
+                    "--slot",
+                    "plan",
+                    "--cwd",
+                    str(self.root),
+                    "--run-id",
+                    "20261019T090000Z-a1b2c3",
+                ],
+                "cwd": str(self.root),
+                "exit": None,
+                "duration_ms": None,
+                "outcome": "spawned",
+                "pid": this_process,
+            },
+        )
+
     def test_should_warn_that_a_client_counting_no_steps_holds_the_budget_on_the_clock(self):
         # Arrange
         runtime = create_test_runtime(
@@ -329,3 +381,234 @@ class RunAttachedTest(unittest.TestCase):
                 "outcome": "done",
             },
         )
+
+    def test_should_append_its_records_to_the_trail_the_process_that_detached_it_began(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        trail = root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "processes.jsonl"
+        trail.parent.mkdir(parents=True)
+        trail.write_text('{"outcome": "spawned"}\n', encoding="utf-8")
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=_spawn_a_client_that_exits,
+            resolve_plugin=_resolve_the_delivering_client,
+        )
+
+        # Act
+        run(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            trail.read_text(encoding="utf-8"),
+            '{"outcome": "spawned"}\n'
+            f'{{"schema_version": 1, "argv": ["double-client", "--print"], "cwd": "{root}", "exit": 0,'
+            ' "duration_ms": 0, "outcome": "exited"}\n',
+        )
+
+
+class RunAttachedBoundingTheRunsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text(
+            f"runs_kept = 1\n{CLIENT_AND_DOCUMENT_CONFIGURATION}", encoding="utf-8"
+        )
+        self.runs = self.root / "state" / "runs"
+
+    def run_attached(self) -> dict:
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(self.root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            spawn_process=_spawn_a_client_that_exits,
+            resolve_plugin=_resolve_the_delivering_client,
+        )
+        return run(request, runtime)
+
+    def test_should_remove_the_oldest_finished_run_beyond_the_runs_kept_of_the_configuration(self):
+        # Arrange
+        write_run_result(self.runs / "20261018T090000Z-0ld001" / "result.json")
+        write_run_record(self.runs / "20261018T090000Z-0ld001")
+
+        # Act
+        self.run_attached()
+
+        # Assert
+        self.assertEqual(list(self.runs.iterdir()), [self.runs / "20261019T090000Z-a1b2c3"])
+
+    def test_should_warn_of_an_unreadable_run_it_skipped(self):
+        # Arrange
+        (self.runs / "20261018T090000Z-unread").mkdir(parents=True)
+        (self.runs / "20261018T090000Z-unread" / "run.json").write_text("not json", encoding="utf-8")
+
+        unreadable_record = self.runs / "20261018T090000Z-unread" / "run.json"
+
+        # Act
+        document = self.run_attached()
+
+        # Assert
+        self.assertEqual(
+            document["warnings"],
+            [f"run 20261018T090000Z-unread skipped, {unreadable_record} is not a run record: not a JSON document"],
+        )
+
+
+PID_HELD_BY_NO_PROCESS = 2**31 - 1
+
+
+class ClientInterruptedWhileItRunsDouble:
+    pid = PID_HELD_BY_NO_PROCESS
+
+    def __init__(self):
+        self._answers = itertools.chain([self._interrupt_brigade], itertools.repeat(self._end_stopped))
+
+    def wait(self, timeout: float) -> int:
+        return next(self._answers)(timeout)
+
+    def _interrupt_brigade(self, timeout: float) -> int:
+        os.kill(os.getpid(), signal.SIGINT)
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _end_stopped(self, _timeout: float) -> int:
+        return -signal.SIGTERM
+
+
+def _spawn_a_client_interrupted_while_it_runs(request):
+    request.stdout.write_text("Reading the task\n", encoding="utf-8")
+    request.stderr.write_text("", encoding="utf-8")
+    return ClientInterruptedWhileItRunsDouble()
+
+
+class RunAttachedInterruptedTest(unittest.TestCase):
+    def test_should_stop_the_client_and_report_the_run_stopped(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=_spawn_a_client_interrupted_while_it_runs,
+            resolve_plugin=_resolve_the_delivering_client,
+        )
+
+        # Act
+        document = run(request, runtime)
+
+        # Assert
+        self.assertEqual(document["outcome"], "stopped")
+
+
+def _fail_awawa(request: ProcessRequest):
+    raise ToolFailure("awawa show @AGENT.reviewer --json /srv/instructions exited 2: awawa: unreadable root")
+
+
+class RunOfASlotBoundInAnUnreadableInstructionsCorpusTest(unittest.TestCase):
+    def test_should_refuse_the_run_before_launching_any_client(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(
+            f'{CLIENT_AND_DOCUMENT_CONFIGURATION}instructions = "/srv/instructions"\n[slots]\nbuild = "reviewer"\n',
+            encoding="utf-8",
+        )
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=(),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=False,
+            resume=False,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root), run_process=_fail_awawa, resolve_plugin=_resolve_the_delivering_client
+        )
+
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            run(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "awawa show @AGENT.reviewer --json /srv/instructions exited 2: awawa: unreadable root",
+        )
+
+
+def _create_run_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="brigade")
+    add_command_parsers(parser, [COMMAND], argparse.ArgumentParser(add_help=False))
+    return parser
+
+
+class RunParserTest(unittest.TestCase):
+    def test_should_leave_the_procedure_every_key_value_argument_wherever_it_stands_among_the_options(self):
+        # Arrange
+        rows = [
+            ("after the options", ["run", "build-task", "--slot", "build", "a=1", "b=2"]),
+            ("before the options", ["run", "build-task", "a=1", "b=2", "--slot", "build"]),
+            ("on both sides of an option", ["run", "build-task", "a=1", "--slot", "build", "b=2"]),
+        ]
+        for case, words in rows:
+            with self.subTest(case=case):
+                # Act
+                options, extras = _create_run_parser().parse_known_args(words)
+
+                # Assert
+                self.assertEqual(options.procedure, "build-task")
+                self.assertEqual(options.slot, "build")
+                self.assertEqual(extras, ["a=1", "b=2"])
+
+    def test_should_name_the_key_value_arguments_of_the_procedure_in_its_help(self):
+        # Arrange
+        page = io.StringIO()
+
+        # Act
+        with contextlib.suppress(SystemExit), contextlib.redirect_stdout(page):
+            _create_run_parser().parse_args(["run", "--help"])
+
+        # Assert
+        self.assertIn("key=value words, follow it before or after the options", " ".join(page.getvalue().split()))

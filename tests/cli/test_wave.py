@@ -60,7 +60,6 @@ CANCELLED_WAVE_EVENTS = (
     '{"schema_version": 1, "ts": "2026-10-13T11:10:00Z", "event": "task.pr_opened", "project": "shop",'
     ' "task": "S4", "wave": "shop_w1", "branch": "task/shop_w1/S4", "pr": 12, "login": "octo-bot"}\n'
 )
-CLIENT_OUTLIVING_THE_TEST = 'delay = "120"\n'
 
 
 class WaveTestCase(unittest.TestCase):
@@ -162,7 +161,7 @@ class BrigadeWaveListTest(WaveTestCase):
 class BrigadeWaveCancelOfAWaveWithALiveRunTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        self.configure_fake(COUNTING_CLIENT + CLIENT_OUTLIVING_THE_TEST)
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client())
         self.record("builder", DONE_RESULT)
         self.ledger.mkdir(parents=True)
         (self.ledger / "2026-10.jsonl").write_text(CANCELLED_WAVE_EVENTS)

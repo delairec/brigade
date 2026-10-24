@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.adapter_launch_argv import COMMAND, adapter_launch_argv
+from brigade.errors import BrigadeError
 from brigade.system.ask_configured_client import ConfiguredClientAnswer
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
@@ -80,3 +81,21 @@ class AdapterLaunchArgvOfTheConfiguredClientTest(unittest.TestCase):
             answer,
             ConfiguredClientAnswer(client="scripted", slot_clients={"review": "other"}, document=LAUNCH_ANSWER),
         )
+
+
+class AdapterLaunchArgvOfAnInvalidRequestTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
+
+    def test_should_refuse_the_request_before_reading_the_configuration(self):
+        # Arrange
+        request_lacking_its_role = '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Deliver the task B42."}'
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            adapter_launch_argv(request_lacking_its_role, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the request on stdin: lacks the key role")

@@ -571,6 +571,109 @@ LISTED_PAGE = {
 }
 
 
+MERGED_PAGE = {
+    "data": {
+        "repository": {
+            "pullRequests": {
+                "nodes": [
+                    {
+                        "number": 5,
+                        "title": "docs: the readme",
+                        "headRefName": "docs/readme",
+                        "baseRefName": "main",
+                        "state": "MERGED",
+                        "isDraft": False,
+                        "reviewDecision": None,
+                        "author": {"login": "ada"},
+                        "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
+                    }
+                ]
+            }
+        }
+    }
+}
+
+
+class ListPullRequestsOfEveryStateTest(unittest.TestCase):
+    def test_should_ask_the_forge_without_a_state_filter(self):
+        # Arrange
+        no_page = "[]"
+        gh = create_gh(no_page)
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        list_pull_requests({**MILESTONES_REQUEST, "state": "all"}, runtime)
+
+        # Assert
+        self.assertEqual(
+            gh.requests[0].argv,
+            (
+                "gh",
+                "api",
+                "graphql",
+                "--paginate",
+                "--slurp",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "name={repo}",
+                "-f",
+                f"query={PULL_REQUESTS_QUERY}",
+            ),
+        )
+
+    def test_should_present_the_pull_requests_of_every_page_the_forge_answers(self):
+        # Arrange
+        gh = create_gh(json.dumps([LISTED_PAGE, MERGED_PAGE]))
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        listing = list_pull_requests({**MILESTONES_REQUEST, "state": "all"}, runtime)
+
+        # Assert
+        self.assertEqual(
+            listing,
+            {
+                "schema_version": 1,
+                "pull_requests": [
+                    {
+                        "number": 7,
+                        "title": "feat: empty the cart",
+                        "head": "task/w1/S3",
+                        "base": "integration/w1",
+                        "state": "open",
+                        "author": None,
+                        "draft": False,
+                        "review": None,
+                        "checks": [],
+                    },
+                    {
+                        "number": 8,
+                        "title": "fix: keep the cart",
+                        "head": "task/w1/S4",
+                        "base": "integration/w1",
+                        "state": "open",
+                        "author": "Clauche-bot",
+                        "draft": True,
+                        "review": "approved",
+                        "checks": [{"name": "unit", "verdict": "pending"}],
+                    },
+                    {
+                        "number": 5,
+                        "title": "docs: the readme",
+                        "head": "docs/readme",
+                        "base": "main",
+                        "state": "merged",
+                        "author": "ada",
+                        "draft": False,
+                        "review": None,
+                        "checks": [],
+                    },
+                ],
+            },
+        )
+
+
 class ListOpenPullRequestsTest(unittest.TestCase):
     def test_should_describe_each_pull_request_of_the_state_asked(self):
         # Arrange

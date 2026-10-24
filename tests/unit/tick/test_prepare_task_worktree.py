@@ -1,3 +1,4 @@
+import json
 import shutil
 import tempfile
 import unittest
@@ -12,11 +13,15 @@ from brigade.tick.actions import LaunchTask
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
-from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
+from tests.unit.lock_observing_runner import LockObservingRunner
+from tests.unit.recording_process_runner import SILENT_SUCCESS, ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
 ACTION = LaunchTask(project="shop", wave="w1", branch="integration/w1", task="B1")
 WORKTREE = Path("/srv/shop/.brigade/worktrees/B1")
+ADD_TASK_WORKTREE = ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1")
+REQUIRE_THE_WAVE_BRANCH = ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")
+HEAD_OFF_THE_WAVE_BRANCH = ProcessAnswer(exit_code=1)
 LIST_WORKTREES = ("git", "worktree", "list", "--porcelain", "-z")
 FIND_TASK_BRANCH = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")
 NO_TASK_BRANCH = ProcessAnswer(exit_code=1)
@@ -36,6 +41,10 @@ TASK_WORKTREE_LISTED = ProcessAnswer(
 )
 
 
+def _create_setup_fields(setup: tuple[str, ...]) -> list[dict]:
+    return [{"name": "SETUP", "atoms": [json.dumps(line)]} for line in setup]
+
+
 class PrepareTaskWorktreeTestCase(unittest.TestCase):
     def setUp(self):
         root = Path(tempfile.mkdtemp())
@@ -43,15 +52,26 @@ class PrepareTaskWorktreeTestCase(unittest.TestCase):
         self.paths = create_test_paths(root)
 
     def create_runner(
-        self, setup: str, worktrees: ProcessAnswer = MAIN_CHECKOUT_ALONE, branch: ProcessAnswer = NO_TASK_BRANCH
+        self,
+        *setup: str,
+        worktrees: ProcessAnswer = MAIN_CHECKOUT_ALONE,
+        branch: ProcessAnswer = NO_TASK_BRANCH,
+        ancestry: ProcessAnswer = SILENT_SUCCESS,
     ) -> RecordingProcessRunner:
+        root = str(self.paths.config_root)
+        fields = [{"name": "PATH", "atoms": ['"/srv/shop"']}, *_create_setup_fields(setup)]
         return RecordingProcessRunner(
             {
-                **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop", "SETUP": setup}}),
+                **create_registry_answers(self.paths.config_root, {"shop": {}}),
+                ("awawa", "show", "@PROJECT.shop", "--json", root): ProcessAnswer(
+                    stdout=json.dumps({"fields": fields})
+                ),
                 ("git", "cat-file", "-p", "integration/w1:.gitignore"): ProcessAnswer(stdout=".brigade/worktrees/\n"),
                 LIST_WORKTREES: worktrees,
                 FIND_TASK_BRANCH: branch,
                 ("make", "deps"): ProcessAnswer(stdout="deps installed\n", stderr="1 warning\n"),
+                ("false",): ProcessAnswer(exit_code=1),
+                REQUIRE_THE_WAVE_BRANCH: ancestry,
             }
         )
 
@@ -197,3 +217,75 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
                 ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1"),
             ),
         )
+
+    def test_should_name_the_setup_line_exiting_non_zero(self):
+        # Arrange
+        runner = self.create_runner("false")
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the setup of @TASK.B1 failed: false exited 1: ")
+
+    def test_should_run_no_line_after_the_failing_one(self):
+        # Arrange
+        runner = self.create_runner("false", "make deps")
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
+
+        # Assert
+        self.assertEqual(runner.commands[-1], (str(WORKTREE), ("false",)))
+
+    def test_should_run_no_line_of_a_setup_holding_a_line_that_splits_into_no_argv(self):
+        # Arrange
+        runner = self.create_runner("make deps", 'make "deps')
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
+
+        # Assert
+        self.assertEqual(runner.commands[-1], ("/srv/shop", ADD_TASK_WORKTREE))
+
+    def test_should_refuse_a_setup_leaving_the_head_off_the_wave_branch(self):
+        # Arrange
+        runner = self.create_runner("make deps", ancestry=HEAD_OFF_THE_WAVE_BRANCH)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "the setup of @TASK.B1 failed: git merge-base --is-ancestor integration/w1 HEAD exited 1: ",
+        )
+
+
+class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCase):
+    def test_should_run_the_line_as_one_argv_without_a_shell(self):
+        # Arrange
+        runner = self.create_runner('touch "$PWD"')
+
+        # Act
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
+
+        # Assert
+        self.assertEqual(runner.commands[-2], (str(WORKTREE), ("touch", "$PWD")))
+
+
+class PrepareTaskWorktreeUnderTheLockTest(PrepareTaskWorktreeTestCase):
+    def test_should_add_the_worktree_under_the_lock_of_the_worktrees_of_the_project(self):
+        # Arrange
+        lock = self.paths.lock_directory / "worktrees-shop.lock"
+        runner = LockObservingRunner(self.create_runner("make deps"), lock, ADD_TASK_WORKTREE)
+
+        # Act
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
+
+        # Assert
+        self.assertEqual(runner.lock_free_at_the_command, [False])

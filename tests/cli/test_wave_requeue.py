@@ -1,7 +1,7 @@
 from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
-from tests.cli.test_tick import WAVE_BRANCH, LaunchingTickTestCase
+from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
 
 S3_PARKED_ON_A_DEAD_RUN = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'

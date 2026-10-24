@@ -53,10 +53,15 @@ class MainTestCase(unittest.TestCase):
             exit_code = main(arguments, self.environment)
         return exit_code, stdout.getvalue(), stderr.getvalue()
 
-    def refuse(self, arguments: list[str]) -> int:
-        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
+    def refuse(self, arguments: list[str]) -> tuple[int, str, str]:
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with (
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+            self.assertRaises(SystemExit) as exit_,
+        ):
             main(arguments, self.environment)
-        return exit_.exception.code
+        return exit_.exception.code, stdout.getvalue(), stderr.getvalue()
 
     def ask_help(self, arguments: list[str]) -> tuple[int, str]:
         stdout = io.StringIO()
@@ -73,6 +78,49 @@ class MainHelpTest(MainTestCase):
         # Assert
         self.assertEqual(exit_code, 0)
         self.assertRegex(page, r"\n    ledger +read the event journal")
+
+
+class MainGroupHelpTest(MainTestCase):
+    def assert_listed(self, page: str, action: str, expected_help: str) -> None:
+        self.assertIn(f" {action} {expected_help} ", " ".join(page.split()) + " ")
+
+    def test_should_list_each_action_with_the_help_its_record_declares(self):
+        # Arrange
+        rows = [
+            ("adapter", "actions", "answer actions, the request read on stdin"),
+            ("adapter", "launch-argv", "answer launch-argv, the request read on stdin"),
+            ("adapter", "matrix", "print the capabilities every client adapter declares"),
+            ("adapter", "parse-result", "answer parse-result, the request read on stdin"),
+            ("adapter", "probe", "answer probe, the request read on stdin"),
+            ("adapter", "resume-argv", "answer resume-argv, the request read on stdin"),
+            ("adapter", "transcripts", "answer transcripts, the request read on stdin"),
+            ("ledger", "budgets", "p50 and p90 steps per procedure over its last runs"),
+            ("ledger", "compare", "the runs before a day against the runs from that day on"),
+            ("project", "add", "register a git repository in the operational corpus"),
+            ("project", "list", "list every registered project"),
+            ("project", "pause", "pause a project"),
+            ("project", "resume", "resume a paused project"),
+            ("project", "show", "print the fields of a project"),
+            ("roles", "lint", "check the built-in and the machine role files"),
+            ("roles", "list", "list the role, the source and the model of each slot"),
+            ("roles", "show", "print the role file a slot resolves to"),
+            ("runs", "list", "list every run with its state and outcome"),
+            ("runs", "show", "print the summary of a run and its segments, and with --log its journal"),
+            ("scheduler", "install", "install the scheduler config.toml names, or the default"),
+            (
+                "scheduler",
+                "status",
+                "report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
+            ),
+        ]
+        for group, action, expected_help in rows:
+            with self.subTest(group=group, action=action):
+                # Act
+                exit_code, page = self.ask_help([group, "--help"])
+
+                # Assert
+                self.assertEqual(exit_code, 0)
+                self.assert_listed(page, action, expected_help)
 
 
 class MainVersionTest(MainTestCase):
@@ -188,11 +236,99 @@ class MainOfACommandRenderedAsMarkdownTest(MainTestCase):
 
 
 class MainRefusalTest(MainTestCase):
-    def test_should_refuse_a_command_line_naming_no_command_or_an_unknown_argument(self):
-        for arguments in [[], ["--version", "--frobnicate"]]:
+    def test_should_refuse_a_misused_command_line_with_the_usage_error_naming_what_is_wrong(self):
+        # Arrange
+        rows = [
+            ([], r"^usage: brigade "),
+            (["--frobnicate"], r"unrecognized arguments: --frobnicate\n$"),
+            (["--version", "--frobnicate"], r"unrecognized arguments: --frobnicate\n$"),
+            (["--json"], r"\nbrigade: error: no option given\n$"),
+            (
+                ["runs"],
+                (
+                    r"^usage: brigade runs \[-h\] \[--json\] \[--verbose\] action \.\.\.\n"
+                    r"brigade runs: error: the following arguments are required: action\n$"
+                ),
+            ),
+            (
+                ["runs", "frobnicate"],
+                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?stop'?\)\n$",
+            ),
+            (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
+            (["runs", "show"], r"\nbrigade runs show: error: the following arguments are required: run\n$"),
+            (
+                ["ledger", "--wave", "tidepool_w16", "--project", "tidepool"],
+                r"\nbrigade ledger: error: argument --project: not allowed with argument --wave\n$",
+            ),
+            (
+                ["ledger", "--project", "tidepool", "--since", "yesterday"],
+                r"\nbrigade ledger: error: argument --since: 'yesterday' is neither <n>d nor a day YYYY-MM-DD\n$",
+            ),
+            (
+                ["ledger", "budgets", "--last", "0"],
+                r"\nbrigade ledger budgets: error: argument --last: '0' is not a count of 1 or more\n$",
+            ),
+            (
+                ["ledger", "compare"],
+                r"\nbrigade ledger compare: error: the following arguments are required: --before\n$",
+            ),
+            (
+                ["ledger", "compare", "--before", "2026-13-01"],
+                r"\nbrigade ledger compare: error: argument --before: '2026-13-01' is not a day YYYY-MM-DD\n$",
+            ),
+        ]
+        for arguments, expected_error in rows:
             with self.subTest(arguments=arguments):
                 # Act
-                exit_code = self.refuse(arguments)
+                exit_code, stdout, stderr = self.refuse(arguments)
 
                 # Assert
                 self.assertEqual(exit_code, 2)
+                self.assertEqual(stdout, "")
+                self.assertRegex(stderr, expected_error)
+
+
+class MainTrailTest(MainTestCase):
+    def setUp(self):
+        super().setUp()
+        empty_search_path = self.root / "empty"
+        empty_search_path.mkdir()
+        self.environment["PATH"] = str(empty_search_path)
+        self.ticks = self.root / "state" / "brigade" / "ticks"
+        self.commands = self.root / "state" / "brigade" / "commands"
+
+    def write_trails(self, *paths: Path) -> None:
+        for path in paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("")
+
+    def test_should_write_the_trail_of_the_command_in_a_file_named_after_it(self):
+        # Act
+        self.run_main(["scheduler", "status", "--json"])
+
+        # Assert
+        [trail] = self.commands.iterdir()
+        self.assertRegex(trail.name, r"^\d{8}T\d{6}Z-scheduler-status\.jsonl$")
+
+    def test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):
+        # Act
+        exit_code, _, stderr = self.run_main(["--verbose", "scheduler", "status"])
+
+        # Assert
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")
+
+    def test_should_remove_the_expired_trails_before_the_command_runs(self):
+        # Arrange
+        expired_tick = self.ticks / "20000101T000000Z.jsonl"
+        expired_command = self.commands / "20000101T000000Z-doctor.jsonl"
+        future_command = self.commands / "29991231T000000Z-doctor.jsonl"
+        self.write_trails(expired_tick, expired_command, future_command)
+
+        # Act
+        self.run_main(["scheduler", "status", "--json"])
+
+        # Assert
+        self.assertEqual(expired_tick.exists(), False)
+        self.assertEqual(expired_command.exists(), False)
+        self.assertEqual(future_command.exists(), True)

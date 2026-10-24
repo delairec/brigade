@@ -75,6 +75,16 @@ class LedgerBudgetsExitCodeTest(unittest.TestCase):
 
 
 class LedgerBudgetsTextTest(unittest.TestCase):
+    def test_should_print_the_heading_alone_when_no_run_finished(self):
+        # Arrange
+        document = {"last": 20, "procedures": {}}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, "steps over the last 20 runs finished of each procedure:")
+
     def test_should_mark_the_procedures_whose_budget_is_an_estimate(self):
         # Arrange
         task_steps = {

@@ -8,6 +8,7 @@ from pathlib import Path
 from brigade.errors import CannotWrite
 from brigade.ledger.append_event import append_event
 from brigade.ledger.order_done import OrderDone
+from brigade.ledger.order_parked import OrderParked
 from brigade.runs.prune_runs import PruneOutcome, PruneRequest, prune_runs
 from brigade.runs.record_run_pid import record_run_pid
 from tests.unit.create_test_paths import create_test_paths
@@ -21,6 +22,7 @@ DEAD = "20261003T090000Z-cccccc"
 RUNNING = "20261004T090000Z-dddddd"
 UNREADABLE = "20261005T090000Z-eeeeee"
 STUDY = "20261006T090000Z-ffffff"
+EARLIER_UNREADABLE = "20261004T120000Z-gggggg"
 
 
 def settle_at(path: Path, instant: datetime) -> None:
@@ -96,6 +98,53 @@ class PruneRunsBeyondTheKeptOnesTest(PruneRunsTestCase):
         # Assert
         self.assertEqual(outcome.removed, [{"run": OLDEST, "state": "finished"}])
 
+    def test_should_remove_the_runs_beyond_the_kept_ones_and_those_settled_before_the_day(self):
+        # Act
+        outcome = self.prune(2, before=date(2026, 10, 3))
+
+        # Assert
+        self.assertEqual(outcome.removed, [{"run": OLDEST, "state": "finished"}, {"run": OLDER, "state": "finished"}])
+
+    def test_should_never_remove_a_running_run(self):
+        # Arrange
+        a_day_after_every_run = date(2099, 1, 1)
+
+        # Act
+        self.prune(10, before=a_day_after_every_run, resumable=True)
+
+        # Assert
+        self.assertCountEqual(self.runs.iterdir(), [self.runs / RUNNING, self.runs / UNREADABLE, self.runs / "notes"])
+
+    def test_should_name_the_unreadable_runs_in_the_order_of_their_names(self):
+        # Arrange
+        (self.runs / EARLIER_UNREADABLE).mkdir()
+        (self.runs / EARLIER_UNREADABLE / "run.json").write_text("not json")
+
+        # Act
+        outcome = self.prune(10)
+
+        # Assert
+        self.assertEqual(
+            outcome.skipped,
+            [
+                {
+                    "run": EARLIER_UNREADABLE,
+                    "reason": f"{self.runs / EARLIER_UNREADABLE / 'run.json'} is not a run record: not a JSON document",
+                },
+                {
+                    "run": UNREADABLE,
+                    "reason": f"{self.runs / UNREADABLE / 'run.json'} is not a run record: not a JSON document",
+                },
+            ],
+        )
+
+    def test_should_take_the_runs_lock(self):
+        # Act
+        self.prune(10)
+
+        # Assert
+        self.assertEqual((self.paths.lock_directory / "runs.lock").read_text(), f"{os.getpid()}\n")
+
 
 class PruneRunsResumableTest(PruneRunsTestCase):
     def setUp(self):
@@ -121,6 +170,22 @@ class PruneRunsResumableTest(PruneRunsTestCase):
         self.assertEqual(outcome.removed[0], {"run": OLDEST, "state": "finished"})
 
 
+class PruneRunsResumingTheNewestRunTest(PruneRunsTestCase):
+    def test_should_keep_the_run_stopped_by_a_usage_limit_without_counting_it(self):
+        # Arrange
+        append_event(
+            self.paths,
+            datetime(2026, 10, 3, 9, 0, tzinfo=UTC),
+            create_run_finished(DEAD, outcome="failed", error_class="rate_limit"),
+        )
+
+        # Act
+        outcome = self.prune(1)
+
+        # Assert
+        self.assertEqual(outcome.removed, [{"run": OLDEST, "state": "finished"}])
+
+
 class PruneRunsOfADoneStudyTest(PruneRunsTestCase):
     def test_should_remove_the_directory_of_a_study_the_ledger_records_done(self):
         # Arrange
@@ -134,6 +199,25 @@ class PruneRunsOfADoneStudyTest(PruneRunsTestCase):
 
         # Assert
         self.assertEqual(outcome.removed, [{"run": STUDY, "state": "finished"}])
+
+
+class PruneRunsOfAParkedStudyTest(PruneRunsTestCase):
+    def test_should_spare_the_directory_of_a_study_the_next_study_run_resumes(self):
+        # Arrange
+        (self.runs / STUDY).mkdir()
+        append_event(
+            self.paths,
+            datetime(2026, 9, 30, 9, 0, tzinfo=UTC),
+            OrderParked(
+                project="tidepool", kind="study", order="trees", run=STUDY, step="collect", reason="collector failed"
+            ),
+        )
+
+        # Act
+        self.prune(0, before=date(2026, 12, 1))
+
+        # Assert
+        self.assertTrue((self.runs / STUDY).is_dir())
 
 
 class PruneRunsLeftByAnEarlierPruneTest(PruneRunsTestCase):
@@ -161,6 +245,42 @@ class PruneRunsLeftByAnEarlierPruneTest(PruneRunsTestCase):
 
         # Assert
         self.assertIn(f"cannot write {removed}/{OLDEST}: ", str(refusal.exception))
+
+    def test_should_leave_what_an_earlier_prune_left_on_a_dry_run(self):
+        # Arrange
+        removed = self.paths.state_root / "runs-removed"
+        (removed / OLDEST).mkdir(parents=True)
+
+        # Act
+        self.prune(10, dry_run=True)
+
+        # Assert
+        self.assertEqual(list(removed.iterdir()), [removed / OLDEST])
+
+    def test_should_leave_a_run_whole_in_runs_when_it_cannot_move_it_out(self):
+        # Arrange
+        removed = self.paths.state_root / "runs-removed"
+        removed.mkdir()
+        removed.chmod(0o500)
+        self.addCleanup(removed.chmod, 0o700)
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            self.prune(1)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {removed}: Permission denied")
+        self.assertCountEqual(
+            self.runs.iterdir(),
+            [
+                self.runs / OLDEST,
+                self.runs / OLDER,
+                self.runs / DEAD,
+                self.runs / RUNNING,
+                self.runs / UNREADABLE,
+                self.runs / "notes",
+            ],
+        )
 
     def test_should_refuse_a_removal_place_that_is_a_file(self):
         # Arrange

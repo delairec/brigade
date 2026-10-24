@@ -32,6 +32,7 @@ class ReadTrailDaysTest(unittest.TestCase):
             ("a negative count", -3, "trail_days is -3, not 1 or more, in /home/ada/.config/brigade/config.toml"),
             ("a number", 1.5, "trail_days is a number, not an integer, in /home/ada/.config/brigade/config.toml"),
             ("a boolean", True, "trail_days is a boolean, not an integer, in /home/ada/.config/brigade/config.toml"),
+            ("a string", "7", "trail_days is a string, not an integer, in /home/ada/.config/brigade/config.toml"),
         ]
         for case, value, expected_problem in rows:
             with self.subTest(case=case):

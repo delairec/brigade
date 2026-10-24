@@ -1,5 +1,0 @@
-#!/bin/sh
-case "$*" in
-  "--user is-system-running") echo "Failed to connect to bus: No medium found" >&2; exit 1 ;;
-  *) exit 2 ;;
-esac

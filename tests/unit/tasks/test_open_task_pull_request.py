@@ -208,8 +208,53 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
         # Assert
         self.assertEqual(opened["title"], "fix: add the parser (@TASK.B12)")
 
+    def test_should_push_the_branch_of_the_task_in_the_environment_of_the_demand(self):
+        # Arrange
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
+        pushed_environments = []
+
+        def record_push(request):
+            pushed_environments.append(request.environment)
+            return 0, "", ""
+
+        self.processes.answer_by(("git", "push", "--quiet", "origin", "task/f0-parser/B12"), record_push)
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
+
+        # Assert
+        self.assertEqual(pushed_environments, [{"GH_TOKEN": "t0ken"}])
+
+    def test_should_open_on_the_milestone_the_forge_holds_without_creating_it(self):
+        # Arrange
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
+        forge = create_forge(["Parser"])
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertEqual(forge.list_operations(), ["list_milestones", "open_pull_request"])
+
 
 class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
+    def test_should_neither_push_nor_open_nor_record_a_task_it_refuses(self):
+        # Arrange
+        self.record_check(PASSING_CHECK)
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "feat"), ("TITLE", "The parser")))
+        forge = create_forge(["Parser"])
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertNotIn(("git", "push", "--quiet", "origin", "task/f0-parser/B12"), self.processes.list_argvs())
+        self.assertEqual(forge.list_operations(), [])
+        self.assertEqual(
+            read_ledger(self.root / "state").entries, (LedgerEntry(instant=WAVE_START, event=WAVE_STARTED),)
+        )
+
     def test_should_refuse_a_task_whose_check_is_not_recorded(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:

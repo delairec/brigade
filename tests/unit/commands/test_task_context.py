@@ -83,6 +83,33 @@ class TaskContextTextTest(unittest.TestCase):
             "# when done\nbrigade task pr",
         )
 
+    def test_should_print_what_a_command_wrote_on_stderr_between_its_exit_code_and_its_output(self):
+        # Arrange
+        document = {
+            "worktree": WORKTREE,
+            "task": [
+                {
+                    "command": "awawa context @TASK.T7",
+                    "exit_code": 0,
+                    "stderr": "L005 duplicate identity @MILESTONE.M1\n",
+                    "output": "TASK T7\n",
+                }
+            ],
+            "rules": None,
+            "project": None,
+            "acceptance": ACCEPTANCE,
+            "reserved": RESERVED,
+            "when_done": ["brigade task pr"],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn(
+            "# task\n$ awawa context @TASK.T7\nexit 0\nL005 duplicate identity @MILESTONE.M1\nTASK T7\n", text
+        )
+
 
 class TaskContextExitCodeTest(unittest.TestCase):
     def test_should_succeed(self):

@@ -25,20 +25,7 @@ DONE_RESULT = {
     "reset": None,
     "message": None,
 }
-TURN_LIMIT_RESULT = {
-    "schema_version": 1,
-    "outcome": "failed",
-    "steps": 94,
-    "usage": None,
-    "session_id": "fake-session",
-    "duration_ms": 900000,
-    "cost_usd": None,
-    "error_class": "turn_limit",
-    "reset": None,
-    "message": "Reached the maximum number of turns",
-}
 COUNTING_CLIENT = 'features = "step_count,tool_grants"\n'
-FINISHING_CLIENT = str(Path(__file__).resolve().parent / "fixtures" / "executables" / "client-finishing")
 FILE_WAIT_S = 20.0
 FILE_POLL_S = 0.05
 NO_SIGNAL = 0
@@ -68,12 +55,17 @@ class RunTestCase(FileWaitingTestCase):
         self.procedure.write_text(PROCEDURE)
         self.runs = self.machine.state_home / "brigade" / "runs"
         self.ledger = self.machine.state_home / "brigade" / "ledger"
+        self.hold = root / "hold"
 
     def configure_fake(self, settings: str = "", keys: str = "", document: str | None = "markdown") -> None:
         document_key = "" if document is None else f'document = "{document}"\n'
         self.machine.write_configuration(
             f'client = "fake"\n{document_key}{keys}[clients.fake]\nrecordings = "{self.recordings}"\n{settings}'
         )
+
+    def hold_the_client(self) -> str:
+        self.hold.touch()
+        return f'hold = "{self.hold}"\n'
 
     def record(self, role: str, result: dict) -> None:
         (self.recordings / f"{role}.json").write_text(json.dumps(result))
@@ -91,16 +83,6 @@ class RunTestCase(FileWaitingTestCase):
     def read_events(self, name: str) -> list:
         lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
         return [event for event in map(json.loads, lines) if event["event"] == name]
-
-    def read_run_record(self, run_id: str) -> dict:
-        return json.loads((self.runs / run_id / "run.json").read_text())
-
-    def wait_for_line(self, path: Path) -> None:
-        deadline = time.monotonic() + FILE_WAIT_S
-        while not path.exists() or not path.read_text().strip():
-            if time.monotonic() > deadline:
-                self.fail(f"{path} never held a line")
-            time.sleep(FILE_POLL_S)
 
     def wait_for_exit(self, pid: int) -> None:
         deadline = time.monotonic() + FILE_WAIT_S

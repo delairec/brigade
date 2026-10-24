@@ -12,16 +12,16 @@ CLIENT_NAME = "fake"
 SETTING_SEPARATOR = ","
 REPLAYED_OPERATIONS = ["probe", "launch", "result"]
 SLOW_CLIENT_SCRIPT = (
-    'sleep "$1"; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
+    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
     ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
     ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
 )
-NO_DELAY = "0"
+NO_HOLD = ""
 NO_PROGRESS = ""
 NO_INTERVAL = "0"
 NO_SOFT_LIMIT = "0"
 GRACEFUL_STOP = "graceful_stop"
-SLOW_CLIENT_SETTINGS = ("delay", "progress", "interval")
+SLOW_CLIENT_SETTINGS = ("hold", "progress", "interval")
 TRANSCRIPTS_RECORDING_SUFFIX = ".transcripts.json"
 RESUMED_RECORDING_SUFFIX = ".resumed.json"
 RESUMED_BRIEF_OPENING = f"# {PROGRESS_SECTION}\n"
@@ -67,7 +67,7 @@ def _build_argv(settings: dict, recording: str, soft_limit) -> list[str]:
         "-c",
         SLOW_CLIENT_SCRIPT,
         CLIENT_NAME,
-        settings.get("delay", NO_DELAY),
+        settings.get("hold", NO_HOLD),
         settings.get("progress", NO_PROGRESS),
         recording,
         settings.get("interval", NO_INTERVAL),

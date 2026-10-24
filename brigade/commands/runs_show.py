@@ -11,7 +11,6 @@ from brigade.runs.run_follower import RunFollower
 from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runs.show_run import show_run
 from brigade.runtime import Runtime
-from brigade.system.poll_until_signalled import poll_until_signalled
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
 
@@ -99,7 +98,7 @@ class _FollowPrinter:
 def _follow_run(run_id: str, runtime: Runtime) -> dict:
     printer = _FollowPrinter(runtime.paths.state_root, run_id)
     interval_s = read_configuration(runtime, CONFIGURATION_OPTIONAL).journal_poll_s
-    interrupted = poll_until_signalled(printer.poll, interval_s)
+    interrupted = runtime.poll_until_signalled(printer.poll, interval_s)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": printer.follower.run, "interrupted": interrupted}
 
 

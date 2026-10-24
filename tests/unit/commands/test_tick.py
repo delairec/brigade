@@ -219,6 +219,16 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
             },
         )
 
+    def test_should_write_no_tick_trail_on_a_dry_run(self):
+        # Arrange
+        request = Namespace(mode="dry-run")
+
+        # Act
+        COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual((self.root / "state" / "ticks").exists(), False)
+
     def test_should_report_each_round_of_the_loop_on_stderr(self):
         # Arrange
         create_round = _create_single_round_factory(
@@ -254,6 +264,103 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(reported.getvalue(), f"brigade tick: another tick holds {self.lock}\n")
 
+    def test_should_leave_the_lock_the_heartbeat_and_the_trail_alone_in_the_state_directory(self):
+        # Arrange
+        request = Namespace(mode="once")
+        state = self.root / "state"
+
+        # Act
+        COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertCountEqual(state.iterdir(), [state / "locks", state / "tick.json", state / "ticks"])
+        self.assertCountEqual((state / "locks").iterdir(), [self.lock])
+        self.assertCountEqual((state / "ticks").iterdir(), [state / "ticks" / "20261007T090000Z.jsonl"])
+
+    def test_should_write_nothing_but_the_lock_while_another_tick_holds_it(self):
+        # Arrange
+        request = Namespace(mode="once")
+        self.lock.parent.mkdir(parents=True)
+
+        # Act
+        with self.lock.open("a") as held, contextlib.suppress(StandingDown):
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertCountEqual((self.root / "state").iterdir(), [self.root / "state" / "locks"])
+
+    def test_should_write_no_heartbeat_when_the_trail_directory_cannot_be_created(self):
+        # Arrange
+        request = Namespace(mode="once")
+        trails = self.root / "state" / "ticks"
+        trails.parent.mkdir()
+        trails.write_text("", encoding="utf-8")
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual(str(raised.exception), f"cannot write {trails}: File exists")
+        self.assertEqual((self.root / "state" / "tick.json").exists(), False)
+
+    def test_should_take_no_lock_and_write_no_heartbeat_on_a_dry_run(self):
+        # Arrange
+        request = Namespace(mode="dry-run")
+
+        # Act
+        COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual((self.root / "state" / "locks").exists(), False)
+        self.assertEqual((self.root / "state" / "tick.json").exists(), False)
+
+    def test_should_plan_while_another_tick_holds_the_lock(self):
+        # Arrange
+        request = Namespace(mode="dry-run")
+        self.lock.parent.mkdir(parents=True)
+
+        # Act
+        with self.lock.open("a") as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            document = COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual(document["plan"], [])
+
+    def test_should_count_a_round_of_the_loop_another_tick_holds_and_write_no_heartbeat(self):
+        # Arrange
+        create_round = _create_single_round_factory(_create_quiet_runtime(self.root))
+        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
+        self.lock.parent.mkdir(parents=True)
+
+        # Act
+        with self.lock.open("a") as held, contextlib.redirect_stderr(io.StringIO()):
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            document = COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual(document, {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
+        self.assertEqual((self.root / "state" / "tick.json").exists(), False)
+
+    def test_should_report_a_failed_round_of_the_loop_and_count_it(self):
+        # Arrange
+        (self.root / "state").write_text("", encoding="utf-8")
+        create_round = _create_single_round_factory(_create_quiet_runtime(self.root))
+        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
+        reported = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(reported):
+            document = COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual(document, {"schema_version": 1, "mode": "loop", "ticks_attempted": 1})
+        self.assertEqual(
+            reported.getvalue(), f"brigade tick: cannot write {self.root / 'state' / 'locks'}: Not a directory\n"
+        )
+
 
 class TickTextTest(unittest.TestCase):
     def test_should_render_each_mode(self):
@@ -275,6 +382,27 @@ class TickTextTest(unittest.TestCase):
                 "a dry run planning nothing",
                 {"mode": "dry-run", "snapshot": {"schema_version": 1, "now": "2026-10-07T09:00:00Z"}, "plan": []},
                 "snapshot\n  now  2026-10-07T09:00:00Z\nplan\n  no action",
+            ),
+            (
+                "a dry run of an empty machine",
+                {
+                    "mode": "dry-run",
+                    "snapshot": {
+                        "schema_version": 1,
+                        "now": "2026-10-07T09:00:00Z",
+                        "waves": [],
+                        "projects": [],
+                        "studies": [],
+                        "live_study_runs": [],
+                        "study_runs": 2,
+                        "rate_limits": [],
+                    },
+                    "plan": [],
+                },
+                (
+                    "snapshot\n  now  2026-10-07T09:00:00Z\n  waves  []\n  projects  []\n  studies  []"
+                    "\n  live_study_runs  []\n  study_runs  2\n  rate_limits  []\nplan\n  no action"
+                ),
             ),
             (
                 "a dry run planning an action",
@@ -415,6 +543,36 @@ PULL_REQUEST_DETAILS = {
     "head_sha": "8885daa",
     "checks": [{"name": "ci", "verdict": "success"}],
     "body": "Delivers @TASK.T7.",
+}
+PAUSED_ON_THE_QUOTA_UNTIL_08 = {
+    "schema_version": 1,
+    "ts": "2026-10-19T07:30:00Z",
+    "event": "wave.paused",
+    "wave": "tidepool_w16",
+    "reason": "quota",
+    "resume_at": "2026-10-19T08:00:00Z",
+}
+FORGE_ACCOUNT_UNAVAILABLE = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:00:00Z",
+    "event": "forge_account.unavailable",
+    "login": "octo-bot",
+    "key": "build",
+}
+PAUSED_ON_THE_FORGE_ACCOUNT = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:10:00Z",
+    "event": "wave.paused",
+    "wave": "tidepool_w16",
+    "reason": "forge_account",
+    "resume_at": None,
+}
+RESUMED_FROM_THE_FORGE_ACCOUNT = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:20:00Z",
+    "event": "wave.resumed",
+    "wave": "tidepool_w16",
+    "reason": "forge_account",
 }
 HEALTH_STUDY = (
     ("TITLE", "the health of the machine"),
@@ -708,6 +866,57 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             },
         )
 
+    def test_should_record_the_findings_of_the_preflight_in_the_ledger(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
+        event_before_the_state_verifying = -2
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_event(event_before_the_state_verifying),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.preflighted",
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "pr": 42,
+                "head": "8885daa",
+                "checks": [
+                    {"name": "ancestry", "verdict": "pass", "findings": []},
+                    {"name": "checks", "verdict": "pass", "findings": []},
+                    {"name": "corpus", "verdict": "pass", "findings": []},
+                    {"name": "promotion", "verdict": "pass", "findings": []},
+                    {"name": "untouched_files", "verdict": "pass", "findings": []},
+                    {"name": "privacy", "verdict": "pass", "findings": []},
+                    {"name": "body", "verdict": "pass", "findings": []},
+                    {"name": "size", "verdict": "info", "findings": ["0 files", "0 lines", "0 packages", "0 layers"]},
+                ],
+            },
+        )
+
+    def test_should_launch_the_procedure_the_key_build_of_procedures_names_in_place_of_build_task(self):
+        # Arrange
+        deliver = self.root / "deliver.md"
+        deliver.write_text("---\ncapabilities: read\nbudget: 40\n---\nDeliver the task.\n", encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(
+            f'{CLIENT_AND_DOCUMENT_CONFIGURATION}[procedures]\nbuild = "{deliver}"\n', encoding="utf-8"
+        )
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.spawn.argvs[0][:2], ("run", str(deliver)))
+
     def test_should_launch_the_verification_of_a_task_in_verifying(self):
         # Arrange
         self.worktree.mkdir(parents=True)
@@ -982,6 +1191,125 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 "resume_at": "2026-10-19T09:30:00Z",
             },
         )
+
+    def test_should_pause_the_wave_until_the_hour_the_quota_resets(self):
+        # Arrange
+        rate_limited = {
+            **create_run_result(FIRST_RUN, "failed", "2026-10-19T08:50:00Z"),
+            "wave": WAVE,
+            "task": "T7",
+            "error_class": "rate_limit",
+            "reset": {"hour": "15:00", "timezone": "UTC"},
+        }
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), rate_limited])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        first_event_of_the_tick = 3
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_event(first_event_of_the_tick)["resume_at"], "2026-10-19T15:00:00Z")
+
+    def test_should_move_the_task_whose_run_hit_the_quota_to_paused_on_the_quota(self):
+        # Arrange
+        rate_limited = {
+            **create_run_result(FIRST_RUN, "failed", "2026-10-19T08:50:00Z"),
+            "wave": WAVE,
+            "task": "T7",
+            "error_class": "rate_limit",
+        }
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), rate_limited])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        event_after_the_pause = 4
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_event(event_after_the_pause),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "paused:quota",
+            },
+        )
+
+    def test_should_record_the_wave_resumed_once_its_pause_on_the_quota_is_over(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        stopped_run = {
+            **create_run_record(FIRST_RUN, WAVE, "T7"),
+            "procedure_path": "build-task",
+            "project": "tidepool",
+            "cwd": str(self.worktree),
+        }
+        write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
+        finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
+        write_ledger(
+            self.root, [WAVE_STARTED, finished, PAUSED_ON_THE_QUOTA_UNTIL_08, _record_task_state("paused:quota")]
+        )
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        first_event_of_the_tick = 4
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_event(first_event_of_the_tick),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.resumed",
+                "wave": "tidepool_w16",
+                "reason": "quota",
+            },
+        )
+
+    def test_should_pause_the_wave_on_an_unavailable_forge_account_and_launch_none_of_its_tasks(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED, FORGE_ACCOUNT_UNAVAILABLE])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        first_event_of_the_tick = 2
+        no_launch = []
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_event(first_event_of_the_tick),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "wave.paused",
+                "wave": "tidepool_w16",
+                "reason": "forge_account",
+                "resume_at": None,
+            },
+        )
+        self.assertEqual(self.spawn.argvs, no_launch)
+
+    def test_should_launch_the_tasks_of_a_wave_resumed_after_its_pause_on_the_forge_account(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, FORGE_ACCOUNT_UNAVAILABLE, PAUSED_ON_THE_FORGE_ACCOUNT, RESUMED_FROM_THE_FORGE_ACCOUNT],
+        )
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.spawn.argvs[0][:2], ("run", "build-task"))
 
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange
@@ -1642,4 +1970,106 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "blockers": [],
                 }
             ],
+        )
+
+
+ONE_FORGE_ATTEMPT = "forge_attempts = 1\n"
+CLI_BOUND_TO_A_TOKENLESS_ACCOUNT = '[forge_accounts]\ncli = "tidepool-tokenless"\n'
+NO_TOKEN = None
+
+
+def create_forge_of_the_cli(found: dict | None, environment: dict | None) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "find_pull_request": lambda request: {"schema_version": 1, "pull_request": found},
+            "read_login_environment": lambda request: {"schema_version": 1, "environment": environment},
+        }
+    )
+
+
+class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+
+    def _create_runtime(self, binding: str, forge: ForgeDouble) -> Runtime:
+        (self.root / "config" / "config.toml").write_text(
+            CLIENT_AND_DOCUMENT_CONFIGURATION + ONE_FORGE_ATTEMPT + binding, encoding="utf-8"
+        )
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+        )
+
+    def test_should_read_the_pull_request_of_a_running_task_as_the_login_of_the_key_cli(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
+        forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, ENVIRONMENT_OF_THE_CLI_ACCOUNT)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge)
+
+        # Act
+        COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(
+            forge.list_requests("find_pull_request"),
+            [
+                {
+                    "schema_version": 1,
+                    "repository": str(self.repository),
+                    "branch": "task/M4/T7",
+                    "environment": {"GH_TOKEN": "t0k3n"},
+                }
+            ],
+        )
+
+    def test_should_read_the_token_of_the_login_of_the_key_cli_once_per_tick(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
+        forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, ENVIRONMENT_OF_THE_CLI_ACCOUNT)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            forge.list_requests("read_login_environment"), [{"schema_version": 1, "login": "tidepool-cli"}]
+        )
+
+    def test_should_stop_on_the_login_of_the_key_cli_without_a_token(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
+        forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, NO_TOKEN)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), "gh printed no token for the login tidepool-tokenless, bound to cli, after 1 attempt"
+        )
+
+    def test_should_plan_the_wave_while_it_follows_no_task(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED])
+        forge = create_forge_of_the_cli(NO_PULL_REQUEST, NO_TOKEN)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["plan"],
+            [{"project": "tidepool", "wave": "tidepool_w16", "branch": "integration/M4", "task": "T7"}],
         )

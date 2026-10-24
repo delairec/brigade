@@ -5,6 +5,8 @@ from pathlib import Path
 
 from brigade.commands.wave_resume import COMMAND
 from brigade.errors import BrigadeError
+from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.wave_resumed import WaveResumed
 from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -93,6 +95,19 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document, {"schema_version": 1, "resumed": [{"wave": "tidepool_w16", "reason": "forge_account"}]}
+        )
+
+    def test_should_record_each_wave_resumed_in_the_ledger(self):
+        # Arrange
+        write_ledger(self.root, [_pause("tidepool_w16", "forge_account")])
+
+        # Act
+        COMMAND.run(Namespace(wave=EVERY_PAUSE), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.root / "state").entries[-1].event,
+            WaveResumed(wave="tidepool_w16", reason="forge_account"),
         )
 
     def test_should_resume_the_wave_named_whatever_its_pause(self):

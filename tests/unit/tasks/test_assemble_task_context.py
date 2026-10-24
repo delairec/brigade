@@ -141,6 +141,57 @@ class AssembleTaskContextTest(unittest.TestCase):
             ],
         )
 
+    def test_should_carry_the_rules_of_every_matching_trigger_in_the_order_of_the_instructions(self):
+        # Arrange
+        runtime = self.create_runtime()
+        self.script_rules()
+        instructions = str(self.instructions)
+        self.processes.answer_entity(self.instructions, "TRIGGER", "docs_file", (("GLOB", "tests/**"),))
+        self.processes.answer(
+            ("awawa", "context", "@TRIGGER.docs_file", "--depth", "1", "--skip", "reasoning", instructions),
+            stdout="RULE tests\n",
+        )
+        self.processes.answer_entity(self.instructions, "TRIGGER", "python_file", (("GLOB", "brigade/**"),))
+        configuration = Configuration(instructions=instructions)
+
+        # Act
+        context = assemble_task_context(runtime, configuration, self.worktree, ATTRIBUTION)
+
+        # Assert
+        self.assertEqual(
+            context["rules"],
+            [
+                {
+                    "trigger": "docs_file",
+                    "command": f"awawa context @TRIGGER.docs_file --depth 1 --skip reasoning {self.instructions}",
+                    "exit_code": 0,
+                    "stderr": "",
+                    "output": "RULE tests\n",
+                },
+                {
+                    "trigger": "python_file",
+                    "command": f"awawa context @TRIGGER.python_file --depth 1 --skip reasoning {self.instructions}",
+                    "exit_code": 0,
+                    "stderr": "",
+                    "output": "RULE python\n",
+                },
+            ],
+        )
+
+    def test_should_carry_the_exit_code_of_the_ancestry_once_the_wave_branch_moved(self):
+        # Arrange
+        runtime = self.create_runtime()
+        self.processes.answer(("git", "merge-base", "--is-ancestor", "integration/oak_w1", "HEAD"), exit_code=1)
+
+        # Act
+        context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+
+        # Assert
+        self.assertEqual(
+            context["worktree"]["ancestry"],
+            {"command": "git merge-base --is-ancestor integration/oak_w1 HEAD", "exit_code": 1},
+        )
+
     def test_should_carry_the_setup_log_of_the_worktree(self):
         # Arrange
         runtime = self.create_runtime()
