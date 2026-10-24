@@ -147,6 +147,32 @@ class ReadInboxOfALineItCannotReadTest(ReadInboxTestCase):
         # Assert
         self.assertEqual(str(refusal.exception), f"{self.signals}:1: lacks the key kind")
 
+    def test_should_refuse_a_line_without_its_event(self):
+        # Arrange
+        self.write_signals('{"schema_version": 1, "ts": "2026-10-24T08:00:00Z", "fingerprint": "rt:1"}\n')
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_inbox(self.state_root, NOW)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"{self.signals}:1: lacks the key event")
+
+    def test_should_refuse_a_line_of_an_unknown_event(self):
+        # Arrange
+        self.write_signals(
+            '{"schema_version": 1, "ts": "2026-10-24T08:00:00Z", "event": "archived", "fingerprint": "rt:1"}\n'
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_inbox(self.state_root, NOW)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception), f"{self.signals}:1: event is 'archived', not one of recorded, dismissed"
+        )
+
     def test_should_refuse_a_line_of_another_version(self):
         # Arrange
         self.write_signals(
