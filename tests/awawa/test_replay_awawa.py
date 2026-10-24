@@ -201,7 +201,25 @@ class FakeAwawaRecordingTest(FakeAwawaTestCase):
 
         # Assert
         self.assertEqual(
-            json.loads(next(self.recordings.iterdir()).read_text())["run_order"], ["<run_name:2>", "<run_name:1>"]
+            json.loads(next(self.recordings.iterdir()).read_text()),
+            {
+                "call": {
+                    "arguments": ["fmt", "<tmp:0>/corpus/answers.awawa"],
+                    "cwd": "<tmp:0>",
+                    "directories": [],
+                    "inputs": {
+                        "<tmp:0>/corpus/answers.awawa": "ANSWER trees_<run_name:1>\nANSWER trees_<run_name:2>\n"
+                    },
+                },
+                "outcome": {
+                    "exit_code": 0,
+                    "rewritten": {"<tmp:0>/corpus/answers.awawa": "TASK B1\n"},
+                    "stderr": "1 file rewritten\n",
+                    "stdout": "<tmp:0>/corpus/answers.awawa\n",
+                },
+                "run_order": ["<run_name:2>", "<run_name:1>"],
+                "version": "awawa 2.7.0",
+            },
         )
 
     def test_should_answer_the_call_with_what_the_real_awawa_answered(self):

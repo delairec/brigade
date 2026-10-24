@@ -128,14 +128,31 @@ class ReadLedgerWhenTheLastLineWasNotEndedTest(ReadLedgerTestCase):
     def test_should_read_the_last_line_as_an_entry(self):
         # Arrange
         unended_last_line = WAVE_PAUSED.removesuffix("\n").encode()
-        self.write_ledger("2026-10.jsonl", WAVE_STARTED.encode() + unended_last_line)
+        october = self.write_ledger("2026-10.jsonl", WAVE_STARTED.encode() + unended_last_line)
 
         # Act
         reading = read_ledger(self.state_root)
 
         # Assert
-        self.assertEqual(len(reading.entries), 2)
-        self.assertEqual(reading.skipped, ())
+        self.assertEqual(
+            reading,
+            LedgerReading(
+                entries=(
+                    LedgerEntry(
+                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
+                        event=WaveStarted(
+                            wave="tidepool_w16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
+                        ),
+                    ),
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
+                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                    ),
+                ),
+                files=(str(october),),
+                skipped=(),
+            ),
+        )
 
 
 class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
@@ -203,8 +220,19 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                 reading = read_ledger(self.state_root)
 
                 # Assert
-                self.assertEqual(len(reading.entries), 1)
-                self.assertEqual(reading.skipped, (SkippedLine(file=str(october), line=2, reason=expected_reason),))
+                self.assertEqual(
+                    reading,
+                    LedgerReading(
+                        entries=(
+                            LedgerEntry(
+                                instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
+                                event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                            ),
+                        ),
+                        files=(str(october),),
+                        skipped=(SkippedLine(file=str(october), line=2, reason=expected_reason),),
+                    ),
+                )
 
 
 class ReadLedgerOfRunsFinishedTest(ReadLedgerTestCase):

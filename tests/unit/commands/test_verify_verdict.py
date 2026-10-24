@@ -2,11 +2,15 @@ import json
 import tempfile
 import unittest
 from argparse import Namespace
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.commands.verify_verdict import COMMAND
 from brigade.errors import BrigadeError
-from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.read_ledger import LedgerReading, read_ledger
+from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.wave_started import WaveStarted
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
@@ -110,14 +114,38 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
     def test_should_record_nothing_on_a_verdict_changes_naming_no_finding(self):
         # Arrange
         self.verdict.write_text(json.dumps(CHANGES_WITHOUT_A_FINDING), encoding="utf-8")
-        events_before_the_verdict = 2
 
         # Act
         with self.assertRaises(BrigadeError):
             COMMAND.run(Namespace(pr=42, file=str(self.verdict)), self.runtime)
 
         # Assert
-        self.assertEqual(len(read_ledger(self.root / "state").entries), events_before_the_verdict)
+        self.assertEqual(
+            read_ledger(self.root / "state"),
+            LedgerReading(
+                entries=(
+                    LedgerEntry(
+                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
+                        event=WaveStarted(
+                            wave="tidepool_w16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
+                        ),
+                    ),
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 1, 22, 0, tzinfo=UTC),
+                        event=TaskPrOpened(
+                            project="tidepool",
+                            task="T7",
+                            wave="tidepool_w16",
+                            branch="task/M4-tides/T7",
+                            pr=42,
+                            login="tidepool-bot",
+                        ),
+                    ),
+                ),
+                files=(f"{self.root}/state/ledger/2026-10.jsonl",),
+                skipped=(),
+            ),
+        )
 
     def test_should_refuse_a_pull_request_no_task_opened(self):
         # Arrange
