@@ -656,13 +656,10 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
         )
 
-    def _read_event(self, rank: int) -> dict:
-        return json.loads(
-            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[rank]
+    def _read_events(self) -> list[dict]:
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
         )
-
-    def _read_last_event(self) -> dict:
-        return self._read_event(-1)
 
     def test_should_launch_the_build_run_of_a_task_ready_to_start(self):
         # Arrange
@@ -731,7 +728,6 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED])
         broken_setup = (("SETUP", 'make "deps'),)
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED), broken_setup)
-        first_event_of_the_tick = 1
 
         # Act
         document = COMMAND.run(Namespace(mode="once"), runtime)
@@ -742,17 +738,53 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             json.loads((self.root / "state" / "tick.json").read_text(encoding="utf-8"))["actions_failed"], 1
         )
         self.assertEqual(
-            self._read_event(first_event_of_the_tick + 1),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "tick.action_failed",
-                "action": "LaunchTask",
-                "project": "tidepool",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "error": 'the setup of @TASK.T7 failed: the line make "deps splits into no argv: No closing quotation',
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "parked",
+                    "reason": "setup failed",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "tick.action_failed",
+                    "action": "LaunchTask",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "error": 'the setup of @TASK.T7 failed: the line make "deps splits into no argv: No closing quotation',
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
+            ],
         )
 
     def test_should_resume_the_run_of_a_task_paused_on_the_quota(self):
@@ -833,22 +865,63 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
-        first_event_of_the_tick = 2
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_event(first_event_of_the_tick),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.state",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "state": "merged",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.closed",
+                    "wave": "tidepool_w16",
+                    "pr": 42,
+                },
+            ],
         )
 
     def test_should_hold_for_verification_a_pull_request_passing_its_preflight(self):
@@ -861,49 +934,200 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self._read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.state",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "state": "verifying",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "pr_open",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [
+                        {
+                            "name": "ancestry",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "checks",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "corpus",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "promotion",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "untouched_files",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "privacy",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "body",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "size",
+                            "verdict": "info",
+                            "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
+                        },
+                    ],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
+            ],
         )
 
     def test_should_record_the_findings_of_the_preflight_in_the_ledger(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
-        event_before_the_state_verifying = -2
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_event(event_before_the_state_verifying),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.preflighted",
-                "project": "tidepool",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "pr": 42,
-                "head": "8885daa",
-                "checks": [
-                    {"name": "ancestry", "verdict": "pass", "findings": []},
-                    {"name": "checks", "verdict": "pass", "findings": []},
-                    {"name": "corpus", "verdict": "pass", "findings": []},
-                    {"name": "promotion", "verdict": "pass", "findings": []},
-                    {"name": "untouched_files", "verdict": "pass", "findings": []},
-                    {"name": "privacy", "verdict": "pass", "findings": []},
-                    {"name": "body", "verdict": "pass", "findings": []},
-                    {"name": "size", "verdict": "info", "findings": ["0 files", "0 lines", "0 packages", "0 layers"]},
-                ],
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "pr_open",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [
+                        {
+                            "name": "ancestry",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "checks",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "corpus",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "promotion",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "untouched_files",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "privacy",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "body",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "size",
+                            "verdict": "info",
+                            "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
+                        },
+                    ],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
+            ],
         )
 
     def test_should_launch_the_procedure_the_key_build_of_procedures_names_in_place_of_build_task(self):
@@ -996,15 +1220,56 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            self._read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.state",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "state": "fixing",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "changes_requested",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "fixing",
+                },
+            ],
         )
 
     def test_should_ask_the_forge_for_the_last_200_lines_of_the_log_of_each_failing_check(self):
@@ -1087,15 +1352,62 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             "The forge keeps no log of this check.\n",
         )
         self.assertEqual(
-            self._read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.state",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "state": "fixing",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [
+                        {
+                            "name": "checks",
+                            "verdict": "fail",
+                            "findings": ["ci: failure", "coverage: failure"],
+                        },
+                    ],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "pr_open",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "fixing",
+                },
+            ],
         )
 
     def test_should_record_the_verdict_passed_at_the_head_of_the_pull_request(self):
@@ -1124,15 +1436,69 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self._read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.state",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "state": "verified",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T12:00:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "verdict": "pass",
+                    "findings": [],
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verified",
+                },
+            ],
         )
 
     def test_should_park_a_queued_task_a_live_blocker_cites(self):
@@ -1151,23 +1517,56 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             ),
         )
 
-        first_event_of_the_tick = 2
-
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_event(first_event_of_the_tick),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.parked",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "reason": "blocked",
-                "blockers": ["OPEN_QUESTION.Undecided"],
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "queued",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.parked",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "reason": "blocked",
+                    "blockers": ["OPEN_QUESTION.Undecided"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
+            ],
         )
 
     def test_should_pause_the_wave_of_a_task_whose_run_hit_the_quota(self):
@@ -1180,22 +1579,72 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         }
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), rate_limited])
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
-        first_event_of_the_tick = 3
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_event(first_event_of_the_tick),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "wave.paused",
-                "wave": "tidepool_w16",
-                "reason": "quota",
-                "resume_at": "2026-10-19T09:30:00Z",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T08:50:00Z",
+                    "event": "run.finished",
+                    "run": ANY,
+                    "segment": 1,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b74",
+                    "main_steps": 12,
+                    "total_steps": 12,
+                    "duration_ms": 4200,
+                    "usage": None,
+                    "outcome": "failed",
+                    "error_class": "rate_limit",
+                    "exit": 0,
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "nulls": {},
+                    "message": "the task is delivered",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.paused",
+                    "wave": "tidepool_w16",
+                    "reason": "quota",
+                    "resume_at": "2026-10-19T09:30:00Z",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "paused:quota",
+                },
+            ],
         )
 
     def test_should_pause_the_wave_until_the_hour_the_quota_resets(self):
@@ -1209,13 +1658,77 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         }
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), rate_limited])
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
-        first_event_of_the_tick = 3
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(self._read_event(first_event_of_the_tick)["resume_at"], "2026-10-19T15:00:00Z")
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T08:50:00Z",
+                    "event": "run.finished",
+                    "run": ANY,
+                    "segment": 1,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b74",
+                    "main_steps": 12,
+                    "total_steps": 12,
+                    "duration_ms": 4200,
+                    "usage": None,
+                    "outcome": "failed",
+                    "error_class": "rate_limit",
+                    "exit": 0,
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "nulls": {},
+                    "message": "the task is delivered",
+                    "reset": {
+                        "hour": "15:00",
+                        "timezone": "UTC",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.paused",
+                    "wave": "tidepool_w16",
+                    "reason": "quota",
+                    "resume_at": "2026-10-19T15:00:00Z",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "paused:quota",
+                },
+            ],
+        )
 
     def test_should_move_the_task_whose_run_hit_the_quota_to_paused_on_the_quota(self):
         # Arrange
@@ -1227,22 +1740,72 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         }
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), rate_limited])
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
-        event_after_the_pause = 4
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_event(event_after_the_pause),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "task.state",
-                "wave": "tidepool_w16",
-                "task": "T7",
-                "state": "paused:quota",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T08:50:00Z",
+                    "event": "run.finished",
+                    "run": ANY,
+                    "segment": 1,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b74",
+                    "main_steps": 12,
+                    "total_steps": 12,
+                    "duration_ms": 4200,
+                    "usage": None,
+                    "outcome": "failed",
+                    "error_class": "rate_limit",
+                    "exit": 0,
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "nulls": {},
+                    "message": "the task is delivered",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.paused",
+                    "wave": "tidepool_w16",
+                    "reason": "quota",
+                    "resume_at": "2026-10-19T09:30:00Z",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "paused:quota",
+                },
+            ],
         )
 
     def test_should_record_the_wave_resumed_once_its_pause_on_the_quota_is_over(self):
@@ -1260,21 +1823,79 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             self.root, [WAVE_STARTED, finished, PAUSED_ON_THE_QUOTA_UNTIL_08, _record_task_state("paused:quota")]
         )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
-        first_event_of_the_tick = 4
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
         self.assertEqual(
-            self._read_event(first_event_of_the_tick),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "wave.resumed",
-                "wave": "tidepool_w16",
-                "reason": "quota",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "run.finished",
+                    "run": ANY,
+                    "segment": 1,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b74",
+                    "main_steps": 12,
+                    "total_steps": 12,
+                    "duration_ms": 4200,
+                    "usage": None,
+                    "outcome": "failed",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "nulls": {},
+                    "message": "the task is delivered",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T07:30:00Z",
+                    "event": "wave.paused",
+                    "wave": "tidepool_w16",
+                    "reason": "quota",
+                    "resume_at": "2026-10-19T08:00:00Z",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "paused:quota",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.resumed",
+                    "wave": "tidepool_w16",
+                    "reason": "quota",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                },
+            ],
         )
 
     def test_should_pause_the_wave_on_an_unavailable_forge_account_and_launch_none_of_its_tasks(self):
@@ -1282,7 +1903,6 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree.mkdir(parents=True)
         write_ledger(self.root, [WAVE_STARTED, FORGE_ACCOUNT_UNAVAILABLE])
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
-        first_event_of_the_tick = 2
         no_launch = []
 
         # Act
@@ -1290,15 +1910,33 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self._read_event(first_event_of_the_tick),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "wave.paused",
-                "wave": "tidepool_w16",
-                "reason": "forge_account",
-                "resume_at": None,
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T08:00:00Z",
+                    "event": "forge_account.unavailable",
+                    "login": "octo-bot",
+                    "key": "build",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.paused",
+                    "wave": "tidepool_w16",
+                    "reason": "forge_account",
+                    "resume_at": None,
+                },
+            ],
         )
         self.assertEqual(self.spawn.argvs, no_launch)
 
@@ -1327,7 +1965,91 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(self._read_last_event()["event"], "task.preflighted")
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "pr_open",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [
+                        {
+                            "name": "ancestry",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "checks",
+                            "verdict": "fail",
+                            "findings": ["ci: failure"],
+                        },
+                        {
+                            "name": "corpus",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "promotion",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "untouched_files",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "privacy",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "body",
+                            "verdict": "pass",
+                            "findings": [],
+                        },
+                        {
+                            "name": "size",
+                            "verdict": "info",
+                            "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
+                        },
+                    ],
+                },
+            ],
+        )
 
     def test_should_report_a_wave_whose_tasks_are_merged_or_parked(self):
         # Arrange
@@ -1339,14 +2061,42 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self._read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "wave.reported",
-                "wave": "tidepool_w16",
-                "run": ANY,
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
+            ],
         )
 
     def test_should_detach_the_wave_report_run_the_wave_reported_names(self):
@@ -1358,8 +2108,46 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        reported_run = self._read_last_event()["run"]
+        [[*_, reported_run]] = self.spawn.argvs
         self.assertEqual(self.spawn.argvs, [("study", "run", "wave-report", "--run-id", reported_run)])
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": reported_run,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": reported_run,
+                },
+            ],
+        )
 
     def test_should_close_a_reported_wave_once_its_integration_pull_request_is_merged(self):
         # Arrange
@@ -1371,14 +2159,40 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self._read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "wave.closed",
-                "wave": "tidepool_w16",
-                "pr": 42,
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T12:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.closed",
+                    "wave": "tidepool_w16",
+                    "pr": 42,
+                },
+            ],
         )
 
 
@@ -1484,16 +2298,65 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         self.assertEqual(forge.merges, [])
 
     def test_should_record_the_merge_with_the_login_it_ran_as_and_the_task_merged(self):
-        # Arrange
-        first_event_of_the_tick = 5
-
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
-            self._read_events()[first_event_of_the_tick : first_event_of_the_tick + 2],
+            self._read_events(),
             [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7", "T8"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:45:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "verdict": "pass",
+                    "findings": [],
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verified",
+                },
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
@@ -1513,19 +2376,135 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "task": "T7",
                     "state": "merged",
                 },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T8",
+                    "state": "running",
+                },
             ],
         )
 
     def test_should_count_as_review_rounds_the_verdicts_of_the_merged_task_in_its_wave_alone(self):
         # Arrange
         write_ledger(self.root, [*LEDGER_OF_A_VERIFIED_TASK, OTHER_TASK_PASSED, SAME_TASK_PASSED_IN_ANOTHER_WAVE])
-        merged_event = 7
 
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
-        self.assertEqual(self._read_events()[merged_event]["rounds"], 1)
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7", "T8"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:45:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "verdict": "pass",
+                    "findings": [],
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verified",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:45:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T8",
+                    "pr": 43,
+                    "head": "8885daa",
+                    "verdict": "pass",
+                    "findings": [],
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:45:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w15",
+                    "task": "T7",
+                    "pr": 41,
+                    "head": "8885daa",
+                    "verdict": "pass",
+                    "findings": [],
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "pr.merged",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "rounds": 1,
+                    "login": "tidepool-cli",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T8",
+                    "state": "running",
+                },
+            ],
+        )
 
     def test_should_start_the_dependent_of_the_merged_task_in_the_same_tick(self):
         # Act
@@ -1594,9 +2573,10 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, self.forge),
         )
 
-    def _read_last_event(self) -> dict:
-        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
-        return json.loads(lines[-1])
+    def _read_events(self) -> list[dict]:
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
 
     def test_should_open_the_pull_request_from_the_wave_branch_to_the_main_branch(self):
         # Act
@@ -1624,15 +2604,50 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self._read_last_event(),
-            {
-                "schema_version": 1,
-                "ts": "2026-10-19T09:00:00Z",
-                "event": "wave.pr_opened",
-                "wave": "tidepool_w16",
-                "pr": 77,
-                "login": "tidepool-cli",
-            },
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.pr_opened",
+                    "wave": "tidepool_w16",
+                    "pr": 77,
+                    "login": "tidepool-cli",
+                },
+            ],
         )
 
     def test_should_open_none_at_a_second_tick(self):
@@ -1857,8 +2872,47 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self._read_events()[4:],
+            self._read_events(),
             [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
@@ -1866,7 +2920,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "wave": "tidepool_w16",
                     "task": "T7",
                     "before": "8885daa",
-                    "after": REBASED_HEAD,
+                    "after": "9a9a9a9",
                     "login": "tidepool-cli",
                 },
                 {
@@ -1942,8 +2996,47 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            self._read_events()[4:],
+            self._read_events(),
             [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
@@ -1951,7 +3044,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "wave": "tidepool_w16",
                     "task": "T7",
                     "state": "fixing",
-                }
+                },
             ],
         )
 
@@ -1966,8 +3059,71 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         # Assert
         self.assertEqual(self.spawn.argvs, [("study", "run", "wave-report", "--run-id", ANY)])
         self.assertEqual(
-            self._read_events()[7:8],
+            self._read_events(),
             [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "fixing",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "fixing",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
@@ -1976,7 +3132,23 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "task": "T7",
                     "reason": "past 2 repair rounds",
                     "blockers": [],
-                }
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
             ],
         )
 
