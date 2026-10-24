@@ -127,6 +127,46 @@ class PromoteTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(promoted["pr"], 42)
 
+    def test_should_ignore_the_pull_request_another_task_of_the_project_opened_since(self):
+        # Arrange
+        self.declare_schema(DECLARED_SCHEMA)
+        self.record_opened_pull_request(42)
+        append_event(
+            self.runtime.paths,
+            datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+            TaskPrOpened(project="oak", task="B13", wave="oak_w1", branch="task/oak_w1/B13", pr=43, login="bot"),
+        )
+
+        # Act
+        promoted = promote_task(self.runtime, self.create_demand(None))
+
+        # Assert
+        self.assertEqual(promoted["pr"], 42)
+
+    def test_should_push_the_promotion_on_the_branch_of_the_task_in_the_environment_of_the_demand(self):
+        # Arrange
+        self.declare_schema(DECLARED_SCHEMA)
+        pushed_environments = []
+
+        def record_push(request):
+            pushed_environments.append(request.environment)
+            return 0, "", ""
+
+        self.processes.answer_by(("git", "push", "--quiet", "origin", "task/oak_w1/B12"), record_push)
+        demand = TaskPromotionDemand(
+            path=self.worktree,
+            task="B12",
+            pr=42,
+            environment={"GH_TOKEN": "token-of-octo-bot"},
+            attribution=("Co-Authored-By: Ada <ada@example.org>",),
+        )
+
+        # Act
+        promote_task(self.runtime, demand)
+
+        # Assert
+        self.assertEqual(pushed_environments, [{"GH_TOKEN": "token-of-octo-bot"}])
+
     def test_should_refuse_a_task_whose_pull_request_is_neither_named_nor_recorded(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -147,6 +187,32 @@ class PromoteTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the TASK schema of the corpus of oak declares no STATUS implemented")
+
+    def test_should_refuse_a_schema_that_declares_no_status(self):
+        # Arrange
+        self.declare_schema({"fields": [{"name": "FIELD", "atoms": ["DELIVERED_BY", "integer"]}]})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            promote_task(self.runtime, self.create_demand(42))
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the TASK schema of the corpus of oak declares no STATUS implemented")
+
+    def test_should_leave_the_task_and_the_ledger_as_they_were_when_the_schema_is_refused(self):
+        # Arrange
+        self.declare_schema({"fields": [{"name": "FIELD", "atoms": ["STATUS", "todo|implemented"]}]})
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            promote_task(self.runtime, self.create_demand(42))
+
+        # Assert
+        self.assertEqual((self.worktree / "corpus" / "tasks.awawa").read_text(encoding="utf-8"), TASKS)
+        self.assertEqual(
+            read_ledger(self.root / "state").entries[-1].event,
+            WaveStarted(wave="oak_w1", project="oak", branch="integration/oak_w1", tasks=("B12",)),
+        )
 
     def test_should_refuse_a_schema_that_declares_no_delivering_pull_request(self):
         # Arrange

@@ -1558,7 +1558,6 @@ TASK B14
 		IMPL "tests/cli/test_tick.py::def test_should_keep_the_worktree_while_a_run_holds_it(self):"
 		IMPL "tests/cli/test_tick.py::def"
 			+ "test_should_wait_for_the_lock_of_the_worktrees_of_the_project_before_removing_the_worktree(self):"
-	AFTER @TASK.B142
 	AFTER @TASK.B75
 	RATIONALE "it follows @TASK.B75: the forge facts it reads run as the login of the key cli, F5"
 		+ "of the foundations review, as"
@@ -1673,7 +1672,6 @@ TASK B15
 			+ "TaskPreflightedTest(unittest.TestCase):"
 	AFTER @TASK.B08
 	AFTER @TASK.B14
-	AFTER @TASK.B142
 	RATIONALE "the eight checks are those of the pass, section 7 of"
 		+ "artifact/blueprint/parts/plan.html; the body and the promotion check what @TASK.B142"
 		+ "writes, its template and the promotion of the task, so this task follows it"
@@ -2116,7 +2114,6 @@ TASK B21
 		IMPL "tests/cli/test_rehearsal.py::class"
 			+ "BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest("
 	DELIVERED_BY 187
-	AFTER @TASK.B142
 	AFTER @TASK.B18
 	AFTER @TASK.B143
 	AFTER @TASK.B20
@@ -8795,7 +8792,6 @@ TASK B141
 			+ "test_should_resolve_it_with_no_instructions_corpus_set"
 		IMPL "tests/cli/test_tick.py::def"
 			+ "test_should_launch_the_procedure_the_key_build_of_procedures_names_in_place_of_build_task"
-	AFTER @TASK.B142
 	RATIONALE "split from @TASK.B12 in its refinement: the tick launches a build run and brigade"
 		+ "ships no procedure, awawa-task.md living in the instructions corpus, which is optional"
 		REF @TASK.B12
@@ -8817,7 +8813,10 @@ TASK B141
 TASK B142
 	TITLE "brigade task check, pr and promote take a build run from its acceptance commands to its"
 		+ "pull request and the promotion of its task"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B206 makes false its SPEC that tests/cli prove each refusal"
+		+ "of brigade task promote; they are proven in tests/unit/tasks/test_promote_task.py, and"
+		+ "tests/cli keeps one flow of brigade task promote"
 	DELIVERED_BY 149
 	TYPE feat
 	MILESTONE @MILESTONE.M1
@@ -8876,8 +8875,7 @@ TASK B142
 		+ "commit; the pull request is the one of the last task.pr_opened of the task, --pr <n>"
 		+ "naming another"
 		IMPL "brigade/tasks/promote_task.py::def promote_task("
-		IMPL "tests/cli/test_task_promote.py::def"
-			+ "test_should_end_the_promotion_commit_on_the_attribution_lines"
+		IMPL "tests/unit/tasks/test_promote_task.py::MESSAGE = "
 	SPEC "brigade task promote refuses before any write, naming it, STATUS implemented or"
 		+ "DELIVERED_BY when the TASK schema of the project's corpus does not declare it"
 		IMPL "brigade/tasks/promote_task.py::def _require_promotion_fields("
@@ -8890,7 +8888,8 @@ TASK B142
 		+ "repository in a temporary directory; unit tests prove the composition of the title from"
 		+ "TYPE, COMPONENT, the subject and the task id, the refusal of a missing subject, the body"
 		+ "and the three ledger events"
-		IMPL "tests/cli/test_task_promote.py::class BrigadeTaskPromoteRefusalTest"
+		IMPL "tests/unit/tasks/test_promote_task.py::def"
+			+ "test_should_refuse_a_schema_that_declares_no_status(self):"
 		IMPL "tests/unit/tasks/test_compose_pull_request_title.py::def"
 			+ "test_should_refuse_a_missing_subject_naming_the_cause"
 	RATIONALE "split from @TASK.B13 in its refinement: the end of a build run, step 5 of the wave"
