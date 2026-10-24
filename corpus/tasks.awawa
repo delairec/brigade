@@ -12241,36 +12241,3 @@ TASK B207
 	SOURCE "the user's ruling at the refinement of 2026-10-24 on the comprehensions that build the"
 		+ "input of a test: « ok pour 2 a) », the arrangement written as literals and the guard"
 		+ "letting the Double classes alone pass"
-
-TASK B208
-	TITLE "no test picks, slices or counts the output it asserts on: the callers the projection"
-		+ "guard cannot see compare the value whole, and the readers of the support modules filter"
-		+ "nothing"
-	STATUS draft
-	TYPE test
-	MILESTONE @MILESTONE.M1
-	COMPONENT "tests"
-	AFTER @TASK.B207
-	SPEC "a test method compares the output it reads whole against literals, never one entry by"
-		+ "index, a slice, one field or a len(): at ab7ccbd the callers"
-		+ "tests/unit/runs/test_run_segments.py 112, 329, 339 and 552,"
-		+ "tests/unit/ledger/test_append_event.py 70, tests/unit/ledger/test_read_ledger.py 137 and"
-		+ "206, tests/unit/commands/test_verify_verdict.py 120, tests/awawa/test_replay_awawa.py"
-		+ "204, tests/cli/test_rehearsal.py 40 and the list_requests(...)[0] callers of"
-		+ "tests/unit/studies, tests/unit/tasks, tests/unit/collectors and"
-		+ "tests/unit/commands/test_tick.py among them, the rule assertion_matcher_on_value SPEC 1"
-		+ "and SPEC 2 of the instructions corpus"
-	SPEC "read_last_event of tests/unit/review/test_record_review_answers.py, which picks the last"
-		+ "line, hands the ledger whole, as"
-		+ "@DECISION.AReaderOfATestDecodesEveryLineWholeAndFiltersNone rules"
-	SPEC "read_events(name) of the support modules tests/cli/run_test_case.py and"
-		+ "tests/cli/wave_rehearser.py filters the ledger by event: it decodes every line whole and"
-		+ "its callers compare the whole ledger, the move into a support module being the one the"
-		+ "review of pull request 192 refused"
-	SPEC "tests/guards/find_projections.py reports a subscript or a len() applied to the call of a"
-		+ "reader in a test module, so that what this task removes stays removed; its test proves"
-		+ "it on modules written for it"
-	SOURCE "the review round of pull request 196 on 2026-10-24: the review found five callers of"
-		+ "_read_events slicing or indexing the ledger, which tests/guards/find_projections.py does"
-		+ "not see; the round fixed those in the files of the threads and found these others"
-		REF @TASK.B207
