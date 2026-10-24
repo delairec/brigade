@@ -151,6 +151,18 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
         self.assertRegex(plan.run_id, r"^20261019T090000Z-[0-9a-f]{6}$")
 
 
+class PlanRunOfAProcedureOnTheSlotOfARoleHoldingFewerCapabilitiesTest(PlanRunTestCase):
+    def test_should_grant_the_capabilities_the_procedure_and_the_role_both_hold(self):
+        # Arrange
+        request = self.create_request(procedure="build-task", slot="review")
+
+        # Act
+        plan = self.plan(request, {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(plan.capabilities, ("read", "shell"))
+
+
 class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
     def test_should_hold_the_budget_on_the_clock_in_a_disposable_worktree(self):
         # Arrange

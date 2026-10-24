@@ -62,6 +62,19 @@ class CreateRunDirectoryOfANewRunTest(CreateRunDirectoryTestCase):
             ],
         )
 
+    def test_should_record_the_path_of_the_brief_of_the_run(self):
+        # Arrange
+        plan = create_run_plan(self.root, brief_path=self.root / "briefs" / "shop_w1-S3.md")
+
+        # Act
+        create_run_directory(plan, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            json.loads((plan.run_directory / "run.json").read_text())["brief"],
+            str(self.root / "briefs" / "shop_w1-S3.md"),
+        )
+
     def test_should_record_the_process_holding_the_run(self):
         # Arrange
         plan = create_run_plan(self.root)

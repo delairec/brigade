@@ -2,7 +2,7 @@ import json
 from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
-from tests.cli.test_tick import WaveTickTestCase
+from tests.cli.wave_tick_test_case import WaveTickTestCase
 
 PAUSED_ON_THE_FORGE_ACCOUNT = (
     '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.paused", "wave": "shop_w1",'
