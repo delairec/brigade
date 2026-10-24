@@ -8,6 +8,7 @@ from pathlib import Path
 from brigade.errors import CannotWrite
 from brigade.ledger.append_event import append_event
 from brigade.ledger.order_done import OrderDone
+from brigade.ledger.order_parked import OrderParked
 from brigade.runs.prune_runs import PruneOutcome, PruneRequest, prune_runs
 from brigade.runs.record_run_pid import record_run_pid
 from tests.unit.create_test_paths import create_test_paths
@@ -198,6 +199,25 @@ class PruneRunsOfADoneStudyTest(PruneRunsTestCase):
 
         # Assert
         self.assertEqual(outcome.removed, [{"run": STUDY, "state": "finished"}])
+
+
+class PruneRunsOfAParkedStudyTest(PruneRunsTestCase):
+    def test_should_spare_the_directory_of_a_study_the_next_study_run_resumes(self):
+        # Arrange
+        (self.runs / STUDY).mkdir()
+        append_event(
+            self.paths,
+            datetime(2026, 9, 30, 9, 0, tzinfo=UTC),
+            OrderParked(
+                project="tidepool", kind="study", order="trees", run=STUDY, step="collect", reason="collector failed"
+            ),
+        )
+
+        # Act
+        self.prune(0, before=date(2026, 12, 1))
+
+        # Assert
+        self.assertTrue((self.runs / STUDY).is_dir())
 
 
 class PruneRunsLeftByAnEarlierPruneTest(PruneRunsTestCase):

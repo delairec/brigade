@@ -4,6 +4,7 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.study_show import COMMAND
+from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -84,3 +85,19 @@ class StudyShowOfARecordedStudyTest(unittest.TestCase):
                 },
             },
         )
+
+
+class StudyShowOfAnUndefinedStudyTest(unittest.TestCase):
+    def test_should_refuse_naming_the_study_that_is_not_defined(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        no_study = {"STUDY": {}}
+        runtime = create_test_runtime(create_test_paths(root), run_process=create_corpus_double(no_study))
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            COMMAND.run(Namespace(name="ghost"), runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@STUDY.ghost is not defined in the operational corpus")

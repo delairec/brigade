@@ -1,3 +1,4 @@
+import dataclasses
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -13,7 +14,9 @@ from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
 from brigade.studies.convert_study import Study
 from brigade.studies.run_study import run_study
-from tests.unit.create_test_runtime import FIXED_NOW
+from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
@@ -53,9 +56,18 @@ SCAN_INTO_THE_INBOX = Study(
     answer_type="FINDING",
     status="active",
 )
-from tests.unit.commands.command_runtime import write_operational_corpus
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
+JUDGED_STUDY = Study(
+    name="trees",
+    project=None,
+    question="are the trees healthy?",
+    collectors=(),
+    slot="report",
+    every=None,
+    output="entity:FINDING",
+    answer_type="FINDING",
+    status="active",
+)
+RECORDED_ANSWER = 'FINDING trees_20261019T090000Z_aaaaaa\n\tVERDICT "healthy"\n'
 
 
 def refuse_collector(name: str, project: Path):
@@ -265,3 +277,32 @@ class RunStudyParkingTest(RunStudyTestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the output inbox is refused: the inbox has no store until @TASK.B22")
+
+
+class RunStudyParkedAtItsJudgingRunTest(RunStudyTestCase):
+    def test_should_finish_the_run_once_its_answer_is_recorded(self):
+        # Arrange
+        run_directory = self.root / "state" / "runs" / RUN_ID
+        (run_directory / "steps").mkdir(parents=True)
+        (run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        (run_directory / "answer.awawa").write_text(RECORDED_ANSWER, encoding="utf-8")
+        self.record_order(
+            OrderParked(
+                project=None,
+                kind="study",
+                order="trees",
+                run=RUN_ID,
+                step="judge",
+                reason="the judging run 20261019T080000Z-dddddd gave no answer",
+            )
+        )
+        equipment = dataclasses.replace(
+            self.equipment, launch_run=lambda request, runtime: {"run": "20261019T090500Z-eeeeee"}
+        )
+
+        # Act
+        ran = run_study(self.runtime, JUDGED_STUDY, equipment, None)
+
+        # Assert
+        self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
+        self.assertEqual((self.config_root / "findings.awawa").read_text(encoding="utf-8"), RECORDED_ANSWER)

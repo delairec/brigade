@@ -6,7 +6,15 @@ from pathlib import Path
 
 from brigade.commands.study_answer import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
+from tests.unit.commands.command_runtime import (
+    ProcessAnswer,
+    ScriptedProcessRunner,
+    create_corpus_double,
+    create_machine_double,
+    write_operational_corpus,
+)
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 RUN_ID = "20261019T090000Z-e10d04"
 HEALTH_STUDY = (
@@ -15,9 +23,6 @@ HEALTH_STUDY = (
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
-
 ANSWER_TEXT = 'ANSWER health_20261019T090000Z_e10d04\n\tVERDICT "healthy"\n'
 NO_FILLED_FIELD = json.dumps({"fields": []})
 
@@ -93,3 +98,27 @@ class StudyAnswerOfAJudgingRunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot read {missing_file}: No such file or directory")
+
+
+class StudyAnswerTheSchemaRejectsTest(unittest.TestCase):
+    def test_should_keep_no_answer_it_refused(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        run_directory = root / "state" / "runs" / RUN_ID
+        run_directory.mkdir(parents=True)
+        (run_directory / "study.json").write_text(json.dumps({"study": "health"}), encoding="utf-8")
+        answer_file = root / "answer.awawa"
+        answer_file.write_text(ANSWER_TEXT, encoding="utf-8")
+        rejecting_lint = {("awawa", "lint"): ProcessAnswer(stdout="E003 unknown field VERDICT\n", exit_code=1)}
+        run_process = ScriptedProcessRunner(
+            rejecting_lint, fallback=create_corpus_double({"STUDY": {"health": HEALTH_STUDY}})
+        ).run
+        runtime = create_test_runtime(create_test_paths(root), run_process=run_process)
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(Namespace(run=RUN_ID, file=str(answer_file)), runtime)
+
+        # Assert
+        self.assertFalse((run_directory / "answer.awawa").exists())

@@ -1,8 +1,10 @@
+import dataclasses
 import tempfile
 import unittest
 from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
+from brigade.errors import BrigadeError
 from brigade.studies.convert_study import Study
 from brigade.studies.present_answer import AnswerPublication
 from brigade.studies.study_run_context import StudyRunContext
@@ -157,3 +159,24 @@ class WriteAnswerToFileTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.processes.list_argvs()[-1], ("git", "worktree", "remove", "--force", str(self.checkout)))
+
+
+class WriteAnswerToFileOfAStudyOfNoProjectTest(unittest.TestCase):
+    def test_should_refuse_the_output_naming_it_as_the_study_wrote_it(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        context = StudyRunContext(
+            runtime=create_test_runtime(create_test_paths(root), run_process=ScriptedProcesses()),
+            study=dataclasses.replace(STUDY, project=None),
+            run_id=RUN_ID,
+            run_directory=root / "state" / "runs" / RUN_ID,
+            equipment=create_study_equipment(),
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            write_answer_to_file(context, PUBLICATION)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the output file:docs/studies/{run}.md needs a project")
