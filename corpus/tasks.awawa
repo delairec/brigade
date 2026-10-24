@@ -12329,3 +12329,31 @@ TASK B207
 	SOURCE "the user's ruling at the refinement of 2026-10-24 on the comprehensions that build the"
 		+ "input of a test: « ok pour 2 a) », the arrangement written as literals and the guard"
 		+ "letting the Double classes alone pass"
+
+TASK B208
+	TITLE "One decoder reads every string atom of awawa's JSON output, a backslash awawa keeps"
+		+ "included"
+	STATUS todo
+	TYPE fix
+	MILESTONE @MILESTONE.M2
+	COMPONENT "corpus"
+	ROLE ada
+	SPEC "brigade tick --once on the brigade corpus at origin/main exits 0: the tick reads the"
+		+ "tasks of the corpus, B152 included, whose SPEC quotes grep -rln"
+		+ "'subprocess\.\(run\|Popen\)(' tests"
+	SPEC "one function of brigade decodes a string atom of awawa show --json into the text awawa"
+		+ "holds, the escapes of awawa's string grammar decoded and every other backslash kept; a"
+		+ "unit test proves it on \., \(, \|, \" and \\ against the text awawa prints for the same"
+		+ "field"
+	SPEC "every reader of awawa atoms calls it, and none calls json.loads on an atom:"
+		+ "brigade/corpus/read_entity.py, brigade/verify/check_promotion.py,"
+		+ "brigade/adapters/documents/awawa.py, brigade/studies/render_wave_report.py,"
+		+ "brigade/tasks/assemble_task_context.py, brigade/collectors/study.py,"
+		+ "brigade/planning/assemble_plan_context.py and brigade/planning/read_plan.py on 10080e4"
+	RATIONALE "on 2026-10-24 the first tick of the installed scheduler exited 70 on"
+		+ "JSONDecodeError: Invalid \escape in brigade/corpus/read_entity.py:30, which decodes the"
+		+ "atom of a SPEC of @TASK.B152 with json.loads, a grammar awawa does not share; the tick"
+		+ "reads the candidates of a wave this way, so no wave starts until this is fixed"
+		REF @TASK.B152
+	SOURCE "the user's ruling of 2026-10-24: « oui, vas-y », on the fix proposed after the failed"
+		+ "tick"
