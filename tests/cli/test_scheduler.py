@@ -47,6 +47,7 @@ class SchedulerTestCase(unittest.TestCase):
             "\n"
             "[Service]\n"
             "Type=oneshot\n"
+            "KillMode=process\n"
             f'Environment="PATH={search_path}"\n'
             f'Environment="XDG_CONFIG_HOME={self.machine.config_home}"\n'
             f'Environment="XDG_STATE_HOME={self.machine.state_home}"\n'

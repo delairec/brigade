@@ -124,6 +124,16 @@ class InstallSystemdTest(unittest.TestCase):
             [("systemctl", "--user", "daemon-reload"), ("systemctl", "--user", "enable", "--now", "brigade.timer")],
         )
 
+    def test_should_spare_the_runs_a_tick_detached_when_the_service_ends(self):
+        # Arrange
+        request = {"unit_directory": str(self.units), "brigade": "/opt/brigade/bin/brigade", "environment": {}}
+
+        # Act
+        install(request, create_test_runtime(run_process=self.run_systemctl))
+
+        # Assert
+        self.assertEqual("KillMode=process" in (self.units / "brigade.service").read_text().splitlines(), True)
+
     def test_should_leave_one_pair_of_units_when_installed_over_an_earlier_install(self):
         # Arrange
         request = {"unit_directory": str(self.units), "brigade": "/opt/brigade/bin/brigade", "environment": {}}
