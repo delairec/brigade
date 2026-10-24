@@ -7927,7 +7927,12 @@ TASK B113
 TASK B114
 	TITLE "A segment reaching its wall-time limit is stopped between two steps where its client"
 		+ "supports it, its result kept, and cut by signal only as the backstop"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B206 makes false its SPEC that tests/cli prove the soft"
+		+ "limit through the fake client; the stop at the soft limit, its signal, its resume and"
+		+ "the hard cut are proven in tests/unit/runs/test_run_segments.py and"
+		+ "tests/unit/runs/test_run_segment.py, and tests/cli keeps one flow cut on the clock"
+		REF @TASK.B206
 	MILESTONE @MILESTONE.F0
 	COMPONENT "adapters"
 	ROLE ada
@@ -8475,7 +8480,6 @@ TASK B137
 			+ "BrigadeRunOfAClientAnsweringParseResultOutsideItsContractTest(RunTestCase):"
 	DELIVERED_BY 113
 	AFTER @TASK.B109
-	AFTER @TASK.B114
 	RATIONALE "verified by the session on 2026-10-12 on run 20261011T174055Z-9aa8e9: the"
 		+ "launch-argv answer of the adapter vibe failed validation,"
 		+ "brigade/system/validate_document.py:48 raising DocumentInvalid, turned into a"
@@ -8529,7 +8533,6 @@ TASK B138
 		IMPL "tests/unit/adapters/clients/test_claude_code.py::def"
 			+ "test_should_sum_only_the_durations_the_result_events_carry(self):"
 	DELIVERED_BY 112
-	AFTER @TASK.B114
 	RATIONALE "verified by the session on 2026-10-12: a Claude Code session in -p stream-json mode"
 		+ "that waits on a background command emits one result event per turn, the later ones"
 		+ "carrying origin.kind task-notification; run 20261012T113945Z-b4a356 has 2 result events,"
