@@ -68,6 +68,19 @@ class ProjectionsGuardTest(unittest.TestCase):
                 "def read_names(calls):\n    return [c.name for c in calls]\n",
                 "tests/unit/test_greeter.py:2 projects a value in read_names",
             ),
+            (
+                "an asynchronous module function",
+                "async def read_names(calls):\n    return [c.name for c in calls]\n",
+                "tests/unit/test_greeter.py:2 projects a value in read_names",
+            ),
+            (
+                "a function nested in a test method",
+                (
+                    "class GreeterTest:\n    def test_greet(self):\n        def read_names():\n"
+                    "            return [c.name for c in calls]\n"
+                ),
+                "tests/unit/test_greeter.py:4 projects a value in test_greet",
+            ),
         ]
         for case, source, expected_violation in rows:
             with self.subTest(case=case):
