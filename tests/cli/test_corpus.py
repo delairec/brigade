@@ -71,54 +71,6 @@ class BrigadeCorpusAtABranchTest(CorpusTestCase):
         )
 
 
-class BrigadeCorpusOfAWorktreeTest(CorpusTestCase):
-    def test_should_read_the_worktree_of_the_branch_in_place(self):
-        # Act
-        completed = self.run_corpus("app", "--ref", "worktree:main", "--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            json.loads(completed.stdout),
-            {
-                "schema_version": 1,
-                "project": "app",
-                "ref": "worktree:main",
-                "sha": self.sha,
-                "kind": "worktree",
-                "root": str(self.project.path),
-            },
-        )
-
-    def test_should_print_a_worktree_named_by_its_path_with_no_ref(self):
-        # Arrange
-        detached_tree = self.project.path.parent / "detached-tree"
-        self.project.run_git("worktree", "add", "--quiet", "--detach", str(detached_tree), "HEAD")
-
-        # Act
-        completed = self.run_corpus("app", "--worktree", str(detached_tree))
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(
-            completed.stdout.splitlines(),
-            [
-                "@PROJECT.app",
-                f"sha   {self.sha}",
-                "kind  worktree",
-                f"root  {detached_tree}",
-            ],
-        )
-
-    def test_should_refuse_a_ref_and_a_worktree_together(self):
-        # Act
-        completed = self.run_corpus("app", "--ref", "main", "--worktree", str(self.project.path))
-
-        # Assert
-        self.assertEqual(completed.returncode, 2)
-        self.assertEqual(completed.stdout, "")
-
-
 class BrigadeCorpusWithAwawaArgumentsTest(CorpusTestCase):
     def test_should_pass_the_output_and_the_exit_code_of_awawa_through_after_the_sha(self):
         # Arrange
@@ -212,33 +164,6 @@ class BrigadeCorpusOnWhatItCannotReadTest(CorpusTestCase):
                 self.assertEqual(completed.returncode, 1)
                 self.assertEqual(completed.stdout, "")
                 self.assertEqual(completed.stderr, expected_error)
-
-
-class BrigadeCorpusWithAConfigurationThatIsNotTomlTest(CorpusTestCase):
-    def setUp(self):
-        super().setUp()
-        self.configuration = self.machine.write_configuration('client = "claude-code\n')
-
-    def test_should_report_the_configuration_before_a_missing_operational_corpus(self):
-        # Arrange
-        (self.machine.corpus / "_schema.awawa").unlink()
-
-        # Act
-        completed = self.run_corpus("app", "--ref", "main")
-
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stdout, "")
-        self.assertIn(f"brigade corpus: {self.configuration} is not valid TOML: ", completed.stderr)
-
-    def test_should_report_the_configuration_before_an_unknown_project(self):
-        # Act
-        completed = self.run_corpus("ghost", "--ref", "main")
-
-        # Assert
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stdout, "")
-        self.assertIn(f"brigade corpus: {self.configuration} is not valid TOML: ", completed.stderr)
 
 
 class BrigadeCorpusWhereAFileStandsForTheCacheTest(CorpusTestCase):

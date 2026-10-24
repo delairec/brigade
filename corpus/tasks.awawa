@@ -850,7 +850,7 @@ TASK B08
 		IMPL "brigade/corpus/prepare_tree.py::def _find_worktree("
 		IMPL "brigade/git/list_worktrees.py::def list_worktrees("
 		IMPL "brigade/commands/corpus.py::(\"--worktree\",), {\"type\": Path,"
-		IMPL "tests/cli/test_corpus.py::class BrigadeCorpusOfAWorktreeTest(CorpusTestCase):"
+		IMPL "tests/unit/commands/test_corpus.py::class CorpusOfAWorktreeTest(unittest.TestCase):"
 		IMPL "tests/integration/corpus/test_prepare_tree.py::class"
 			+ "PrepareTreeOfAWorktreeTest(PrepareTreeTestCase):"
 	SPEC "given -- <awawa args>, it runs awawa with those args at the root of the tree and passes"
