@@ -135,9 +135,28 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
 
         # Assert
         self.assertEqual(
-            forge.list_requests("open_pull_request")[0]["body"],
-            "The parser\n\n## Acceptance criteria\n\n- parses a line\n\n## Checks of c0ffee\n\n"
-            "- pass `python3 -m unittest` 1.2 s\n\nCo-Authored-By: Ada <ada@example.org>\n",
+            forge.list_requests("open_pull_request"),
+            [
+                {
+                    "repository": "/srv/oak-b12",
+                    "base": "integration/f0-parser",
+                    "branch": "task/f0-parser/B12",
+                    "title": "feat(the-parser): add the parser (@TASK.B12)",
+                    "body": "The parser\n"
+                    "\n"
+                    "## Acceptance criteria\n"
+                    "\n"
+                    "- parses a line\n"
+                    "\n"
+                    "## Checks of c0ffee\n"
+                    "\n"
+                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "\n"
+                    "Co-Authored-By: Ada <ada@example.org>\n",
+                    "milestone": "Parser",
+                    "environment": {"GH_TOKEN": "t0ken"},
+                }
+            ],
         )
 
     def test_should_record_the_opened_pull_request_in_the_ledger(self):

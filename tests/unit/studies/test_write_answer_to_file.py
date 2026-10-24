@@ -130,7 +130,20 @@ class WriteAnswerToFileTest(unittest.TestCase):
         write_answer_to_file(self.create_context("github", CLI_BOUND_TO_OCTO_CLI), PUBLICATION)
 
         # Assert
-        self.assertEqual(self.forge.list_requests("open_pull_request")[0]["environment"], {"GH_TOKEN": "cli-token"})
+        self.assertEqual(
+            self.forge.list_requests("open_pull_request"),
+            [
+                {
+                    "repository": str(self.checkout),
+                    "base": "main",
+                    "branch": "brigade/study-trees-20261019T090000Z-aaaaaa",
+                    "title": "Study trees, run 20261019T090000Z-aaaaaa",
+                    "body": "# FINDING trees_1\n",
+                    "milestone": None,
+                    "environment": {"GH_TOKEN": "cli-token"},
+                }
+            ],
+        )
 
     def test_should_write_the_answer_at_the_path_the_output_names_for_the_run(self):
         # Act

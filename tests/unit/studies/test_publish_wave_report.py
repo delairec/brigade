@@ -189,7 +189,15 @@ class PublishWaveReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.forge.list_requests("rewrite_pull_request_body")[0]["environment"], {"GH_TOKEN": "cli-token"}
+            self.forge.list_requests("rewrite_pull_request_body"),
+            [
+                {
+                    "repository": str(self.checkout),
+                    "number": 181,
+                    "body": "# REPORT oak_w2\n\n- WAVE: oak_w2\n",
+                    "environment": {"GH_TOKEN": "cli-token"},
+                }
+            ],
         )
 
     def test_should_rewrite_no_pull_request_before_the_wave_opened_its_integration_pull_request(self):

@@ -1286,7 +1286,19 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(forge.list_requests("read_check_logs")[0]["lines"], 200)
+        self.assertEqual(
+            forge.list_requests("read_check_logs"),
+            [
+                {
+                    "schema_version": 1,
+                    "repository": f"{self.root}/tidepool",
+                    "number": 42,
+                    "checks": ["ci", "coverage"],
+                    "lines": 200,
+                    "environment": {},
+                }
+            ],
+        )
 
     def test_should_launch_the_repair_of_the_failing_checks_with_the_tail_of_their_logs_and_record_it_in_fixing(self):
         # Arrange
