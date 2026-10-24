@@ -18,9 +18,8 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
             ledger.write(PAUSED_ON_THE_FORGE_ACCOUNT)
 
-    def read_events(self, name: str) -> list:
-        lines = (self.state / "ledger" / "2026-10.jsonl").read_text().splitlines()
-        return [event for event in map(json.loads, lines) if event["event"] == name]
+    def read_events(self) -> list:
+        return list(map(json.loads, (self.state / "ledger" / "2026-10.jsonl").read_text().splitlines()))
 
     def test_should_resume_the_wave_named(self):
         # Act
@@ -33,6 +32,49 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         self.assertEqual(completed.stdout, "wave shop_w1 resumed\n")
         self.assertEqual(completed.stderr, "")
         self.assertEqual(
-            self.read_events("wave.resumed"),
-            [{"schema_version": 1, "ts": ANY, "event": "wave.resumed", "wave": "shop_w1", "reason": "forge_account"}],
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-13T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "shop_w1",
+                    "project": "shop",
+                    "branch": "integration/M1-empty-cart",
+                    "tasks": ["S3", "S4", "S5", "S6"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "queued",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T10:30:00Z",
+                    "event": "task.state",
+                    "wave": "cafe_w1",
+                    "task": "S6",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T11:00:00Z",
+                    "event": "wave.paused",
+                    "wave": "shop_w1",
+                    "reason": "forge_account",
+                    "resume_at": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T11:00:00Z",
+                    "event": "wave.paused",
+                    "wave": "cafe_w1",
+                    "reason": "quota",
+                    "resume_at": "2026-10-13T12:00:00Z",
+                },
+                {"schema_version": 1, "ts": ANY, "event": "wave.resumed", "wave": "shop_w1", "reason": "forge_account"},
+            ],
         )

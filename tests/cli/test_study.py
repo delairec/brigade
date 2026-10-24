@@ -116,9 +116,9 @@ class StudyRunTestCase(StudyTestCase):
             "entity:ANSWER",
         )
 
-    def read_events(self, name: str) -> list:
-        lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
-        return [event for event in map(json.loads, lines) if event["event"] == name]
+    def read_events(self) -> list:
+        [month] = self.ledger.glob("*.jsonl")
+        return list(map(json.loads, month.read_text().splitlines()))
 
 
 class BrigadeStudyRunTest(StudyRunTestCase):
@@ -192,7 +192,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
 
         # Assert
         document = json.loads(completed.stdout)
-        [judging] = self.read_events("run.finished")
+        [_, _, judging, _, _] = self.read_events()
         self.assertEqual(document["state"], "parked")
         self.assertEqual(document["reason"], f"the judging run {judging['run']} gave no answer")
         self.assertEqual(judging["procedure"], "study")

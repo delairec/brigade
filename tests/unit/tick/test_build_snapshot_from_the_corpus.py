@@ -54,22 +54,34 @@ from brigade.system.run_process import ProcessRequest
 from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 
-def answer_entities(root: Path, entity_type: str, entities: dict[str, list[dict]], *conditions: str) -> dict:
-    filters = tuple(argument for condition in conditions for argument in ("--where", condition))
-    status = {"entities": [{"type": entity_type, "name": name} for name in entities]}
-    return {
-        ("awawa", "status", entity_type, *filters, "--json", str(root)): ProcessAnswer(stdout=json.dumps(status)),
-        **{
-            ("awawa", "show", f"@{entity_type}.{name}", "--json", str(root)): ProcessAnswer(
-                stdout=json.dumps({"fields": fields})
-            )
-            for name, fields in entities.items()
-        },
-    }
+class AwawaAnswerWriterDouble:
+    def answer_entities(self, root: Path, entity_type: str, entities: dict[str, list[dict]], *conditions: str) -> dict:
+        filters = tuple(argument for condition in conditions for argument in ("--where", condition))
+        status = {"entities": [{"type": entity_type, "name": name} for name in entities]}
+        return {
+            ("awawa", "status", entity_type, *filters, "--json", str(root)): ProcessAnswer(stdout=json.dumps(status)),
+            **{
+                ("awawa", "show", f"@{entity_type}.{name}", "--json", str(root)): ProcessAnswer(
+                    stdout=json.dumps({"fields": fields})
+                )
+                for name, fields in entities.items()
+            },
+        }
+
+    def describe_task(self, status: str, *after: str) -> list[dict]:
+        return [
+            {"name": "STATUS", "atoms": [status]},
+            *({"name": "AFTER", "atoms": [f"@TASK.{task}"]} for task in after),
+        ]
+
+    def answer_no_incoming_refs(self, root: Path, *tasks: str) -> dict:
+        return {
+            ("awawa", "refs", f"@TASK.{task}", "--json", str(root)): ProcessAnswer(stdout=json.dumps({"incoming": []}))
+            for task in tasks
+        }
 
 
-def describe_task(status: str, *after: str) -> list[dict]:
-    return [{"name": "STATUS", "atoms": [status]}, *({"name": "AFTER", "atoms": [f"@TASK.{task}"]} for task in after)]
+AWAWA_ANSWERS = AwawaAnswerWriterDouble()
 
 
 def answer_tree(ref: str, sha: str) -> dict:
@@ -84,13 +96,6 @@ def answer_main_of_the_forge(sha: str) -> dict:
 def answer_unreadable_tree(ref: str) -> dict:
     argv = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
     return {argv: ProcessAnswer(exit_code=128, stderr="fatal: bad revision")}
-
-
-def answer_no_incoming_refs(root: Path, *tasks: str) -> dict:
-    return {
-        ("awawa", "refs", f"@TASK.{task}", "--json", str(root)): ProcessAnswer(stdout=json.dumps({"incoming": []}))
-        for task in tasks
-    }
 
 
 def _read_forge_environment(slot: str) -> dict:
@@ -154,7 +159,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                         "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk"},
                     },
                 ),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     config_root,
                     "POLICY",
                     {
@@ -166,7 +171,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                         ]
                     },
                 ),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     config_root,
                     "STUDY",
                     {
@@ -181,25 +186,25 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/w4"): ProcessAnswer(exit_code=1),
                 **answer_tree("integration/w1", WAVE_SHA),
                 **answer_unreadable_tree("integration/w5"),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     self.wave_tree,
                     "TASK",
-                    {"B1": describe_task("todo", "B0"), "B2": [], "B3": [], "B4": []},
+                    {"B1": AWAWA_ANSWERS.describe_task("todo", "B0"), "B2": [], "B3": [], "B4": []},
                 ),
-                **answer_no_incoming_refs(self.wave_tree, "B1", "B2", "B3", "B4"),
-                **answer_entities(self.wave_tree, "TASK", {"B0": []}, "STATUS==implemented"),
+                **AWAWA_ANSWERS.answer_no_incoming_refs(self.wave_tree, "B1", "B2", "B3", "B4"),
+                **AWAWA_ANSWERS.answer_entities(self.wave_tree, "TASK", {"B0": []}, "STATUS==implemented"),
                 **answer_tree("main", MAIN_SHA),
-                **answer_entities(
+                **AWAWA_ANSWERS.answer_entities(
                     self.main_tree,
                     "TASK",
                     {
-                        "B0": describe_task("implemented"),
-                        "B1": describe_task("todo", "B0"),
-                        "B5": describe_task("todo", "B0"),
-                        "B6": describe_task("draft"),
+                        "B0": AWAWA_ANSWERS.describe_task("implemented"),
+                        "B1": AWAWA_ANSWERS.describe_task("todo", "B0"),
+                        "B5": AWAWA_ANSWERS.describe_task("todo", "B0"),
+                        "B6": AWAWA_ANSWERS.describe_task("draft"),
                     },
                 ),
-                **answer_no_incoming_refs(self.main_tree, "B5"),
+                **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5"),
                 **answer_unreadable_tree("trunk"),
                 **self.remote_answers,
             }

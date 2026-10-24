@@ -13,7 +13,7 @@ TICK_TRAIL_PATTERN = r"^\d{8}T\d{6}Z\.jsonl$"
 
 
 def read_trail(path: Path) -> list:
-    return [json.loads(line) for line in path.read_text().splitlines()]
+    return list(map(json.loads, path.read_text().splitlines()))
 
 
 class BrigadeRunTrailTest(RunTestCase):

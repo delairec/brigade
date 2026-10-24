@@ -404,7 +404,7 @@ class ClientFailingOnAnErrorClassDouble(ClientAnsweringOutcomesDouble):
 class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
     def read_ledger_lines(self) -> list[dict]:
         [ledger_file] = (self.paths.state_root / "ledger").glob("*.jsonl")
-        return [json.loads(line) for line in ledger_file.read_text().splitlines()]
+        return list(map(json.loads, ledger_file.read_text().splitlines()))
 
     def test_should_append_the_finished_run_to_the_ledger(self):
         # Arrange

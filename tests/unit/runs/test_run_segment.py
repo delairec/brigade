@@ -338,11 +338,12 @@ LAUNCH_INSTANT = datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
 
 
 def _read_journal_records(journal: Path) -> list[dict]:
-    return [json.loads(line) for line in journal.read_text(encoding="utf-8").splitlines()]
+    return list(map(json.loads, journal.read_text(encoding="utf-8").splitlines()))
 
 
 def _read_every_file(directory: Path) -> str:
-    return "".join(path.read_text(encoding="utf-8") for path in sorted(directory.rglob("*")) if path.is_file())
+    every_file = filter(Path.is_file, directory.rglob("*"))
+    return b"".join(map(Path.read_bytes, every_file)).decode("utf-8")
 
 
 def _create_runtime(root: Path, spawn) -> Runtime:

@@ -36,7 +36,12 @@ def append_signals(root: Path, writer: int) -> None:
 
 def append_from_concurrent_writers(root: Path) -> None:
     context = multiprocessing.get_context("fork")
-    writers = [context.Process(target=append_signals, args=(root, writer)) for writer in range(PROCESS_COUNT)]
+    writers = (
+        context.Process(target=append_signals, args=(root, 0)),
+        context.Process(target=append_signals, args=(root, 1)),
+        context.Process(target=append_signals, args=(root, 2)),
+        context.Process(target=append_signals, args=(root, 3)),
+    )
     for writer in writers:
         writer.start()
     for writer in writers:

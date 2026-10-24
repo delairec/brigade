@@ -41,8 +41,10 @@ TASK_WORKTREE_LISTED = ProcessAnswer(
 )
 
 
-def _create_setup_fields(setup: tuple[str, ...]) -> list[dict]:
-    return [{"name": "SETUP", "atoms": [json.dumps(line)]} for line in setup]
+MAKE_DEPS = {"name": "SETUP", "atoms": ['"make deps"']}
+UNCLOSED_QUOTE = {"name": "SETUP", "atoms": ['"make \\"deps"']}
+FAILING_SETUP = {"name": "SETUP", "atoms": ['"false"']}
+TOUCH_THE_WORKTREE = {"name": "SETUP", "atoms": ['"touch \\"$PWD\\""']}
 
 
 class PrepareTaskWorktreeTestCase(unittest.TestCase):
@@ -53,13 +55,13 @@ class PrepareTaskWorktreeTestCase(unittest.TestCase):
 
     def create_runner(
         self,
-        *setup: str,
+        *setup: dict,
         worktrees: ProcessAnswer = MAIN_CHECKOUT_ALONE,
         branch: ProcessAnswer = NO_TASK_BRANCH,
         ancestry: ProcessAnswer = SILENT_SUCCESS,
     ) -> RecordingProcessRunner:
         root = str(self.paths.config_root)
-        fields = [{"name": "PATH", "atoms": ['"/srv/shop"']}, *_create_setup_fields(setup)]
+        fields = [{"name": "PATH", "atoms": ['"/srv/shop"']}, *setup]
         return RecordingProcessRunner(
             {
                 **create_registry_answers(self.paths.config_root, {"shop": {}}),
@@ -79,7 +81,7 @@ class PrepareTaskWorktreeTestCase(unittest.TestCase):
 class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
     def test_should_add_the_task_worktree_and_run_its_setup_logging_each_line(self):
         # Arrange
-        runner = self.create_runner("make deps")
+        runner = self.create_runner(MAKE_DEPS)
 
         # Act
         worktree = prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
@@ -106,7 +108,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 
     def test_should_leave_the_ignore_file_alone_under_a_configured_worktree_root(self):
         # Arrange
-        runner = self.create_runner("make deps")
+        runner = self.create_runner(MAKE_DEPS)
 
         # Act
         prepare_task_worktree(
@@ -136,7 +138,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
     def test_should_reuse_the_worktree_of_the_task_and_run_its_setup_again(self):
         # Arrange
-        runner = self.create_runner("make deps", worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
 
         # Act
         worktree = prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
@@ -154,7 +156,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 
     def test_should_add_a_worktree_on_the_existing_branch_of_the_task(self):
         # Arrange
-        runner = self.create_runner("make deps", branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
@@ -170,7 +172,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 
     def test_should_not_take_a_worktree_of_the_branch_outside_the_worktree_root_for_the_task_worktree(self):
         # Arrange
-        runner = self.create_runner("make deps", worktrees=TASK_BRANCH_LISTED_ELSEWHERE, branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_BRANCH_LISTED_ELSEWHERE, branch=TASK_BRANCH_FOUND)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
@@ -185,7 +187,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
     def test_should_park_the_task_and_refuse(self):
         # Arrange
-        runner = self.create_runner('make "deps')
+        runner = self.create_runner(UNCLOSED_QUOTE)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -203,7 +205,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
     def test_should_leave_the_worktree_and_the_branch_of_the_task_in_place(self):
         # Arrange
-        runner = self.create_runner('make "deps')
+        runner = self.create_runner(UNCLOSED_QUOTE)
 
         # Act
         with self.assertRaises(BrigadeError):
@@ -220,7 +222,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
     def test_should_name_the_setup_line_exiting_non_zero(self):
         # Arrange
-        runner = self.create_runner("false")
+        runner = self.create_runner(FAILING_SETUP)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -231,7 +233,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
     def test_should_run_no_line_after_the_failing_one(self):
         # Arrange
-        runner = self.create_runner("false", "make deps")
+        runner = self.create_runner(FAILING_SETUP, MAKE_DEPS)
 
         # Act
         with self.assertRaises(BrigadeError):
@@ -242,7 +244,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
     def test_should_run_no_line_of_a_setup_holding_a_line_that_splits_into_no_argv(self):
         # Arrange
-        runner = self.create_runner("make deps", 'make "deps')
+        runner = self.create_runner(MAKE_DEPS, UNCLOSED_QUOTE)
 
         # Act
         with self.assertRaises(BrigadeError):
@@ -253,7 +255,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
     def test_should_refuse_a_setup_leaving_the_head_off_the_wave_branch(self):
         # Arrange
-        runner = self.create_runner("make deps", ancestry=HEAD_OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(MAKE_DEPS, ancestry=HEAD_OFF_THE_WAVE_BRANCH)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -269,7 +271,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCase):
     def test_should_run_the_line_as_one_argv_without_a_shell(self):
         # Arrange
-        runner = self.create_runner('touch "$PWD"')
+        runner = self.create_runner(TOUCH_THE_WORKTREE)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
@@ -282,7 +284,7 @@ class PrepareTaskWorktreeUnderTheLockTest(PrepareTaskWorktreeTestCase):
     def test_should_add_the_worktree_under_the_lock_of_the_worktrees_of_the_project(self):
         # Arrange
         lock = self.paths.lock_directory / "worktrees-shop.lock"
-        runner = LockObservingRunner(self.create_runner("make deps"), lock, ADD_TASK_WORKTREE)
+        runner = LockObservingRunner(self.create_runner(MAKE_DEPS), lock, ADD_TASK_WORKTREE)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)

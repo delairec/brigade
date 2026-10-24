@@ -20,7 +20,7 @@ class TrailWriterTestCase(unittest.TestCase):
         self.trail = TrailWriter(self.reported.append)
 
     def read_lines(self) -> list:
-        return [json.loads(line) for line in self.destination.read_text().splitlines()]
+        return list(map(json.loads, self.destination.read_text().splitlines()))
 
 
 class TrailWriterLocatedTest(TrailWriterTestCase):

@@ -74,9 +74,9 @@ class RecordVerdictTestCase(unittest.TestCase):
         )
 
     def read_ledger(self) -> list[dict]:
-        return [
-            json.loads(line) for line in (self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines()
-        ]
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
 
     def list_posted_reviews(self) -> list[dict]:
         return self.forge.list_requests("post_review")

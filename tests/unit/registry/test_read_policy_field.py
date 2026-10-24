@@ -7,18 +7,34 @@ AUTO_MERGE_FIELD = "AUTO_MERGE"
 INTEGRATION_NEUTRAL = "integration"
 
 
-def _create_policy(name: str, *fields: tuple[str, str]) -> Entity:
-    return Entity(name=name, fields=tuple(EntityField(name=field, value=value) for field, value in fields))
+def _create_policy(name: str, *fields: EntityField) -> Entity:
+    return Entity(name=name, fields=fields)
 
 
 class ReadPolicyFieldTest(unittest.TestCase):
     def test_should_read_the_value_the_first_policy_of_the_project_sets(self):
         # Arrange
         policies = [
-            _create_policy("elm_merge", ("PROJECT", "@PROJECT.elm"), (AUTO_MERGE_FIELD, "integration")),
-            _create_policy("oak_review", ("PROJECT", "@PROJECT.oak"), ("REVIEW", "approval")),
-            _create_policy("oak_merge", ("PROJECT", "@PROJECT.oak"), (AUTO_MERGE_FIELD, "none")),
-            _create_policy("oak_later", ("PROJECT", "@PROJECT.oak"), (AUTO_MERGE_FIELD, "integration")),
+            _create_policy(
+                "elm_merge",
+                EntityField(name="PROJECT", value="@PROJECT.elm"),
+                EntityField(name=AUTO_MERGE_FIELD, value="integration"),
+            ),
+            _create_policy(
+                "oak_review",
+                EntityField(name="PROJECT", value="@PROJECT.oak"),
+                EntityField(name="REVIEW", value="approval"),
+            ),
+            _create_policy(
+                "oak_merge",
+                EntityField(name="PROJECT", value="@PROJECT.oak"),
+                EntityField(name=AUTO_MERGE_FIELD, value="none"),
+            ),
+            _create_policy(
+                "oak_later",
+                EntityField(name="PROJECT", value="@PROJECT.oak"),
+                EntityField(name=AUTO_MERGE_FIELD, value="integration"),
+            ),
         ]
 
         # Act
@@ -30,8 +46,16 @@ class ReadPolicyFieldTest(unittest.TestCase):
     def test_should_fall_back_on_the_neutral_value_when_no_policy_of_the_project_sets_the_field(self):
         # Arrange
         policies = [
-            _create_policy("elm_merge", ("PROJECT", "@PROJECT.elm"), (AUTO_MERGE_FIELD, "none")),
-            _create_policy("oak_review", ("PROJECT", "@PROJECT.oak"), ("REVIEW", "approval")),
+            _create_policy(
+                "elm_merge",
+                EntityField(name="PROJECT", value="@PROJECT.elm"),
+                EntityField(name=AUTO_MERGE_FIELD, value="none"),
+            ),
+            _create_policy(
+                "oak_review",
+                EntityField(name="PROJECT", value="@PROJECT.oak"),
+                EntityField(name="REVIEW", value="approval"),
+            ),
         ]
 
         # Act

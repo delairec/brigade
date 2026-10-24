@@ -6,7 +6,7 @@ from pathlib import Path
 from brigade.commands.rebase_done import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TIDEPOOL_PROJECT, WAVE_STARTED
 
 DESCENDING = ProcessAnswer()
 NOT_DESCENDING = ProcessAnswer(exit_code=1)
@@ -52,7 +52,10 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, ancestry: ProcessAnswer):
         answers = {
-            **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in TASK_WORKTREE.items()},
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
+                stdout="/home/user/tidepool/.git\n"
+            ),
             ("git", "fetch"): ProcessAnswer(),
             ("git", "merge-base", "--is-ancestor", "origin/integration/M4-tides", "HEAD"): ancestry,
             ("git", "rev-parse", "--verify"): ProcessAnswer(stdout="8885daa\n"),

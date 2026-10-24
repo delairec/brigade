@@ -460,6 +460,7 @@ MACHINE_OUTPUTS = {
     ("awawa", "lint"): "",
     ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
 }
+MACHINE_ANSWERS = {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()}
 WAVE_STARTED = {
     "schema_version": 2,
     "ts": "2026-10-18T09:00:00Z",
@@ -596,15 +597,20 @@ def _record_task_state(state: str) -> dict:
     }
 
 
+class CheckLogsReaderDouble:
+    def __init__(self, tails: dict | None):
+        self.tails = tails
+
+    def read_check_logs(self, request: dict) -> dict:
+        return {"schema_version": 1, "logs": [{"name": name, "tail": self.tails[name]} for name in request["checks"]]}
+
+
 def create_forge(found: dict | None, details: dict | None, tails: dict | None = None) -> ForgeDouble:
     return ForgeDouble(
         {
             "find_pull_request": lambda request: {"schema_version": 1, "pull_request": found},
             "read_pull_request": lambda request: {"schema_version": 1, "pull_request": details},
-            "read_check_logs": lambda request: {
-                "schema_version": 1,
-                "logs": [{"name": name, "tail": tails[name]} for name in request["checks"]],
-            },
+            "read_check_logs": CheckLogsReaderDouble(tails).read_check_logs,
         }
     )
 
@@ -1452,8 +1458,9 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         )
 
     def _read_events(self) -> list[dict]:
-        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
-        return [json.loads(line) for line in lines]
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
 
     def test_should_merge_the_pull_request_by_the_method_of_the_project(self):
         # Act
@@ -1650,7 +1657,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             "TASK": {"T7": TASK_TO_DELIVER},
         }
         outputs = {
-            **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()},
+            **MACHINE_ANSWERS,
             ("git", "branch", "--quiet"): ProcessAnswer(),
         }
         self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
@@ -1730,7 +1737,7 @@ FETCH_OF_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/M4
 CLI_BOUND_TO_A_FORGE_ACCOUNT = '[forge_accounts]\ncli = "tidepool-cli"\n'
 ENVIRONMENT_OF_THE_CLI_ACCOUNT = {"GH_TOKEN": "t0k3n"}
 REBASE_OUTPUTS = {
-    **{prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()},
+    **MACHINE_ANSWERS,
     REBASE_ONTO_THE_WAVE_BRANCH: ProcessAnswer(),
     ("git", "rebase", "--abort"): ProcessAnswer(),
     ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout=f"{REBASED_HEAD}\n"),
@@ -1817,8 +1824,9 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         return run
 
     def _read_events(self) -> list[dict]:
-        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
-        return [json.loads(line) for line in lines]
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
 
     def test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):
         # Arrange
