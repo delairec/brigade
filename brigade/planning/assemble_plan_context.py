@@ -1,8 +1,8 @@
-import json
 from collections.abc import Callable
 from pathlib import Path
 
 from brigade.corpus.collect_anchors import collect_anchors
+from brigade.corpus.decode_atom import decode_atom
 from brigade.errors import BrigadeError
 from brigade.planning.count_next_task_number import count_next_task_number
 
@@ -31,12 +31,8 @@ def _list_missing(read_awawa_document, root: Path, schemas: dict) -> list[dict]:
     return [*missing_types, {"type": TASK_TYPE, "field": MILESTONE_FIELD}]
 
 
-def _decode_atom(atom: str) -> str:
-    return json.loads(atom)
-
-
 def _read_title(entity: dict) -> str:
-    titles = ["".join(map(_decode_atom, field["atoms"])) for field in entity["fields"] if field["name"] == TITLE_FIELD]
+    titles = ["".join(map(decode_atom, field["atoms"])) for field in entity["fields"] if field["name"] == TITLE_FIELD]
     if not titles:
         raise BrigadeError(f"@{entity['type']}.{entity['name']} holds no {TITLE_FIELD}")
     return titles[0]

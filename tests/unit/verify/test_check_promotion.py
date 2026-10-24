@@ -82,3 +82,23 @@ class CheckPromotionTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(check["findings"], ["@TASK.B1 is delivered by #158, not by #160"])
+
+    def test_should_name_an_unanchored_criterion_with_the_backslash_awawa_keeps(self):
+        # Act
+        check = self.check(
+            [
+                {"name": "STATUS", "atoms": ["implemented"], "fields": []},
+                {"name": "DELIVERED_BY", "atoms": ["160"], "fields": []},
+                {"name": "SPEC", "atoms": [r'"matches brigade/cli\.py"'], "fields": []},
+            ]
+        )
+
+        # Assert
+        self.assertEqual(
+            check,
+            {
+                "name": "promotion",
+                "verdict": "fail",
+                "findings": [r"SPEC 1 has no IMPL whose anchor resolves: matches brigade/cli\.py"],
+            },
+        )

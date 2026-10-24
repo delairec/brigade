@@ -252,3 +252,30 @@ class AssembleTaskContextTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception), "awawa context @TASK.B12 --with-schema . exited 1: @TASK.B12 is not defined"
         )
+
+    def test_should_carry_the_rules_of_a_path_named_beside_a_backslash_awawa_keeps(self):
+        # Arrange
+        runtime = self.create_runtime()
+        self.script_rules()
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B12", "--json", str(self.worktree_path)),
+            {"fields": [{"name": "SPEC", "atoms": [r'"edit brigade/parse.py, then grep a\.b"'], "fields": []}]},
+        )
+        configuration = Configuration(instructions=str(self.instructions))
+
+        # Act
+        context = assemble_task_context(runtime, configuration, self.worktree, ATTRIBUTION)
+
+        # Assert
+        self.assertEqual(
+            context["rules"],
+            [
+                {
+                    "trigger": "python_file",
+                    "command": f"awawa context @TRIGGER.python_file --depth 1 --skip reasoning {self.instructions}",
+                    "exit_code": 0,
+                    "stderr": "",
+                    "output": "RULE python\n",
+                }
+            ],
+        )

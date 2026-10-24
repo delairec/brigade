@@ -228,3 +228,17 @@ class AssemblePlanContextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "@DECISION.D1 holds no TITLE")
+
+    def test_should_keep_in_a_title_the_backslash_awawa_keeps(self):
+        # Arrange
+        self.documents[(ROOT, ("show", "@TASK.B2"))] = {
+            **TASK_B2,
+            "fields": [{"name": "TITLE", "atoms": [r'"the \.awawa parser"'], "fields": []}],
+        }
+        self.script_task_schema(TASK_SCHEMA)
+
+        # Act
+        context = self.assemble()
+
+        # Assert
+        self.assertEqual(context["tasks"], [{"name": "B2", "status": "draft", "title": r"the \.awawa parser"}])

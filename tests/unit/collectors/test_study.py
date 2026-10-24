@@ -91,3 +91,19 @@ class StudyCollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the study collector takes name=<study>")
+
+    def test_should_keep_in_the_answer_the_backslash_awawa_keeps(self):
+        # Arrange
+        self.record_answer("20261002T080000Z-bbbbbb")
+        self.processes.answer_entity(self.runtime.paths.config_root, "STUDY", "trees", STUDY_FIELDS)
+        answer = self.root / "state" / "runs" / "20261002T080000Z-bbbbbb" / "answer.awawa"
+        self.processes.answer_json(
+            ("awawa", "show", "@FINDING.trees_20261002T080000Z_bbbbbb", "--json", str(answer)),
+            {"fields": [{"name": "VERDICT", "atoms": [r'"two oaks, grep oak\.b"']}]},
+        )
+
+        # Act
+        document = collect(create_environment('{"name": "trees"}'), self.runtime, EQUIPMENT)
+
+        # Assert
+        self.assertEqual(document["items"][0]["fields"], [{"name": "VERDICT", "value": r"two oaks, grep oak\.b"}])

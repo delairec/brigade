@@ -214,3 +214,48 @@ class AwawaDocumentRenderingTest(AwawaDocumentTestCase):
                 ],
             },
         )
+
+    def test_should_render_a_backslash_awawa_keeps_as_it_holds_it(self):
+        # Arrange
+        self.path.write_text(SCHEMA + '\nSTEP s1\n\tDONE "matched grep a\\.b"\n')
+
+        # Act
+        rendering = render_document(self.describe_request(), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            rendering,
+            {
+                "schema_version": 1,
+                "text": "STEP s1\n  DONE: matched grep a\\.b\n",
+                "entities": [
+                    {"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "matched grep a\\.b"}]}
+                ],
+            },
+        )
+
+
+class AwawaDocumentDescriptionOfASchemaHoldingABackslashTest(AwawaDocumentTestCase):
+    def test_should_name_the_type_with_the_backslash_its_description_keeps(self):
+        # Arrange
+        request = {
+            **self.describe_request(role_has_shell=False),
+            "schema": 'SCHEMA STEP\n\tDESC "a step of grep a\\.b"\n',
+        }
+
+        # Act
+        description = describe_document(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            description,
+            {
+                "schema_version": 1,
+                "text": f"The progress is the awawa corpus {self.path}: after the schema it holds, append one entity"
+                " per entry, of a type the schema declares, named by the initial of its type in lower case and its"
+                " rank among the entities of that type in order of writing.\n\n"
+                "- STEP: a step of grep a\\.b\n\n"
+                "- one entry per major step\n"
+                "- never command output\n",
+            },
+        )
