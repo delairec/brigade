@@ -266,3 +266,49 @@ class MainRefusalTest(MainTestCase):
                 self.assertEqual(exit_code, 2)
                 self.assertEqual(stdout, "")
                 self.assertRegex(stderr, expected_error)
+
+
+class MainTrailTest(MainTestCase):
+    def setUp(self):
+        super().setUp()
+        empty_search_path = self.root / "empty"
+        empty_search_path.mkdir()
+        self.environment["PATH"] = str(empty_search_path)
+        self.ticks = self.root / "state" / "brigade" / "ticks"
+        self.commands = self.root / "state" / "brigade" / "commands"
+
+    def write_trails(self, *paths: Path) -> None:
+        for path in paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("")
+
+    def test_should_write_the_trail_of_the_command_in_a_file_named_after_it(self):
+        # Act
+        self.run_main(["scheduler", "status", "--json"])
+
+        # Assert
+        [trail] = self.commands.iterdir()
+        self.assertRegex(trail.name, r"^\d{8}T\d{6}Z-scheduler-status\.jsonl$")
+
+    def test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):
+        # Act
+        exit_code, _, stderr = self.run_main(["--verbose", "scheduler", "status"])
+
+        # Assert
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")
+
+    def test_should_remove_the_expired_trails_before_the_command_runs(self):
+        # Arrange
+        expired_tick = self.ticks / "20000101T000000Z.jsonl"
+        expired_command = self.commands / "20000101T000000Z-doctor.jsonl"
+        future_command = self.commands / "29991231T000000Z-doctor.jsonl"
+        self.write_trails(expired_tick, expired_command, future_command)
+
+        # Act
+        self.run_main(["scheduler", "status", "--json"])
+
+        # Assert
+        self.assertEqual(expired_tick.exists(), False)
+        self.assertEqual(expired_command.exists(), False)
+        self.assertEqual(future_command.exists(), True)

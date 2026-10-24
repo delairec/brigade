@@ -219,6 +219,16 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
             },
         )
 
+    def test_should_write_no_tick_trail_on_a_dry_run(self):
+        # Arrange
+        request = Namespace(mode="dry-run")
+
+        # Act
+        COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual((self.root / "state" / "ticks").exists(), False)
+
     def test_should_report_each_round_of_the_loop_on_stderr(self):
         # Arrange
         create_round = _create_single_round_factory(

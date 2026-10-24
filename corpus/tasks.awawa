@@ -4551,7 +4551,7 @@ TASK B72
 			+ "Callable[[ProcessTrace], None]:"
 		IMPL "brigade/system/render_trace.py::def render_trace(trace: ProcessTrace) -> str:"
 		IMPL "tests/unit/system/test_render_trace.py::class RenderTraceTest(unittest.TestCase):"
-		IMPL "tests/cli/test_trails.py::def"
+		IMPL "tests/unit/test_cli.py::def"
 			+ "test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):"
 	SPEC "brigade run --detach --verbose prints the spawned line of the run, and the process it"
 		+ "re-executes receives no --verbose"

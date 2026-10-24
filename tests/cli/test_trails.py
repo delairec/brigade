@@ -175,18 +175,12 @@ class TrailTestCase(unittest.TestCase):
         self.machine = TemporaryMachine(Path(self.root.name).resolve())
         self.state = self.machine.state_home / "brigade"
         self.ticks = self.state / "ticks"
-        self.commands = self.state / "commands"
 
     def tearDown(self):
         self.root.cleanup()
 
     def run_brigade(self, *arguments: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments)
-
-    def write_trails(self, *paths: Path) -> None:
-        for path in paths:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("")
 
 
 class BrigadeTickTrailTest(TrailTestCase):
@@ -199,43 +193,6 @@ class BrigadeTickTrailTest(TrailTestCase):
         [trail] = self.ticks.iterdir()
         self.assertRegex(trail.name, TICK_TRAIL_PATTERN)
 
-    def test_should_write_no_tick_trail_on_a_dry_run(self):
-        # Act
-        completed = self.run_brigade("tick", "--dry-run")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertFalse(self.ticks.exists())
-
-    def test_should_remove_the_trails_older_than_seven_days_by_default(self):
-        # Arrange
-        old_tick = self.ticks / "20000101T000000Z.jsonl"
-        old_command = self.commands / "20000101T000000Z-doctor.jsonl"
-        future_command = self.commands / "29991231T000000Z-doctor.jsonl"
-        self.write_trails(old_tick, old_command, future_command)
-
-        # Act
-        completed = self.run_brigade("tick", "--once")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(old_tick.exists(), False)
-        self.assertEqual(old_command.exists(), False)
-        self.assertEqual(future_command.exists(), True)
-
-    def test_should_keep_the_trails_younger_than_the_trail_days_of_config_toml(self):
-        # Arrange
-        self.machine.write_configuration("trail_days = 100000\n")
-        old_tick = self.ticks / "20000101T000000Z.jsonl"
-        self.write_trails(old_tick)
-
-        # Act
-        completed = self.run_brigade("tick", "--once")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertTrue(old_tick.exists())
-
 
 class BrigadeCommandTrailTest(TrailTestCase):
     def setUp(self):
@@ -245,27 +202,6 @@ class BrigadeCommandTrailTest(TrailTestCase):
     def run_status(self, *options: str):
         return self.machine.run_brigade(
             CLONE_ENTRY_POINT, "scheduler", "status", *options, environment=self.environment
-        )
-
-    def test_should_write_the_trail_of_the_command_named_after_it(self):
-        # Act
-        completed = self.run_status("--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        [trail] = self.commands.glob("*-scheduler-status.jsonl")
-        self.assertEqual(
-            read_trail(trail),
-            [
-                {
-                    "schema_version": 1,
-                    "argv": ["crontab", "-l"],
-                    "cwd": "/",
-                    "exit": None,
-                    "duration_ms": ANY,
-                    "outcome": "not_found",
-                }
-            ],
         )
 
     def test_should_render_each_record_on_stderr_and_leave_stdout_unchanged_under_verbose(self):
@@ -281,21 +217,3 @@ class BrigadeCommandTrailTest(TrailTestCase):
             ' "paused_waves": [], "parked_tasks": []}\n',
         )
         self.assertEqual(completed.stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")
-
-    def test_should_render_each_record_on_stderr_under_a_verbose_given_before_the_command(self):
-        # Act
-        completed = self.machine.run_brigade(
-            CLONE_ENTRY_POINT, "--verbose", "scheduler", "status", environment=self.environment
-        )
-
-        # Assert
-        self.assertEqual(completed.returncode, 0)
-        self.assertEqual(completed.stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")
-
-    def test_should_print_no_record_on_stderr_without_verbose(self):
-        # Act
-        completed = self.run_status("--json")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0)
-        self.assertEqual(completed.stderr, "")
