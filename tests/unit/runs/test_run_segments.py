@@ -1,15 +1,14 @@
 import json
+import re
 import shutil
 import signal
 import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.ledger.read_ledger import read_ledger
-from brigade.ledger.run_finished import RunFinished
-from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.resolve_procedure import Procedure
+from brigade.runs.run_segment import SegmentRecord
 from brigade.runs.run_segments import run_segments
 from brigade.system.stop_signal_receiver import StopSignalReceiver
 from tests.unit.create_test_paths import create_test_paths
@@ -19,6 +18,7 @@ from tests.unit.runs.create_run_plan import RUN_ID, create_run_plan
 
 PID_HELD_BY_NO_PROCESS = 2**31 - 1
 LIMIT_ALREADY_REACHED_S = 0.0
+UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 LAUNCH_OPERATIONS = ("launch-argv", "resume-argv")
 RATE_LIMITED_SESSION = "rate-limited-session"
 NO_SESSION_TO_RESUME = None
@@ -43,6 +43,11 @@ LAUNCH = {
     "stdin": "the brief of the run",
     "session_id": None,
 }
+
+
+class GeneratedSessionIdMatcher:
+    def __eq__(self, session_id: object) -> bool:
+        return isinstance(session_id, str) and re.fullmatch(UUID_PATTERN, session_id) is not None
 
 
 class ClientAnsweringOutcomesDouble:
@@ -88,6 +93,10 @@ class RunSegmentsTestCase(unittest.TestCase):
         self.runtime = create_test_runtime(self.paths, run_process=self.git, spawn_process=spawn_an_exited_client)
         (self.root / "project").mkdir()
 
+    def read_events(self) -> list[dict]:
+        [ledger_file] = (self.paths.state_root / "ledger").glob("*.jsonl")
+        return list(map(json.loads, ledger_file.read_text().splitlines()))
+
     def create_plan(
         self, outcomes: list[str], progress: str | None = None, client_double=ClientAnsweringOutcomesDouble, **changes
     ):
@@ -108,8 +117,60 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 1)
-        self.assertEqual(json.loads((plan.run_directory / "result.json").read_text())["outcome"], "done")
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="done",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                )
+            ],
+        )
+        self.assertEqual(
+            json.loads((plan.run_directory / "result.json").read_text()),
+            {
+                "schema_version": 2,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.finished",
+                "run": RUN_ID,
+                "segment": 1,
+                "procedure": "build-task",
+                "slot": "build",
+                "role": "builder",
+                "client": "fake",
+                "project": None,
+                "session": "session-b73",
+                "main_steps": 12,
+                "total_steps": None,
+                "duration_ms": 0,
+                "usage": None,
+                "outcome": "done",
+                "error_class": None,
+                "exit": 0,
+                "wave": None,
+                "task": None,
+                "nulls": {
+                    "project": "no project given",
+                    "wave": "not launched by a wave",
+                    "task": "not launched for a task",
+                    "total_steps": "the client reads no transcript",
+                    "usage": "the client reported no usage",
+                    "error_class": "the run did not fail",
+                },
+            },
+        )
 
 
 class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
@@ -121,12 +182,72 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 1)
         self.assertEqual(
-            read_ledger(self.paths.state_root).entries[1].event,
-            SignalRecorded(
-                signal="handed_over", project=None, procedure="build-task", run=RUN_ID, segment=1, budget=40
-            ),
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                )
+            ],
+        )
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "handed_over",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the client reported no error class",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "handed_over",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 40,
+                },
+            ],
         )
 
     def test_should_stop_once_the_hand_overs_are_spent(self):
@@ -137,7 +258,27 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 1)
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                )
+            ],
+        )
 
     def test_should_run_a_next_segment_while_the_progress_file_holds_an_entry(self):
         # Arrange
@@ -147,10 +288,43 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[0].number, 1)
-        self.assertEqual(records[0].outcome, "handed_over")
-        self.assertEqual(records[1].number, 2)
-        self.assertEqual(records[1].outcome, "done")
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=2,
+                    outcome="done",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
 
 
 class ClientRecordingLaunchesDouble(ClientAnsweringOutcomesDouble):
@@ -189,8 +363,105 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(client.launches[0]["session_id"], "rate-limited-session")
-        self.assertNotEqual(client.launches[1]["session_id"], "rate-limited-session")
+        self.assertEqual(
+            client.launches,
+            [
+                {
+                    "schema_version": 1,
+                    "worktree": f"{self.root}/project",
+                    "brief": "# Progress so far\n"
+                    "\n"
+                    "- the first segment is done\n"
+                    "\n"
+                    "# Procedure build-task\n"
+                    "\n"
+                    "Deliver the task.\n"
+                    "\n"
+                    "# Brief\n"
+                    "\n"
+                    "Deliver S3 behind the feature flag of the shop.\n"
+                    "\n"
+                    "# Progress file\n"
+                    "\n"
+                    "The progress is the Markdown file "
+                    f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md.\n"
+                    "\n"
+                    "- one entry per major step: what it did in one line, the facts it established, one line each and "
+                    "five at most, and the next step as the procedure names it, complete at the end\n"
+                    "- a fact is what the next segment needs and no command gives back\n"
+                    "- never command output, a diff, the course of the step, a restatement of the brief or a fact an "
+                    "earlier entry holds\n"
+                    "- a handover entry holds what remains, one line per step not done, and the next step\n"
+                    "\n"
+                    "# End of segment\n"
+                    "\n"
+                    "End your final message on one of these lines: brigade-end: done once the work is delivered, "
+                    "brigade-end: handed_over when a next segment resumes it from the progress file, brigade-end: "
+                    "blocked when it waits for a ruling.\n",
+                    "role": {
+                        "name": "builder",
+                        "package": "You build.",
+                        "package_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/role.md",
+                        "capabilities": ["read", "write"],
+                        "reasoning": "standard",
+                        "budget": 40,
+                    },
+                    "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
+                    "session_id": "rate-limited-session",
+                    "stop_at": "2026-10-19T09:23:00Z",
+                    "reasoning_table": {},
+                    "settings": {},
+                    "home": f"{self.root}/home",
+                },
+                {
+                    "schema_version": 1,
+                    "worktree": f"{self.root}/project",
+                    "brief": "# Progress so far\n"
+                    "\n"
+                    "- the first segment is done\n"
+                    "\n"
+                    "# Procedure build-task\n"
+                    "\n"
+                    "Deliver the task.\n"
+                    "\n"
+                    "# Brief\n"
+                    "\n"
+                    "Deliver S3 behind the feature flag of the shop.\n"
+                    "\n"
+                    "# Progress file\n"
+                    "\n"
+                    "The progress is the Markdown file "
+                    f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md.\n"
+                    "\n"
+                    "- one entry per major step: what it did in one line, the facts it established, one line each and "
+                    "five at most, and the next step as the procedure names it, complete at the end\n"
+                    "- a fact is what the next segment needs and no command gives back\n"
+                    "- never command output, a diff, the course of the step, a restatement of the brief or a fact an "
+                    "earlier entry holds\n"
+                    "- a handover entry holds what remains, one line per step not done, and the next step\n"
+                    "\n"
+                    "# End of segment\n"
+                    "\n"
+                    "End your final message on one of these lines: brigade-end: done once the work is delivered, "
+                    "brigade-end: handed_over when a next segment resumes it from the progress file, brigade-end: "
+                    "blocked when it waits for a ruling.\n",
+                    "role": {
+                        "name": "builder",
+                        "package": "You build.",
+                        "package_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/role.md",
+                        "capabilities": ["read", "write"],
+                        "reasoning": "standard",
+                        "budget": 40,
+                    },
+                    "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
+                    "session_id": GeneratedSessionIdMatcher(),
+                    "stop_at": "2026-10-19T09:23:00Z",
+                    "reasoning_table": {},
+                    "settings": {},
+                    "home": f"{self.root}/home",
+                },
+            ],
+        )
 
     def test_should_relaunch_a_run_without_its_session_on_a_brief_opening_on_its_progress(self):
         # Arrange
@@ -201,10 +472,79 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[0].number, 2)
-        self.assertEqual(records[0].outcome, "done")
-        self.assertRegex(client.launches[0]["brief"], r"^# Progress so far\n\n- the first segment is done\n")
-        self.assertIn("# Brief\n\nDeliver S3 behind the feature flag of the shop.\n", client.launches[0]["brief"])
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=2,
+                    outcome="done",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                )
+            ],
+        )
+        self.assertEqual(
+            client.launches,
+            [
+                {
+                    "schema_version": 1,
+                    "worktree": f"{self.root}/project",
+                    "brief": "# Progress so far\n"
+                    "\n"
+                    "- the first segment is done\n"
+                    "\n"
+                    "# Procedure build-task\n"
+                    "\n"
+                    "Deliver the task.\n"
+                    "\n"
+                    "# Brief\n"
+                    "\n"
+                    "Deliver S3 behind the feature flag of the shop.\n"
+                    "\n"
+                    "# Progress file\n"
+                    "\n"
+                    "The progress is the Markdown file "
+                    f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md.\n"
+                    "\n"
+                    "- one entry per major step: what it did in one line, the facts it established, one line each and "
+                    "five at most, and the next step as the procedure names it, complete at the end\n"
+                    "- a fact is what the next segment needs and no command gives back\n"
+                    "- never command output, a diff, the course of the step, a restatement of the brief or a fact an "
+                    "earlier entry holds\n"
+                    "- a handover entry holds what remains, one line per step not done, and the next step\n"
+                    "\n"
+                    "# End of segment\n"
+                    "\n"
+                    "End your final message on one of these lines: brigade-end: done once the work is delivered, "
+                    "brigade-end: handed_over when a next segment resumes it from the progress file, brigade-end: "
+                    "blocked when it waits for a ruling.\n",
+                    "role": {
+                        "name": "builder",
+                        "package": "You build.",
+                        "package_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/role.md",
+                        "capabilities": ["read", "write"],
+                        "reasoning": "standard",
+                        "budget": 40,
+                    },
+                    "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
+                    "session_id": GeneratedSessionIdMatcher(),
+                    "stop_at": "2026-10-19T09:23:00Z",
+                    "reasoning_table": {},
+                    "settings": {},
+                    "home": f"{self.root}/home",
+                }
+            ],
+        )
 
 
 class ProcessCutAtTheLimitDouble:
@@ -236,16 +576,55 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.paths.state_root).entries[1].event,
-            SignalRecorded(
-                signal="wall_limit_reached",
-                project=None,
-                procedure="build-task",
-                run=RUN_ID,
-                segment=1,
-                budget=40,
-                wall_limit_s=0.0,
-            ),
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": None,
+                    "main_steps": None,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "wall_limit",
+                    "error_class": None,
+                    "exit": None,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "session": "the client names no session at launch",
+                        "main_steps": "the client reads no transcript",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reads no transcript",
+                        "error_class": "cut at the wall-time limit",
+                        "exit": "cut at the wall-time limit",
+                    },
+                    "message": "cut at the wall-time limit of 0 s",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "wall_limit_reached",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 40,
+                    "wall_limit_s": 0.0,
+                },
+            ],
         )
 
     def test_should_relaunch_a_segment_cut_on_the_clock_with_progress_up_to_the_last_hand_over(self):
@@ -258,8 +637,59 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 3)
-        self.assertEqual(records[-1].outcome, "wall_limit")
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="wall_limit",
+                    session_id=None,
+                    client_steps=None,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message="cut at the wall-time limit of 0 s",
+                    exit_code=None,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=2,
+                    outcome="wall_limit",
+                    session_id=None,
+                    client_steps=None,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message="cut at the wall-time limit of 0 s",
+                    exit_code=None,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=3,
+                    outcome="wall_limit",
+                    session_id=None,
+                    client_steps=None,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message="cut at the wall-time limit of 0 s",
+                    exit_code=None,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
 
 
 class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
@@ -272,16 +702,51 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.paths.state_root).entries[1].event,
-            SignalRecorded(
-                signal="wall_limit_reached",
-                project=None,
-                procedure="build-task",
-                run=RUN_ID,
-                segment=1,
-                budget=40,
-                wall_limit_s=4.0,
-            ),
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "soft_limit",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the client reported no error class",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "wall_limit_reached",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 40,
+                    "wall_limit_s": 4.0,
+                },
+            ],
         )
 
     def test_should_resume_a_segment_stopped_at_the_soft_limit_with_progress(self):
@@ -292,8 +757,43 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 2)
-        self.assertEqual(records[-1].outcome, "done")
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="soft_limit",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=2,
+                    outcome="done",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
 
 
 class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
@@ -306,16 +806,51 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.paths.state_root).entries[1].event,
-            SignalRecorded(
-                signal="budget_exceeded",
-                project=None,
-                procedure="build-task",
-                run=RUN_ID,
-                segment=1,
-                budget=5,
-                steps=12,
-            ),
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the run did not fail",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_exceeded",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 5,
+                    "steps": 12,
+                },
+            ],
         )
 
     def test_should_record_no_signal_for_a_segment_at_exactly_its_budget(self):
@@ -326,7 +861,41 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(len(read_ledger(self.paths.state_root).entries), 1)
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the run did not fail",
+                    },
+                }
+            ],
+        )
 
     def test_should_record_no_signal_for_the_steps_of_a_client_that_counts_none(self):
         # Arrange
@@ -336,7 +905,42 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(len(read_ledger(self.paths.state_root).entries), 1)
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": None,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "main_steps": "the client counts no steps and the client reads no transcript",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the run did not fail",
+                    },
+                }
+            ],
+        )
 
 
 class RunSegmentsInADisposableWorktreeTest(RunSegmentsTestCase):
@@ -402,10 +1006,6 @@ class ClientFailingOnAnErrorClassDouble(ClientAnsweringOutcomesDouble):
 
 
 class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
-    def read_ledger_lines(self) -> list[dict]:
-        [ledger_file] = (self.paths.state_root / "ledger").glob("*.jsonl")
-        return list(map(json.loads, ledger_file.read_text().splitlines()))
-
     def test_should_append_the_finished_run_to_the_ledger(self):
         # Arrange
         plan = self.create_plan(["done"], client_double=ClientReportingUsageDouble)
@@ -415,7 +1015,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
 
         # Assert
         self.assertEqual(
-            self.read_ledger_lines(),
+            self.read_events(),
             [
                 {
                     "schema_version": 2,
@@ -457,9 +1057,80 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        [finished] = self.read_ledger_lines()
-        self.assertEqual(json.loads((plan.run_directory / "segments" / "1" / "result.json").read_text()), finished)
-        self.assertEqual(json.loads((plan.run_directory / "result.json").read_text()), finished)
+        self.assertEqual(
+            json.loads((plan.run_directory / "segments" / "1" / "result.json").read_text()),
+            {
+                "schema_version": 2,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.finished",
+                "run": RUN_ID,
+                "segment": 1,
+                "procedure": "build-task",
+                "slot": "build",
+                "role": "builder",
+                "client": "fake",
+                "project": None,
+                "session": "session-b73",
+                "main_steps": 12,
+                "total_steps": None,
+                "duration_ms": 0,
+                "usage": {
+                    "input_tokens": 120,
+                    "output_tokens": 3400,
+                    "cache_creation_input_tokens": 16778,
+                    "cache_read_input_tokens": 98000,
+                },
+                "outcome": "done",
+                "error_class": None,
+                "exit": 0,
+                "wave": None,
+                "task": None,
+                "nulls": {
+                    "project": "no project given",
+                    "wave": "not launched by a wave",
+                    "task": "not launched for a task",
+                    "total_steps": "the client reads no transcript",
+                    "error_class": "the run did not fail",
+                },
+            },
+        )
+        self.assertEqual(
+            json.loads((plan.run_directory / "result.json").read_text()),
+            {
+                "schema_version": 2,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.finished",
+                "run": RUN_ID,
+                "segment": 1,
+                "procedure": "build-task",
+                "slot": "build",
+                "role": "builder",
+                "client": "fake",
+                "project": None,
+                "session": "session-b73",
+                "main_steps": 12,
+                "total_steps": None,
+                "duration_ms": 0,
+                "usage": {
+                    "input_tokens": 120,
+                    "output_tokens": 3400,
+                    "cache_creation_input_tokens": 16778,
+                    "cache_read_input_tokens": 98000,
+                },
+                "outcome": "done",
+                "error_class": None,
+                "exit": 0,
+                "wave": None,
+                "task": None,
+                "nulls": {
+                    "project": "no project given",
+                    "wave": "not launched by a wave",
+                    "task": "not launched for a task",
+                    "total_steps": "the client reads no transcript",
+                    "error_class": "the run did not fail",
+                },
+            },
+        )
 
 
 class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
@@ -476,8 +1147,59 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 3)
-        self.assertEqual(records[-1].outcome, "turn_limit")
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="turn_limit",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class="turn_limit",
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=2,
+                    outcome="turn_limit",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class="turn_limit",
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=3,
+                    outcome="turn_limit",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class="turn_limit",
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
 
     def test_should_append_one_finished_run_per_segment(self):
         # Arrange
@@ -492,14 +1214,130 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        entries = read_ledger(self.paths.state_root).entries
         self.assertEqual(
+            self.read_events(),
             [
-                (type(entries[0].event), entries[0].event.segment),
-                (type(entries[2].event), entries[2].event.segment),
-                (type(entries[4].event), entries[4].event.segment),
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "turn_limit",
+                    "error_class": "turn_limit",
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_reached",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 40,
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 2,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "turn_limit",
+                    "error_class": "turn_limit",
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_reached",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 2,
+                    "budget": 40,
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 3,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "turn_limit",
+                    "error_class": "turn_limit",
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_reached",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 3,
+                    "budget": 40,
+                },
             ],
-            [(RunFinished, 1), (RunFinished, 2), (RunFinished, 3)],
         )
 
     def test_should_not_relaunch_a_segment_ended_on_the_step_cap_with_an_empty_progress_file(self):
@@ -510,7 +1348,27 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 1)
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="turn_limit",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class="turn_limit",
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                )
+            ],
+        )
 
     def test_should_record_the_budget_exceeded_then_the_step_cap_reached(self):
         # Arrange
@@ -522,22 +1380,61 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        [_started, exceeded, reached] = read_ledger(self.paths.state_root).entries
         self.assertEqual(
-            [exceeded.event, reached.event],
+            self.read_events(),
             [
-                SignalRecorded(
-                    signal="budget_exceeded",
-                    project=None,
-                    procedure="build-task",
-                    run=RUN_ID,
-                    segment=1,
-                    budget=5,
-                    steps=12,
-                ),
-                SignalRecorded(
-                    signal="budget_reached", project=None, procedure="build-task", run=RUN_ID, segment=1, budget=5
-                ),
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "turn_limit",
+                    "error_class": "turn_limit",
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_exceeded",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 5,
+                    "steps": 12,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_reached",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 5,
+                },
             ],
         )
 
@@ -549,7 +1446,38 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(json.loads((plan.run_directory / "result.json").read_text())["outcome"], "turn_limit")
+        self.assertEqual(
+            json.loads((plan.run_directory / "result.json").read_text()),
+            {
+                "schema_version": 2,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.finished",
+                "run": RUN_ID,
+                "segment": 1,
+                "procedure": "build-task",
+                "slot": "build",
+                "role": "builder",
+                "client": "fake",
+                "project": None,
+                "session": "session-b73",
+                "main_steps": 12,
+                "total_steps": None,
+                "duration_ms": 0,
+                "usage": None,
+                "outcome": "turn_limit",
+                "error_class": "turn_limit",
+                "exit": 0,
+                "wave": None,
+                "task": None,
+                "nulls": {
+                    "project": "no project given",
+                    "wave": "not launched by a wave",
+                    "task": "not launched for a task",
+                    "total_steps": "the client reads no transcript",
+                    "usage": "the client reported no usage",
+                },
+            },
+        )
 
 
 class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
@@ -563,8 +1491,59 @@ class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 3)
-        self.assertEqual(records[-1].outcome, "handed_over")
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=2,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=3,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
 
     def test_should_open_the_brief_of_the_next_segment_on_the_progress_file(self):
         # Arrange
@@ -610,8 +1589,59 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 3)
-        self.assertEqual(records[-1].outcome, "undeclared")
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="undeclared",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=2,
+                    outcome="undeclared",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=3,
+                    outcome="undeclared",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
 
     def test_should_not_relaunch_an_undeclared_segment_with_an_empty_progress_file(self):
         # Arrange
@@ -621,7 +1651,27 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
         records = run_segments(plan, self.runtime, StopSignalReceiver())
 
         # Assert
-        self.assertEqual(records[-1].number, 1)
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=1,
+                    outcome="undeclared",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                )
+            ],
+        )
 
     def test_should_record_that_the_segment_ended_undeclared(self):
         # Arrange
@@ -632,8 +1682,50 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.paths.state_root).entries[1].event,
-            SignalRecorded(signal="undeclared", project=None, procedure="build-task", run=RUN_ID, segment=1, budget=40),
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "undeclared",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "nulls": {
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the client reported no error class",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "undeclared",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 40,
+                },
+            ],
         )
 
 
@@ -641,10 +1733,54 @@ class RunSegmentsOfASegmentEndedWithoutRelaunchTest(RunSegmentsTestCase):
     def test_should_stop_after_one_segment_whatever_its_progress(self):
         # Arrange
         rows = [
-            ("blocked", "blocked", ClientAnsweringOutcomesDouble),
-            ("failed on a client error", "execution", ClientFailingOnAnErrorClassDouble),
+            (
+                "blocked",
+                "blocked",
+                ClientAnsweringOutcomesDouble,
+                [
+                    SegmentRecord(
+                        number=1,
+                        outcome="blocked",
+                        session_id="session-b73",
+                        client_steps=12,
+                        usage=None,
+                        error_class=None,
+                        reset=None,
+                        message=None,
+                        exit_code=0,
+                        measured_ms=0,
+                        cost_usd=None,
+                        counted_steps=None,
+                        uncounted="the client reads no transcript",
+                        adapter_failure=None,
+                    )
+                ],
+            ),
+            (
+                "failed on a client error",
+                "execution",
+                ClientFailingOnAnErrorClassDouble,
+                [
+                    SegmentRecord(
+                        number=1,
+                        outcome="failed",
+                        session_id="session-b73",
+                        client_steps=12,
+                        usage=None,
+                        error_class="execution",
+                        reset=None,
+                        message=None,
+                        exit_code=0,
+                        measured_ms=0,
+                        cost_usd=None,
+                        counted_steps=None,
+                        uncounted="the client reads no transcript",
+                        adapter_failure=None,
+                    )
+                ],
+            ),
         ]
-        for case, outcome, client_double in rows:
+        for case, outcome, client_double, expected in rows:
             with self.subTest(case=case):
                 # Arrange
                 shutil.rmtree(self.root / "state", ignore_errors=True)
@@ -656,4 +1792,4 @@ class RunSegmentsOfASegmentEndedWithoutRelaunchTest(RunSegmentsTestCase):
                 records = run_segments(plan, self.runtime, StopSignalReceiver())
 
                 # Assert
-                self.assertEqual(records[-1].number, 1)
+                self.assertEqual(records, expected)
