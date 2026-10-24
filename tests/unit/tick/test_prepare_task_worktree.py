@@ -240,7 +240,33 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
             prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
 
         # Assert
-        self.assertEqual(runner.commands[-1], (str(WORKTREE), ("false",)))
+        self.assertEqual(
+            runner.commands,
+            [
+                (str(self.paths.config_root), ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root))),
+                (
+                    str(self.paths.config_root),
+                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
+                ),
+                ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
+                ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
+                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")),
+                (
+                    "/srv/shop",
+                    (
+                        "git",
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        "-b",
+                        "task/w1/B1",
+                        "/srv/shop/.brigade/worktrees/B1",
+                        "integration/w1",
+                    ),
+                ),
+                ("/srv/shop/.brigade/worktrees/B1", ("false",)),
+            ],
+        )
 
     def test_should_run_no_line_of_a_setup_holding_a_line_that_splits_into_no_argv(self):
         # Arrange
@@ -251,7 +277,32 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
             prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
 
         # Assert
-        self.assertEqual(runner.commands[-1], ("/srv/shop", ADD_TASK_WORKTREE))
+        self.assertEqual(
+            runner.commands,
+            [
+                (str(self.paths.config_root), ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root))),
+                (
+                    str(self.paths.config_root),
+                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
+                ),
+                ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
+                ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
+                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")),
+                (
+                    "/srv/shop",
+                    (
+                        "git",
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        "-b",
+                        "task/w1/B1",
+                        "/srv/shop/.brigade/worktrees/B1",
+                        "integration/w1",
+                    ),
+                ),
+            ],
+        )
 
     def test_should_refuse_a_setup_leaving_the_head_off_the_wave_branch(self):
         # Arrange
@@ -277,7 +328,34 @@ class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCa
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION)
 
         # Assert
-        self.assertEqual(runner.commands[-2], (str(WORKTREE), ("touch", "$PWD")))
+        self.assertEqual(
+            runner.commands,
+            [
+                (str(self.paths.config_root), ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root))),
+                (
+                    str(self.paths.config_root),
+                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
+                ),
+                ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
+                ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
+                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")),
+                (
+                    "/srv/shop",
+                    (
+                        "git",
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        "-b",
+                        "task/w1/B1",
+                        "/srv/shop/.brigade/worktrees/B1",
+                        "integration/w1",
+                    ),
+                ),
+                ("/srv/shop/.brigade/worktrees/B1", ("touch", "$PWD")),
+                ("/srv/shop/.brigade/worktrees/B1", ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
+            ],
+        )
 
 
 class PrepareTaskWorktreeUnderTheLockTest(PrepareTaskWorktreeTestCase):

@@ -171,7 +171,35 @@ class WriteAnswerToFileTest(unittest.TestCase):
         write_answer_to_file(self.create_context("github"), PUBLICATION)
 
         # Assert
-        self.assertEqual(self.processes.list_argvs()[-1], ("git", "worktree", "remove", "--force", str(self.checkout)))
+        self.assertEqual(
+            self.processes.list_argvs(),
+            [
+                ("awawa", "status", "PROJECT", "--json", f"{self.root}/config"),
+                ("awawa", "show", "@PROJECT.oak", "--json", f"{self.root}/config"),
+                ("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"),
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    f"{self.root}/state/runs/20261019T090000Z-aaaaaa/checkout",
+                    "main",
+                ),
+                ("git", "switch", "--quiet", "--force-create", "brigade/study-trees-20261019T090000Z-aaaaaa"),
+                ("git", "add", "--", "docs/studies/20261019T090000Z-aaaaaa.md"),
+                ("git", "diff", "--cached", "--quiet", "--", "docs/studies/20261019T090000Z-aaaaaa.md"),
+                (
+                    "git",
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    "docs(studies): add the answer of trees, run 20261019T090000Z-aaaaaa",
+                ),
+                ("git", "push", "--quiet", "--force", "origin", "brigade/study-trees-20261019T090000Z-aaaaaa"),
+                ("git", "worktree", "remove", "--force", f"{self.root}/state/runs/20261019T090000Z-aaaaaa/checkout"),
+            ],
+        )
 
 
 class WriteAnswerToFileOfAStudyOfNoProjectTest(unittest.TestCase):

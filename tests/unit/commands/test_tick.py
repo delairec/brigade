@@ -1145,7 +1145,31 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(self.spawn.argvs[0][:2], ("run", str(deliver)))
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    f"{self.root}/deliver.md",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    f"{self.root}/tidepool/.brigade/worktrees/T7",
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    f"{self.root}/state/briefs/tidepool_w16-T7.md",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
 
     def test_should_launch_the_verification_of_a_task_in_verifying(self):
         # Arrange
@@ -1965,7 +1989,31 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(self.spawn.argvs[0][:2], ("run", "build-task"))
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    f"{self.root}/tidepool/.brigade/worktrees/T7",
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    f"{self.root}/state/briefs/tidepool_w16-T7.md",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
 
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange
@@ -2670,7 +2718,20 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
-        self.assertEqual(len(self.forge.opened), 1)
+        self.assertEqual(
+            self.forge.opened,
+            [
+                {
+                    "repository": f"{self.root}/tidepool",
+                    "base": "main",
+                    "branch": "integration/M4",
+                    "title": "chore(wave): merge the wave tidepool_w16 into main",
+                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
+                    "milestone": None,
+                    "environment": {},
+                }
+            ],
+        )
 
 
 class TickStartingAndCuttingWavesTest(unittest.TestCase):

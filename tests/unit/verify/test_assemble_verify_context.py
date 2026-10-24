@@ -145,7 +145,30 @@ class AssembleVerifyContextTest(unittest.TestCase):
         document = self.assemble(Configuration())
 
         # Assert
-        self.assertEqual(document["preflight"][0], {"name": "ancestry", "verdict": "pass", "findings": []})
+        self.assertEqual(
+            document["preflight"],
+            [
+                {"name": "ancestry", "verdict": "pass", "findings": []},
+                {"name": "checks", "verdict": "pass", "findings": []},
+                {"name": "corpus", "verdict": "pass", "findings": []},
+                {
+                    "name": "promotion",
+                    "verdict": "fail",
+                    "findings": [
+                        "@TASK.B1 is STATUS None, not implemented",
+                        "@TASK.B1 is delivered by no pull request, not by #160",
+                    ],
+                },
+                {"name": "untouched_files", "verdict": "pass", "findings": []},
+                {"name": "privacy", "verdict": "pass", "findings": []},
+                {"name": "body", "verdict": "pass", "findings": []},
+                {
+                    "name": "size",
+                    "verdict": "info",
+                    "findings": ["1 files", "1 lines", "1 packages: brigade", "0 layers"],
+                },
+            ],
+        )
 
     def test_should_print_the_rules_of_the_path_triggers_matching_a_file_of_the_diff_in_their_order(self):
         # Arrange

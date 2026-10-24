@@ -161,7 +161,19 @@ class DescribeAccountTest(unittest.TestCase):
         describe_account(request, runtime)
 
         # Assert
-        self.assertEqual(gh.requests[0].environment, {"GH_TOKEN": "token-of-octo-bot"})
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "auth", "status", "--active", "--hostname", "github.com", "--json", "hosts"),
+                    cwd="/",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=EVERY_EXIT_CODE,
+                    stdin=None,
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
+        )
 
 
 class ReadLoginEnvironmentTest(unittest.TestCase):
@@ -274,7 +286,31 @@ class OpenPullRequestTest(unittest.TestCase):
         open_pull_request({**PULL_REQUEST_REQUEST, "milestone": no_milestone}, runtime)
 
         # Assert
-        self.assertNotIn("--milestone", gh.requests[0].argv)
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "pr",
+                        "create",
+                        "--base",
+                        "integration/M1-empty-cart",
+                        "--head",
+                        "task/M1-empty-cart/S3",
+                        "--title",
+                        "feat(cart): empty the cart in one click (@TASK.S3)",
+                        "--body-file",
+                        "-",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    acceptable_exit_codes=(0,),
+                    stdin="Empty the cart in one click\n",
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
+        )
 
 
 class ListMilestonesTest(unittest.TestCase):
@@ -323,7 +359,31 @@ class ListPullRequestsTest(unittest.TestCase):
         list_pull_requests({"repository": "/projects/shop", "state": "all", "environment": BOT_ENVIRONMENT}, runtime)
 
         # Assert
-        self.assertEqual(gh.requests[0].timeout_s, 600.0)
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "api",
+                        "graphql",
+                        "--paginate",
+                        "--slurp",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-f",
+                        f"query={PULL_REQUESTS_QUERY}",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=600.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
+        )
 
 
 class CreateMilestoneTest(unittest.TestCase):

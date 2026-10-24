@@ -16,7 +16,13 @@ class RestoreFilesHeldAtHeadTest(unittest.TestCase):
         restore_files(git, Path("/srv/shop"), ("tasks.awawa",))
 
         # Assert
-        self.assertEqual(git.commands[1:], [("/srv/shop", ("git", "checkout", "HEAD", "--", "tasks.awawa"))])
+        self.assertEqual(
+            git.commands,
+            [
+                ("/srv/shop", ("git", "ls-tree", "--name-only", "HEAD", "--", "tasks.awawa")),
+                ("/srv/shop", ("git", "checkout", "HEAD", "--", "tasks.awawa")),
+            ],
+        )
 
 
 class RestoreFilesNewSinceHeadTest(unittest.TestCase):

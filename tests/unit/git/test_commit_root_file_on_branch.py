@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 
 from brigade.git.commit_root_file_on_branch import RootFileCommit, commit_root_file_on_branch
+from brigade.system.run_process import ProcessRequest
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 COMMIT = RootFileCommit(branch="brigade/state", path="ledger.jsonl", content="{}\n", message="record the ledger")
@@ -32,7 +33,53 @@ class CommitRootFileOnBranchTreeTest(unittest.TestCase):
         commit_root_file_on_branch(git, Path("/srv/shop"), COMMIT)
 
         # Assert
-        self.assertEqual(git.requests[3].stdin, "100644 blob keep4\tREADME.md\x00100644 blob blob2\tledger.jsonl\x00")
+        self.assertEqual(
+            git.requests,
+            [
+                ProcessRequest(
+                    argv=("git", "rev-parse", "--verify", "refs/heads/brigade/state"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "hash-object", "-w", "--stdin"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin="{}\n",
+                ),
+                ProcessRequest(
+                    argv=("git", "ls-tree", "-z", "parent1"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "mktree", "-z"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin="100644 blob keep4\tREADME.md\x00100644 blob blob2\tledger.jsonl\x00",
+                ),
+                ProcessRequest(
+                    argv=("git", "commit-tree", "tree5", "-p", "parent1", "-m", "record the ledger"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+                ProcessRequest(
+                    argv=("git", "update-ref", "refs/heads/brigade/state", "commit6", "parent1"),
+                    cwd="/srv/shop",
+                    timeout_s=10.0,
+                    acceptable_exit_codes=(0,),
+                    stdin=None,
+                ),
+            ],
+        )
 
 
 class CommitRootFileOnBranchReferenceTest(unittest.TestCase):

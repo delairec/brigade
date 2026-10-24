@@ -169,7 +169,21 @@ class RolesLintOfTheMachineRolesTest(unittest.TestCase):
         document = COMMAND.run(Namespace(), create_test_runtime(create_test_paths(self.root)))
 
         # Assert
-        self.assertEqual(document["files"][-1], f"{self.roles}/auditor.md")
+        self.assertEqual(
+            document["files"],
+            [
+                "brigade/roles/data/builder.md",
+                "brigade/roles/data/explorer.md",
+                "brigade/roles/data/planner.md",
+                "brigade/roles/data/rebaser.md",
+                "brigade/roles/data/remediator.md",
+                "brigade/roles/data/reporter.md",
+                "brigade/roles/data/reviewer.md",
+                "brigade/roles/data/rulewriter.md",
+                "brigade/roles/data/triager.md",
+                f"{self.root}/config/roles/auditor.md",
+            ],
+        )
 
     def test_should_find_no_shared_slot_between_two_machine_role_files_declaring_none(self):
         # Arrange

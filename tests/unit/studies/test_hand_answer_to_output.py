@@ -8,6 +8,7 @@ from brigade.studies.convert_study import Study
 from brigade.studies.hand_answer_to_output import hand_answer_to_output
 from brigade.studies.present_answer import AnswerPublication
 from brigade.studies.study_run_context import StudyRunContext
+from brigade.system.run_process import ProcessRequest
 from tests.unit.scripted_processes import ScriptedProcesses
 
 RUN_ID = "20261019T090000Z-aaaaaa"
@@ -82,7 +83,19 @@ class HandAnswerToOutputTest(unittest.TestCase):
         hand_answer_to_output(self.context, PUBLICATION)
 
         # Assert
-        self.assertEqual(self.processes.requests[0].cwd, str(self.root / "run"))
+        self.assertEqual(
+            self.processes.requests,
+            [
+                ProcessRequest(
+                    argv=(f"{self.root}/bin/brigade-output-slack",),
+                    cwd=f"{self.root}/run",
+                    timeout_s=120.0,
+                    acceptable_exit_codes=(0,),
+                    stdin='{"schema_version": 1, "study": "trees", "run": "20261019T090000Z-aaaaaa", "markdown": '
+                    '"# FINDING trees_1\\n"}',
+                )
+            ],
+        )
 
     def test_should_refuse_an_output_no_executable_provides(self):
         # Act
