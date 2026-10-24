@@ -1,9 +1,11 @@
 import argparse
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
 from brigade.commands.init import COMMAND, init
+from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, CannotWrite
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.create_test_paths import create_test_paths
@@ -56,6 +58,114 @@ class InitTest(unittest.TestCase):
 
         # Assert
         self.assertIn(("git", "add", "--", "_schema.awawa", ".gitignore"), self.runner.argvs)
+
+    def test_should_commit_them_under_the_message_of_the_operational_corpus(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(("git", "commit", "--quiet", "-m", "brigade init: the operational corpus"), self.runner.argvs)
+
+    def test_should_install_the_shipped_schema(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual((self.config_root / "_schema.awawa").read_bytes(), SHIPPED_SCHEMA.read_bytes())
+
+    def test_should_keep_the_configuration_out_of_the_repository(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual((self.config_root / ".gitignore").read_text(), "config.toml\n")
+
+    def test_should_write_a_configuration_read_as_an_empty_table(self):
+        # Arrange
+        init(self.no_option, self.runtime)
+
+        # Act
+        configuration = tomllib.loads((self.config_root / "config.toml").read_text())
+
+        # Assert
+        self.assertEqual(configuration, {})
+
+    def test_should_create_neither_the_state_root_nor_the_cache_root(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.runtime.paths.state_root.exists(), False)
+        self.assertEqual(self.runtime.paths.cache_root.exists(), False)
+
+    def test_should_rewrite_nothing_on_a_second_run(self):
+        # Arrange
+        init(self.no_option, self.runtime)
+        (self.config_root / ".git").mkdir()
+        schema_written_at = (self.config_root / "_schema.awawa").stat().st_mtime_ns
+        gitignore_written_at = (self.config_root / ".gitignore").stat().st_mtime_ns
+        configuration_written_at = (self.config_root / "config.toml").stat().st_mtime_ns
+
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual((self.config_root / "_schema.awawa").stat().st_mtime_ns, schema_written_at)
+        self.assertEqual((self.config_root / ".gitignore").stat().st_mtime_ns, gitignore_written_at)
+        self.assertEqual((self.config_root / "config.toml").stat().st_mtime_ns, configuration_written_at)
+
+    def test_should_create_the_schema_again_and_commit_it_alone(self):
+        # Arrange
+        init(self.no_option, self.runtime)
+        (self.config_root / ".git").mkdir()
+        (self.config_root / "_schema.awawa").unlink()
+        self.runner.argvs.clear()
+
+        # Act
+        document = init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["items"][1],
+            {"name": "schema", "path": str(self.config_root / "_schema.awawa"), "state": "created"},
+        )
+        self.assertIn(("git", "add", "--", "_schema.awawa"), self.runner.argvs)
+
+    def test_should_leave_the_file_as_it_is_and_report_it_differing(self):
+        # Arrange
+        init(self.no_option, self.runtime)
+        (self.config_root / ".git").mkdir()
+        rows = [
+            ("schema", "_schema.awawa", 1),
+            (".gitignore", ".gitignore", 2),
+            ("config.toml", "config.toml", 3),
+        ]
+        for name, file_name, entry in rows:
+            with self.subTest(name=name):
+                # Arrange
+                edited_file = self.config_root / file_name
+                edited_file.write_text("# edited by the user\n")
+
+                # Act
+                document = init(self.no_option, self.runtime)
+
+                # Assert
+                self.assertEqual(document["items"][entry], {"name": name, "path": str(edited_file), "state": "differs"})
+                self.assertEqual(edited_file.read_text(), "# edited by the user\n")
+
+    def test_should_refuse_a_directory_standing_for_a_file_of_the_corpus(self):
+        # Arrange
+        init(self.no_option, self.runtime)
+        (self.config_root / ".git").mkdir()
+        (self.config_root / "config.toml").unlink()
+        (self.config_root / "config.toml").mkdir()
+
+        # Act
+        with self.assertRaises(CannotWrite) as refusal:
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"cannot write {self.config_root / 'config.toml'}: Is a directory")
 
     def test_should_report_present_and_commit_nothing_on_a_second_run(self):
         # Arrange
@@ -139,6 +249,7 @@ class InitWithoutAGitIdentityTest(unittest.TestCase):
         absent = ProcessAnswer(exit_code=1)
         rows = [
             (absent, ProcessAnswer(stdout="ada@example.org\n"), "user.name"),
+            (ProcessAnswer(stdout="Ada\n"), absent, "user.email"),
             (absent, absent, "user.name and user.email"),
         ]
         for name, email, lacking in rows:
@@ -156,6 +267,7 @@ class InitWithoutAGitIdentityTest(unittest.TestCase):
                 self.assertEqual(
                     str(refusal.exception), f"the git identity lacks {lacking}; set it with git config --global"
                 )
+                self.assertEqual(runtime.paths.config_root.exists(), False)
 
 
 class InitRequestTest(unittest.TestCase):
