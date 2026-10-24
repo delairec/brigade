@@ -339,10 +339,32 @@ class DoctorLingerTest(DoctorTestCase):
     def test_should_not_read_the_linger_for_another_scheduler(self):
         # Arrange
         rows = [
-            ("cron in the configuration", 'scheduler = "cron"\n' + CONFIGURATION, "running\n"),
-            ("cron by the probe", CONFIGURATION, "offline\n"),
+            (
+                "cron in the configuration",
+                'scheduler = "cron"\n' + CONFIGURATION,
+                "running\n",
+                {
+                    "name": "scheduler",
+                    "kind": "optional",
+                    "state": "ok",
+                    "detail": "user systemd instance running",
+                    "fallback": "a cron line, or brigade tick --loop",
+                },
+            ),
+            (
+                "cron by the probe",
+                CONFIGURATION,
+                "offline\n",
+                {
+                    "name": "scheduler",
+                    "kind": "optional",
+                    "state": "warning",
+                    "detail": "no user systemd instance (offline)",
+                    "fallback": "a cron line, or brigade tick --loop",
+                },
+            ),
         ]
-        for case, configuration, systemd_state in rows:
+        for case, configuration, systemd_state, scheduler in rows:
             with self.subTest(case=case):
                 self.configure(configuration)
                 self.answers["systemctl",] = ProcessAnswer(stdout=systemd_state)
@@ -351,7 +373,68 @@ class DoctorLingerTest(DoctorTestCase):
                 document = doctor(self.no_option, self.runtime)
 
                 # Assert
-                self.assertNotIn(self.lingering, document["items"])
+                self.assertEqual(
+                    document["items"][1:],
+                    [
+                        {
+                            "name": "git",
+                            "kind": "prerequisite",
+                            "state": "ok",
+                            "detail": "2.47.0 (no floor)",
+                            "fallback": None,
+                        },
+                        {
+                            "name": "awawa",
+                            "kind": "prerequisite",
+                            "state": "ok",
+                            "detail": "2.8.1 (floor 2.7)",
+                            "fallback": None,
+                        },
+                        {
+                            "name": "client",
+                            "kind": "prerequisite",
+                            "state": "ok",
+                            "detail": "scripted: scripted 1.4.2",
+                            "fallback": None,
+                        },
+                        scheduler,
+                        {
+                            "name": "forge",
+                            "kind": "optional",
+                            "state": "ok",
+                            "detail": "gh as ada-bot",
+                            "fallback": "local mode without a forge",
+                        },
+                        {
+                            "name": "forge login",
+                            "kind": "optional",
+                            "state": "ok",
+                            "detail": "ada-bot for cli, build",
+                            "fallback": "the commands acting as it stop",
+                        },
+                        {
+                            "name": "forge login",
+                            "kind": "optional",
+                            "state": "ok",
+                            "detail": "rev-bot for review",
+                            "fallback": "the commands acting as it stop",
+                        },
+                        {
+                            "name": "awawa-web",
+                            "kind": "optional",
+                            "state": "ok",
+                            "detail": "on PATH",
+                            "fallback": "the dashboard's corpus view only",
+                        },
+                        {
+                            "name": "instructions",
+                            "kind": "optional",
+                            "state": "ok",
+                            "detail": "lint --strict clean in /srv/instructions",
+                            "fallback": "built-in roles and no instructions package",
+                        },
+                    ],
+                )
 
     def test_should_leave_the_exit_code_at_0_when_the_user_does_not_linger(self):
         # Arrange
