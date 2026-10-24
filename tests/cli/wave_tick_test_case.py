@@ -138,7 +138,6 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
         (instructions / "procedures" / "deliver.md").write_text(REPLACING_PROCEDURE)
         self.configure(recordings, instructions)
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
-        self.worktree_of_s6 = self.project.path / ".brigade" / "worktrees" / "S6"
 
     def configure(self, recordings: Path, instructions: Path, keys: str = "") -> None:
         self.machine.write_configuration(
@@ -149,10 +148,6 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
     def tearDown(self):
         self.wait_for_the_runs()
         super().tearDown()
-
-    def tick_once_until_the_runs_end(self) -> None:
-        self.run_tick("--once")
-        self.wait_for_the_runs()
 
     def wait_for_the_runs(self) -> None:
         for record in self.read_run_records():

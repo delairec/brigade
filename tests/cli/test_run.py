@@ -1,13 +1,9 @@
 import json
 import os
 import signal
-import subprocess
-import sys
 from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
-from tests.cli.temporary_machine import CLONE_ENTRY_POINT
-from tests.process_launcher import ProcessLauncher
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
@@ -142,35 +138,9 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
         )
         return started.stdout.strip()
 
-    def start_in_the_foreground(self) -> subprocess.Popen:
-        brigade = ProcessLauncher.start(
-            [
-                sys.executable,
-                str(CLONE_ENTRY_POINT),
-                "run",
-                str(self.procedure),
-                "--slot",
-                "build",
-                "--cwd",
-                str(self.workspace),
-                "--json",
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=self.machine.describe_environment(),
-        )
-        self.addCleanup(brigade.wait)
-        self.addCleanup(brigade.kill)
-        return brigade
-
     def terminate(self, brigade_pid: int) -> None:
         os.kill(brigade_pid, signal.SIGTERM)
         self.wait_for_exit(brigade_pid)
-
-    def terminate_and_list_the_runs(self, brigade_pid: int) -> list:
-        self.terminate(brigade_pid)
-        return self.list_the_runs()
 
     def test_should_record_the_stop_in_the_finished_event_and_in_the_processes_of_the_run(self):
         # Arrange
