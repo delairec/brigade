@@ -2193,7 +2193,8 @@ TASK B21
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 203
 	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
