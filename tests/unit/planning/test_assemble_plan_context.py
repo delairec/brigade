@@ -147,3 +147,84 @@ class AssemblePlanContextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "@TASK.B2 holds no TITLE")
+
+    def test_should_count_the_schemas_among_the_types_of_the_corpus(self):
+        # Arrange
+        self.documents[(ROOT, ("status",))] = {"types": [{"type": "SCHEMA", "total": 2, "counts": {}}], "entities": []}
+        self.script_task_schema(TASK_SCHEMA)
+
+        # Act
+        context = self.assemble()
+
+        # Assert
+        self.assertEqual(context["status"], [{"type": "SCHEMA", "total": 2, "counts": {}}])
+
+    def test_should_carry_the_text_of_both_planned_schemas(self):
+        # Arrange
+        self.documents[(ROOT, ("show", "@TASK.B2"))] = TASK_B2
+        self.script_task_schema(TASK_SCHEMA)
+        self.schemas[(ROOT, "MILESTONE")] = "SCHEMA MILESTONE\n"
+
+        # Act
+        context = self.assemble()
+
+        # Assert
+        self.assertEqual(context["schemas"], {"TASK": "SCHEMA TASK\n", "MILESTONE": "SCHEMA MILESTONE\n"})
+
+    def test_should_report_the_milestone_field_of_the_task_schema_missing_alone(self):
+        # Arrange
+        self.documents[(ROOT, ("show", "@TASK.B2"))] = TASK_B2
+        self.script_task_schema(TASK_SCHEMA)
+        self.schemas[(ROOT, "MILESTONE")] = "SCHEMA MILESTONE\n"
+
+        # Act
+        context = self.assemble()
+
+        # Assert
+        self.assertEqual(context["missing"], [{"type": "TASK", "field": "MILESTONE"}])
+
+    def test_should_index_the_anchors_of_one_file_in_the_order_of_the_corpus(self):
+        # Arrange
+        self.documents[(ROOT, ("show", "@DECISION.D1"))] = {
+            "type": "DECISION",
+            "name": "D1",
+            "status": "active",
+            "fields": [
+                {"name": "TITLE", "atoms": ['"one store"'], "fields": []},
+                {"name": "IMPL", "atoms": ['"brigade/parse.py::read"'], "fields": []},
+            ],
+        }
+        self.documents[(ROOT, ("show", "@TASK.B2"))] = TASK_B2
+        self.script_task_schema(TASK_SCHEMA)
+
+        # Act
+        context = self.assemble()
+
+        # Assert
+        self.assertEqual(
+            context["anchors"],
+            {
+                "brigade/parse.py": [
+                    {"entity": "@DECISION.D1", "anchor": "brigade/parse.py::read"},
+                    {"entity": "@TASK.B2", "anchor": "brigade/parse.py::parse"},
+                ]
+            },
+        )
+
+    def test_should_refuse_an_active_decision_without_a_title(self):
+        # Arrange
+        self.documents[(ROOT, ("show", "@DECISION.D1"))] = {
+            "type": "DECISION",
+            "name": "D1",
+            "status": "active",
+            "fields": [],
+        }
+        self.documents[(ROOT, ("show", "@TASK.B2"))] = TASK_B2
+        self.script_task_schema(TASK_SCHEMA)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            self.assemble()
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@DECISION.D1 holds no TITLE")

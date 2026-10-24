@@ -273,6 +273,16 @@ class RecordPlanTest(RecordPlanTestCase):
             ),
         )
 
+    def test_should_merge_the_plan_pull_request_without_approving_it_where_the_forge_requires_no_review(self):
+        # Arrange
+        self.script_recording()
+
+        # Act
+        record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(self.forge.list_operations(), ["open_pull_request", "find_pull_request", "merge_pull_request"])
+
     def test_should_leave_the_plan_pull_request_to_the_user_under_the_asking_review(self):
         # Arrange
         self.script_recording()
@@ -703,6 +713,27 @@ class RecordPlanRefusalTest(RecordPlanTestCase):
         self.assertEqual(
             str(refusal.exception),
             "the schema of the corpus of @PROJECT.oak does not declare the field OWNER of MILESTONE",
+        )
+
+    def test_should_name_every_undeclared_field_and_type_in_one_refusal(self):
+        # Arrange
+        self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}, {"type": "EPIC", "name": "E1"}])
+        self.script_plan_entity(
+            "@MILESTONE.F1", [{"name": "TITLE", "atoms": ['"Printer"']}, {"name": "OWNER", "atoms": ['"ada"']}]
+        )
+        self.script_plan_entity("@EPIC.E1", [{"name": "TITLE", "atoms": ['"Printing"']}])
+        self.script_corpus_sites([])
+        self.script_skeletons()
+        self.processes.answer(("awawa", "new", "EPIC", "E1", str(self.worktree)), exit_code=1)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            record_plan(self.runtime, self.create_recording())
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "the schema of the corpus of @PROJECT.oak does not declare the field OWNER of MILESTONE, the type EPIC",
         )
 
     def test_should_refuse_a_plan_holding_neither_a_milestone_nor_a_task(self):

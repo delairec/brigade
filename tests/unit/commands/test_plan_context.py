@@ -249,3 +249,77 @@ class PlanContextTextTest(unittest.TestCase):
             "\n"
             "SCHEMA TASK\n\tFIELD TITLE",
         )
+
+    def test_should_print_each_schema_in_a_section_of_its_own(self):
+        # Arrange
+        document = {
+            "request": {"name": "r1", "project": "app", "text": "Let the tides be planned"},
+            "corpus": "/srv/app",
+            "status": [{"type": "TASK", "total": 1, "counts": {"draft": 1}}],
+            "decisions": [],
+            "tasks": [{"name": "T7", "status": "draft", "title": "Ebb the tide"}],
+            "schemas": {"TASK": "SCHEMA TASK\n\tFIELD TITLE\n", "MILESTONE": "SCHEMA MILESTONE\n\tFIELD TITLE\n"},
+            "missing": [],
+            "next_task_number": 8,
+            "anchors": {},
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "@REQUEST.r1 of @PROJECT.app\nLet the tides be planned\n"
+            "\n"
+            "Corpus /srv/app\nTASK  1  draft 1\n"
+            "\n"
+            "Active decisions\n"
+            "\n"
+            "Draft and todo tasks\n@TASK.T7  draft  Ebb the tide\n"
+            "\n"
+            "Next free task number 8\n"
+            "\n"
+            "Anchors by file\n"
+            "\n"
+            "SCHEMA TASK\n\tFIELD TITLE\n"
+            "\n"
+            "SCHEMA MILESTONE\n\tFIELD TITLE",
+        )
+
+    def test_should_print_the_empty_inventory_of_a_corpus_without_schemas(self):
+        # Arrange
+        document = {
+            "request": {"name": "r1", "project": "app", "text": "Let the tides be planned"},
+            "corpus": "/srv/app",
+            "status": [],
+            "decisions": [],
+            "tasks": [],
+            "schemas": {},
+            "missing": [{"type": "TASK"}, {"type": "MILESTONE"}],
+            "next_task_number": 1,
+            "anchors": {},
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "@REQUEST.r1 of @PROJECT.app\nLet the tides be planned\n"
+            "\n"
+            "Corpus /srv/app\n"
+            "\n"
+            "Active decisions\n"
+            "\n"
+            "Draft and todo tasks\n"
+            "\n"
+            "Next free task number 1\n"
+            "\n"
+            "Anchors by file\n"
+            "\n"
+            "Missing schema TASK\n"
+            "\n"
+            "Missing schema MILESTONE",
+        )
