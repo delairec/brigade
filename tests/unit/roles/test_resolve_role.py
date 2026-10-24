@@ -358,3 +358,163 @@ class ResolveRoleFromTheCorpusRolesetTest(ResolveRoleTestCase):
         self.assertEqual(
             str(refusal.exception), "@AGENT.planner: reasoning is shallow, not one of deepest, deep, standard, light"
         )
+
+
+MACHINE_PLANNER = (
+    "---\n"
+    "name: planner\n"
+    "slot: plan\n"
+    "work: the plan of a wave\n"
+    "reasoning: light\n"
+    "capabilities: read\n"
+    "budget: 20\n"
+    "returns: the wave plan\n"
+    "---\n"
+    "You plan the waves of this machine.\n"
+)
+
+
+class ResolveRoleFromTheMachineRolesDirectoryTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        root = Path(self.root.name)
+        self.machine_roles = root / "config" / "roles"
+        self.machine_roles.mkdir(parents=True)
+        self.paths = create_test_paths(root)
+        self.no_project_bindings = create_bindings(None)
+
+    def test_should_refuse_a_machine_role_file_off_its_keys_naming_the_file_and_the_key(self):
+        # Arrange
+        role_file = self.machine_roles / "planner.md"
+        role_file.write_text(MACHINE_PLANNER.replace("budget: 20\n", "budget: 20\nmodel: opus\n"))
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            resolve_role("plan", create_test_runtime(self.paths), self.no_project_bindings, NOTHING_CONFIGURED)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), f"{role_file}: model names a model")
+
+    def test_should_refuse_two_machine_role_files_declaring_one_slot(self):
+        # Arrange
+        (self.machine_roles / "a-planner.md").write_text(MACHINE_PLANNER)
+        (self.machine_roles / "b-planner.md").write_text(MACHINE_PLANNER)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            resolve_role("plan", create_test_runtime(self.paths), self.no_project_bindings, NOTHING_CONFIGURED)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            f"slot plan is declared by both {self.machine_roles / 'a-planner.md'} and {self.machine_roles / 'b-planner.md'}",
+        )
+
+    def test_should_prefer_the_machine_role_file_to_the_agent_entity(self):
+        # Arrange
+        (self.machine_roles / "planner.md").write_text(MACHINE_PLANNER)
+        configuration = Configuration(
+            instructions=str(Path(self.root.name) / "instructions"), slots={"plan": "planner"}
+        )
+
+        # Act
+        resolved = resolve_role("plan", create_test_runtime(self.paths), self.no_project_bindings, configuration)
+
+        # Assert
+        self.assertEqual(resolved.source, "machine")
+
+
+LIGHT_PLANNER_FIELDS = [
+    {"name": "WORK", "atoms": ['"the plan of a wave"']},
+    {"name": "REASONING", "atoms": ["light"]},
+    {"name": "CAPABILITY", "atoms": ["read"]},
+    {"name": "BUDGET", "atoms": ["40"]},
+    {"name": "RETURNS", "atoms": ['"the plan"']},
+]
+PLANNER_FIELDS_WITHOUT_A_BUDGET = [
+    {"name": "WORK", "atoms": ['"the plan of a wave"']},
+    {"name": "REASONING", "atoms": ["deep"]},
+    {"name": "CAPABILITY", "atoms": ["read"]},
+    {"name": "RETURNS", "atoms": ['"the plan"']},
+]
+PLANNER_FIELDS_LISTING_TWO_WORKS = [
+    {"name": "WORK", "atoms": ['"the plan of a wave"']},
+    {"name": "WORK", "atoms": ['"the order of its tasks"']},
+    {"name": "REASONING", "atoms": ["deep"]},
+    {"name": "CAPABILITY", "atoms": ["read"]},
+    {"name": "BUDGET", "atoms": ["40"]},
+    {"name": "RETURNS", "atoms": ['"the wave plan"']},
+    {"name": "RETURNS", "atoms": ['"the blockers"']},
+]
+
+
+def _create_awawa_answering(fields: list):
+    answers = {"show": json.dumps({"fields": fields}), "context": PLANNER_PACKAGE}
+
+    def answer_awawa(request: ProcessRequest) -> ProcessRecord:
+        return ProcessRecord(
+            argv=request.argv, cwd=request.cwd, exit_code=0, stdout=answers[request.argv[1]], stderr="", duration_ms=1
+        )
+
+    return answer_awawa
+
+
+class ResolveRoleOfAnAgentEntityTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        root = Path(self.root.name)
+        self.paths = create_test_paths(root)
+        self.configuration = Configuration(instructions=str(root / "instructions"), slots={"plan": "planner"})
+        self.no_project_bindings = create_bindings(None)
+
+    def test_should_refuse_an_agent_entity_off_the_role_keys_naming_the_entity_and_the_key(self):
+        # Arrange
+        runtime = create_test_runtime(self.paths, run_process=_create_awawa_answering(PLANNER_FIELDS_WITHOUT_A_BUDGET))
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            resolve_role("plan", runtime, self.no_project_bindings, self.configuration)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@AGENT.planner: budget is missing")
+
+    def test_should_join_the_values_of_a_field_the_entity_lists_twice(self):
+        # Arrange
+        runtime = create_test_runtime(self.paths, run_process=_create_awawa_answering(PLANNER_FIELDS_LISTING_TWO_WORKS))
+
+        # Act
+        resolved = resolve_role("plan", runtime, self.no_project_bindings, self.configuration)
+
+        # Assert
+        self.assertEqual(
+            resolved.front_matter,
+            {
+                "name": "planner",
+                "slot": "plan",
+                "work": "the plan of a wave; the order of its tasks",
+                "reasoning": "deep",
+                "capabilities": "read",
+                "budget": "40",
+                "returns": "the wave plan; the blockers",
+            },
+        )
+
+    def test_should_read_the_entity_again_at_each_resolution(self):
+        # Arrange
+        resolve_role(
+            "plan",
+            create_test_runtime(self.paths, run_process=_create_awawa_answering(PLANNER_FIELDS)),
+            self.no_project_bindings,
+            self.configuration,
+        )
+        runtime_reading_a_light_planner = create_test_runtime(
+            self.paths, run_process=_create_awawa_answering(LIGHT_PLANNER_FIELDS)
+        )
+
+        # Act
+        resolved = resolve_role("plan", runtime_reading_a_light_planner, self.no_project_bindings, self.configuration)
+
+        # Assert
+        self.assertEqual(resolved.front_matter["reasoning"], "light")

@@ -170,3 +170,22 @@ class RolesLintOfTheMachineRolesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["files"][-1], f"{self.roles}/auditor.md")
+
+    def test_should_find_no_shared_slot_between_two_machine_role_files_declaring_none(self):
+        # Arrange
+        (self.roles / "auditor.md").write_text(AUDITOR_ROLE.replace("slot: review\n", ""), encoding="utf-8")
+        (self.roles / "second-auditor.md").write_text(
+            SECOND_AUDITOR_ROLE.replace("slot: review\n", ""), encoding="utf-8"
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(), create_test_runtime(create_test_paths(self.root)))
+
+        # Assert
+        self.assertEqual(
+            document["findings"],
+            [
+                {"file": f"{self.roles}/auditor.md", "key": "slot", "problem": "is missing"},
+                {"file": f"{self.roles}/second-auditor.md", "key": "slot", "problem": "is missing"},
+            ],
+        )
