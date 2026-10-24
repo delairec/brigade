@@ -374,6 +374,20 @@ MACHINE_PLANNER = (
 )
 
 
+class ResolveRoleOfAnAbsoluteRolesetTest(ResolveRoleTestCase):
+    def test_should_resolve_the_role_file_of_the_directory_whatever_the_project_path(self):
+        # Arrange
+        (self.roleset / "shopbuilder.md").write_text(SHOP_BUILDER)
+        elsewhere = Path(self.root.name) / "elsewhere"
+
+        # Act
+        resolved = resolve_role(
+            "build", NO_RUNTIME_NEEDED, create_bindings(str(self.roleset), elsewhere), NOTHING_CONFIGURED
+        )
+
+        # Assert
+        self.assertEqual((resolved.role, resolved.source), ("shopbuilder", "roleset"))
+
 class ResolveRoleFromTheMachineRolesDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -410,6 +424,16 @@ class ResolveRoleFromTheMachineRolesDirectoryTest(unittest.TestCase):
             str(refusal.exception),
             f"slot plan is declared by both {self.machine_roles / 'a-planner.md'} and {self.machine_roles / 'b-planner.md'}",
         )
+
+    def test_should_resolve_the_built_in_role_of_a_builtin_roleset_over_the_machine_role_file(self):
+        # Arrange
+        (self.machine_roles / "planner.md").write_text(MACHINE_PLANNER)
+
+        # Act
+        resolved = resolve_role("plan", create_test_runtime(self.paths), create_bindings("builtin"), NOTHING_CONFIGURED)
+
+        # Assert
+        self.assertEqual((resolved.role, resolved.source), ("planner", "built-in"))
 
     def test_should_prefer_the_machine_role_file_to_the_agent_entity(self):
         # Arrange

@@ -143,6 +143,20 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
         self.assertEqual(plan.first_segment, 1)
         self.assertEqual(plan.resumed_session, None)
 
+    def test_should_hold_the_capabilities_of_the_procedure_to_those_the_role_of_its_slot_allows(self):
+        rows = [
+            ("explore", "explorer", ("read", "shell")),
+            ("review", "reviewer", ("read", "shell")),
+            ("remediate", "remediator", ("read", "write", "shell")),
+        ]
+        for slot, role, capabilities in rows:
+            with self.subTest(slot=slot):
+                # Act
+                plan = self.plan(self.create_request(slot=slot), {"features": "step_count"})
+
+                # Assert
+                self.assertEqual((plan.role.role, plan.capabilities), (role, capabilities))
+
     def test_should_name_a_new_run_by_its_instant(self):
         # Act
         plan = self.plan(self.create_request(), {"features": "step_count"})
