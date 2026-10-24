@@ -69,9 +69,6 @@ class StderrReleasingTheHolderDouble:
         fcntl.flock(self.holder, fcntl.LOCK_UN)
         return len(text)
 
-    def flush(self) -> None:
-        pass
-
 
 class HoldLockHeldByAnotherProcessTest(unittest.TestCase):
     def setUp(self):
