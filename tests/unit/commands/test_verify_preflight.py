@@ -50,6 +50,14 @@ class ForgeDeclineDouble:
         return decline
 
 
+class ForgeBindingItsLoginsDouble(ForgeDeclineDouble):
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "environment": {"GH_TOKEN": f"token-of-{request['login']}"}}
+
+    def describe_account(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "login": request["environment"]["GH_TOKEN"].removeprefix("token-of-")}
+
+
 class VerifyPreflightTextTest(unittest.TestCase):
     def test_should_print_each_check_with_its_findings(self):
         # Arrange
@@ -128,3 +136,40 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
+
+
+class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
+    def test_should_read_the_pull_request_as_the_login_of_the_cli_key(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(
+            '[forge_accounts]\ncli = "octo-cli"\nbuild = "octo-bot"\n', encoding="utf-8"
+        )
+        write_ledger(root, [WAVE_STARTED, TASK_PR_OPENED])
+        forge = ForgeBindingItsLoginsDouble()
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}, TASK_WORKTREE),
+            resolve_plugin=lambda kind, name, **places: forge,
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(Namespace(pr=42), runtime)
+
+        # Assert
+        self.assertEqual(
+            forge.questions,
+            [
+                (
+                    "read_pull_request",
+                    {
+                        "schema_version": 1,
+                        "repository": "/home/user/tidepool",
+                        "number": 42,
+                        "environment": {"GH_TOKEN": "token-of-octo-cli"},
+                    },
+                )
+            ],
+        )
