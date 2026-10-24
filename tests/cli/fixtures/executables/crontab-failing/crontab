@@ -1,3 +1,0 @@
-#!/bin/sh
-echo "crontab: cannot open the spool directory" >&2
-exit 1

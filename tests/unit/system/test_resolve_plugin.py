@@ -35,6 +35,22 @@ class ResolvePluginRefusalTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), "no forge plugin gitlab")
 
+    def test_should_refuse_a_scheduler_brigade_does_not_ship(self):
+        # Arrange
+        rows = [
+            ("launchd", "no scheduler plugin launchd"),
+            ("data", "no scheduler plugin data"),
+            ("__init__", "no scheduler plugin __init__"),
+        ]
+        for name, expected_refusal in rows:
+            with self.subTest(name=name):
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    resolve_plugin("scheduler", name, NO_SOURCES_NEEDED)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), expected_refusal)
+
     def test_should_refuse_a_document_plugin_brigade_does_not_ship(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:

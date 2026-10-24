@@ -72,6 +72,26 @@ class InstallCronTest(unittest.TestCase):
         self.assertEqual(str(refusal.exception), "crontab -l exited 1: crontab: permission denied")
 
 
+    def test_should_quote_the_paths_holding_a_space_and_a_percent_sign(self):
+        # Arrange
+        request = {
+            "brigade": "/srv/a 100% b/bin/brigade",
+            "log_file": "/srv/a 100% b/state/brigade/tick.log",
+            "environment": {"XDG_STATE_HOME": "/srv/a 100% b/state"},
+        }
+        runtime = create_runtime(ProcessAnswer(exit_code=1, stderr="no crontab for ada\n"))
+
+        # Act
+        installation = install(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            installation["cron_line"],
+            "*/5 * * * * mkdir -p '/srv/a 100\\% b/state/brigade' && XDG_STATE_HOME='/srv/a 100\\% b/state'"
+            " '/srv/a 100\\% b/bin/brigade' tick --once >/dev/null 2>>'/srv/a 100\\% b/state/brigade/tick.log'"
+            " # brigade scheduler install",
+        )
+
 class ReadCronStatusTest(unittest.TestCase):
     def test_should_read_the_line_of_brigade_when_installed(self):
         # Arrange
