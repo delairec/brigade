@@ -2743,6 +2743,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         corpus = {
             "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
+            "MILESTONE": {"M4": (("STATUS", "active"),)},
         }
         outputs = {
             **MACHINE_ANSWERS,
