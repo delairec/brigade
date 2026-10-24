@@ -67,6 +67,21 @@ class ResolveCollectorFoundTest(ResolveCollectorTestCase):
                 # Assert
                 self.assertEqual(collector, expected)
 
+    def test_should_prefer_a_collector_on_path_to_the_built_in_of_the_same_name(self):
+        # Arrange
+        write_executable(self.root / "bin" / "brigade-collector-git-log")
+
+        # Act
+        collector = resolve_collector("git-log", self.places)
+
+        # Assert
+        self.assertEqual(
+            collector,
+            ExecutableCollector(
+                name="git-log", source="PATH", command=str(self.root / "bin" / "brigade-collector-git-log")
+            ),
+        )
+
     def test_should_resolve_a_built_in_collector_by_its_dashed_name(self):
         # Act
         collector = resolve_collector("pr-list", self.places)

@@ -68,9 +68,11 @@ class ShellCollectorTest(unittest.TestCase):
         self.assertEqual(str(refusal.exception), "the command exited 1\ncat: flag: No such file or directory")
 
     def test_should_refuse_to_run_without_a_command(self):
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            collect(create_environment("{}"), self.runtime, EQUIPMENT)
+        for parameters in ["{}", '{"command": ""}']:
+            with self.subTest(parameters=parameters):
+                # Act
+                with self.assertRaises(BrigadeError) as refusal:
+                    collect(create_environment(parameters), self.runtime, EQUIPMENT)
 
-        # Assert
-        self.assertEqual(str(refusal.exception), "the shell collector takes command=<line>")
+                # Assert
+                self.assertEqual(str(refusal.exception), "the shell collector takes command=<line>")

@@ -37,6 +37,32 @@ class ListCollectorsTest(unittest.TestCase):
             [{"name": "coverage", "source": "project"}, {"name": "latency", "source": "PATH"}],
         )
 
+    def test_should_list_the_built_ins_alone_without_a_collector_of_the_project_the_machine_or_path(self):
+        # Arrange
+        no_collector_directories = CollectorPlaces(
+            project_directory=self.root / "no-project-collectors",
+            machine_directory=self.root / "no-machine-collectors",
+            executable_search_path=str(self.root / "missing"),
+        )
+
+        # Act
+        collectors = list_collectors(no_collector_directories)
+
+        # Assert
+        self.assertEqual(
+            collectors,
+            [
+                {"name": "corpus", "source": "built-in"},
+                {"name": "git-diff-stat", "source": "built-in"},
+                {"name": "git-log", "source": "built-in"},
+                {"name": "ledger", "source": "built-in"},
+                {"name": "pr-list", "source": "built-in"},
+                {"name": "shell", "source": "built-in"},
+                {"name": "study", "source": "built-in"},
+                {"name": "worktrees", "source": "built-in"},
+            ],
+        )
+
     def test_should_list_the_built_ins_by_their_dashed_names(self):
         # Act
         collectors = list_collectors(self.places)

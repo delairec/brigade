@@ -67,6 +67,17 @@ class CollectorsListTest(unittest.TestCase):
         # Assert
         self.assertIn({"name": "pr-list", "source": "built-in", "absent": "FORGE none"}, document["collectors"])
 
+    def test_should_mark_a_project_collector_named_after_a_forge_collector_present(self):
+        # Arrange
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        _place_executable(Path.cwd() / ".brigade" / "collectors" / "pr-list")
+
+        # Act
+        document = collectors_list(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn({"name": "pr-list", "source": "project", "absent": None}, document["collectors"])
+
     def test_should_mark_no_collector_absent_without_the_operational_corpus(self):
         # Act
         document = collectors_list(self.no_option, self.runtime)

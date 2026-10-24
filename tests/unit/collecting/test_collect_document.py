@@ -60,9 +60,9 @@ COLLECTOR_DIRECTORY = "/srv/shop"
 
 
 class CollectorDouble:
-    def __init__(self, exit_code: int, stdout: str, stderr: str = ""):
-        self.name = "weather"
-        self.command = "brigade-collector-weather"
+    def __init__(self, exit_code: int, stdout: str, stderr: str = "", name: str = "weather"):
+        self.name = name
+        self.command = f"brigade-collector-{name}"
         self.environments = []
         self._answer = ProcessRecord(
             argv=(self.command,),
@@ -282,6 +282,23 @@ class CollectDocumentTest(unittest.TestCase):
             CollectorDouble(0, json.dumps(SNOWY_CACHED_DOCUMENT)),
             CollectionRequest(inputs=next_day, refresh=False, equipment=EQUIPMENT),
             self.runtime,
+        )
+
+        # Assert
+        self.assertEqual(collection.document, SNOWY_CACHED_DOCUMENT)
+
+    def test_should_collect_again_once_its_cache_input_changed(self):
+        # Arrange
+        ledger_month = self.root / "state" / "ledger" / "2026-10.jsonl"
+        ledger_month.parent.mkdir(parents=True)
+        ledger_month.write_text('{"event": "run.started"}\n')
+        collect_document(CollectorDouble(0, json.dumps(CACHED_DOCUMENT), name="ledger"), create_request(), self.runtime)
+        with ledger_month.open("a") as ledger:
+            ledger.write('{"event": "run.finished"}\n')
+
+        # Act
+        collection = collect_document(
+            CollectorDouble(0, json.dumps(SNOWY_CACHED_DOCUMENT), name="ledger"), create_request(), self.runtime
         )
 
         # Assert
