@@ -3620,3 +3620,29 @@ DECISION ARunningTaskThatNoLiveRunNamesIsParkedWithItsLastRunInTheReason
 		REF @TASK.B166
 	SOURCE "taken in the delivery of @TASK.B168, pull request #190"
 		REF @TASK.B168
+
+DECISION ARehearsalReplaysItsWaveOnceForTheTestsThatReadIt
+	TITLE "the rehearsal of tests/cli/test_rehearsal.py replays its wave once, in setUpClass, and"
+		+ "its tests only read what the wave left"
+	STATUS active
+	DESC "WaveRehearser builds the machine, the sandbox and the client, then ticks until the three"
+		+ "tasks are merged, the integration pull request is opened and the report of the wave has"
+		+ "ended; between two ticks it waits for every run to hold its result.json, never on a"
+		+ "delay"
+	DESC "a test of the rehearsal reads the ledger, the forge or brigade's output and writes"
+		+ "nothing the other tests read; ClassCleanupRegistrar gives the fixture the addCleanup and"
+		+ "fail the awawa replay needs, as class cleanups"
+	DESC "binds @TASK.B206"
+		REF @TASK.B206
+	REJECTED "the wave replayed in setUp, once per test: 5.8 s per test, three replays of the same"
+		+ "wave for three readings of it"
+	REJECTED "one test asserting the three readings: one test of one wave still lasts the replay,"
+		+ "and it mixes three behaviours"
+	REJECTED "a sleep of 0.2 s between two ticks: a delay, where the end of the runs a tick"
+		+ "launched is a fact the test can wait on"
+	RATIONALE "@RULE.test_isolation_and_cleanup of the instructions corpus has a resource created"
+		+ "in beforeEach; the wave is a fixture of the class, read-only for its tests, so no test"
+		+ "depends on another; the replay, about 6 s, counts once in the time of the suite and in"
+		+ "no test"
+	SOURCE "taken in the delivery of @TASK.B206"
+		REF @TASK.B206
