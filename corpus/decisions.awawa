@@ -3669,3 +3669,33 @@ DECISION AReaderOfATestDecodesEveryLineWholeAndFiltersNone
 		+ "refuse is the filter by event, the picked field and the sort, which the readers lost"
 	SOURCE "taken in the delivery of @TASK.B207, pull request 196"
 		REF @TASK.B207
+
+DECISION TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
+	TITLE "the inbox is $XDG_STATE_HOME/brigade/inbox/signals.jsonl, appended under its lock and"
+		+ "folded by fingerprint when read; a signal is named by a prefix of the sha256 of its"
+		+ "fingerprint, and its ledger events are inbox.recorded and inbox.dismissed"
+	STATUS active
+	DESC "a recording or a dismissal is one appended line; count, age and status are computed by"
+		+ "the reader, never stored"
+	DESC "a connector, a scan or a study that records a signal sets its kind and its fingerprint; a"
+		+ "fingerprint is the fact, so the same fact recorded twice is one signal counted twice"
+	DESC "a note and a study answer, having no key of their own, are fingerprinted by the sha256 of"
+		+ "their content"
+	DESC "binds @TASK.B22"
+		REF @TASK.B22
+	REJECTED "one line per fingerprint, the file rewritten atomically at each recording: the"
+		+ "occurrences of a signal are lost, and the Blueprint draws the connectors as CLI append"
+	REJECTED "a sequential id s<n>: a counter to keep under the lock, where a hash prefix needs no"
+		+ "state and names the same fingerprint on every machine"
+	REJECTED "the fingerprint itself as the id: that of a review thread runs to a path and a line,"
+		+ "too long to type"
+	REJECTED "the ledger event signal.recorded: it records the OS signals of a run segment,"
+		+ "brigade/runs/run_segments.py, and renaming it would change the meaning of lines already"
+		+ "written"
+	REJECTED "a signal per recording, with no deduplication: a dismissal would hold for one"
+		+ "occurrence, and the same fact would come back as new"
+	RATIONALE "the buffer of the outer loop must count the repetitions of one fact for the triage"
+		+ "to see a pattern, and keep a dismissed fact dismissed; an append-only file keeps every"
+		+ "occurrence as the ledger does"
+	SOURCE "the user's rulings of 2026-10-24 in the refinement of @TASK.B22"
+		REF @TASK.B22

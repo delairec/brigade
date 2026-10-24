@@ -2194,19 +2194,56 @@ TASK B21
 
 TASK B22
 	TITLE "Signals store, brigade note and brigade inbox"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
 	ROLE ada
-	SPEC "signals JSONL with fingerprint, count, age and status"
-	SPEC "note appends"
-	SPEC "inbox lists, shows and dismisses"
-	SPEC "a dismissed fingerprint never returns as new"
-	SPEC "carries the output inbox of a study: study new and study run accept it, and the output"
-		+ "step of a study run records the answer as a signal of the store"
+	SPEC "recording a signal appends one JSON line under the inbox lock to"
+		+ "$XDG_STATE_HOME/brigade/inbox/signals.jsonl, carrying ts, kind, project, fingerprint and"
+		+ "evidence; a dismissal appends a line naming the fingerprint; the directory is created on"
+		+ "the first write"
+	SPEC "a reader folds the lines by fingerprint: count the number of recordings, age the time"
+		+ "since the first, status new until a dismissal and dismissed after it, evidence that of"
+		+ "the last recording"
+	SPEC "the id of a signal is the sha256 of its fingerprint in hexadecimal; inbox list prints its"
+		+ "first 7 characters, and inbox show and inbox dismiss accept any prefix of 4 characters"
+		+ "or more matching one fingerprint, exiting 1 on none and on several, the candidates"
+		+ "listed"
+	SPEC "brigade note <text> [--project <name>] records a signal of kind note, fingerprint"
+		+ "note:<the first 12 hexadecimal characters of the sha256 of the project and the text>; a"
+		+ "project that is not registered exits 1 naming it"
+	SPEC "brigade inbox list prints the signals of status new, one row each with id, kind, project,"
+		+ "count and age, --all adding the dismissed ones; inbox show <id> prints a signal with its"
+		+ "evidence; inbox dismiss <id> dismisses it"
+	SPEC "a dismissed fingerprint never returns as new: a later recording raises its count and"
+		+ "leaves it dismissed"
+	SPEC "each recording appends the ledger event inbox.recorded, each dismissal inbox.dismissed,"
+		+ "both carrying the fingerprint, the kind and the project"
+	SPEC "the output inbox of a study is accepted by study new and study run, and the output step"
+		+ "of a study run records the answer as a signal of kind study, fingerprint"
+		+ "study:<study>:<the first 12 hexadecimal characters of the sha256 of the answer>,"
+		+ "evidence the study, the run and the answer; brigade/studies/refuse_inbox_output.py and"
+		+ "the mentions of B22 in study new and schema.awawa.tpl disappear, and the decision"
+		+ "TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore goes archived, its DESC naming"
+		+ "this task"
 	AFTER @TASK.B05
+	AFTER @TASK.B48
+	RATIONALE "the inbox is the buffer of the outer loop of the Blueprint: connectors, notes and"
+		+ "scans turn facts into signals, and the triage groups them into patterns, thirty similar"
+		+ "signals being one structural problem; B22 is the root of M2, @TASK.B23, @TASK.B24 and"
+		+ "@TASK.B25 waiting on its store, and @TASK.B33 and @TASK.B35 after them; the store, the"
+		+ "id, the fingerprints and the events are those of"
+		+ "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint"
+		REF @TASK.B23
+		REF @TASK.B24
+		REF @TASK.B25
+		REF @TASK.B33
+		REF @TASK.B35
+		REF @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
 	SOURCE "the user's ruling of 2026-10-16 on pull request #143: « B22 portera cette sortie »,"
-		+ "recorded as @DECISION.TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore"
+		+ "recorded as @DECISION.TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore; the user's"
+		+ "rulings of 2026-10-24 in the refinement of B22"
 		REF @DECISION.TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore
 
 TASK B23
