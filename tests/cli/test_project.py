@@ -1,18 +1,16 @@
-import fcntl
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from tests.cli.run_while_lock_held import run_while_lock_held
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.process_launcher import ProcessLauncher
 
 PACKAGE_JSON = '{"scripts": {"build": "tsc", "test": "vitest", "lint": "eslint ."}}'
 INVALID_ENTITY = 'PROJECT bad-name\n\tPATH "/srv/bad"\n\tMAIN "main"\n\tSTATUS active\n'
-LOCK_WAIT_S = 5
 
 
 class ProjectTestCase(unittest.TestCase):
@@ -581,29 +579,16 @@ class BrigadeProjectWhileTheCorpusIsLockedTest(ProjectTestCase):
         project = self.create_project("app")
         self.run_project("add", str(project.path))
         lock_files = list((self.machine.state_home / "brigade" / "locks").iterdir())
-        with lock_files[0].open("a") as held_lock:
-            fcntl.flock(held_lock, fcntl.LOCK_EX)
+        argv = [sys.executable, str(CLONE_ENTRY_POINT), "project", "pause", "app"]
 
-            # Act
-            waiting = self.detect_waiting(["project", "pause", "app"])
+        # Act
+        with run_while_lock_held(argv, self.machine.describe_environment(), lock_files[0]) as wait_line:
+            status_while_waiting = self.registry.read_text().splitlines()[-1]
 
         # Assert
         self.assertEqual(len(lock_files), 1)
-        self.assertEqual(waiting, True)
-        self.assertEqual(self.registry.read_text().splitlines()[-1], "\tSTATUS active")
-
-    def detect_waiting(self, arguments: list) -> bool:
-        try:
-            ProcessLauncher.run(
-                [sys.executable, str(CLONE_ENTRY_POINT), *arguments],
-                capture_output=True,
-                env=self.machine.describe_environment(),
-                timeout=LOCK_WAIT_S,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            return True
-        return False
+        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_files[0]}, held by pid 4242\n")
+        self.assertEqual(status_while_waiting, "\tSTATUS active")
 
 
 class BrigadeProjectWhereAFileStandsForTheLockDirectoryTest(ProjectTestCase):

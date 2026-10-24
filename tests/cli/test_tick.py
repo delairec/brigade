@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
+from tests.cli.run_while_lock_held import run_while_lock_held
 from tests.cli.stop_process import stop_process
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
@@ -177,7 +178,6 @@ REPLACING_PROCEDURE = "---\ncapabilities: read, shell\nbudget: 40\n---\nDeliver 
 SHIPPED_BUILD_PROCEDURE = REPOSITORY_ROOT / "brigade" / "runs" / "data" / "procedures" / "build-task.md"
 TASK_BRANCH = "task/M1-empty-cart/S3"
 TOKENLESS_LOGIN = "octo-tokenless"
-LOCK_WAIT_S = 5
 
 
 FAKE_GH = (
@@ -1678,29 +1678,15 @@ class BrigadeTickOnceFollowingThePullRequestOfARunningTaskTest(FollowingTickTest
         # Arrange
         self.answer_pull_request_of_s3("MERGED")
         lock_file = self.state / "locks" / "worktrees-shop.lock"
-        lock_file.parent.mkdir(parents=True, exist_ok=True)
-        with lock_file.open("a") as held_lock:
-            fcntl.flock(held_lock, fcntl.LOCK_EX)
+        argv = [sys.executable, str(CLONE_ENTRY_POINT), "tick", "--once"]
 
-            # Act
-            waiting = self.detect_waiting("--once")
+        # Act
+        with run_while_lock_held(argv, self.describe_environment(), lock_file) as wait_line:
+            worktree_kept_while_waiting = self.worktree.is_dir()
 
         # Assert
-        self.assertEqual(waiting, True)
-        self.assertEqual(self.worktree.is_dir(), True)
-
-    def detect_waiting(self, *options: str) -> bool:
-        try:
-            ProcessLauncher.run(
-                [sys.executable, str(CLONE_ENTRY_POINT), "tick", *options],
-                capture_output=True,
-                env=self.describe_environment(),
-                timeout=LOCK_WAIT_S,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            return True
-        return False
+        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_file}, held by pid 4242\n")
+        self.assertEqual(worktree_kept_while_waiting, True)
 
 
 class BrigadeTickDryRunFollowingAMergedTaskTest(FollowingTickTestCase):

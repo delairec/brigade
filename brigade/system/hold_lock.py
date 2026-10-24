@@ -1,5 +1,6 @@
 import fcntl
 import os
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -16,11 +17,21 @@ def _open_lock_file(path: Path) -> TextIO:
         raise CannotWrite(error.filename or path, error) from error
 
 
+def _wait_for_the_holder(lock_file: TextIO, path: Path) -> None:
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        holder = path.read_text(encoding="utf-8").strip()
+        sys.stderr.write(f"brigade: waiting for the lock {path}, held by pid {holder}\n")
+        sys.stderr.flush()
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+
+
 @contextmanager
 def hold_lock(path: Path) -> Iterator[None]:
     with _open_lock_file(path) as lock_file:
         try:
-            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            _wait_for_the_holder(lock_file, path)
             lock_file.truncate(0)
             lock_file.write(f"{os.getpid()}\n")
             lock_file.flush()

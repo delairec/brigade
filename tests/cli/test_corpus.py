@@ -1,18 +1,15 @@
-import fcntl
 import json
 import os
-import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from tests.cli.run_while_lock_held import run_while_lock_held
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
-from tests.process_launcher import ProcessLauncher
 
 RELAY_EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables" / "awawa-relay"
-LOCK_WAIT_S = 5
 
 
 class CorpusTestCase(unittest.TestCase):
@@ -160,41 +157,29 @@ class BrigadeCorpusWhileTheCacheIsLockedTest(CorpusTestCase):
     def test_should_wait_for_the_lock_of_the_cache_before_pruning(self):
         # Arrange
         lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
-        lock_file.parent.mkdir(parents=True, exist_ok=True)
-        with lock_file.open("a") as held_lock:
-            fcntl.flock(held_lock, fcntl.LOCK_EX)
 
-            # Act
-            waiting = self.detect_waiting(["app", "--ref", "main"])
+        # Act
+        with self.run_while_cache_locked(lock_file) as wait_line:
+            pass
 
         # Assert
-        self.assertTrue(waiting)
+        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_file}, held by pid 4242\n")
 
     def test_should_wait_for_the_lock_of_the_cache_before_reading_a_cached_tree(self):
         # Arrange
         self.run_corpus("app", "--ref", "main")
         lock_file = self.machine.state_home / "brigade" / "locks" / "refs-cache.lock"
-        with lock_file.open("a") as held_lock:
-            fcntl.flock(held_lock, fcntl.LOCK_EX)
 
-            # Act
-            waiting = self.detect_waiting(["app", "--ref", "main"])
+        # Act
+        with self.run_while_cache_locked(lock_file) as wait_line:
+            pass
 
         # Assert
-        self.assertTrue(waiting)
+        self.assertEqual(wait_line, f"brigade: waiting for the lock {lock_file}, held by pid 4242\n")
 
-    def detect_waiting(self, arguments: list) -> bool:
-        try:
-            ProcessLauncher.run(
-                [sys.executable, str(CLONE_ENTRY_POINT), "corpus", *arguments],
-                capture_output=True,
-                env=self.machine.describe_environment(),
-                timeout=LOCK_WAIT_S,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            return True
-        return False
+    def run_while_cache_locked(self, lock_file: Path):
+        argv = [sys.executable, str(CLONE_ENTRY_POINT), "corpus", "app", "--ref", "main"]
+        return run_while_lock_held(argv, self.machine.describe_environment(), lock_file)
 
 
 class BrigadeCorpusOnWhatItCannotReadTest(CorpusTestCase):
