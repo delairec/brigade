@@ -27,11 +27,11 @@ SANDBOX_SCHEMA = (
     "SCHEMA MILESTONE\n"
     '\tDESC "the tasks planned for one request"\n'
     "\tFIELD TITLE string\n\t\tREQUIRED\n"
-    "\tFIELD STATUS planned|running|reached\n\t\tREQUIRED\n"
+    "\tFIELD STATUS planned|active|reached\n\t\tREQUIRED\n"
 )
 SANDBOX_TASKS = 'TASK S0\n\tTITLE "Show the cart"\n\tSTATUS implemented\n\tTYPE feat\n'
 PLAN = (
-    'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS planned\n\n'
+    'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS active\n\n'
     'TASK S1\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n\n'
     'TASK S2\n\tTITLE "Confirm before emptying the cart"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n'
     "\tAFTER @TASK.S1\n\n"
