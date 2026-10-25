@@ -2619,14 +2619,21 @@ class OpeningForgeDouble:
     def list_check_runs(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "check_runs": []}
 
+    def list_pull_requests(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_requests": []}
 
-def _resolve_the_check_runs_beside(resolve_plugin, root: Path):
-    check_runs = resolve_collector("check-runs", locate_collectors(root, create_test_paths(root)))
 
-    def resolve(kind: str, name: str, **places):
+def _resolve_the_collectors_beside(resolve_plugin, root: Path):
+    places = locate_collectors(root, create_test_paths(root))
+    check_runs = resolve_collector("check-runs", places)
+    pr_threads = resolve_collector("pr-threads", places)
+
+    def resolve(kind: str, name: str, **options):
         if (kind, name) == ("collector", "check-runs"):
             return check_runs
-        return resolve_plugin(kind, name, **places)
+        if (kind, name) == ("collector", "pr-threads"):
+            return pr_threads
+        return resolve_plugin(kind, name, **options)
 
     return resolve
 
@@ -2648,7 +2655,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=_resolve_the_check_runs_beside(
+            resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
             ),
         )
@@ -3474,7 +3481,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
                 "mode": "once",
                 "ts": "2026-10-19T09:00:00Z",
                 "duration_ms": ANY,
-                "actions_applied": 1,
+                "actions_applied": 3,
                 "actions_failed": 1,
                 "heartbeat": str(self.root / "state" / "tick.json"),
             },
@@ -3593,7 +3600,7 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         document = COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(document["actions_applied"], 2)
+        self.assertEqual(document["actions_applied"], 4)
 
     def test_should_plan_the_connector_actions_on_a_dry_run_and_apply_none(self):
         # Arrange
@@ -3604,7 +3611,9 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         document = COMMAND.run(Namespace(mode="dry-run"), runtime)
 
         # Assert
-        self.assertEqual(document["plan"], [{"project": "elm"}, {"project": "oak"}])
+        self.assertEqual(
+            document["plan"], [{"project": "elm"}, {"project": "elm"}, {"project": "oak"}, {"project": "oak"}]
+        )
         self.assertFalse(self.root.joinpath("state", "inbox", "signals.jsonl").exists())
 
     def test_should_record_the_review_threads_of_the_other_projects_when_the_forge_fails_for_one(self):
