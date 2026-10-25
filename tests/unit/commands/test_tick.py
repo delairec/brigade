@@ -3428,6 +3428,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
         self.signals.parent.mkdir(parents=True)
         self.signals.write_text("", encoding="utf-8")
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {
                 "elm": (("PATH", "/srv/elm"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
                 "oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
