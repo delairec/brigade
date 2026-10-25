@@ -29,14 +29,10 @@ class PlanConnectorsTest(unittest.TestCase):
         )
 
     def test_should_collect_nothing_from_a_paused_project_or_a_project_with_no_forge(self):
-        rows = [("paused", "github"), ("active", "none")]
-        for status, forge in rows:
+        for status, forge in [("paused", "github"), ("active", "none")]:
             with self.subTest(status=status, forge=forge):
-                # Arrange
-                projects = (create_project("oak", status, forge),)
-
                 # Act
-                actions = plan_connectors(projects)
+                actions = plan_connectors((create_project("oak", status, forge),))
 
                 # Assert
                 self.assertEqual(actions, ())
