@@ -1,6 +1,7 @@
 import unittest
 
 from brigade.ledger.task_review_answered import TaskReviewAnswered
+from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.verify.read_previous_verdict import VerifiedPullRequest, read_previous_verdict
 
@@ -132,6 +133,20 @@ class ReadPreviousVerdictTest(unittest.TestCase):
 
         # Assert
         self.assertIsNone(previous["findings"][0]["answer"])
+
+    def test_should_read_the_answers_among_the_other_events_recorded_after_the_verdict(self):
+        # Arrange
+        events = [
+            create_verdict("efd5ed1", (TIDE_TABLE_READ_TWICE,)),
+            TaskState(wave="tidepool_w16", task="T7", state="changes_requested"),
+            create_answers("efd5ed1", ({"finding": "1", "answer": "the table is read once"},)),
+        ]
+
+        # Act
+        previous = read_previous_verdict(events, VERIFIED)
+
+        # Assert
+        self.assertEqual(previous["findings"][0]["answer"], "the table is read once")
 
     def test_should_give_no_summary_for_a_finding_recorded_without_one(self):
         # Arrange
