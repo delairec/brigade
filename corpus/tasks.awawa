@@ -2314,7 +2314,8 @@ TASK B22
 
 TASK B23
 	TITLE "Connector: review threads"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 210
 	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
