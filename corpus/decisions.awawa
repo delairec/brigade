@@ -3927,3 +3927,30 @@ DECISION TheTickRunsTheConnectorsOnceAfterItsRoundsThroughItsExecutor
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	SOURCE "taken in the delivery of @TASK.B23"
 		REF @TASK.B23
+
+DECISION TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint
+	TITLE "the built-in triage groups the new signals by rule cited, file and check name, and a"
+		+ "PATTERN cites a signal by an EVIDENCE that is its fingerprint or opens on it followed by"
+		+ "a space"
+	STATUS active
+	DESC "a family is the signals sharing one key, kept from two signals on: a @RULE.<name> cited"
+		+ "in a string of the evidence, the evidence path, the evidence name of a signal of kind"
+		+ "check_run; a signal shares several families when it holds several keys, and a signal in"
+		+ "none is a family of one"
+	DESC "the built-in triage is a study of the code, EVERY 24h; a STUDY of the operational corpus"
+		+ "named triage replaces it, to pause it or change its schedule"
+	DESC "an answer of type PATTERN is linted beside the patterns.awawa of the operational corpus,"
+		+ "and refused when a PATTERN is not new, names no ACTION, holds no EVIDENCE or holds an"
+		+ "EVIDENCE opening on no fingerprint inbox-families collected"
+	DESC "binds @TASK.B25"
+		REF @TASK.B25
+	REJECTED "an EVIDENCE that contains the fingerprint anywhere: rt:101 would cite rt:1012, and a"
+		+ "check name holding a space forbids reading the first word alone"
+	REJECTED "families joined transitively into one group: one shared file would merge two"
+		+ "unrelated rules into one problem"
+	REJECTED "the built-in triage written into the operational corpus by brigade init: init"
+		+ "upgrades no installed corpus, so the machines already initialised would never run it"
+	RATIONALE "the collector must recognise the signals a PATTERN already cites, so that none is"
+		+ "proposed twice, and the check of the answer is the same rule read from the other side"
+	SOURCE "@TASK.B25, delivered in the wave brigade_w1"
+		REF @TASK.B25

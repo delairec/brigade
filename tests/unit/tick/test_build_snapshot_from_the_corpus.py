@@ -848,7 +848,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
         self.assertEqual(
             snapshot.studies,
-            (StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),),
+            (
+                StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),
+                StudyFacts(name="triage", slot="triage", every="24h", status="active", last_started=None, parked=False),
+            ),
         )
 
     def test_should_carry_no_rate_limit_whose_reset_has_passed(self):

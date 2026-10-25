@@ -6,6 +6,7 @@ from brigade.corpus.run_awawa import run_awawa
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 from brigade.studies.choose_answer_form import choose_answer_form
+from brigade.studies.name_answer_file import name_answer_file
 from brigade.studies.read_collected import read_collected
 from brigade.studies.read_study import Study
 from brigade.studies.study_run_context import ANSWER_FILE
@@ -24,6 +25,13 @@ def _prepare_corpus(runtime: Runtime, directory: Path, answer: str) -> None:
     create_directory(directory)
     shutil.copyfile(runtime.paths.config_root / SCHEMA_FILE, directory / SCHEMA_FILE)
     write_text_atomically(directory / ANSWER_FILE, answer)
+
+
+def _prepare_submitted_corpus(runtime: Runtime, study: Study, directory: Path, answer: str) -> None:
+    _prepare_corpus(runtime, directory, answer)
+    held = runtime.paths.config_root / name_answer_file(study.answer_type)
+    if held.is_file():
+        shutil.copyfile(held, directory / held.name)
 
 
 def _require_conformity(runtime: Runtime, study: Study, directory: Path) -> None:
@@ -55,9 +63,12 @@ def _compare_answer(runtime: Runtime, study: Study, run_directory: Path, answer:
     run_id = run_directory.name
     submitted_directory = run_directory / VALIDATION_DIRECTORY / SUBMITTED_DIRECTORY
     filled_directory = run_directory / VALIDATION_DIRECTORY / FILLED_DIRECTORY
-    _prepare_corpus(runtime, submitted_directory, answer)
+    _prepare_submitted_corpus(runtime, study, submitted_directory, answer)
     _require_conformity(runtime, study, submitted_directory)
     form = choose_answer_form(study)
+    form.check(runtime, submitted_directory, read_collected(run_directory))
+    if not form.fields_the_cli_fills:
+        return
     _prepare_corpus(runtime, filled_directory, form.render(runtime, study, run_id, read_collected(run_directory)))
     changed = _find_changed_field(
         form.fields_the_cli_fills,

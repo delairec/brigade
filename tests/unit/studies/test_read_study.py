@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.studies.convert_study import Study
+from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
 from brigade.studies.read_study import read_study
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
@@ -61,3 +62,45 @@ class ReadStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "@STUDY.ash is not defined in the operational corpus")
+
+    def test_should_read_the_built_in_triage_the_operational_corpus_does_not_define(self):
+        # Arrange
+        self.processes.answer(
+            ("awawa", "show", "@STUDY.triage", "--json", str(self.runtime.paths.config_root)),
+            exit_code=1,
+            stderr="awawa show: @STUDY.triage is not defined in the workspace\n",
+        )
+
+        # Act
+        study = read_study(self.runtime, "triage")
+
+        # Assert
+        self.assertEqual(study, BUILT_IN_TRIAGE)
+
+    def test_should_take_the_triage_the_operational_corpus_defines_over_the_built_in_one(self):
+        # Arrange
+        self.processes.answer_entity(
+            self.runtime.paths.config_root,
+            "STUDY",
+            "triage",
+            (("SLOT", "triage"), ("OUTPUT", "entity:PATTERN"), ("ANSWER", "PATTERN"), ("STATUS", "paused")),
+        )
+
+        # Act
+        study = read_study(self.runtime, "triage")
+
+        # Assert
+        self.assertEqual(
+            study,
+            Study(
+                name="triage",
+                project=None,
+                question=None,
+                collectors=(),
+                slot="triage",
+                every=None,
+                output="entity:PATTERN",
+                answer_type="PATTERN",
+                status="paused",
+            ),
+        )

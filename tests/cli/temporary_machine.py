@@ -8,6 +8,15 @@ from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
+PAUSED_TRIAGE = (
+    "STUDY triage\n"
+    '\tTITLE "the triage, paused"\n'
+    '\tCOLLECTOR "inbox-families"\n'
+    "\tSLOT triage\n"
+    '\tOUTPUT "entity:PATTERN"\n'
+    '\tANSWER "PATTERN"\n'
+    "\tSTATUS paused\n"
+)
 SHIPPED_SCHEMA = REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
 USER_IDENTITY = "[user]\n\tname = Ada Lovelace\n\temail = ada@example.org\n"
 
@@ -34,6 +43,9 @@ class TemporaryMachine:
 
     def install_awawa(self, test_case: unittest.TestCase) -> None:
         self.search_path = provide_awawa(test_case)
+
+    def pause_the_built_in_triage(self) -> None:
+        (self.corpus / "studies.awawa").write_text(PAUSED_TRIAGE)
 
     def write_configuration(self, content: str) -> Path:
         configuration = self.corpus / "config.toml"

@@ -56,6 +56,7 @@ class ListCollectorsTest(unittest.TestCase):
                 {"name": "corpus", "source": "built-in"},
                 {"name": "git-diff-stat", "source": "built-in"},
                 {"name": "git-log", "source": "built-in"},
+                {"name": "inbox-families", "source": "built-in"},
                 {"name": "ledger", "source": "built-in"},
                 {"name": "pr-list", "source": "built-in"},
                 {"name": "pr-threads", "source": "built-in"},
