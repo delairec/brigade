@@ -3772,6 +3772,29 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         )
         self.assertEqual(document["actions_failed"], 1)
 
+    def test_should_count_the_connector_actions_among_the_actions_applied(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(document["actions_applied"], 2)
+
+    def test_should_plan_the_connector_actions_on_a_dry_run_and_apply_none(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(document["plan"], [{"project": "elm"}, {"project": "oak"}])
+        self.assertFalse(self.root.joinpath("state", "inbox", "signals.jsonl").exists())
+
     def test_should_record_the_review_threads_of_the_other_projects_when_the_forge_fails_for_one(self):
         # Arrange
         projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
