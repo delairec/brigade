@@ -3902,5 +3902,5 @@ DECISION ACheckRunFailsOnFailureTimeoutOrStartupFailureAndTheTickRunsItsConnecto
 	RATIONALE "@TASK.B24 names the failing check runs and leaves open which conclusions fail, the"
 		+ "shape of summary and where the tick runs its connectors"
 		REF @TASK.B24
-	SOURCE "taken in the delivery of @TASK.B24"
+	SOURCE "taken in the delivery of @TASK.B24, pull request 212"
 		REF @TASK.B24
