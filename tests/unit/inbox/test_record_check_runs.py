@@ -21,6 +21,15 @@ FAILED_BUILD_ON_MAIN = {
     "link": "https://github.com/octo/oak/actions/runs/7/job/70",
     "first_failing_step": "Compile",
 }
+FAILED_BUILD_ON_MAIN_IN_ANOTHER_SUITE = {
+    "pull_request": None,
+    "branch": "main",
+    "head": "4567def",
+    "name": "build",
+    "conclusion": "failure",
+    "link": "https://github.com/octo/oak/actions/runs/8/job/80",
+    "first_failing_step": "Compile",
+}
 NO_FORGE_NEEDED = None
 
 
@@ -110,6 +119,37 @@ class RecordCheckRunsTest(unittest.TestCase):
                     "project": "oak",
                     "fingerprint": "cr:oak:main:build:4567def",
                     "evidence": {},
+                }
+            ],
+        )
+
+    def test_should_record_once_a_check_run_the_collection_holds_twice(self):
+        # Arrange
+        recording = self.create_recording([FAILED_BUILD_ON_MAIN, FAILED_BUILD_ON_MAIN_IN_ANOTHER_SUITE])
+
+        # Act
+        record_check_runs(self.runtime, recording)
+
+        # Assert
+        self.assertEqual(
+            self.read_signal_lines(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "recorded",
+                    "kind": "check_run",
+                    "project": "oak",
+                    "fingerprint": "cr:oak:main:build:4567def",
+                    "evidence": {
+                        "pull_request": None,
+                        "branch": "main",
+                        "head": "4567def",
+                        "name": "build",
+                        "conclusion": "failure",
+                        "link": "https://github.com/octo/oak/actions/runs/7/job/70",
+                        "first_failing_step": "Compile",
+                    },
                 }
             ],
         )
