@@ -42,6 +42,7 @@ TESTS_STEPS = [
     {"name": "Run tests", "conclusion": "failure"},
     {"name": "Upload report", "conclusion": "failure"},
 ]
+STEPS_BY_JOB_LINK = {TESTS_JOB: TESTS_STEPS}
 NO_JOB = None
 CONCLUSIONS_AND_FAILING_COUNTS = [
     ("failure", 1),
@@ -60,8 +61,7 @@ def create_environment() -> dict:
     return {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "2026-10-01", "BRIGADE_PARAMS": "{}"}
 
 
-def create_forge(check_runs: list[dict]) -> ForgeDouble:
-    steps_by_link = {TESTS_JOB: TESTS_STEPS}
+def create_forge(check_runs: list[dict], steps_by_link: dict = STEPS_BY_JOB_LINK) -> ForgeDouble:
     return ForgeDouble(
         {
             "list_check_runs": lambda request: {"schema_version": 1, "check_runs": check_runs},
@@ -147,7 +147,8 @@ class CheckRunsCollectorTest(unittest.TestCase):
     def test_should_ask_the_forge_for_the_check_runs_of_the_main_branch_with_no_account_bound_by_default(self):
         # Arrange
         self.register_project("github")
-        forge = create_forge([])
+        no_check_runs: list[dict] = []
+        forge = create_forge(no_check_runs)
 
         # Act
         collect(create_environment(), self.runtime, self.create_equipment(forge))
@@ -183,12 +184,7 @@ class CheckRunsCollectorTest(unittest.TestCase):
         # Arrange
         self.register_project("github")
         passed_steps = [{"name": "Run tests", "conclusion": "success"}]
-        forge = ForgeDouble(
-            {
-                "list_check_runs": lambda request: {"schema_version": 1, "check_runs": [FAILED_TESTS]},
-                "read_job_steps": lambda request: {"schema_version": 1, "steps": passed_steps},
-            }
-        )
+        forge = create_forge([FAILED_TESTS], {TESTS_JOB: passed_steps})
 
         # Act
         document = collect(create_environment(), self.runtime, self.create_equipment(forge))
@@ -199,7 +195,8 @@ class CheckRunsCollectorTest(unittest.TestCase):
     def test_should_be_absent_from_a_project_with_no_forge(self):
         # Arrange
         self.register_project("none")
-        forge = create_forge([])
+        no_check_runs: list[dict] = []
+        forge = create_forge(no_check_runs)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:

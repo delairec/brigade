@@ -3563,7 +3563,8 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        write_ledger(self.root, [])
+        no_ledger_lines: list[dict] = []
+        write_ledger(self.root, no_ledger_lines)
         (self.root / "cache" / "refs" / "elm" / WAVE_HEAD).mkdir(parents=True)
         (self.root / "cache" / "refs" / "oak" / WAVE_HEAD).mkdir(parents=True)
         self.signals = self.root / "state" / "inbox" / "signals.jsonl"

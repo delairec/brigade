@@ -101,7 +101,8 @@ class RecordCheckRunsTest(unittest.TestCase):
 
     def test_should_not_record_again_a_check_run_the_inbox_holds(self):
         # Arrange
-        held = NewSignal(kind="check_run", project="oak", fingerprint="cr:oak:main:build:4567def", evidence={})
+        no_evidence: dict = {}
+        held = NewSignal(kind="check_run", project="oak", fingerprint="cr:oak:main:build:4567def", evidence=no_evidence)
         record_signal(self.runtime.paths, self.runtime.now, held)
 
         # Act
