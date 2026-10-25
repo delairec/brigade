@@ -1442,6 +1442,8 @@ class ReadJobStepsTest(unittest.TestCase):
         for link in [
             "https://ci.example.com/build/9",
             "https://jenkins.example.com/job/oak/job/main/12/display/redirect",
+            "https://ci.example.com/mirror/octo/shop/actions/runs/7/job/70",
+            "https://github.com/octo/shop/actions/runs/7/job/70/summary",
             NO_LINK,
         ]:
             with self.subTest(link=link):
