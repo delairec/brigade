@@ -2341,7 +2341,8 @@ TASK B23
 
 TASK B24
 	TITLE "Connector: check runs"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 212
 	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "intake"
