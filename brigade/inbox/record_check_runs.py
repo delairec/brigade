@@ -58,3 +58,4 @@ def record_check_runs(runtime: Runtime, recording: CheckRunsRecording) -> None:
                 runtime.now,
                 NewSignal(kind=SIGNAL_KIND, project=recording.project, fingerprint=fingerprint, evidence=check_run),
             )
+            held.add(fingerprint)
