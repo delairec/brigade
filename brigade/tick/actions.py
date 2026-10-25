@@ -150,3 +150,8 @@ class RebaseTask:
 @dataclass(frozen=True)
 class CollectCheckRuns:
     project: str
+
+
+@dataclass(frozen=True)
+class CollectReviewThreads:
+    project: str

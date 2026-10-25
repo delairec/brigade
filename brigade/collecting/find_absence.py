@@ -2,7 +2,7 @@ from brigade.corpus.read_entities import Entity
 from brigade.registry.describe_remote import NO_FORGE
 from brigade.registry.read_project_field import read_project_field
 
-FORGE_COLLECTORS = ("pr-list", "check-runs")
+FORGE_COLLECTORS = ("pr-list", "check-runs", "pr-threads")
 FORGE_FIELD = "FORGE"
 FORGE_ABSENCE = f"FORGE {NO_FORGE}"
 
