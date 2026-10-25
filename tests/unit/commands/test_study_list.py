@@ -98,7 +98,10 @@ class StudyListOfTheOperationalCorpusTest(unittest.TestCase):
             document,
             {
                 "schema_version": 1,
-                "studies": [{"name": "health", "status": "active", "every": "1d", "last_run": None, "outcome": None}],
+                "studies": [
+                    {"name": "health", "status": "active", "every": "1d", "last_run": None, "outcome": None},
+                    {"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None},
+                ],
             },
         )
 

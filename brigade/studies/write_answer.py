@@ -2,6 +2,7 @@ from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.studies.choose_answer_form import choose_answer_form
 from brigade.studies.hand_answer_to_output import hand_answer_to_output
+from brigade.studies.name_answer_file import name_answer_file
 from brigade.studies.open_answer_issue import open_answer_issue
 from brigade.studies.present_answer import present_answer
 from brigade.studies.read_collected import read_collected
@@ -32,7 +33,7 @@ def _read_answer(context: StudyRunContext) -> str:
 
 def _write_entity(context: StudyRunContext, answer: str) -> None:
     root = context.runtime.paths.config_root
-    file_name = f"{context.study.answer_type.lower()}s.awawa"
+    file_name = name_answer_file(context.study.answer_type)
     change_corpus_file(
         context.runtime.run_process,
         CorpusChange(

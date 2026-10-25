@@ -1,7 +1,13 @@
 import unittest
 
-from brigade.studies.choose_answer_form import REPORT_ANSWER_FORM, STUDY_ANSWER_FORM, choose_answer_form
+from brigade.studies.choose_answer_form import (
+    PATTERN_ANSWER_FORM,
+    REPORT_ANSWER_FORM,
+    STUDY_ANSWER_FORM,
+    choose_answer_form,
+)
 from brigade.studies.convert_study import Study
+from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
 
 WAVE_REPORT = Study(
     name="wave-report",
@@ -42,3 +48,20 @@ class ChooseAnswerFormTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(form, STUDY_ANSWER_FORM)
+
+    def test_should_give_the_triage_the_form_of_patterns(self):
+        # Act
+        form = choose_answer_form(BUILT_IN_TRIAGE)
+
+        # Assert
+        self.assertEqual(form, PATTERN_ANSWER_FORM)
+
+    def test_should_render_no_entity_for_the_slot_to_copy_in_the_form_of_patterns(self):
+        # Arrange
+        no_collected_evidence = []
+
+        # Act
+        rendered = PATTERN_ANSWER_FORM.render(None, BUILT_IN_TRIAGE, "20261019T090000Z-aaaaaa", no_collected_evidence)
+
+        # Assert
+        self.assertEqual(rendered, "")

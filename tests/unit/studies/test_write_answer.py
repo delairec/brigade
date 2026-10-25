@@ -9,11 +9,16 @@ from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer import write_answer
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
 from tests.unit.studies.create_study_equipment import create_study_equipment
 
 RUN_ID = "20261019T090000Z-aaaaaa"
 RENDERED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n'
 JUDGED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tVERDICT "two oaks"\n'
+RATIFIED_PATTERN = 'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to read"\n\tSTATUS ratified\n'
+PROPOSED_PATTERN = (
+    'PATTERN slow_tick\n\tTITLE "the tick is slow"\n\tSTATUS new\n\tEVIDENCE "note:5f2b1c0d9e8a"\n\tACTION dismiss\n'
+)
 REPORTED = 'REPORT oak_w2\n\tWAVE "oak_w2"\n'
 WAVE_REPORT = Study(
     name="wave-report",
@@ -148,6 +153,26 @@ class WriteAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual((self.config_root / "findings.awawa").read_text(encoding="utf-8"), JUDGED)
+
+    def test_should_commit_the_patterns_of_the_triage_to_the_operational_corpus(self):
+        # Arrange
+        (self.config_root / "patterns.awawa").write_text(RATIFIED_PATTERN, encoding="utf-8")
+        (self.run_directory / "answer.awawa").write_text(PROPOSED_PATTERN, encoding="utf-8")
+        self.processes.answer_corpus_change(
+            self.config_root, ("patterns.awawa",), "brigade study run: the answer of @STUDY.triage"
+        )
+
+        # Act
+        write_answer(self.create_context("entity:PATTERN", BUILT_IN_TRIAGE))
+
+        # Assert
+        self.assertEqual(
+            (self.config_root / "patterns.awawa").read_text(encoding="utf-8"), f"{RATIFIED_PATTERN}\n{PROPOSED_PATTERN}"
+        )
+        self.assertIn(
+            ("git", "commit", "--quiet", "-m", "brigade study run: the answer of @STUDY.triage"),
+            self.processes.list_argvs(),
+        )
 
     def test_should_publish_the_answer_as_an_issue(self):
         # Arrange

@@ -582,6 +582,12 @@ RESUMED_FROM_THE_FORGE_ACCOUNT = {
     "wave": "tidepool_w16",
     "reason": "forge_account",
 }
+PAUSED_TRIAGE = (
+    ("SLOT", "triage"),
+    ("OUTPUT", "entity:PATTERN"),
+    ("ANSWER", "PATTERN"),
+    ("STATUS", "paused"),
+)
 HEALTH_STUDY = (
     ("TITLE", "the health of the machine"),
     ("COLLECTOR", "runs-list"),
@@ -653,6 +659,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
     def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = ()) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), *setup)},
             "TASK": {"T7": task},
         }
@@ -1622,6 +1629,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
@@ -2402,6 +2410,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
     def _create_runtime(self, forge: MergingForgeDouble) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
@@ -2743,6 +2752,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, forge: OpeningForgeDouble) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
@@ -2956,6 +2966,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
             "MILESTONE": {"M4": (("STATUS", "active"),)},
@@ -3021,7 +3032,9 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         spawn = SpawnRecorderDouble()
         runtime = create_test_runtime(
             create_test_paths(root),
-            run_process=create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, MACHINE_OUTPUTS),
+            run_process=create_machine_double(
+                {"STUDY": {"health": HEALTH_STUDY, "triage": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
+            ),
             spawn_process=spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
         )
@@ -3031,6 +3044,25 @@ class TickLaunchingAStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])
+
+    def test_should_launch_the_built_in_triage_on_a_machine_that_never_ran_it(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        spawn = SpawnRecorderDouble()
+        no_recorded_study = {}
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(no_recorded_study, MACHINE_OUTPUTS),
+            spawn_process=spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(spawn.argvs, [("study", "run", "triage", "--run-id", ANY)])
 
 
 BEHIND_PULL_REQUEST = {**OPEN_PULL_REQUEST, "behind": True}
@@ -3097,6 +3129,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
     def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
@@ -3468,6 +3501,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
             CLIENT_AND_DOCUMENT_CONFIGURATION + ONE_FORGE_ATTEMPT + binding, encoding="utf-8"
         )
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
