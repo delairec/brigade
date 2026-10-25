@@ -1,0 +1,48 @@
+# REPORT brigade_w2
+
+- WAVE: brigade_w2
+- PROJECT: brigade
+- TASK_ROW: B209 merged #209
+- STATISTIC: tasks 1
+- STATISTIC: merged 1
+- STATISTIC: parked 0
+- STATISTIC: runs 5
+- STATISTIC: files 1
+- STATISTIC: insertions 1
+- STATISTIC: deletions 0
+- MANUAL_TEST: B209: on a pull request with no task.verdict of its task recorded, brigade verify context <pr> prints the sections it prints today and the procedure verify-pr.md judges the whole pull request as today
+- MANUAL_TEST: B209: on a pull request with a task.verdict of its task recorded, brigade verify context <pr> prints, besides those sections, a section previous verdict with the head the last task.verdict judged, its verdict and each of its findings with its identifier, grade, file, line, broken and summary, followed by the answer the last task.review_answered of the task recorded for that identifier after that verdict, or none
+- MANUAL_TEST: B209: that package prints a section repair diff: git diff from the head the last task.verdict judged to the current head when the first is an ancestor of the second, otherwise git range-diff of the commits of the pull request on their base at each of the two heads
+- MANUAL_TEST: B209: a finding of a verdict carries a summary string: brigade verify verdict refuses a finding without one, naming it, and the example of verify-pr.md carries one
+- MANUAL_TEST: B209: the procedure verify-pr.md gains the re-verification path: when the package holds a previous verdict, the run judges each of its findings by its answer, a fix checked in the repair diff and a challenge accepted only when its argument holds, reads in full the files the repair diff touches, raises again with its grade a finding not resolved, raises a new finding only inside the repair diff and only of grade medium, high or critical, and hands back pass when every previous finding is fixed or soundly challenged and no new finding is raised
+- MANUAL_TEST: B209: the grades, the VERIFY_ROUNDS of the tick and the review posted in approval mode are unchanged: a verdict changes carrying one finding of grade low is recorded and the task moves to changes_requested
+- NARRATIVE: brigade_w2 delivered its one task: B209 merged as #209 into integration/brigade_w2 at 2026-10-25T21:00:00Z after two repair rounds; no task parked or failed (ledger, pr.merged rounds 2)
+- NARRATIVE: wall clock 39 min 38 s, from wave.started at 20:20:22Z to pr.merged at 21:00:00Z (ledger)
+- NARRATIVE: 5 runs, all outcome done and exit 0: 1 build-task (ada), 2 remediate-pr (remediator), 2 verify-pr (prudence) (ledger, run.finished)
+- NARRATIVE: 137 steps: build 57, remediate 26 then 15, verify 15 then 24 (main_steps of the 5 run.finished events)
+- NARRATIVE: 23 min 07 s of run time, 1 386 573 ms summed over the 5 runs; the build alone 615 483 ms, 44 % (duration_ms of run.finished)
+- NARRATIVE: 6.69 USD for the wave: build 3.14, remediate 0.78 and 0.45, verify 1.07 and 1.25 (cost_usd of the 5 run.finished events)
+- NARRATIVE: round 1: the preflight of 20:35:25Z at head 407d843 failed its promotion check, quoted: @TASK.B209 is STATUS todo, not implemented; @TASK.B209 is delivered by no pull request, not by #209; the build run had opened #209 without promoting the task
+- NARRATIVE: the first remediate-pr run promoted B209 at head f1e8d5b in 26 steps and 0.78 USD; its task.review_answered holds no answer, no verifier finding being open; the preflight of 20:45:00Z passed every check
+- NARRATIVE: round 2: the first verify-pr at f1e8d5b handed back changes with one medium finding against @RULE.tdd_green_writes_only_demanded_code: brigade/verify/read_previous_verdict.py:21, no test fails when the guard isinstance(event, TaskReviewAnswered) is removed from _read_answers
+- NARRATIVE: the finding was a production defect, not a style point: a real ledger holds a task.state after each verdict, and without the guard every re-verification would raise AttributeError (verdict summary of 20:48:20Z)
+- NARRATIVE: the second remediate-pr fixed it at 687cf7b in 15 steps with test_should_read_the_answers_among_the_other_events_recorded_after_the_verdict; the second verify-pr passed with no finding at 20:58:45Z
+- NARRATIVE: #209 at its merged head 687cf7b: 18 files, 639 lines, 9 packages, against 621 lines at the first preflight (size check of the preflights of 20:35:25Z and 20:55:03Z)
+- NARRATIVE: #209 passed its 8 CI checks, from the tests on Python 3.11 to coverage.py (pr-list, collected 21:00:40Z)
+- NARRATIVE: gap: the statistics files 1, insertions 1, deletions 0 come from the git-diff-stat collector, which counted .gitignore +1 alone; they do not measure #209, and its document does not state which two refs it compared
+- NARRATIVE: gap: pr-list at 21:00:40Z holds no pull request from integration/brigade_w2 into main and the ledger records no opening of one; whether the tick opened it after that snapshot is not collected, and M2 cannot be delivered without it
+- NARRATIVE: went well: the verifier found, in its first pass, a defect the 8 CI checks and the build's own tests had let through, and the repair took one 15-step run
+- NARRATIVE: went wrong: round 1 spent 9 min 35 s (20:35:25Z to 20:45:00Z) and 0.78 USD on a promotion the preflight detects mechanically
+- NARRATIVE: next wave: have build-task promote the task (STATUS implemented, delivered by its pull request) before it hands back, or have the CLI do it, since the step is mechanical
+- NARRATIVE: next wave: give the git-diff-stat collector the perimeter of the wave, integration/<wave> against main or the sum of the merged task pull requests, so the statistics measure what the wave changed
+- REASON: no task parked or failed; B209 returned to changes_requested twice: at 20:35:25Z on the promotion check of the preflight, at 20:50:00Z on the medium finding of the verdict, each closed by one remediate-pr run
+- TESTER_STEP: B209, test 1: check out integration/brigade_w2 in a worktree (git worktree add /tmp/w2 integration/brigade_w2); pick a task pull request whose task has no task.verdict in the ledger; run /tmp/w2/bin/brigade verify context <pr> and bin/brigade verify context <pr> from the main checkout; diff the two outputs: they are identical, with no section previous verdict and no section repair diff
+- TESTER_STEP: B209, test 2: from /tmp/w2, run bin/brigade verify context <pr> on a pull request whose last task.verdict is changes (brigade wave show <wave> names its task and runs); a section previous verdict prints the head that verdict judged, the verdict, and per finding its identifier, grade, file, line, broken rule and summary, then the answer recorded after the verdict for that identifier, or none; on #209, whose last verdict is a pass at 687cf7b, the section prints that head and verdict and no finding
+- TESTER_STEP: B209, test 3: on the same pull request, compare the section repair diff with git diff <judged head> <current head> when the judged head is an ancestor (git merge-base --is-ancestor); then rebase the branch of a scratch pull request on its base after a verdict and check the section shows git range-diff of the commits at the two heads instead
+- TESTER_STEP: B209, test 4: write a verdict JSON whose finding has no summary and run /tmp/w2/bin/brigade verify verdict --file <file> <pr>: it is refused, naming that finding, and nothing is recorded; never hand a valid verdict on a live pull request, which records a task.verdict; then check the example of brigade/runs/data/procedures/verify-pr.md in /tmp/w2 carries a summary
+- TESTER_STEP: B209, test 5: read the re-verification path of brigade/runs/data/procedures/verify-pr.md in /tmp/w2 against the six clauses of the SPEC line: each previous finding judged by its answer, fixes checked in the repair diff, challenges accepted on a sound argument, touched files read in full, unresolved findings raised again at their grade, new findings only inside the repair diff and of grade medium or above, pass only when all hold; then watch the second verify-pr run of the next task that gets a changes verdict
+- TESTER_STEP: B209, test 6: git diff main integration/brigade_w2 shows no change to the grades, to VERIFY_ROUNDS of the tick nor to the review posted in approval mode; on a scratch pull request, a verdict changes with a single finding of grade low moves the task to changes_requested in brigade wave show
+- SAMPLING: brigade/verify/read_previous_verdict.py, _read_answers around line 21: the guard the verifier's finding was about; check that every event type the ledger records after a verdict (task.state, task.preflighted, run.finished) is skipped, not only task.state
+- SAMPLING: the repair-diff code under brigade/git: the ancestor test and the range-diff fallback after a rebase, the branch the wave's runs never exercised on a real pull request
+- SAMPLING: brigade/runs/data/procedures/verify-pr.md: the re-verification path an unattended verifier follows; check that the clause on new findings of grade medium or above cannot be read as dropping a low finding of the previous verdict that stays unresolved
+- SAMPLING: the corpus change of #209 made at f1e8d5b by the remediator, not by the build: check that @TASK.B209 reads STATUS implemented and names #209 as the pull request that delivers it
