@@ -955,6 +955,31 @@ class ReadCheckLogsTest(unittest.TestCase):
         # Assert
         self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "coverage", "tail": None}]})
 
+    def test_should_hold_no_tail_for_a_check_of_another_ci_whose_link_names_a_job(self):
+        # Arrange
+        gh = create_gh_answering_by_argv(
+            {
+                CHECKS_OF_PULL_REQUEST_42: json.dumps(
+                    [{"name": "jenkins", "link": "https://jenkins.example.com/job/oak/job/main/12/display/redirect"}]
+                )
+            }
+        )
+        runtime = create_test_runtime(run_process=gh)
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": ["jenkins"],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "jenkins", "tail": None}]})
+
     def test_should_run_gh_in_the_repository_as_the_login_of_the_environment(self):
         # Arrange
         gh = create_gh_answering_by_argv({CHECKS_OF_PULL_REQUEST_42: json.dumps([])})
@@ -1414,7 +1439,11 @@ class ReadJobStepsTest(unittest.TestCase):
         )
 
     def test_should_answer_no_steps_for_a_link_naming_no_job(self):
-        for link in ["https://ci.example.com/build/9", NO_LINK]:
+        for link in [
+            "https://ci.example.com/build/9",
+            "https://jenkins.example.com/job/oak/job/main/12/display/redirect",
+            NO_LINK,
+        ]:
             with self.subTest(link=link):
                 # Arrange
                 runtime = create_test_runtime(run_process=create_gh_answering_in_turn([]))
