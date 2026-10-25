@@ -15,6 +15,7 @@ VERDICT_SHAPE = {
                 "file": Field(kinds=(str,)),
                 "line": Field(kinds=(int,)),
                 "broken": Field(kinds=(str,)),
+                "summary": Field(kinds=(str,)),
             },
         ),
     ),

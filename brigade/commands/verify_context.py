@@ -15,6 +15,7 @@ from brigade.verify.preflight_pull_request import PreflightDemand
 
 DOCUMENT_SCHEMA_VERSION = 1
 CLI_KEY = "cli"
+ABSENT = "none"
 
 
 def _render_commands(entries: list[dict]) -> str:
@@ -30,11 +31,31 @@ def _render_preflight(checks: list[dict]) -> str:
     )
 
 
+def _render_previous(previous: dict) -> str:
+    findings = "".join(
+        f"finding {finding['id']}: {finding['grade']} {finding['file']}:{finding['line']}, broken {finding['broken']}\n"
+        f"  summary: {finding['summary'] or ABSENT}\n"
+        f"  answer: {finding['answer'] or ABSENT}\n"
+        for finding in previous["findings"]
+    )
+    return f"head {previous['head']}\nverdict {previous['verdict']}\n{findings}"
+
+
+def _render_re_verification(document: dict) -> list[str]:
+    if document["previous"] is None:
+        return []
+    return [
+        f"# previous verdict\n{_render_previous(document['previous'])}",
+        f"# repair diff\n{_render_commands([document['repair']])}",
+    ]
+
+
 def _render_text(document: dict) -> str:
     sections = [
         f"# head\n{document['head']}\n",
         f"# task\n{_render_commands(document['context'])}",
         f"# diff\n{_render_commands([document['diff']])}",
+        *_render_re_verification(document),
         f"# preflight\n{_render_preflight(document['preflight'])}",
         *([] if document["rules"] is None else [f"# rules\n{_render_commands(document['rules'])}"]),
         "# grades\n" + "".join(f"{grade}\n" for grade in document["grades"]),

@@ -3840,3 +3840,17 @@ DECISION AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairD
 		+ "décider si la PR a atteint un seuil d'acceptabilité suffisant... », and on a new finding"
 		+ "in a later round: « tout grade au dessus de low (low exclu) »"
 		REF @TASK.B209
+
+DECISION AFindingRecordedWithoutASummaryPrintsNoneAsItsSummaryInThePreviousVerdict
+	TITLE "a finding of a task.verdict recorded before verify verdict required a summary is printed"
+		+ "in the previous verdict with the summary none, never refused"
+	STATUS active
+	DESC "binds @TASK.B209"
+		REF @TASK.B209
+	REJECTED "reading the summary of every recorded finding as required: the ledger holds verdicts"
+		+ "recorded without one, and verify context would fail on the pull request they judged"
+	RATIONALE "the ledger is a record of facts, never rewritten; the verdict of @TASK.B22 at"
+		+ "efd5ed1 on pull request #203 carries a finding without a summary"
+		REF @TASK.B22
+	SOURCE "taken in the delivery of @TASK.B209"
+		REF @TASK.B209
