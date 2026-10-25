@@ -1,5 +1,7 @@
 import json
+import re
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from brigade.runtime import Runtime
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
@@ -37,7 +39,7 @@ LISTING_TIMEOUT_S = 600.0
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
-JOB_SEPARATOR = "/job/"
+ACTIONS_JOB_PATH = re.compile(r"/[^/]+/[^/]+/actions/runs/\d+/job/(?P<job>\d+)")
 JOBS_PATH = "repos/{owner}/{repo}/actions/jobs"
 REVIEW_EVENTS = {"approve": "APPROVE", "request_changes": "REQUEST_CHANGES"}
 REVIEW_THREADS_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
@@ -354,10 +356,17 @@ def post_review(request: dict, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
 
 
+def _name_actions_job(link: str | None) -> str | None:
+    if link is None:
+        return None
+    job_path = ACTIONS_JOB_PATH.fullmatch(urlsplit(link).path)
+    return None if job_path is None else job_path["job"]
+
+
 def _read_check_log(request: dict, runtime: Runtime, name: str, link: str) -> dict:
-    if JOB_SEPARATOR not in link:
+    job = _name_actions_job(link)
+    if job is None:
         return {"name": name, "tail": None}
-    job = link.rsplit(JOB_SEPARATOR, 1)[1]
     record = runtime.run_process(
         ProcessRequest(
             argv=("gh", "api", f"{JOBS_PATH}/{job}/logs", "--allow-escape-sequences"),
@@ -543,10 +552,10 @@ def list_check_runs(request: dict, runtime: Runtime) -> dict:
 
 
 def read_job_steps(request: dict, runtime: Runtime) -> dict:
-    link = request["link"]
-    if link is None or JOB_SEPARATOR not in link:
+    job_id = _name_actions_job(request["link"])
+    if job_id is None:
         return {"schema_version": DOCUMENT_SCHEMA_VERSION, "steps": None}
-    job = json.loads(_ask_gh(request, runtime, ("api", f"{JOBS_PATH}/{link.rsplit(JOB_SEPARATOR, 1)[1]}")))
+    job = json.loads(_ask_gh(request, runtime, ("api", f"{JOBS_PATH}/{job_id}")))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "steps": [{"name": step["name"], "conclusion": step["conclusion"]} for step in job["steps"]],
