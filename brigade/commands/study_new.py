@@ -11,7 +11,6 @@ from brigade.runtime import Runtime
 from brigade.studies.read_collector_line import read_collector_line
 from brigade.studies.read_schedule import read_schedule
 from brigade.studies.record_study import NewStudy, record_study
-from brigade.studies.refuse_inbox_output import refuse_inbox_output
 from brigade.studies.require_answer_type import require_answer_type
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -34,7 +33,6 @@ def study_new(request: argparse.Namespace, runtime: Runtime) -> dict:
     for line in request.collector:
         read_collector_line(line)
     require_answer_type(partial(check_type_declared, runtime.run_process), runtime.paths.config_root, request.answer)
-    refuse_inbox_output(request.output)
     if request.every is not None:
         read_schedule(request.every)
     record_study(
@@ -79,7 +77,7 @@ COMMAND = Command(
         Argument(("--every",), {"help": "a schedule of the tick; absent, the study runs on demand"}),
         Argument(
             ("--output",),
-            {"required": True, "help": "file:<path>, entity:<TYPE>, issue or a name; inbox refused until task B22"},
+            {"required": True, "help": "file:<path>, entity:<TYPE>, issue, inbox or a name"},
         ),
         Argument(("--answer",), {"default": DEFAULT_ANSWER_TYPE, "help": "the entity type of the answer"}),
     ),

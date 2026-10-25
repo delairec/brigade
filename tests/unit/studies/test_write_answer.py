@@ -89,6 +89,21 @@ class WriteAnswerTest(unittest.TestCase):
             self.config_root, ("findings.awawa",), "brigade study run: the answer of @STUDY.trees"
         )
 
+    def test_should_record_the_answer_of_a_study_answering_into_the_inbox(self):
+        # Act
+        written = write_answer(self.create_context("inbox"))
+
+        # Assert
+        self.assertEqual(
+            written,
+            {
+                "output": "inbox",
+                "answer": str(self.run_directory / "answer.awawa"),
+                "signal": "af53cf2028ed09d28bc16549166fcb64657c57afcb0ea5cb90f877e5731c2aec",
+                "fingerprint": "study:trees:76c781bcf86d",
+            },
+        )
+
     def test_should_answer_where_the_answer_went(self):
         # Arrange
         self.script_entity_output()
