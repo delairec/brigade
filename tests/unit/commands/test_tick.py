@@ -12,11 +12,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import ANY
 
+from brigade.collectors import pr_threads
 from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
-from brigade.system.resolve_collector import resolve_collector
+from brigade.system.resolve_collector import BuiltInCollector, resolve_collector
 from tests.unit.commands.command_runtime import (
     ProcessAnswer,
     ScriptedProcessRunner,
@@ -3558,6 +3559,9 @@ class CheckRunsForgeDouble:
     def read_job_steps(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "steps": None}
 
+    def list_pull_requests(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_requests": []}
+
 
 class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
     def setUp(self):
@@ -3584,6 +3588,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
                 {
                     ("forge", "github"): CheckRunsForgeDouble(failing_repository="/srv/elm"),
                     ("collector", "check-runs"): resolve_collector("check-runs", locate_collectors(self.root, paths)),
+                    ("collector", "pr-threads"): resolve_collector("pr-threads", locate_collectors(self.root, paths)),
                 }
             ),
         )
@@ -3661,4 +3666,124 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
                 "actions_failed": 1,
                 "heartbeat": str(self.root / "state" / "tick.json"),
             },
+        )
+
+
+PR_THREADS = BuiltInCollector(
+    name="pr-threads", source="built-in", command="brigade.collectors.pr_threads", module=pr_threads
+)
+OPEN_PULL_REQUEST_BY_REPOSITORY = {"oak": 4, "elm": 7}
+THREAD_BY_PULL_REQUEST = {
+    4: {"id": "PRRT_oak4", "file": "src/cart.py", "line": 12, "author": "delairec", "body": "Name the total"},
+    7: {"id": "PRRT_elm7", "file": "src/tree.py", "line": 3, "author": "delairec", "body": "Test the empty tree"},
+}
+
+
+def _refuse_the_listing(request: dict) -> dict:
+    raise BrigadeError("gh: HTTP 502")
+
+
+def _list_the_open_pull_request(request: dict) -> dict:
+    return {
+        "schema_version": 1,
+        "pull_requests": [{"number": OPEN_PULL_REQUEST_BY_REPOSITORY[Path(request["repository"]).name]}],
+    }
+
+
+def create_connector_forge(list_pull_requests_of_elm) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "list_pull_requests": lambda request: (
+                list_pull_requests_of_elm(request)
+                if Path(request["repository"]).name == "elm"
+                else _list_the_open_pull_request(request)
+            ),
+            "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            "list_review_threads": lambda request: {
+                "schema_version": 1,
+                "threads": [THREAD_BY_PULL_REQUEST[request["number"]]],
+            },
+        }
+    )
+
+
+class TickRunningTheConnectorsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "oak" / WAVE_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "elm" / WAVE_HEAD).mkdir(parents=True)
+
+    def _create_runtime(self, projects: dict, forge: ForgeDouble) -> Runtime:
+        paths = create_test_paths(self.root)
+        resolve_plugin = create_plugin_resolution(STEP_COUNTING_PROBE, forge)
+        collectors = {
+            "pr-threads": PR_THREADS,
+            "check-runs": resolve_collector("check-runs", locate_collectors(self.root, paths)),
+        }
+        return create_test_runtime(
+            paths,
+            run_process=create_machine_double({"PROJECT": projects}, MACHINE_OUTPUTS),
+            resolve_plugin=lambda kind, name, **options: (
+                collectors[name] if kind == "collector" else resolve_plugin(kind, name, **options)
+            ),
+        )
+
+    def _describe_project(self, name: str) -> tuple:
+        return (("PATH", str(self.root / name)), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active"))
+
+    def _read_state_file(self, *parts: str) -> str:
+        return self.root.joinpath("state", *parts).read_text(encoding="utf-8")
+
+    def test_should_record_the_review_threads_of_every_active_project_at_each_tick(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_state_file("inbox", "signals.jsonl"),
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "recorded", "kind": "review_thread",'
+            ' "project": "elm", "fingerprint": "rt:PRRT_elm7", "evidence": {"pull_request": 7, "path": "src/tree.py",'
+            ' "line": 3, "author": "delairec", "comment": "Test the empty tree"}}\n'
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "recorded", "kind": "review_thread",'
+            ' "project": "oak", "fingerprint": "rt:PRRT_oak4", "evidence": {"pull_request": 4, "path": "src/cart.py",'
+            ' "line": 12, "author": "delairec", "comment": "Name the total"}}\n',
+        )
+
+    def test_should_record_the_forge_error_of_the_connector_in_the_outcome_of_the_tick_for_the_project(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm")}
+        runtime = self._create_runtime(projects, create_connector_forge(_refuse_the_listing))
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_state_file("ledger", "2026-10.jsonl"),
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "tick.action_failed",'
+            ' "action": "CollectReviewThreads", "project": "elm", "wave": null, "task": null,'
+            ' "error": "collector pr-threads exited 1\\ngh: HTTP 502"}\n',
+        )
+        self.assertEqual(document["actions_failed"], 1)
+
+    def test_should_record_the_review_threads_of_the_other_projects_when_the_forge_fails_for_one(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_refuse_the_listing))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_state_file("inbox", "signals.jsonl"),
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "recorded", "kind": "review_thread",'
+            ' "project": "oak", "fingerprint": "rt:PRRT_oak4", "evidence": {"pull_request": 4, "path": "src/cart.py",'
+            ' "line": 12, "author": "delairec", "comment": "Name the total"}}\n',
         )

@@ -3,11 +3,14 @@ import dataclasses
 import functools
 import sys
 from collections.abc import Callable
+from datetime import date
 from pathlib import Path
 
+from brigade.collecting.collect_document import CollectionRequest, collect_document
+from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command, ExclusiveArguments
-from brigade.commands._read_forge_environment import FORGE_NAME, read_forge_environment
+from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
@@ -54,6 +57,7 @@ from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
     CloseWave,
     CollectCheckRuns,
+    CollectReviewThreads,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -80,8 +84,9 @@ from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.rebase_task import rebase_task
+from brigade.tick.record_review_threads import record_review_threads
 from brigade.tick.remove_task_worktree import remove_task_worktree
-from brigade.tick.run_rounds import Rounds, run_rounds
+from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
@@ -117,6 +122,10 @@ COMMAND_NAME = "tick"
 CLI_KEY = "cli"
 COLLECTOR_KIND = "collector"
 CHECK_RUNS_COLLECTOR = "check-runs"
+REVIEW_THREADS_COLLECTOR = "pr-threads"
+BEGINNING = date(1970, 1, 1)
+NO_PARAMETERS = {}
+NO_REFRESH = False
 
 
 def _locate_heartbeat(runtime: Runtime):
@@ -453,6 +462,21 @@ def _collect_check_runs(runtime: Runtime, configuration: Configuration, action: 
     )
 
 
+def _collect_review_threads(runtime: Runtime, configuration: Configuration, action: CollectReviewThreads) -> None:
+    repository = Path(read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD))
+    collector = runtime.resolve_plugin(
+        COLLECTOR_KIND, REVIEW_THREADS_COLLECTOR, places=locate_collectors(repository, runtime.paths)
+    )
+    equipment = CollectorEquipment(
+        configuration=configuration, forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME), forge_name=FORGE_NAME
+    )
+    inputs = CollectorInputs(project=repository, since=BEGINNING, parameters=NO_PARAMETERS)
+    collection = collect_document(
+        collector, CollectionRequest(inputs=inputs, refresh=NO_REFRESH, equipment=equipment), runtime
+    )
+    record_review_threads(runtime, action.project, collection.document["items"])
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
@@ -477,6 +501,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         ReportWave: lambda action: _report_wave(runtime, action),
         CloseWave: lambda action: append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr)),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
+        CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
     }
 
 
@@ -491,18 +516,33 @@ def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Cal
     )
 
 
-def _prepare_apply(runtime: Runtime, configuration: Configuration) -> Callable:
-    return functools.partial(
+def _plan_registered_connectors(runtime: Runtime) -> tuple:
+    if not runtime.paths.schema_file.exists():
+        return ()
+    return plan_connectors(read_projects(runtime))
+
+
+def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
+    read_pull_request = _follow_pull_requests(runtime, configuration)
+    read_environment = _cache_forge_environment(runtime, configuration)
+    apply = functools.partial(
         apply_actions,
         executors=_list_executors(runtime, configuration),
         record_failure=lambda event: append_event(runtime.paths, runtime.now, event),
     )
-
-
-def _read_registered_projects(runtime: Runtime) -> tuple:
-    if not runtime.paths.schema_file.exists():
-        return ()
-    return read_projects(runtime)
+    outcome = run_rounds(
+        Rounds(
+            build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
+            plan=plan,
+            apply=apply,
+            cap=ROUND_CAP,
+        )
+    )
+    connectors = apply(_plan_registered_connectors(runtime))
+    return RoundsOutcome(
+        actions_applied=outcome.actions_applied + connectors.applied,
+        actions_failed=outcome.actions_failed + len(connectors.failed),
+    )
 
 
 def _tick(runtime: Runtime) -> Heartbeat | None:
@@ -511,24 +551,12 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
         if not acquired:
             return None
         runtime.trail.locate(_locate_trail(runtime))
-        configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-        read_pull_request = _follow_pull_requests(runtime, configuration)
-        read_environment = _cache_forge_environment(runtime, configuration)
-        apply = _prepare_apply(runtime, configuration)
-        outcome = run_rounds(
-            Rounds(
-                build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
-                plan=plan,
-                apply=apply,
-                cap=ROUND_CAP,
-            )
-        )
-        connected = apply(plan_connectors(_read_registered_projects(runtime)))
+        outcome = _apply_the_actions_of_the_tick(runtime, read_configuration(runtime, CONFIGURATION_OPTIONAL))
         heartbeat = Heartbeat(
             ts=format_instant(runtime.now),
             duration_ms=int((runtime.read_monotonic() - started) * 1000),
-            actions_applied=outcome.actions_applied + connected.applied,
-            actions_failed=outcome.actions_failed + len(connected.failed),
+            actions_applied=outcome.actions_applied,
+            actions_failed=outcome.actions_failed,
         )
         write_json_atomically(_locate_heartbeat(runtime), heartbeat.to_document())
     return heartbeat

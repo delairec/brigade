@@ -4033,3 +4033,26 @@ DECISION ACheckRunFailsOnFailureTimeoutOrStartupFailureAndTheTickRunsItsConnecto
 		REF @TASK.B24
 	SOURCE "taken in the delivery of @TASK.B24, pull request 212"
 		REF @TASK.B24
+
+DECISION TheTickRunsTheConnectorsOnceAfterItsRoundsThroughItsExecutor
+	TITLE "the tick runs the review threads connector once per tick, after its plan and apply"
+		+ "rounds, as an action planned from the registry and applied by the executor of the tick"
+	STATUS active
+	DESC "plan_connectors plans, for each project whose STATUS is not paused and whose FORGE is"
+		+ "github, CollectCheckRuns and then CollectReviewThreads; a project of FORGE none is"
+		+ "planned none"
+	DESC "a connector that fails with a BrigadeError is a tick.action_failed naming its project and"
+		+ "counts in the actions_failed of the heartbeat, as any action of the tick"
+	DESC "binds @TASK.B23"
+		REF @TASK.B23
+	REJECTED "the connector planned by plan() from the snapshot: the rounds end on an empty plan,"
+		+ "so it would be planned again at each round up to ROUND_CAP"
+	REJECTED "the collector run for a project of FORGE none: its absence would be recorded as a"
+		+ "failed action at every tick"
+	RATIONALE "@DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce asks for one run per tick and"
+		+ "project, and @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction for"
+		+ "every outcome recorded by the executor; a step after the rounds keeps both"
+		REF @DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "taken in the delivery of @TASK.B23"
+		REF @TASK.B23
