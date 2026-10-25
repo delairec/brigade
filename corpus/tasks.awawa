@@ -2427,7 +2427,8 @@ TASK B24
 
 TASK B25
 	TITLE "Built-in study triage"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 211
 	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "studies"
