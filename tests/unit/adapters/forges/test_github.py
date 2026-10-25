@@ -982,7 +982,8 @@ class ReadCheckLogsTest(unittest.TestCase):
 
     def test_should_run_gh_in_the_repository_as_the_login_of_the_environment(self):
         # Arrange
-        gh = create_gh_answering_by_argv({CHECKS_OF_PULL_REQUEST_42: json.dumps([])})
+        no_checks = json.dumps([])
+        gh = create_gh_answering_by_argv({CHECKS_OF_PULL_REQUEST_42: no_checks})
         runtime = create_test_runtime(run_process=gh)
         request = {
             "schema_version": 1,
@@ -1108,7 +1109,8 @@ class ListReviewThreadsTest(unittest.TestCase):
 
     def test_should_ask_the_threads_of_the_pull_request_in_the_repository_as_the_login_of_the_environment(self):
         # Arrange
-        gh = create_gh(create_review_threads_page([]))
+        no_threads: list[dict] = []
+        gh = create_gh(create_review_threads_page(no_threads))
         runtime = create_test_runtime(run_process=gh)
 
         # Act
@@ -1448,7 +1450,8 @@ class ReadJobStepsTest(unittest.TestCase):
         ]:
             with self.subTest(link=link):
                 # Arrange
-                runtime = create_test_runtime(run_process=create_gh_answering_in_turn([]))
+                no_gh_answer_expected: list[str] = []
+                runtime = create_test_runtime(run_process=create_gh_answering_in_turn(no_gh_answer_expected))
                 request = {"schema_version": 1, "repository": "/projects/shop", "link": link, "environment": {}}
 
                 # Act
