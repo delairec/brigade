@@ -52,6 +52,7 @@ class ListCollectorsTest(unittest.TestCase):
         self.assertEqual(
             collectors,
             [
+                {"name": "check-runs", "source": "built-in"},
                 {"name": "corpus", "source": "built-in"},
                 {"name": "git-diff-stat", "source": "built-in"},
                 {"name": "git-log", "source": "built-in"},
