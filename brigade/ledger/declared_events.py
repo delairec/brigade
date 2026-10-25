@@ -1,5 +1,7 @@
 from brigade.ledger.constraint_delivered import ConstraintDelivered
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
+from brigade.ledger.inbox_dismissed import InboxDismissed
+from brigade.ledger.inbox_recorded import InboxRecorded
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
@@ -68,6 +70,8 @@ DECLARED_EVENTS = {
         TaskReviewAnswered,
         TaskRebased,
         TickActionFailed,
+        InboxRecorded,
+        InboxDismissed,
     )
 }
 LedgerEvent = (
@@ -100,5 +104,7 @@ LedgerEvent = (
     | TaskReviewAnswered
     | TaskRebased
     | TickActionFailed
+    | InboxRecorded
+    | InboxDismissed
     | UndeclaredEvent
 )

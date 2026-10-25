@@ -100,8 +100,7 @@ SCHEMA STUDY
 			+ "means on demand"
 	FIELD OUTPUT string
 		REQUIRED
-		DESC "file:<path pattern>, entity:<TYPE>, issue, or an output on PATH; inbox refused until"
-			+ "task B22"
+		DESC "file:<path pattern>, entity:<TYPE>, issue, inbox, or an output on PATH"
 	FIELD ANSWER string
 		DEFAULT "ANSWER"
 		DESC "the entity type of this schema the answer is written as"

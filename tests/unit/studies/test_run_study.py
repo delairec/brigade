@@ -71,6 +71,11 @@ JUDGED_STUDY = Study(
 RECORDED_ANSWER = 'FINDING trees_20261019T090000Z_aaaaaa\n\tVERDICT "healthy"\n'
 
 
+class DocumentDouble:
+    def render_document(self, request: dict, runtime) -> dict:
+        return {"entities": [{"type": "FINDING", "name": "trees_1", "fields": []}]}
+
+
 def refuse_collector(name: str, project: Path):
     raise BrigadeError(f"no collector {name}")
 
@@ -263,21 +268,15 @@ class RunStudyParkingTest(RunStudyTestCase):
         # Assert
         self.assertEqual(read_ledger(self.root / "state").entries, ())
 
-    def test_should_start_no_run_of_a_study_whose_output_is_the_inbox(self):
+    def test_should_run_a_study_answering_into_the_inbox(self):
+        # Arrange
+        equipment = dataclasses.replace(self.equipment, document=DocumentDouble())
+
         # Act
-        with self.assertRaises(BrigadeError):
-            run_study(self.runtime, SCAN_INTO_THE_INBOX, self.equipment, None)
+        ran = run_study(self.runtime, SCAN_INTO_THE_INBOX, equipment, RUN_ID)
 
         # Assert
-        self.assertEqual(read_ledger(self.root / "state").entries, ())
-
-    def test_should_refuse_a_study_whose_output_is_the_inbox(self):
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            run_study(self.runtime, SCAN_INTO_THE_INBOX, self.equipment, RUN_ID)
-
-        # Assert
-        self.assertEqual(str(refusal.exception), "the output inbox is refused: the inbox has no store until @TASK.B22")
+        self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
 
 
 class RunStudyParkedAtItsJudgingRunTest(RunStudyTestCase):
