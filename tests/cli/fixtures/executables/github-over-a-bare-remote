@@ -89,6 +89,10 @@ class Forge:
         if any(argument.startswith("number=") for argument in arguments):
             threads = {"reviewThreads": {"nodes": []}}
             return json.dumps({"data": {"repository": {"pullRequest": threads}}})
+        branch = next((argument for argument in arguments if argument.startswith("branch=")), None)
+        if branch is not None:
+            oid = run_git("-C", str(self.remote), "rev-parse", branch.partition("=")[2]).strip()
+            return json.dumps({"data": {"repository": {"ref": {"target": {"oid": oid, "statusCheckRollup": None}}}}})
         nodes = [self.describe(pull) for pull in reversed(self.read_pulls())]
         return json.dumps([{"data": {"repository": {"pullRequests": {"nodes": nodes}}}}])
 

@@ -145,3 +145,8 @@ class RebaseTask:
     worktree: str
     head: str
     parking_reason: str | None
+
+
+@dataclass(frozen=True)
+class CollectCheckRuns:
+    project: str

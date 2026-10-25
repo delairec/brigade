@@ -13,8 +13,10 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from brigade.commands.tick import COMMAND
-from brigade.errors import BrigadeError, StandingDown, UsageError
+from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
 from brigade.runtime import Runtime
+from brigade.system.collector_places import locate_collectors
+from brigade.system.resolve_collector import resolve_collector
 from tests.unit.commands.command_runtime import (
     ProcessAnswer,
     ScriptedProcessRunner,
@@ -23,6 +25,7 @@ from tests.unit.commands.command_runtime import (
     write_ledger,
     write_operational_corpus,
 )
+from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
@@ -2704,6 +2707,20 @@ class OpeningForgeDouble:
     def describe_account(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "login": "tidepool-cli"}
 
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "check_runs": []}
+
+
+def _resolve_the_check_runs_beside(resolve_plugin, root: Path):
+    check_runs = resolve_collector("check-runs", locate_collectors(root, create_test_paths(root)))
+
+    def resolve(kind: str, name: str, **places):
+        if (kind, name) == ("collector", "check-runs"):
+            return check_runs
+        return resolve_plugin(kind, name, **places)
+
+    return resolve
+
 
 class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
     def setUp(self):
@@ -2725,7 +2742,9 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_check_runs_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def _read_events(self) -> list[dict]:
@@ -3514,4 +3533,131 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         self.assertEqual(
             document["plan"],
             [{"project": "tidepool", "wave": "tidepool_w16", "branch": "integration/M4", "task": "T7"}],
+        )
+
+
+FAILED_BUILD_OF_OAK = {
+    "pull_request": None,
+    "branch": "main",
+    "head": "4567def",
+    "name": "build",
+    "conclusion": "failure",
+    "link": None,
+}
+
+
+class CheckRunsForgeDouble:
+    def __init__(self, failing_repository: str):
+        self.failing_repository = failing_repository
+
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        if request["repository"] == self.failing_repository:
+            raise CommandFailed(("gh", "api", "graphql"), 1, "HTTP 502")
+        return {"schema_version": 1, "check_runs": [FAILED_BUILD_OF_OAK]}
+
+    def read_job_steps(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "steps": None}
+
+
+class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        write_ledger(self.root, [])
+        (self.root / "cache" / "refs" / "elm" / WAVE_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "oak" / WAVE_HEAD).mkdir(parents=True)
+        self.signals = self.root / "state" / "inbox" / "signals.jsonl"
+        self.signals.parent.mkdir(parents=True)
+        self.signals.write_text("", encoding="utf-8")
+        corpus = {
+            "PROJECT": {
+                "elm": (("PATH", "/srv/elm"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
+                "oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
+            }
+        }
+        paths = create_test_paths(self.root)
+        self.runtime = create_test_runtime(
+            paths,
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
+            resolve_plugin=create_plugin_resolver(
+                {
+                    ("forge", "github"): CheckRunsForgeDouble(failing_repository="/srv/elm"),
+                    ("collector", "check-runs"): resolve_collector("check-runs", locate_collectors(self.root, paths)),
+                }
+            ),
+        )
+
+    def test_should_record_the_failing_check_runs_of_an_active_project_in_the_inbox(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            list(map(json.loads, self.signals.read_text(encoding="utf-8").splitlines())),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "recorded",
+                    "kind": "check_run",
+                    "project": "oak",
+                    "fingerprint": "cr:oak:main:build:4567def",
+                    "evidence": {
+                        "pull_request": None,
+                        "branch": "main",
+                        "head": "4567def",
+                        "name": "build",
+                        "conclusion": "failure",
+                        "link": None,
+                        "first_failing_step": None,
+                    },
+                }
+            ],
+        )
+
+    def test_should_record_the_forge_error_of_a_project_in_the_outcome_of_the_tick_and_serve_the_others(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            list(map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines())),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "tick.action_failed",
+                    "action": "CollectCheckRuns",
+                    "project": "elm",
+                    "wave": None,
+                    "task": None,
+                    "error": "collector check-runs exited 1\ngh api graphql exited 1: HTTP 502",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "inbox.recorded",
+                    "fingerprint": "cr:oak:main:build:4567def",
+                    "kind": "check_run",
+                    "project": "oak",
+                },
+            ],
+        )
+
+    def test_should_count_the_collection_of_each_project_among_the_actions_of_the_tick(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "mode": "once",
+                "ts": "2026-10-19T09:00:00Z",
+                "duration_ms": ANY,
+                "actions_applied": 1,
+                "actions_failed": 1,
+                "heartbeat": str(self.root / "state" / "tick.json"),
+            },
         )
