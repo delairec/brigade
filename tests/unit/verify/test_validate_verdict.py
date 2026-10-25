@@ -3,12 +3,20 @@ import unittest
 from brigade.system.validate_document import DocumentInvalid
 from brigade.verify.validate_verdict import validate_verdict
 
-BROKEN_RULE = {"grade": "medium", "file": "src/tides.py", "line": 12, "broken": "@RULE.kiss"}
+BROKEN_RULE = {
+    "grade": "medium",
+    "file": "src/tides.py",
+    "line": 12,
+    "broken": "@RULE.kiss",
+    "summary": "the tide table is read twice",
+}
 JUDGED_HEAD = "8885daa"
 
 
 class ValidateVerdictTest(unittest.TestCase):
-    def test_should_accept_a_verdict_whose_findings_each_name_their_grade_file_line_and_what_they_break(self):
+    def test_should_accept_a_verdict_whose_findings_each_name_their_grade_file_line_what_they_break_and_a_summary(
+        self,
+    ):
         # Arrange
         rows = [
             ("a pass without a finding", {"head": JUDGED_HEAD, "verdict": "pass", "findings": []}),
@@ -66,6 +74,15 @@ class ValidateVerdictTest(unittest.TestCase):
                     "findings": [{"grade": "low", "file": "src/tides.py", "line": 12}],
                 },
                 "lacks the key findings[0].broken",
+            ),
+            (
+                "a finding without its summary",
+                {
+                    "head": JUDGED_HEAD,
+                    "verdict": "changes",
+                    "findings": [{"grade": "low", "file": "src/tides.py", "line": 12, "broken": "@RULE.kiss"}],
+                },
+                "lacks the key findings[0].summary",
             ),
             (
                 "changes without a finding",

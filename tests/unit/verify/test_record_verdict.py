@@ -110,6 +110,34 @@ class RecordVerdictUnderTheVerdictModeTest(RecordVerdictTestCase):
             ],
         )
 
+    def test_should_record_a_verdict_changes_carrying_one_finding_of_grade_low(self):
+        # Arrange
+        no_policy = {}
+        untested_ebb = {
+            "grade": "low",
+            "file": "src/ebb.py",
+            "line": 3,
+            "broken": "@RULE.test_first_properties",
+            "summary": "the ebb has no test",
+        }
+
+        # Act
+        self.record(no_policy, {"head": "8885daa", "verdict": "changes", "findings": [untested_ebb]})
+
+        # Assert
+        self.assertEqual(
+            self.read_ledger()[0]["findings"],
+            [
+                {
+                    "grade": "low",
+                    "file": "src/ebb.py",
+                    "line": 3,
+                    "broken": "@RULE.test_first_properties",
+                    "summary": "the ebb has no test",
+                }
+            ],
+        )
+
     def test_should_post_no_review(self):
         # Arrange
         no_policy = {}
