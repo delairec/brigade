@@ -15,7 +15,13 @@ REVIEWING_GH = (
     '  "pr view") cat "{pull_request}" ;;\n'
     "esac\n"
 )
-BROKEN_SPEC = {"grade": "high", "file": "src/cart/button.py", "line": 2, "broken": "SPEC 1 of @TASK.S3"}
+BROKEN_SPEC = {
+    "grade": "high",
+    "file": "src/cart/button.py",
+    "line": 2,
+    "broken": "SPEC 1 of @TASK.S3",
+    "summary": "the button empties no cart",
+}
 
 
 class VerifyVerdictTestCase(VerifyPreflightTestCase):
@@ -87,7 +93,13 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
                     "head": self.read_head(),
                     "verdict": "changes",
                     "findings": [
-                        {"grade": "high", "file": "src/cart/button.py", "line": 2, "broken": "SPEC 1 of @TASK.S3"}
+                        {
+                            "grade": "high",
+                            "file": "src/cart/button.py",
+                            "line": 2,
+                            "broken": "SPEC 1 of @TASK.S3",
+                            "summary": "the button empties no cart",
+                        }
                     ],
                     "login": None,
                 },

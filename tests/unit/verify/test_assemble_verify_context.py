@@ -8,6 +8,7 @@ from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.preflight_pull_request import PreflightDemand
+from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -16,6 +17,29 @@ from tests.unit.verify.test_preflight_pull_request import BASE, HEAD, WAVE_HEAD,
 
 DIFF = "--- a/brigade/cart.py\n+++ b/brigade/cart.py\n@@ -0,0 +1 @@\n+def empty_cart():\n"
 INSTRUCTIONS = "/srv/instructions"
+JUDGED_HEAD = "1a2b3c4"
+REPAIR = "--- a/brigade/cart.py\n+++ b/brigade/cart.py\n@@ -1 +1 @@\n-def cart():\n+def empty_cart():\n"
+VERDICT_CHANGES = {
+    "schema_version": 1,
+    "ts": "2026-10-18T13:00:00Z",
+    "event": "task.verdict",
+    "project": "shop",
+    "wave": "shop_w1",
+    "task": "B1",
+    "pr": 160,
+    "head": JUDGED_HEAD,
+    "verdict": "changes",
+    "findings": [
+        {
+            "grade": "low",
+            "file": "brigade/cart.py",
+            "line": 1,
+            "broken": "@RULE.function_named_after_verb",
+            "summary": "cart names no action",
+        }
+    ],
+    "login": None,
+}
 
 
 class AssembleVerifyContextTest(unittest.TestCase):
@@ -224,3 +248,66 @@ class AssembleVerifyContextTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_hold_neither_a_previous_verdict_nor_a_repair_diff_when_no_verdict_is_recorded(self):
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertIsNone(document["previous"])
+        self.assertIsNone(document["repair"])
+
+    def test_should_hold_the_previous_verdict_of_the_task_at_the_pull_request(self):
+        # Arrange
+        write_ledger(self.root, [VERDICT_CHANGES])
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(
+            document["previous"],
+            {
+                "head": JUDGED_HEAD,
+                "verdict": "changes",
+                "findings": [
+                    {
+                        "id": "1",
+                        "grade": "low",
+                        "file": "brigade/cart.py",
+                        "line": 1,
+                        "broken": "@RULE.function_named_after_verb",
+                        "summary": "cart names no action",
+                        "answer": None,
+                    }
+                ],
+            },
+        )
+
+    def test_should_hold_the_repair_diff_from_the_head_the_previous_verdict_judged(self):
+        # Arrange
+        write_ledger(self.root, [VERDICT_CHANGES])
+        self.answers[("git", "diff", JUDGED_HEAD, HEAD)] = ProcessAnswer(stdout=REPAIR)
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(
+            document["repair"],
+            {"command": f"git diff {JUDGED_HEAD} {HEAD}", "exit_code": 0, "stderr": "", "output": REPAIR},
+        )
+
+    def test_should_range_diff_on_the_base_of_the_wave_when_the_judged_head_was_rebased_away(self):
+        # Arrange
+        write_ledger(self.root, [VERDICT_CHANGES])
+        self.answers[("git", "merge-base", "--is-ancestor", JUDGED_HEAD, HEAD)] = ProcessAnswer(exit_code=1)
+        self.answers[("git", "merge-base", "--end-of-options", WAVE_HEAD, JUDGED_HEAD)] = ProcessAnswer(
+            stdout="9999999\n"
+        )
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(document["repair"]["command"], f"git range-diff 9999999..{JUDGED_HEAD} {BASE}..{HEAD}")
