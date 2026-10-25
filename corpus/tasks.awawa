@@ -12376,3 +12376,36 @@ TASK B208
 		REF @TASK.B152
 	SOURCE "the user's ruling of 2026-10-24: « oui, vas-y », on the fix proposed after the failed"
 		+ "tick"
+
+TASK B209
+	TITLE "A verification after the first verdict judges the previous findings and the repair diff"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M2
+	COMPONENT "the pass"
+	ROLE ada
+	SPEC "on a pull request with no task.verdict of its task recorded, brigade verify context <pr>"
+		+ "prints the sections it prints today and the procedure verify-pr.md judges the whole pull"
+		+ "request as today"
+	SPEC "on a pull request with a task.verdict of its task recorded, brigade verify context <pr>"
+		+ "prints, besides those sections, a section previous verdict with the head the last"
+		+ "task.verdict judged, its verdict and each of its findings with grade, file, line and"
+		+ "broken, and a section repair diff with the diff from that head to the current head"
+	SPEC "the procedure verify-pr.md gains the re-verification path: when the package holds a"
+		+ "previous verdict, the run judges whether each of its findings is resolved and the repair"
+		+ "diff, reads in full the files that diff touches, raises again at its current line a"
+		+ "finding not resolved, and raises no finding outside that diff on code a previous verdict"
+		+ "judged"
+	SPEC "brigade verify verdict, the grades and the VERIFY_ROUNDS of the tick are unchanged: a"
+		+ "verdict changes carrying one finding of grade low is recorded and the task moves to"
+		+ "changes_requested"
+	RATIONALE "implements"
+		+ "@DECISION.AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff;"
+		+ "today brigade/verify/assemble_verify_context.py passes neither the previous verdict nor"
+		+ "the diff since the head it judged, though the ledger holds the head and the findings of"
+		+ "every task.verdict, and brigade/verify/validate_verdict.py derives nothing from grades"
+		REF @DECISION.AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff
+	SOURCE "the user's ruling of 2026-10-25, « B seul », recorded as"
+		+ "@DECISION.AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff;"
+		+ "B22 left parked until this task is on main"
+		REF @DECISION.AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff
