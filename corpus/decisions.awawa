@@ -3756,7 +3756,7 @@ DECISION TheInboxRefusesALineItCannotReadWhereTheLedgerSkipsIt
 	RATIONALE "the fold decides the status of a signal, and a dismissed fingerprint never returns"
 		+ "as new; a line lost to the fold is a status gone wrong, where a line lost to the ledger"
 		+ "is one event fewer in a count"
-	SOURCE "taken in the delivery of @TASK.B22"
+	SOURCE "taken in the delivery of @TASK.B22, pull request 203"
 		REF @TASK.B22
 
 DECISION ANoteHashesItsProjectANewlineAndItsTextAndAStudyAnswerItsMarkdown
@@ -3772,5 +3772,5 @@ DECISION ANoteHashesItsProjectANewlineAndItsTextAndAStudyAnswerItsMarkdown
 		+ "show, as every output but entity: does, so its evidence and its hash are the Markdown"
 	RATIONALE "a fingerprint names the fact once recorded: changing what it hashes makes every"
 		+ "signal already in the inbox new again"
-	SOURCE "taken in the delivery of @TASK.B22"
+	SOURCE "taken in the delivery of @TASK.B22, pull request 203"
 		REF @TASK.B22
