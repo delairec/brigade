@@ -3777,3 +3777,43 @@ DECISION AnAtomOfAwawaIsDecodedByAwawasGrammarAndNeverByJson
 		REF @TASK.B152
 	SOURCE "taken in the delivery of @TASK.B208, pull request 199"
 		REF @TASK.B208
+
+DECISION AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff
+	TITLE "once a verdict is recorded on a pull request, a verification run judges whether each"
+		+ "finding of the previous verdict is resolved and the diff since the head that verdict"
+		+ "judged, nothing else; the grades keep their meaning"
+	STATUS active
+	DESC "the first verification of a pull request judges the whole pull request, as @TASK.B16 says"
+		REF @TASK.B16
+	DESC "after the first verdict, a verification run judges two things: whether each finding of"
+		+ "the previous verdict is resolved, and the diff between the head the previous verdict"
+		+ "judged and the current head"
+	DESC "a finding outside that diff, on code a previous verdict already judged, is not raised"
+	DESC "the grades keep their meaning: a finding of grade low still asks for changes, and a"
+		+ "verdict changes still sends the task to repair"
+	DESC "the previous verdict is the last task.verdict of the task at the pull request, naming the"
+		+ "head its run judged as"
+		+ "@DECISION.AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead asks; the"
+		+ "repair rounds of @DECISION.ARepairRoundIsOneFixingStateOfTheTask and the VERIFY_ROUNDS"
+		+ "bounding them are unchanged"
+		REF @DECISION.AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead
+		REF @DECISION.ARepairRoundIsOneFixingStateOfTheTask
+	DESC "binds @TASK.B209"
+		REF @TASK.B209
+	REJECTED "VERIFY_ROUNDS raised in the POLICY of brigade, 4 for instance, and B22 requeued at"
+		+ "once: the non-convergence remains for the other tasks of M2"
+	REJECTED "a verdict with no medium or high finding passing with remarks: a low finding still"
+		+ "blocks"
+	REJECTED "B22 repaired by hand on the three findings of its third round: the user left it"
+		+ "parked until this ruling is on main"
+	RATIONALE "on pull request #203 of @TASK.B22 each of the three review runs re-read the whole"
+		+ "pull request and surfaced a fresh finding, the third at 51dee9a raising three findings"
+		+ "outside efd5ed1..51dee9a, a diff touching one test file, so the task was parked past 2"
+		+ "repair rounds without the review converging; the residual risk, a defect the first"
+		+ "verdict missed that no later round catches, is accepted because the user alone merges"
+		+ "integration into main, @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate"
+		REF @TASK.B22
+		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+	SOURCE "the user's ruling of 2026-10-25 in session, on « Quelle voie pour la vérification de"
+		+ "brigade ? »: « B seul », the option reading « Re-vérification limitée aux findings"
+		+ "précédents et au diff de la réparation ; les low continuent de bloquer »"
