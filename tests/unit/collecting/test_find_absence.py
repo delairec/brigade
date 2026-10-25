@@ -9,7 +9,7 @@ PROJECT_ON_GITHUB = Entity(name="oak", fields=(EntityField(name="FORGE", value="
 
 class FindAbsenceTest(unittest.TestCase):
     def test_should_name_the_missing_forge_of_a_forge_collector(self):
-        for name in ["pr-list", "check-runs"]:
+        for name in ["pr-list", "check-runs", "pr-threads"]:
             with self.subTest(name=name):
                 # Act
                 absence = find_absence(name, PROJECT_WITHOUT_FORGE)
