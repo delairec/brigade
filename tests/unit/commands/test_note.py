@@ -88,6 +88,24 @@ class NoteTest(unittest.TestCase):
         self.assertEqual(read_inbox(self.runtime.paths.state_root, FIXED_NOW), ())
 
 
+class NoteBeforeInitTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=ScriptedProcesses())
+
+    def test_should_refuse_a_project_naming_it_as_not_registered(self):
+        # Arrange
+        request = argparse.Namespace(text="fix the flaky test", project="nope")
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            note(request, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@PROJECT.nope is not registered")
+
+
 class NoteTextTest(unittest.TestCase):
     def test_should_name_the_signal_it_recorded(self):
         # Arrange
