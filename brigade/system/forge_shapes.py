@@ -29,6 +29,14 @@ FORGE_ANSWER_SHAPES = {
         "schema_version": Field(kinds=(int,), values=(1,)),
         "threads": Field(kinds=(list,), items=Field(kinds=(dict,))),
     },
+    "list_check_runs": {
+        "schema_version": Field(kinds=(int,), values=(1,)),
+        "check_runs": Field(kinds=(list,), items=Field(kinds=(dict,))),
+    },
+    "read_job_steps": {
+        "schema_version": Field(kinds=(int,), values=(1,)),
+        "steps": Field(kinds=(list,), nullable=True, items=Field(kinds=(dict,))),
+    },
     "reply_review_thread": {
         "schema_version": Field(kinds=(int,), values=(1,)),
     },

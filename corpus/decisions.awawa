@@ -3872,3 +3872,35 @@ DECISION ANoteHashesItsProjectANewlineAndItsTextAndAStudyAnswerItsMarkdown
 		+ "signal already in the inbox new again"
 	SOURCE "taken in the delivery of @TASK.B22, pull request 203"
 		REF @TASK.B22
+
+DECISION ACheckRunFailsOnFailureTimeoutOrStartupFailureAndTheTickRunsItsConnectorsAfterItsRounds
+	TITLE "check-runs takes as failing the conclusions failure, timed_out and startup_failure,"
+		+ "counts them per pull request or branch, and the tick applies its connectors once, after"
+		+ "its rounds"
+	STATUS active
+	DESC "a check run fails when its conclusion is failure, timed_out or startup_failure; success,"
+		+ "cancelled, skipped, neutral, action_required and a pending check run do not fail"
+	DESC "summary of check-runs maps the number of a pull request, or the branch PROJECT.MAIN for"
+		+ "its head, to the count of its failing check runs; that subject is the one the"
+		+ "fingerprint names, through brigade/collecting/name_check_run_subject.py"
+	DESC "the forge answers the check runs of the open pull requests and of the head of a branch"
+		+ "through list_check_runs, and the steps of a job through read_job_steps, none for a link"
+		+ "naming no job; check-runs declares cache false, as pr-list does"
+	DESC "the tick plans CollectCheckRuns for each registered project whose STATUS is not paused"
+		+ "and whose FORGE is github, and applies those actions once after its rounds through the"
+		+ "executor of the rounds: a failure is a tick.action_failed naming the project, counted in"
+		+ "actions_failed"
+	DESC "binds @TASK.B24"
+		REF @TASK.B24
+	REJECTED "the connector actions planned by plan in every round: the rounds plan again until the"
+		+ "plan is empty, so a connector would run up to the round cap at each tick"
+	REJECTED "a failing check run as any conclusion but success, as the preflight reads it: a"
+		+ "cancelled or skipped check is no failure, and a pending one would be recorded before it"
+		+ "concludes"
+	REJECTED "the listing of pr-list widened with the head and the links of the check runs: the"
+		+ "document of another collector changed for the need of this one"
+	RATIONALE "@TASK.B24 names the failing check runs and leaves open which conclusions fail, the"
+		+ "shape of summary and where the tick runs its connectors"
+		REF @TASK.B24
+	SOURCE "taken in the delivery of @TASK.B24"
+		REF @TASK.B24

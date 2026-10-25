@@ -2,6 +2,8 @@ import json
 import unittest
 
 from brigade.adapters.forges.github import (
+    BRANCH_CHECK_RUNS_QUERY,
+    OPEN_CHECK_RUNS_QUERY,
     PULL_REQUESTS_QUERY,
     REVIEW_THREADS_QUERY,
     THREAD_REPLY_MUTATION,
@@ -9,6 +11,7 @@ from brigade.adapters.forges.github import (
     create_milestone,
     describe_account,
     find_pull_request,
+    list_check_runs,
     list_milestones,
     list_pull_requests,
     list_review_threads,
@@ -17,6 +20,7 @@ from brigade.adapters.forges.github import (
     open_pull_request,
     post_review,
     read_check_logs,
+    read_job_steps,
     read_login_environment,
     read_pull_request,
     reply_review_thread,
@@ -59,6 +63,10 @@ def create_gh(stdout: str, exit_code: int = 0) -> GhDouble:
 
 def create_gh_answering_by_argv(answers: dict) -> GhDouble:
     return GhDouble(lambda request, rank: (0, answers[request.argv]))
+
+
+def create_gh_answering_in_turn(answers: list[str]) -> GhDouble:
+    return GhDouble(lambda request, rank: (0, answers[rank - 1]))
 
 
 class DecidePullRequestTest(unittest.TestCase):
@@ -1146,3 +1154,274 @@ class ReplyReviewThreadTest(unittest.TestCase):
                 )
             ],
         )
+
+
+CLI_ENVIRONMENT = {"GH_TOKEN": "token-of-octo-cli"}
+NO_LINK = None
+CHECK_RUNS_REQUEST = {
+    "schema_version": 1,
+    "repository": "/projects/shop",
+    "branch": "main",
+    "environment": CLI_ENVIRONMENT,
+}
+OPEN_PULL_REQUESTS_PAGES = json.dumps(
+    [
+        {
+            "data": {
+                "repository": {
+                    "pullRequests": {
+                        "nodes": [
+                            {
+                                "number": 12,
+                                "headRefName": "task/shop_w1/S3",
+                                "commits": {
+                                    "nodes": [
+                                        {
+                                            "commit": {
+                                                "oid": "0123abc",
+                                                "statusCheckRollup": {
+                                                    "contexts": {
+                                                        "nodes": [
+                                                            {
+                                                                "__typename": "CheckRun",
+                                                                "name": "tests",
+                                                                "conclusion": "FAILURE",
+                                                                "detailsUrl": "https://github.com/octo/shop/actions/runs/7/job/70",
+                                                            },
+                                                            {
+                                                                "__typename": "CheckRun",
+                                                                "name": "lint",
+                                                                "conclusion": None,
+                                                                "detailsUrl": None,
+                                                            },
+                                                            {"__typename": "StatusContext"},
+                                                        ]
+                                                    }
+                                                },
+                                            }
+                                        }
+                                    ]
+                                },
+                            },
+                            {
+                                "number": 13,
+                                "headRefName": "docs/readme",
+                                "commits": {"nodes": [{"commit": {"oid": "89abcde", "statusCheckRollup": None}}]},
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+)
+MAIN_HEAD = json.dumps(
+    {
+        "data": {
+            "repository": {
+                "ref": {
+                    "target": {
+                        "oid": "4567def",
+                        "statusCheckRollup": {
+                            "contexts": {
+                                "nodes": [
+                                    {
+                                        "__typename": "CheckRun",
+                                        "name": "build",
+                                        "conclusion": "TIMED_OUT",
+                                        "detailsUrl": "https://ci.example.com/build/9",
+                                    }
+                                ]
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    }
+)
+MISSING_BRANCH = json.dumps({"data": {"repository": {"ref": None}}})
+NO_OPEN_PULL_REQUEST = json.dumps([{"data": {"repository": {"pullRequests": {"nodes": []}}}}])
+JOB = json.dumps(
+    {
+        "id": 70,
+        "steps": [
+            {"name": "Set up job", "status": "completed", "conclusion": "success", "number": 1},
+            {"name": "Run tests", "status": "completed", "conclusion": "failure", "number": 2},
+            {"name": "Post Run actions/checkout@v4", "status": "pending", "conclusion": None, "number": 3},
+        ],
+    }
+)
+
+
+class ListCheckRunsTest(unittest.TestCase):
+    def test_should_answer_the_check_runs_of_the_open_pull_requests_and_of_the_head_of_the_branch(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=create_gh_answering_in_turn([OPEN_PULL_REQUESTS_PAGES, MAIN_HEAD]))
+
+        # Act
+        answer = list_check_runs(CHECK_RUNS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            {
+                "schema_version": 1,
+                "check_runs": [
+                    {
+                        "pull_request": 12,
+                        "branch": "task/shop_w1/S3",
+                        "head": "0123abc",
+                        "name": "tests",
+                        "conclusion": "failure",
+                        "link": "https://github.com/octo/shop/actions/runs/7/job/70",
+                    },
+                    {
+                        "pull_request": 12,
+                        "branch": "task/shop_w1/S3",
+                        "head": "0123abc",
+                        "name": "lint",
+                        "conclusion": "pending",
+                        "link": None,
+                    },
+                    {
+                        "pull_request": None,
+                        "branch": "main",
+                        "head": "4567def",
+                        "name": "build",
+                        "conclusion": "timed_out",
+                        "link": "https://ci.example.com/build/9",
+                    },
+                ],
+            },
+        )
+
+    def test_should_answer_no_check_run_of_a_branch_the_forge_does_not_hold(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=create_gh_answering_in_turn([NO_OPEN_PULL_REQUEST, MISSING_BRANCH]))
+
+        # Act
+        answer = list_check_runs(CHECK_RUNS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "check_runs": []})
+
+    def test_should_read_every_page_of_the_open_pull_requests_then_the_branch_as_the_login_of_the_request(self):
+        # Arrange
+        gh = create_gh_answering_in_turn([NO_OPEN_PULL_REQUEST, MISSING_BRANCH])
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        list_check_runs(CHECK_RUNS_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "api",
+                        "graphql",
+                        "--paginate",
+                        "--slurp",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-f",
+                        f"query={OPEN_CHECK_RUNS_QUERY}",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=600.0,
+                    environment={"GH_TOKEN": "token-of-octo-cli"},
+                ),
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "api",
+                        "graphql",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-f",
+                        "branch=refs/heads/main",
+                        "-f",
+                        f"query={BRANCH_CHECK_RUNS_QUERY}",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment={"GH_TOKEN": "token-of-octo-cli"},
+                ),
+            ],
+        )
+
+
+class ReadJobStepsTest(unittest.TestCase):
+    def test_should_answer_the_steps_of_the_job_the_link_names(self):
+        # Arrange
+        gh = create_gh_answering_in_turn([JOB])
+        runtime = create_test_runtime(run_process=gh)
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "link": "https://github.com/octo/shop/actions/runs/7/job/70",
+            "environment": CLI_ENVIRONMENT,
+        }
+
+        # Act
+        answer = read_job_steps(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            {
+                "schema_version": 1,
+                "steps": [
+                    {"name": "Set up job", "conclusion": "success"},
+                    {"name": "Run tests", "conclusion": "failure"},
+                    {"name": "Post Run actions/checkout@v4", "conclusion": None},
+                ],
+            },
+        )
+
+    def test_should_ask_gh_for_the_job_the_link_names_as_the_login_of_the_request(self):
+        # Arrange
+        gh = create_gh_answering_in_turn([JOB])
+        runtime = create_test_runtime(run_process=gh)
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "link": "https://github.com/octo/shop/actions/runs/7/job/70",
+            "environment": CLI_ENVIRONMENT,
+        }
+
+        # Act
+        read_job_steps(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "api", "repos/{owner}/{repo}/actions/jobs/70"),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment={"GH_TOKEN": "token-of-octo-cli"},
+                )
+            ],
+        )
+
+    def test_should_answer_no_steps_for_a_link_naming_no_job(self):
+        for link in ["https://ci.example.com/build/9", NO_LINK]:
+            with self.subTest(link=link):
+                # Arrange
+                runtime = create_test_runtime(run_process=create_gh_answering_in_turn([]))
+                request = {"schema_version": 1, "repository": "/projects/shop", "link": link, "environment": {}}
+
+                # Act
+                answer = read_job_steps(request, runtime)
+
+                # Assert
+                self.assertEqual(answer, {"schema_version": 1, "steps": None})

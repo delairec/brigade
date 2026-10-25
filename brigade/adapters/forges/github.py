@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 
 from brigade.runtime import Runtime
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
@@ -37,7 +38,7 @@ COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
 PENDING_VERDICT = "pending"
 JOB_SEPARATOR = "/job/"
-JOB_LOGS_PATH = "repos/{owner}/{repo}/actions/jobs"
+JOBS_PATH = "repos/{owner}/{repo}/actions/jobs"
 REVIEW_EVENTS = {"approve": "APPROVE", "request_changes": "REQUEST_CHANGES"}
 REVIEW_THREADS_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
@@ -48,6 +49,23 @@ REVIEW_THREADS_QUERY = """query($owner: String!, $name: String!, $number: Int!) 
     }
   }
 }"""
+CHECK_RUN_CONTEXTS = """statusCheckRollup { contexts(first: 100) {
+  nodes { __typename ... on CheckRun { name conclusion detailsUrl } }
+} }"""
+OPEN_CHECK_RUNS_QUERY = f"""query($owner: String!, $name: String!, $endCursor: String) {{
+  repository(owner: $owner, name: $name) {{
+    pullRequests(first: 100, after: $endCursor, states: [OPEN]) {{
+      nodes {{ number headRefName commits(last: 1) {{ nodes {{ commit {{ oid {CHECK_RUN_CONTEXTS} }} }} }} }}
+      pageInfo {{ hasNextPage endCursor }}
+    }}
+  }}
+}}"""
+BRANCH_CHECK_RUNS_QUERY = f"""query($owner: String!, $name: String!, $branch: String!) {{
+  repository(owner: $owner, name: $name) {{
+    ref(qualifiedName: $branch) {{ target {{ ... on Commit {{ oid {CHECK_RUN_CONTEXTS} }} }} }}
+  }}
+}}"""
+BRANCH_REF_PREFIX = "refs/heads/"
 THREAD_REPLY_MUTATION = """mutation($thread: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $thread, body: $body}) { comment { id } }
 }"""
@@ -340,7 +358,7 @@ def _read_job_tail(request: dict, runtime: Runtime, link: str) -> str | None:
     if JOB_SEPARATOR not in link:
         return None
     job = link.rsplit(JOB_SEPARATOR, 1)[1]
-    log = _ask_gh(request, runtime, ("api", f"{JOB_LOGS_PATH}/{job}/logs"))
+    log = _ask_gh(request, runtime, ("api", f"{JOBS_PATH}/{job}/logs"))
     return "\n".join(log.splitlines()[-request["lines"] :])
 
 
@@ -423,3 +441,103 @@ def rewrite_pull_request_body(request: dict, runtime: Runtime) -> dict:
         )
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+@dataclass(frozen=True)
+class _CheckedHead:
+    pull_request: int | None
+    branch: str
+    commit: dict
+
+
+def _describe_head_check_runs(head: _CheckedHead) -> list[dict]:
+    rollup = head.commit["statusCheckRollup"]
+    contexts = [] if rollup is None else rollup["contexts"]["nodes"]
+    return [
+        {
+            "pull_request": head.pull_request,
+            "branch": head.branch,
+            "head": head.commit["oid"],
+            "name": context["name"],
+            "conclusion": (context["conclusion"] or PENDING_VERDICT).lower(),
+            "link": context["detailsUrl"],
+        }
+        for context in contexts
+        if context["__typename"] == CHECK_RUN_TYPE
+    ]
+
+
+def _list_open_heads(request: dict, runtime: Runtime) -> list[_CheckedHead]:
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=(
+                "gh",
+                "api",
+                "graphql",
+                "--paginate",
+                "--slurp",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "name={repo}",
+                "-f",
+                f"query={OPEN_CHECK_RUNS_QUERY}",
+            ),
+            cwd=request["repository"],
+            timeout_s=LISTING_TIMEOUT_S,
+            environment=request["environment"],
+        )
+    )
+    return [
+        _CheckedHead(
+            pull_request=pull_request["number"],
+            branch=pull_request["headRefName"],
+            commit=pull_request["commits"]["nodes"][0]["commit"],
+        )
+        for page in json.loads(record.stdout)
+        for pull_request in page["data"]["repository"]["pullRequests"]["nodes"]
+    ]
+
+
+def _list_branch_head(request: dict, runtime: Runtime) -> list[_CheckedHead]:
+    page = json.loads(
+        _ask_gh(
+            request,
+            runtime,
+            (
+                "api",
+                "graphql",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "name={repo}",
+                "-f",
+                f"branch={BRANCH_REF_PREFIX}{request['branch']}",
+                "-f",
+                f"query={BRANCH_CHECK_RUNS_QUERY}",
+            ),
+        )
+    )
+    ref = page["data"]["repository"]["ref"]
+    if ref is None:
+        return []
+    return [_CheckedHead(pull_request=None, branch=request["branch"], commit=ref["target"])]
+
+
+def list_check_runs(request: dict, runtime: Runtime) -> dict:
+    heads = [*_list_open_heads(request, runtime), *_list_branch_head(request, runtime)]
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "check_runs": [check_run for head in heads for check_run in _describe_head_check_runs(head)],
+    }
+
+
+def read_job_steps(request: dict, runtime: Runtime) -> dict:
+    link = request["link"]
+    if link is None or JOB_SEPARATOR not in link:
+        return {"schema_version": DOCUMENT_SCHEMA_VERSION, "steps": None}
+    job = json.loads(_ask_gh(request, runtime, ("api", f"{JOBS_PATH}/{link.rsplit(JOB_SEPARATOR, 1)[1]}")))
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "steps": [{"name": step["name"], "conclusion": step["conclusion"]} for step in job["steps"]],
+    }

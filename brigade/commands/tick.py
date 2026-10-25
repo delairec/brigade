@@ -3,11 +3,14 @@ import dataclasses
 import functools
 import sys
 from collections.abc import Callable
+from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.commands._read_forge_environment import FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
+from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.pr_merged import PrMerged
@@ -38,6 +41,7 @@ from brigade.studies.start_study_run import start_study_run
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
+from brigade.system.collector_places import locate_collectors
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.parse_configuration import Configuration
@@ -49,6 +53,7 @@ from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
     CloseWave,
+    CollectCheckRuns,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -72,6 +77,7 @@ from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import build_snapshot
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
+from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.remove_task_worktree import remove_task_worktree
@@ -107,6 +113,8 @@ ROUND_CAP = 10
 LOCK_NAME = "tick.lock"
 COMMAND_NAME = "tick"
 CLI_KEY = "cli"
+COLLECTOR_KIND = "collector"
+CHECK_RUNS_COLLECTOR = "check-runs"
 
 
 def _locate_heartbeat(runtime: Runtime):
@@ -418,6 +426,25 @@ def _pause_wave(runtime: Runtime, action: PauseWave) -> None:
     )
 
 
+def _collect_check_runs(runtime: Runtime, configuration: Configuration, action: CollectCheckRuns) -> None:
+    path = Path(read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD))
+    record_check_runs(
+        runtime,
+        CheckRunsRecording(
+            project=action.project,
+            path=path,
+            collector=runtime.resolve_plugin(
+                COLLECTOR_KIND, CHECK_RUNS_COLLECTOR, places=locate_collectors(path, runtime.paths)
+            ),
+            equipment=CollectorEquipment(
+                configuration=configuration,
+                forge=runtime.resolve_plugin("forge", FORGE_NAME),
+                forge_name=FORGE_NAME,
+            ),
+        ),
+    )
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
@@ -441,6 +468,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: _report_wave(runtime, action),
         CloseWave: lambda action: append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr)),
+        CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
     }
 
 
@@ -455,6 +483,20 @@ def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Cal
     )
 
 
+def _prepare_apply(runtime: Runtime, configuration: Configuration) -> Callable:
+    return functools.partial(
+        apply_actions,
+        executors=_list_executors(runtime, configuration),
+        record_failure=lambda event: append_event(runtime.paths, runtime.now, event),
+    )
+
+
+def _read_registered_projects(runtime: Runtime) -> tuple:
+    if not runtime.paths.schema_file.exists():
+        return ()
+    return read_projects(runtime)
+
+
 def _tick(runtime: Runtime) -> Heartbeat | None:
     started = runtime.read_monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
@@ -464,23 +506,21 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
         configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
         read_pull_request = _follow_pull_requests(runtime, configuration)
         read_environment = _cache_forge_environment(runtime, configuration)
+        apply = _prepare_apply(runtime, configuration)
         outcome = run_rounds(
             Rounds(
                 build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
                 plan=plan,
-                apply=functools.partial(
-                    apply_actions,
-                    executors=_list_executors(runtime, configuration),
-                    record_failure=lambda event: append_event(runtime.paths, runtime.now, event),
-                ),
+                apply=apply,
                 cap=ROUND_CAP,
             )
         )
+        connected = apply(plan_connectors(_read_registered_projects(runtime)))
         heartbeat = Heartbeat(
             ts=format_instant(runtime.now),
             duration_ms=int((runtime.read_monotonic() - started) * 1000),
-            actions_applied=outcome.actions_applied,
-            actions_failed=outcome.actions_failed,
+            actions_applied=outcome.actions_applied + connected.applied,
+            actions_failed=outcome.actions_failed + len(connected.failed),
         )
         write_json_atomically(_locate_heartbeat(runtime), heartbeat.to_document())
     return heartbeat
