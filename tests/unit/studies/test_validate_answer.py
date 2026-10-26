@@ -194,6 +194,7 @@ class ValidateAnswerTest(unittest.TestCase):
             ("MANUAL_TEST", "the answer changed MANUAL_TEST, a field brigade filled"),
             ("INSTRUCTIONS_CHANGE", "the answer changed INSTRUCTIONS_CHANGE, a field brigade filled"),
             ("PARKED_QUESTION", "the answer changed PARKED_QUESTION, a field brigade filled"),
+            ("PATTERN_TASK", "the answer changed PATTERN_TASK, a field brigade filled"),
         ]:
             with self.subTest(field=field):
                 # Arrange
