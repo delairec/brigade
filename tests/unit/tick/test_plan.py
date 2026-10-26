@@ -1553,6 +1553,24 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, expected)
 
+    def test_should_settle_rather_than_park_on_its_question_a_task_whose_pull_request_was_merged(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            pull_request=MERGED,
+            worktree=WORKTREE_S3,
+            opened_pull_request=OPENED_BY_THE_TASK,
+            preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+            blocked_run=BLOCKED_ON_A_RULING,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
+
 
 SHOP_ON_GITHUB = dataclasses.replace(SHOP, on_github=True)
 SHOP_ON_GITHUB_UNDER_APPROVAL = dataclasses.replace(SHOP_ON_GITHUB, review="approval")
