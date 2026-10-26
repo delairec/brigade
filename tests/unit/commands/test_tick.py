@@ -3620,7 +3620,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
             "PROJECT": {
                 "elm": (("PATH", "/srv/elm"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
                 "oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
-            }
+            },
         }
         paths = create_test_paths(self.root)
         self.runtime = create_test_runtime(

@@ -3,12 +3,12 @@ import unittest
 from pathlib import Path
 
 from brigade.studies.convert_study import Study
-from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
 from brigade.studies.read_studies import read_studies
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
 
 
 class ReadStudiesTest(unittest.TestCase):
