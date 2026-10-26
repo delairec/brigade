@@ -3578,7 +3578,9 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         }
         return create_test_runtime(
             paths,
-            run_process=create_machine_double({"PROJECT": projects}, MACHINE_OUTPUTS),
+            run_process=create_machine_double(
+                {"PROJECT": projects, "STUDY": {"triage": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
+            ),
             resolve_plugin=lambda kind, name, **options: (
                 collectors[name] if kind == "collector" else resolve_plugin(kind, name, **options)
             ),
