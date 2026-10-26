@@ -2480,7 +2480,8 @@ TASK B25
 
 TASK B26
 	TITLE "Ratification into a wave"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 222
 	TYPE feat
 	MILESTONE @MILESTONE.M2
 	COMPONENT "triage"
