@@ -1614,22 +1614,30 @@ class PlanIntegrationPullRequestTest(unittest.TestCase):
 
 LAST_RUN_OF_S3 = "20261006T110000Z-d1e2f3"
 NO_RUN = None
+NOT_BLOCKED = None
 PARK_S3_RUN_NOT_STARTED = ParkTask(wave="shop_w1", task="S3", reason="run not started", blockers=())
 
 
 class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
     def test_should_park_a_running_task_no_live_run_names_with_the_reason_of_its_last_run(self):
-        for case, last_run, expected in [
+        for case, last_run, blocked_run, expected in [
             (
                 "its last run dead",
                 LAST_RUN_OF_S3,
+                NOT_BLOCKED,
                 (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),),
             ),
-            ("no run naming it", NO_RUN, (PARK_S3_RUN_NOT_STARTED,)),
+            (
+                "its first build ended blocked on a question",
+                "20261006T110000Z-b10c4d",
+                BLOCKED_ON_A_RULING,
+                (PARK_S3_ON_THE_QUESTION,),
+            ),
+            ("no run naming it", NO_RUN, NOT_BLOCKED, (PARK_S3_RUN_NOT_STARTED,)),
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", last_run=last_run)
+                task = TaskFacts(name="S3", last_run=last_run, blocked_run=blocked_run)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
                 # Act
