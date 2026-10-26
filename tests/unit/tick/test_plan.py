@@ -1001,7 +1001,11 @@ NO_INTEGRATION_PULL_REQUEST = None
 class PlanWaveCloseTest(unittest.TestCase):
     def test_should_close_a_wave_once_its_integration_pull_request_is_merged(self):
         for case, integration, expected in [
-            ("merged", INTEGRATION_MERGED, (CloseWave(wave="shop_w1", pr=77),)),
+            (
+                "merged",
+                INTEGRATION_MERGED,
+                (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=()),),
+            ),
             ("still open", INTEGRATION_OPEN, ()),
             ("not opened yet", NO_INTEGRATION_PULL_REQUEST, ()),
         ]:
@@ -1017,6 +1021,22 @@ class PlanWaveCloseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+    def test_should_close_a_wave_with_the_milestones_its_tasks_carry(self):
+        # Arrange
+        tasks = (TaskFacts(name="S3", milestone="M4"), TaskFacts(name="S4", milestone="M4"), TaskFacts(name="S5"))
+        wave = dataclasses.replace(
+            create_wave(tasks, {"S3": "merged", "S4": "merged", "S5": "parked"}),
+            reported=True,
+            integration_pull_request=INTEGRATION_MERGED,
+        )
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=("M4",)),))
 
 
 BODY_FAILURE = PreflightFailure(name="body", findings=("the body names no task",))

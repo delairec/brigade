@@ -89,6 +89,7 @@ from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.tick.write_repair_brief import write_repair_brief
+from brigade.triage.deliver_patterns import WaveDelivery, deliver_patterns
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
@@ -302,6 +303,11 @@ def _report_wave(runtime: Runtime, action: ReportWave) -> None:
     append_event(runtime.paths, runtime.now, WaveReported(wave=action.wave, run=run_id))
 
 
+def _close_wave(runtime: Runtime, action: CloseWave) -> None:
+    deliver_patterns(runtime, WaveDelivery(project=action.project, milestones=action.milestones))
+    append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr))
+
+
 def _record_task_state(runtime: Runtime, action: RecordTaskState) -> None:
     append_event(
         runtime.paths,
@@ -491,7 +497,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: _report_wave(runtime, action),
-        CloseWave: lambda action: append_event(runtime.paths, runtime.now, WaveClosed(wave=action.wave, pr=action.pr)),
+        CloseWave: lambda action: _close_wave(runtime, action),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
     }

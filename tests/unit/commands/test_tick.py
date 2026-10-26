@@ -462,6 +462,7 @@ MACHINE_OUTPUTS = {
     ("awawa", "refs"): '{"incoming": []}',
     ("awawa", "fmt"): "",
     ("awawa", "lint"): "",
+    ("git", "add"): "",
     ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
 }
 MACHINE_ANSWERS = {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()}
@@ -654,11 +655,12 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
         self.spawn = SpawnRecorderDouble()
 
-    def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = ()) -> Runtime:
+    def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = (), requests: tuple = ()) -> Runtime:
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), *setup)},
             "TASK": {"T7": task},
+            "REQUEST": dict(requests),
         }
         return create_test_runtime(
             create_test_paths(self.root),
@@ -2219,6 +2221,30 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "run": reported_run,
                 },
             ],
+        )
+
+    def test_should_deliver_the_pattern_whose_request_the_closed_wave_delivers(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), WAVE_REPORTED])
+        (self.root / "config" / "patterns.awawa").write_text(
+            'PATTERN CartTimeouts\n\tTITLE "the cart tests fail on a timeout"\n\tSTATUS ratified\n\tACTION wave\n',
+            encoding="utf-8",
+        )
+        request_from_the_pattern = (
+            "tidepool_r1",
+            (("PROJECT", "@PROJECT.tidepool"), ("MILESTONE", "M4"), ("FROM", "@PATTERN.CartTimeouts")),
+        )
+        runtime = self._create_runtime(
+            TASK_DELIVERED, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED), requests=(request_from_the_pattern,)
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (self.root / "config" / "patterns.awawa").read_text(encoding="utf-8"),
+            'PATTERN CartTimeouts\n\tTITLE "the cart tests fail on a timeout"\n\tSTATUS delivered\n\tACTION wave\n',
         )
 
     def test_should_close_a_reported_wave_once_its_integration_pull_request_is_merged(self):

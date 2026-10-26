@@ -124,6 +124,7 @@ class SnapshotTest(unittest.TestCase):
                             "repair_rounds": 0,
                             "holds_uncommitted_changes": False,
                             "last_run": None,
+                            "milestone": None,
                         }
                     ],
                     "states": {},
@@ -228,3 +229,13 @@ class TaskFactsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["last_run"], "20261022T232947Z-1858d2")
+
+    def test_should_carry_the_milestone_of_the_task_in_its_document(self):
+        # Arrange
+        task = TaskFacts(name="B19", milestone="M4")
+
+        # Act
+        document = task.to_document()
+
+        # Assert
+        self.assertEqual(document["milestone"], "M4")

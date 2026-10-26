@@ -436,7 +436,12 @@ def _plan_reports(snapshot: Snapshot) -> tuple:
 
 def _plan_closes(snapshot: Snapshot) -> tuple:
     return tuple(
-        CloseWave(wave=wave.wave, pr=wave.integration_pull_request.number)
+        CloseWave(
+            wave=wave.wave,
+            pr=wave.integration_pull_request.number,
+            project=wave.project,
+            milestones=tuple(sorted({task.milestone for task in wave.tasks if task.milestone is not None})),
+        )
         for wave in snapshot.waves
         if wave.integration_pull_request is not None and wave.integration_pull_request.state == MERGED_PULL_REQUEST
     )
