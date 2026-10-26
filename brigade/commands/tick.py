@@ -101,6 +101,8 @@ MERGED_STATE = "merged"
 PATH_FIELD = "PATH"
 MAIN_FIELD = "MAIN"
 NO_MILESTONE = None
+UNKNOWN_OPENER = None
+OPEN_PULL_REQUEST = "open"
 FAILED_VERDICT = "fail"
 TICK_INTERVAL_S = 300
 ROUND_CAP = 10
@@ -368,11 +370,17 @@ def _open_integration_pull_request(
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     project = find_project(read_projects(runtime), action.project)
     main = read_project_field(project, MAIN_FIELD)
+    repository = read_project_field(project, PATH_FIELD)
+    query = PullRequestQuery(repository=repository, branch=action.branch, environment=environment)
+    found = ask_pull_request(forge, FORGE_NAME, query, runtime)
+    if found is not None and found.state == OPEN_PULL_REQUEST and found.base == main:
+        append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=found.number, login=UNKNOWN_OPENER))
+        return
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
     tasks = ", ".join(f"@TASK.{task}" for task in action.tasks)
     opened = forge.open_pull_request(
         {
-            "repository": read_project_field(project, PATH_FIELD),
+            "repository": repository,
             "base": main,
             "branch": action.branch,
             "title": f"chore(wave): merge the wave {action.wave} into {main}",
