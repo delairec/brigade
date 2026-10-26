@@ -3482,7 +3482,12 @@ DECISION SchedulerStatusJudgesTheTickStaleStrictlyPastItsMinutesAndSummarisesThe
 DECISION ARepairRoundIsOneFixingStateOfTheTask
 	TITLE "a repair round is one task.state fixing of the task in its wave, recorded by the tick"
 		+ "after each launch of a repair run; a run that ends without a push is launched again"
-	STATUS active
+	STATUS archived
+	DESC "replaced by"
+		+ "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone on"
+		+ "the user's ruling of 2026-10-26: only the repair runs are counted, a run of the rebase"
+		+ "slot counts no round"
+		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
 	DESC "the tick records task.state fixing after it launches a run of the remediate, the build or"
 		+ "the rebase slot on a task in changes_requested, with a failing check or whose git rebase"
 		+ "conflicted; the rounds of a task are the count of those events of the task in its wave"
@@ -3854,3 +3859,85 @@ DECISION AFindingRecordedWithoutASummaryPrintsNoneAsItsSummaryInThePreviousVerdi
 		REF @TASK.B22
 	SOURCE "taken in the delivery of @TASK.B209"
 		REF @TASK.B209
+
+DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
+	TITLE "a repair round is one launch by the tick of a run of the remediate or the build slot on"
+		+ "a task of a wave; a run of the rebase slot counts none, and no other bound replaces it"
+	STATUS active
+	DESC "the rounds of a task are the count of the runs of the remediate slot and of the build"
+		+ "slot the tick launched on it in its wave, each recorded as task.state fixing after its"
+		+ "launch; past the VERIFY_ROUNDS of the project's POLICY the task is parked with the"
+		+ "reason of the rounds spent"
+	DESC "a run of the rebase slot, launched on a conflict of the git rebase, counts no round, and"
+		+ "no count of its own bounds its launches"
+	DESC "a task left fixing whose pull request head is still the head of its last preflight, with"
+		+ "no run holding its worktree, is launched again, one more round when the run is of the"
+		+ "remediate or the build slot and none when it is of the rebase slot; a task whose last"
+		+ "run ended blocked is parked instead, as"
+		+ "@DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion"
+		+ "says"
+		REF @DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
+	DESC "replaces @DECISION.ARepairRoundIsOneFixingStateOfTheTask, under which a run of the rebase"
+		+ "slot counted one round; binds @TASK.B18 and @TASK.B143, whose SPEC counting a run of the"
+		+ "rebase slot as one round no longer holds, and @TASK.B196, whose repair round is"
+		+ "unchanged"
+		REF @DECISION.ARepairRoundIsOneFixingStateOfTheTask
+		REF @TASK.B18
+		REF @TASK.B143
+		REF @TASK.B196
+	REJECTED "a run of the rebase slot counted as one round, as the former ruling did: the user"
+		+ "ruled that only the repair rounds are counted"
+	REJECTED "a bound of its own on the runs of the rebase slot once they count no round: the user"
+		+ "refused a second limit"
+	REJECTED "the rounds counted from run.finished of the repair slots: a run resumed after a rate"
+		+ "limit finishes once per segment and would count twice"
+	REJECTED "the rounds counted by pushes: a run that never pushes would be launched without end"
+	RATIONALE "the user's words: « non mais seuls les rounds de réparations doivent être comptés »,"
+		+ "and on a bound of its own for the runs of the rebase slot: « je ne comprends pas"
+		+ "pourquoi il faudrait une autre limite, c'est débile »; the ledger holds the launch"
+		+ "decision the tick took, so the count follows from facts as"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "the user's rulings of 2026-10-26 in session, on @TASK.B25 parked past 2 repair rounds"
+		+ "at its first verdict on pull request #211, its two rounds being one run of the rebase"
+		+ "slot of 2026-10-25 and one check repair of 2026-10-26"
+		REF @TASK.B25
+	SOURCE "the former ruling, taken in the delivery of @TASK.B18, pull request #180, and extended"
+		+ "to the rebase slot in the delivery of @TASK.B143, pull request #182"
+		REF @TASK.B18
+		REF @TASK.B143
+
+DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
+	TITLE "a repair run or a rebase run that cannot go on without a decision the task did not"
+		+ "settle ends blocked on its question, and the tick parks the task on that question, not"
+		+ "on the rounds spent"
+	STATUS active
+	DESC "a run of the remediate, the build or the rebase slot that meets a decision the task did"
+		+ "not settle pushes nothing, states its question in its final message and declares"
+		+ "brigade-end: blocked, as"
+		+ "@DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage provides; a"
+		+ "conflict of the rebase whose resolution needs such a decision, and a finding or a"
+		+ "failing check that needs one, are such cases"
+		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
+	DESC "a task in fixing whose last run ended blocked is parked by the next tick, whatever the"
+		+ "count of its rounds, with a reason of task.parked naming that run and the ruling it"
+		+ "waits for, distinct from the reason of the rounds spent"
+	DESC "binds the procedures rebase-on-base, remediate-pr and build-task of"
+		+ "brigade/runs/data/procedures, and the parking of @TASK.B18 and @TASK.B143"
+		REF @TASK.B18
+		REF @TASK.B143
+	REJECTED "a run that ended blocked launched again at the next tick, one more round, until the"
+		+ "task is parked past the rounds of the policy: the question is answered by no run, and"
+		+ "the user wants the need of a ruling signalled as such"
+	REJECTED "the question left in the log of the run alone, the reason of task.parked saying only"
+		+ "that the rounds are spent: the user refused a park that says only that the budget was"
+		+ "reached"
+	RATIONALE "the user's words: « Si la réparation ne peut se faire sans une décision critique,"
+		+ "alors ça devrait être signalé comme tel et pas seulement comme ayant atteint la limite"
+		+ "de budget »; the procedure rebase-on-base already ends on the question when a conflict"
+		+ "needs a decision the task did not settle, and remediate-pr challenges such a finding"
+		+ "with the question, but nothing carried that end to the tick, which launched the run"
+		+ "again and parked the task past its rounds"
+	SOURCE "the user's rulings of 2026-10-26 in session, on @TASK.B25 parked past 2 repair rounds"
+		+ "at its first verdict on pull request #211"
+		REF @TASK.B25
