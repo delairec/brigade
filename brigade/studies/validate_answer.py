@@ -17,6 +17,7 @@ from brigade.system.write_text_atomically import write_text_atomically
 SCHEMA_FILE = "_schema.awawa"
 VALIDATION_DIRECTORY = "validation"
 SUBMITTED_DIRECTORY = "submitted"
+ANSWERED_DIRECTORY = "answered"
 FILLED_DIRECTORY = "filled"
 CONFORMING_EXIT_CODE = 0
 
@@ -62,11 +63,13 @@ def _find_changed_field(fields_the_cli_fills: tuple[str, ...], submitted: list[d
 def _compare_answer(runtime: Runtime, study: Study, run_directory: Path, answer: str) -> None:
     run_id = run_directory.name
     submitted_directory = run_directory / VALIDATION_DIRECTORY / SUBMITTED_DIRECTORY
+    answered_directory = run_directory / VALIDATION_DIRECTORY / ANSWERED_DIRECTORY
     filled_directory = run_directory / VALIDATION_DIRECTORY / FILLED_DIRECTORY
     _prepare_submitted_corpus(runtime, study, submitted_directory, answer)
     _require_conformity(runtime, study, submitted_directory)
     form = choose_answer_form(study)
-    form.check(runtime, submitted_directory, read_collected(run_directory))
+    _prepare_corpus(runtime, answered_directory, answer)
+    form.check(runtime, answered_directory, read_collected(run_directory))
     if not form.fields_the_cli_fills:
         return
     _prepare_corpus(runtime, filled_directory, form.render(runtime, study, run_id, read_collected(run_directory)))
