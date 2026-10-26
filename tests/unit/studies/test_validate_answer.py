@@ -236,6 +236,7 @@ class ValidateTriageAnswerTest(unittest.TestCase):
         (self.run_directory / "steps").mkdir(parents=True)
         (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
         self.submitted = self.run_directory / "validation" / "submitted"
+        self.answered = self.run_directory / "validation" / "answered"
 
     def test_should_lint_the_patterns_beside_those_the_operational_corpus_holds(self):
         # Arrange
@@ -247,8 +248,8 @@ class ValidateTriageAnswerTest(unittest.TestCase):
             return 0, "", ""
 
         self.processes.answer_by(("awawa", "lint", "--strict", str(self.submitted)), record_the_patterns_linted)
-        no_patterns = {}
-        self.processes.answer_entities(self.submitted, "PATTERN", no_patterns)
+        no_patterns_in_the_answer = {}
+        self.processes.answer_entities(self.answered, "PATTERN", no_patterns_in_the_answer)
 
         # Act
         validate_answer(self.runtime, TRIAGE, self.run_directory, "")
@@ -256,11 +257,29 @@ class ValidateTriageAnswerTest(unittest.TestCase):
         # Assert
         self.assertEqual(linted, [RATIFIED_PATTERN])
 
+    def test_should_check_the_patterns_of_the_answer_and_leave_out_those_the_operational_corpus_holds(self):
+        # Arrange
+        (self.root / "config" / "patterns.awawa").write_text(RATIFIED_PATTERN, encoding="utf-8")
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
+        self.processes.answer_entities(
+            self.submitted,
+            "PATTERN",
+            {"cli_is_hard_to_read": (("TITLE", "the cli is hard to read"), ("STATUS", "ratified"))},
+        )
+        no_patterns_in_the_answer = {}
+        self.processes.answer_entities(self.answered, "PATTERN", no_patterns_in_the_answer)
+
+        # Act
+        accepted = validate_answer(self.runtime, TRIAGE, self.run_directory, "")
+
+        # Assert
+        self.assertIsNone(accepted)
+
     def test_should_refuse_a_triage_answer_its_patterns_check_refuses(self):
         # Arrange
         self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
         self.processes.answer_entities(
-            self.submitted,
+            self.answered,
             "PATTERN",
             {"slow_tick": (("TITLE", "the tick is slow"), ("STATUS", "dismissed"), ("ACTION", "dismiss"))},
         )
