@@ -12,7 +12,6 @@ from brigade.studies.collect_evidence import collect_evidence
 from brigade.studies.judge_evidence import judge_evidence
 from brigade.studies.read_live_study_runs import read_live_study_runs
 from brigade.studies.read_study import Study
-from brigade.studies.refuse_inbox_output import refuse_inbox_output
 from brigade.studies.start_study_run import start_study_run
 from brigade.studies.study_run_context import STEPS_DIRECTORY, STUDY_KIND, StudyEquipment, StudyRunContext
 from brigade.studies.write_answer import write_answer
@@ -80,7 +79,6 @@ def _park_study(context: StudyRunContext, step: str, reason: str) -> dict:
 
 
 def run_study(runtime: Runtime, study: Study, equipment: StudyEquipment, started_run: str | None) -> dict:
-    refuse_inbox_output(study.output)
     context = _start_run(runtime, study, equipment, started_run)
     for step, perform in STEPS:
         result_path = context.run_directory / STEPS_DIRECTORY / f"{step}.json"

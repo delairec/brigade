@@ -12,9 +12,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import ANY
 
+from brigade.collectors import pr_threads
 from brigade.commands.tick import COMMAND
-from brigade.errors import BrigadeError, StandingDown, UsageError
+from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
 from brigade.runtime import Runtime
+from brigade.system.collector_places import locate_collectors
+from brigade.system.resolve_collector import BuiltInCollector, resolve_collector
 from tests.unit.commands.command_runtime import (
     ProcessAnswer,
     ScriptedProcessRunner,
@@ -23,6 +26,7 @@ from tests.unit.commands.command_runtime import (
     write_ledger,
     write_operational_corpus,
 )
+from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
@@ -458,6 +462,7 @@ MACHINE_OUTPUTS = {
     ("awawa", "refs"): '{"incoming": []}',
     ("awawa", "fmt"): "",
     ("awawa", "lint"): "",
+    ("git", "add"): "",
     ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
 }
 MACHINE_ANSWERS = {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()}
@@ -578,6 +583,12 @@ RESUMED_FROM_THE_FORGE_ACCOUNT = {
     "wave": "tidepool_w16",
     "reason": "forge_account",
 }
+PAUSED_TRIAGE = (
+    ("SLOT", "triage"),
+    ("OUTPUT", "entity:PATTERN"),
+    ("ANSWER", "PATTERN"),
+    ("STATUS", "paused"),
+)
 HEALTH_STUDY = (
     ("TITLE", "the health of the machine"),
     ("COLLECTOR", "runs-list"),
@@ -647,10 +658,12 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
         self.spawn = SpawnRecorderDouble()
 
-    def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = ()) -> Runtime:
+    def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = (), requests: tuple = ()) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), *setup)},
             "TASK": {"T7": task},
+            "REQUEST": dict(requests),
         }
         return create_test_runtime(
             create_test_paths(self.root),
@@ -931,6 +944,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
@@ -1618,6 +1632,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
@@ -2286,6 +2301,30 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             ],
         )
 
+    def test_should_deliver_the_pattern_whose_request_the_closed_wave_delivers(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), WAVE_REPORTED])
+        (self.root / "config" / "patterns.awawa").write_text(
+            'PATTERN CartTimeouts\n\tTITLE "the cart tests fail on a timeout"\n\tSTATUS ratified\n\tACTION wave\n',
+            encoding="utf-8",
+        )
+        request_from_the_pattern = (
+            "tidepool_r1",
+            (("PROJECT", "@PROJECT.tidepool"), ("MILESTONE", "M4"), ("FROM", "@PATTERN.CartTimeouts")),
+        )
+        runtime = self._create_runtime(
+            TASK_DELIVERED, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED), requests=(request_from_the_pattern,)
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (self.root / "config" / "patterns.awawa").read_text(encoding="utf-8"),
+            'PATTERN CartTimeouts\n\tTITLE "the cart tests fail on a timeout"\n\tSTATUS delivered\n\tACTION wave\n',
+        )
+
     def test_should_close_a_reported_wave_once_its_integration_pull_request_is_merged(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), WAVE_REPORTED])
@@ -2398,6 +2437,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
     def _create_runtime(self, forge: MergingForgeDouble) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
@@ -2704,6 +2744,27 @@ class OpeningForgeDouble:
     def describe_account(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "login": "tidepool-cli"}
 
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "check_runs": []}
+
+    def list_pull_requests(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_requests": []}
+
+
+def _resolve_the_collectors_beside(resolve_plugin, root: Path):
+    places = locate_collectors(root, create_test_paths(root))
+    check_runs = resolve_collector("check-runs", places)
+    pr_threads = resolve_collector("pr-threads", places)
+
+    def resolve(kind: str, name: str, **options):
+        if (kind, name) == ("collector", "check-runs"):
+            return check_runs
+        if (kind, name) == ("collector", "pr-threads"):
+            return pr_threads
+        return resolve_plugin(kind, name, **options)
+
+    return resolve
+
 
 class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
     def setUp(self):
@@ -2718,6 +2779,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, forge: OpeningForgeDouble) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
@@ -2725,7 +2787,9 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def _read_events(self) -> list[dict]:
@@ -2929,6 +2993,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
             "MILESTONE": {"M4": (("STATUS", "active"),)},
@@ -2994,7 +3059,9 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         spawn = SpawnRecorderDouble()
         runtime = create_test_runtime(
             create_test_paths(root),
-            run_process=create_machine_double({"STUDY": {"health": HEALTH_STUDY}}, MACHINE_OUTPUTS),
+            run_process=create_machine_double(
+                {"STUDY": {"health": HEALTH_STUDY, "triage": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
+            ),
             spawn_process=spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
         )
@@ -3004,6 +3071,25 @@ class TickLaunchingAStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])
+
+    def test_should_launch_the_built_in_triage_on_a_machine_that_never_ran_it(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        spawn = SpawnRecorderDouble()
+        no_recorded_study = {}
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(no_recorded_study, MACHINE_OUTPUTS),
+            spawn_process=spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(spawn.argvs, [("study", "run", "triage", "--run-id", ANY)])
 
 
 BEHIND_PULL_REQUEST = {**OPEN_PULL_REQUEST, "behind": True}
@@ -3070,6 +3156,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
     def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
@@ -3441,6 +3528,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
             CLIENT_AND_DOCUMENT_CONFIGURATION + ONE_FORGE_ATTEMPT + binding, encoding="utf-8"
         )
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
@@ -3514,4 +3602,284 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         self.assertEqual(
             document["plan"],
             [{"project": "tidepool", "wave": "tidepool_w16", "branch": "integration/M4", "task": "T7"}],
+        )
+
+
+FAILED_BUILD_OF_OAK = {
+    "pull_request": None,
+    "branch": "main",
+    "head": "4567def",
+    "name": "build",
+    "conclusion": "failure",
+    "link": None,
+}
+
+
+class CheckRunsForgeDouble:
+    def __init__(self, failing_repository: str):
+        self.failing_repository = failing_repository
+
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        if request["repository"] == self.failing_repository:
+            raise CommandFailed(("gh", "api", "graphql"), 1, "HTTP 502")
+        return {"schema_version": 1, "check_runs": [FAILED_BUILD_OF_OAK]}
+
+    def read_job_steps(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "steps": None}
+
+    def list_pull_requests(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_requests": []}
+
+
+class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        no_ledger_lines: list[dict] = []
+        write_ledger(self.root, no_ledger_lines)
+        (self.root / "cache" / "refs" / "elm" / WAVE_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "oak" / WAVE_HEAD).mkdir(parents=True)
+        self.signals = self.root / "state" / "inbox" / "signals.jsonl"
+        self.signals.parent.mkdir(parents=True)
+        self.signals.write_text("", encoding="utf-8")
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {
+                "elm": (("PATH", "/srv/elm"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
+                "oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active")),
+            },
+        }
+        paths = create_test_paths(self.root)
+        self.runtime = create_test_runtime(
+            paths,
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
+            resolve_plugin=create_plugin_resolver(
+                {
+                    ("forge", "github"): CheckRunsForgeDouble(failing_repository="/srv/elm"),
+                    ("collector", "check-runs"): resolve_collector("check-runs", locate_collectors(self.root, paths)),
+                    ("collector", "pr-threads"): resolve_collector("pr-threads", locate_collectors(self.root, paths)),
+                }
+            ),
+        )
+
+    def test_should_record_the_failing_check_runs_of_an_active_project_in_the_inbox(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            list(map(json.loads, self.signals.read_text(encoding="utf-8").splitlines())),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "recorded",
+                    "kind": "check_run",
+                    "project": "oak",
+                    "fingerprint": "cr:oak:main:build:4567def",
+                    "evidence": {
+                        "pull_request": None,
+                        "branch": "main",
+                        "head": "4567def",
+                        "name": "build",
+                        "conclusion": "failure",
+                        "link": None,
+                        "first_failing_step": None,
+                    },
+                }
+            ],
+        )
+
+    def test_should_record_the_forge_error_of_a_project_in_the_outcome_of_the_tick_and_serve_the_others(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            list(map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text().splitlines())),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "tick.action_failed",
+                    "action": "CollectCheckRuns",
+                    "project": "elm",
+                    "wave": None,
+                    "task": None,
+                    "error": "collector check-runs exited 1\ngh api graphql exited 1: HTTP 502",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "inbox.recorded",
+                    "fingerprint": "cr:oak:main:build:4567def",
+                    "kind": "check_run",
+                    "project": "oak",
+                },
+            ],
+        )
+
+    def test_should_count_the_collection_of_each_project_among_the_actions_of_the_tick(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "mode": "once",
+                "ts": "2026-10-19T09:00:00Z",
+                "duration_ms": ANY,
+                "actions_applied": 3,
+                "actions_failed": 1,
+                "heartbeat": str(self.root / "state" / "tick.json"),
+            },
+        )
+
+
+PR_THREADS = BuiltInCollector(
+    name="pr-threads", source="built-in", command="brigade.collectors.pr_threads", module=pr_threads
+)
+OPEN_PULL_REQUEST_BY_REPOSITORY = {"oak": 4, "elm": 7}
+THREAD_BY_PULL_REQUEST = {
+    4: {"id": "PRRT_oak4", "file": "src/cart.py", "line": 12, "author": "delairec", "body": "Name the total"},
+    7: {"id": "PRRT_elm7", "file": "src/tree.py", "line": 3, "author": "delairec", "body": "Test the empty tree"},
+}
+
+
+def _refuse_the_listing(request: dict) -> dict:
+    raise BrigadeError("gh: HTTP 502")
+
+
+def _list_the_open_pull_request(request: dict) -> dict:
+    return {
+        "schema_version": 1,
+        "pull_requests": [{"number": OPEN_PULL_REQUEST_BY_REPOSITORY[Path(request["repository"]).name]}],
+    }
+
+
+def create_connector_forge(list_pull_requests_of_elm) -> ForgeDouble:
+    return ForgeDouble(
+        {
+            "list_pull_requests": lambda request: (
+                list_pull_requests_of_elm(request)
+                if Path(request["repository"]).name == "elm"
+                else _list_the_open_pull_request(request)
+            ),
+            "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            "list_review_threads": lambda request: {
+                "schema_version": 1,
+                "threads": [THREAD_BY_PULL_REQUEST[request["number"]]],
+            },
+        }
+    )
+
+
+class TickRunningTheConnectorsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "oak" / WAVE_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "elm" / WAVE_HEAD).mkdir(parents=True)
+
+    def _create_runtime(self, projects: dict, forge: ForgeDouble) -> Runtime:
+        paths = create_test_paths(self.root)
+        resolve_plugin = create_plugin_resolution(STEP_COUNTING_PROBE, forge)
+        collectors = {
+            "pr-threads": PR_THREADS,
+            "check-runs": resolve_collector("check-runs", locate_collectors(self.root, paths)),
+        }
+        return create_test_runtime(
+            paths,
+            run_process=create_machine_double(
+                {"PROJECT": projects, "STUDY": {"triage": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
+            ),
+            resolve_plugin=lambda kind, name, **options: (
+                collectors[name] if kind == "collector" else resolve_plugin(kind, name, **options)
+            ),
+        )
+
+    def _describe_project(self, name: str) -> tuple:
+        return (("PATH", str(self.root / name)), ("MAIN", "main"), ("FORGE", "github"), ("STATUS", "active"))
+
+    def _read_state_file(self, *parts: str) -> str:
+        return self.root.joinpath("state", *parts).read_text(encoding="utf-8")
+
+    def test_should_record_the_review_threads_of_every_active_project_at_each_tick(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_state_file("inbox", "signals.jsonl"),
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "recorded", "kind": "review_thread",'
+            ' "project": "elm", "fingerprint": "rt:PRRT_elm7", "evidence": {"pull_request": 7, "path": "src/tree.py",'
+            ' "line": 3, "author": "delairec", "comment": "Test the empty tree"}}\n'
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "recorded", "kind": "review_thread",'
+            ' "project": "oak", "fingerprint": "rt:PRRT_oak4", "evidence": {"pull_request": 4, "path": "src/cart.py",'
+            ' "line": 12, "author": "delairec", "comment": "Name the total"}}\n',
+        )
+
+    def test_should_record_the_forge_error_of_the_connector_in_the_outcome_of_the_tick_for_the_project(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm")}
+        runtime = self._create_runtime(projects, create_connector_forge(_refuse_the_listing))
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_state_file("ledger", "2026-10.jsonl"),
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "tick.action_failed",'
+            ' "action": "CollectReviewThreads", "project": "elm", "wave": null, "task": null,'
+            ' "error": "collector pr-threads exited 1\\ngh: HTTP 502"}\n',
+        )
+        self.assertEqual(document["actions_failed"], 1)
+
+    def test_should_count_the_connector_actions_among_the_actions_applied(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(document["actions_applied"], 4)
+
+    def test_should_plan_the_connector_actions_on_a_dry_run_and_apply_none(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["plan"], [{"project": "elm"}, {"project": "elm"}, {"project": "oak"}, {"project": "oak"}]
+        )
+        self.assertFalse(self.root.joinpath("state", "inbox", "signals.jsonl").exists())
+
+    def test_should_record_the_review_threads_of_the_other_projects_when_the_forge_fails_for_one(self):
+        # Arrange
+        projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
+        runtime = self._create_runtime(projects, create_connector_forge(_refuse_the_listing))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_state_file("inbox", "signals.jsonl"),
+            '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "recorded", "kind": "review_thread",'
+            ' "project": "oak", "fingerprint": "rt:PRRT_oak4", "evidence": {"pull_request": 4, "path": "src/cart.py",'
+            ' "line": 12, "author": "delairec", "comment": "Name the total"}}\n',
         )

@@ -3039,7 +3039,9 @@ DECISION TheOutputStepOfAStudyRunWritesTheAnswerStudyAnswerRecorded
 DECISION TheInboxOutputOfAStudyIsRefusedUntilTheInboxHasAStore
 	TITLE "brigade study new and brigade study run refuse the output inbox until task B22 gives the"
 		+ "inbox a store"
-	STATUS active
+	STATUS archived
+	DESC "archived on 2026-10-24: @TASK.B22 gives the inbox its store and accepts the output inbox"
+		+ "of a study, which records the answer as a signal"
 	DESC "study new refuses OUTPUT inbox before it records the study, and study run refuses it"
 		+ "before its run starts, for a study recorded earlier; each exits 1 naming the output and"
 		+ "@TASK.B22"
@@ -3969,3 +3971,149 @@ DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQ
 		+ "étendre la mise de côté sur la question au cas où le tout premier build d'une tâche"
 		+ "termine bloqué ? Aujourd'hui, la tâche est alors mise de côté comme run dead, sans la"
 		+ "question. »"
+
+DECISION TheInboxRefusesALineItCannotReadWhereTheLedgerSkipsIt
+	TITLE "a line of the inbox that is not JSON, lacks a field or carries another schema_version"
+		+ "stops every inbox command, exit 1 naming its file and its number"
+	STATUS active
+	DESC "binds @TASK.B22"
+		REF @TASK.B22
+	REJECTED "skipping the line and reporting it, as the ledger does: a skipped dismissal would"
+		+ "turn a dismissed signal back to new"
+	RATIONALE "the fold decides the status of a signal, and a dismissed fingerprint never returns"
+		+ "as new; a line lost to the fold is a status gone wrong, where a line lost to the ledger"
+		+ "is one event fewer in a count"
+	SOURCE "taken in the delivery of @TASK.B22, pull request 203"
+		REF @TASK.B22
+
+DECISION ANoteHashesItsProjectANewlineAndItsTextAndAStudyAnswerItsMarkdown
+	TITLE "the fingerprint of a note hashes its project, a newline and its text, the project empty"
+		+ "when none is given; that of a study answer hashes the Markdown brigade renders from the"
+		+ "answer entity"
+	STATUS active
+	DESC "binds @TASK.B22"
+		REF @TASK.B22
+	REJECTED "the project and the text joined without a separator: the project oak with the text x"
+		+ "would hash as the project oa with the text kx"
+	REJECTED "the awawa text of the answer: the inbox hands the answer to a person through inbox"
+		+ "show, as every output but entity: does, so its evidence and its hash are the Markdown"
+	RATIONALE "a fingerprint names the fact once recorded: changing what it hashes makes every"
+		+ "signal already in the inbox new again"
+	SOURCE "taken in the delivery of @TASK.B22, pull request 203"
+		REF @TASK.B22
+
+DECISION ACheckRunFailsOnFailureTimeoutOrStartupFailureAndTheTickRunsItsConnectorsAfterItsRounds
+	TITLE "check-runs takes as failing the conclusions failure, timed_out and startup_failure,"
+		+ "counts them per pull request or branch, and the tick applies its connectors once, after"
+		+ "its rounds"
+	STATUS active
+	DESC "a check run fails when its conclusion is failure, timed_out or startup_failure; success,"
+		+ "cancelled, skipped, neutral, action_required and a pending check run do not fail"
+	DESC "summary of check-runs maps the number of a pull request, or the branch PROJECT.MAIN for"
+		+ "its head, to the count of its failing check runs; that subject is the one the"
+		+ "fingerprint names, through brigade/collecting/name_check_run_subject.py"
+	DESC "the forge answers the check runs of the open pull requests and of the head of a branch"
+		+ "through list_check_runs, and the steps of a job through read_job_steps, none for a link"
+		+ "naming no job; check-runs declares cache false, as pr-list does"
+	DESC "the tick plans CollectCheckRuns for each registered project whose STATUS is not paused"
+		+ "and whose FORGE is github, and applies those actions once after its rounds through the"
+		+ "executor of the rounds: a failure is a tick.action_failed naming the project, counted in"
+		+ "actions_failed"
+	DESC "binds @TASK.B24"
+		REF @TASK.B24
+	REJECTED "the connector actions planned by plan in every round: the rounds plan again until the"
+		+ "plan is empty, so a connector would run up to the round cap at each tick"
+	REJECTED "a failing check run as any conclusion but success, as the preflight reads it: a"
+		+ "cancelled or skipped check is no failure, and a pending one would be recorded before it"
+		+ "concludes"
+	REJECTED "the listing of pr-list widened with the head and the links of the check runs: the"
+		+ "document of another collector changed for the need of this one"
+	RATIONALE "@TASK.B24 names the failing check runs and leaves open which conclusions fail, the"
+		+ "shape of summary and where the tick runs its connectors"
+		REF @TASK.B24
+	SOURCE "taken in the delivery of @TASK.B24, pull request 212"
+		REF @TASK.B24
+
+DECISION TheTickRunsTheConnectorsOnceAfterItsRoundsThroughItsExecutor
+	TITLE "the tick runs the review threads connector once per tick, after its plan and apply"
+		+ "rounds, as an action planned from the registry and applied by the executor of the tick"
+	STATUS active
+	DESC "plan_connectors plans, for each project whose STATUS is not paused and whose FORGE is"
+		+ "github, CollectCheckRuns and then CollectReviewThreads; a project of FORGE none is"
+		+ "planned none"
+	DESC "a connector that fails with a BrigadeError is a tick.action_failed naming its project and"
+		+ "counts in the actions_failed of the heartbeat, as any action of the tick"
+	DESC "binds @TASK.B23"
+		REF @TASK.B23
+	REJECTED "the connector planned by plan() from the snapshot: the rounds end on an empty plan,"
+		+ "so it would be planned again at each round up to ROUND_CAP"
+	REJECTED "the collector run for a project of FORGE none: its absence would be recorded as a"
+		+ "failed action at every tick"
+	RATIONALE "@DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce asks for one run per tick and"
+		+ "project, and @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction for"
+		+ "every outcome recorded by the executor; a step after the rounds keeps both"
+		REF @DECISION.ConnectorsRunAtEachTickAndRecordAFactOnce
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "taken in the delivery of @TASK.B23"
+		REF @TASK.B23
+
+DECISION TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint
+	TITLE "the built-in triage groups the new signals by rule cited, file and check name, and a"
+		+ "PATTERN cites a signal by an EVIDENCE that is its fingerprint or opens on it followed by"
+		+ "a space"
+	STATUS active
+	DESC "a family is the signals sharing one key, kept from two signals on: a @RULE.<name> cited"
+		+ "in a string of the evidence, the evidence path, the evidence name of a signal of kind"
+		+ "check_run; a signal shares several families when it holds several keys, and a signal in"
+		+ "none is a family of one"
+	DESC "the built-in triage is a study of the code, EVERY 24h; a STUDY of the operational corpus"
+		+ "named triage replaces it, to pause it or change its schedule"
+	DESC "an answer of type PATTERN is linted beside the patterns.awawa of the operational corpus,"
+		+ "and refused when a PATTERN of the answer is not new, names no ACTION, holds no EVIDENCE"
+		+ "or holds an EVIDENCE opening on no fingerprint inbox-families collected; the patterns"
+		+ "the operational corpus already holds are linted, never checked"
+	DESC "binds @TASK.B25"
+		REF @TASK.B25
+	REJECTED "an EVIDENCE that contains the fingerprint anywhere: rt:101 would cite rt:1012, and a"
+		+ "check name holding a space forbids reading the first word alone"
+	REJECTED "families joined transitively into one group: one shared file would merge two"
+		+ "unrelated rules into one problem"
+	REJECTED "the built-in triage written into the operational corpus by brigade init: init"
+		+ "upgrades no installed corpus, so the machines already initialised would never run it"
+	REJECTED "the check run on the patterns held beside the answer: a held pattern is ratified or"
+		+ "cites signals inbox-families no longer collects, so every triage after the first would"
+		+ "be refused"
+	RATIONALE "the collector must recognise the signals a PATTERN already cites, so that none is"
+		+ "proposed twice, and the check of the answer is the same rule read from the other side"
+	SOURCE "pull request 211, which delivers @TASK.B25"
+		REF @TASK.B25
+
+DECISION RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversThePattern
+	TITLE "brigade inbox ratify names the CONSTRAINT and the ORDER after their PATTERN, and the"
+		+ "close of the wave that delivers the request of a pattern delivers the PATTERN and its"
+		+ "CONSTRAINT"
+	STATUS active
+	DESC "a CONSTRAINT and an ORDER a ratification records bear the name of their PATTERN"
+	DESC "brigade inbox ratify takes --kind for a pattern of ACTION constraint, KIND being required"
+		+ "on a CONSTRAINT and absent from a PATTERN, and refuses a pattern of ACTION dismiss,"
+		+ "naming brigade inbox dismiss"
+	DESC "brigade inbox dismiss names a PATTERN when the operational corpus defines one by that"
+		+ "name, a signal otherwise"
+	DESC "a wave report row PATTERN_TASK reads <task> from @PATTERN.<name> with @CONSTRAINT.<name>:"
+		+ "<the TITLE of the pattern>, for each task whose MILESTONE is that of a REQUEST FROM a"
+		+ "pattern"
+	DESC "the tick delivers at wave.closed: every PATTERN a REQUEST of the project comes FROM,"
+		+ "whose MILESTONE a task of the closed wave carries, goes delivered with each CONSTRAINT"
+		+ "FROM it, and constraint.delivered is appended once per constraint"
+	DESC "binds @TASK.B26"
+		REF @TASK.B26
+	REJECTED "a KIND guessed from the pattern: the triage answer carries no KIND, and a wrong guess"
+		+ "would deliver the wrong kind of artefact"
+	REJECTED "delivery when the task pull requests merge into the integration branch: the wave is"
+		+ "delivered once its integration pull request reaches the main branch, which the tick"
+		+ "reads as wave.closed"
+	RATIONALE "the request of a pattern is planned into one MILESTONE, so the milestones the tasks"
+		+ "of a closed wave carry are what links the wave back to the patterns it delivers"
+	SOURCE "the user's rulings of 2026-10-24 in the refinement of B23 to B26, and the build run of"
+		+ "@TASK.B26"
+		REF @TASK.B26

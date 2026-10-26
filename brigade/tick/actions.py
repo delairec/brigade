@@ -133,6 +133,8 @@ class OpenIntegrationPullRequest:
 class CloseWave:
     wave: str
     pr: int
+    project: str
+    milestones: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -145,3 +147,13 @@ class RebaseTask:
     worktree: str
     head: str
     parking_reason: str | None
+
+
+@dataclass(frozen=True)
+class CollectCheckRuns:
+    project: str
+
+
+@dataclass(frozen=True)
+class CollectReviewThreads:
+    project: str

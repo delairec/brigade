@@ -6,6 +6,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.studies.convert_study import Study
+from brigade.studies.read_pattern_origins import read_pattern_origins
 from brigade.studies.render_wave_report import WaveEvidence, render_wave_report
 
 CORPUS_FIELD = "CORPUS"
@@ -27,5 +28,6 @@ def render_report_answer(runtime: Runtime, study: Study, run_id: str, collected:
             pull_requests=_read_items(collected, "pr-list"),
             tasks=_read_items(collected, "corpus"),
             changes=_read_items(collected, "git-diff-stat"),
+            origins=read_pattern_origins(runtime, study.project),
         )
     )

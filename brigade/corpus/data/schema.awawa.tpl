@@ -100,8 +100,7 @@ SCHEMA STUDY
 			+ "means on demand"
 	FIELD OUTPUT string
 		REQUIRED
-		DESC "file:<path pattern>, entity:<TYPE>, issue, or an output on PATH; inbox refused until"
-			+ "task B22"
+		DESC "file:<path pattern>, entity:<TYPE>, issue, inbox, or an output on PATH"
 	FIELD ANSWER string
 		DEFAULT "ANSWER"
 		DESC "the entity type of this schema the answer is written as"
@@ -162,6 +161,10 @@ SCHEMA REPORT
 	FIELD PARKED_QUESTION string
 		REPEATABLE
 		DESC "one parked task and what it waits for, filled by the CLI"
+	FIELD PATTERN_TASK string
+		REPEATABLE
+		DESC "one task whose request comes from a pattern, its constraint and its reason, filled by"
+			+ "the CLI"
 	FIELD NARRATIVE string
 		REPEATABLE
 		DESC "filled by the report slot"

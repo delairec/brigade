@@ -55,6 +55,7 @@ class RenderReportAnswerTest(unittest.TestCase):
         self.processes.answer_entities(
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))}
         )
+        self.processes.answer_entities(self.runtime.paths.config_root, "REQUEST", {})
         collected = [
             self.write_document("ledger", LEDGER_ITEMS),
             self.write_document("pr-list", PULL_REQUEST_ITEMS),
@@ -81,4 +82,55 @@ class RenderReportAnswerTest(unittest.TestCase):
             '\tSTATISTIC "deletions 1"\n'
             '\tMANUAL_TEST "B17: the tick merges"\n'
             '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n',
+        )
+
+    def test_should_list_the_task_whose_request_comes_from_a_pattern_of_the_operational_corpus(self):
+        # Arrange
+        config = self.runtime.paths.config_root
+        self.processes.answer_entities(config, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))})
+        self.processes.answer_entities(
+            config,
+            "REQUEST",
+            {
+                "oak_r1": (("PROJECT", "@PROJECT.oak"), ("MILESTONE", "M3"), ("FROM", "@PATTERN.CartTimeouts")),
+                "oak_r2": (("PROJECT", "@PROJECT.oak"), ("MILESTONE", "M3")),
+                "elm_r1": (("PROJECT", "@PROJECT.elm"), ("MILESTONE", "M3"), ("FROM", "@PATTERN.ElmPattern")),
+            },
+        )
+        self.processes.answer_entities(
+            config, "PATTERN", {"CartTimeouts": (("TITLE", "the cart tests fail on a timeout"),)}
+        )
+        self.processes.answer_entities(config, "CONSTRAINT", {"CartTimeouts": (("FROM", "@PATTERN.CartTimeouts"),)})
+        task_of_milestone_m3 = {
+            "type": "TASK",
+            "name": "B17",
+            "fields": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M3"]}],
+        }
+        collected = [
+            self.write_document("ledger", LEDGER_ITEMS),
+            self.write_document("pr-list", PULL_REQUEST_ITEMS),
+            self.write_document("corpus", [task_of_milestone_m3]),
+            self.write_document("git-diff-stat", CHANGE_ITEMS),
+        ]
+
+        # Act
+        answer = render_report_answer(self.runtime, STUDY, RUN_ID, collected)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            "REPORT oak_w2\n"
+            '\tWAVE "oak_w2"\n'
+            '\tPROJECT "oak"\n'
+            '\tTASK_ROW "B17 merged #178"\n'
+            '\tSTATISTIC "tasks 1"\n'
+            '\tSTATISTIC "merged 1"\n'
+            '\tSTATISTIC "parked 0"\n'
+            '\tSTATISTIC "runs 0"\n'
+            '\tSTATISTIC "files 2"\n'
+            '\tSTATISTIC "insertions 13"\n'
+            '\tSTATISTIC "deletions 1"\n'
+            '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n'
+            '\tPATTERN_TASK "B17 from @PATTERN.CartTimeouts with @CONSTRAINT.CartTimeouts:'
+            ' the cart tests fail on a timeout"\n',
         )

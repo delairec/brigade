@@ -152,6 +152,7 @@ class BuildStudyContextTest(unittest.TestCase):
             json.dumps({"collected": collected}), encoding="utf-8"
         )
         self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))})
+        self.processes.answer_entities(config_root, "REQUEST", {})
         self.processes.answer_json(
             ("awawa", "show", "REPORT", "--json", str(config_root)),
             {

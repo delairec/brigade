@@ -87,6 +87,7 @@ class WaveRehearser:
         self.machine.install_awawa(registrar)
         self.install_tools()
         self.machine.run_init()
+        self.machine.pause_the_built_in_triage()
         self.prepare_sandbox(root / "projects" / "shop")
         self.prepare_client(root / "recordings", root / "plays")
         self.register_sandbox()

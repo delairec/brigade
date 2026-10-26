@@ -2,16 +2,18 @@ from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.studies.choose_answer_form import choose_answer_form
 from brigade.studies.hand_answer_to_output import hand_answer_to_output
+from brigade.studies.name_answer_file import name_answer_file
 from brigade.studies.open_answer_issue import open_answer_issue
 from brigade.studies.present_answer import present_answer
 from brigade.studies.read_collected import read_collected
+from brigade.studies.record_answer_signal import record_answer_signal
 from brigade.studies.render_answer import render_answer
 from brigade.studies.study_run_context import ANSWER_FILE, StudyRunContext
 from brigade.studies.write_answer_to_file import FILE_OUTPUT_PREFIX, write_answer_to_file
 from brigade.system.write_text_atomically import write_text_atomically
 
 ENTITY_OUTPUT_PREFIX = "entity:"
-PUBLISHERS_BY_OUTPUT = {"issue": open_answer_issue}
+PUBLISHERS_BY_OUTPUT = {"issue": open_answer_issue, "inbox": record_answer_signal}
 
 
 def _append_block(text: str, block: str) -> str:
@@ -31,7 +33,7 @@ def _read_answer(context: StudyRunContext) -> str:
 
 def _write_entity(context: StudyRunContext, answer: str) -> None:
     root = context.runtime.paths.config_root
-    file_name = f"{context.study.answer_type.lower()}s.awawa"
+    file_name = name_answer_file(context.study.answer_type)
     change_corpus_file(
         context.runtime.run_process,
         CorpusChange(

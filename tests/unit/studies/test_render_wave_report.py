@@ -37,6 +37,7 @@ TASKS = [
         "name": "B17",
         "fields": [
             {"name": "STATUS", "atoms": ["implemented"]},
+            {"name": "MILESTONE", "atoms": ["@MILESTONE.M3"]},
             {"name": "SPEC", "atoms": ['"the tick merges "', r'"a verified task, grep a\.b"']},
         ],
     },
@@ -45,6 +46,7 @@ TASKS = [
         "name": "B21",
         "fields": [
             {"name": "STATUS", "atoms": ["todo"]},
+            {"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]},
             {"name": "SPEC", "atoms": ['"the report names the wave"']},
             {"name": "AFTER", "atoms": ["@TASK.B17"]},
             {"name": "AFTER", "atoms": ["@TASK.B3"]},
@@ -55,6 +57,7 @@ CHANGES = [
     {"path": "corpus/tasks.awawa", "insertions": 3, "deletions": 1},
     {"path": "brigade/tick/plan.py", "insertions": 10, "deletions": 0},
 ]
+NO_REQUEST_FROM_A_PATTERN = []
 
 
 class RenderWaveReportTest(unittest.TestCase):
@@ -68,6 +71,7 @@ class RenderWaveReportTest(unittest.TestCase):
             pull_requests=PULL_REQUESTS,
             tasks=TASKS,
             changes=CHANGES,
+            origins=NO_REQUEST_FROM_A_PATTERN,
         )
 
         # Act
@@ -90,6 +94,96 @@ class RenderWaveReportTest(unittest.TestCase):
             '\tSTATISTIC "deletions 1"\n'
             '\tGRAPH "B21 after B17"\n'
             '\tMANUAL_TEST "B17: the tick merges a verified task, grep a\\\\.b"\n'
+            '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n'
+            '\tPARKED_QUESTION "B21 blocked by @OPEN_QUESTION.Q4"\n',
+        )
+
+    def test_should_list_each_task_whose_request_comes_from_a_pattern_with_its_constraint_and_its_reason(self):
+        # Arrange
+        evidence = WaveEvidence(
+            wave="oak_w2",
+            project="oak",
+            corpus_folder="corpus",
+            events=EVENTS,
+            pull_requests=PULL_REQUESTS,
+            tasks=TASKS,
+            changes=CHANGES,
+            origins=[
+                {
+                    "milestone": "M3",
+                    "pattern": "CartTimeouts",
+                    "constraint": "CartTimeouts",
+                    "reason": "the cart tests fail on a timeout",
+                },
+                {"milestone": "M4", "pattern": "SlowCheckout", "constraint": None, "reason": "the checkout is slow"},
+                {"milestone": "M9", "pattern": "Elsewhere", "constraint": None, "reason": "another wave"},
+            ],
+        )
+
+        # Act
+        report = render_wave_report(evidence)
+
+        # Assert
+        self.assertEqual(
+            report,
+            "REPORT oak_w2\n"
+            '\tWAVE "oak_w2"\n'
+            '\tPROJECT "oak"\n'
+            '\tTASK_ROW "B17 merged #178"\n'
+            '\tTASK_ROW "B21 parked"\n'
+            '\tSTATISTIC "tasks 2"\n'
+            '\tSTATISTIC "merged 1"\n'
+            '\tSTATISTIC "parked 1"\n'
+            '\tSTATISTIC "runs 3"\n'
+            '\tSTATISTIC "files 2"\n'
+            '\tSTATISTIC "insertions 13"\n'
+            '\tSTATISTIC "deletions 1"\n'
+            '\tGRAPH "B21 after B17"\n'
+            '\tMANUAL_TEST "B17: the tick merges a verified task, grep a\\\\.b"\n'
+            '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n'
+            '\tPARKED_QUESTION "B21 blocked by @OPEN_QUESTION.Q4"\n'
+            '\tPATTERN_TASK "B17 from @PATTERN.CartTimeouts with @CONSTRAINT.CartTimeouts: the cart tests fail on a timeout"\n'
+            '\tPATTERN_TASK "B21 from @PATTERN.SlowCheckout: the checkout is slow"\n',
+        )
+
+    def test_should_list_no_task_without_milestone_from_a_request_still_planning(self):
+        # Arrange
+        evidence = WaveEvidence(
+            wave="oak_w2",
+            project="oak",
+            corpus_folder="corpus",
+            events=EVENTS,
+            pull_requests=PULL_REQUESTS,
+            tasks=[{"type": "TASK", "name": "B17", "fields": []}],
+            changes=CHANGES,
+            origins=[
+                {
+                    "milestone": None,
+                    "pattern": "CartTimeouts",
+                    "constraint": None,
+                    "reason": "the cart tests fail on a timeout",
+                },
+            ],
+        )
+
+        # Act
+        report = render_wave_report(evidence)
+
+        # Assert
+        self.assertEqual(
+            report,
+            "REPORT oak_w2\n"
+            '\tWAVE "oak_w2"\n'
+            '\tPROJECT "oak"\n'
+            '\tTASK_ROW "B17 merged #178"\n'
+            '\tTASK_ROW "B21 parked"\n'
+            '\tSTATISTIC "tasks 2"\n'
+            '\tSTATISTIC "merged 1"\n'
+            '\tSTATISTIC "parked 1"\n'
+            '\tSTATISTIC "runs 3"\n'
+            '\tSTATISTIC "files 2"\n'
+            '\tSTATISTIC "insertions 13"\n'
+            '\tSTATISTIC "deletions 1"\n'
             '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n'
             '\tPARKED_QUESTION "B21 blocked by @OPEN_QUESTION.Q4"\n',
         )

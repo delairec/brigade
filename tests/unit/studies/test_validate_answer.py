@@ -48,6 +48,11 @@ LEDGER_ITEMS = [
     {"ts": "2026-10-04T10:30:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "merged"},
 ]
 DIAGNOSTICS = "answer.awawa:4: L003 unknown field VERDIKT\n"
+TRIAGE = dataclasses.replace(
+    STUDY, name="triage", collectors=("inbox-families",), slot="triage", output="entity:PATTERN", answer_type="PATTERN"
+)
+RATIFIED_PATTERN = 'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to read"\n\tSTATUS ratified\n'
+SUBMITTED_PATTERN = 'PATTERN slow_tick\n\tTITLE "the tick is slow"\n\tSTATUS dismissed\n\tACTION dismiss\n'
 
 
 class ValidateAnswerTest(unittest.TestCase):
@@ -174,6 +179,7 @@ class ValidateAnswerTest(unittest.TestCase):
         self.processes.answer_entities(
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))}
         )
+        self.processes.answer_entities(self.runtime.paths.config_root, "REQUEST", {})
         self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
         self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.submitted)), submitted_fields)
         self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.filled)), filled_fields)
@@ -188,6 +194,7 @@ class ValidateAnswerTest(unittest.TestCase):
             ("MANUAL_TEST", "the answer changed MANUAL_TEST, a field brigade filled"),
             ("INSTRUCTIONS_CHANGE", "the answer changed INSTRUCTIONS_CHANGE, a field brigade filled"),
             ("PARKED_QUESTION", "the answer changed PARKED_QUESTION, a field brigade filled"),
+            ("PATTERN_TASK", "the answer changed PATTERN_TASK, a field brigade filled"),
         ]:
             with self.subTest(field=field):
                 # Arrange
@@ -217,3 +224,71 @@ class ValidateAnswerTest(unittest.TestCase):
 
                 # Assert
                 self.assertIsNone(accepted)
+
+
+class ValidateTriageAnswerTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.processes = ScriptedProcesses()
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
+        self.run_directory = self.root / "state" / "runs" / RUN_ID
+        (self.run_directory / "steps").mkdir(parents=True)
+        (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        self.submitted = self.run_directory / "validation" / "submitted"
+        self.answered = self.run_directory / "validation" / "answered"
+
+    def test_should_lint_the_patterns_beside_those_the_operational_corpus_holds(self):
+        # Arrange
+        (self.root / "config" / "patterns.awawa").write_text(RATIFIED_PATTERN, encoding="utf-8")
+        linted = []
+
+        def record_the_patterns_linted(request):
+            linted.append((self.submitted / "patterns.awawa").read_text(encoding="utf-8"))
+            return 0, "", ""
+
+        self.processes.answer_by(("awawa", "lint", "--strict", str(self.submitted)), record_the_patterns_linted)
+        no_patterns_in_the_answer = {}
+        self.processes.answer_entities(self.answered, "PATTERN", no_patterns_in_the_answer)
+
+        # Act
+        validate_answer(self.runtime, TRIAGE, self.run_directory, "")
+
+        # Assert
+        self.assertEqual(linted, [RATIFIED_PATTERN])
+
+    def test_should_check_the_patterns_of_the_answer_and_leave_out_those_the_operational_corpus_holds(self):
+        # Arrange
+        (self.root / "config" / "patterns.awawa").write_text(RATIFIED_PATTERN, encoding="utf-8")
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
+        self.processes.answer_entities(
+            self.submitted,
+            "PATTERN",
+            {"cli_is_hard_to_read": (("TITLE", "the cli is hard to read"), ("STATUS", "ratified"))},
+        )
+        no_patterns_in_the_answer = {}
+        self.processes.answer_entities(self.answered, "PATTERN", no_patterns_in_the_answer)
+
+        # Act
+        accepted = validate_answer(self.runtime, TRIAGE, self.run_directory, "")
+
+        # Assert
+        self.assertIsNone(accepted)
+
+    def test_should_refuse_a_triage_answer_its_patterns_check_refuses(self):
+        # Arrange
+        self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
+        self.processes.answer_entities(
+            self.answered,
+            "PATTERN",
+            {"slow_tick": (("TITLE", "the tick is slow"), ("STATUS", "dismissed"), ("ACTION", "dismiss"))},
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            validate_answer(self.runtime, TRIAGE, self.run_directory, SUBMITTED_PATTERN)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@PATTERN.slow_tick is dismissed: a triage proposes it new")

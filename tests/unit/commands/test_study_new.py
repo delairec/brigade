@@ -172,7 +172,7 @@ class StudyNewOfAStudyOnDemandTest(unittest.TestCase):
 
 
 class StudyNewOfAStudyWhoseOutputIsTheInboxTest(unittest.TestCase):
-    def test_should_record_no_study_it_refuses(self):
+    def test_should_record_the_study_answering_into_the_inbox(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
@@ -192,8 +192,17 @@ class StudyNewOfAStudyWhoseOutputIsTheInboxTest(unittest.TestCase):
         )
 
         # Act
-        with self.assertRaises(BrigadeError):
-            COMMAND.run(request, runtime)
+        COMMAND.run(request, runtime)
 
         # Assert
-        self.assertFalse((root / "config" / "studies.awawa").exists())
+        self.assertEqual(
+            (root / "config" / "studies.awawa").read_text(encoding="utf-8"),
+            "STUDY health\n"
+            '\tTITLE "the health of the machine"\n'
+            '\tCOLLECTOR "runs-list"\n'
+            "\tSLOT report\n"
+            '\tEVERY "daily@06:00"\n'
+            '\tOUTPUT "inbox"\n'
+            '\tANSWER "ANSWER"\n'
+            "\tSTATUS active\n",
+        )

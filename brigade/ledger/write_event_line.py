@@ -5,6 +5,8 @@ from brigade.errors import BrigadeError
 from brigade.ledger.declared_events import LEDGER_SCHEMA_VERSION, WRITTEN_SCHEMA_VERSIONS
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.inbox_dismissed import InboxDismissed
+from brigade.ledger.inbox_recorded import InboxRecorded
 from brigade.ledger.ledger_locations import LEDGER_DIRECTORY
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.order_done import OrderDone
@@ -43,6 +45,8 @@ WrittenEvent = (
     | MilestoneCreated
     | TaskPromoted
     | TaskPreflighted
+    | InboxRecorded
+    | InboxDismissed
 )
 
 

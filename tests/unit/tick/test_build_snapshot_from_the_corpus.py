@@ -190,7 +190,12 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 **AWAWA_ANSWERS.answer_entities(
                     self.wave_tree,
                     "TASK",
-                    {"B1": AWAWA_ANSWERS.describe_task("todo", "B0"), "B2": [], "B3": [], "B4": []},
+                    {
+                        "B1": AWAWA_ANSWERS.describe_task("todo", "B0"),
+                        "B2": [],
+                        "B3": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}],
+                        "B4": [],
+                    },
                 ),
                 **AWAWA_ANSWERS.answer_no_incoming_refs(self.wave_tree, "B1", "B2", "B3", "B4"),
                 **AWAWA_ANSWERS.answer_entities(self.wave_tree, "TASK", {"B0": []}, "STATUS==implemented"),
@@ -260,7 +265,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     rate_limit=RateLimit(reset=None),
                 ),
                 TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3"),
+                TaskFacts(name="B3", milestone="M4"),
                 TaskFacts(name="B4", pull_request=PULL_REQUEST),
             ),
         )
@@ -288,7 +293,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     last_run="20261013T100000Z-a00003",
                 ),
                 TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3"),
+                TaskFacts(name="B3", milestone="M4"),
                 TaskFacts(name="B4", pull_request=PULL_REQUEST, last_run="20261013T090000Z-a00002"),
             ),
         )
@@ -315,7 +320,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     holds_uncommitted_changes=True,
                 ),
                 TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3"),
+                TaskFacts(name="B3", milestone="M4"),
                 TaskFacts(name="B4", pull_request=PULL_REQUEST),
             ),
         )
@@ -402,6 +407,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            milestone="M4",
                             after=(),
                             blocked_by=(),
                             pull_request=None,
@@ -537,6 +543,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            milestone="M4",
                             after=(),
                             blocked_by=(),
                             pull_request=None,
@@ -680,6 +687,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            milestone="M4",
                             after=(),
                             blocked_by=(),
                             pull_request=None,
@@ -849,7 +857,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
         self.assertEqual(
             snapshot.studies,
-            (StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),),
+            (
+                StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),
+                StudyFacts(name="triage", slot="triage", every="24h", status="active", last_started=None, parked=False),
+            ),
         )
 
     def test_should_carry_no_rate_limit_whose_reset_has_passed(self):
@@ -930,6 +941,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            milestone="M4",
                             after=(),
                             blocked_by=(),
                             pull_request=None,
@@ -1065,6 +1077,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            milestone="M4",
                             after=(),
                             blocked_by=(),
                             pull_request=None,
@@ -1355,7 +1368,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                     reviewed_head="4f2a9c1",
                 ),
                 TaskFacts(name="B2", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
-                TaskFacts(name="B3"),
+                TaskFacts(name="B3", milestone="M4"),
                 TaskFacts(name="B4", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
             ),
         )
