@@ -27,6 +27,14 @@ FAMILIES = {
     ],
 }
 
+OTHER_COLLECTION = {
+    "schema_version": 1,
+    "collector": "ledger",
+    "collected_at": "2026-10-25T09:00:00Z",
+    "cache": False,
+    "summary": {"events": 1},
+    "items": [{"signals": [{"fingerprint": "rt:102"}]}],
+}
 
 class CheckPatternsTest(unittest.TestCase):
     def setUp(self):
@@ -39,6 +47,8 @@ class CheckPatternsTest(unittest.TestCase):
         families = root / "families.json"
         families.write_text(json.dumps(FAMILIES), encoding="utf-8")
         self.collected = [{"collector": "inbox-families", "summary": FAMILIES["summary"], "document": str(families)}]
+        self.other_collection = root / "ledger.json"
+        self.other_collection.write_text(json.dumps(OTHER_COLLECTION), encoding="utf-8")
 
     def answer_patterns(self, patterns: dict) -> None:
         self.processes.answer_entities(self.answer, "PATTERN", patterns)
@@ -130,5 +140,33 @@ class CheckPatternsTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception),
             "@PATTERN.cli_is_hard_to_read: the EVIDENCE 'rt:10 a thread' opens on the fingerprint of no signal"
+            " inbox-families collected",
+        )
+
+    def test_should_refuse_an_evidence_opening_on_a_fingerprint_another_collector_collected(self):
+        # Arrange
+        self.answer_patterns(
+            {
+                "planner_is_hard_to_read": (
+                    ("TITLE", "the planner is hard to read"),
+                    ("STATUS", "new"),
+                    ("EVIDENCE", "rt:102"),
+                    ("ACTION", "constraint"),
+                )
+            }
+        )
+        collected_by_two_collectors = [
+            *self.collected,
+            {"collector": "ledger", "summary": OTHER_COLLECTION["summary"], "document": str(self.other_collection)},
+        ]
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            check_patterns(self.runtime, self.answer, collected_by_two_collectors)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "@PATTERN.planner_is_hard_to_read: the EVIDENCE 'rt:102' opens on the fingerprint of no signal"
             " inbox-families collected",
         )

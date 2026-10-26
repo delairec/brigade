@@ -104,3 +104,26 @@ class ReadStudyTest(unittest.TestCase):
                 status="paused",
             ),
         )
+
+
+class ReadStudyWithoutOperationalCorpusTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.processes = ScriptedProcesses()
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=self.processes)
+
+    def test_should_refuse_the_built_in_triage_on_a_machine_without_an_operational_corpus(self):
+        # Arrange
+        self.processes.answer(
+            ("awawa", "show", "@STUDY.triage", "--json", str(self.runtime.paths.config_root)),
+            exit_code=1,
+            stderr="awawa show: @STUDY.triage is not defined in the workspace\n",
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_study(self.runtime, "triage")
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
