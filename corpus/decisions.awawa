@@ -3958,3 +3958,33 @@ DECISION TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOn
 		+ "proposed twice, and the check of the answer is the same rule read from the other side"
 	SOURCE "pull request 211, which delivers @TASK.B25"
 		REF @TASK.B25
+
+DECISION RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversThePattern
+	TITLE "brigade inbox ratify names the CONSTRAINT and the ORDER after their PATTERN, and the"
+		+ "close of the wave that delivers the request of a pattern delivers the PATTERN and its"
+		+ "CONSTRAINT"
+	STATUS active
+	DESC "a CONSTRAINT and an ORDER a ratification records bear the name of their PATTERN"
+	DESC "brigade inbox ratify takes --kind for a pattern of ACTION constraint, KIND being required"
+		+ "on a CONSTRAINT and absent from a PATTERN, and refuses a pattern of ACTION dismiss,"
+		+ "naming brigade inbox dismiss"
+	DESC "brigade inbox dismiss names a PATTERN when the operational corpus defines one by that"
+		+ "name, a signal otherwise"
+	DESC "a wave report row PATTERN_TASK reads <task> from @PATTERN.<name> with @CONSTRAINT.<name>:"
+		+ "<the TITLE of the pattern>, for each task whose MILESTONE is that of a REQUEST FROM a"
+		+ "pattern"
+	DESC "the tick delivers at wave.closed: every PATTERN a REQUEST of the project comes FROM,"
+		+ "whose MILESTONE a task of the closed wave carries, goes delivered with each CONSTRAINT"
+		+ "FROM it, and constraint.delivered is appended once per constraint"
+	DESC "binds @TASK.B26"
+		REF @TASK.B26
+	REJECTED "a KIND guessed from the pattern: the triage answer carries no KIND, and a wrong guess"
+		+ "would deliver the wrong kind of artefact"
+	REJECTED "delivery when the task pull requests merge into the integration branch: the wave is"
+		+ "delivered once its integration pull request reaches the main branch, which the tick"
+		+ "reads as wave.closed"
+	RATIONALE "the request of a pattern is planned into one MILESTONE, so the milestones the tasks"
+		+ "of a closed wave carry are what links the wave back to the patterns it delivers"
+	SOURCE "the user's rulings of 2026-10-24 in the refinement of B23 to B26, and the build run of"
+		+ "@TASK.B26"
+		REF @TASK.B26
