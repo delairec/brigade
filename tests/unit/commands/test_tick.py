@@ -2598,12 +2598,27 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         )
 
 
+NO_PULL_REQUEST_FROM_ANY_BRANCH = {}
+INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN = {
+    "number": 206,
+    "state": "open",
+    "checks": [],
+    "review": None,
+    "behind": False,
+    "head": "8885daa",
+    "base": "main",
+}
+INTEGRATION_PULL_REQUEST_CLOSED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "state": "closed"}
+INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "base": "develop"}
+
+
 class OpeningForgeDouble:
-    def __init__(self):
+    def __init__(self, found_by_branch: dict):
+        self.found_by_branch = found_by_branch
         self.opened = []
 
     def find_pull_request(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "pull_request": None}
+        return {"schema_version": 1, "pull_request": self.found_by_branch.get(request["branch"])}
 
     def open_pull_request(self, request: dict, runtime) -> dict:
         self.opened.append(request)
@@ -2620,17 +2635,20 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
-        self.forge = OpeningForgeDouble()
+        self.forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+        self.runtime = self._create_runtime(self.forge)
+
+    def _create_runtime(self, forge: OpeningForgeDouble) -> Runtime:
         corpus = {
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
-        self.runtime = create_test_runtime(
+        return create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, self.forge),
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
         )
 
     def _read_events(self) -> list[dict]:
@@ -2732,6 +2750,99 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                 }
             ],
         )
+
+    def test_should_open_none_while_the_wave_branch_has_one_open_into_the_main_branch(self):
+        # Arrange
+        forge = OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN})
+        runtime = self._create_runtime(forge)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(forge.opened, [])
+
+    def test_should_record_as_opened_the_pull_request_already_open_into_the_main_branch_whoever_opened_it(self):
+        # Arrange
+        runtime = self._create_runtime(OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN}))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.pr_opened",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                    "login": None,
+                },
+            ],
+        )
+
+    def test_should_open_its_own_beside_a_pull_request_of_the_wave_branch_closed_or_into_another_base(self):
+        for found in [INTEGRATION_PULL_REQUEST_CLOSED, INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE]:
+            with self.subTest(state=found["state"], base=found["base"]):
+                # Arrange
+                write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+                forge = OpeningForgeDouble({"integration/M4": found})
+                runtime = self._create_runtime(forge)
+
+                # Act
+                COMMAND.run(Namespace(mode="once"), runtime)
+
+                # Assert
+                self.assertEqual(
+                    forge.opened,
+                    [
+                        {
+                            "repository": str(self.repository),
+                            "base": "main",
+                            "branch": "integration/M4",
+                            "title": "chore(wave): merge the wave tidepool_w16 into main",
+                            "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
+                            "milestone": None,
+                            "environment": {},
+                        }
+                    ],
+                )
 
 
 class TickStartingAndCuttingWavesTest(unittest.TestCase):
