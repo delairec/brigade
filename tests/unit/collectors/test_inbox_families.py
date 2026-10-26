@@ -57,9 +57,7 @@ class InboxFamiliesCollectorTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.processes = ScriptedProcesses()
         write_operational_corpus(Path(directory.name))
-        self.runtime = create_test_runtime(
-            create_test_paths(Path(directory.name)), now=NOW, run_process=self.processes
-        )
+        self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), now=NOW, run_process=self.processes)
 
     def record(self, *signals: NewSignal) -> None:
         for signal in signals:
@@ -118,7 +116,12 @@ class InboxFamiliesCollectorTest(unittest.TestCase):
                         {
                             "id": "89480cd0f7d57ed2256762d1272b769cb716ede258b368390dcb1f32424546ac",
                             "fingerprint": "rt:103",
-                            "evidence": {"pull_request": 8, "path": "brigade/cli.py", "line": 40, "comment": "rename it"},
+                            "evidence": {
+                                "pull_request": 8,
+                                "path": "brigade/cli.py",
+                                "line": 40,
+                                "comment": "rename it",
+                            },
                         },
                     ],
                 },
@@ -195,7 +198,12 @@ class InboxFamiliesCollectorTest(unittest.TestCase):
                         {
                             "id": "89480cd0f7d57ed2256762d1272b769cb716ede258b368390dcb1f32424546ac",
                             "fingerprint": "rt:103",
-                            "evidence": {"pull_request": 8, "path": "brigade/cli.py", "line": 40, "comment": "rename it"},
+                            "evidence": {
+                                "pull_request": 8,
+                                "path": "brigade/cli.py",
+                                "line": 40,
+                                "comment": "rename it",
+                            },
                         }
                     ],
                 }
@@ -223,4 +231,4 @@ class InboxFamiliesCollectorTest(unittest.TestCase):
         document = collect(ENVIRONMENT, self.runtime, EQUIPMENT)
 
         # Assert
-        self.assertIs(document["cache"], False)
+        self.assertEqual(document["cache"], False)

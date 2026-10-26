@@ -21,7 +21,9 @@ NOT_CACHED = False
 
 
 def _read_cited_rules(signal: Signal) -> list[str]:
-    return sorted({rule for text in signal.evidence.values() if isinstance(text, str) for rule in CITED_RULE.findall(text)})
+    return sorted(
+        {rule for text in signal.evidence.values() if isinstance(text, str) for rule in CITED_RULE.findall(text)}
+    )
 
 
 def _read_file(signal: Signal) -> list[str]:
@@ -78,7 +80,8 @@ def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) 
         (
             signal
             for signal in read_inbox(runtime.paths.state_root, runtime.now)
-            if signal.status == NEW_STATUS and not any(is_signal_cited(evidence, signal.fingerprint) for evidence in cited_evidence)
+            if signal.status == NEW_STATUS
+            and not any(is_signal_cited(evidence, signal.fingerprint) for evidence in cited_evidence)
         ),
         key=lambda signal: signal.fingerprint,
     )
