@@ -13,6 +13,8 @@ PARKED_STATE = "parked"
 SPEC_FIELD = "SPEC"
 AFTER_FIELD = "AFTER"
 TASK_REFERENCE_PREFIX = "@TASK."
+MILESTONE_FIELD = "MILESTONE"
+MILESTONE_REFERENCE_PREFIX = "@MILESTONE."
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,7 @@ class WaveEvidence:
     pull_requests: list[dict]
     tasks: list[dict]
     changes: list[dict]
+    origins: list[dict]
 
 
 def _read_wave_tasks(events: list[dict]) -> list[str]:
@@ -44,6 +47,16 @@ def _read_predecessors(task: dict) -> list[str]:
         for field in task["fields"]
         if field["name"] == AFTER_FIELD
     ]
+
+
+def _read_milestone(task: dict) -> str | None:
+    atoms = next((field["atoms"] for field in task["fields"] if field["name"] == MILESTONE_FIELD), None)
+    return None if atoms is None else atoms[0].removeprefix(MILESTONE_REFERENCE_PREFIX)
+
+
+def _render_origin(task: str, origin: dict) -> str:
+    constraint = "" if origin["constraint"] is None else f" with @CONSTRAINT.{origin['constraint']}"
+    return f"{task} from @PATTERN.{origin['pattern']}{constraint}: {origin['reason']}"
 
 
 def _render_task_row(task: str, state: str, pull_requests: list[dict]) -> str:
@@ -92,6 +105,15 @@ def _render_findings(evidence: WaveEvidence, wave_tasks: list, merged: list) -> 
     ]
 
 
+def _render_origins(evidence: WaveEvidence) -> list[tuple[str, str]]:
+    return [
+        ("PATTERN_TASK", _render_origin(task["name"], origin))
+        for task in evidence.tasks
+        for origin in evidence.origins
+        if origin["milestone"] == _read_milestone(task)
+    ]
+
+
 def _render_rows(evidence: WaveEvidence) -> list[tuple[str, str]]:
     wave_tasks = _read_wave_tasks(evidence.events)
     states = _read_last_states(evidence.events)
@@ -103,6 +125,7 @@ def _render_rows(evidence: WaveEvidence) -> list[tuple[str, str]]:
         *[("TASK_ROW", _render_task_row(task, states[task], evidence.pull_requests)) for task in wave_tasks],
         *[("STATISTIC", f"{name} {value}") for name, value in statistics.items()],
         *_render_findings(evidence, wave_tasks, merged),
+        *_render_origins(evidence),
     ]
 
 
