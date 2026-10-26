@@ -3879,8 +3879,9 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		REF @DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
 	DESC "replaces @DECISION.ARepairRoundIsOneFixingStateOfTheTask, under which a run of the rebase"
 		+ "slot counted one round; binds @TASK.B18 and @TASK.B143, whose SPEC counting a run of the"
-		+ "rebase slot as one round no longer holds, and @TASK.B196, whose repair round is"
-		+ "unchanged"
+		+ "rebase slot as one round no longer holds and is kept as written, this DESC being the"
+		+ "record, and @TASK.B196, whose repair round is unchanged; the code follows in a fix pull"
+		+ "request without a task"
 		REF @DECISION.ARepairRoundIsOneFixingStateOfTheTask
 		REF @TASK.B18
 		REF @TASK.B143
@@ -3909,8 +3910,8 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 
 DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
 	TITLE "a repair run or a rebase run that cannot go on without a decision the task did not"
-		+ "settle ends blocked on its question, and the tick parks the task on that question, not"
-		+ "on the rounds spent"
+		+ "settle, or whose tests fail after the rebase, ends blocked on its question, and the tick"
+		+ "parks the task on the text of that question, not on the rounds spent"
 	STATUS active
 	DESC "a run of the remediate, the build or the rebase slot that meets a decision the task did"
 		+ "not settle pushes nothing, states its question in its final message and declares"
@@ -3919,9 +3920,13 @@ DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQ
 		+ "conflict of the rebase whose resolution needs such a decision, and a finding or a"
 		+ "failing check that needs one, are such cases"
 		REF @DECISION.ARunDeclaresTheEndOfEachSegmentOnTheLastLineOfItsFinalMessage
+	DESC "a run of the rebase slot whose project's tests fail after the rebase ends the same way,"
+		+ "blocked, naming the failing tests in its final message; it is not launched again at the"
+		+ "next tick"
 	DESC "a task in fixing whose last run ended blocked is parked by the next tick, whatever the"
-		+ "count of its rounds, with a reason of task.parked naming that run and the ruling it"
-		+ "waits for, distinct from the reason of the rounds spent"
+		+ "count of its rounds, with a reason of task.parked carrying the text of the question or"
+		+ "of the failure that run stated, distinct from the reason of the rounds spent, readable"
+		+ "in brigade wave show and in the ledger"
 	DESC "binds the procedures rebase-on-base, remediate-pr and build-task of"
 		+ "brigade/runs/data/procedures, and the parking of @TASK.B18 and @TASK.B143"
 		REF @TASK.B18
@@ -3930,8 +3935,10 @@ DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQ
 		+ "task is parked past the rounds of the policy: the question is answered by no run, and"
 		+ "the user wants the need of a ruling signalled as such"
 	REJECTED "the question left in the log of the run alone, the reason of task.parked saying only"
-		+ "that the rounds are spent: the user refused a park that says only that the budget was"
-		+ "reached"
+		+ "that the rounds are spent, or naming the run without its question: the user chose the"
+		+ "text of the question in the reason"
+	REJECTED "a rebase run whose tests fail after the rebase launched again at the next tick, with"
+		+ "or without a bound of its own: the user chose blocked, with the failure"
 	RATIONALE "the user's words: « Si la réparation ne peut se faire sans une décision critique,"
 		+ "alors ça devrait être signalé comme tel et pas seulement comme ayant atteint la limite"
 		+ "de budget »; the procedure rebase-on-base already ends on the question when a conflict"
@@ -3941,3 +3948,6 @@ DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQ
 	SOURCE "the user's rulings of 2026-10-26 in session, on @TASK.B25 parked past 2 repair rounds"
 		+ "at its first verdict on pull request #211"
 		REF @TASK.B25
+	SOURCE "the user's answers of 2026-10-26 to the questions of pull request #218: on a rebase"
+		+ "whose tests fail after it, « Bloqué, avec l'échec »; on the park reason, « Le texte de"
+		+ "la question »; on the record of the rebase round of B143 and B18, « PR fix sans tâche »"
