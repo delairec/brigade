@@ -251,7 +251,7 @@ def _decide_blocked_parking(wave: WaveFacts, task: TaskFacts, occupancy: _Occupa
     return ParkTask(
         wave=wave.wave,
         task=task.name,
-        reason=f"run {task.blocked_run.run} blocked: {task.blocked_run.question}",
+        reason=_describe_blocked_run(task),
         blockers=(),
     )
 
@@ -420,7 +420,13 @@ def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
     )
 
 
+def _describe_blocked_run(task: TaskFacts) -> str:
+    return f"run {task.blocked_run.run} blocked: {task.blocked_run.question}"
+
+
 def _describe_dead_run(task: TaskFacts) -> str:
+    if task.blocked_run is not None:
+        return _describe_blocked_run(task)
     if task.last_run is None:
         return RUN_NOT_STARTED_REASON
     return f"{RUN_DEAD_REASON}: {task.last_run}"
