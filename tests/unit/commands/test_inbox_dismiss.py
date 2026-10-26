@@ -12,7 +12,12 @@ from tests.unit.commands.command_runtime import (
     create_corpus_double,
     write_operational_corpus,
 )
-from tests.unit.commands.inbox_lines import NOTE_ON_OAK_RECORDED, THREAD_DISMISSED, THREAD_RECORDED
+from tests.unit.commands.inbox_lines import (
+    NOTE_ON_OAK_DISMISSED,
+    NOTE_ON_OAK_RECORDED,
+    THREAD_DISMISSED,
+    THREAD_RECORDED,
+)
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 
@@ -184,6 +189,17 @@ class InboxDismissPatternTest(unittest.TestCase):
                 evidence={"text": "fix the flaky test"},
             ),
         )
+
+    def test_should_leave_a_cited_signal_already_dismissed_as_it_is(self):
+        # Arrange
+        self.signals.write_text(NOTE_ON_OAK_RECORDED + NOTE_ON_OAK_DISMISSED, encoding="utf-8")
+        runtime = self._create_runtime("new")
+
+        # Act
+        inbox_dismiss(argparse.Namespace(id="CartTimeouts"), runtime)
+
+        # Assert
+        self.assertEqual(self.signals.read_text(encoding="utf-8"), NOTE_ON_OAK_RECORDED + NOTE_ON_OAK_DISMISSED)
 
     def test_should_refuse_a_pattern_that_is_not_new_and_write_nothing(self):
         # Arrange
