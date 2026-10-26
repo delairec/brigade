@@ -110,7 +110,7 @@ def _render_origins(evidence: WaveEvidence) -> list[tuple[str, str]]:
         ("PATTERN_TASK", _render_origin(task["name"], origin))
         for task in evidence.tasks
         for origin in evidence.origins
-        if origin["milestone"] == _read_milestone(task)
+        if origin["milestone"] is not None and origin["milestone"] == _read_milestone(task)
     ]
 
 

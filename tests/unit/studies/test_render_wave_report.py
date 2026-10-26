@@ -145,3 +145,45 @@ class RenderWaveReportTest(unittest.TestCase):
             '\tPATTERN_TASK "B17 from @PATTERN.CartTimeouts with @CONSTRAINT.CartTimeouts: the cart tests fail on a timeout"\n'
             '\tPATTERN_TASK "B21 from @PATTERN.SlowCheckout: the checkout is slow"\n',
         )
+
+    def test_should_list_no_task_without_milestone_from_a_request_still_planning(self):
+        # Arrange
+        evidence = WaveEvidence(
+            wave="oak_w2",
+            project="oak",
+            corpus_folder="corpus",
+            events=EVENTS,
+            pull_requests=PULL_REQUESTS,
+            tasks=[{"type": "TASK", "name": "B17", "fields": []}],
+            changes=CHANGES,
+            origins=[
+                {
+                    "milestone": None,
+                    "pattern": "CartTimeouts",
+                    "constraint": None,
+                    "reason": "the cart tests fail on a timeout",
+                },
+            ],
+        )
+
+        # Act
+        report = render_wave_report(evidence)
+
+        # Assert
+        self.assertEqual(
+            report,
+            "REPORT oak_w2\n"
+            '\tWAVE "oak_w2"\n'
+            '\tPROJECT "oak"\n'
+            '\tTASK_ROW "B17 merged #178"\n'
+            '\tTASK_ROW "B21 parked"\n'
+            '\tSTATISTIC "tasks 2"\n'
+            '\tSTATISTIC "merged 1"\n'
+            '\tSTATISTIC "parked 1"\n'
+            '\tSTATISTIC "runs 3"\n'
+            '\tSTATISTIC "files 2"\n'
+            '\tSTATISTIC "insertions 13"\n'
+            '\tSTATISTIC "deletions 1"\n'
+            '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n'
+            '\tPARKED_QUESTION "B21 blocked by @OPEN_QUESTION.Q4"\n',
+        )
