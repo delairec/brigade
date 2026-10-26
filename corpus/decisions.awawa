@@ -3648,6 +3648,11 @@ DECISION ARunningTaskThatNoLiveRunNamesIsParkedWithItsLastRunInTheReason
 	DESC "the reason is run dead: <run>, the last run directory naming the wave and the task"
 		+ "whatever its state, or run not started when none names them; task.parked keeps its"
 		+ "fields"
+	DESC "a run that ended blocked is the one exception: its task is parked on the text of its"
+		+ "question, as"
+		+ "@DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion"
+		+ "says"
+		REF @DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
 	DESC "binds @TASK.B168"
 		REF @TASK.B168
 	REJECTED "a run field added to task.parked: a change of the event shape and of every reader of"
@@ -3909,9 +3914,10 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		REF @TASK.B143
 
 DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
-	TITLE "a repair run or a rebase run that cannot go on without a decision the task did not"
-		+ "settle, or whose tests fail after the rebase, ends blocked on its question, and the tick"
-		+ "parks the task on the text of that question, not on the rounds spent"
+	TITLE "a build run, a repair run or a rebase run that cannot go on without a decision the task"
+		+ "did not settle, or whose tests fail after the rebase, ends blocked on its question, and"
+		+ "the tick parks the task on the text of that question, not on the rounds spent nor as a"
+		+ "dead run"
 	STATUS active
 	DESC "a run of the remediate, the build or the rebase slot that meets a decision the task did"
 		+ "not settle pushes nothing, states its question in its final message and declares"
@@ -3923,14 +3929,19 @@ DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQ
 	DESC "a run of the rebase slot whose project's tests fail after the rebase ends the same way,"
 		+ "blocked, naming the failing tests in its final message; it is not launched again at the"
 		+ "next tick"
-	DESC "a task in fixing whose last run ended blocked is parked by the next tick, whatever the"
-		+ "count of its rounds, with a reason of task.parked carrying the text of the question or"
-		+ "of the failure that run stated, distinct from the reason of the rounds spent, readable"
-		+ "in brigade wave show and in the ledger"
+	DESC "a task in fixing whose last run ended blocked, and a task in running whose first build"
+		+ "run ended blocked before opening its pull request, are parked by the next tick, whatever"
+		+ "the count of its rounds, with a reason of task.parked carrying the text of the question"
+		+ "or of the failure that run stated, distinct from the reason of the rounds spent and from"
+		+ "the reason run dead, readable in brigade wave show and in the ledger"
 	DESC "binds the procedures rebase-on-base, remediate-pr and build-task of"
-		+ "brigade/runs/data/procedures, and the parking of @TASK.B18 and @TASK.B143"
+		+ "brigade/runs/data/procedures, the parking of @TASK.B18 and @TASK.B143, and the parking"
+		+ "of @TASK.B168, whose SPEC parking every task of a dead run with the reason run dead no"
+		+ "longer holds for a run that ended blocked and is kept as written, this DESC being the"
+		+ "record"
 		REF @TASK.B18
 		REF @TASK.B143
+		REF @TASK.B168
 	REJECTED "a run that ended blocked launched again at the next tick, one more round, until the"
 		+ "task is parked past the rounds of the policy: the question is answered by no run, and"
 		+ "the user wants the need of a ruling signalled as such"
@@ -3939,6 +3950,9 @@ DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQ
 		+ "text of the question in the reason"
 	REJECTED "a rebase run whose tests fail after the rebase launched again at the next tick, with"
 		+ "or without a bound of its own: the user chose blocked, with the failure"
+	REJECTED "the task of a first build run that ended blocked parked with the reason run dead, its"
+		+ "question left in the log of the run, as pull request #219 left it: the user extended the"
+		+ "parking on the question to that run"
 	RATIONALE "the user's words: « Si la réparation ne peut se faire sans une décision critique,"
 		+ "alors ça devrait être signalé comme tel et pas seulement comme ayant atteint la limite"
 		+ "de budget »; the procedure rebase-on-base already ends on the question when a conflict"
@@ -3951,3 +3965,7 @@ DECISION ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQ
 	SOURCE "the user's answers of 2026-10-26 to the questions of pull request #218: on a rebase"
 		+ "whose tests fail after it, « Bloqué, avec l'échec »; on the park reason, « Le texte de"
 		+ "la question »; on the record of the rebase round of B143 and B18, « PR fix sans tâche »"
+	SOURCE "the user's answer of 2026-10-26 in session, « Oui ok », to the question « faut-il"
+		+ "étendre la mise de côté sur la question au cas où le tout premier build d'une tâche"
+		+ "termine bloqué ? Aujourd'hui, la tâche est alors mise de côté comme run dead, sans la"
+		+ "question. »"
