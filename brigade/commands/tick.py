@@ -589,9 +589,7 @@ def _plan_dry(runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",
         "snapshot": snapshot.to_document(),
-        "plan": [
-            dataclasses.asdict(action) for action in (*plan(snapshot), *_plan_registered_connectors(runtime))
-        ],
+        "plan": [dataclasses.asdict(action) for action in (*plan(snapshot), *_plan_registered_connectors(runtime))],
     }
 
 
