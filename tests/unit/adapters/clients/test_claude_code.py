@@ -858,6 +858,29 @@ class ClaudeCodeEndDeclarationTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(result["outcome"], expected_outcome)
 
+    def test_should_keep_the_final_message_of_a_run_that_declares_itself_blocked_and_of_no_other_end(self):
+        for case, final_message, expected_message in [
+            (
+                "blocked",
+                "Keep the guard or drop it?\\nbrigade-end: blocked",
+                "Keep the guard or drop it?\nbrigade-end: blocked",
+            ),
+            ("done", "Pull request #96 is open.\\nbrigade-end: done", None),
+            ("handed over", "Progress written.\\nbrigade-end: handed_over", None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                stdout = (
+                    '{"type":"result","subtype":"success","is_error":false,"num_turns":12,'
+                    f'"result":"{final_message}","session_id":"s-42"}}'
+                )
+
+                # Act
+                result = parse_claude_output(stdout)
+
+                # Assert
+                self.assertEqual(result["message"], expected_message)
+
     def test_should_answer_failed_on_a_client_error_whatever_its_last_line_declares(self):
         # Arrange
         stdout = (

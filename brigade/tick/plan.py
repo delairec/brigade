@@ -210,6 +210,9 @@ def _decide_worktree_removal(wave: WaveFacts, task: TaskFacts, occupancy: _Occup
 def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy) -> tuple:
     record = _decide_task_state(wave, task)
     recorded = () if record is None else (record,)
+    blocked_parking = _decide_blocked_parking(wave, task, occupancy)
+    if blocked_parking is not None:
+        return (*recorded, blocked_parking)
     catch_up = _decide_catch_up(wave, task, project, occupancy)
     if catch_up is not None:
         return (*recorded, catch_up)
@@ -232,6 +235,24 @@ def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
         for task in wave.tasks
         if task.pull_request is not None
         for action in _plan_followed_task(wave, task, projects[wave.project], occupancy)
+    )
+
+
+def _decide_blocked_parking(wave: WaveFacts, task: TaskFacts, occupancy: _Occupancy) -> ParkTask | None:
+    if (
+        task.blocked_run is None
+        or wave.states.get(task.name) != FIXING_STATE
+        or task.pull_request.state != OPEN_PULL_REQUEST
+        or task.preflighted_head != task.pull_request.head
+        or task.worktree in occupancy.worktrees
+        or (wave.wave, task.name) in occupancy.tasks
+    ):
+        return None
+    return ParkTask(
+        wave=wave.wave,
+        task=task.name,
+        reason=f"run {task.blocked_run.run} blocked: {task.blocked_run.question}",
+        blockers=(),
     )
 
 

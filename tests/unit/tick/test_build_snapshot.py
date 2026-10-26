@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.build_snapshot import (
+    BlockedRun,
     PreflightFailure,
     ProjectFacts,
     RateLimit,
@@ -124,6 +125,7 @@ class SnapshotTest(unittest.TestCase):
                             "repair_rounds": 0,
                             "holds_uncommitted_changes": False,
                             "last_run": None,
+                            "blocked_run": None,
                         }
                     ],
                     "states": {},
@@ -218,6 +220,25 @@ class TaskFactsTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["preflight_failures"], [{"name": "checks", "findings": ["tests: failure"]}])
         self.assertEqual(document["repair_rounds"], 1)
+
+    def test_should_carry_the_run_its_task_waits_on_a_ruling_from_and_the_question_in_its_document(self):
+        for case, blocked_run, expected in [
+            ("no run blocked", None, None),
+            (
+                "a run blocked",
+                BlockedRun(run="20261026T091000Z-b10c4d", question="Keep the guard or drop it?"),
+                {"run": "20261026T091000Z-b10c4d", "question": "Keep the guard or drop it?"},
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="B25", blocked_run=blocked_run)
+
+                # Act
+                document = task.to_document()
+
+                # Assert
+                self.assertEqual(document["blocked_run"], expected)
 
     def test_should_carry_the_last_run_naming_it_in_its_document(self):
         # Arrange

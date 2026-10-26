@@ -26,6 +26,7 @@ from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tick.build_snapshot import (
+    BlockedRun,
     LiveRun,
     PreflightFailure,
     ProjectFacts,
@@ -1401,6 +1402,91 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 TaskFacts(name="B2", pull_request=PULL_REQUEST),
             ),
         )
+
+    def test_should_count_a_round_for_each_repair_run_and_none_for_a_rebase_run(self):
+        for case, second_launch, expected_rounds in [
+            ("a check repair after a remediation", ("build", "w1", "B1"), 2),
+            ("a rebase run after a remediation", ("rebase", "w1", "B1"), 1),
+            ("a rebase run of another task at the same tick", ("rebase", "w1", "B2"), 2),
+            ("a rebase run of the task in another wave at the same tick", ("rebase", "w4", "B1"), 2),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                slot, wave, task = second_launch
+                self.setUp()
+                write_run(
+                    self.paths.state_root,
+                    {**create_run_record("20261019T081100Z-a00001", "w1", "B1"), "slot": "remediate"},
+                    None,
+                )
+                write_run(
+                    self.paths.state_root,
+                    {**create_run_record("20261019T082100Z-a00002", wave, task), "slot": slot},
+                    None,
+                )
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, expected_rounds)
+
+    def test_should_carry_the_question_of_the_last_run_of_the_task_when_it_ended_blocked(self):
+        for case, outcome, message, expected in [
+            (
+                "a question on one line",
+                "blocked",
+                "Keep the guard or drop it?\nbrigade-end: blocked",
+                BlockedRun(run="20261019T083000Z-b10c4d", question="Keep the guard or drop it?"),
+            ),
+            (
+                "a question over several lines",
+                "blocked",
+                "The rebase conflicts in plan.py.\n\nKeep the guard or drop it?\nbrigade-end: blocked",
+                BlockedRun(
+                    run="20261019T083000Z-b10c4d",
+                    question="The rebase conflicts in plan.py. Keep the guard or drop it?",
+                ),
+            ),
+            ("no final message", "blocked", None, BlockedRun(run="20261019T083000Z-b10c4d", question="")),
+            ("a run delivered", "done", "Pushed.\nbrigade-end: done", None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                write_run(self.paths.state_root, create_run_record("20261019T081100Z-a00001", "w1", "B1"), None)
+                write_run(self.paths.state_root, create_run_record("20261019T083000Z-b10c4d", "w1", "B1"), None)
+                self.record(
+                    5,
+                    dataclasses.replace(
+                        create_run_finished("20261019T083000Z-b10c4d", wave="w1", task="B1", outcome=outcome),
+                        message=message,
+                    ),
+                )
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].blocked_run, expected)
+
+    def test_should_carry_no_blocked_run_while_the_last_run_of_the_task_has_not_finished(self):
+        # Arrange
+        write_run(self.paths.state_root, create_run_record("20261019T081100Z-a00001", "w1", "B1"), None)
+        write_run(self.paths.state_root, create_run_record("20261019T083000Z-b10c4d", "w1", "B1"), None)
+        self.record(
+            20,
+            dataclasses.replace(
+                create_run_finished("20261019T081100Z-a00001", wave="w1", task="B1", outcome="blocked"),
+                message="Keep the guard or drop it?\nbrigade-end: blocked",
+            ),
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].tasks[0].blocked_run)
 
 
 class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):

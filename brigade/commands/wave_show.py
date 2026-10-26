@@ -4,18 +4,20 @@ from brigade.command import Argument, Command
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_last_task_event import find_last_task_event
+from brigade.waves.read_task_state import TASK_EVENTS
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.require_wave_summary import require_wave_summary
 
 DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
-TASK_HEADER = ("task", "state", "pull request", "run")
-TASK_COLUMNS = ("task", "state", "pull_request", "run")
+TASK_HEADER = ("task", "state", "pull request", "run", "reason")
+TASK_COLUMNS = ("task", "state", "pull_request", "run", "reason")
 
 
 def _show(value) -> str:
@@ -35,11 +37,13 @@ def _render_text(document: dict) -> str:
 def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) -> dict:
     opened = find_last_task_event(events, TaskPrOpened, wave, task)
     finished = find_last_task_event(events, RunFinished, wave, task)
+    last_state = find_last_task_event(events, TASK_EVENTS, wave, task)
     return {
         "task": task,
         "state": states.get(task),
         "pull_request": None if opened is None else opened.pr,
         "run": None if finished is None else finished.run,
+        "reason": last_state.reason if isinstance(last_state, TaskParked) else None,
     }
 
 

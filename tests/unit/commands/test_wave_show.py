@@ -77,8 +77,14 @@ class WaveShowTextTest(unittest.TestCase):
             "last_event": "wave.started",
             "pull_request": 77,
             "tasks": [
-                {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1"},
-                {"task": "T8", "state": None, "pull_request": None, "run": None},
+                {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1", "reason": None},
+                {
+                    "task": "T8",
+                    "state": "parked",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "run 20261001T120000Z-b2 blocked: Keep the guard?",
+                },
             ],
         }
 
@@ -90,9 +96,9 @@ class WaveShowTextTest(unittest.TestCase):
             text,
             "wave tidepool_w16 of @PROJECT.tidepool on integration/tidepool_w16,"
             " started 2026-09-30T22:00:00Z, last event wave.started, pull request 77\n"
-            "task  state    pull request  run\n"
-            "T7    pr_open  42            20261001T090000Z-a1\n"
-            "T8    -        -             -",
+            "task  state    pull request  run                  reason\n"
+            "T7    pr_open  42            20261001T090000Z-a1  -\n"
+            "T8    parked   -             -                    run 20261001T120000Z-b2 blocked: Keep the guard?",
         )
 
 
@@ -140,8 +146,14 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "last_event": "wave.started",
                 "pull_request": None,
                 "tasks": [
-                    {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1"},
-                    {"task": "T8", "state": None, "pull_request": None, "run": None},
+                    {
+                        "task": "T7",
+                        "state": "pr_open",
+                        "pull_request": 42,
+                        "run": "20261001T090000Z-a1",
+                        "reason": None,
+                    },
+                    {"task": "T8", "state": None, "pull_request": None, "run": None, "reason": None},
                 ],
             },
         )
@@ -167,9 +179,22 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         self.assertEqual(
             document["tasks"],
             [
-                {"task": "T7", "state": None, "pull_request": None, "run": None},
-                {"task": "T8", "state": "parked", "pull_request": None, "run": None},
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {"task": "T8", "state": "parked", "pull_request": None, "run": None, "reason": "blocked"},
             ],
+        )
+
+    def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
+        # Arrange
+        requeued = {**T8_QUEUED, "ts": "2026-10-01T11:00:00Z"}
+        write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED, requeued])
+
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
         )
 
     def test_should_refuse_a_wave_no_wave_started_names(self):

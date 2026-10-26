@@ -28,9 +28,9 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "last_event": "wave.reported",
                 "pull_request": ANY,
                 "tasks": [
-                    {"task": "S1", "state": "merged", "pull_request": ANY, "run": ANY},
-                    {"task": "S2", "state": "merged", "pull_request": ANY, "run": ANY},
-                    {"task": "S3", "state": "merged", "pull_request": ANY, "run": ANY},
+                    {"task": "S1", "state": "merged", "pull_request": ANY, "run": ANY, "reason": None},
+                    {"task": "S2", "state": "merged", "pull_request": ANY, "run": ANY, "reason": None},
+                    {"task": "S3", "state": "merged", "pull_request": ANY, "run": ANY, "reason": None},
                 ],
             },
         )
