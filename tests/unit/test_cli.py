@@ -194,12 +194,13 @@ class MainOfAMisusedCommandTest(MainTestCase):
 class MainOfACommandFailingUnexpectedlyTest(MainTestCase):
     def test_should_print_the_traceback_and_answer_the_software_exit_code(self):
         # Arrange
+        tick_too_recent_to_expire = "29991231T000000Z"
         ticks = self.root / "state" / "brigade" / "ticks"
         ticks.mkdir(parents=True)
-        (ticks / "20261019T090000Z.jsonl").write_bytes(b"\xff\n")
+        (ticks / f"{tick_too_recent_to_expire}.jsonl").write_bytes(b"\xff\n")
 
         # Act
-        exit_code, _, stderr = self.run_main(["processes", "show", "20261019T090000Z"])
+        exit_code, _, stderr = self.run_main(["processes", "show", tick_too_recent_to_expire])
 
         # Assert
         self.assertEqual(exit_code, 70)
