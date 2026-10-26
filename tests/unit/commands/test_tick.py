@@ -944,6 +944,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
