@@ -1,7 +1,7 @@
 coverage==7.17.0
 pytest==9.1.1
 pytest-xdist==3.8.0
-ruff==0.17.1
+ruff==0.17.2
 semgrep==1.182.1
 vulture==2.16
 zizmor==1.31.1
