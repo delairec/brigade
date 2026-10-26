@@ -461,6 +461,9 @@ MACHINE_OUTPUTS = {
     ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
 }
 MACHINE_ANSWERS = {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in MACHINE_OUTPUTS.items()}
+WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS = {
+    ("awawa", "status", "TASK", "--where", "STATUS==implemented"): '{"entities": [{"type": "TASK", "name": "T7"}]}',
+}
 WAVE_STARTED = {
     "schema_version": 2,
     "ts": "2026-10-18T09:00:00Z",
@@ -889,6 +892,80 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "wave": "tidepool_w16",
                     "task": "T7",
                     "state": "running",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "order.started",
+                    "project": "tidepool",
+                    "kind": "study",
+                    "order": "wave-report",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.reported",
+                    "wave": "tidepool_w16",
+                    "run": ANY,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.closed",
+                    "wave": "tidepool_w16",
+                    "pr": 42,
+                },
+            ],
+        )
+
+    def test_should_record_the_merge_of_the_pull_request_of_a_queued_task_the_wave_tree_holds_implemented(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
+        corpus = {
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_DELIVERED},
+        }
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS}),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "queued",
                 },
                 {
                     "schema_version": 1,

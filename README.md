@@ -79,9 +79,9 @@ These commands need awawa on `PATH`.
 ## Waves
 
 A request is a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one
-project, in their words, and the plan it receives. Every command below but `wave show`, `wave list`, `wave cancel`,
-`wave resume` and `wave requeue`, which read the ledger alone, exits 1 naming `brigade init` until the corpus exists, and each prints text
-or, with `--json`, a JSON document.
+project, in their words, and the plan it receives. Every command below but `wave show`, `wave list`, `wave cancel`
+and `wave resume`, which read the ledger alone, and `wave requeue`, which reads the ledger until the task proves
+parked, exits 1 naming `brigade init` until the corpus exists, and each prints text or, with `--json`, a JSON document.
 
 ```
 brigade request new <project> <text>
@@ -139,8 +139,9 @@ resumed, and a wave no `wave.started` names, or one that is not paused, exits 1 
 
 `wave requeue` records `task.state` `queued` for a parked task of the wave named, so that the next tick launches it
 again in its existing worktree; it prints the task queued, and a task that is not parked exits 1 naming its state, a
-task outside the wave exits 1 naming the wave, and a wave no `wave.started` names exits 1 naming it. The tick never
-queues a parked task again by itself.
+task outside the wave exits 1 naming the wave, a parked task the wave branch holds implemented exits 1 naming the
+branch, and a wave no `wave.started` names exits 1 naming it. The tick never queues a parked task again by itself; a
+queued task the wave branch holds implemented is followed through its pull request, and recorded merged once it is.
 
 ## Tasks
 

@@ -1553,7 +1553,7 @@ TASK B14
 		IMPL "brigade/adapters/forges/github.py::def find_pull_request(request: dict, runtime:"
 			+ "Runtime) -> dict:"
 		IMPL "brigade/tick/build_snapshot.py::def _follow_task(task: TaskFacts, followed:"
-			+ "FollowedWave) -> TaskFacts:"
+			+ "FollowedWave, implemented: tuple[str, ...]) -> TaskFacts:"
 		IMPL "brigade/commands/tick.py::read_environment = functools.cache(lambda:"
 			+ "read_forge_environment(configuration, CLI_KEY, runtime))"
 		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::def"

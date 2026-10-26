@@ -7,7 +7,8 @@ from brigade.commands.wave_requeue import COMMAND
 from brigade.errors import BrigadeError
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
-from tests.unit.commands.command_runtime import write_ledger
+from brigade.runtime import Runtime
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -38,6 +39,10 @@ PARKED_ON_A_FAILED_SETUP = {
     "state": "parked",
     "reason": "setup failed",
 }
+WAVE_HEAD = "8885daa"
+IMPLEMENTED_TASKS_QUERY = ("awawa", "status", "TASK", "--where", "STATUS==implemented")
+NO_TASK_IMPLEMENTED = '{"entities": []}'
+T7_IMPLEMENTED = '{"entities": [{"type": "TASK", "name": "T7"}]}'
 RUNNING = {
     "schema_version": 1,
     "ts": "2026-10-19T08:30:00Z",
@@ -83,12 +88,20 @@ class WaveRequeueRequestTest(unittest.TestCase):
         self.assertIs(request, options)
 
 
+def create_wave_tree_runtime(root: Path, implemented_tasks: str) -> Runtime:
+    write_operational_corpus(root)
+    (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+    corpus = {"PROJECT": {"tidepool": (("PATH", "/srv/tidepool"),)}}
+    outputs = {("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n", IMPLEMENTED_TASKS_QUERY: implemented_tasks}
+    return create_test_runtime(create_test_paths(root), run_process=create_machine_double(corpus, outputs))
+
+
 class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.runtime = create_test_runtime(create_test_paths(self.root))
+        self.runtime = create_wave_tree_runtime(self.root, NO_TASK_IMPLEMENTED)
 
     def test_should_record_the_parked_task_queued(self):
         for case, parking in [
@@ -141,6 +154,21 @@ class WaveRequeueRefusalTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_refusal)
+
+    def test_should_refuse_a_parked_task_the_wave_tree_holds_implemented_naming_the_wave_branch(self):
+        # Arrange
+        runtime = create_wave_tree_runtime(self.root, T7_IMPLEMENTED)
+        write_ledger(self.root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "the task T7 of the wave tidepool_w16 is already implemented on integration/tidepool_w16",
+        )
 
     def test_should_refuse_a_task_outside_the_wave_naming_the_wave(self):
         # Arrange
