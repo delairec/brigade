@@ -133,6 +133,8 @@ class OpenIntegrationPullRequest:
 class CloseWave:
     wave: str
     pr: int
+    project: str
+    milestones: tuple[str, ...]
 
 
 @dataclass(frozen=True)

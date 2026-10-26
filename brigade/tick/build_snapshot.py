@@ -63,6 +63,8 @@ CHECK_RUNS_FIELD = "CHECK_RUNS"
 NO_CHECK_RUNS = "none"
 AFTER_FIELD = "AFTER"
 TASK_PREFIX = "@TASK."
+MILESTONE_FIELD = "MILESTONE"
+MILESTONE_PREFIX = "@MILESTONE."
 PROJECT_SLOTS = 4
 PARKED_OUTCOME = "parked"
 QUEUED_STATE = "queued"
@@ -135,6 +137,7 @@ class TaskFacts:
     holds_uncommitted_changes: bool = False
     last_run: str | None = None
     blocked_run: BlockedRun | None = None
+    milestone: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -160,6 +163,7 @@ class TaskFacts:
                 if self.blocked_run is None
                 else {"run": self.blocked_run.run, "question": self.blocked_run.question}
             ),
+            "milestone": self.milestone,
         }
 
 
@@ -279,11 +283,17 @@ class Snapshot:
         }
 
 
+def _read_milestone(task: Entity) -> str | None:
+    milestone = read_project_field(task, MILESTONE_FIELD)
+    return None if milestone is None else milestone.removeprefix(MILESTONE_PREFIX)
+
+
 def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
     return TaskFacts(
         name=task.name,
         after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
         blocked_by=read_live_blockers(runtime.run_process, root, task.name),
+        milestone=_read_milestone(task),
     )
 
 
