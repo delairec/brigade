@@ -2456,6 +2456,8 @@ TASK B25
 			+ "test_should_refuse_an_evidence_opening_on_the_fingerprint_of_no_signal_collected"
 		IMPL "tests/unit/studies/test_validate_answer.py::def"
 			+ "test_should_refuse_a_triage_answer_its_patterns_check_refuses"
+		IMPL "tests/unit/studies/test_validate_answer.py::def"
+			+ "test_should_check_the_patterns_of_the_answer_and_leave_out_those_the_operational_corpus_holds"
 		IMPL "tests/unit/studies/test_write_answer.py::def"
 			+ "test_should_commit_the_patterns_of_the_triage_to_the_operational_corpus"
 	SPEC "brigade study run triage runs it on demand; the built-in study is due once a day by"
