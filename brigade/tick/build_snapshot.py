@@ -288,11 +288,11 @@ class FollowedWave:
     run_process: Callable[[ProcessRequest], ProcessRecord]
 
 
-def _follow_task(task: TaskFacts, followed: FollowedWave) -> TaskFacts:
+def _follow_task(task: TaskFacts, followed: FollowedWave, implemented: tuple[str, ...]) -> TaskFacts:
     state = followed.states.get(task.name, QUEUED_STATE)
     worktree = locate_scheduled_worktree(followed.repository, followed.worktree_root, task.name)
     standing = worktree.is_dir()
-    if state == QUEUED_STATE or (state in SETTLED_STATES and not standing):
+    if (state == QUEUED_STATE and task.name not in implemented) or (state in SETTLED_STATES and not standing):
         return task
     return dataclasses.replace(
         task,
@@ -427,6 +427,7 @@ class _OpenWave:
     started: WaveStarted
     tree_root: Path
     followed: FollowedWave
+    implemented: tuple[str, ...]
 
 
 def _locate_wave_repository(reading: WaveReading, started: WaveStarted) -> Path:
@@ -467,8 +468,20 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
 
 def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
     wave = open_wave.started.wave
-    followed = _follow_task(_read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed)
+    followed = _follow_task(
+        _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
+    )
     return _note_last_run(_note_quota(followed, reading, wave, open_wave.followed.states), reading, wave)
+
+
+def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tree_root: Path) -> _OpenWave:
+    states = read_task_states(runtime.paths.state_root, started.wave)
+    return _OpenWave(
+        started=started,
+        tree_root=tree_root,
+        followed=_follow_wave(runtime, reading, started, states),
+        implemented=read_implemented_tasks(runtime.run_process, tree_root),
+    )
 
 
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
@@ -478,18 +491,15 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         return WaveFacts(project=started.project, wave=started.wave, branch=started.branch, branch_missing=True)
     tree = prepare_wave_tree(runtime, reading.configuration, started)
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
-    states = read_task_states(runtime.paths.state_root, started.wave)
-    open_wave = _OpenWave(
-        started=started, tree_root=tree.root, followed=_follow_wave(runtime, reading, started, states)
-    )
+    open_wave = _open_wave(runtime, reading, started, tree.root)
     reported = _is_reported(reading, started.wave)
     return WaveFacts(
         project=started.project,
         wave=started.wave,
         branch=started.branch,
         tasks=tuple(_read_wave_task(runtime, reading, open_wave, tasks[task]) for task in started.tasks),
-        states=states,
-        implemented=read_implemented_tasks(runtime.run_process, tree.root),
+        states=open_wave.followed.states,
+        implemented=open_wave.implemented,
         pause=read_wave_pause(reading.events, started.wave),
         forge_account_unavailable=_is_forge_account_unavailable(reading.entries, started.wave),
         reported=reported,
