@@ -49,6 +49,12 @@ LINT_FAILING_ON_MAIN = NewSignal(
     evidence={"branch": "main", "name": "lint", "conclusion": "failure"},
 )
 NOTE = NewSignal(kind="note", project=None, fingerprint="note:5f2b1c0d9e8a", evidence={"text": "the tick is slow"})
+NOTE_NAMING_THE_LINT = NewSignal(
+    kind="note", project=None, fingerprint="note:0a1b2c3d4e5f", evidence={"text": "the lint is slow", "name": "lint"}
+)
+OTHER_NOTE_NAMING_THE_LINT = NewSignal(
+    kind="note", project=None, fingerprint="note:6a7b8c9d0e1f", evidence={"text": "the lint is noisy", "name": "lint"}
+)
 
 
 class InboxFamiliesCollectorTest(unittest.TestCase):
@@ -154,6 +160,18 @@ class InboxFamiliesCollectorTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_group_by_check_name_the_signals_of_a_check_run_alone(self):
+        # Arrange
+        self.record(NOTE_NAMING_THE_LINT, OTHER_NOTE_NAMING_THE_LINT)
+        no_patterns = {}
+        self.answer_patterns(no_patterns)
+
+        # Act
+        document = collect(ENVIRONMENT, self.runtime, EQUIPMENT)
+
+        # Assert
+        self.assertEqual(document["summary"], {"families": 2, "signals": 2})
 
     def test_should_leave_out_the_dismissed_signals_and_those_a_pattern_cites(self):
         # Arrange
