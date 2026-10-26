@@ -161,6 +161,10 @@ SCHEMA REPORT
 	FIELD PARKED_QUESTION string
 		REPEATABLE
 		DESC "one parked task and what it waits for, filled by the CLI"
+	FIELD PATTERN_TASK string
+		REPEATABLE
+		DESC "one task whose request comes from a pattern, its constraint and its reason, filled by"
+			+ "the CLI"
 	FIELD NARRATIVE string
 		REPEATABLE
 		DESC "filled by the report slot"
