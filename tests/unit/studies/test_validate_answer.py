@@ -179,6 +179,7 @@ class ValidateAnswerTest(unittest.TestCase):
         self.processes.answer_entities(
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))}
         )
+        self.processes.answer_entities(self.runtime.paths.config_root, "REQUEST", {})
         self.processes.answer(("awawa", "lint", "--strict", str(self.submitted)))
         self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.submitted)), submitted_fields)
         self.processes.answer_json(("awawa", "show", REPORT_TARGET, "--json", str(self.filled)), filled_fields)
