@@ -26,9 +26,13 @@ the wave, and the files git reports in conflict between them.
 ## 2. Rebase
 
 `git rebase origin/<base>`. Resolve each conflict by keeping what both sides meant. A conflict whose resolution needs
-a decision the task did not settle is not settled: `git rebase --abort`, and end on the question.
+a decision the task did not settle is not settled: `git rebase --abort`, push nothing, and end blocked, your final
+message stating the question, the files in conflict and what each side meant on the lines above
+`brigade-end: blocked`. The tick parks the task on that question.
 
 ## 3. Hand the branch back
 
 Run the project's tests. Only when they pass, `brigade rebase done <pr>`: it refuses a branch that does not descend
-from the head of the base, and pushes it. The push moves the task back to its preflight; end there.
+from the head of the base, and pushes it. The push moves the task back to its preflight; end there. When they fail
+after the rebase, push nothing and end blocked, your final message naming each failing test and its failure on the
+lines above `brigade-end: blocked`: the tick parks the task on that failure.

@@ -126,8 +126,8 @@ the project in the ledger, records `wave.started` with the wave, the project, th
 of the ledger, then cuts `integration/<project>_w<n>` from the main branch and pushes it under the forge `github`; the
 missing branch of an open wave is cut again, and a branch of the name that no `wave.started` names, local or remote,
 exits 1. A wave is open until `wave.closed` or `wave.cancelled`. `wave show` prints a wave, its branch, the instant it
-started and its last wave event, then each task with its last `task.state`, its pull request and its last run in the
-wave, `-` when none; `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task
+started and its last wave event, then each task with its last `task.state`, its pull request, its last run in the
+wave and, for a parked task, the reason of its `task.parked`, `-` when none; `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task
 count, the open waves first, those of one project with `--project`. `wave cancel` records `wave.cancelled`, stops the
 live run of each task of the wave as `brigade runs stop` does and lists, per task, the run it stopped, the worktree of
 its last run, and the branch and the pull request it opened, all left in place; a wave already closed or cancelled
@@ -343,15 +343,17 @@ through `brigade review context|reply`; a task whose preflight found a failing c
 `build` whose brief carries the build brief of the task and the last 200 lines of the log of each failing check. Each
 launch records the task `fixing` and counts one round; a run that ends without a push leaves the task `fixing`, and the
 next tick launches it again. A push moves the task back to `pr_open`. Past the `VERIFY_ROUNDS` of the project's
-`POLICY`, 2 by default, the task is parked, `task.parked` naming the rounds.
+`POLICY`, 2 by default, the task is parked, `task.parked` naming the rounds. A run of the slot `remediate`, `build` or
+`rebase` that cannot go on without a ruling pushes nothing and ends on `brigade-end: blocked`, its question on the lines
+above: the next tick parks its task, whatever its rounds, `task.parked` naming the run and that question.
 A task whose open pull request is behind the branch of its wave, from `pr_open` to `fixing`, is rebased by git when no
 run holds its worktree, and waits for the next tick otherwise: under the lock of the project's worktrees, the tick
 fetches the wave branch, rebases the worktree onto it and pushes with `--force-with-lease` on the head it read, as the
 login of the key `cli` of `[forge_accounts]`, then records `task.rebased`, the head before and after and that login,
 and moves the task back to `pr_open`. On a conflict it aborts the rebase and starts a detached run of the slot
 `rebase`, of `rebase-on-base`, the procedure brigade ships, or of the one the key `rebase` of `[procedures]` names,
-which works through `brigade rebase context|done`; the launch records the task `fixing` and counts one round, and past
-the rounds the task is parked instead.
+which works through `brigade rebase context|done`; the launch records the task `fixing` and counts no round, and past
+the rounds the repair runs spent the task is parked instead.
 The waves are the
 open waves of the ledger, each with the tasks its `wave.started` names, in that order, read from the project corpus
 at the wave's branch; a wave whose pull requests the forge fails to read is skipped, named on stderr, and the tick
