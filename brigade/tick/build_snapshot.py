@@ -32,6 +32,7 @@ from brigade.studies.convert_study import Study
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_studies import read_studies
+from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
@@ -71,6 +72,8 @@ RUNNING_STATE = "running"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
 RATE_LIMIT = "rate_limit"
 REVIEW_SLOT = "review"
+REBASE_SLOT = "rebase"
+BLOCKED_OUTCOME = "blocked"
 FORGE_ACCOUNT_REASON = "forge_account"
 PROJECT_STATUS_FIELD = "STATUS"
 PAUSED_PROJECT_STATUS = "paused"
@@ -109,6 +112,12 @@ class PreflightFailure:
 
 
 @dataclass(frozen=True)
+class BlockedRun:
+    run: str
+    question: str
+
+
+@dataclass(frozen=True)
 class TaskFacts:
     name: str
     after: tuple[str, ...] = ()
@@ -125,6 +134,7 @@ class TaskFacts:
     repair_rounds: int = 0
     holds_uncommitted_changes: bool = False
     last_run: str | None = None
+    blocked_run: BlockedRun | None = None
 
     def to_document(self) -> dict:
         return {
@@ -145,6 +155,11 @@ class TaskFacts:
             "repair_rounds": self.repair_rounds,
             "holds_uncommitted_changes": self.holds_uncommitted_changes,
             "last_run": self.last_run,
+            "blocked_run": (
+                None
+                if self.blocked_run is None
+                else {"run": self.blocked_run.run, "question": self.blocked_run.question}
+            ),
         }
 
 
@@ -316,14 +331,6 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
     )
 
 
-def _count_repair_rounds(events: tuple, wave: str) -> dict:
-    rounds = {}
-    for event in events:
-        if isinstance(event, TaskState) and event.wave == wave and event.state == FIXING_STATE:
-            rounds[event.task] = rounds.get(event.task, 0) + 1
-    return rounds
-
-
 @dataclass(frozen=True)
 class WaveReading:
     configuration: Configuration
@@ -334,6 +341,31 @@ class WaveReading:
     projects: tuple[Entity, ...]
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
     read_environment: Callable[[str], dict]
+
+
+def _is_rebase_launch(entry: LedgerEntry, runs: tuple[dict, ...]) -> bool:
+    launched = f"{entry.instant.astimezone(UTC).strftime(COMPACT_INSTANT_FORMAT)}-"
+    return any(
+        run["slot"] == REBASE_SLOT
+        and run["wave"] == entry.event.wave
+        and run["task"] == entry.event.task
+        and run["run"].startswith(launched)
+        for run in runs
+    )
+
+
+def _count_repair_rounds(reading: WaveReading, wave: str) -> dict:
+    rounds = {}
+    for entry in reading.entries:
+        event = entry.event
+        if (
+            isinstance(event, TaskState)
+            and event.wave == wave
+            and event.state == FIXING_STATE
+            and not _is_rebase_launch(entry, reading.runs)
+        ):
+            rounds[event.task] = rounds.get(event.task, 0) + 1
+    return rounds
 
 
 def _read_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts | None:
@@ -390,11 +422,24 @@ def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) 
     return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
 
 
+def _read_question(message: str | None) -> str:
+    if message is None:
+        return ""
+    return " ".join(line.strip() for line in message.splitlines()[:-1] if line.strip())
+
+
+def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
+    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == run]
+    if not finished or finished[-1].outcome != BLOCKED_OUTCOME:
+        return None
+    return BlockedRun(run=run, question=_read_question(finished[-1].message))
+
+
 def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
     naming = [run["run"] for run in reading.runs if run["wave"] == wave and run["task"] == task.name]
     if not naming:
         return task
-    return dataclasses.replace(task, last_run=naming[-1])
+    return dataclasses.replace(task, last_run=naming[-1], blocked_run=_read_blocked_run(reading, naming[-1]))
 
 
 def _is_review_ended_within_quota(event, wave: str) -> bool:
@@ -460,7 +505,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
             for event in reading.events
             if isinstance(event, TaskPreflighted) and event.wave == wave
         },
-        repair_rounds=_count_repair_rounds(reading.events, wave),
+        repair_rounds=_count_repair_rounds(reading, wave),
         read_pull_request=reading.read_pull_request,
         run_process=runtime.run_process,
     )

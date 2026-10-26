@@ -64,3 +64,7 @@ lints, commits and pushes the corpus. Never promote before the pull request exis
 The verdict first, in one line: the task delivered, or what stopped it. Then one fact per line: the pull request by
 its number, the branch, the verdict of each acceptance command, the evidence of each failing test seen before its
 code, the entities written in the corpus by name, and the question left to a ruling, verbatim, if there is one.
+
+A run that stops on a ruling, at step 1, at step 3, or on a failing check whose repair needs a decision the task did
+not settle, pushes nothing and ends blocked: its final message states the question on the lines above
+`brigade-end: blocked`, and the tick parks the task on that question.

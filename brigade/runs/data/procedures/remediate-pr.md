@@ -28,8 +28,9 @@ identifier its answer names.
 ## 2. Answer each finding
 
 Read the code each finding points at. Fix what it shows to be wrong, test first, or challenge it with the reason it
-does not hold. A finding that needs a decision the task did not settle is challenged with the question; never decide
-it yourself.
+does not hold. A finding that needs a decision the task did not settle is not yours to decide: push nothing, and end
+blocked, your final message stating the question and the finding it comes from on the lines above
+`brigade-end: blocked`. The tick parks the task on that question.
 
 ## 3. Push
 

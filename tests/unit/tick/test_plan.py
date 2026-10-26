@@ -28,6 +28,7 @@ from brigade.tick.actions import (
     StartWave,
 )
 from brigade.tick.build_snapshot import (
+    BlockedRun,
     LiveRun,
     PreflightFailure,
     ProjectFacts,
@@ -1489,6 +1490,86 @@ class PlanRebaseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (PARK_S3_PAST_ITS_ROUNDS,))
+
+
+BLOCKED_ON_A_RULING = BlockedRun(run="20261006T110000Z-b10c4d", question="Keep the guard or drop it?")
+PARK_S3_ON_THE_QUESTION = ParkTask(
+    wave="shop_w1",
+    task="S3",
+    reason="run 20261006T110000Z-b10c4d blocked: Keep the guard or drop it?",
+    blockers=(),
+)
+
+
+class PlanBlockedRunParkingTest(unittest.TestCase):
+    def test_should_park_on_its_question_a_task_in_fixing_whose_last_run_ended_blocked_whatever_its_rounds(self):
+        for case, pull_request, failures, rounds in [
+            ("a remediation within the rounds", OPEN, NO_PREFLIGHT_FAILURE, NO_ROUND_TAKEN),
+            ("a check repair past the rounds", FAILED_CHECK_RUN, (CHECKS_FAILURE,), TWO_ROUNDS_TAKEN),
+            ("a rebase run on a conflict", BEHIND, NO_PREFLIGHT_FAILURE, NO_ROUND_TAKEN),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    preflight_failures=failures,
+                    repair_rounds=rounds,
+                    blocked_run=BLOCKED_ON_A_RULING,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (PARK_S3_ON_THE_QUESTION,))
+
+    def test_should_not_park_on_the_question_of_a_run_the_task_has_moved_past(self):
+        for case, state, preflighted, live_runs, expected in [
+            ("while a run holds its worktree", "fixing", PREFLIGHTED_AT_THE_HEAD, (REMEDIATION_RUN_OF_S3,), ()),
+            ("pushed since its preflight", "fixing", PREFLIGHTED_BEFORE_A_PUSH, (), (RECORD_PR_OPEN,)),
+            ("changes requested again", "changes_requested", PREFLIGHTED_AT_THE_HEAD, (), (REMEDIATE_S3,)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=OPEN,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=preflighted,
+                    blocked_run=BLOCKED_ON_A_RULING,
+                )
+                project = dataclasses.replace(SHOP, live_runs=live_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_settle_rather_than_park_on_its_question_a_task_whose_pull_request_was_merged(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            pull_request=MERGED,
+            worktree=WORKTREE_S3,
+            opened_pull_request=OPENED_BY_THE_TASK,
+            preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+            blocked_run=BLOCKED_ON_A_RULING,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
 
 
 SHOP_ON_GITHUB = dataclasses.replace(SHOP, on_github=True)

@@ -41,7 +41,8 @@ TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
 SUBAGENTS_DIRECTORY = "subagents"
 SUBAGENT_TRANSCRIPTS = "*.jsonl"
 IDENTIFYING_ARGUMENTS = ("file_path", "command", "pattern", "path", "url", "query")
-END_DECLARATIONS = {f"brigade-end: {outcome}": outcome for outcome in ("done", "handed_over", "blocked")}
+BLOCKED_OUTCOME = "blocked"
+END_DECLARATIONS = {f"brigade-end: {outcome}": outcome for outcome in ("done", "handed_over", BLOCKED_OUTCOME)}
 UNDECLARED = "undeclared"
 HOOK_STOPPED = "hook_stopped"
 SOFT_LIMIT = "soft_limit"
@@ -205,9 +206,10 @@ def _parse_result(request: dict) -> dict:
     result = result_events[-1]
     message = result.get("result")
     error_class = _classify_error(result, message)
+    outcome = _decide_outcome(result, error_class, message)
     return {
         "schema_version": SCHEMA_VERSION,
-        "outcome": _decide_outcome(result, error_class, message),
+        "outcome": outcome,
         "steps": _read_steps(result),
         "usage": _read_usage(result),
         "session_id": result.get("session_id"),
@@ -215,7 +217,7 @@ def _parse_result(request: dict) -> dict:
         "cost_usd": result.get("total_cost_usd"),
         "error_class": error_class,
         "reset": _read_reset(message) if error_class == "rate_limit" else None,
-        "message": None if error_class is None else message,
+        "message": message if error_class is not None or outcome == BLOCKED_OUTCOME else None,
     }
 
 
