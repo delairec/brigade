@@ -36,6 +36,7 @@ OTHER_COLLECTION = {
     "items": [{"signals": [{"fingerprint": "rt:102"}]}],
 }
 
+
 class CheckPatternsTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
