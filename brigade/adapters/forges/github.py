@@ -336,12 +336,22 @@ def post_review(request: dict, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
 
 
-def _read_job_tail(request: dict, runtime: Runtime, link: str) -> str | None:
+def _read_check_log(request: dict, runtime: Runtime, name: str, link: str) -> dict:
     if JOB_SEPARATOR not in link:
-        return None
+        return {"name": name, "tail": None}
     job = link.rsplit(JOB_SEPARATOR, 1)[1]
-    log = _ask_gh(request, runtime, ("api", f"{JOB_LOGS_PATH}/{job}/logs"))
-    return "\n".join(log.splitlines()[-request["lines"] :])
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=("gh", "api", f"{JOB_LOGS_PATH}/{job}/logs", "--allow-escape-sequences"),
+            cwd=request["repository"],
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            acceptable_exit_codes=EVERY_EXIT_CODE,
+            environment=request["environment"],
+        )
+    )
+    if record.exit_code != 0:
+        return {"name": name, "tail": None, "unreadable": True}
+    return {"name": name, "tail": "\n".join(record.stdout.splitlines()[-request["lines"] :])}
 
 
 def read_check_logs(request: dict, runtime: Runtime) -> dict:
@@ -353,7 +363,7 @@ def read_check_logs(request: dict, runtime: Runtime) -> dict:
     }
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "logs": [{"name": name, "tail": _read_job_tail(request, runtime, links[name])} for name in request["checks"]],
+        "logs": [_read_check_log(request, runtime, name, links[name]) for name in request["checks"]],
     }
 
 

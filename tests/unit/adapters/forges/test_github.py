@@ -22,6 +22,7 @@ from brigade.adapters.forges.github import (
     reply_review_thread,
     rewrite_pull_request_body,
 )
+from brigade.errors import CommandFailed
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -890,6 +891,19 @@ class PostReviewTest(unittest.TestCase):
 
 
 CHECKS_OF_PULL_REQUEST_42 = ("gh", "pr", "checks", "42", "--json", "name,link")
+LOGS_OF_JOB_70 = ("gh", "api", "repos/{owner}/{repo}/actions/jobs/70/logs", "--allow-escape-sequences")
+JOB_LOGS_REQUEST = ("gh", "api")
+
+
+def create_gh_unable_to_read_job_logs(answers: dict) -> GhDouble:
+    def answer(request: ProcessRequest, rank: int) -> tuple[int, str]:
+        if request.argv[:2] != JOB_LOGS_REQUEST:
+            return 0, answers[request.argv]
+        if 1 not in request.acceptable_exit_codes:
+            raise CommandFailed(request.argv, 1, "the response contains terminal escape sequences")
+        return 1, ""
+
+    return GhDouble(answer)
 
 
 class ReadCheckLogsTest(unittest.TestCase):
@@ -903,7 +917,7 @@ class ReadCheckLogsTest(unittest.TestCase):
                         {"name": "lint", "link": "https://github.com/octo/shop/actions/runs/7/job/71"},
                     ]
                 ),
-                ("gh", "api", "repos/{owner}/{repo}/actions/jobs/70/logs"): "set up\nrun\nFAIL test_cart\nexit 1\n",
+                LOGS_OF_JOB_70: "set up\nrun\nFAIL test_cart\nexit 1\n",
             }
         )
         runtime = create_test_runtime(run_process=gh)
@@ -921,6 +935,31 @@ class ReadCheckLogsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "tests", "tail": "FAIL test_cart\nexit 1"}]})
+
+    def test_should_mark_unreadable_the_log_of_a_check_gh_cannot_read(self):
+        # Arrange
+        gh = create_gh_unable_to_read_job_logs(
+            {
+                CHECKS_OF_PULL_REQUEST_42: json.dumps(
+                    [{"name": "tests", "link": "https://github.com/octo/shop/actions/runs/7/job/70"}]
+                )
+            }
+        )
+        runtime = create_test_runtime(run_process=gh)
+        request = {
+            "schema_version": 1,
+            "repository": "/projects/shop",
+            "number": 42,
+            "checks": ["tests"],
+            "lines": 2,
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = read_check_logs(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1, "logs": [{"name": "tests", "tail": None, "unreadable": True}]})
 
     def test_should_hold_no_tail_for_a_check_whose_log_the_forge_does_not_keep(self):
         # Arrange
