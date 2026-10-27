@@ -4117,3 +4117,32 @@ DECISION RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversTheP
 	SOURCE "the user's rulings of 2026-10-24 in the refinement of B23 to B26, and the build run of"
 		+ "@TASK.B26"
 		REF @TASK.B26
+
+DECISION ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
+	TITLE "a view of the dashboard is an HTML fragment the server renders in Python from the JSON"
+		+ "of a brigade command, every string escaped with html.escape; the page only polls and"
+		+ "swaps fragments"
+	STATUS active
+	DESC "the server renders each view from the --json document of the command its route runs;"
+		+ "every string goes through html.escape, so markup written by an agent stays text"
+	DESC "the page holds no rendering of its own: it fetches the fragment of the view it shows and"
+		+ "swaps it in; the /api/ routes keep serving the JSON for the plugin and the agents"
+	DESC "the escaping of a view is proven by a unit test rendering a document whose strings hold"
+		+ "markup"
+	DESC "binds @TASK.B27, @TASK.B28, @TASK.B29, @TASK.B30, @TASK.B31 and @TASK.B94"
+		REF @TASK.B27
+		REF @TASK.B28
+		REF @TASK.B29
+		REF @TASK.B30
+		REF @TASK.B31
+		REF @TASK.B94
+	REJECTED "the page rendering the JSON in the browser with textContent: the escaping would be"
+		+ "checked only by looking at the page, no test able to fail"
+	REJECTED "a JavaScript test runtime in the CI: a tool introduced for a page whose rendering"
+		+ "Python covers, no runtime on the reference machine (command -v node, 2026-10-27)"
+	RATIONALE "an escaping criterion must fail in a test, and brigade's tests are Python's unittest"
+		+ "alone; a fragment rendered on the server is tested where every other rendering of"
+		+ "brigade is"
+	SOURCE "the user's ruling of 2026-10-27 in the refinement of @TASK.B27, \"Côté serveur, en"
+		+ "Python\""
+		REF @TASK.B27

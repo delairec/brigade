@@ -11,11 +11,11 @@ MILESTONE M1
 
 MILESTONE M2
 	TITLE "Intake and triage"
-	STATUS active
+	STATUS reached
 
 MILESTONE M3
 	TITLE "Dashboard"
-	STATUS planned
+	STATUS active
 
 MILESTONE M4
 	TITLE "Gardening scans"
