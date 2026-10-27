@@ -1,0 +1,21 @@
+# REPORT brigade_w3
+
+- WAVE: brigade_w3
+- PROJECT: brigade
+- TASK_ROW: B27 running
+- STATISTIC: tasks 1
+- STATISTIC: merged 0
+- STATISTIC: parked 0
+- STATISTIC: runs 1
+- STATISTIC: files 0
+- STATISTIC: insertions 0
+- STATISTIC: deletions 0
+- NARRATIVE: Verdict: the wave delivered nothing; its only task, B27, stopped on a contradiction in its own SPEC and waits for a ruling of the user.
+- NARRATIVE: The wave started at 2026-10-27T23:45:31Z on integration/brigade_w3 with B27 alone (ledger, wave.started).
+- NARRATIVE: One run: 20261027T234531Z-babebe, role ada, procedure build-task, 16 steps, 115968 ms, 1.5859 USD, 10616 output tokens, outcome blocked, exit 0 (ledger, run.finished).
+- NARRATIVE: Nothing reached a branch: no commit, no pull request, git-diff-stat counts 0 files, 0 insertions, 0 deletions; the PR list counts 0 open pull requests.
+- NARRATIVE: B27 was parked at 23:50:31Z (ledger, task.parked); the TASK_ROW "B27 running" and the STATISTIC "parked 0" the CLI filled predate that event, recorded in the same second as wave.reported, and are wrong: B27 is parked and the wave counts 1 parked task.
+- NARRATIVE: Went well: the run stopped after 16 steps, before writing code, and named the contradiction with two worded options instead of delivering a page the browser would break.
+- NARRATIVE: Went wrong: B27 was ratified with SPEC lines that cannot hold together, so the wave spent its only run discovering a defect of the task; no PARKED_QUESTION was filled for it.
+- NARRATIVE: Next wave: rule on B27 (option a or b of its REASON), record the ruling in the SPEC of B27, then brigade wave requeue brigade_w3 B27; the CLI should build TASK_ROW and the parked count from the last task event, task.parked included.
+- REASON: B27, parked: the SPEC "every response carries Content-Security-Policy: default-src 'self'" forbids inline script and style, while the SPEC "the page is one file under brigade/dashboard/data/" needs an inline polling script and an inline theme stylesheet; the run asks which wording changes: (a), recommended, page.html loading page.js and page.css from the same folder through server routes, the header unchanged; (b) one file, the CSP widened with a nonce the server generates at start.
