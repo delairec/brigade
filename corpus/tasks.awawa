@@ -2548,28 +2548,69 @@ TASK B26
 
 TASK B27
 	TITLE "brigade serve and the JSON API"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE ada
-	SPEC "a loopback server"
+	SPEC "brigade serve runs in the foreground until SIGINT or SIGTERM, prints the URL it serves"
+		+ "and exits 0 on either signal"
+	SPEC "it listens on the port of --port, else of the key dashboard_port of config.toml, else"
+		+ "8470; a port already taken exits 1 with a message naming the port"
+	SPEC "the key dashboard_port is documented in the config.toml template with its default"
 	SPEC "the server binds 127.0.0.1 only, never 0.0.0.0 nor an address of the machine"
 	SPEC "a request whose Host header is not the loopback host and port the server listens on is"
 		+ "refused with 400 before any routing: a page reaching the port by DNS rebinding gets"
 		+ "nothing"
 	SPEC "a GET request changes no state of brigade; a state-changing request is a POST"
-	SPEC "every string read from the corpus, the ledger, a run or a report is escaped on render; no"
-		+ "content becomes HTML, markup written by an agent included"
+	SPEC "every POST carries the token the server generated at its start, written into the page it"
+		+ "serves, and an Origin header equal to the loopback origin; a request missing either is"
+		+ "refused with 403 before any routing and changes nothing"
 	SPEC "no response carries a CORS header, whatever the Origin of the request"
-	SPEC "/api/status, /api/waves/<id>, /api/inbox, /api/corpus, /api/ledger, /api/reports"
-	SPEC "a polling page shell with theme tokens"
-	SPEC "every state-changing POST of the server carries the token the server generated at its"
-		+ "start and an Origin header equal to the loopback origin, the rule of SPEC 5 of"
-		+ "@TASK.B28; a request missing either is refused with 403 and changes nothing"
-		REF @TASK.B28
+	SPEC "every response carries Content-Security-Policy: default-src 'self'; the page loads no"
+		+ "resource from outside the server"
+	SPEC "/api/waves, /api/waves/<id>, /api/inbox, /api/ledger and /api/corpus/<project> each serve"
+		+ "the standard output of brigade wave list, brigade wave show <id>, brigade inbox list,"
+		+ "brigade ledger and brigade corpus <project> with --json, run as a subprocess of the"
+		+ "entry point the server runs from"
+	SPEC "a command that exits non-zero answers 404 for an id or a project it does not know, 500"
+		+ "otherwise, with a JSON body holding its standard error"
+	SPEC "the page is one file under brigade/dashboard/data/; it polls the view it shows every 5"
+		+ "seconds while the tab is visible and swaps in the fragment the server renders"
+	SPEC "a light and a dark theme, CSS custom properties chosen by prefers-color-scheme"
+	SPEC "every string of a rendered fragment is escaped with html.escape: a unit test renders a"
+		+ "document whose strings hold markup and finds none of it in the fragment"
 	AFTER @TASK.B05
 	AFTER @TASK.B08
+	RATIONALE "the dashboard of @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept starts"
+		+ "with the server every view of @MILESTONE.M3 runs in, its security criteria and the"
+		+ "routes of the commands whose documents exist today; the views add their own routes, as"
+		+ "@TASK.B94 does for /api/runs"
+		REF @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept
+		REF @MILESTONE.M3
+		REF @TASK.B94
+	RATIONALE "a route runs the command line, never the package, as"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles requires of the dashboard,"
+		+ "so /api/<route> and brigade <command> --json are one document;"
+		+ "brigade/runs/detach_brigade_command.py already runs brigade through runtime.entry_point"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+	RATIONALE "/api/status moved to @TASK.B28, which settles the quota of Home, and /api/reports to"
+		+ "@TASK.B31, which reads the reports through the document kind of @TASK.B106: no command"
+		+ "prints either document today"
+		REF @TASK.B28
+		REF @TASK.B31
+		REF @TASK.B106
+	RATIONALE "the server renders the fragments from the JSON of the command and the page only"
+		+ "swaps them, as @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand sets,"
+		+ "so the escaping is proven by Python's tests"
+		REF @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
+	RATIONALE "the page and the template ship as resources, as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets for the dashboard"
+		+ "page"
+		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
 	SOURCE "use-case map of 2026-10-16, finding C19"
+	SOURCE "the user's rulings of 2026-10-27 in the refinement of B27: the routes of the commands"
+		+ "that exist, the rendering on the server, the port as a key of config.toml"
 
 TASK B28
 	TITLE "Home and Wave views"
@@ -2582,9 +2623,7 @@ TASK B28
 	SPEC "a board of tasks by state with pull request, rounds and steps"
 	SPEC "a timeline"
 	SPEC "pause, resume and retry actions through the CLI"
-	SPEC "pause, resume and retry are POST requests carrying the token the server generated at its"
-		+ "start, handed to the page it serves, and an Origin header equal to the loopback origin;"
-		+ "a request missing either is refused with 403 and changes nothing"
+	SPEC "/api/status serves the document Home renders, its content settled in the refinement"
 	SPEC "the quota shown on Home is a consumption computed from the usage of the run.finished"
 		+ "events over the reset window, the computation settled in the refinement, where today no"
 		+ "module computes it"
@@ -2631,6 +2670,7 @@ TASK B31
 		+ "@TASK.B106, rendered from their entities with their manual-test tables; the Markdown of"
 		+ "each is a rendering for the person, never the home of a fact"
 		REF @TASK.B106
+	SPEC "/api/reports serves the documents the views render"
 	AFTER @TASK.B27
 	AFTER @TASK.B20
 	RATIONALE "the views render the entities, as"
@@ -6750,13 +6790,14 @@ TASK B94
 	RATIONALE "asked on 2026-10-07 while following the run of @TASK.B82: brigade runs list gives"
 		+ "the state and brigade runs logs the client's output, which Claude Code writes only at"
 		+ "the end; the progress file runs/<id>/progress.md is the only live trace, and no command"
-		+ "prints it; @TASK.B27 serves /api/status, /api/waves/<id>, /api/inbox, /api/corpus,"
-		+ "/api/ledger and /api/reports, and @TASK.B28 a Wave view of tasks with their steps: a run"
-		+ "launched by brigade run outside a wave appears in none, and none shows a run in"
+		+ "prints it; @TASK.B27 serves /api/waves, /api/inbox, /api/corpus and /api/ledger,"
+		+ "@TASK.B28 /api/status and a Wave view of tasks with their steps, @TASK.B31 /api/reports:"
+		+ "a run launched by brigade run outside a wave appears in none, and none shows a run in"
 		+ "progress; neither task is amended, the view completes them"
 		REF @TASK.B82
 		REF @TASK.B27
 		REF @TASK.B28
+		REF @TASK.B31
 	SOURCE "item 15 of docs/follow-up/2026-10-07-b82-run.md; the user's words of 2026-10-07,"
 		+ "\"seulement après la review on lancera lex pour l'écriture dans le corpus\""
 	SOURCE "use-case map of 2026-10-16, finding C13: SPEC 3, brigade runs show printing the"
