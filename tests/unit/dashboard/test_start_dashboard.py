@@ -1,6 +1,8 @@
+import gc
 import socket
 import sys
 import unittest
+import warnings
 
 from brigade.dashboard.start_dashboard import start_dashboard
 from brigade.errors import BrigadeError
@@ -103,3 +105,31 @@ class StartDashboardOnATakenPortTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), f"cannot listen on port {port}: Address already in use")
+
+
+class StartDashboardOnAPortOutOfRangeTest(unittest.TestCase):
+    def test_should_refuse_naming_the_port_and_the_range(self):
+        for port in (70000, -1):
+            with self.subTest(port=port):
+                # Act
+                with self.assertRaises(BrigadeError) as raised, start_dashboard(port, ISSUED_CREDENTIAL, create_test_runtime()):
+                    pass
+
+                # Assert
+                self.assertEqual(str(raised.exception), f"cannot listen on port {port}: not a port from 0 to 65535")
+
+
+class StopDashboardTest(unittest.TestCase):
+    def test_should_close_the_listening_socket(self):
+        # Arrange
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("ignore")
+            warnings.simplefilter("always", ResourceWarning)
+
+            # Act
+            with start_dashboard(ANY_FREE_PORT, ISSUED_CREDENTIAL, create_test_runtime()):
+                pass
+            gc.collect()
+
+        # Assert
+        self.assertEqual(caught, [])

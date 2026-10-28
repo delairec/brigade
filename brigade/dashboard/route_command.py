@@ -34,7 +34,7 @@ def _route_wave(wave: str, query: dict) -> CommandRoute:
 
 
 def _route_corpus(project: str, query: dict) -> CommandRoute:
-    references = tuple(f"--{REF_PARAMETER}={ref}" for ref in query.get(REF_PARAMETER, ())[-1:])
+    references = tuple(f"--{REF_PARAMETER}={ref}" for ref in query.get(REF_PARAMETER, ()))
     return CommandRoute(
         arguments=("corpus", *references, "--json", project), identifier=project, listing=PROJECT_LISTING
     )
