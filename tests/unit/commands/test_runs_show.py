@@ -1,4 +1,5 @@
 import contextlib
+import functools
 import io
 import json
 import os
@@ -10,9 +11,13 @@ from pathlib import Path
 from brigade.commands.runs_show import COMMAND
 from brigade.errors import BrigadeError, UsageError
 from brigade.runs.record_run_pid import record_run_pid
+from brigade.system.resolve_plugin import PluginSources, resolve_plugin
+from tests.awawa.provide_awawa import provide_awawa
+from tests.create_process_runner import create_process_runner
 from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.refuse_to_run import refuse_to_run
 
 FINISHED_RUN = {
     "run": FIRST_RUN,
@@ -40,6 +45,19 @@ FOLLOWED_RUN = {
     "task": None,
 }
 FINISHED_SEGMENT = {"segment": 1, "outcome": "done", "steps": 12, "duration_ms": 4200}
+NO_PROGRESS = None
+NO_EXECUTABLE_DIRECTORY = ""
+MARKDOWN_PROGRESS = "- read the task\n- wrote the tests\n"
+AWAWA_PROGRESS = (
+    "SCHEMA STEP\n"
+    '\tDESC "a step the run completed"\n'
+    "\tFIELD DONE string\n"
+    "\t\tREQUIRED\n"
+    '\t\tDESC "what the step did, one line"\n'
+    "\n"
+    "STEP s1\n"
+    '\tDONE "read the task"\n'
+)
 JOURNAL_RECORD = {
     "schema_version": 1,
     "at": "2026-10-07T09:01:00Z",
@@ -57,6 +75,7 @@ class RunsShowTextTest(unittest.TestCase):
             "schema_version": 1,
             "run": {**FINISHED_RUN, "project": None, "outcome": None, "message": None},
             "segments": [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}],
+            "progress": NO_PROGRESS,
             "journal": None,
         }
 
@@ -85,6 +104,7 @@ class RunsShowTextTest(unittest.TestCase):
             "schema_version": 1,
             "run": FINISHED_RUN,
             "segments": [FINISHED_SEGMENT],
+            "progress": NO_PROGRESS,
             "journal": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
         }
 
@@ -105,6 +125,40 @@ class RunsShowTextTest(unittest.TestCase):
             "\n"
             "segment  outcome  steps  duration\n"
             "1        done     12     0m04s\n"
+            "\n"
+            "2026-10-07T09:01:00Z  1  text  reads the task",
+        )
+
+    def test_should_print_the_progress_after_the_segments_and_before_the_journal(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "run": FINISHED_RUN,
+            "segments": [FINISHED_SEGMENT],
+            "progress": {"text": "STEP s1\n  DONE: read the task\n", "entities": None},
+            "journal": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            f"run        {FIRST_RUN}\n"
+            "procedure  deliver\n"
+            "slot       build\n"
+            "role       builder\n"
+            "project    -\n"
+            "state      finished\n"
+            "outcome    done\n"
+            "message    the task is delivered\n"
+            "\n"
+            "segment  outcome  steps  duration\n"
+            "1        done     12     0m04s\n"
+            "\n"
+            "STEP s1\n"
+            "  DONE: read the task\n"
             "\n"
             "2026-10-07T09:01:00Z  1  text  reads the task",
         )
@@ -283,7 +337,13 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document,
-            {"schema_version": 1, "run": FINISHED_RUN, "segments": [FINISHED_SEGMENT], "journal": [JOURNAL_RECORD]},
+            {
+                "schema_version": 1,
+                "run": FINISHED_RUN,
+                "segments": [FINISHED_SEGMENT],
+                "progress": NO_PROGRESS,
+                "journal": [JOURNAL_RECORD],
+            },
         )
 
     def test_should_print_the_run_and_its_journal_when_following_a_run_already_ended(self):
@@ -324,3 +384,88 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "no run 20261009T090000Z-d90c03")
+
+
+class RunsShowOfARunWithItsProgressTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.run_directory = write_run(
+            self.root / "state",
+            create_run_record(FIRST_RUN, None, None),
+            create_run_result(FIRST_RUN, "done", "2026-10-07T09:12:00Z"),
+        )
+        sources = PluginSources(executable_search_path=NO_EXECUTABLE_DIRECTORY, run_process=refuse_to_run)
+        self.resolve_plugin = functools.partial(resolve_plugin, sources=sources)
+
+    def test_should_carry_the_text_of_a_markdown_progress_with_no_entities(self):
+        # Arrange
+        (self.run_directory / "progress.md").write_text(MARKDOWN_PROGRESS, encoding="utf-8")
+        runtime = create_test_runtime(create_test_paths(self.root), resolve_plugin=self.resolve_plugin)
+
+        # Act
+        document = COMMAND.run(Namespace(run=FIRST_RUN, log=False, follow=False), runtime)
+
+        # Assert
+        self.assertEqual(document["progress"], {"text": "- read the task\n- wrote the tests\n", "entities": None})
+
+    def test_should_carry_no_progress_for_a_progress_holding_no_entry(self):
+        # Arrange
+        (self.run_directory / "progress.md").write_text("", encoding="utf-8")
+        runtime = create_test_runtime(create_test_paths(self.root), resolve_plugin=self.resolve_plugin)
+
+        # Act
+        document = COMMAND.run(Namespace(run=FIRST_RUN, log=False, follow=False), runtime)
+
+        # Assert
+        self.assertIsNone(document["progress"])
+
+    def test_should_render_an_awawa_progress_whatever_form_the_configuration_names_now(self):
+        # Arrange
+        (self.run_directory / "progress.awawa").write_text(AWAWA_PROGRESS, encoding="utf-8")
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_process_runner(provide_awawa(self)),
+            resolve_plugin=self.resolve_plugin,
+        )
+        runtime.paths.config_root.mkdir(parents=True)
+        runtime.paths.configuration_file.write_text('document = "markdown"\n', encoding="utf-8")
+
+        # Act
+        document = COMMAND.run(Namespace(run=FIRST_RUN, log=False, follow=False), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["progress"],
+            {
+                "text": "STEP s1\n  DONE: read the task\n",
+                "entities": [{"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}],
+            },
+        )
+
+    def test_should_print_no_progress_when_following_the_run(self):
+        # Arrange
+        (self.run_directory / "progress.md").write_text(MARKDOWN_PROGRESS, encoding="utf-8")
+        printed = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stdout(printed):
+            COMMAND.run(
+                Namespace(run=FIRST_RUN, log=False, follow=True), create_test_runtime(create_test_paths(self.root))
+            )
+
+        # Assert
+        self.assertEqual(
+            printed.getvalue(),
+            f"run        {FIRST_RUN}\n"
+            "procedure  deliver\n"
+            "slot       build\n"
+            "role       builder\n"
+            "project    -\n"
+            "state      finished\n"
+            "outcome    done\n"
+            "message    the task is delivered\n"
+            "\n"
+            "segment  outcome  steps  duration\n"
+            "1        done     12     0m04s\n"
+            "\n",
+        )

@@ -3,6 +3,7 @@ import unittest
 from brigade.errors import BrigadeError
 from brigade.system.ask_document import DocumentQuestion, ask_document
 from brigade.system.document_creation import DocumentCreation
+from brigade.system.document_rendering import DocumentRendering
 from brigade.system.document_request import DocumentRequest
 from brigade.system.document_text import DocumentText
 from brigade.system.entry_detection import EntryDetection
@@ -34,10 +35,22 @@ class DocumentPluginDouble:
         self.requests.append(request)
         return {"schema_version": 1, "holds_entry": True}
 
+    def render_document(self, request: dict, runtime) -> dict:
+        return {
+            "schema_version": 1,
+            "text": "STEP s1\n  DONE: read the task\n",
+            "entities": [{"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}],
+        }
+
 
 class EntryDetectorAnsweringATextDouble:
     def detect_entry(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "holds_entry": "yes"}
+
+
+class RendererAnsweringTextEntitiesDouble:
+    def render_document(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "text": "STEP s1\n", "entities": "STEP s1"}
 
 
 class CreatorAnsweringNothingDouble:
@@ -79,6 +92,13 @@ class AskDocumentTest(unittest.TestCase):
             ),
             ("read_document", DocumentText(text="step 1 done\n")),
             ("detect_entry", EntryDetection(holds_entry=True)),
+            (
+                "render_document",
+                DocumentRendering(
+                    text="STEP s1\n  DONE: read the task\n",
+                    entities=[{"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}],
+                ),
+            ),
         ]
         for operation, expected_answer in rows:
             with self.subTest(operation=operation):
@@ -103,6 +123,20 @@ class AskDocumentTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception),
             "document plugin awawa answered detect_entry: holds_entry is a string, not a boolean",
+        )
+
+    def test_should_refuse_a_rendering_whose_entities_are_no_list(self):
+        # Arrange
+        question = DocumentQuestion(document_name="awawa", operation="render_document", request=PROGRESS_REQUEST)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            ask_document(RendererAnsweringTextEntitiesDouble(), question, NO_RUNTIME_NEEDED)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "document plugin awawa answered render_document: entities is a string, not a list",
         )
 
     def test_should_refuse_a_creation_answering_no_document(self):
