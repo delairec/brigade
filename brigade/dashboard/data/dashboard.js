@@ -1,7 +1,6 @@
 const POLL_INTERVAL_MS = 5000;
 const FIRST_VIEW = "waves";
 const TOKEN_HEADER = "X-Brigade-Token";
-const CORPUS_SELECTOR = "form.corpus-selector";
 
 function selectView() {
   return window.location.hash.slice(1) || FIRST_VIEW;
@@ -38,28 +37,14 @@ function pollView() {
   showView();
 }
 
-function readSelection(form) {
-  const selection = new URLSearchParams();
-  for (const [name, value] of new FormData(form)) {
-    if (name !== "project" && value) {
-      selection.append(name, value);
-    }
-  }
-  return selection;
-}
-
-function selectCorpus(event) {
-  if (!event.target.matches(CORPUS_SELECTOR)) {
-    return;
-  }
+function submitView(event) {
   event.preventDefault();
-  const project = new FormData(event.target).get("project");
-  window.location.hash = `corpus/${encodeURIComponent(project)}?${readSelection(event.target)}`;
+  window.location.hash = `${event.target.dataset.view}?${new URLSearchParams(new FormData(event.target))}`;
 }
 
 window.addEventListener("hashchange", showView);
 document.addEventListener("visibilitychange", showView);
 document.addEventListener("click", postAction);
-document.addEventListener("submit", selectCorpus);
+document.addEventListener("submit", submitView);
 window.setInterval(pollView, POLL_INTERVAL_MS);
 showView();
