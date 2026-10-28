@@ -61,3 +61,14 @@ MILESTONE ADD0
 		+ "planned after M8"
 	SOURCE "the user's words of 2026-10-07, \"on va créer une milestone \\\"post-mvp\\\" avec comme"
 		+ "id \\\"ADD0\\\" je pense\"; docs/follow-up/2026-10-07-b82-run.md, items 5, 6, 7 and 13"
+
+MILESTONE M9
+	TITLE "Milestone integration branch"
+	STATUS planned
+	DESC "a milestone delivered alone, as DESC 5 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
+		+ "a change the tick itself needs; M3 keeps its dashboard perimeter"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	SOURCE "the user's ruling of 2026-10-28 on the milestone of the tasks B212 to B216: « Nouveau"
+		+ "milestone », on the session's recommendation « Un milestone à part, livré seul, comme la"
+		+ "règle 2 le prévoit pour les correctifs du tick. M3 garde son périmètre dashboard »"

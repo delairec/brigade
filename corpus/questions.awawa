@@ -152,9 +152,29 @@ OPEN_QUESTION HowM3MovesToTheIntegrationBranchOfTheMilestone
 	BLOCKS @TASK.B212
 	BLOCKS @TASK.B215
 	RATIONALE "the user keeps #237 and #239 open, « je garde ouvertes »; the tasks of the new model"
-		+ "are themselves in M3, and the tick runs from the main checkout, so they reach the tick"
-		+ "only once merged into main"
+		+ "are in @MILESTONE.M9, delivered alone, and the tick runs from the main checkout, so they"
+		+ "reach the tick only once M9 is merged into main"
+		REF @MILESTONE.M9
 	SOURCE "the user's words of 2026-10-28: « je garde ouvertes, fais écrire la décision par lex »;"
 		+ "opened by the session that wrote"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+
+OPEN_QUESTION TheRebaseOfAMilestoneBranchUnderItsOpenWaves
+	QUESTION "when the integration branch of a milestone is rebased onto main before a wave starts"
+		+ "while other waves of the milestone are open, cut from the branch before the rebase, what"
+		+ "becomes of those waves: their branches rebased onto the new base too, the rebase waited"
+		+ "for until they are merged, or something else?"
+	STATUS open
+	BLOCKS @TASK.B214
+	RATIONALE "the user ruled the rebase over the merge, « je préfère rebase que merge », which"
+		+ "rewrites the base of every wave branch cut from the milestone branch; several waves of a"
+		+ "project may be open at once under"
+		+ "@DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone, and the rebase of"
+		+ "a task branch onto its wave branch, @TASK.B210, does not reach a wave branch"
+		REF @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
+		REF @TASK.B210
+	SOURCE "the user's ruling of 2026-10-28, « je préfère rebase que merge, le reste ok »; opened"
+		+ "by the session that wrote"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce"
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce

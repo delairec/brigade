@@ -12919,7 +12919,7 @@ TASK B212
 		+ "request of a wave is opened into it, never into main"
 	STATUS draft
 	TYPE feat
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
 	ROLE ada
 	SPEC "when a wave of a milestone starts and the milestone has no integration branch, the tick"
@@ -12964,7 +12964,7 @@ TASK B213
 	TITLE "The candidates of a wave are read on the integration branch of its milestone"
 	STATUS draft
 	TYPE feat
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M9
 	COMPONENT "waves"
 	ROLE ada
 	AFTER @TASK.B212
@@ -12998,24 +12998,25 @@ TASK B213
 		+ "fais écrire la décision par lex »"
 
 TASK B214
-	TITLE "The main branch is merged into the integration branch of a milestone before a wave"
+	TITLE "The integration branch of a milestone is rebased onto the main branch before a wave"
 		+ "starts"
 	STATUS draft
 	TYPE feat
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M9
 	COMPONENT "waves"
 	ROLE ada
 	AFTER @TASK.B212
-	SPEC "before the tick or brigade wave start composes a wave of a milestone, PROJECT.MAIN,"
-		+ "origin/<MAIN> on a project of FORGE github, is merged into the integration branch of the"
-		+ "milestone and the branch pushed, so that the candidates are read after the merge"
-	SPEC "a merge stopped on a conflict is aborted, the milestone branch left as it was, and starts"
-		+ "no wave: the tick names the branch and the conflicting files on stderr and serves the"
-		+ "other projects"
+	SPEC "before the tick or brigade wave start composes a wave of a milestone, the integration"
+		+ "branch of the milestone is rebased onto PROJECT.MAIN, origin/<MAIN> on a project of"
+		+ "FORGE github, and pushed with --force-with-lease, so that the candidates are read after"
+		+ "the rebase"
+	SPEC "a rebase stopped on a conflict is aborted, the milestone branch left as it was, and"
+		+ "starts no wave: the tick names the branch and the conflicting files on stderr and serves"
+		+ "the other projects"
 	SPEC "the sentence of the Bootstrap section of AGENTS.md that this task makes false is"
 		+ "rewritten at delivery"
 	SPEC "tests/unit prove a ratification merged into PROJECT.MAIN after the milestone branch was"
-		+ "cut reaching the candidates of the next wave, and a conflicting merge starting no wave"
+		+ "cut reaching the candidates of the next wave, and a conflicting rebase starting no wave"
 	RATIONALE "the ruling is"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, DESC 4: a"
 		+ "ratification, a refinement or a fix is merged into main by its own pull request while"
@@ -13025,16 +13026,17 @@ TASK B214
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @TASK.B27
 	RATIONALE "the handling of a conflict, SPEC 2, is the session's proposal, to be refined: the"
-		+ "user ruled the merge, not the conflict"
-	SOURCE "the user's answer of 2026-10-28 to the session's recommendation: « je garde ouvertes,"
-		+ "fais écrire la décision par lex »"
+		+ "user ruled the rebase, not the conflict; what the rebase does to the open waves cut from"
+		+ "the branch before it is @OPEN_QUESTION.TheRebaseOfAMilestoneBranchUnderItsOpenWaves"
+		REF @OPEN_QUESTION.TheRebaseOfAMilestoneBranchUnderItsOpenWaves
+	SOURCE "the user's ruling of 2026-10-28: « je préfère rebase que merge, le reste ok »"
 
 TASK B215
 	TITLE "The tick opens the pull request of the integration branch of a milestone into main once"
 		+ "every wave of the milestone is merged, and merges it never"
 	STATUS draft
 	TYPE feat
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
 	ROLE ada
 	AFTER @TASK.B212
@@ -13071,15 +13073,15 @@ TASK B216
 		+ "integration branch"
 	STATUS draft
 	TYPE docs
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M9
 	COMPONENT "AGENTS.md"
 	ROLE ada
 	AFTER @TASK.B212
 	AFTER @TASK.B213
 	AFTER @TASK.B214
 	AFTER @TASK.B215
-	SPEC "the Bootstrap section of AGENTS.md says that the tick merges main into the integration"
-		+ "branch of the milestone, starts a wave of the ratified tasks read on that branch, on a"
+	SPEC "the Bootstrap section of AGENTS.md says that the tick rebases the integration branch of"
+		+ "the milestone onto main, starts a wave of the ratified tasks read on that branch, on a"
 		+ "wave branch cut from it, merges each verified task pull request into the wave branch,"
 		+ "opens the pull request of the wave into the integration branch of the milestone, and"
 		+ "opens the pull request of the milestone into main once every wave is merged; the"
