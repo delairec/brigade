@@ -1,7 +1,11 @@
-from brigade.dashboard.render_corpus_selector import render_corpus_selector
+from html import escape
+from urllib.parse import quote
 
-NO_SELECTION: dict = {}
+
+def _render_project_link(project: str) -> str:
+    view = f"#corpus/{quote(project, safe='')}"
+    return f'<li><a href="{escape(view)}">{escape(project)}</a></li>'
 
 
 def render_project_choice(document: dict) -> str:
-    return render_corpus_selector([project["name"] for project in document["projects"]], NO_SELECTION)
+    return f"<ul>{''.join(_render_project_link(project['name']) for project in document['projects'])}</ul>"
