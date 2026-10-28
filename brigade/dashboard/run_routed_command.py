@@ -35,8 +35,10 @@ def _is_unknown(route: CommandRoute, runtime: Runtime) -> bool:
     listed = _run_brigade(route.listing.arguments, runtime)
     if listed.exit_code != 0:
         return False
-    entries = json.loads(listed.stdout)[route.listing.collection]
-    return route.identifier not in [entry[route.listing.field] for entry in entries]
+    document = json.loads(listed.stdout)
+    return route.identifier not in [
+        entry[field] for collection, field in route.listing.names for entry in document[collection]
+    ]
 
 
 def run_routed_command(route: CommandRoute, runtime: Runtime) -> CommandAnswer:

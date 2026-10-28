@@ -1,8 +1,13 @@
 const POLL_INTERVAL_MS = 5000;
 const FIRST_VIEW = "waves";
+const TOKEN_HEADER = "X-Brigade-Token";
 
 function selectView() {
   return window.location.hash.slice(1) || FIRST_VIEW;
+}
+
+function readToken() {
+  return document.querySelector('meta[name="brigade-token"]').content;
 }
 
 async function showView() {
@@ -13,7 +18,20 @@ async function showView() {
   document.getElementById("view").innerHTML = await response.text();
 }
 
+async function postAction(event) {
+  const button = event.target.closest("button[data-post]");
+  if (button === null) {
+    return;
+  }
+  const response = await fetch(button.dataset.post, { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });
+  if (!response.ok) {
+    window.alert((await response.json()).error);
+  }
+  await showView();
+}
+
 window.addEventListener("hashchange", showView);
 document.addEventListener("visibilitychange", showView);
+document.addEventListener("click", postAction);
 window.setInterval(showView, POLL_INTERVAL_MS);
 showView();
