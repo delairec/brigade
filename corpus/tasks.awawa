@@ -11520,7 +11520,8 @@ TASK B181
 
 TASK B182
 	TITLE "brigade runs show <id> prints the progress file of the run, text and --json"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 236
 	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "runs"
