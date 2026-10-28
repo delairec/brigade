@@ -1,5 +1,5 @@
 const POLL_INTERVAL_MS = 5000;
-const FIRST_VIEW = "waves";
+const FIRST_VIEW = "status";
 const TOKEN_HEADER = "X-Brigade-Token";
 
 function selectView() {
