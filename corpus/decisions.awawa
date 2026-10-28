@@ -4770,5 +4770,5 @@ DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKee
 		REF @TASK.B31
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 		REF @TASK.B51
-	SOURCE "the delivery of @TASK.B31 in the wave brigade_w4"
+	SOURCE "pull request #242 of the brigade repository, delivering @TASK.B31"
 		REF @TASK.B31
