@@ -21,7 +21,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
-from brigade.ledger.task_state import REQUEUE_REASON, TaskState
+from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
@@ -37,11 +37,9 @@ from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
 from brigade.runs.read_run_question import read_run_question
 from brigade.runtime import Runtime
-from brigade.studies.convert_study import Study
-from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
+from brigade.studies.read_last_study_orders import read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_studies import read_studies
-from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
@@ -49,13 +47,17 @@ from brigade.system.reset_hour import ResetHour
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.tasks.read_task_field import read_task_field
 from brigade.tick.decide_resume_at import decide_resume_at
+from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
+from brigade.tick.study_facts import StudyFacts
+from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.cut_wave_branch import WaveBranchCut
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_milestone_branch import find_milestone_branch
+from brigade.waves.is_requeue import is_requeue
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
@@ -79,7 +81,6 @@ TASK_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
 MILESTONE_PREFIX = "@MILESTONE."
 PROJECT_SLOTS = 4
-PARKED_OUTCOME = "parked"
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
@@ -314,26 +315,6 @@ class MilestoneFacts:
 
 
 @dataclass(frozen=True)
-class StudyFacts:
-    name: str
-    slot: str
-    every: str | None
-    status: str
-    last_started: datetime | None
-    parked: bool
-
-    def to_document(self) -> dict:
-        return {
-            "study": self.name,
-            "slot": self.slot,
-            "every": self.every,
-            "status": self.status,
-            "last_started": None if self.last_started is None else format_instant(self.last_started),
-            "parked": self.parked,
-        }
-
-
-@dataclass(frozen=True)
 class Snapshot:
     now: datetime
     waves: tuple[WaveFacts, ...] = ()
@@ -434,25 +415,6 @@ class WaveReading:
     forge: ForgeReaders
 
 
-def _is_rebase_launch(entry: LedgerEntry, runs: tuple[dict, ...]) -> bool:
-    launched = f"{entry.instant.astimezone(UTC).strftime(COMPACT_INSTANT_FORMAT)}-"
-    return any(
-        run["slot"] == REBASE_SLOT
-        and run["wave"] == entry.event.wave
-        and run["task"] == entry.event.task
-        and run["run"].startswith(launched)
-        for run in runs
-    )
-
-
-def _is_requeue(event, wave: str) -> bool:
-    return isinstance(event, TaskState) and event.wave == wave and event.reason == REQUEUE_REASON
-
-
-def _restarts_the_rounds(event, wave: str) -> bool:
-    return _is_requeue(event, wave) or (isinstance(event, TaskVerdict) and event.wave == wave)
-
-
 def _is_verification_fact(event, wave: str, task: str) -> bool:
     return isinstance(event, TaskPreflighted | TaskVerdict) and event.wave == wave and event.task == task
 
@@ -460,49 +422,10 @@ def _is_verification_fact(event, wave: str, task: str) -> bool:
 def _list_events_since_requeue(events: tuple, wave: str) -> tuple:
     kept = []
     for event in events:
-        if _is_requeue(event, wave):
+        if is_requeue(event, wave):
             kept = [held for held in kept if not _is_verification_fact(held, wave, event.task)]
         kept.append(event)
     return tuple(kept)
-
-
-def _is_rate_limited_launch(entry: LedgerEntry, reading: WaveReading) -> bool:
-    launched = f"{entry.instant.astimezone(UTC).strftime(COMPACT_INSTANT_FORMAT)}-"
-    return any(
-        isinstance(event, RunFinished)
-        and event.error_class == RATE_LIMIT
-        and event.wave == entry.event.wave
-        and event.task == entry.event.task
-        and event.run.startswith(launched)
-        for event in reading.events
-    )
-
-
-def _is_spending_round(entry: LedgerEntry, reading: WaveReading, previous_state: str | None) -> bool:
-    return (
-        previous_state != PAUSED_ON_QUOTA_STATE
-        and not _is_rebase_launch(entry, reading.runs)
-        and not _is_rate_limited_launch(entry, reading)
-    )
-
-
-def _count_repair_rounds(reading: WaveReading, wave: str) -> dict:
-    rounds = {}
-    states = {}
-    for entry in reading.entries:
-        event = entry.event
-        if _restarts_the_rounds(event, wave):
-            rounds[event.task] = 0
-        elif (
-            isinstance(event, TaskState)
-            and event.wave == wave
-            and event.state == FIXING_STATE
-            and _is_spending_round(entry, reading, states.get(event.task))
-        ):
-            rounds[event.task] = rounds.get(event.task, 0) + 1
-        if isinstance(event, TaskState) and event.wave == wave:
-            states[event.task] = event.state
-    return rounds
 
 
 def _read_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts | None:
@@ -680,7 +603,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
             for event in since_requeue
             if isinstance(event, TaskPreflighted) and event.wave == wave
         },
-        repair_rounds=_count_repair_rounds(reading, wave),
+        repair_rounds=count_repair_rounds(reading.entries, reading.runs, wave),
         read_pull_request=reading.forge.read_pull_request,
         run_process=runtime.run_process,
     )
@@ -800,17 +723,6 @@ def _read_readable_project_facts(
     except ToolFailure as failure:
         sys.stderr.write(f"brigade tick: the project {project.name} skipped: {failure}\n")
         return None
-
-
-def _describe_study(study: Study, last_order: LastStudyOrder | None) -> StudyFacts:
-    return StudyFacts(
-        name=study.name,
-        slot=study.slot,
-        every=study.every,
-        status=study.status,
-        last_started=None if last_order is None else last_order.started,
-        parked=last_order is not None and last_order.outcome == PARKED_OUTCOME,
-    )
 
 
 def _assemble_reading(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> WaveReading:
@@ -963,7 +875,7 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         now=runtime.now.astimezone(),
         waves=_read_open_waves(runtime, reading),
         projects=_read_registered_projects(runtime, reading),
-        studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
+        studies=tuple(describe_study_facts(study, last_orders.get(study.name)) for study in read_studies(runtime)),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         rate_limits=_read_rate_limits(reading, runtime.now),

@@ -22,7 +22,9 @@ class CommandRoute:
 WAVE_LISTING = Listing(arguments=("wave", "list", "--json"), names=(("waves", "wave"),))
 PROJECT_LISTING = Listing(arguments=("project", "list", "--json"), names=(("projects", "name"),))
 REPORT_LISTING = Listing(arguments=("reports", "list", "--json"), names=(("reports", "id"),))
+HOME_ROUTE = CommandRoute(arguments=("status", "--json"))
 ROUTES_WITHOUT_IDENTIFIER = {
+    "status": HOME_ROUTE,
     "waves": CommandRoute(arguments=WAVE_LISTING.arguments),
     "inbox": CommandRoute(arguments=("inbox", "list", "--json")),
     "ledger": CommandRoute(arguments=("ledger", "--json")),
