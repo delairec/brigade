@@ -15,9 +15,8 @@ from brigade.system.read_tick_stale_after import (
 )
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
-STRING_KEYS = ("client", "scheduler", "instructions", "document", "worktree_root")
+STRING_KEYS = ("client", "scheduler", "instructions", "document", "worktree_root", "ide_link")
 DOCUMENT_BY_DEFAULT = "awawa"
-UNREAD_STRING_KEYS = ("ide_link",)
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
@@ -73,6 +72,7 @@ class Configuration:
     worktree_root: str | None = None
     attribution: tuple[str, ...] | None = None
     dashboard_port: int = DASHBOARD_PORT_BY_DEFAULT
+    ide_link: str = ""
 
 
 @dataclass(frozen=True)
@@ -199,7 +199,6 @@ def _parse(path: Path) -> dict:
 
 KNOWN_KEYS = (
     *STRING_KEYS,
-    *UNREAD_STRING_KEYS,
     REFS_CACHE_MB_KEY,
     "reasoning",
     "clients",
@@ -221,9 +220,6 @@ KNOWN_KEYS = (
 
 
 def _read_strings(document: dict, path: Path) -> dict:
-    for key in UNREAD_STRING_KEYS:
-        if key in document:
-            _require(document[key], STRING, key, path)
     return {key: _require(document[key], STRING, key, path) for key in STRING_KEYS if key in document}
 
 
