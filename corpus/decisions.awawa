@@ -4772,3 +4772,45 @@ DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKee
 		REF @TASK.B51
 	SOURCE "pull request #242 of the brigade repository, delivering @TASK.B31"
 		REF @TASK.B31
+
+DECISION TheCorpusViewReadsBrigadeCorpusAndItsBoardReadsEachEntity
+	TITLE "the Corpus view reads brigade corpus --type, --field and --entity through"
+		+ "/api/corpus/<project>, and its board reads the field of each entity with awawa show"
+	STATUS active
+	DESC "brigade corpus <project> --type lists the entities of the type from one awawa status;"
+		+ "--field reads each of them with awawa show through brigade/corpus/read_entity.py, for"
+		+ "every field, STATUS included; --entity reads awawa context --depth 1"
+	DESC "a view renders the document of one command, as"
+		+ "@DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand sets"
+		REF @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
+	DESC "binds @TASK.B30"
+		REF @TASK.B30
+	REJECTED "a board by STATUS alone, read from awawa status: the task asks a board by field, and"
+		+ "STATUS read apart would be a second path to the same board"
+	REJECTED "a route per awawa command under /api/corpus/<project>: a view is rendered from the"
+		+ "document of one command"
+	RATIONALE "awawa show of one entity took 9 ms on the brigade corpus, time awawa show @TASK.B08"
+		+ "--json . on 2026-10-28: a board of the 172 tasks costs about 1.5 s a render"
+		REF @TASK.B08
+	SOURCE "the build run of @TASK.B30 of 2026-10-28"
+		REF @TASK.B30
+
+DECISION TheCorpusViewLinksAwawaWebAtItsDefaultAddress
+	TITLE "an entity of the Corpus view links awawa-web at its default address"
+		+ "http://127.0.0.1:7878/, which brigade never starts"
+	STATUS active
+	DESC "the link is shown when the probe of brigade doctor, awawa-web --help run by"
+		+ "brigade/system/find_awawa_web.py, finds awawa-web on the PATH; the user runs awawa-web"
+		+ "on the checkout"
+	DESC "awawa-web stays the editor of the corpus, as"
+		+ "@DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept sets"
+		REF @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept
+	DESC "binds @TASK.B30"
+		REF @TASK.B30
+	REJECTED "brigade starting awawa-web on the tree it read: a tree extracted at a SHA is a cache,"
+		+ "not the checkout awawa-web edits"
+	REJECTED "a link to the entity inside awawa-web: awawa-web --help documents no address of an"
+		+ "entity"
+	RATIONALE "awawa-web --help: it listens on 127.0.0.1, at the port of --port, 7878 by default"
+	SOURCE "the build run of @TASK.B30 of 2026-10-28"
+		REF @TASK.B30

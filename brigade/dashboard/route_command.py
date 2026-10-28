@@ -3,7 +3,7 @@ from urllib.parse import parse_qs, urlsplit
 
 OPTION_PREFIX = "-"
 PATH_SEPARATOR = "/"
-REF_PARAMETER = "ref"
+CORPUS_PARAMETERS = ("ref", "type", "field", "entity")
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,7 @@ ROUTES_WITHOUT_IDENTIFIER = {
     "inbox": CommandRoute(arguments=("inbox", "list", "--json")),
     "ledger": CommandRoute(arguments=("ledger", "--json")),
     "reports": CommandRoute(arguments=REPORT_LISTING.arguments),
+    "corpus": CommandRoute(arguments=PROJECT_LISTING.arguments),
 }
 
 
@@ -35,10 +36,8 @@ def _route_wave(wave: str, query: dict) -> CommandRoute:
 
 
 def _route_corpus(project: str, query: dict) -> CommandRoute:
-    references = tuple(f"--{REF_PARAMETER}={ref}" for ref in query.get(REF_PARAMETER, ()))
-    return CommandRoute(
-        arguments=("corpus", *references, "--json", project), identifier=project, listing=PROJECT_LISTING
-    )
+    options = tuple(f"--{name}={value}" for name in CORPUS_PARAMETERS for value in query.get(name, ()))
+    return CommandRoute(arguments=("corpus", *options, "--json", project), identifier=project, listing=PROJECT_LISTING)
 
 
 def _route_report(report: str, query: dict) -> CommandRoute:
