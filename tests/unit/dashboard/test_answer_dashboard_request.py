@@ -526,6 +526,15 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                     (PYTHON, ENTRY_POINT, "ledger", "compare", "--before=2026-10-01", "--json"),
                 ],
             ),
+            (
+                "/views/ledger?wave=w4&wave=w5&before=2026-10-01&before=2026-11-01",
+                [
+                    (PYTHON, ENTRY_POINT, "ledger", "--json"),
+                    (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
+                    (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
+                    (PYTHON, ENTRY_POINT, "ledger", "compare", "--before=2026-10-01", "--json"),
+                ],
+            ),
         ]
         for target, commands in rows:
             with self.subTest(target=target):
