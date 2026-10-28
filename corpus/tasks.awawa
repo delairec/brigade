@@ -13151,7 +13151,8 @@ TASK B210
 
 TASK B211
 	TITLE "A task of a new wave takes over the worktree its task left in a cancelled wave"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 245
 	TYPE fix
 	MILESTONE @MILESTONE.M3
 	COMPONENT "the tick"
