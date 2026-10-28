@@ -4743,3 +4743,32 @@ DECISION TheInboxViewRendersTheFamiliesAndPatternsOfInboxListAndPostsItsActionsU
 		+ "without --kind"
 	SOURCE "the build run of @TASK.B29 of 2026-10-28"
 		REF @TASK.B29
+
+DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
+	TITLE "brigade reports reads the REPORT and ANSWER entities of the operational corpus through"
+		+ "the awawa document plugin; the outputs of an order join it with the engine that writes"
+		+ "them"
+	STATUS active
+	DESC "a wave report is a REPORT entity of reports.awawa, kind wave-report, its project its"
+		+ "PROJECT field; a study answer is an ANSWER entity of answers.awawa, kind study-answer,"
+		+ "its project that of the STUDY it answers; the id is the name of the entity"
+	DESC "an answer a study hands to a file, an issue, the inbox or an output on PATH is read where"
+		+ "it was handed: brigade reports lists what the operational corpus keeps"
+	DESC "no order output exists when @TASK.B31 is delivered: the engine of @TASK.B51 is a draft,"
+		+ "and where it keeps the answer of a judge step is its to settle; it adds the kind of its"
+		+ "outputs to brigade reports"
+		REF @TASK.B31
+		REF @TASK.B51
+	DESC "the Markdown of a report, printed by brigade reports show and published by the wave"
+		+ "report, is rendered by one function, brigade/reports/render_report_markdown.py, its"
+		+ "manual tests and tester steps as tables"
+	REJECTED "the answer.awawa of each run directory as the source: the retention of runs/ removes"
+		+ "a settled run, and its report would vanish with it"
+	RATIONALE "the SPEC of @TASK.B31 names the order outputs among the reports, after"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole;"
+		+ "no code writes one, so no test can list one before @TASK.B51"
+		REF @TASK.B31
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+		REF @TASK.B51
+	SOURCE "the delivery of @TASK.B31 in the wave brigade_w4"
+		REF @TASK.B31

@@ -5,10 +5,10 @@ from string import Template
 from urllib.parse import urlsplit
 
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
-from brigade.dashboard.render_fragment import render_fragment
 from brigade.dashboard.render_inbox_view import render_inbox_view
 from brigade.dashboard.route_change import route_change
 from brigade.dashboard.route_command import CommandRoute, route_command
+from brigade.dashboard.route_view import route_view
 from brigade.dashboard.run_routed_command import run_routed_command
 from brigade.runtime import Runtime
 
@@ -79,14 +79,12 @@ def _answer_change(target: str, runtime: Runtime) -> DashboardResponse:
 
 
 def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
-    view = target.removeprefix(VIEWS_PREFIX)
-    route = route_command(view)
-    if route is None:
+    view = route_view(target.removeprefix(VIEWS_PREFIX), VIEW_RENDERERS)
+    if view is None:
         return _answer_error(NOT_FOUND, f"no view serves {target}")
-    answer = run_routed_command(route, runtime)
-    render = VIEW_RENDERERS.get(view, render_fragment) if answer.status == OK else render_fragment
-    fragment = render(json.loads(answer.document))
-    return DashboardResponse(status=answer.status, content_type=HTML, body=fragment.encode())
+    answers = {name: run_routed_command(route, runtime) for name, route in view.routes.items()}
+    status = next(iter(answers.values())).status
+    return DashboardResponse(status=status, content_type=HTML, body=view.render(answers).encode())
 
 
 def _answer_reading(target: str, dashboard: Dashboard, runtime: Runtime) -> DashboardResponse:
