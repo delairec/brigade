@@ -171,7 +171,7 @@ def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | No
         return RecordTaskState(wave=wave.wave, task=task.name, state=MERGED_STATE, reason=None)
     if task.pull_request.state == CLOSED_PULL_REQUEST:
         return RecordTaskState(wave=wave.wave, task=task.name, state=PARKED_STATE, reason=CLOSED_REASON)
-    if state == RUNNING_STATE or _is_pushed_since_preflight(state, task):
+    if (state == RUNNING_STATE and not task.last_run_is_a_rebase) or _is_pushed_since_preflight(state, task):
         return RecordTaskState(wave=wave.wave, task=task.name, state=PR_OPEN_STATE, reason=None)
     return None
 
@@ -444,7 +444,7 @@ def _plan_dead_run_parkings(snapshot: Snapshot) -> tuple:
         for wave in snapshot.waves
         for task in wave.tasks
         if wave.states.get(task.name) == RUNNING_STATE
-        and task.pull_request is None
+        and (task.pull_request is None or task.last_run_is_a_rebase)
         and task.rate_limit is None
         and not task.rebased_by_last_run
         and (wave.wave, task.name) not in live_tasks
@@ -524,7 +524,6 @@ def _is_startable(task: TaskFacts, wave: WaveFacts) -> bool:
 def _is_rebased(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset) -> bool:
     return (
         wave.states.get(task.name) == RUNNING_STATE
-        and task.pull_request is None
         and task.rebased_by_last_run
         and (wave.wave, task.name) not in live_tasks
     )
