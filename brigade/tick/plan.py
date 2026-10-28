@@ -75,17 +75,6 @@ def plan(snapshot: Snapshot) -> tuple:
     paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
         pause.wave for pause in pauses if isinstance(pause, PauseWave)
     }
-    free_slots = {project.name: _count_free_slots(project) for project in snapshot.projects}
-    launches = []
-    for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
-        for task in sorted(
-            (task for task in wave.tasks if _is_startable(task, wave)),
-            key=lambda task: read_task_number(task.name, wave.wave),
-        ):
-            if free_slots[wave.project] <= 0:
-                break
-            free_slots[wave.project] -= 1
-            launches.append(LaunchTask(project=wave.project, wave=wave.wave, branch=wave.branch, task=task.name))
     return (
         pauses
         + _plan_resumes(snapshot)
@@ -96,10 +85,26 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_reports(snapshot)
         + _plan_closes(snapshot)
         + _plan_integration_pull_requests(snapshot)
-        + tuple(launches)
+        + _plan_launches(snapshot, paused)
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
     )
+
+
+def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
+    free_slots = {project.name: _count_free_slots(project) for project in snapshot.projects}
+    live_tasks = _read_occupancy(snapshot).tasks
+    launches = []
+    for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
+        for task in sorted(
+            (task for task in wave.tasks if _is_startable(task, wave) or _is_rebased(task, wave, live_tasks)),
+            key=lambda task: read_task_number(task.name, wave.wave),
+        ):
+            if free_slots[wave.project] <= 0:
+                break
+            free_slots[wave.project] -= 1
+            launches.append(LaunchTask(project=wave.project, wave=wave.wave, branch=wave.branch, task=task.name))
+    return tuple(launches)
 
 
 def _decide_quota_resume_at(snapshot: Snapshot) -> datetime | None:
@@ -441,6 +446,7 @@ def _plan_dead_run_parkings(snapshot: Snapshot) -> tuple:
         if wave.states.get(task.name) == RUNNING_STATE
         and task.pull_request is None
         and task.rate_limit is None
+        and not task.rebased_by_last_run
         and (wave.wave, task.name) not in live_tasks
     )
 
@@ -512,6 +518,15 @@ def _is_startable(task: TaskFacts, wave: WaveFacts) -> bool:
         and task.name not in wave.implemented
         and all(wave.states.get(earlier) == MERGED_STATE or earlier in wave.implemented for earlier in task.after)
         and not task.blocked_by
+    )
+
+
+def _is_rebased(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset) -> bool:
+    return (
+        wave.states.get(task.name) == RUNNING_STATE
+        and task.pull_request is None
+        and task.rebased_by_last_run
+        and (wave.wave, task.name) not in live_tasks
     )
 
 

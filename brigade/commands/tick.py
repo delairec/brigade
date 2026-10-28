@@ -141,8 +141,30 @@ def _locate_trail(runtime: Runtime):
     return runtime.paths.state_root / TICKS_DIRECTORY / f"{runtime.now.strftime(COMPACT_INSTANT_FORMAT)}{TRAIL_SUFFIX}"
 
 
+def _launch_rebase_of_the_branch(runtime: Runtime, configuration: Configuration, action: LaunchTask, worktree: Path):
+    rebasing = argparse.Namespace(
+        procedure=configuration.procedures.get(REBASE_SLOT, REBASE_PROCEDURE),
+        slot=REBASE_SLOT,
+        project=action.project,
+        cwd=str(worktree),
+        brief=None,
+        arguments=(f"task=@TASK.{action.task}", f"base={action.branch}"),
+        run_id=None,
+        wave=action.wave,
+        task=action.task,
+        detach=True,
+        resume=False,
+    )
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
+    run(rebasing, runtime)
+
+
 def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
-    worktree = prepare_task_worktree(runtime, configuration, action)
+    prepared = prepare_task_worktree(runtime, configuration, action, _cache_forge_environment(runtime, configuration))
+    if prepared.conflicted:
+        _launch_rebase_of_the_branch(runtime, configuration, action, prepared.worktree.path)
+        return
+    worktree = prepared.worktree
     building = argparse.Namespace(
         procedure=configuration.procedures.get(BUILD_SLOT, BUILD_PROCEDURE),
         slot=BUILD_SLOT,

@@ -238,13 +238,15 @@ Under `REVIEW approval` it also replies each answer on its thread as the login o
 ## Rebase on the base
 
 ```
-brigade rebase context <pr>
+brigade rebase context [<pr>]
 brigade rebase done <pr>
 ```
 
 Both run from the worktree of the task whose rebase conflicted, in a run of the `rebase` slot. `rebase context` prints
 the branch of the pull request, its base, the branch the `wave.started` of its wave names, and the files `git
-merge-tree` reports in conflict between the head and `origin/<base>`. `rebase done` fetches both branches, refuses a
+merge-tree` reports in conflict between the head and `origin/<base>`; without `<pr>`, for a task that has no pull
+request yet, it reads the task and its wave from the branch of the worktree, and the conflicts against
+`origin/<base>` on a project of `FORGE github`, against the local `<base>` otherwise. `rebase done` fetches both branches, refuses a
 head that does not descend from `origin/<base>`, exit 1, and pushes nothing; otherwise it pushes the head onto the
 branch with `--force-with-lease` on the remote head it fetched, under the account of the run, and prints the head
 pushed.
@@ -347,10 +349,16 @@ place, resolved as the argument of `brigade run` is, with the wave and the task 
 read as the login of the key `cli` of `[forge_accounts]`: the task is recorded `pr_open` when its pull request opens,
 `merged` when it merges, `parked` with the reason `pull request closed` when it closes unmerged, and the task's
 worktree is removed once its pull request is merged or closed, never while a run holds it. A task is recorded `running`
-before its run is spawned, and its launch reuses the branch `task/<slug>/<task>` and its worktree when they exist. A
+before its run is spawned, and its launch reuses the branch `task/<slug>/<task>` and its worktree when they exist. On
+a project of `FORGE github` the launch fetches the wave branch and cuts the task branch from `origin/<branch>`, its
+setup checking that `origin/<branch>` is an ancestor of `HEAD`; a project of `FORGE none` keeps its local wave branch.
+An existing task branch that does not descend from that wave branch is rebased onto it before the setup; a rebase
+stopped on a conflict is aborted and the tick starts a detached run of the slot `rebase` in the worktree of the task,
+with the arguments `task` and `base` and no `pr`, the task staying `running`: once that run ends done, the next tick
+launches the build run, and a run that ends blocked parks the task on its question. A
 task whose setup fails is recorded `parked` with the reason `setup failed`, its worktree and branch left in place. A
-`running` task with no pull request that no live run names in its wave and task, its run rate-limited aside, is
-parked, `task.parked` with the reason `run dead: <run>`, the last run naming the task, or `run not started` when no run
+`running` task with no pull request that no live run names in its wave and task, its run rate-limited or a rebase
+run ended done aside, is parked, `task.parked` with the reason `run dead: <run>`, the last run naming the task, or `run not started` when no run
 names it. An
 action that fails is recorded as `tick.action_failed`, with the action, its project, wave and task where it names
 them, and the error; the tick applies the actions that follow it, never applies it again in the same tick and undoes

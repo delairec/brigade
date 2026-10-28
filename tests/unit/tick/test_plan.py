@@ -1700,3 +1700,44 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, ())
+
+
+LAST_RUN_A_REBASE = "20261006T110000Z-4eba5e"
+LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
+
+
+class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
+    def test_should_launch_the_build_run_once_the_rebase_run_has_put_the_branch_on_the_wave_branch(self):
+        # Arrange
+        task = TaskFacts(name="S3", last_run=LAST_RUN_A_REBASE, rebased_by_last_run=True)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_S3,))
+
+    def test_should_park_the_task_on_the_question_of_a_rebase_run_that_ended_blocked(self):
+        # Arrange
+        task = TaskFacts(name="S3", last_run=LAST_RUN_A_REBASE, blocked_run=BLOCKED_ON_A_RULING)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PARK_S3_ON_THE_QUESTION,))
+
+    def test_should_launch_nothing_while_the_rebase_run_is_live(self):
+        # Arrange
+        task = TaskFacts(name="S3", last_run=LAST_RUN_A_REBASE, rebased_by_last_run=True)
+        live_rebase = LiveRun(run=LAST_RUN_A_REBASE, slot="rebase", worktree=WORKTREE_S3, wave="shop_w1", task="S3")
+        project = dataclasses.replace(SHOP, live_runs=(live_rebase,))
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())

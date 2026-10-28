@@ -102,3 +102,126 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
         self.run_tick("--once")
         self.wait_for_the_runs()
         return requeued
+
+
+S3_RULED_ON_MAIN = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
+    'TASK S3\n\tTITLE "Empty the cart in two clicks"\n\tSTATUS todo\n'
+)
+S3_AS_PLANNED = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
+    'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\tAFTER @TASK.S2\n'
+)
+
+
+class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.state / "ledger" / "2026-10.jsonl").write_text(S3_PARKED_ON_A_DEAD_RUN)
+        self.project.run_git("branch", "task/M1-empty-cart/S3", WAVE_BRANCH)
+        self.project.run_git("checkout", "--quiet", WAVE_BRANCH)
+        self.project.write("docs/wave-report.md", "# shop_w1\n")
+        self.project.track("docs")
+        self.project.run_git("commit", "--quiet", "-m", "the report of shop_w1")
+        self.project.run_git("checkout", "--quiet", "main")
+
+    def test_should_launch_the_build_run_on_the_branch_put_back_on_the_wave_branch(self):
+        # Act
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[-1],
+            {
+                "schema_version": 2,
+                "ts": ANY,
+                "event": "run.finished",
+                "run": PatternMatcher(RUN_ID_PATTERN),
+                "segment": 1,
+                "procedure": "build-task",
+                "slot": "build",
+                "role": "builder",
+                "client": "fake",
+                "project": "shop",
+                "session": "fake-session",
+                "main_steps": 12,
+                "total_steps": None,
+                "duration_ms": ANY,
+                "usage": ANY,
+                "outcome": "done",
+                "error_class": None,
+                "exit": 0,
+                "wave": "shop_w1",
+                "task": "S3",
+                "nulls": ANY,
+                "cost_usd": 0.42,
+            },
+        )
+
+
+class BrigadeWaveRequeueOfATaskRuledOnTheMainBranchTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.state / "ledger" / "2026-10.jsonl").write_text(S3_PARKED_ON_A_DEAD_RUN)
+
+    def rule_on_main(self, tasks: str):
+        self.project.write("corpus/tasks.awawa", tasks)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "-m", "a ruling on S3")
+
+    def test_should_refuse_the_task_naming_the_two_branches_and_the_cancellation_of_the_wave(self):
+        # Arrange
+        self.rule_on_main(S3_RULED_ON_MAIN)
+
+        # Act
+        requeued = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+
+        # Assert
+        self.assertEqual(
+            requeued.stderr,
+            "brigade wave requeue: the task S3 of the wave shop_w1 differs between main and"
+            " integration/M1-empty-cart: the ruling on main reaches it through brigade wave cancel shop_w1"
+            " and a new wave cut from main\n",
+        )
+        self.assertEqual(requeued.returncode, 1)
+
+    def test_should_leave_the_task_parked(self):
+        # Arrange
+        self.rule_on_main(S3_RULED_ON_MAIN)
+
+        # Act
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[-1],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-13T10:00:00Z",
+                "event": "task.parked",
+                "wave": "shop_w1",
+                "task": "S3",
+                "reason": "run dead: 20261013T093000Z-a00001",
+                "blockers": [],
+            },
+        )
+
+    def test_should_queue_a_task_whose_entity_on_main_is_the_one_of_the_wave_branch(self):
+        # Arrange
+        self.rule_on_main(S3_AS_PLANNED)
+
+        # Act
+        requeued = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+
+        # Assert
+        self.assertEqual(requeued.stdout, "task S3 of shop_w1 queued\n", requeued.stderr)
