@@ -27,7 +27,7 @@ DEBT_STUDY = (
     ("COLLECTOR", "runs-list"),
     ("SLOT", "report"),
     ("EVERY", "1d"),
-    ("OUTPUT", "file:/home/user/debt.md"),
+    ("OUTPUT", "file:/srv/reports/debt.md"),
     ("ANSWER", "ANSWER"),
     ("STATUS", "active"),
 )
@@ -36,7 +36,7 @@ HEALTH_STUDY = (
     ("COLLECTOR", "runs-list"),
     ("SLOT", "report"),
     ("EVERY", "1d"),
-    ("OUTPUT", "file:/home/user/health.md"),
+    ("OUTPUT", "file:/srv/reports/health.md"),
     ("ANSWER", "ANSWER"),
     ("STATUS", "paused"),
 )
