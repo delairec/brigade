@@ -75,3 +75,86 @@ OPEN_QUESTION TheKeyOfAWaveInTheLedger
 	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"Open"
 		+ "question\""
 	SOURCE "use-case map of 2026-10-16, findings X2 and C2"
+
+OPEN_QUESTION TheNameOfTheIntegrationBranchOfAMilestone
+	QUESTION "is the integration branch of a milestone named integration/<milestone>,"
+		+ "integration/M3, or with its TITLE as a slug, integration/M3-dashboard, as the archived"
+		+ "decision named it; and does the branch of a wave keep integration/<project>_w<n> beside"
+		+ "it?"
+	STATUS open
+	BLOCKS @TASK.B212
+	BLOCKS @TASK.B216
+	RATIONALE "the user ruled that the integration branch carries the name of the milestone, « je"
+		+ "comprends pas pourquoi les branche d'intégration ne porte pas le nom de la milestone »,"
+		+ "and named no form;"
+		+ "@DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt, archived, named"
+		+ "integration/<NAME>-<slug>"
+		REF @DECISION.AWaveIsAMilestoneOfTheProjectCorpusAndItsBranchIsNamedAfterIt
+	SOURCE "the user's words of 2026-10-28 on pull request #239; opened by the session that wrote"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+
+OPEN_QUESTION TheWaveOfATaskNamingNoMilestone
+	QUESTION "on which integration branch does a task naming no MILESTONE run, and into which pull"
+		+ "request is it merged, a TASK of a project corpus being allowed to name none?"
+	STATUS open
+	BLOCKS @TASK.B212
+	BLOCKS @TASK.B213
+	RATIONALE "@DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone admits a task"
+		+ "naming no MILESTONE as a candidate, and"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce merges a wave"
+		+ "into the branch of one milestone; the corpus of brigade requires MILESTONE on TASK, a"
+		+ "project's corpus may not"
+		REF @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	SOURCE "opened by the session that wrote"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce on 2026-10-28"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+
+OPEN_QUESTION WhoMergesAWaveIntoTheIntegrationBranchOfItsMilestone
+	QUESTION "who merges the pull request of a wave into the integration branch of its milestone,"
+		+ "and on what gate: brigade once the checks of the pull request pass, as it merges a task"
+		+ "pull request into the wave branch, the user, or another gate?"
+	STATUS open
+	BLOCKS @TASK.B212
+	RATIONALE "the user ruled that a wave merges into the integration branch and that the user"
+		+ "intervenes for the final merge into main alone, « alors j'interviens pour le merge final"
+		+ "»; the session's recommendation read it as a merge without the user, and the user named"
+		+ "no gate"
+	SOURCE "the user's words of 2026-10-28: « une wave merge dans la branche d'inté »; opened by"
+		+ "the session that wrote"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+
+OPEN_QUESTION SeveralMilestonesActiveAtOnce
+	QUESTION "may several milestones of a project be active at once, each with its integration"
+		+ "branch and its waves, and if so which the tick serves first; or does one milestone run"
+		+ "at a time?"
+	STATUS open
+	BLOCKS @TASK.B212
+	BLOCKS @TASK.B213
+	BLOCKS @TASK.B214
+	RATIONALE "MILESTONE carries STATUS planned|active|reached since 2026-10-24 and nothing bounds"
+		+ "the active ones; several waves of a project may be open at once under"
+		+ "@DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone, and each wave now"
+		+ "merges into the branch of one milestone"
+		REF @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
+	SOURCE "opened by the session that wrote"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce on 2026-10-28"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+
+OPEN_QUESTION HowM3MovesToTheIntegrationBranchOfTheMilestone
+	QUESTION "how does M3, in flight with one branch per wave, integration/brigade_w4 and"
+		+ "integration/brigade_w6 and their pull requests #237 and #239 open into main, move to one"
+		+ "integration branch of the milestone: the open pull requests retargeted onto it, the"
+		+ "waves merged into it by hand, or M3 delivered under the model it started on?"
+	STATUS open
+	BLOCKS @TASK.B212
+	BLOCKS @TASK.B215
+	RATIONALE "the user keeps #237 and #239 open, « je garde ouvertes »; the tasks of the new model"
+		+ "are themselves in M3, and the tick runs from the main checkout, so they reach the tick"
+		+ "only once merged into main"
+	SOURCE "the user's words of 2026-10-28: « je garde ouvertes, fais écrire la décision par lex »;"
+		+ "opened by the session that wrote"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
