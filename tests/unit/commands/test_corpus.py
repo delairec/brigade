@@ -290,3 +290,26 @@ class CorpusTextTest(unittest.TestCase):
             "@TASK.B30 reaches nothing\n"
             "@TASK.B30 is referenced by @TASK.B32",
         )
+
+    def test_should_print_nothing_for_what_references_an_entity_nothing_references(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "project": "app",
+            "ref": "main",
+            "sha": "de446f3",
+            "kind": "archive",
+            "root": "/cache/brigade/refs/app/de446f3",
+            "dependencies": {"entity": "@TASK.B30", "reaches": [{"target": "@TASK.B27"}], "referenced_by": []},
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "@PROJECT.app\nref   main\nsha   de446f3\nkind  archive\nroot  /cache/brigade/refs/app/de446f3\n"
+            "@TASK.B30 reaches @TASK.B27\n"
+            "@TASK.B30 is referenced by nothing",
+        )
