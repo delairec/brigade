@@ -44,6 +44,7 @@ class RouteActionTest(unittest.TestCase):
             "waves/--all/resume",
             "waves/w4/tasks/-x/requeue",
             "waves/w4/tasks/B28/park",
+            "inbox/w4/resume",
             "waves",
             "status",
         ]
