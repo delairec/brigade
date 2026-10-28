@@ -2694,7 +2694,8 @@ TASK B27
 
 TASK B28
 	TITLE "Home and Wave views"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 241
 	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
