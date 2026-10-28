@@ -12806,7 +12806,8 @@ TASK B209
 TASK B210
 	TITLE "A requeued task is launched on its branch put back on the integration branch of the"
 		+ "forge, and a requeue refuses a task the main branch has changed since its wave started"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 233
 	TYPE fix
 	MILESTONE @MILESTONE.M3
 	COMPONENT "the tick"
