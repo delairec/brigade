@@ -112,7 +112,10 @@ class StartDashboardOnAPortOutOfRangeTest(unittest.TestCase):
         for port in (70000, -1):
             with self.subTest(port=port):
                 # Act
-                with self.assertRaises(BrigadeError) as raised, start_dashboard(port, ISSUED_CREDENTIAL, create_test_runtime()):
+                with (
+                    self.assertRaises(BrigadeError) as raised,
+                    start_dashboard(port, ISSUED_CREDENTIAL, create_test_runtime()),
+                ):
                     pass
 
                 # Assert
