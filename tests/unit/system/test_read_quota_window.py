@@ -4,7 +4,7 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.system.read_quota_window import read_quota_window
 
-CONFIGURATION_PATH = Path("/home/user/.config/brigade/config.toml")
+CONFIGURATION_PATH = Path("/srv/brigade/config.toml")
 
 
 class ReadQuotaWindowTest(unittest.TestCase):
