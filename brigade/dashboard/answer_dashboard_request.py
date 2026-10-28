@@ -6,7 +6,9 @@ from urllib.parse import urlsplit
 
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
 from brigade.dashboard.render_fragment import render_fragment
-from brigade.dashboard.route_command import route_command
+from brigade.dashboard.render_inbox_view import render_inbox_view
+from brigade.dashboard.route_change import route_change
+from brigade.dashboard.route_command import CommandRoute, route_command
 from brigade.dashboard.run_routed_command import run_routed_command
 from brigade.runtime import Runtime
 
@@ -27,6 +29,7 @@ BAD_REQUEST = 400
 FORBIDDEN = 403
 NOT_FOUND = 404
 OK = 200
+VIEW_RENDERERS = {"inbox": render_inbox_view}
 
 
 def _answer_error(status: int, message: str) -> DashboardResponse:
@@ -56,20 +59,33 @@ def _answer_asset(path: str) -> DashboardResponse:
     return DashboardResponse(status=OK, content_type=content_type, body=(PAGE_DATA / name).read_bytes())
 
 
-def _answer_command(target: str, runtime: Runtime) -> DashboardResponse:
-    route = route_command(target.removeprefix(API_PREFIX))
-    if route is None:
-        return _answer_error(NOT_FOUND, f"no route serves {target}")
+def _answer_route(route: CommandRoute, runtime: Runtime) -> DashboardResponse:
     answer = run_routed_command(route, runtime)
     return DashboardResponse(status=answer.status, content_type=JSON, body=answer.document.encode())
 
 
+def _answer_command(target: str, runtime: Runtime) -> DashboardResponse:
+    route = route_command(target.removeprefix(API_PREFIX))
+    if route is None:
+        return _answer_error(NOT_FOUND, f"no route serves {target}")
+    return _answer_route(route, runtime)
+
+
+def _answer_change(target: str, runtime: Runtime) -> DashboardResponse:
+    route = route_change(target.removeprefix(API_PREFIX))
+    if route is None:
+        return _answer_error(NOT_FOUND, f"no route changes state at {target}")
+    return _answer_route(route, runtime)
+
+
 def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
-    route = route_command(target.removeprefix(VIEWS_PREFIX))
+    view = target.removeprefix(VIEWS_PREFIX)
+    route = route_command(view)
     if route is None:
         return _answer_error(NOT_FOUND, f"no view serves {target}")
     answer = run_routed_command(route, runtime)
-    fragment = render_fragment(json.loads(answer.document))
+    render = VIEW_RENDERERS.get(view, render_fragment) if answer.status == OK else render_fragment
+    fragment = render(json.loads(answer.document))
     return DashboardResponse(status=answer.status, content_type=HTML, body=fragment.encode())
 
 
@@ -90,6 +106,8 @@ def answer_dashboard_request(incoming: IncomingRequest, dashboard: Dashboard, ru
     refusal = _refuse(incoming, dashboard)
     if refusal is not None:
         return refusal
+    if incoming.method == STATE_CHANGING_METHOD:
+        return _answer_change(incoming.target, runtime)
     if incoming.method != READING_METHOD:
-        return _answer_error(NOT_FOUND, f"no route changes state at {incoming.target}")
+        return _answer_error(NOT_FOUND, f"no route serves the method {incoming.method}")
     return _answer_reading(incoming.target, dashboard, runtime)
