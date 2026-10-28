@@ -88,6 +88,18 @@ class AnswerDashboardRequestOfAGuardedPostTest(unittest.TestCase):
         self.assertEqual(response.status, 404)
 
 
+class AnswerDashboardRequestOfAnotherMethodTest(unittest.TestCase):
+    def test_should_answer_not_found_and_run_nothing(self):
+        # Arrange
+        incoming = IncomingRequest(method="DELETE", target="/api/inbox/dismiss/FlakyTests", host=LOOPBACK_HOST)
+
+        # Act
+        response = answer_dashboard_request(incoming, DASHBOARD, create_test_runtime())
+
+        # Assert
+        self.assertEqual(response.status, 404)
+
+
 class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
     def test_should_serve_the_json_of_the_command_the_route_runs(self):
         # Arrange
@@ -279,3 +291,157 @@ class AnswerDashboardRequestOfAViewTest(unittest.TestCase):
         # Assert
         self.assertEqual(response.status, 404)
         self.assertEqual(response.body, b"<dl><dt>error</dt><dd>no wave w9\n</dd></dl>")
+
+
+class AnswerDashboardRequestOfTheInboxViewTest(unittest.TestCase):
+    def test_should_render_the_signals_and_the_patterns_of_the_inbox(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "inbox", "list", "--json"): ProcessAnswer(
+                    stdout='{"schema_version": 1, "signals": [], "families": [], "patterns": []}\n'
+                )
+            }
+        )
+
+        # Act
+        response = answer_get("/views/inbox", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response,
+            DashboardResponse(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body=b"<section><h2>Signals</h2><p>no new signal</p></section>"
+                b"<section><h2>Patterns</h2><p>no pattern proposed</p></section>",
+            ),
+        )
+
+    def test_should_render_the_error_of_a_failing_inbox_list(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {(PYTHON, ENTRY_POINT, "inbox", "list"): ProcessAnswer(exit_code=1, stderr="the inbox is unreadable\n")}
+        )
+
+        # Act
+        response = answer_get("/views/inbox", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 500)
+        self.assertEqual(response.body, b"<dl><dt>error</dt><dd>the inbox is unreadable\n</dd></dl>")
+
+
+INBOX_LIST = (PYTHON, ENTRY_POINT, "inbox", "list", "--json")
+INBOX_HOLDING_A_NOTE_AND_A_PATTERN = (
+    '{"schema_version": 1, "signals": [{"id": "a4a5f464", "fingerprint": "note:474fa40ae4db", "kind": "note",'
+    ' "project": "oak", "count": 1, "age_s": 60, "status": "new"}], "families": [],'
+    ' "patterns": [{"name": "FlakyTests", "action": "constraint", "signals": ["a4a5f464"]}]}\n'
+)
+
+
+def answer_post(target: str, runtime) -> DashboardResponse:
+    return answer_dashboard_request(
+        IncomingRequest(
+            method="POST", target=target, host=LOOPBACK_HOST, origin=LOOPBACK_ORIGIN, token=ISSUED_CREDENTIAL
+        ),
+        DASHBOARD,
+        runtime,
+    )
+
+
+class AnswerDashboardRequestOfAnInboxActionTest(unittest.TestCase):
+    def test_should_serve_the_json_of_the_command_the_action_runs(self):
+        # Arrange
+        rows = [
+            ("/api/inbox/ratify/FlakyTests", ("inbox", "ratify", "--json", "FlakyTests")),
+            ("/api/inbox/ratify/FlakyTests?kind=guard", ("inbox", "ratify", "--kind=guard", "--json", "FlakyTests")),
+            ("/api/inbox/dismiss/FlakyTests", ("inbox", "dismiss", "--json", "FlakyTests")),
+            ("/api/inbox/dismiss/a4a5f464", ("inbox", "dismiss", "--json", "a4a5f464")),
+        ]
+        for target, arguments in rows:
+            with self.subTest(target=target):
+                runner = ScriptedProcessRunner({(PYTHON, ENTRY_POINT, *arguments): ProcessAnswer(stdout='{"a": 1}\n')})
+
+                # Act
+                response = answer_post(target, create_test_runtime(run_process=runner.run))
+
+                # Assert
+                self.assertEqual(response, DashboardResponse(status=200, content_type=JSON, body=b'{"a": 1}\n'))
+
+    def test_should_answer_not_found_for_a_pattern_or_a_signal_the_inbox_does_not_list(self):
+        # Arrange
+        rows = [
+            ("/api/inbox/ratify/LongNames", ("inbox", "ratify")),
+            ("/api/inbox/dismiss/LongNames", ("inbox", "dismiss")),
+        ]
+        for target, arguments in rows:
+            with self.subTest(target=target):
+                runner = ScriptedProcessRunner(
+                    {
+                        (PYTHON, ENTRY_POINT, *arguments): ProcessAnswer(exit_code=1, stderr="LongNames is unknown\n"),
+                        INBOX_LIST: ProcessAnswer(stdout=INBOX_HOLDING_A_NOTE_AND_A_PATTERN),
+                    }
+                )
+
+                # Act
+                response = answer_post(target, create_test_runtime(run_process=runner.run))
+
+                # Assert
+                self.assertEqual(response.status, 404)
+
+    def test_should_answer_a_server_error_for_a_pattern_or_a_signal_the_inbox_lists(self):
+        # Arrange
+        rows = [
+            ("/api/inbox/ratify/FlakyTests", ("inbox", "ratify")),
+            ("/api/inbox/dismiss/FlakyTests", ("inbox", "dismiss")),
+            ("/api/inbox/dismiss/a4a5f464", ("inbox", "dismiss")),
+        ]
+        for target, arguments in rows:
+            with self.subTest(target=target):
+                runner = ScriptedProcessRunner(
+                    {
+                        (PYTHON, ENTRY_POINT, *arguments): ProcessAnswer(exit_code=1, stderr="the corpus is locked\n"),
+                        INBOX_LIST: ProcessAnswer(stdout=INBOX_HOLDING_A_NOTE_AND_A_PATTERN),
+                    }
+                )
+
+                # Act
+                response = answer_post(target, create_test_runtime(run_process=runner.run))
+
+                # Assert
+                self.assertEqual(
+                    response,
+                    DashboardResponse(status=500, content_type=JSON, body=b'{"error": "the corpus is locked\\n"}'),
+                )
+
+    def test_should_answer_not_found_and_run_nothing_for_a_path_no_action_serves(self):
+        # Arrange
+        rows = [
+            "/api/inbox/ratify/-h",
+            "/api/inbox/dismiss/",
+            "/api/inbox/accept/FlakyTests",
+            "/api/inbox/ratify/FlakyTests/again",
+            "/api/inbox",
+            "/views/inbox/dismiss/FlakyTests",
+        ]
+        runtime = create_test_runtime()
+        for target in rows:
+            with self.subTest(target=target):
+                # Act
+                response = answer_post(target, runtime)
+
+                # Assert
+                self.assertEqual(response.status, 404)
+
+    def test_should_never_run_an_action_on_a_get(self):
+        # Arrange
+        rows = ["/api/inbox/ratify/FlakyTests", "/api/inbox/dismiss/FlakyTests"]
+        runtime = create_test_runtime()
+        for target in rows:
+            with self.subTest(target=target):
+                # Act
+                response = answer_get(target, runtime)
+
+                # Assert
+                self.assertEqual(response.status, 404)

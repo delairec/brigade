@@ -4716,3 +4716,30 @@ DECISION TheDashboardAcceptsOnlyItsLoopbackHostAndATokenInAHeader
 		+ "header only by a script of the page"
 	SOURCE "the build run of @TASK.B27 of 2026-10-28"
 		REF @TASK.B27
+
+DECISION TheInboxViewRendersTheFamiliesAndPatternsOfInboxListAndPostsItsActionsUnderApiInbox
+	TITLE "brigade inbox list --json carries the families of the triage and the proposed patterns,"
+		+ "the Inbox view renders them, and its actions are POSTs to /api/inbox/ratify/<pattern>"
+		+ "and /api/inbox/dismiss/<id>"
+	STATUS active
+	DESC "brigade inbox list --json carries families, each with by, key and the ids of its signals,"
+		+ "grouped among the signals it lists by brigade/inbox/group_signals.py, the grouping the"
+		+ "built-in triage collects"
+	DESC "a pattern of the document carries its name, its ACTION or null, and the ids of the"
+		+ "signals of the inbox an EVIDENCE of it cites"
+	DESC "POST /api/inbox/ratify/<pattern>?kind=<kind> runs brigade inbox ratify --kind=<kind>, the"
+		+ "kind optional, and POST /api/inbox/dismiss/<id> runs brigade inbox dismiss; when the"
+		+ "command fails, an id brigade inbox list does not name, among its patterns for ratify,"
+		+ "its patterns and signals for dismiss, answers 404"
+	DESC "a pattern of ACTION constraint shows one ratify button per KIND of CONSTRAINT, any other"
+		+ "pattern one ratify button"
+	DESC "binds @TASK.B29"
+		REF @TASK.B29
+	REJECTED "the view grouping the signals itself: the dashboard reads the command line, never the"
+		+ "package, so the grouping stays in the command a port carries over"
+	REJECTED "the evidence of each signal in brigade inbox list --json for the view to group: the"
+		+ "grouping would be written twice, in the collector and in the view"
+	REJECTED "one ratify button for a pattern of ACTION constraint: brigade inbox ratify refuses it"
+		+ "without --kind"
+	SOURCE "the build run of @TASK.B29 of 2026-10-28"
+		REF @TASK.B29
