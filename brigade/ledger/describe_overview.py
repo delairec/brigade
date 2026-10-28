@@ -3,6 +3,9 @@ from brigade.ledger.format_instant import format_instant
 from brigade.ledger.group_runs import group_runs
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.wave_started import WaveStarted
+
+MONTH_FORMAT = "%Y-%m"
 
 
 def _count_outcomes(finished: list[RunFinished]) -> dict:
@@ -10,6 +13,14 @@ def _count_outcomes(finished: list[RunFinished]) -> dict:
         "outcomes": count_by_name(segment.outcome for segment in finished),
         "error_classes": count_by_name(segment.error_class for segment in finished if segment.error_class is not None),
     }
+
+
+def _group_waves_started_by_month(entries) -> dict:
+    months: dict[str, list[str]] = {}
+    for entry in sorted(entries, key=lambda entry: entry.instant):
+        if isinstance(entry.event, WaveStarted):
+            months.setdefault(entry.instant.strftime(MONTH_FORMAT), []).append(entry.event.wave)
+    return months
 
 
 def describe_overview(reading: LedgerReading) -> dict:
@@ -24,4 +35,5 @@ def describe_overview(reading: LedgerReading) -> dict:
         "files": list(reading.files),
         "runs": _count_outcomes([run.last for run in runs]),
         "segments": _count_outcomes([segment for run in runs for segment in run.segments]),
+        "waves_started": _group_waves_started_by_month(reading.entries),
     }

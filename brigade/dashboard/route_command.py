@@ -21,10 +21,12 @@ class CommandRoute:
 
 WAVE_LISTING = Listing(arguments=("wave", "list", "--json"), names=(("waves", "wave"),))
 PROJECT_LISTING = Listing(arguments=("project", "list", "--json"), names=(("projects", "name"),))
+REPORT_LISTING = Listing(arguments=("reports", "list", "--json"), names=(("reports", "id"),))
 ROUTES_WITHOUT_IDENTIFIER = {
     "waves": CommandRoute(arguments=WAVE_LISTING.arguments),
     "inbox": CommandRoute(arguments=("inbox", "list", "--json")),
     "ledger": CommandRoute(arguments=("ledger", "--json")),
+    "reports": CommandRoute(arguments=REPORT_LISTING.arguments),
 }
 
 
@@ -39,7 +41,11 @@ def _route_corpus(project: str, query: dict) -> CommandRoute:
     )
 
 
-ROUTES_WITH_IDENTIFIER = {"waves": _route_wave, "corpus": _route_corpus}
+def _route_report(report: str, query: dict) -> CommandRoute:
+    return CommandRoute(arguments=("reports", "show", "--json", report), identifier=report, listing=REPORT_LISTING)
+
+
+ROUTES_WITH_IDENTIFIER = {"waves": _route_wave, "corpus": _route_corpus, "reports": _route_report}
 
 
 def route_command(target: str) -> CommandRoute | None:
