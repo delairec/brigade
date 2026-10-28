@@ -11520,26 +11520,42 @@ TASK B181
 
 TASK B182
 	TITLE "brigade runs show <id> prints the progress file of the run, text and --json"
-	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	STATUS todo
+	TYPE feat
+	MILESTONE @MILESTONE.M3
 	COMPONENT "runs"
 	ROLE ada
-	SPEC "brigade runs show <id> prints the progress of the run after the segments, rendered for a"
-		+ "person by the document plugin of brigade/adapters/documents/ in the form the run wrote,"
-		+ "progress.md or progress.awawa, and carries it under progress with --json: the text in"
-		+ "the markdown form, the entities in the awawa form; where today"
-		+ "brigade/commands/runs_show.py prints the summary and the log alone"
+	SPEC "brigade runs show <id>, with or without --log, prints the progress of the run after its"
+		+ "segments, rendered for a person by the document plugin of the form the run wrote, read"
+		+ "from the progress file present in the run's directory, progress.md or progress.awawa,"
+		+ "never from the configuration of the moment"
+	SPEC "with --json the document carries progress: the text of the progress, with entities null"
+		+ "in the markdown form and the entities of the file in the awawa form"
+	SPEC "a run whose progress file is absent or holds no entry prints no progress section, carries"
+		+ "progress null with --json and exits as it does today"
+	SPEC "a progress.awawa that awawa lint --strict refuses, a file caught in the middle of a"
+		+ "write, is printed as its raw text, with entities null under --json, and the command"
+		+ "exits 0"
+	SPEC "brigade runs show --follow prints no progress: it stays the stream of the journal"
 	RATIONALE "SPEC 3 of @TASK.B94, in M3 AFTER @TASK.B27, bound this command to the server; it is"
-		+ "removed from B94 and carried here, a command of the CLI needing no dashboard"
+		+ "removed from B94 and carried here, a command of the CLI needing no dashboard; it moves"
+		+ "to M3 with B94, which runs after it"
 		REF @TASK.B94
 		REF @TASK.B27
-	RATIONALE "the progress of a run is kept in the form the configuration chooses, as"
-		+ "brigade/runs/describe_progress.py writes it, so the command reads it through the plugin"
-		+ "and never names one form"
+	RATIONALE "the progress of a run is kept in the form the configuration chooses when the run is"
+		+ "planned, as brigade/runs/describe_progress.py describes it, so the command reads it"
+		+ "through the plugin and never names one form; today brigade/commands/runs_show.py prints"
+		+ "the summary, the segments and with --log the journal alone"
+	RATIONALE "a run in progress is the case @TASK.B94 follows: a progress not written yet, or"
+		+ "caught mid-write, is no error of the command, so the Runs view never answers 500 for it"
+		REF @TASK.B94
 	SOURCE "use-case map of 2026-10-16, finding C13"
 	SOURCE "the user's ruling of 2026-10-28 in the grouped refinement of the M3 drafts: @TASK.B94"
 		+ "runs after this task, which prints the progress in either form"
 		REF @TASK.B94
+	SOURCE "the user's rulings of 2026-10-28 in the refinement of B182: an absent progress prints"
+		+ "nothing and exits 0, a non-conformant progress.awawa prints its raw text, --follow"
+		+ "prints no progress"
 
 TASK B183
 	TITLE "brigade config get prints the configuration as brigade reads it, one key or all"
