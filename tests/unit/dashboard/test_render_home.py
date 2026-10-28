@@ -107,7 +107,7 @@ class RenderHomeTest(unittest.TestCase):
         # Assert
         self.assertIn(
             '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.paused, paused on forge_account'
-            ' <button type="button" data-action="/api/waves/elm_w1/resume">resume</button></li>',
+            ' <button type="button" data-post="/api/waves/elm_w1/resume">resume</button></li>',
             fragment,
         )
 
