@@ -110,6 +110,7 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
             ("/api/ledger", ("ledger", "--json")),
             ("/api/corpus/oak?ref=main", ("corpus", "--ref=main", "--json", "oak")),
             ("/api/corpus/oak", ("corpus", "--json", "oak")),
+            ("/api/corpus/oak?ref=main&type=&field=", ("corpus", "--ref=main", "--json", "oak")),
             (
                 "/api/corpus/oak?ref=main&type=TASK&field=STATUS&entity=@TASK.B30",
                 ("corpus", "--ref=main", "--type=TASK", "--field=STATUS", "--entity=@TASK.B30", "--json", "oak"),
@@ -604,7 +605,7 @@ class AnswerDashboardRequestOfTheCorpusViewTest(unittest.TestCase):
         response = answer_get("/views/corpus", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertIn(b'<select name="project"><option value="oak">oak</option></select>', response.body)
+        self.assertIn(b'<a href="#corpus/oak">oak</a>', response.body)
 
     def test_should_render_the_error_of_a_project_not_registered(self):
         # Arrange
