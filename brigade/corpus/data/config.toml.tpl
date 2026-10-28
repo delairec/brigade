@@ -25,6 +25,9 @@
 # The link the dashboard opens a file with, {path} and {line} replaced.
 # ide_link = ""
 
+# The port brigade serve listens on, on the loopback address 127.0.0.1 alone, from 1 to 65535.
+# dashboard_port = 8470
+
 # The bound, in MB, of the cache of the trees brigade corpus extracts; the least recently read are removed past it.
 # refs_cache_mb = 1024
 
