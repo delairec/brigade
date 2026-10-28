@@ -4648,3 +4648,27 @@ DECISION ARunCutByARateLimitSpendsNoRoundOnceResumedAndItsResumeRestoresTheState
 	SOURCE "the delivery of @TASK.B220, on the user's ruling of 2026-10-29 « Ne compte aucun round"
 		+ "»"
 		REF @TASK.B220
+
+DECISION TheAwawaDocumentPluginRendersAFileHoldingItsSchemaOnlyOnceLintAcceptsIt
+	TITLE "the awawa document plugin renders a file that holds its schema only once awawa lint"
+		+ "--strict accepts it, and a file it refuses as its raw text with entities null"
+	STATUS active
+	DESC "render_document of the awawa plugin runs awawa lint --strict on a file holding a SCHEMA"
+		+ "entity, the progress of a run, and answers the text of the file whole with entities null"
+		+ "when lint refuses it"
+	DESC "a file whose schema lives outside it, the answer of a study, is rendered from its"
+		+ "entities without that lint: the file alone is no corpus lint can accept, and the study"
+		+ "validated it against its schema before"
+	DESC "binds @TASK.B182"
+		REF @TASK.B182
+	REJECTED "the lint applied to every file the plugin renders: the answer of a study holds no"
+		+ "schema and would always render as its raw text"
+	REJECTED "a conformity operation added to the document kind for the progress alone: a second"
+		+ "operation answering what the rendering already decides"
+	RATIONALE "SPEC 4 of @TASK.B182 prints a progress.awawa caught in the middle of a write as its"
+		+ "raw text and exits 0; the plugin decides it, so brigade runs show never names one form"
+		+ "of the progress"
+		REF @TASK.B182
+	SOURCE "the run delivering @TASK.B182, whose first form of the lint broke"
+		+ "tests/cli/test_study.py on the answer of a study"
+		REF @TASK.B182
