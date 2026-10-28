@@ -4189,6 +4189,5 @@ DECISION TheAwawaDocumentPluginRendersAFileHoldingItsSchemaOnlyOnceLintAcceptsIt
 		+ "raw text and exits 0; the plugin decides it, so brigade runs show never names one form"
 		+ "of the progress"
 		REF @TASK.B182
-	SOURCE "the run delivering @TASK.B182, whose first form of the lint broke"
-		+ "tests/cli/test_study.py on the answer of a study"
+	SOURCE "pull request #236 of the brigade repository, delivering @TASK.B182"
 		REF @TASK.B182
