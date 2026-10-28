@@ -59,10 +59,16 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             "wave": "<b>w2</b>",
             "steps": {
                 "by_slot": {},
-                "by_role": {"<i>ada</i>": {"runs": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50, "partial": 0}}},
+                "by_role": {
+                    "<i>ada</i>": {"runs": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50, "partial": 0}}
+                },
             },
             "pauses": [
-                {"paused_at": "<i>2026-10-02T10:00:00Z</i>", "resumed_at": "<i>2026-10-02T11:05:00Z</i>", "duration_ms": 3900000},
+                {
+                    "paused_at": "<i>2026-10-02T10:00:00Z</i>",
+                    "resumed_at": "<i>2026-10-02T11:05:00Z</i>",
+                    "duration_ms": 3900000,
+                },
                 {"paused_at": "<i>2026-10-03T10:00:00Z</i>", "resumed_at": None, "duration_ms": None},
             ],
         }
