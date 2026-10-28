@@ -124,7 +124,8 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(worktree_root="/var/worktrees"),
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(worktree_root="/var/worktrees"),
             ACTION,
             read_no_environment,
         )
@@ -213,8 +214,8 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            )
 
         # Assert
         self.assertEqual(
@@ -233,8 +234,8 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError):
             prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            )
 
         # Assert
         self.assertEqual(
@@ -252,8 +253,8 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            )
 
         # Assert
         self.assertEqual(str(refusal.exception), "the setup of @TASK.B1 failed: false exited 1: ")
@@ -265,8 +266,8 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError):
             prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            )
 
         # Assert
         self.assertEqual(
@@ -304,8 +305,8 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError):
             prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            )
 
         # Assert
         self.assertEqual(
@@ -342,8 +343,8 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            )
 
         # Assert
         self.assertEqual(
