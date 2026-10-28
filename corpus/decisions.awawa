@@ -4168,3 +4168,28 @@ DECISION ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
 	SOURCE "the user's rulings of 2026-10-28 in the refinement of @TASK.B210,"
 		+ "\"origin/<integration>\" then \"Tout sur origin (Recommandé)\""
 		REF @TASK.B210
+
+DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
+	TITLE "a rebase run launched at the launch of a task with no pull request takes the arguments"
+		+ "task and base, reads its task from the branch of the worktree, pushes nothing, and the"
+		+ "next tick launches the build run once that run ended done"
+	STATUS active
+	DESC "binds @TASK.B210"
+		REF @TASK.B210
+	DESC "brigade rebase context without a pull request reads the task and its wave from the branch"
+		+ "task/<slug>/<task> of the worktree, as brigade task context does"
+	DESC "the task stays running while that run lives; a running task with no pull request whose"
+		+ "last run is a rebase run ended done is launched again, not parked as a dead run"
+	DESC "brigade wave requeue compares the entity of the task on both branches only when the main"
+		+ "branch defines it"
+	REJECTED "a state of its own for a task under a rebase run: running already parks the task on"
+		+ "the question of a run that ended blocked, and a new state would add a case to every"
+		+ "reader of the states"
+	REJECTED "a push of the rebased branch by the rebase run: a branch with no pull request is"
+		+ "pushed by the build run when it opens one"
+	RATIONALE "@TASK.B210 leaves open how a run of the rebase slot works on a task that has no pull"
+		+ "request, which brigade rebase context and the procedure rebase-on-base named by its"
+		+ "number"
+		REF @TASK.B210
+	SOURCE "the build run of @TASK.B210 on 2026-10-28"
+		REF @TASK.B210

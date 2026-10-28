@@ -85,6 +85,57 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
                 self.assertEqual(document, create_document(conflicts))
 
 
+ON_GITHUB = (("PATH", "/home/user/tidepool"), ("FORGE", "github"))
+NO_PULL_REQUEST = None
+
+
+class RebaseContextOfATaskWithoutAPullRequestTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        write_ledger(self.root, [WAVE_STARTED])
+
+    def _create_runtime(self, project: tuple, base: str):
+        answers = {
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
+                stdout="/home/user/tidepool/.git\n"
+            ),
+            ("git", "branch", "--show-current"): ProcessAnswer(stdout="task/M4-tides/T7\n"),
+            ("git", "fetch", "--quiet", "origin", "integration/M4-tides"): ProcessAnswer(),
+            (*MERGE_TREE[:-1], base): CONFLICTING_MERGE,
+        }
+        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double({"PROJECT": {"tidepool": project}}))
+        return create_test_runtime(create_test_paths(self.root), run_process=machine.run)
+
+    def test_should_read_the_task_from_the_branch_of_the_worktree_and_its_conflicts_with_the_wave_branch(self):
+        for case, project, base in [
+            ("a project without a forge", TIDEPOOL_PROJECT, "integration/M4-tides"),
+            ("a project on GitHub", ON_GITHUB, "origin/integration/M4-tides"),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                runtime = self._create_runtime(project, base)
+
+                # Act
+                document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST), runtime)
+
+                # Assert
+                self.assertEqual(
+                    document,
+                    {
+                        "schema_version": 1,
+                        "project": "tidepool",
+                        "pr": None,
+                        "task": "T7",
+                        "branch": "task/M4-tides/T7",
+                        "base": "integration/M4-tides",
+                        "conflicts": ["src/tides.py", "README.md"],
+                    },
+                )
+
+
 class RebaseContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange

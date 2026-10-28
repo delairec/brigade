@@ -3051,6 +3051,92 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         self.assertIn(("git", "branch", "--quiet", "integration/M4", "main"), self.machine.argvs)
 
 
+OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
+    **MACHINE_ANSWERS,
+    ("git", "merge-base", "--is-ancestor", "integration/M4", "task/M4/T7"): ProcessAnswer(exit_code=1),
+    ("git", "rebase", "integration/M4"): ProcessAnswer(
+        exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
+    ),
+    ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
+    ("git", "rebase", "--abort"): ProcessAnswer(),
+}
+
+
+class TickLaunchingATaskWhoseBranchConflictsWithTheWaveBranchTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.worktree.mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        write_ledger(self.root, [WAVE_STARTED])
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=ScriptedProcessRunner(
+                OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
+            ).run,
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+        )
+
+    def test_should_launch_the_rebase_slot_on_the_worktree_of_the_task_instead_of_its_build(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_record_the_task_running(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        last_event = json.loads(
+            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[-1]
+        )
+        self.assertEqual(
+            last_event,
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "running",
+            },
+        )
+
+
 class TickLaunchingAStudyTest(unittest.TestCase):
     def test_should_launch_a_study_whose_schedule_is_due(self):
         # Arrange

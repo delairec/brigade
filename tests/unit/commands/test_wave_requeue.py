@@ -91,7 +91,10 @@ class WaveRequeueRequestTest(unittest.TestCase):
 def create_wave_tree_runtime(root: Path, implemented_tasks: str) -> Runtime:
     write_operational_corpus(root)
     (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
-    corpus = {"PROJECT": {"tidepool": (("PATH", "/srv/tidepool"),)}}
+    corpus = {
+        "PROJECT": {"tidepool": (("PATH", "/srv/tidepool"), ("MAIN", "main"))},
+        "TASK": {"T7": (("STATUS", "todo"),)},
+    }
     outputs = {("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n", IMPLEMENTED_TASKS_QUERY: implemented_tasks}
     return create_test_runtime(create_test_paths(root), run_process=create_machine_double(corpus, outputs))
 
