@@ -1,3 +1,4 @@
+import dataclasses
 import unittest
 from datetime import UTC, datetime
 
@@ -7,6 +8,7 @@ from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.task_parked import TaskParked
+from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
@@ -135,4 +137,71 @@ class DescribeWaveResumedTest(unittest.TestCase):
         self.assertEqual(
             wave["pauses"],
             [{"paused_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:04:00Z", "duration_ms": 240000}],
+        )
+
+
+WAVE_W5 = LedgerReading(
+    entries=(
+        LedgerEntry(at_minute(0), WaveStarted(wave="w5", project="tidepool", branch="main", tasks=("TP5", "TP6"))),
+        LedgerEntry(at_minute(20), create_run_finished("r6", main_steps=7, wave="w5", task="TP6")),
+        LedgerEntry(at_minute(10), create_run_finished("r5", main_steps=30, wave="w5", task="TP5")),
+        LedgerEntry(at_minute(11), TaskState(wave="w5", task="TP5", state="fixing")),
+        LedgerEntry(at_minute(12), create_run_finished("r5b", segment=1, main_steps=4, wave="w5", task="TP5")),
+        LedgerEntry(at_minute(13), TaskState(wave="w5", task="TP5", state="fixing")),
+        LedgerEntry(
+            at_minute(14),
+            dataclasses.replace(
+                create_run_finished("20261010T091300Z-ab12cd", main_steps=2, wave="w5", task="TP5"), slot="rebase"
+            ),
+        ),
+    ),
+    files=(),
+    skipped=(),
+)
+
+
+class DescribeWaveOfEachTaskTest(unittest.TestCase):
+    def test_should_count_the_repair_rounds_of_each_task_but_the_rebase_launches(self):
+        # Act
+        wave = describe_wave(WAVE_W5, "w5")
+
+        # Assert
+        self.assertEqual(wave["rounds_by_task"], {"TP5": 1})
+
+    def test_should_sum_the_main_steps_of_the_runs_of_each_task(self):
+        # Act
+        wave = describe_wave(WAVE_W5, "w5")
+
+        # Assert
+        self.assertEqual(wave["steps_by_task"], {"TP5": 36, "TP6": 7})
+
+    def test_should_date_each_entry_of_the_wave_oldest_first(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(at_minute(5), TaskState(wave="w7", task="TP7", state="running")),
+                LedgerEntry(at_minute(0), WaveStarted(wave="w7", project="tidepool", branch="main", tasks=("TP7",))),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        wave = describe_wave(reading, "w7")
+
+        # Assert
+        self.assertEqual(
+            wave["timeline"],
+            [
+                {
+                    "at": "2026-10-10T09:00:00Z",
+                    "event": "wave.started",
+                    "fields": {"wave": "w7", "project": "tidepool", "branch": "main", "tasks": ["TP7"]},
+                },
+                {
+                    "at": "2026-10-10T09:05:00Z",
+                    "event": "task.state",
+                    "fields": {"wave": "w7", "task": "TP7", "state": "running"},
+                },
+            ],
         )

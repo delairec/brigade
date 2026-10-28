@@ -424,6 +424,16 @@ class ReadConfigurationOfTheDashboardPortTest(ReadConfigurationTestCase):
         # Assert
         self.assertEqual(configuration.dashboard_port, 8500)
 
+    def test_should_answer_the_quota_window_the_key_sets(self):
+        # Arrange
+        self.path.write_text("quota_window_hours = 8\n")
+
+        # Act
+        configuration = parse_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.quota_window_hours, 8)
+
     def test_should_answer_the_default_port_when_the_key_is_absent(self):
         # Arrange
         self.path.write_text("")

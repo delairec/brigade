@@ -3,7 +3,7 @@ import argparse
 from brigade.command import Command
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
-from brigade.studies.describe_last_study_order import describe_last_study_order
+from brigade.studies.describe_study_row import describe_study_row
 from brigade.studies.read_last_study_orders import read_last_study_orders
 from brigade.studies.read_studies import read_studies
 from brigade.system.render_table import render_table
@@ -30,15 +30,7 @@ def study_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     last_orders = read_last_study_orders(runtime.paths.state_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "studies": [
-            {
-                "name": study.name,
-                "status": study.status,
-                "every": study.every,
-                **describe_last_study_order(last_orders.get(study.name)),
-            }
-            for study in read_studies(runtime)
-        ],
+        "studies": [describe_study_row(study, last_orders.get(study.name)) for study in read_studies(runtime)],
     }
 
 

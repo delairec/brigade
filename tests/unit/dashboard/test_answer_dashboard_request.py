@@ -108,6 +108,7 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
             ("/api/waves/w4", ("wave", "show", "--json", "w4")),
             ("/api/inbox", ("inbox", "list", "--json")),
             ("/api/ledger", ("ledger", "--json")),
+            ("/api/status", ("status", "--json")),
             ("/api/corpus/oak?ref=main", ("corpus", "--ref=main", "--json", "oak")),
             ("/api/corpus/oak", ("corpus", "--json", "oak")),
             ("/api/corpus/oak?ref=main&type=&field=", ("corpus", "--ref=main", "--json", "oak")),
@@ -231,6 +232,7 @@ class AnswerDashboardRequestOfAPathNoRouteServesTest(unittest.TestCase):
             "/api/corpus/-h?ref=main",
             "/nowhere",
             "/views/runs",
+            "/api/projects/oak/pause",
         ]
         runtime = create_test_runtime()
         for target in rows:
@@ -290,6 +292,7 @@ class AnswerDashboardRequestOfAViewTest(unittest.TestCase):
             {
                 (PYTHON, ENTRY_POINT, "wave", "show"): ProcessAnswer(exit_code=1, stderr="no wave w9\n"),
                 WAVE_LIST: ProcessAnswer(stdout=NO_WAVE),
+                (PYTHON, ENTRY_POINT, "ledger"): ProcessAnswer(exit_code=1, stderr="the ledger is unreadable\n"),
             }
         )
 
@@ -347,25 +350,40 @@ INBOX_HOLDING_A_NOTE_AND_A_PATTERN = (
     ' "patterns": [{"name": "FlakyTests", "action": "constraint", "signals": ["a4a5f464"]}]}\n'
 )
 
+HOME = (
+    '{"schema_version": 1, "projects": [{"name": "oak", "paused": false}], "waves": [], "inbox": {"new_signals": 0},'
+    ' "quota": {"window_hours": 5, "usage": {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0,'
+    ' "cache_read_input_tokens": 0}, "runs_without_usage": 0, "paused_waves": []}, "last_tick": null, "studies": []}\n'
+)
+WAVE_W4_SHOWN = (
+    '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
+    ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "tasks": [{"task": "B28",'
+    ' "state": "parked", "pull_request": null, "run": "r28", "reason": "blocked"}]}\n'
+)
+WAVE_W4_LEDGER = (
+    '{"view": "wave", "wave": "w4", "rounds_by_task": {}, "steps_by_task": {"B28": 12}, "timeline":'
+    ' [{"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}}]}\n'
+)
+
 
 def answer_post(target: str, runtime) -> DashboardResponse:
-    return answer_dashboard_request(
-        IncomingRequest(
-            method="POST", target=target, host=LOOPBACK_HOST, origin=LOOPBACK_ORIGIN, token=ISSUED_CREDENTIAL
-        ),
-        DASHBOARD,
-        runtime,
+    incoming = IncomingRequest(
+        method="POST", target=target, host=LOOPBACK_HOST, origin=LOOPBACK_ORIGIN, token=ISSUED_CREDENTIAL
     )
+    return answer_dashboard_request(incoming, DASHBOARD, runtime)
 
 
-class AnswerDashboardRequestOfAnInboxActionTest(unittest.TestCase):
+class AnswerDashboardRequestOfAnActionTest(unittest.TestCase):
     def test_should_serve_the_json_of_the_command_the_action_runs(self):
-        # Arrange
         rows = [
             ("/api/inbox/ratify/FlakyTests", ("inbox", "ratify", "--json", "FlakyTests")),
             ("/api/inbox/ratify/FlakyTests?kind=guard", ("inbox", "ratify", "--kind=guard", "--json", "FlakyTests")),
             ("/api/inbox/dismiss/FlakyTests", ("inbox", "dismiss", "--json", "FlakyTests")),
             ("/api/inbox/dismiss/a4a5f464", ("inbox", "dismiss", "--json", "a4a5f464")),
+            ("/api/projects/oak/pause", ("project", "pause", "--json", "oak")),
+            ("/api/projects/oak/resume", ("project", "resume", "--json", "oak")),
+            ("/api/waves/w4/resume", ("wave", "resume", "--json", "w4")),
+            ("/api/waves/w4/tasks/B28/requeue", ("wave", "requeue", "--json", "w4", "B28")),
         ]
         for target, arguments in rows:
             with self.subTest(target=target):
@@ -453,6 +471,23 @@ class AnswerDashboardRequestOfAnInboxActionTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(response.status, 404)
+
+    def test_should_answer_not_found_for_a_project_not_registered(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "project", "pause"): ProcessAnswer(
+                    exit_code=1, stderr="brigade project pause: @PROJECT.elm is not registered\n"
+                ),
+                PROJECT_LIST: ProcessAnswer(stdout=NO_PROJECT),
+            }
+        )
+
+        # Act
+        response = answer_post("/api/projects/elm/pause", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 404)
 
 
 class AnswerDashboardRequestOfAReportNoListingNamesTest(unittest.TestCase):
@@ -625,4 +660,63 @@ class AnswerDashboardRequestOfTheCorpusViewTest(unittest.TestCase):
         self.assertEqual(response.status, 404)
         self.assertEqual(
             response.body, b"<dl><dt>error</dt><dd>brigade corpus: @PROJECT.elm is not registered\n</dd></dl>"
+        )
+
+
+class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
+    def test_should_render_the_document_of_brigade_status(self):
+        # Arrange
+        runner = ScriptedProcessRunner({(PYTHON, ENTRY_POINT, "status", "--json"): ProcessAnswer(stdout=HOME)})
+
+        # Act
+        response = answer_get("/views/status", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertIn(
+            b'<li>oak, active <button type="button" data-post="/api/projects/oak/pause">pause</button></li>',
+            response.body,
+        )
+
+
+class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
+    def test_should_render_the_wave_from_its_show_and_its_ledger(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN),
+                (PYTHON, ENTRY_POINT, "ledger", "--json", "--wave=w4"): ProcessAnswer(stdout=WAVE_W4_LEDGER),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/waves/w4", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertIn(b"<li>B28, pull request -, run r28, 0 rounds, 12 steps, blocked", response.body)
+        self.assertIn(b"<li>2026-10-19T07:00:00Z wave.started</li>", response.body)
+
+    def test_should_render_the_error_of_its_ledger_under_the_status_of_its_show(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN),
+                (PYTHON, ENTRY_POINT, "ledger", "--json", "--wave=w4"): ProcessAnswer(
+                    exit_code=1, stderr="the ledger is unreadable\n"
+                ),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/waves/w4", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response,
+            DashboardResponse(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body=b"<dl><dt>error</dt><dd>the ledger is unreadable\n</dd></dl>",
+            ),
         )

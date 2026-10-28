@@ -52,6 +52,10 @@
 # The minutes past which brigade scheduler status reports the last tick as stale and exits 1, 1 or more.
 # tick_stale_after = 15
 
+# The hours of the reset window of the client's quota, 1 or more: brigade status sums the usage of the runs finished
+# within it.
+# quota_window_hours = 5
+
 # The seconds between two reads of a running segment's output into the journal of its run, a positive number.
 # journal_poll_s = 2
 

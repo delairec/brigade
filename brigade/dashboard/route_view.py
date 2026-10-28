@@ -10,13 +10,15 @@ from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
 from brigade.dashboard.render_project_choice import render_project_choice
 from brigade.dashboard.render_report_fragment import render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
-from brigade.dashboard.route_command import CommandRoute, route_command
-from brigade.dashboard.run_routed_command import CommandAnswer
+from brigade.dashboard.render_wave import render_wave
+from brigade.dashboard.route_command import WAVE_LISTING, CommandRoute, route_command
+from brigade.dashboard.run_routed_command import OK, CommandAnswer
 
 LEDGER_VIEW = "ledger"
 REPORTS_VIEW = "reports"
 CORPUS_VIEW = "corpus"
 DOCUMENT = "document"
+WAVE_LEDGER = "ledger"
 OPTIONAL_LEDGER_SECTIONS = {"wave": ("wave", ("ledger",)), "before": ("comparison", ("ledger", "compare"))}
 
 
@@ -36,6 +38,13 @@ def _render_reports(answers: dict[str, CommandAnswer]) -> str:
 
 def _render_report(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(answers[DOCUMENT], render_report_fragment)
+
+
+def _render_wave(answers: dict[str, CommandAnswer]) -> str:
+    shown, ledger = answers[DOCUMENT], answers[WAVE_LEDGER]
+    if shown.status == OK and ledger.status != OK:
+        return render_fragment(json.loads(ledger.document))
+    return render_answer(shown, lambda document: render_wave(document, json.loads(ledger.document)))
 
 
 def _render_with(render: Callable[[dict], str]) -> Callable[[dict[str, CommandAnswer]], str]:
@@ -60,6 +69,9 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
     route = route_command(target)
     if route is None:
         return None
+    if route.listing == WAVE_LISTING:
+        ledger = CommandRoute(arguments=("ledger", "--json", f"--wave={route.identifier}"))
+        return ViewRoute(routes={DOCUMENT: route, WAVE_LEDGER: ledger}, render=_render_wave)
     if address.path in renderers:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[address.path]))
     if address.path == CORPUS_VIEW:
