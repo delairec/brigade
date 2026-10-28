@@ -6,11 +6,14 @@ from brigade.command import Argument, Command
 from brigade.errors import UsageError
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.describe_run import describe_run
+from brigade.runs.find_progress_file import find_progress_file
 from brigade.runs.format_duration import format_duration
+from brigade.runs.render_progress import render_progress
 from brigade.runs.run_follower import RunFollower
 from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runs.show_run import show_run
 from brigade.runtime import Runtime
+from brigade.system.name_document_plugin import name_document_plugin
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
 
@@ -24,6 +27,7 @@ RECORD_SEPARATOR = "  "
 LINE_END = "\n"
 RUNNING = "running"
 NO_JOURNAL_YET = ()
+NO_PROGRESS = None
 
 
 def _render_value(value) -> str:
@@ -57,6 +61,8 @@ def _render_text(document: dict) -> str:
     summary = [_render_field(document["run"], field) for field in SUMMARY_FIELDS]
     segments = render_table(SEGMENT_COLUMNS, [_render_segment(segment) for segment in document["segments"]])
     lines = [*summary, "", segments]
+    if document["progress"] is not None:
+        lines += ["", document["progress"]["text"].rstrip(LINE_END)]
     if document["journal"] is not None:
         lines += ["", *(_render_record(record) for record in document["journal"])]
     return "\n".join(lines)
@@ -89,7 +95,7 @@ class _FollowPrinter:
     def poll(self) -> bool:
         if not self.opened:
             opening = show_run(self.state_root, self.run_id, with_journal=False)
-            _print(_render_text({**opening, "journal": NO_JOURNAL_YET}) + LINE_END)
+            _print(_render_text({**opening, "progress": NO_PROGRESS, "journal": NO_JOURNAL_YET}) + LINE_END)
             self.opened = True
         _print("".join(_render_record(record) + LINE_END for record in self.follower.read_records()))
         return self.follower.run["state"] != RUNNING
@@ -102,15 +108,24 @@ def _follow_run(run_id: str, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": printer.follower.run, "interrupted": interrupted}
 
 
+def _read_progress(run_id: str, runtime: Runtime) -> dict | None:
+    progress_file = find_progress_file(runtime.paths.state_root / RUNS_DIRECTORY / run_id)
+    if progress_file is None:
+        return NO_PROGRESS
+    document = runtime.resolve_plugin("document", name_document_plugin(progress_file))
+    return render_progress(progress_file, document, runtime)
+
+
 def runs_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.follow:
         return _follow_run(request.run, runtime)
-    return show_run(runtime.paths.state_root, request.run, with_journal=request.log)
+    shown = show_run(runtime.paths.state_root, request.run, with_journal=request.log)
+    return {**shown, "progress": _read_progress(request.run, runtime)}
 
 
 COMMAND = Command(
     path=("runs", "show"),
-    help="print the summary of a run and its segments, and with --log its journal",
+    help="print the summary of a run, its segments and its progress, and with --log its journal",
     group_help="list the runs, show one, stop one and prune them",
     arguments=(
         Argument(("run",)),

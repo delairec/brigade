@@ -234,6 +234,41 @@ class AwawaDocumentRenderingTest(AwawaDocumentTestCase):
             },
         )
 
+    def test_should_render_the_entities_of_a_file_whose_schema_lives_beside_it(self):
+        # Arrange
+        (self.path.parent / "_schema.awawa").write_text(SCHEMA)
+        self.path.write_text('STEP s1\n\tDONE "read the task"\n')
+
+        # Act
+        rendering = render_document({"path": str(self.path)}, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            rendering,
+            {
+                "schema_version": 1,
+                "text": "STEP s1\n  DONE: read the task\n",
+                "entities": [{"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}],
+            },
+        )
+
+    def test_should_render_a_file_lint_refuses_as_its_raw_text_with_no_entities(self):
+        # Arrange
+        self.path.write_text(SCHEMA + '\nSTEP s1\n\tDONE "read the task"\n\nSTEP s2\n\tNEXT "section 3"\n')
+
+        # Act
+        rendering = render_document(self.describe_request(), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            rendering,
+            {
+                "schema_version": 1,
+                "text": f'{SCHEMA}\nSTEP s1\n\tDONE "read the task"\n\nSTEP s2\n\tNEXT "section 3"\n',
+                "entities": None,
+            },
+        )
+
 
 class AwawaDocumentDescriptionOfASchemaHoldingABackslashTest(AwawaDocumentTestCase):
     def test_should_name_the_type_with_the_backslash_its_description_keeps(self):
