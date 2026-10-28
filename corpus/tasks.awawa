@@ -2801,7 +2801,8 @@ TASK B29
 
 TASK B30
 	TITLE "Corpus view with the branch selector"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 240
 	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
