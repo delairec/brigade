@@ -4671,3 +4671,48 @@ DECISION TheAwawaDocumentPluginRendersAFileHoldingItsSchemaOnlyOnceLintAcceptsIt
 		REF @TASK.B182
 	SOURCE "pull request #236 of the brigade repository, delivering @TASK.B182"
 		REF @TASK.B182
+
+DECISION ADashboardRouteTellsAnUnknownIdByItsListingCommand
+	TITLE "a route of the dashboard that names an id or a project answers 404 when the listing"
+		+ "command does not list it, takes the ref of brigade corpus from its query, and serves its"
+		+ "fragment under /views/"
+	STATUS active
+	DESC "a route whose command exits non-zero runs the listing command of what it names, brigade"
+		+ "wave list --json for a wave and brigade project list --json for a project, and answers"
+		+ "404 when the id is absent from it, 500 when it is listed or the listing fails"
+	DESC "/api/corpus/<project> passes its query parameter ref as --ref=<ref>; without it the"
+		+ "command runs without --ref and its usage error answers 500"
+	DESC "an id or a project starting with - is no id: the route answers 404 and runs nothing, so"
+		+ "no path segment reaches the command line as an option"
+	DESC "/views/<route> renders as an HTML fragment the document /api/<route> serves, under the"
+		+ "same status; a view without a renderer of its own nests the fields of the document"
+	DESC "binds @TASK.B27"
+		REF @TASK.B27
+	REJECTED "telling 404 from the standard error of the command: its messages are text, not a"
+		+ "contract of the command line"
+	REJECTED "the -- separator before the id: argparse treats it unevenly across the Python"
+		+ "versions brigade supports, and brigade corpus reads -- as the start of awawa's arguments"
+	RATIONALE "brigade corpus requires --ref or --worktree, which the route of @TASK.B27 does not"
+		+ "name; @TASK.B30 reads the corpus through /api/corpus/<project> at a ref it selects"
+		REF @TASK.B30
+		REF @TASK.B27
+	SOURCE "the build run of @TASK.B27 of 2026-10-28"
+		REF @TASK.B27
+
+DECISION TheDashboardAcceptsOnlyItsLoopbackHostAndATokenInAHeader
+	TITLE "the dashboard accepts the Host 127.0.0.1:<port> alone, and a POST carries the token of"
+		+ "the page in the header X-Brigade-Token"
+	STATUS active
+	DESC "the Host header is compared to 127.0.0.1:<port> exactly: localhost and every other name"
+		+ "answer 400"
+	DESC "the page holds the token in <meta name=\"brigade-token\">; a POST carries it in the"
+		+ "header X-Brigade-Token, compared in constant time, with the Origin"
+		+ "http://127.0.0.1:<port>"
+	DESC "binds @TASK.B27"
+		REF @TASK.B27
+	REJECTED "accepting localhost: the server prints and binds 127.0.0.1, the origin of its page is"
+		+ "that address, and a second accepted name widens what a rebound name can reach"
+	REJECTED "the token in a cookie: a cookie is sent by every page that reaches the port, the"
+		+ "header only by a script of the page"
+	SOURCE "the build run of @TASK.B27 of 2026-10-28"
+		REF @TASK.B27
