@@ -85,6 +85,16 @@ class RenderCorpusViewOfTheTreeTest(unittest.TestCase):
         )
 
 
+    def test_should_offer_the_types_of_the_corpus_in_the_selector(self):
+        # Act
+        fragment = render_corpus_view(TASKS_OF_OAK)
+
+        # Assert
+        self.assertIn(
+            '<datalist id="corpus-types"><option value="MILESTONE"></option><option value="TASK"></option></datalist>',
+            fragment,
+        )
+
 class RenderCorpusViewOfTheBoardTest(unittest.TestCase):
     def test_should_show_every_task_under_its_status(self):
         # Arrange
