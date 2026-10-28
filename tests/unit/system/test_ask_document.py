@@ -53,6 +53,11 @@ class RendererAnsweringTextEntitiesDouble:
         return {"schema_version": 1, "text": "STEP s1\n", "entities": "STEP s1"}
 
 
+class RendererAnsweringATextEntityDouble:
+    def render_document(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "text": "STEP s1\n", "entities": ["STEP s1"]}
+
+
 class CreatorAnsweringNothingDouble:
     def create_document(self, request: dict, runtime) -> None:
         return None
@@ -137,6 +142,20 @@ class AskDocumentTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception),
             "document plugin awawa answered render_document: entities is a string, not a list",
+        )
+
+    def test_should_refuse_a_rendering_whose_entities_hold_an_item_that_is_no_object(self):
+        # Arrange
+        question = DocumentQuestion(document_name="awawa", operation="render_document", request=PROGRESS_REQUEST)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            ask_document(RendererAnsweringATextEntityDouble(), question, NO_RUNTIME_NEEDED)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "document plugin awawa answered render_document: entities[0] is a string, not an object",
         )
 
     def test_should_refuse_a_creation_answering_no_document(self):
