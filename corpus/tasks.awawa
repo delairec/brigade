@@ -2614,71 +2614,141 @@ TASK B27
 
 TASK B28
 	TITLE "Home and Wave views"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE ada
-	SPEC "projects, waves, inbox count, quota, last tick, due studies and orders, failing scans,"
-		+ "parked orders"
-	SPEC "a board of tasks by state with pull request, rounds and steps"
-	SPEC "a timeline"
-	SPEC "pause, resume and retry actions through the CLI"
-	SPEC "/api/status serves the document Home renders, its content settled in the refinement"
-	SPEC "the quota shown on Home is a consumption computed from the usage of the run.finished"
-		+ "events over the reset window, the computation settled in the refinement, where today no"
-		+ "module computes it"
+	SPEC "brigade status prints the Home document, text and --json: the registered projects with"
+		+ "their pause, the open waves, the count of new signals of the inbox, the quota, the last"
+		+ "tick as brigade scheduler status reports it, and the studies that are due, whose last"
+		+ "outcome failed or that are parked, as brigade study list reports them"
+	SPEC "/api/status serves the standard output of brigade status --json, as the server serves the"
+		+ "other commands"
+	SPEC "the quota of the document is, for each of input_tokens, output_tokens,"
+		+ "cache_creation_input_tokens and cache_read_input_tokens, the sum of the usage of the"
+		+ "run.finished events of the last quota_window_hours hours, with the count of the"
+		+ "run.finished events of that window that carry no usage, and the waves paused on quota"
+		+ "with their resume_at"
+	SPEC "the key quota_window_hours of config.toml defaults to 5 and is documented in the"
+		+ "config.toml template with its default"
+	SPEC "the Home view renders the document of /api/status"
+	SPEC "the Wave view shows the tasks of a wave grouped by state, each with its pull request, its"
+		+ "run, its rounds and its steps, from brigade wave show <id> --json and brigade ledger"
+		+ "--wave <id> --json"
+	SPEC "the Wave view shows the timeline of the wave: the dated entries of brigade ledger --wave"
+		+ "<id> --json, oldest first"
+	SPEC "the Home and Wave views carry the actions pause and resume of a project, resume of a wave"
+		+ "and requeue of a parked task, each a POST running brigade project pause, brigade project"
+		+ "resume, brigade wave resume and brigade wave requeue, under the token and the Origin the"
+		+ "server requires of every POST"
 	AFTER @TASK.B27
 	AFTER @TASK.B14
+	RATIONALE "no command printed the Home document, and the route runs the command line, as"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles requires: Home gets the"
+		+ "command brigade status, and /api/status is its document"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+	RATIONALE "the tick knows the quota only as the pauses it applies on the rate limits the client"
+		+ "reports, in brigade/tick/plan.py; the consumption is computed from the usage"
+		+ "brigade/ledger/run_finished.py already records, a run that reported none counted apart"
+		+ "rather than as zero, as"
+		+ "@DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent"
+		+ "sets; five hours is the reset window of the client brigade drives by default"
+		REF @DECISION.ALedgerEventDeclaresEveryFieldBrigadeWritesAndAnUnreportedMeasureIsAbsent
+	RATIONALE "brigade wave has no pause and no retry: a pause is the project's, a retry is the"
+		+ "requeue of a parked task; the rounds and the steps are in the ledger of the wave, not in"
+		+ "brigade wave show; a scan is a study without a judging slot, so the failing scans are"
+		+ "the studies whose last outcome failed"
 	SOURCE "use-case map of 2026-10-16, finding C6"
+	SOURCE "the user's rulings of 2026-10-28 in the grouped refinement of the M3 drafts: brigade"
+		+ "status, with the quota as a consumption computed over a configured reset window"
 
 TASK B29
 	TITLE "Inbox view"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE ada
-	SPEC "signals grouped and patterns proposed"
-	SPEC "ratify and dismiss call the CLI"
+	SPEC "brigade inbox list carries the proposed patterns, each with its name, its action and the"
+		+ "signals it cites, after the signals in text and under patterns with --json"
+	SPEC "the Inbox view shows the new signals grouped by key and the proposed patterns, from the"
+		+ "standard output of brigade inbox list --json"
+	SPEC "ratify on a pattern and dismiss on a signal or a pattern are POSTs running brigade inbox"
+		+ "ratify and brigade inbox dismiss, under the token and the Origin the server requires of"
+		+ "every POST"
 	AFTER @TASK.B27
 	AFTER @TASK.B25
+	RATIONALE "brigade inbox list printed the signals alone and no command listed the proposed"
+		+ "patterns, which brigade inbox ratify takes by name; the route runs the command line, as"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles requires, so the command"
+		+ "gains the patterns; the grouping by key is that of"
+		+ "@DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+		REF @DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint
+	SOURCE "the user's rulings of 2026-10-28 in the grouped refinement of the M3 drafts: the CLI is"
+		+ "extended"
 
 TASK B30
 	TITLE "Corpus view with the branch selector"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE ada
-	SPEC "project, ref (branch, worktree, sha) and type selectors"
-	SPEC "tree, board by field and dependencies, read-only"
+	SPEC "the Corpus view selects a registered project, a ref (a branch, a worktree or a SHA) and"
+		+ "an entity type, and reads the corpus through /api/corpus/<project> at that ref"
+	SPEC "it shows the tree, a board by field and the dependencies of an entity, read-only: no"
+		+ "control of the view writes to the corpus"
 	SPEC "the board by field, type TASK and field STATUS, shows every task of the selected corpus"
-		+ "at the selected ref with its status; the Blueprint board is retired once it does"
-	SPEC "a link to awawa-web for the checkout and an IDE link to the line"
+		+ "at the selected ref with its status"
+	SPEC "an entity carries a link to the line of its file built from the key ide_link of"
+		+ "config.toml, absent when the key is empty, and a link to awawa-web for the checkout when"
+		+ "brigade doctor finds awawa-web on the PATH"
 	AFTER @TASK.B27
 	AFTER @TASK.B08
+	RATIONALE "once the board shows every task of the brigade corpus with its status, the Blueprint"
+		+ "board is republished no more and the plan frozen, as"
+		+ "@DECISION.TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard sets: the retirement"
+		+ "is the user's act, no test of this task proves it"
+		REF @DECISION.TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard
+	RATIONALE "awawa-web stays the editor of the corpus, as"
+		+ "@DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept sets, and brigade doctor"
+		+ "reports it as optional"
+		REF @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept
 	SOURCE "@DECISION.TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard, pull request #6 of"
 		+ "the brigade repository"
+		REF @DECISION.TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard
 
 TASK B31
 	TITLE "Ledger and Reports views"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE ada
-	SPEC "steps p50 and p90 by role and procedure, waves per month, pauses and the baseline"
-		+ "comparison"
-	SPEC "wave reports, study answers and order outputs, read through the document kind of"
-		+ "@TASK.B106, rendered from their entities with their manual-test tables; the Markdown of"
-		+ "each is a rendering for the person, never the home of a fact"
-		REF @TASK.B106
-	SPEC "/api/reports serves the documents the views render"
+	SPEC "the Ledger view shows the steps p50 and p90 by procedure from brigade ledger budgets"
+		+ "--json and by role from brigade ledger --wave <id> --json, the waves started per month,"
+		+ "the pauses and the baseline comparison of brigade ledger compare --json"
+	SPEC "brigade reports list prints every wave report, study answer and order output with its id,"
+		+ "its kind and its project, and brigade reports show <id> prints one, text and --json,"
+		+ "read through the document plugin of brigade/adapters/documents/"
+	SPEC "a report is rendered from its entities with its manual-test tables; the Markdown of each"
+		+ "is a rendering for the person, never the home of a fact"
+	SPEC "/api/reports and /api/reports/<id> serve the standard output of brigade reports list"
+		+ "--json and brigade reports show <id> --json, which the Reports view renders"
 	AFTER @TASK.B27
 	AFTER @TASK.B20
 	RATIONALE "the views render the entities, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
-		+ "sets, so that the dashboard shows no fact the entities lack; after @TASK.B106, which"
-		+ "introduces the document kind"
+		+ "sets, so that the dashboard shows no fact the entities lack; the document plugin was"
+		+ "delivered by @TASK.B106, archived since, and lives in brigade/adapters/documents/"
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 		REF @TASK.B106
+	RATIONALE "no command printed the reports and the route runs the command line, as"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles requires: the task adds"
+		+ "brigade reports"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
 	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
 		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
 		+ "amending this task: \"ok pour le plan ci-dessus\""
@@ -2689,8 +2759,15 @@ TASK B32
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE none
+	DESC "a record kept for memory: the work is done in the repository of the IntelliJ plugin,"
+		+ "never in this one, and no wave of brigade delivers it"
 	SPEC "outside the POC: the plugin gains the ref selector as a thin client of the local API"
 	AFTER @TASK.B30
+	RATIONALE "the local JSON API is open to the plugin, as"
+		+ "@DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept sets"
+		REF @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept
+	SOURCE "the user's ruling of 2026-10-28 in the grouped refinement of the M3 drafts: kept as a"
+		+ "record for memory, done in another repository"
 
 TASK B33
 	TITLE "Gardening scans: studies without a judging run"
@@ -6775,18 +6852,27 @@ TASK B93
 TASK B94
 	TITLE "A run is followed while it runs, inside or outside a wave: /api/runs and a Runs view of"
 		+ "the dashboard"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE ada
-	SPEC "/api/runs lists every run of runs/, inside or outside a wave, with its state, running,"
-		+ "finished or dead, its segments and their outcomes, the arguments of its procedure and"
-		+ "its progress file read at each request; /api/runs/<id> serves one run"
-	SPEC "a Runs view of the dashboard lists the runs and shows one run with its progress file,"
-		+ "refreshed by the polling of the page shell; every string of a progress file is escaped"
-		+ "on render, as @TASK.B27 requires of every rendered string"
+	SPEC "/api/runs serves the standard output of brigade runs list --json, every run inside or"
+		+ "outside a wave with its state, running, finished or dead, and /api/runs/<id> that of"
+		+ "brigade runs show <id> --json, its segments, their outcomes and its progress, run at"
+		+ "each request"
+	SPEC "a Runs view of the dashboard lists the runs and shows one run with its progress,"
+		+ "refreshed by the polling of the page; every string of the progress is escaped on render,"
+		+ "as the server requires of every rendered string"
 	AFTER @TASK.B27
 	AFTER @TASK.B82
+	AFTER @TASK.B182
+	RATIONALE "the route runs the command line, as"
+		+ "@DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles requires: the progress"
+		+ "reaches the view through brigade runs show, which @TASK.B182 makes print it in either"
+		+ "form"
+		REF @DECISION.ThePortableContractIsTheCommandLineAndNeutralFiles
+		REF @TASK.B182
 	RATIONALE "asked on 2026-10-07 while following the run of @TASK.B82: brigade runs list gives"
 		+ "the state and brigade runs logs the client's output, which Claude Code writes only at"
 		+ "the end; the progress file runs/<id>/progress.md is the only live trace, and no command"
@@ -11428,14 +11514,22 @@ TASK B182
 	MILESTONE @MILESTONE.ADD0
 	COMPONENT "runs"
 	ROLE ada
-	SPEC "brigade runs show <id> prints the progress file runs/<id>/progress.md after the segments,"
-		+ "and carries it under progress with --json, where today"
-		+ "brigade/commands/runs_show.py:108-117 prints the summary and the log alone"
+	SPEC "brigade runs show <id> prints the progress of the run after the segments, rendered for a"
+		+ "person by the document plugin of brigade/adapters/documents/ in the form the run wrote,"
+		+ "progress.md or progress.awawa, and carries it under progress with --json: the text in"
+		+ "the markdown form, the entities in the awawa form; where today"
+		+ "brigade/commands/runs_show.py prints the summary and the log alone"
 	RATIONALE "SPEC 3 of @TASK.B94, in M3 AFTER @TASK.B27, bound this command to the server; it is"
 		+ "removed from B94 and carried here, a command of the CLI needing no dashboard"
 		REF @TASK.B94
 		REF @TASK.B27
+	RATIONALE "the progress of a run is kept in the form the configuration chooses, as"
+		+ "brigade/runs/describe_progress.py writes it, so the command reads it through the plugin"
+		+ "and never names one form"
 	SOURCE "use-case map of 2026-10-16, finding C13"
+	SOURCE "the user's ruling of 2026-10-28 in the grouped refinement of the M3 drafts: @TASK.B94"
+		+ "runs after this task, which prints the progress in either form"
+		REF @TASK.B94
 
 TASK B183
 	TITLE "brigade config get prints the configuration as brigade reads it, one key or all"
