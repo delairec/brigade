@@ -48,7 +48,9 @@ PARKED_ON_A_FAILED_SETUP = {
 }
 WAVE_HEAD = "8885daa"
 MAIN_HEAD = "5c2e854"
-MAIN_HEAD_QUERY = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "main^{commit}")
+TIDEPOOL_WITHOUT_FORGE = (("PATH", "/srv/tidepool"), ("MAIN", "main"))
+TIDEPOOL_ON_GITHUB = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "github"))
+GITHUB_FORGE = object()
 T7_RULED_ON_MAIN = ProcessAnswer(stdout='{"fields": [{"name": "STATUS", "atoms": ["\\"draft\\""]}]}')
 T7_ABSENT_FROM_MAIN = ProcessAnswer(exit_code=1, stderr="@TASK.T7 is not defined in the workspace")
 IMPLEMENTED_TASKS_QUERY = ("awawa", "status", "TASK", "--where", "STATUS==implemented")
@@ -110,23 +112,27 @@ def create_wave_tree_runtime(root: Path, implemented_tasks: str) -> Runtime:
     return create_test_runtime(create_test_paths(root), run_process=create_machine_double(corpus, outputs))
 
 
-def create_main_tree_runtime(root: Path, task_on_main: ProcessAnswer) -> Runtime:
+def create_main_tree_runtime(
+    root: Path, task_on_main: ProcessAnswer, project: tuple = TIDEPOOL_WITHOUT_FORGE, main: str = "main"
+) -> Runtime:
     write_operational_corpus(root)
     (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
     (root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True)
-    corpus = {
-        "PROJECT": {"tidepool": (("PATH", "/srv/tidepool"), ("MAIN", "main"))},
-        "TASK": {"T7": (("STATUS", "todo"),)},
-    }
+    corpus = {"PROJECT": {"tidepool": project}, "TASK": {"T7": (("STATUS", "todo"),)}}
     main_root = str(root / "cache" / "refs" / "tidepool" / MAIN_HEAD)
     answers = {
         ("git", "rev-parse", "--verify"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
-        MAIN_HEAD_QUERY: ProcessAnswer(stdout=f"{MAIN_HEAD}\n"),
+        ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{main}^{{commit}}"): ProcessAnswer(
+            stdout=f"{MAIN_HEAD}\n"
+        ),
+        ("git", "fetch", "--quiet", "origin", "main"): ProcessAnswer(),
         IMPLEMENTED_TASKS_QUERY: ProcessAnswer(stdout=NO_TASK_IMPLEMENTED),
         ("awawa", "show", "@TASK.T7", "--json", main_root): task_on_main,
     }
     runner = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
-    return create_test_runtime(create_test_paths(root), run_process=runner.run)
+    return create_test_runtime(
+        create_test_paths(root), run_process=runner.run, resolve_plugin=lambda kind, name: GITHUB_FORGE
+    )
 
 
 class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
@@ -245,17 +251,36 @@ class WaveRequeueRefusalTest(unittest.TestCase):
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w99")
 
     def test_should_refuse_a_parked_task_ruled_on_main_naming_the_two_branches_and_the_cancellation(self):
-        # Arrange
-        runtime = create_main_tree_runtime(self.root, T7_RULED_ON_MAIN)
-        write_ledger(self.root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+        for case, project, main, expected_refusal in [
+            (
+                "a project without a forge",
+                TIDEPOOL_WITHOUT_FORGE,
+                "main",
+                (
+                    "the task T7 of the wave tidepool_w16 differs between main and integration/tidepool_w16:"
+                    " the ruling on main reaches it through brigade wave cancel tidepool_w16 and a new wave cut from main"
+                ),
+            ),
+            (
+                "a project on GitHub",
+                TIDEPOOL_ON_GITHUB,
+                "origin/main",
+                (
+                    "the task T7 of the wave tidepool_w16 differs between origin/main and integration/tidepool_w16:"
+                    " the ruling on main reaches it through brigade wave cancel tidepool_w16"
+                    " and a new wave cut from origin/main"
+                ),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                runtime = create_main_tree_runtime(root, T7_RULED_ON_MAIN, project, main)
+                write_ledger(root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
 
-        # Act
-        with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
 
-        # Assert
-        self.assertEqual(
-            str(raised.exception),
-            "the task T7 of the wave tidepool_w16 differs between main and integration/tidepool_w16:"
-            " the ruling on main reaches it through brigade wave cancel tidepool_w16 and a new wave cut from main",
-        )
+                # Assert
+                self.assertEqual(str(raised.exception), expected_refusal)
