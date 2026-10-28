@@ -139,6 +139,7 @@ class TaskFacts:
     last_run: str | None = None
     blocked_run: BlockedRun | None = None
     rebased_by_last_run: bool = False
+    last_run_is_a_rebase: bool = False
     milestone: str | None = None
 
     def to_document(self) -> dict:
@@ -461,6 +462,7 @@ def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFact
         last_run=naming[-1]["run"],
         blocked_run=_read_blocked_run(reading, naming[-1]["run"]),
         rebased_by_last_run=_is_rebase_done(reading, naming[-1]),
+        last_run_is_a_rebase=naming[-1]["slot"] == REBASE_SLOT,
     )
 
 
