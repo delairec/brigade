@@ -14,7 +14,7 @@ BUDGETS = {
             "segments": {"measured": 3, "unmeasured": 0, "p50": 40, "p90": 70},
             "estimate": True,
         },
-        "review": {
+        "<i>review</i>": {
             "runs": {"measured": 0, "unmeasured": 6, "p50": None, "p90": None, "partial": 0},
             "segments": {"measured": 0, "unmeasured": 6, "p50": None, "p90": None},
             "estimate": False,
@@ -25,7 +25,7 @@ STEPS_SECTION = (
     "<section><h2>Steps by procedure</h2>"
     "<table><thead><tr><th>procedure</th><th>runs</th><th>p50</th><th>p90</th><th>estimate</th></tr></thead>"
     "<tbody><tr><td>build-task</td><td>3</td><td>40</td><td>70</td><td>yes</td></tr>"
-    "<tr><td>review</td><td>0</td><td>-</td><td>-</td><td>no</td></tr></tbody></table></section>"
+    "<tr><td>&lt;i&gt;review&lt;/i&gt;</td><td>0</td><td>-</td><td>-</td><td>no</td></tr></tbody></table></section>"
 )
 MONTHS_SECTION = (
     "<section><h2>Waves started by month</h2>"
@@ -59,11 +59,11 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             "wave": "<b>w2</b>",
             "steps": {
                 "by_slot": {},
-                "by_role": {"ada": {"runs": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50, "partial": 0}}},
+                "by_role": {"<i>ada</i>": {"runs": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50, "partial": 0}}},
             },
             "pauses": [
-                {"paused_at": "2026-10-02T10:00:00Z", "resumed_at": "2026-10-02T11:05:00Z", "duration_ms": 3900000},
-                {"paused_at": "2026-10-03T10:00:00Z", "resumed_at": None, "duration_ms": None},
+                {"paused_at": "<i>2026-10-02T10:00:00Z</i>", "resumed_at": "<i>2026-10-02T11:05:00Z</i>", "duration_ms": 3900000},
+                {"paused_at": "<i>2026-10-03T10:00:00Z</i>", "resumed_at": None, "duration_ms": None},
             ],
         }
         answers = {"overview": answer_with(OVERVIEW), "budgets": answer_with(BUDGETS), "wave": answer_with(wave)}
@@ -78,17 +78,18 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             + MONTHS_SECTION
             + "<section><h2>Steps by role and pauses of the wave</h2><p>wave &lt;b&gt;w2&lt;/b&gt;</p>"
             "<table><thead><tr><th>role</th><th>runs</th><th>p50</th><th>p90</th></tr></thead>"
-            "<tbody><tr><td>ada</td><td>2</td><td>30</td><td>50</td></tr></tbody></table>"
+            "<tbody><tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>2</td><td>30</td><td>50</td></tr></tbody></table>"
             "<table><thead><tr><th>paused at</th><th>resumed at</th><th>minutes</th></tr></thead>"
-            "<tbody><tr><td>2026-10-02T10:00:00Z</td><td>2026-10-02T11:05:00Z</td><td>65</td></tr>"
-            "<tr><td>2026-10-03T10:00:00Z</td><td>still paused</td><td>-</td></tr></tbody></table></section>",
+            "<tbody><tr><td>&lt;i&gt;2026-10-02T10:00:00Z&lt;/i&gt;</td><td>&lt;i&gt;2026-10-02T11:05:00Z&lt;/i&gt;</td>"
+            "<td>65</td></tr>"
+            "<tr><td>&lt;i&gt;2026-10-03T10:00:00Z&lt;/i&gt;</td><td>still paused</td><td>-</td></tr></tbody></table></section>",
         )
 
     def test_should_render_the_baseline_comparison_of_the_day_asked(self):
         # Arrange
         comparison = {
             "schema_version": 1,
-            "before": "2026-10-01",
+            "before": "<i>2026-10-01</i>",
             "periods": {
                 "before": {
                     "runs": 4,
@@ -120,7 +121,7 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             fragment,
             STEPS_SECTION
             + MONTHS_SECTION
-            + "<section><h2>Baseline comparison</h2><p>4 runs before 2026-10-01, 2 runs from it on</p>"
+            + "<section><h2>Baseline comparison</h2><p>4 runs before &lt;i&gt;2026-10-01&lt;/i&gt;, 2 runs from it on</p>"
             "<table><thead><tr><th>measure</th><th>p50 before</th><th>p90 before</th>"
             "<th>p50 from</th><th>p90 from</th></tr></thead><tbody>"
             "<tr><td>steps</td><td>40</td><td>80</td><td>30</td><td>45</td></tr>"
