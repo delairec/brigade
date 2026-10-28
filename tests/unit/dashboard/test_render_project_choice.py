@@ -6,7 +6,7 @@ MARKUP = '"><script>alert(1)</script>'
 
 
 class RenderProjectChoiceTest(unittest.TestCase):
-    def test_should_offer_every_registered_project_in_the_selector(self):
+    def test_should_link_every_registered_project_to_its_corpus_view(self):
         # Arrange
         projects = {
             "schema_version": 1,
@@ -18,15 +18,7 @@ class RenderProjectChoiceTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            fragment,
-            '<form class="corpus-selector" method="get">'
-            '<label>project <select name="project">'
-            '<option value="oak">oak</option><option value="elm">elm</option></select></label>'
-            '<label>ref <input name="ref" value=""></label>'
-            '<label>type <input name="type" list="corpus-types" value=""></label>'
-            '<datalist id="corpus-types"></datalist>'
-            '<label>board field <input name="field" value=""></label>'
-            "<button>read</button></form>",
+            fragment, '<ul><li><a href="#corpus/oak">oak</a></li><li><a href="#corpus/elm">elm</a></li></ul>'
         )
 
     def test_should_escape_the_name_of_a_project(self):
