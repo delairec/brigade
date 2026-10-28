@@ -1,0 +1,96 @@
+# REPORT brigade_w4
+
+- WAVE: brigade_w4
+- PROJECT: brigade
+- TASK_ROW: B27 merged #235
+- TASK_ROW: B28 pr_open #241
+- TASK_ROW: B29 merged #238
+- TASK_ROW: B30 merged #240
+- TASK_ROW: B31 merged #242
+- STATISTIC: tasks 5
+- STATISTIC: merged 4
+- STATISTIC: parked 0
+- STATISTIC: runs 25
+- STATISTIC: files 2
+- STATISTIC: insertions 11
+- STATISTIC: deletions 133
+- GRAPH: B28 after B27
+- GRAPH: B29 after B27
+- GRAPH: B30 after B27
+- GRAPH: B31 after B27
+- MANUAL_TEST: B27: brigade serve runs in the foreground until SIGINT or SIGTERM, prints the URL it serves and exits 0 on either signal
+- MANUAL_TEST: B27: it listens on the port of --port, else of the key dashboard_port of config.toml, else 8470; a port already taken exits 1 with a message naming the port
+- MANUAL_TEST: B27: the key dashboard_port is documented in the config.toml template with its default
+- MANUAL_TEST: B27: the server binds 127.0.0.1 only, never 0.0.0.0 nor an address of the machine
+- MANUAL_TEST: B27: a request whose Host header is not the loopback host and port the server listens on is refused with 400 before any routing: a page reaching the port by DNS rebinding gets nothing
+- MANUAL_TEST: B27: a GET request changes no state of brigade; a state-changing request is a POST
+- MANUAL_TEST: B27: every POST carries the token the server generated at its start, written into the page it serves, and an Origin header equal to the loopback origin; a request missing either is refused with 403 before any routing and changes nothing
+- MANUAL_TEST: B27: no response carries a CORS header, whatever the Origin of the request
+- MANUAL_TEST: B27: every response carries Content-Security-Policy: default-src 'self'; the page loads no resource from outside the server
+- MANUAL_TEST: B27: /api/waves, /api/waves/<id>, /api/inbox, /api/ledger and /api/corpus/<project> each serve the standard output of brigade wave list, brigade wave show <id>, brigade inbox list, brigade ledger and brigade corpus <project> with --json, run as a subprocess of the entry point the server runs from
+- MANUAL_TEST: B27: a command that exits non-zero answers 404 for an id or a project it does not know, 500 otherwise, with a JSON body holding its standard error
+- MANUAL_TEST: B27: the page is one HTML file that loads its script and its stylesheet from the server, the three files under brigade/dashboard/data/, with no inline script, no inline style and no style attribute
+- MANUAL_TEST: B27: the page polls the view it shows every 5 seconds while the tab is visible and swaps in the fragment the server renders
+- MANUAL_TEST: B27: a light and a dark theme, CSS custom properties chosen by prefers-color-scheme
+- MANUAL_TEST: B27: every string of a rendered fragment is escaped with html.escape: a unit test renders a document whose strings hold markup and finds none of it in the fragment
+- MANUAL_TEST: B29: brigade inbox list carries the proposed patterns, each with its name, its action and the signals it cites, after the signals in text and under patterns with --json
+- MANUAL_TEST: B29: the Inbox view shows the new signals grouped by key and the proposed patterns, from the standard output of brigade inbox list --json
+- MANUAL_TEST: B29: ratify on a pattern and dismiss on a signal or a pattern are POSTs running brigade inbox ratify and brigade inbox dismiss, under the token and the Origin the server requires of every POST
+- MANUAL_TEST: B30: the Corpus view selects a registered project, a ref (a branch, a worktree or a SHA) and an entity type, and reads the corpus through /api/corpus/<project> at that ref
+- MANUAL_TEST: B30: it shows the tree, a board by field and the dependencies of an entity, read-only: no control of the view writes to the corpus
+- MANUAL_TEST: B30: the board by field, type TASK and field STATUS, shows every task of the selected corpus at the selected ref with its status
+- MANUAL_TEST: B30: an entity carries a link to the line of its file built from the key ide_link of config.toml, absent when the key is empty, and a link to awawa-web for the checkout when brigade doctor finds awawa-web on the PATH
+- MANUAL_TEST: B31: the Ledger view shows the steps p50 and p90 by procedure from brigade ledger budgets --json and by role from brigade ledger --wave <id> --json, the waves started per month, the pauses and the baseline comparison of brigade ledger compare --json
+- MANUAL_TEST: B31: brigade reports list prints every wave report, study answer and order output with its id, its kind and its project, and brigade reports show <id> prints one, text and --json, read through the document plugin of brigade/adapters/documents/
+- MANUAL_TEST: B31: a report is rendered from its entities with its manual-test tables; the Markdown of each is a rendering for the person, never the home of a fact
+- MANUAL_TEST: B31: /api/reports and /api/reports/<id> serve the standard output of brigade reports list --json and brigade reports show <id> --json, which the Reports view renders
+- INSTRUCTIONS_CHANGE: corpus/decisions.awawa +0 -21
+- INSTRUCTIONS_CHANGE: corpus/tasks.awawa +11 -112
+- NARRATIVE: verdict: 4 of 5 tasks merged into integration/brigade_w4 (B27 #235, B29 #238, B31 #242, B30 #240); B28 #241 is parked, past 2 repair rounds, on a privacy check its runs never addressed
+- NARRATIVE: span: wave.started 2026-10-28T19:45:54Z to wave.reported 22:05:06Z, 2 h 19 min (ledger collector, document.json)
+- NARRATIVE: cost: 25 runs, all outcome done, 823 steps, 170.4 min of run time, 44.52 USD (sum of the 25 run.finished events of the ledger collector)
+- NARRATIVE: cost by task: B28 5 runs 246 steps 11.59 USD; B30 8 runs 211 steps 10.49 USD; B31 6 runs 160 steps 9.10 USD; B27 4 runs 131 steps 8.11 USD; B29 2 runs 75 steps 5.23 USD (run.finished, ledger collector)
+- NARRATIVE: cost by role: ada 9 runs 476 steps 30.00 USD; prudence 9 runs 155 steps 8.90 USD; remediator 3 runs 84 steps 3.57 USD; rebaser 4 runs 108 steps 2.05 USD (run.finished, ledger collector)
+- NARRATIVE: the 6 first builds of ada took 60 to 70 steps each (B27 70, B28 68 and 69, B31 60, B29 61, B30 61); the budget of build-task is not in the evidence, so whether they exceeded it is not established
+- NARRATIVE: rounds to merge: B29 1, B27 2, B31 2, B30 4 (pr.merged events); 9 verdicts, 5 with changes requested: B27 1 medium 2 low, B30 twice 1 medium 2 low, B31 3 medium 2 low
+- NARRATIVE: went well: every finding of B27, B31 and B30 was answered by a commit and a test seen failing, and the next verdict on each passed (task.review_answered, task.verdict)
+- NARRATIVE: went well: preflight caught an ancestry failure of B31 at 21:00:01 and ruff and coverage failures of B28 and B31 before any review ran on them
+- NARRATIVE: went wrong: the launch of B27 failed on 3 ticks, 19:45:54, 19:50:52 and 19:55:54, git worktree add refusing because .brigade/worktrees/B27 already existed; the build started at 20:00:01, 14 min late, and B28 to B31, after B27, waited as long
+- NARRATIVE: went wrong: B30 spent a round for nothing: the rebaser moved its head at 21:10:54, a verify ran at 21:20:08 on that head before the remediation (21:30:30 to 21:38:09) and found every finding still unanswered
+- NARRATIVE: went wrong: the CLI-filled fields contradict the ledger: TASK_ROW gives B28 pr_open and STATISTIC parked 0, while the ledger holds task.parked for B28 at 21:40:42 and 22:05:06 and no PARKED_QUESTION is filled
+- NARRATIVE: gap: the git-diff-stat collector covers 2 files, corpus/decisions.awawa +0 -21 and corpus/tasks.awawa +11 -112, and no file of brigade/dashboard/ the merged tasks delivered; its perimeter (which two refs) is not in its document, so the statistics files 2, insertions 11, deletions 133 do not measure the wave
+- NARRATIVE: next wave: a launch finding its task worktree in place takes it over or reports it once instead of failing every tick; a verify is not scheduled on a head whose findings have no review_answered yet; a requeue resets the repair-round count or the task is parked at once with its blocker; the wave report reads the parked state from the ledger
+- REASON: B28 #241 parked at 21:40:42Z, past 2 repair rounds: the privacy check of preflight failed on all 3 heads (57f7876a, 0474cef8, b2968a4f) on a home path at tests/unit/commands/test_status.py:30 and :39 and tests/unit/system/test_read_quota_window.py:7
+- REASON: B28: the two repair builds (50 and 20 steps) fixed the coverage failure, then the ruff failure, and left the 3 home paths unchanged; the blockers list of task.parked is empty, so the park names no blocker to a reader of the event
+- REASON: B28 was queued again at 21:51:53Z, rebuilt in 69 steps (21:55:54 to 22:03:35, 3.03 USD) and parked again at 22:05:06Z with the same reason, past 2 repair rounds, with no preflight recorded on the new head: the requeue bought no repair round, and whether the privacy failure remains is not in the evidence
+- TESTER_STEP: B27: run brigade serve; it prints the URL; press Ctrl-C and check echo $? prints 0; run it again and send kill -TERM to its pid; it exits 0 again
+- TESTER_STEP: B27: run brigade serve --port 8471 and open that port; remove --port and set dashboard_port = 8472 in config.toml, it listens on 8472; remove the key, it listens on 8470; start a second brigade serve on a taken port, it exits 1 naming the port
+- TESTER_STEP: B27: open the config.toml template and find dashboard_port documented with its default 8470
+- TESTER_STEP: B27: while it serves, run ss -ltnp | grep brigade or the equivalent; the listening address is 127.0.0.1 alone, never 0.0.0.0 nor a LAN address
+- TESTER_STEP: B27: curl -H 'Host: evil.example' http://127.0.0.1:8470/ answers 400; curl -H 'Host: 127.0.0.1:9999' answers 400; the plain curl with the right host answers 200
+- TESTER_STEP: B27: note brigade wave list, browse every view of the page and reload them; the state is unchanged; every button that changes state sends a POST, seen in the network tab of the browser
+- TESTER_STEP: B27: replay a POST of the page with curl without the token, then without the Origin header, then with Origin http://evil.example; each answers 403 and brigade inbox list is unchanged
+- TESTER_STEP: B27: curl -i -H 'Origin: http://evil.example' on the page and on /api/waves; no response carries an Access-Control-Allow-Origin or other Access-Control header
+- TESTER_STEP: B27: curl -I on the page, its script, its stylesheet and an /api route; each carries Content-Security-Policy: default-src 'self'; the network tab shows no request leaving 127.0.0.1
+- TESTER_STEP: B27: compare curl http://127.0.0.1:8470/api/waves with brigade wave list --json, and likewise /api/waves/<id>, /api/inbox, /api/ledger and /api/corpus/brigade with wave show, inbox list, ledger and corpus brigade; each pair is identical
+- TESTER_STEP: B27: curl /api/waves/nosuchwave and /api/corpus/nosuchproject; each answers 404 with a JSON body holding the standard error of the command
+- TESTER_STEP: B27: list brigade/dashboard/data/ and find the HTML page, its script and its stylesheet; view the source of the page and find no script body, no style element and no style attribute
+- TESTER_STEP: B27: open a view with the network tab open; a request goes out every 5 s; switch to another tab for 20 s, none goes out; come back, polling resumes
+- TESTER_STEP: B27: switch the system between light and dark; the page follows without reload
+- TESTER_STEP: B27: run python3 -m unittest and find the test that renders strings holding markup green; put a task title holding <b>x</b> in a scratch corpus and see it shown as text
+- TESTER_STEP: B29: run brigade inbox list with a pattern proposed; it prints the signals then each pattern with its name, its action and the signals it cites; with --json they sit under patterns
+- TESTER_STEP: B29: open the Inbox view; the new signals are grouped by key and the proposed patterns follow, matching brigade inbox list --json
+- TESTER_STEP: B29: click ratify on a pattern and dismiss on a signal; brigade inbox list shows the change; replay either POST without the token or the Origin, it answers 403 and nothing changes
+- TESTER_STEP: B30: in the Corpus view pick brigade, a branch, then a worktree, then a SHA, and the type TASK; the view changes with the ref, and the network tab shows /api/corpus/brigade with that ref
+- TESTER_STEP: B30: open the tree, the board by field and the dependencies of an entity; no control offers an edit, and git status of the checkout is clean after using them
+- TESTER_STEP: B30: choose the board, type TASK, field STATUS; compare with awawa status TASK . at the same ref; every task is there with its status
+- TESTER_STEP: B30: set ide_link in config.toml and follow the link of an entity, it opens the right file and line; empty the key, the link is gone; with awawa-web on the PATH, as brigade doctor reports, a link to awawa-web appears, without it none
+- TESTER_STEP: B31: open the Ledger view; compare the p50 and p90 by procedure with brigade ledger budgets --json, by role with brigade ledger --wave brigade_w4 --json, and the monthly waves, the pauses and the comparison with brigade ledger compare --json
+- TESTER_STEP: B31: run brigade reports list; the report of brigade_w4 is listed with its id, its kind and its project; run brigade reports show <id> and again with --json; order outputs are not listed yet, deferred to @TASK.B51
+- TESTER_STEP: B31: open a report in the Reports view; its fields and its manual tests show as tables; the Markdown rendering holds no fact absent from the entities
+- TESTER_STEP: B31: compare curl /api/reports and /api/reports/<id> with brigade reports list --json and brigade reports show <id> --json; they are identical and the Reports view renders them
+- SAMPLING: B27 #235 brigade/dashboard/start_dashboard.py, _listen: the port bound is 0 to 65535 for --port and 1 to 65535 for dashboard_port, a choice the remediator made for tests/cli/test_serve.py and no decision records
+- SAMPLING: B27 #235 the Host, token and Origin checks before routing: the security of the dashboard rests on them, and the reviews of B27 found nothing against them; a read confirms they run before every route
+- SAMPLING: B30 #240 brigade/dashboard/data/dashboard.js submitView and render_corpus_selector.py: logic left the page after two findings against @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand; a read confirms the page keeps only polling and swapping
+- SAMPLING: B31 #242 corpus/decisions.awawa near line 4233 and @TASK.B51: the order outputs of the second SPEC of @TASK.B31 are deferred to B51; a read confirms the deferral is a ruling the user accepts
+- SAMPLING: B28 #241 tests/unit/commands/test_status.py:30,39 and tests/unit/system/test_read_quota_window.py:7: the 3 home paths the privacy check refused, the lines the next repair of B28 starts from
