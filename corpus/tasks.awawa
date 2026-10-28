@@ -12786,3 +12786,52 @@ TASK B209
 		+ "B22 merged into integration/brigade_w1 by the user, its findings closed by pull request"
 		+ "207"
 		REF @DECISION.AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff
+
+TASK B210
+	TITLE "A requeued task is launched on its branch put back on the integration branch of the"
+		+ "forge, and a requeue refuses a task the main branch has changed since its wave started"
+	STATUS todo
+	TYPE fix
+	MILESTONE @MILESTONE.M3
+	COMPONENT "the tick"
+	ROLE ada
+	SPEC "on a project of FORGE github, the launch of a task fetches its integration branch, cuts a"
+		+ "new task branch from origin/<integration>, and its setup checks that"
+		+ "origin/<integration> is an ancestor of HEAD; a project of FORGE none keeps its local"
+		+ "integration branch"
+	SPEC "brigade tick launching a task whose branch exists and does not descend from the"
+		+ "integration branch of the previous SPEC rebases that branch onto it before the setup,"
+		+ "and the build run starts"
+	SPEC "a rebase of that branch stopped on a conflict is aborted and the tick launches a run of"
+		+ "the rebase slot on the worktree of the task, pull request or not; once that run puts the"
+		+ "branch on the integration branch, the next tick launches the build run, and a run that"
+		+ "ends blocked parks the task on its question"
+	SPEC "brigade wave requeue refuses a parked task whose entity on the main branch, origin/<MAIN>"
+		+ "on a project of FORGE github, differs from its entity on the integration branch of its"
+		+ "wave, its message naming the task, the two branches and brigade wave cancel"
+	SPEC "a test reproduces brigade_w3: a task branch cut, a commit added to the integration"
+		+ "branch, the task parked then requeued; the next tick launches its build run"
+	SPEC "a test changes the entity of a parked task on the main branch only, and brigade wave"
+		+ "requeue refuses it and leaves its state parked"
+	RATIONALE "observed on brigade_w3: @TASK.B27 parked blocked on 2026-10-27, the wave report"
+		+ "committed on integration/brigade_w3 as 61b915f9, B27 requeued on 2026-10-28 at"
+		+ "19:39:05Z; the next tick parked it again with the reason setup failed, git merge-base"
+		+ "--is-ancestor integration/brigade_w3 HEAD exiting 1, the worktree still at c387ac7e:"
+		+ "prepare_task_worktree.py reused the branch as it stood, and any commit on the"
+		+ "integration branch after the cut, the wave report or a sibling task merged, fails the"
+		+ "requeue"
+		REF @TASK.B27
+	RATIONALE "the ruling on B27, pull request 229, was merged on main and never reached"
+		+ "integration/brigade_w3: a requeue would have run the task on the wording the ruling"
+		+ "replaced; a ruling on main reaches a parked task by the cancellation of its wave and a"
+		+ "new wave cut from main, which the refusal of the requeue names"
+	RATIONALE "the reference of the integration branch, origin on a forge, follows"
+		+ "@DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge; a"
+		+ "conflict goes to the rebase slot as the conflicts of a pull request do under"
+		+ "@DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion"
+		REF @DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
+		REF @DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
+	SOURCE "the user's words of 2026-10-28, after the requeue of B27 failed: \"ajoute la tâche dans"
+		+ "m3, on la refine immédiatement\"; the rulings of the refinement the same day:"
+		+ "\"origin/<integration>\", \"Un run du slot rebase\", \"requeue refuse, renvoie au"
+		+ "cancel\", \"Tout sur origin\""
