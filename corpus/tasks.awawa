@@ -12835,3 +12835,32 @@ TASK B210
 		+ "m3, on la refine immédiatement\"; the rulings of the refinement the same day:"
 		+ "\"origin/<integration>\", \"Un run du slot rebase\", \"requeue refuse, renvoie au"
 		+ "cancel\", \"Tout sur origin\""
+
+TASK B211
+	TITLE "A task of a new wave takes over the worktree its task left in a cancelled wave"
+	STATUS todo
+	TYPE fix
+	MILESTONE @MILESTONE.M3
+	COMPONENT "the tick"
+	ROLE ada
+	AFTER @TASK.B210
+	SPEC "brigade tick launching a task whose worktree path holds the branch of the same task in a"
+		+ "cancelled wave switches that worktree to the new task branch, cut as a new task branch"
+		+ "is cut, and the build run starts; the branch of the cancelled wave is kept"
+	SPEC "a worktree so held with uncommitted changes is left as it is and the task parked with a"
+		+ "reason naming the worktree path and the cancelled wave"
+	SPEC "a test reproduces brigade_w4: a task parked in a wave, the wave cancelled, a new wave"
+		+ "started with the task; the next tick launches its build run in the same worktree path"
+	RATIONALE "observed on brigade_w4, started on 2026-10-28 at 19:45:54Z after the cancellation of"
+		+ "brigade_w3: every tick failed LaunchTask of @TASK.B27 on git worktree add, the path"
+		+ ".brigade/worktrees/B27 still holding task/brigade_w3/B27; locate_scheduled_worktree.py"
+		+ "names the path after the task alone, and brigade wave cancel leaves the worktrees in"
+		+ "place, so the task blocked the whole wave until the user removed the worktree"
+		REF @TASK.B27
+	RATIONALE "after @TASK.B210 because both change prepare_task_worktree.py; a separate task"
+		+ "because the build run of B210 was already running on brigade_w5 when the defect was"
+		+ "found, and a change of B210 on main would not have reached it"
+		REF @TASK.B210
+	SOURCE "the user's words of 2026-10-28: \"une vague annulée = la suivante doit pouvoir"
+		+ "reprendre les worktrees\"; the ruling the same day, \"Nouvelle tâche B211"
+		+ "(Recommandé)\", B210 being in flight"
