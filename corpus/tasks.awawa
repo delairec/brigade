@@ -2551,7 +2551,8 @@ TASK B26
 
 TASK B27
 	TITLE "brigade serve and the JSON API"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 235
 	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
