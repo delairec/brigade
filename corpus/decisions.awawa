@@ -941,9 +941,10 @@ DECISION ShippedFilesLiveInsideThePackageAndAreReadAsResources
 		+ "same files"
 	STATUS active
 	DESC "every file brigade ships, the operational schema template, the built-in roles,"
-		+ "procedures, recipes and templates, the dashboard page and the scheduler unit templates,"
-		+ "lives in a data/ folder of the component that reads it, under brigade/, read with"
-		+ "importlib.resources.files(); as_file() only to hand a path to a subprocess"
+		+ "procedures, recipes and templates, the dashboard page with its script and its"
+		+ "stylesheet, and the scheduler unit templates, lives in a data/ folder of the component"
+		+ "that reads it, under brigade/, read with importlib.resources.files(); as_file() only to"
+		+ "hand a path to a subprocess"
 	DESC "a shipped awawa file keeps a name not ending in .awawa, schema.awawa.tpl: a .awawa under"
 		+ "the package joins this repository's corpus and collides"
 	DESC "build.py ships the package tree as it is, so the clone and the zipapp read the same files"
