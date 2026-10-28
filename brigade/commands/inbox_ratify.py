@@ -3,10 +3,9 @@ import argparse
 from brigade.command import Argument, Command
 from brigade.commands._launch_planner import launch_planner
 from brigade.runtime import Runtime
-from brigade.triage.ratify_pattern import Ratification, ratify_pattern
+from brigade.triage.ratify_pattern import CONSTRAINT_KINDS, Ratification, ratify_pattern
 
 DOCUMENT_SCHEMA_VERSION = 1
-CONSTRAINT_KINDS = ("rule", "guard", "lint", "schema", "skill", "script")
 
 
 def _render_text(document: dict) -> str:
