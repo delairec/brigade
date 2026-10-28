@@ -2808,7 +2808,7 @@ TASK B30
 		+ "an entity type, and reads the corpus through /api/corpus/<project> at that ref"
 		IMPL "brigade/dashboard/render_corpus_selector.py::def render_corpus_selector("
 		IMPL "brigade/dashboard/route_command.py::def _route_corpus("
-		IMPL "brigade/dashboard/data/dashboard.js::function selectCorpus(event) {"
+		IMPL "brigade/dashboard/data/dashboard.js::function submitView(event) {"
 		IMPL "tests/unit/dashboard/test_answer_dashboard_request.py::class"
 			+ "AnswerDashboardRequestOfTheCorpusViewTest(unittest.TestCase):"
 	SPEC "it shows the tree, a board by field and the dependencies of an entity, read-only: no"

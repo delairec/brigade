@@ -59,8 +59,8 @@ def _render_dependencies(document: dict) -> str:
 def render_corpus_view(document: dict) -> str:
     return "".join(
         (
-            render_corpus_selector([document["project"]], document),
-            f"<p>{escape(document['sha'])}</p>",
+            render_corpus_selector(document),
+            f"<p>{escape(document['project'])} {escape(document['sha'])}</p>",
             _render_tree(document) if "entities" in document else "",
             _render_board(document) if "board" in document else "",
             _render_dependencies(document) if "dependencies" in document else "",
