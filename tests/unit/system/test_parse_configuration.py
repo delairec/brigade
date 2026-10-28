@@ -48,7 +48,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
         self.path.write_text(
             'client = "claude-code"\n'
             'scheduler = "cron"\n'
-            'instructions = "/home/ada/.ai"\n'
+            'instructions = "/srv/instructions"\n'
             'document = "markdown"\n'
             'ide_link = "idea://open?file={path}&line={line}"\n'
             "refs_cache_mb = 2048\n"
@@ -80,7 +80,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             Configuration(
                 client="claude-code",
                 scheduler="cron",
-                instructions="/home/ada/.ai",
+                instructions="/srv/instructions",
                 document="markdown",
                 ide_link="idea://open?file={path}&line={line}",
                 refs_cache_mb=2048,
