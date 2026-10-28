@@ -12913,3 +12913,192 @@ TASK B211
 	SOURCE "the user's ruling of 2026-10-28 after the merge of pull request 231, on the parking of"
 		+ "a worktree with uncommitted changes: \"le but c'est d'éviter un blocage alors non, on"
 		+ "parque pas, on reprend\""
+
+TASK B212
+	TITLE "A milestone has one integration branch, the branch of a wave is cut from it and the pull"
+		+ "request of a wave is opened into it, never into main"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M9
+	COMPONENT "the tick"
+	ROLE ada
+	SPEC "when a wave of a milestone starts and the milestone has no integration branch, the tick"
+		+ "or brigade wave start cuts it from PROJECT.MAIN, origin/<MAIN> on a project of FORGE"
+		+ "github, and pushes it there; the branch is named after the milestone, as OPEN_QUESTION"
+		+ "TheNameOfTheIntegrationBranchOfAMilestone rules it"
+	SPEC "the branch of a wave is cut from the integration branch of its milestone, origin/<branch>"
+		+ "on a project of FORGE github, where today brigade/waves/cut_wave_branch.py cuts it from"
+		+ "PROJECT.MAIN"
+	SPEC "the tick opens the pull request of a wave into the integration branch of its milestone,"
+		+ "where today SPEC 1 of TASK B171 opens it into PROJECT.MAIN; wave.pr_opened and"
+		+ "wave.closed keep their writers, the pull request of the wave being the one of"
+		+ "wave.pr_opened, closed when it is merged into the milestone branch"
+	SPEC "the tick merges no pull request whose base is PROJECT.MAIN"
+	SPEC "TASK B171 is archived at delivery, its SPEC 1, the pull request opened into PROJECT.MAIN,"
+		+ "made false by this task; TASK B187 is archived at delivery, its SPEC 6, the branch of a"
+		+ "wave cut from PROJECT.MAIN, made false by this task; each with a DESC naming this task"
+	SPEC "the sentence of the Bootstrap section of AGENTS.md that this task makes false, the wave"
+		+ "on integration/<wave> and the integration pull request into main, is rewritten at"
+		+ "delivery"
+	SPEC "tests/unit prove the milestone branch cut once and reused by the next wave, the wave"
+		+ "branch cut from it, the pull request of the wave opened into it and none into"
+		+ "PROJECT.MAIN; tests/cli gains at most one flow, a wave started on a milestone whose"
+		+ "branch the forge lacks, through the fake adapter"
+	RATIONALE "the ruling is"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, DESC 1 and"
+		+ "DESC 2; the task branch stays cut from and checked against the branch of the wave,"
+		+ "@DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge, and"
+		+ "the wave report stays the body of the pull request of the wave,"
+		+ "@DECISION.TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBranch"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+		REF @DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
+		REF @DECISION.TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBranch
+	RATIONALE "who merges the pull request of the wave into the milestone branch, the name of the"
+		+ "milestone branch, the wave of a task naming no milestone, several milestones active at"
+		+ "once and the move of M3 are open questions blocking this task; the SPEC are refined once"
+		+ "they are ruled"
+	SOURCE "the user's words of 2026-10-28: « les vagues (waves) ne sont pas censé merger"
+		+ "directement dans main »; « une wave merge dans la branche d'inté »"
+
+TASK B213
+	TITLE "The candidates of a wave are read on the integration branch of its milestone"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M9
+	COMPONENT "waves"
+	ROLE ada
+	AFTER @TASK.B212
+	SPEC "brigade wave start and the tick read the candidates of a wave from the corpus at the"
+		+ "integration branch of the milestone, origin/<branch> on a project of FORGE github, where"
+		+ "today SPEC 5 of TASK B187 reads them at PROJECT.MAIN; a task whose every AFTER is"
+		+ "implemented on that branch is admitted, as TASK B94 AFTER TASK B182, implemented on the"
+		+ "branch of the wave brigade_w6 alone on 2026-10-28"
+	SPEC "brigade wave start --task <task> reads the named tasks on the same branch"
+	SPEC "the DESC of TASK B187, archived by TASK B212, names this task for its SPEC 5, the"
+		+ "candidates read at PROJECT.MAIN, made false by this task"
+	SPEC "the sentence of the Bootstrap section of AGENTS.md that this task makes false is"
+		+ "rewritten at delivery"
+	SPEC "tests/unit prove a task admitted whose AFTER is implemented on the milestone branch and"
+		+ "not on PROJECT.MAIN, and refused when it is implemented on neither"
+	RATIONALE "the ruling is"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, DESC 3: a"
+		+ "milestone delivered to main at its end leaves its implemented tasks on its branch alone"
+		+ "until then, so a dependent task never starts when the candidates are read on"
+		+ "PROJECT.MAIN; on 2026-10-28 @TASK.B94, AFTER @TASK.B182, could not start while B182 was"
+		+ "implemented on integration/brigade_w6 alone"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+		REF @TASK.B94
+		REF @TASK.B182
+	RATIONALE "the integration branch of the milestone is the one of @TASK.B212; the fetch of"
+		+ "origin/<branch> follows"
+		+ "@DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge as amended"
+		REF @TASK.B212
+		REF @DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
+	SOURCE "the user's answer of 2026-10-28 to the session's recommendation: « je garde ouvertes,"
+		+ "fais écrire la décision par lex »"
+
+TASK B214
+	TITLE "The integration branch of a milestone is rebased onto the main branch before a wave"
+		+ "starts"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M9
+	COMPONENT "waves"
+	ROLE ada
+	AFTER @TASK.B212
+	SPEC "before the tick or brigade wave start composes a wave of a milestone, the integration"
+		+ "branch of the milestone is rebased onto PROJECT.MAIN, origin/<MAIN> on a project of"
+		+ "FORGE github, and pushed with --force-with-lease, so that the candidates are read after"
+		+ "the rebase"
+	SPEC "a rebase stopped on a conflict is aborted, the milestone branch left as it was, and"
+		+ "starts no wave: the tick names the branch and the conflicting files on stderr and serves"
+		+ "the other projects"
+	SPEC "the sentence of the Bootstrap section of AGENTS.md that this task makes false is"
+		+ "rewritten at delivery"
+	SPEC "tests/unit prove a ratification merged into PROJECT.MAIN after the milestone branch was"
+		+ "cut reaching the candidates of the next wave, and a conflicting rebase starting no wave"
+	RATIONALE "the ruling is"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, DESC 4: a"
+		+ "ratification, a refinement or a fix is merged into main by its own pull request while"
+		+ "the milestone runs, and a milestone branch cut once never sees it otherwise; on"
+		+ "2026-10-28 the ruling on @TASK.B27, pull request #229, merged on main and never reached"
+		+ "integration/brigade_w3"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+		REF @TASK.B27
+	RATIONALE "the handling of a conflict, SPEC 2, is the session's proposal, to be refined: the"
+		+ "user ruled the rebase, not the conflict; what the rebase does to the open waves cut from"
+		+ "the branch before it is @OPEN_QUESTION.TheRebaseOfAMilestoneBranchUnderItsOpenWaves"
+		REF @OPEN_QUESTION.TheRebaseOfAMilestoneBranchUnderItsOpenWaves
+	SOURCE "the user's ruling of 2026-10-28: « je préfère rebase que merge, le reste ok »"
+
+TASK B215
+	TITLE "The tick opens the pull request of the integration branch of a milestone into main once"
+		+ "every wave of the milestone is merged, and merges it never"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M9
+	COMPONENT "the tick"
+	ROLE ada
+	AFTER @TASK.B212
+	SPEC "under PROJECT.FORGE github, the tick opens the pull request from the integration branch"
+		+ "of a milestone into PROJECT.MAIN as the login of the key cli when every wave of the"
+		+ "milestone is closed and the corpus at that branch holds no task of the milestone STATUS"
+		+ "todo, guarded by the fact that the ledger holds no milestone.pr_opened for it"
+	SPEC "the ledger declares milestone.pr_opened with project, milestone, pr and login, appended"
+		+ "by the tick once the pull request is opened, and milestone.closed with project,"
+		+ "milestone and pr, appended when the tick sees the pull request merged"
+	SPEC "the tick merges that pull request never: it is merged by the user alone"
+	SPEC "the sentence of the Bootstrap section of AGENTS.md that this task makes false is"
+		+ "rewritten at delivery"
+	SPEC "tests/unit prove the opening once the last wave is closed and not before, a second tick"
+		+ "opening none, no opening while a task of the milestone is todo, and milestone.closed on"
+		+ "the merge"
+	RATIONALE "the ruling is"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, DESC 2, and"
+		+ "the gate is @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate; the two ledger"
+		+ "events mirror wave.pr_opened and wave.closed of @TASK.B171 and @TASK.B187"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+		REF @TASK.B171
+		REF @TASK.B187
+	RATIONALE "the condition of SPEC 1, every wave closed and no task todo, is the session's"
+		+ "reading of « quand toutes les wave de la milestone sont mergée », to be refined: nothing"
+		+ "else tells the tick that a milestone has no wave left"
+	SOURCE "the user's words of 2026-10-28: « quand toutes les wave de la milestone sont mergée"
+		+ "dans la branche d'inté, alors j'interviens pour le merge final de la branche d'inté dans"
+		+ "main »"
+
+TASK B216
+	TITLE "The Bootstrap section of AGENTS.md describes the delivery of a milestone through its"
+		+ "integration branch"
+	STATUS draft
+	TYPE docs
+	MILESTONE @MILESTONE.M9
+	COMPONENT "AGENTS.md"
+	ROLE ada
+	AFTER @TASK.B212
+	AFTER @TASK.B213
+	AFTER @TASK.B214
+	AFTER @TASK.B215
+	SPEC "the Bootstrap section of AGENTS.md says that the tick rebases the integration branch of"
+		+ "the milestone onto main, starts a wave of the ratified tasks read on that branch, on a"
+		+ "wave branch cut from it, merges each verified task pull request into the wave branch,"
+		+ "opens the pull request of the wave into the integration branch of the milestone, and"
+		+ "opens the pull request of the milestone into main once every wave is merged; the"
+		+ "milestone is delivered when the user merges it"
+	SPEC "the section says that a fix of brigade the tick itself needs reaches main by a pull"
+		+ "request of its own, or by a milestone delivered alone"
+	SPEC "the section holds nothing the corpus states and nothing a task of this milestone has not"
+		+ "delivered"
+	RATIONALE "the ruling is"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce; the section"
+		+ "describes the tick as it runs, so it is rewritten whole once @TASK.B212, @TASK.B213,"
+		+ "@TASK.B214 and @TASK.B215 are delivered, each having rewritten at its delivery the"
+		+ "sentence it made false"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+		REF @TASK.B212
+		REF @TASK.B213
+		REF @TASK.B214
+		REF @TASK.B215
+	SOURCE "the user's answer of 2026-10-28 to the session's recommendation: « je garde ouvertes,"
+		+ "fais écrire la décision par lex »"

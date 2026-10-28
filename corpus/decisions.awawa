@@ -3168,19 +3168,25 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 	DESC "a wave is named <project>_w<n> when it starts, n one above the highest wave number of the"
 		+ "project in the ledger, read and appended under one lock; the name is never changed and"
 		+ "is the key of every wave event"
-	DESC "the integration branch of a wave is integration/<project>_w<n>, cut from PROJECT.MAIN"
-		+ "when the wave starts, after wave.started is appended: an open wave without its branch"
-		+ "has it cut again, and a branch of the name that no wave.started of the ledger names, as"
-		+ "another machine leaves it, refuses the start"
+	DESC "the branch of a wave is integration/<project>_w<n>, cut from the integration branch of"
+		+ "its milestone, as"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce sets, when"
+		+ "the wave starts, after wave.started is appended: an open wave without its branch has it"
+		+ "cut again, and a branch of the name that no wave.started of the ledger names, as another"
+		+ "machine leaves it, refuses the start"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "a wave the tick starts takes every candidate, its size unbounded; PROJECT.SLOTS bounds"
 		+ "the live build runs of the project, not the size of a wave"
 	DESC "several waves of a project may be open at once; a task belongs to at most one open wave,"
 		+ "and the tick and brigade wave start take their candidates outside every open wave"
 	DESC "the CLI forms a wave without a model: the candidates are the tasks STATUS todo of the"
-		+ "corpus at PROJECT.MAIN with no live blocker, naming no MILESTONE or one whose STATUS is"
-		+ "active, a fixpoint admitting a task whose every AFTER is implemented or in the wave;"
-		+ "--task <task> ... takes exactly the named tasks, their MILESTONE unread, and exits 1 on"
-		+ "one whose AFTER is neither implemented nor named; an empty wave exits 1"
+		+ "corpus at the integration branch of the milestone, as"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce sets, with no"
+		+ "live blocker, naming no MILESTONE or one whose STATUS is active, a fixpoint admitting a"
+		+ "task whose every AFTER is implemented or in the wave; --task <task> ... takes exactly"
+		+ "the named tasks, their MILESTONE unread, and exits 1 on one whose AFTER is neither"
+		+ "implemented nor named; an empty wave exits 1"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "the tick starts a wave of a project under POLICY.WAVE_START auto, the default, the mirror"
 		+ "of PLAN_REVIEW; under ask the user runs brigade wave start <project> [--task <task> ...]"
 	DESC "a REQUEST is named <project>_r<n>: the user's text and its planning, STATUS"
@@ -3200,8 +3206,8 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "projects whose waves name one MILESTONE share their task states, and a milestone cannot"
 		+ "be run twice"
 	REJECTED "one open wave per project: the user ruled several, a task in at most one"
-	REJECTED "<project>_<milestone>_<n> as the name: a wave spans milestones, and a task may belong"
-		+ "to none"
+	REJECTED "<project>_<milestone>_<n> as the name: a task may belong to no milestone; that a wave"
+		+ "spans milestones no longer holds since a wave merges into the branch of one milestone"
 	REJECTED "renaming REQUEST to PLAN: plan already names the act and the file, plan context, plan"
 		+ "record, plan.awawa and PLAN_REVIEW"
 	REJECTED "renaming everything to request: a request is planned once, and its tasks may run in"
@@ -3246,6 +3252,11 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "active dans la même PR, M3 à M8 restent planned donc bloquées. »; « On fix en mode"
 		+ "hotfix (quick fix) sans tâche. »; DESC 1 and DESC 8 gain the gate, DESC 2 loses «"
 		+ "whatever their MILESTONE »"
+	SOURCE "the user's ruling of 2026-10-28,"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce: DESC 5 cuts"
+		+ "the branch of a wave from the integration branch of its milestone, DESC 8 reads the"
+		+ "candidates there, REJECTED 5 loses « a wave spans milestones »"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 
 DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 	TITLE "the tick runs an active study that is due and not parked, and counts against study_runs"
@@ -3596,13 +3607,20 @@ DECISION AFailedActionIsNotAppliedAgainInTheTickThatSawItFail
 
 DECISION AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
 	TITLE "on a project of FORGE github, brigade fetches origin/<MAIN> and reads from it the corpus"
-		+ "the planner is given, checks and records the plan on a worktree cut from it, reads the"
-		+ "candidates of a wave and cuts its integration branch from it; a project of FORGE none"
-		+ "keeps its local MAIN"
+		+ "the planner is given, checks and records the plan on a worktree cut from it, and rebases"
+		+ "the integration branch of a milestone onto it; the candidates of a wave are read and its"
+		+ "branch cut from origin/<the integration branch of the milestone>, fetched the same way;"
+		+ "a project of FORGE none keeps its local branches"
 	STATUS active
 	DESC "the fetch runs with the environment of the cli slot, at each plan context, each plan"
-		+ "record, each read of the candidates and each cut of a wave branch; the local MAIN and"
-		+ "the checkout of the user are never touched"
+		+ "record, each rebase of the integration branch of a milestone onto MAIN, each read of the"
+		+ "candidates and each cut of a wave branch; the local MAIN and the checkout of the user"
+		+ "are never touched"
+	DESC "since @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce the"
+		+ "candidates of a wave are read and its branch cut from origin/<the integration branch of"
+		+ "its milestone>, not from origin/<MAIN>; origin/<MAIN> stays what the plan is recorded"
+		+ "against and what the milestone branch is rebased onto before a wave starts"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "plan context reads the corpus from the tree of that commit on both forges, never from the"
 		+ "checkout of the clone, so the planner sees the corpus the plan is recorded against"
 	DESC "binds @TASK.B21"
@@ -3619,6 +3637,11 @@ DECISION AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
 		+ "(Recommended) », delivered in its pull request « Dans la PR de B21 (Recommended) », pull"
 		+ "request #187"
 		REF @TASK.B21
+	SOURCE "the user's ruling of 2026-10-28,"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce: the TITLE"
+		+ "and DESC 1 read the candidates and cut the wave branch from the milestone branch, DESC 3"
+		+ "added"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 
 DECISION TheFakeClientPlaysAnAgentFromAnExecutableNamedAfterItsRole
 	TITLE "the setting plays of [clients.fake] names a directory whose executable named after the"
@@ -4193,3 +4216,77 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 		REF @TASK.B210
 	SOURCE "the build run of @TASK.B210 on 2026-10-28"
 		REF @TASK.B210
+
+DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	TITLE "a milestone has one integration branch, named after it; a wave merges into that branch,"
+		+ "and the user merges the branch into main once, when every wave of the milestone is"
+		+ "merged into it"
+	STATUS active
+	DESC "a milestone has one integration branch, named after the milestone; the pull request of a"
+		+ "wave is opened into that branch, never into PROJECT.MAIN"
+	DESC "the integration pull request of @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate"
+		+ "is the milestone's, from its integration branch into PROJECT.MAIN, opened once every"
+		+ "wave of the milestone is merged into that branch and merged by the user alone; a wave is"
+		+ "never merged into PROJECT.MAIN"
+		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+	DESC "the candidates of a wave are read on the integration branch of the milestone, not on"
+		+ "PROJECT.MAIN: a task whose AFTER is implemented on that branch alone is startable"
+	DESC "before a wave starts, the integration branch of the milestone is rebased onto"
+		+ "PROJECT.MAIN, so that a ratification merged into PROJECT.MAIN after the milestone"
+		+ "started reaches the wave"
+	DESC "a fix of brigade the tick itself needs reaches main by a pull request of its own, or by a"
+		+ "milestone delivered alone: the tick runs from the main checkout, and a fix kept on a"
+		+ "milestone branch waits for the whole milestone"
+	DESC "replaces DESC 5 and DESC 8 of"
+		+ "@DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone, amended in place;"
+		+ "the name of a wave, its ledger events and the composition of a wave by the CLI are"
+		+ "unchanged"
+		REF @DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
+	DESC "binds @TASK.B212, @TASK.B213, @TASK.B214, @TASK.B215 and @TASK.B216; until they are"
+		+ "delivered the Bootstrap section of AGENTS.md describes the tick as it runs, one branch"
+		+ "per wave and one pull request per wave into main"
+		REF @TASK.B212
+		REF @TASK.B213
+		REF @TASK.B214
+		REF @TASK.B215
+		REF @TASK.B216
+	REJECTED "one integration branch per wave, integration/<project>_w<n> cut from PROJECT.MAIN and"
+		+ "merged into main by a pull request of its own, as the tick does today: the user ruled"
+		+ "that a wave merges into the integration branch of its milestone and never into main"
+	REJECTED "the candidates read on PROJECT.MAIN: a task whose AFTER is implemented on the"
+		+ "milestone branch alone never starts, as TASK B94, AFTER TASK B182 implemented on"
+		+ "integration/brigade_w6 alone, on 2026-10-28"
+	REJECTED "merging PROJECT.MAIN into the integration branch of the milestone before a wave"
+		+ "starts: the user prefers a rebase, « je préfère rebase que merge »"
+	REJECTED "merging the open integration pull requests of the waves brigade_w4 and brigade_w6"
+		+ "into main, #237 and #239, under the model this decision replaces: the user keeps them"
+		+ "open"
+	RATIONALE "on 2026-10-28 the pull request #239 of the wave brigade_w6 was mergeable into main"
+		+ "before the other pull requests of M3, and the branches integration/brigade_w4 and"
+		+ "integration/brigade_w6 carried the names of waves, not of the milestone; the user's"
+		+ "vision is one integration branch per milestone, the waves merged into it, and the user"
+		+ "merging it into main once at the end"
+	RATIONALE "DESC 4 and DESC 5: without the rebase onto main, a ratification merged into main"
+		+ "after a milestone starts never reaches its waves; without a pull request of its own, a"
+		+ "fix of brigade waits for the whole milestone while the tick runs from the main checkout"
+		+ "through bin/brigade, as on 2026-10-28 when @TASK.B210, the requeue onto the rebased"
+		+ "branch, was needed to requeue B210 itself"
+		REF @TASK.B210
+	SOURCE "the user's words of 2026-10-28 on pull request #239: « comment ça la pr 239 peut être"
+		+ "mergée, il est pas censé y avoir d'abord le merge de toutes les pr de m3?, puis je"
+		+ "comprends pas pourquoi les branche d'intégration ne porte pas le nom de la milestone,"
+		+ "les vagues (waves) ne sont pas censé merger directement dans main »"
+	SOURCE "the user's words of 2026-10-28: « normalment, dans ma vision, c'était: une wave merge"
+		+ "dans la branche d'inté, puis quand toutes les wave de la milestone sont mergée dans la"
+		+ "branche d'inté, alors j'interviens pour le merge final de la branche d'inté dans main »"
+	SOURCE "the user's words of 2026-10-28 on pull requests #237 and #239: « je garde ouvertes,"
+		+ "fais écrire la décision par lex »"
+	SOURCE "the user's ruling of 2026-10-28 on DESC 4 and DESC 5, main brought into the milestone"
+		+ "branch before a wave starts and a brigade fix the tick needs delivered by its own pull"
+		+ "request or by a milestone delivered alone: « je préfère rebase que merge, le reste ok »"
+	SOURCE "the user's ruling of 2026-10-28 on the milestone of @TASK.B212 to @TASK.B216: « Nouveau"
+		+ "milestone », @MILESTONE.M9, delivered alone as DESC 5 provides, M3 keeping its dashboard"
+		+ "perimeter"
+		REF @TASK.B212
+		REF @TASK.B216
+		REF @MILESTONE.M9
