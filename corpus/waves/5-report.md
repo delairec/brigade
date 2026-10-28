@@ -1,0 +1,28 @@
+# REPORT brigade_w5
+
+- WAVE: brigade_w5
+- PROJECT: brigade
+- TASK_ROW: B210 changes_requested #233
+- STATISTIC: tasks 1
+- STATISTIC: merged 0
+- STATISTIC: parked 0
+- STATISTIC: runs 4
+- STATISTIC: files 1
+- STATISTIC: insertions 11
+- STATISTIC: deletions 63
+- INSTRUCTIONS_CHANGE: corpus/tasks.awawa +11 -63
+- NARRATIVE: Verdict: the wave delivered nothing; its only task, B210, was parked at 20:45:40Z with PR #233 open and unmerged, so no integration pull request was opened.
+- NARRATIVE: Cost: 4 runs, 141 steps, 8.96 USD, 28 min 17 s of run time, wave open 19:55:54Z to 20:45:40Z; read from the run.finished events of the ledger.
+- NARRATIVE: Build run 20261028T195554Z-8ad8a9 (ada): 72 steps, 13 min 33 s, 5.14 USD, opened PR #233; preflight then failed on CI (tests on 3.11 and 3.x, ruff, coverage) and on privacy (three home paths in tests/unit/commands/test_rebase_context.py:88, 101, 103).
+- NARRATIVE: Fix run 20261028T201512Z-331680 (ada): 28 steps, 4 min 44 s, 1.86 USD; CI went green but the three privacy findings remained, so the task went back to changes_requested.
+- NARRATIVE: Remediate run 20261028T202503Z-724690 (remediator): 16 steps, 1 min 50 s, 0.55 USD; cleared the privacy findings, the third preflight passed every check at head 0322eed.
+- NARRATIVE: Review run 20261028T203511Z-9ee0a4 (prudence): 25 steps, 8 min 9 s, 1.41 USD; verdict changes with two medium findings, both untested SPEC lines of B210.
+- NARRATIVE: Went well: the preflight caught the CI failures and the home paths before any review, and the remediation cleared them in 16 steps.
+- NARRATIVE: Went wrong: the first build run reported done with red CI and home paths in its tests, which spent one of the two repair rounds on what its own checks should have caught.
+- NARRATIVE: Went wrong: the figures of this report do not describe the wave: the statistic parked 0 contradicts the task.parked event of the ledger, and the diff of corpus/tasks.awawa +11 -63 is main moving ahead of integration/brigade_w5 (PRs #231, #232, #234 after its base 39bfb1bc), not work of the wave.
+- NARRATIVE: Next wave: the build run runs the CI suite and the privacy check before it reports done; the report counts a task parked from its task.parked event and measures the diff from the merge base of the integration branch.
+- REASON: B210 parked: past 2 repair rounds; the review verdict at head 0322eed found brigade/tick/plan.py:527, where _is_rebased launches the build run after a done rebase run only for a task with no pull request while the third SPEC launches it pull request or not, a condition no test covers, and brigade/commands/wave_requeue.py:36, where no requeue test runs on a GitHub project to prove origin/<MAIN>; it waits for a requeue with the two findings to answer.
+- TESTER_STEP: No manual test: no task of the wave was merged, so no SPEC line reaches a tester.
+- SAMPLING: PR #233, brigade/tick/plan.py around line 527: the _is_rebased condition, to check against the third SPEC of B210 whether a task with a pull request gets its build run after a rebase.
+- SAMPLING: PR #233, brigade/commands/wave_requeue.py around line 36: the call to locate_project_main, which no test exercises on a project of FORGE github.
+- SAMPLING: PR #233, tests/unit/commands/test_rebase_context.py lines 88 to 103: how the remediation removed the home paths, to see whether the tests still assert what they did.
