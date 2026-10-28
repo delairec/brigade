@@ -85,6 +85,32 @@ class RenderHomeTest(unittest.TestCase):
         self.assertIn("<section><h2>Last tick</h2><p>2026-10-19T08:55:00Z, 2 actions applied in 120 ms</p>", fragment)
         self.assertIn("<section><h2>Studies</h2><ul><li>debt, parked</li></ul></section>", fragment)
 
+    def test_should_render_a_wave_paused_until_further_notice_without_a_resume_time(self):
+        # Arrange
+        document = {
+            **HOME,
+            "waves": [
+                {
+                    "wave": "elm_w1",
+                    "project": "elm",
+                    "branch": "integration/elm_w1",
+                    "last_event": "wave.paused",
+                    "tasks": 1,
+                    "pause": {"reason": "forge_account", "resume_at": None},
+                }
+            ],
+        }
+
+        # Act
+        fragment = render_home(document)
+
+        # Assert
+        self.assertIn(
+            '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.paused, paused on forge_account'
+            ' <button type="button" data-action="/api/waves/elm_w1/resume">resume</button></li>',
+            fragment,
+        )
+
     def test_should_escape_every_string_of_the_document(self):
         # Arrange
         markup = "<script>alert(1)</script>"

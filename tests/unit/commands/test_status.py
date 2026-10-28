@@ -170,3 +170,25 @@ class StatusTextTest(unittest.TestCase):
 
         # Assert
         self.assertIn("\nlast tick  never\n", text)
+
+    def test_should_say_that_a_wave_paused_until_further_notice_has_no_resume_time(self):
+        # Arrange
+        document = {
+            **HOME,
+            "waves": [
+                {
+                    "wave": "elm_w1",
+                    "project": "elm",
+                    "branch": "integration/elm_w1",
+                    "last_event": "wave.paused",
+                    "tasks": 1,
+                    "pause": {"reason": "forge_account", "resume_at": None},
+                }
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn("\nwave       elm_w1 of elm, wave.paused, paused on forge_account\n", text)

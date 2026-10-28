@@ -720,3 +720,18 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
                 body=b"<dl><dt>error</dt><dd>the ledger is unreadable\n</dd></dl>",
             ),
         )
+
+
+class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest.TestCase):
+    def test_should_answer_not_found_and_serve_nothing(self):
+        # Arrange
+        incoming = IncomingRequest(method="DELETE", target="/", host=LOOPBACK_HOST)
+
+        # Act
+        response = answer_dashboard_request(incoming, DASHBOARD, create_test_runtime())
+
+        # Assert
+        self.assertEqual(
+            response,
+            DashboardResponse(status=404, content_type=JSON, body=b'{"error": "no route changes state at /"}'),
+        )
