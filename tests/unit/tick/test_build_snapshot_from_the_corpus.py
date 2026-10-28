@@ -1483,6 +1483,62 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 # Assert
                 self.assertEqual(snapshot.waves[0].tasks[0].blocked_run, expected)
 
+    def test_should_note_a_task_rebased_by_its_last_run_when_a_rebase_run_ended_done(self):
+        for case, slot, outcome, expected in [
+            ("a rebase run delivered", "rebase", "done", True),
+            ("a rebase run blocked", "rebase", "blocked", False),
+            ("a build run delivered", "build", "done", False),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                write_run(
+                    self.paths.state_root,
+                    {**create_run_record("20261019T083000Z-4eba5e", "w1", "B1"), "slot": slot},
+                    None,
+                )
+                self.record(5, create_run_finished("20261019T083000Z-4eba5e", wave="w1", task="B1", outcome=outcome))
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].rebased_by_last_run, expected)
+
+    def test_should_note_a_task_whose_last_run_is_a_rebase_run_whatever_its_outcome(self):
+        for case, slot, outcome, expected in [
+            ("a rebase run delivered", "rebase", "done", True),
+            ("a rebase run blocked", "rebase", "blocked", True),
+            ("a build run delivered", "build", "done", False),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                write_run(
+                    self.paths.state_root,
+                    {**create_run_record("20261019T083000Z-4eba5e", "w1", "B1"), "slot": slot},
+                    None,
+                )
+                self.record(5, create_run_finished("20261019T083000Z-4eba5e", wave="w1", task="B1", outcome=outcome))
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].last_run_is_a_rebase, expected)
+
+    def test_should_note_a_task_whose_last_run_is_a_rebase_run_not_finished_yet(self):
+        # Arrange
+        write_run(
+            self.paths.state_root, {**create_run_record("20261019T083000Z-4eba5e", "w1", "B1"), "slot": "rebase"}, None
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertTrue(snapshot.waves[0].tasks[0].last_run_is_a_rebase)
+
     def test_should_carry_no_blocked_run_while_the_last_run_of_the_task_has_not_finished(self):
         # Arrange
         write_run(self.paths.state_root, create_run_record("20261019T081100Z-a00001", "w1", "B1"), None)

@@ -76,6 +76,7 @@ RATE_LIMIT = "rate_limit"
 REVIEW_SLOT = "review"
 REBASE_SLOT = "rebase"
 BLOCKED_OUTCOME = "blocked"
+DONE_OUTCOME = "done"
 FORGE_ACCOUNT_REASON = "forge_account"
 PROJECT_STATUS_FIELD = "STATUS"
 PAUSED_PROJECT_STATUS = "paused"
@@ -137,6 +138,8 @@ class TaskFacts:
     holds_uncommitted_changes: bool = False
     last_run: str | None = None
     blocked_run: BlockedRun | None = None
+    rebased_by_last_run: bool = False
+    last_run_is_a_rebase: bool = False
     milestone: str | None = None
 
     def to_document(self) -> dict:
@@ -445,11 +448,22 @@ def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
     return BlockedRun(run=run, question=_read_question(finished[-1].message))
 
 
+def _is_rebase_done(reading: WaveReading, run: dict) -> bool:
+    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == run["run"]]
+    return run["slot"] == REBASE_SLOT and bool(finished) and finished[-1].outcome == DONE_OUTCOME
+
+
 def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
-    naming = [run["run"] for run in reading.runs if run["wave"] == wave and run["task"] == task.name]
+    naming = [run for run in reading.runs if run["wave"] == wave and run["task"] == task.name]
     if not naming:
         return task
-    return dataclasses.replace(task, last_run=naming[-1], blocked_run=_read_blocked_run(reading, naming[-1]))
+    return dataclasses.replace(
+        task,
+        last_run=naming[-1]["run"],
+        blocked_run=_read_blocked_run(reading, naming[-1]["run"]),
+        rebased_by_last_run=_is_rebase_done(reading, naming[-1]),
+        last_run_is_a_rebase=naming[-1]["slot"] == REBASE_SLOT,
+    )
 
 
 def _is_review_ended_within_quota(event, wave: str) -> bool:

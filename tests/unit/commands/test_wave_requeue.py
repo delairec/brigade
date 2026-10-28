@@ -8,7 +8,14 @@ from brigade.errors import BrigadeError
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
 from brigade.runtime import Runtime
-from tests.unit.commands.command_runtime import create_machine_double, write_ledger, write_operational_corpus
+from tests.unit.commands.command_runtime import (
+    ProcessAnswer,
+    ScriptedProcessRunner,
+    create_corpus_double,
+    create_machine_double,
+    write_ledger,
+    write_operational_corpus,
+)
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -40,6 +47,12 @@ PARKED_ON_A_FAILED_SETUP = {
     "reason": "setup failed",
 }
 WAVE_HEAD = "8885daa"
+MAIN_HEAD = "5c2e854"
+TIDEPOOL_WITHOUT_FORGE = (("PATH", "/srv/tidepool"), ("MAIN", "main"))
+TIDEPOOL_ON_GITHUB = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "github"))
+GITHUB_FORGE = object()
+T7_RULED_ON_MAIN = ProcessAnswer(stdout='{"fields": [{"name": "STATUS", "atoms": ["\\"draft\\""]}]}')
+T7_ABSENT_FROM_MAIN = ProcessAnswer(exit_code=1, stderr="@TASK.T7 is not defined in the workspace")
 IMPLEMENTED_TASKS_QUERY = ("awawa", "status", "TASK", "--where", "STATUS==implemented")
 NO_TASK_IMPLEMENTED = '{"entities": []}'
 T7_IMPLEMENTED = '{"entities": [{"type": "TASK", "name": "T7"}]}'
@@ -91,9 +104,35 @@ class WaveRequeueRequestTest(unittest.TestCase):
 def create_wave_tree_runtime(root: Path, implemented_tasks: str) -> Runtime:
     write_operational_corpus(root)
     (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
-    corpus = {"PROJECT": {"tidepool": (("PATH", "/srv/tidepool"),)}}
+    corpus = {
+        "PROJECT": {"tidepool": (("PATH", "/srv/tidepool"), ("MAIN", "main"))},
+        "TASK": {"T7": (("STATUS", "todo"),)},
+    }
     outputs = {("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n", IMPLEMENTED_TASKS_QUERY: implemented_tasks}
     return create_test_runtime(create_test_paths(root), run_process=create_machine_double(corpus, outputs))
+
+
+def create_main_tree_runtime(
+    root: Path, task_on_main: ProcessAnswer, project: tuple = TIDEPOOL_WITHOUT_FORGE, main: str = "main"
+) -> Runtime:
+    write_operational_corpus(root)
+    (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+    (root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True)
+    corpus = {"PROJECT": {"tidepool": project}, "TASK": {"T7": (("STATUS", "todo"),)}}
+    main_root = str(root / "cache" / "refs" / "tidepool" / MAIN_HEAD)
+    answers = {
+        ("git", "rev-parse", "--verify"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
+        ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{main}^{{commit}}"): ProcessAnswer(
+            stdout=f"{MAIN_HEAD}\n"
+        ),
+        ("git", "fetch", "--quiet", "origin", "main"): ProcessAnswer(),
+        IMPLEMENTED_TASKS_QUERY: ProcessAnswer(stdout=NO_TASK_IMPLEMENTED),
+        ("awawa", "show", "@TASK.T7", "--json", main_root): task_on_main,
+    }
+    runner = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
+    return create_test_runtime(
+        create_test_paths(root), run_process=runner.run, resolve_plugin=lambda kind, name: GITHUB_FORGE
+    )
 
 
 class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
@@ -130,6 +169,25 @@ class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "wave": "tidepool_w16", "task": "T7", "state": "queued"})
+
+
+class WaveRequeueOfAParkedTaskTheMainBranchDoesNotHoldTest(unittest.TestCase):
+    def test_should_record_the_parked_task_queued(self):
+        # Arrange
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        runtime = create_main_tree_runtime(root, T7_ABSENT_FROM_MAIN)
+        write_ledger(root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+
+        # Act
+        COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(runtime.paths.state_root).entries[-1].event,
+            TaskState(wave="tidepool_w16", task="T7", state="queued"),
+        )
 
 
 class WaveRequeueRefusalTest(unittest.TestCase):
@@ -191,3 +249,38 @@ class WaveRequeueRefusalTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w99")
+
+    def test_should_refuse_a_parked_task_ruled_on_main_naming_the_two_branches_and_the_cancellation(self):
+        for case, project, main, expected_refusal in [
+            (
+                "a project without a forge",
+                TIDEPOOL_WITHOUT_FORGE,
+                "main",
+                (
+                    "the task T7 of the wave tidepool_w16 differs between main and integration/tidepool_w16:"
+                    " the ruling on main reaches it through brigade wave cancel tidepool_w16 and a new wave cut from main"
+                ),
+            ),
+            (
+                "a project on GitHub",
+                TIDEPOOL_ON_GITHUB,
+                "origin/main",
+                (
+                    "the task T7 of the wave tidepool_w16 differs between origin/main and integration/tidepool_w16:"
+                    " the ruling on main reaches it through brigade wave cancel tidepool_w16"
+                    " and a new wave cut from origin/main"
+                ),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                runtime = create_main_tree_runtime(root, T7_RULED_ON_MAIN, project, main)
+                write_ledger(root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+
+                # Assert
+                self.assertEqual(str(raised.exception), expected_refusal)
