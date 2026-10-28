@@ -375,6 +375,7 @@ def answer_post(target: str, runtime) -> DashboardResponse:
 
 class AnswerDashboardRequestOfAnActionTest(unittest.TestCase):
     def test_should_serve_the_json_of_the_command_the_action_runs(self):
+        # Arrange
         rows = [
             ("/api/inbox/ratify/FlakyTests", ("inbox", "ratify", "--json", "FlakyTests")),
             ("/api/inbox/ratify/FlakyTests?kind=guard", ("inbox", "ratify", "--kind=guard", "--json", "FlakyTests")),
@@ -733,5 +734,5 @@ class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest
         # Assert
         self.assertEqual(
             response,
-            DashboardResponse(status=404, content_type=JSON, body=b'{"error": "no route changes state at /"}'),
+            DashboardResponse(status=404, content_type=JSON, body=b'{"error": "no route serves the method DELETE"}'),
         )
