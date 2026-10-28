@@ -9,8 +9,7 @@ REF_PARAMETER = "ref"
 @dataclass(frozen=True)
 class Listing:
     arguments: tuple[str, ...]
-    collection: str
-    field: str
+    names: tuple[tuple[str, str], ...]
 
 
 @dataclass(frozen=True)
@@ -20,8 +19,8 @@ class CommandRoute:
     listing: Listing | None = None
 
 
-WAVE_LISTING = Listing(arguments=("wave", "list", "--json"), collection="waves", field="wave")
-PROJECT_LISTING = Listing(arguments=("project", "list", "--json"), collection="projects", field="name")
+WAVE_LISTING = Listing(arguments=("wave", "list", "--json"), names=(("waves", "wave"),))
+PROJECT_LISTING = Listing(arguments=("project", "list", "--json"), names=(("projects", "name"),))
 ROUTES_WITHOUT_IDENTIFIER = {
     "waves": CommandRoute(arguments=WAVE_LISTING.arguments),
     "inbox": CommandRoute(arguments=("inbox", "list", "--json")),

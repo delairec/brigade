@@ -335,10 +335,11 @@ file and its number.
 
 `note` records a signal of kind `note`, fingerprint `note:` and the first 12 hexadecimal characters of the sha256 of
 the project, a newline and the text, the project empty when none is given; a project that is not registered exits 1.
-`inbox list` prints the new signals, `--all` adding the dismissed ones; `inbox dismiss` leaves a dismissed signal as
-it is. A study whose output is `inbox` records its answer as a signal of kind `study`, fingerprint
-`study:<study>:` and the first 12 hexadecimal characters of the sha256 of the Markdown rendered from the answer,
-evidence the study, the run and that Markdown.
+`inbox list` prints the new signals, `--all` adding the dismissed ones, then the proposed patterns, each with its
+action and the signals it cites; with `--json`, its document also groups the listed signals into the families of the
+triage, by rule cited, file and check name. `inbox dismiss` leaves a dismissed signal as it is. A study whose output
+is `inbox` records its answer as a signal of kind `study`, fingerprint `study:<study>:` and the first 12 hexadecimal
+characters of the sha256 of the Markdown rendered from the answer, evidence the study, the run and that Markdown.
 
 ## Tick and scheduler
 
@@ -781,10 +782,17 @@ already taken exits 1. The page polls the view it shows every five seconds while
 | `/api/ledger`                         | `brigade ledger`                   |
 | `/api/corpus/<project>?ref=<ref>`     | `brigade corpus <project> --ref <ref>` |
 
-`/views/<route>` serves the HTML fragment of the document `/api/<route>` serves. A command that exits non-zero answers
-404 for a wave or a project its listing command does not list, 500 otherwise, with its standard error in the body. A
-request whose Host is not `127.0.0.1:<port>` answers 400; a POST without the token of the page in `X-Brigade-Token` and
-the Origin `http://127.0.0.1:<port>` answers 403. Every response carries `Content-Security-Policy: default-src 'self'`.
+| POST route                            | Command run, with `--json`         |
+|---------------------------------------|------------------------------------|
+| `/api/inbox/ratify/<pattern>?kind=<kind>` | `brigade inbox ratify <pattern> --kind=<kind>`, the kind optional |
+| `/api/inbox/dismiss/<id>`             | `brigade inbox dismiss <id>`       |
+
+`/views/<route>` serves the HTML fragment of the document `/api/<route>` serves; the Inbox view shows the new
+signals by family and the proposed patterns, with their ratify and dismiss buttons. A command that exits non-zero
+answers 404 for a wave, a project, a pattern or a signal its listing command does not list, 500 otherwise, with its
+standard error in the body. A request whose Host is not `127.0.0.1:<port>` answers 400; a POST without the token of
+the page in `X-Brigade-Token` and the Origin `http://127.0.0.1:<port>` answers 403. Every response carries
+`Content-Security-Policy: default-src 'self'`.
 
 ## Develop
 
