@@ -12,6 +12,7 @@ from brigade.ledger.summarize_measure import summarize_measure
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.waves.count_repair_rounds import count_repair_rounds
 
 FIRST_HAND_OVER_SEGMENT = 2
 MILLISECONDS_PER_SECOND = 1000
@@ -67,6 +68,29 @@ def _list_hand_overs(events: list) -> list[dict]:
     ]
 
 
+def _list_runs(events: list) -> tuple[dict, ...]:
+    return tuple(
+        {"slot": event.slot, "wave": event.wave, "task": event.task, "run": event.run}
+        for event in events
+        if isinstance(event, RunFinished)
+    )
+
+
+def _sum_steps_by_task(events: list) -> dict:
+    steps = {}
+    for event in events:
+        if isinstance(event, RunFinished) and event.task is not None and event.main_steps is not None:
+            steps[event.task] = steps.get(event.task, 0) + event.main_steps
+    return steps
+
+
+def _date_entries(entries: list[LedgerEntry]) -> list[dict]:
+    return [
+        {"at": format_instant(entry.instant), "event": entry.event.name, "fields": entry.event.to_document()}
+        for entry in sorted(entries, key=lambda entry: entry.instant)
+    ]
+
+
 def describe_wave(reading: LedgerReading, wave: str) -> dict:
     entries = [entry for entry in reading.entries if getattr(entry.event, "wave", None) == wave]
     if not entries:
@@ -89,4 +113,7 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
         "hand_overs": _list_hand_overs(events),
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
+        "rounds_by_task": count_repair_rounds(tuple(entries), _list_runs(events), wave),
+        "steps_by_task": _sum_steps_by_task(events),
+        "timeline": _date_entries(entries),
     }

@@ -15,7 +15,6 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
-from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -28,22 +27,23 @@ from brigade.registry.read_projects import read_projects
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
-from brigade.studies.convert_study import Study
-from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
+from brigade.studies.read_last_study_orders import read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_studies import read_studies
-from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.reset_hour import ResetHour
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.tick.decide_resume_at import decide_resume_at
+from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
+from brigade.tick.study_facts import StudyFacts
 from brigade.waves.admit_candidates import admit_candidates
+from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.cut_wave_branch import WaveBranchCut
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
@@ -66,7 +66,6 @@ TASK_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
 MILESTONE_PREFIX = "@MILESTONE."
 PROJECT_SLOTS = 4
-PARKED_OUTCOME = "parked"
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
@@ -74,7 +73,6 @@ RUNNING_STATE = "running"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
 RATE_LIMIT = "rate_limit"
 REVIEW_SLOT = "review"
-REBASE_SLOT = "rebase"
 BLOCKED_OUTCOME = "blocked"
 FORGE_ACCOUNT_REASON = "forge_account"
 PROJECT_STATUS_FIELD = "STATUS"
@@ -88,7 +86,6 @@ AUTO_MERGE_FIELD = "AUTO_MERGE"
 MERGE_INTO_INTEGRATION = "integration"
 VERIFY_ROUNDS_BY_DEFAULT = 2
 VERIFY_ROUNDS_FIELD = "VERIFY_ROUNDS"
-FIXING_STATE = "fixing"
 FAILED_PREFLIGHT_CHECK = "fail"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
@@ -241,26 +238,6 @@ class ProjectFacts:
 
 
 @dataclass(frozen=True)
-class StudyFacts:
-    name: str
-    slot: str
-    every: str | None
-    status: str
-    last_started: datetime | None
-    parked: bool
-
-    def to_document(self) -> dict:
-        return {
-            "study": self.name,
-            "slot": self.slot,
-            "every": self.every,
-            "status": self.status,
-            "last_started": None if self.last_started is None else format_instant(self.last_started),
-            "parked": self.parked,
-        }
-
-
-@dataclass(frozen=True)
 class Snapshot:
     now: datetime
     waves: tuple[WaveFacts, ...] = ()
@@ -351,31 +328,6 @@ class WaveReading:
     projects: tuple[Entity, ...]
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
     read_environment: Callable[[str], dict]
-
-
-def _is_rebase_launch(entry: LedgerEntry, runs: tuple[dict, ...]) -> bool:
-    launched = f"{entry.instant.astimezone(UTC).strftime(COMPACT_INSTANT_FORMAT)}-"
-    return any(
-        run["slot"] == REBASE_SLOT
-        and run["wave"] == entry.event.wave
-        and run["task"] == entry.event.task
-        and run["run"].startswith(launched)
-        for run in runs
-    )
-
-
-def _count_repair_rounds(reading: WaveReading, wave: str) -> dict:
-    rounds = {}
-    for entry in reading.entries:
-        event = entry.event
-        if (
-            isinstance(event, TaskState)
-            and event.wave == wave
-            and event.state == FIXING_STATE
-            and not _is_rebase_launch(entry, reading.runs)
-        ):
-            rounds[event.task] = rounds.get(event.task, 0) + 1
-    return rounds
 
 
 def _read_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts | None:
@@ -515,7 +467,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
             for event in reading.events
             if isinstance(event, TaskPreflighted) and event.wave == wave
         },
-        repair_rounds=_count_repair_rounds(reading, wave),
+        repair_rounds=count_repair_rounds(reading.entries, reading.runs, wave),
         read_pull_request=reading.read_pull_request,
         run_process=runtime.run_process,
     )
@@ -606,17 +558,6 @@ def _read_readable_project_facts(
         return None
 
 
-def _describe_study(study: Study, last_order: LastStudyOrder | None) -> StudyFacts:
-    return StudyFacts(
-        name=study.name,
-        slot=study.slot,
-        every=study.every,
-        status=study.status,
-        last_started=None if last_order is None else last_order.started,
-        parked=last_order is not None and last_order.outcome == PARKED_OUTCOME,
-    )
-
-
 def _assemble_reading(
     runtime: Runtime,
     configuration: Configuration,
@@ -672,7 +613,7 @@ def build_snapshot(
         now=runtime.now.astimezone(),
         waves=_read_open_waves(runtime, reading),
         projects=_read_registered_projects(runtime, reading),
-        studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
+        studies=tuple(describe_study_facts(study, last_orders.get(study.name)) for study in read_studies(runtime)),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         rate_limits=_read_rate_limits(reading, runtime.now),

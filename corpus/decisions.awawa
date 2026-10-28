@@ -4290,3 +4290,50 @@ DECISION TheCorpusViewLinksAwawaWebAtItsDefaultAddress
 	RATIONALE "awawa-web --help: it listens on 127.0.0.1, at the port of --port, 7878 by default"
 	SOURCE "the build run of @TASK.B30 of 2026-10-28"
 		REF @TASK.B30
+
+DECISION HomeListsAStudyWhoseLastOrderParkedAsFailedAndADueStudyByTheRuleOfTheTick
+	TITLE "brigade status lists a study as failed and parked when its last order parked, and as due"
+		+ "by the rule the tick plans studies with"
+	STATUS active
+	REJECTED "a failed outcome of its own: a study run that fails a step parks its order, and"
+		+ "brigade study list reports no other failure"
+	RATIONALE "@TASK.B28 asks for the studies that are due, whose last outcome failed or that are"
+		+ "parked; the outcomes of a study order are started, done and parked, so one test serves"
+		+ "both, and is_study_due is shared with the tick so that Home never disagrees with the"
+		+ "plan"
+		REF @TASK.B28
+	SOURCE "the build run of @TASK.B28 of 2026-10-28"
+		REF @TASK.B28
+
+DECISION TheLedgerOfAWaveCountsTheRoundsOfATaskAsTheTickDoes
+	TITLE "brigade ledger --wave counts the rounds of a task as the tick does: its fixing states"
+		+ "less those a rebase run launched, the rebase runs read from the run.finished events of"
+		+ "the wave"
+	STATUS active
+	REJECTED "the rounds of the pr.merged event alone: a task not merged yet would show none"
+	REJECTED "the fixing states alone: a rebase launch would count as a round"
+	RATIONALE "a rebase run counts no round, as"
+		+ "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone"
+		+ "sets; the Wave view of @TASK.B28 reads the rounds from the ledger of the wave; a rebase"
+		+ "run still live has no run.finished yet, so its launch counts until it finishes"
+		REF @TASK.B28
+		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
+	SOURCE "the build run of @TASK.B28 of 2026-10-28"
+		REF @TASK.B28
+
+DECISION TheWaveViewRunsItsShowAndItsLedgerAsOneViewUnderTheStatusOfItsShow
+	TITLE "the Wave view is a view of route_view with two commands, brigade wave show and brigade"
+		+ "ledger --wave, run together; it answers the status of brigade wave show, and renders the"
+		+ "error of the ledger when the show succeeded and the ledger failed"
+	STATUS active
+	REJECTED "the ledger run only once the show succeeded, under the status of the ledger: a second"
+		+ "path beside the view registry every other view of several commands goes through"
+	RATIONALE "@TASK.B31 merged the view registry, whose status is that of the first command and"
+		+ "whose page swaps any fragment it receives; the Wave view of @TASK.B28 joins it rather"
+		+ "than keep a dispatch of its own"
+		REF @TASK.B31
+		REF @TASK.B28
+	SOURCE "the build run of @TASK.B28 of 2026-10-28, on the rebase of pull request #241 onto the"
+		+ "merge of @TASK.B31"
+		REF @TASK.B28
+		REF @TASK.B31
