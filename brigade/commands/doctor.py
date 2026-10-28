@@ -20,6 +20,7 @@ from brigade.system.choose_scheduler import choose_scheduler
 from brigade.system.client_question import ClientQuestion
 from brigade.system.describe_linger_warning import describe_linger_warning
 from brigade.system.describe_slot_clients import describe_slot_clients
+from brigade.system.find_awawa_web import find_awawa_web
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
 from brigade.system.parse_configuration import CLI_KEY, Configuration, ConfigurationMissing
 from brigade.system.probe_answer import ProbeAnswer
@@ -263,11 +264,7 @@ def _check_review_logins(reading: Configuration | BrigadeError, runtime: Runtime
 
 
 def _check_awawa_web(runtime: Runtime) -> dict:
-    try:
-        runtime.run_process(
-            ProcessRequest(argv=("awawa-web", "--help"), cwd=PROBE_DIRECTORY, timeout_s=PROBE_TIMEOUT_S)
-        )
-    except ToolNotFound:
+    if not find_awawa_web(runtime.run_process):
         return _create_optional("awawa-web", "warning", "not on PATH", AWAWA_WEB_FALLBACK)
     return _create_optional("awawa-web", "ok", "on PATH", AWAWA_WEB_FALLBACK)
 

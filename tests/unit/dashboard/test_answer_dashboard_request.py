@@ -110,6 +110,11 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
             ("/api/ledger", ("ledger", "--json")),
             ("/api/corpus/oak?ref=main", ("corpus", "--ref=main", "--json", "oak")),
             ("/api/corpus/oak", ("corpus", "--json", "oak")),
+            (
+                "/api/corpus/oak?ref=main&type=TASK&field=STATUS&entity=@TASK.B30",
+                ("corpus", "--ref=main", "--type=TASK", "--field=STATUS", "--entity=@TASK.B30", "--json", "oak"),
+            ),
+            ("/api/corpus", ("project", "list", "--json")),
             ("/api/reports", ("reports", "list", "--json")),
             ("/api/reports/oak_w3", ("reports", "show", "--json", "oak_w3")),
         ]
@@ -553,3 +558,70 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(response.status, 200)
                 self.assertEqual(runner.argvs, commands)
+
+
+class AnswerDashboardRequestOfTheCorpusViewTest(unittest.TestCase):
+    def test_should_render_the_board_of_the_corpus_at_the_ref(self):
+        # Arrange
+        board_of_oak = json.dumps(
+            {
+                "project": "oak",
+                "ref": "main",
+                "sha": "de446f3",
+                "type": "TASK",
+                "types": ["TASK"],
+                "entities": [],
+                "awawa_web": None,
+                "field": "STATUS",
+                "board": [{"value": "todo", "targets": ["@TASK.B30"]}],
+            }
+        )
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "corpus", "--ref=main", "--type=TASK", "--field=STATUS", "--json", "oak"): (
+                    ProcessAnswer(stdout=board_of_oak)
+                )
+            }
+        )
+
+        # Act
+        response = answer_get(
+            "/views/corpus/oak?ref=main&type=TASK&field=STATUS", create_test_runtime(run_process=runner.run)
+        )
+
+        # Assert
+        self.assertIn(
+            b'<section class="board"><h2>STATUS</h2><div><h3>todo</h3><ul><li>@TASK.B30</li></ul></div></section>',
+            response.body,
+        )
+
+    def test_should_offer_the_registered_projects_to_choose_from(self):
+        # Arrange
+        projects = '{"schema_version": 1, "projects": [{"name": "oak", "path": "/srv/oak", "status": "active"}]}'
+        runner = ScriptedProcessRunner({PROJECT_LIST: ProcessAnswer(stdout=projects)})
+
+        # Act
+        response = answer_get("/views/corpus", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertIn(b'<select name="project"><option value="oak">oak</option></select>', response.body)
+
+    def test_should_render_the_error_of_a_project_not_registered(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "corpus"): ProcessAnswer(
+                    exit_code=1, stderr="brigade corpus: @PROJECT.elm is not registered\n"
+                ),
+                PROJECT_LIST: ProcessAnswer(stdout=NO_PROJECT),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/corpus/elm?ref=main&type=TASK", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 404)
+        self.assertEqual(
+            response.body, b"<dl><dt>error</dt><dd>brigade corpus: @PROJECT.elm is not registered\n</dd></dl>"
+        )

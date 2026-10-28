@@ -51,3 +51,27 @@ dt {
 dd {
   margin: 0 0 0.5rem;
 }
+
+form.corpus-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+section.board {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+}
+
+section.board div {
+  min-width: 12rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+}
+
+section.tree ul,
+section.dependencies ul {
+  padding-left: 1rem;
+}
