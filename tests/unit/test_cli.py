@@ -105,7 +105,7 @@ class MainGroupHelpTest(MainTestCase):
             ("roles", "list", "list the role, the source and the model of each slot"),
             ("roles", "show", "print the role file a slot resolves to"),
             ("runs", "list", "list every run with its state and outcome"),
-            ("runs", "show", "print the summary of a run and its segments, and with --log its journal"),
+            ("runs", "show", "print the summary of a run, its segments and its progress, and with --log its journal"),
             ("scheduler", "install", "install the scheduler config.toml names, or the default"),
             (
                 "scheduler",

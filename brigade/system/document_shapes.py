@@ -8,4 +8,9 @@ DOCUMENT_ANSWER_SHAPES = {
     "describe_document": {"schema_version": SCHEMA_VERSION, "text": TEXT},
     "read_document": {"schema_version": SCHEMA_VERSION, "text": TEXT},
     "detect_entry": {"schema_version": SCHEMA_VERSION, "holds_entry": Field(kinds=(bool,))},
+    "render_document": {
+        "schema_version": SCHEMA_VERSION,
+        "text": TEXT,
+        "entities": Field(kinds=(list,), nullable=True, items=Field(kinds=(dict,))),
+    },
 }
