@@ -445,6 +445,7 @@ with their wave and their reason; it resumes no wave. It exits 1 when the last t
 brigade corpus <project> --ref <branch|sha> [--json] [-- <awawa args>]
 brigade corpus <project> --ref worktree:<branch> [--json] [-- <awawa args>]
 brigade corpus <project> --worktree <path> [--json] [-- <awawa args>]
+brigade corpus <project> --ref <ref> --type <TYPE> [--field <FIELD>] [--entity @TYPE.Name] [--json]
 ```
 
 `--ref <branch|sha>` resolves the ref to a commit of the project's repository and extracts `git archive` of that
@@ -456,6 +457,13 @@ document; an unknown project, a ref that resolves to no commit, and a branch or 
 
 Given `-- <awawa args>`, it runs awawa with those arguments at the root of the tree instead, and passes its stdout,
 its stderr and its exit code through unchanged, after one stderr line naming the SHA it read.
+
+Given `--type <TYPE>`, the document also lists the entities of that type with their status, their file and their line,
+the types of the corpus, and `awawa_web`, `http://127.0.0.1:7878/` when `brigade doctor` finds awawa-web on the PATH,
+null otherwise; each entity carries `ide_link`, the key `ide_link` of `config.toml` with `{path}` and `{line}` replaced,
+null when the key is empty. `--field <FIELD>` adds the board: the entities grouped by the values of that field, those
+without it in a column of their own. `--entity @TYPE.Name` adds what that entity reaches and what references it.
+`--field` or `--entity` without `--type` exits 1.
 
 The cache holds at most `refs_cache_mb` of `config.toml`, 1024 by default: each read marks its SHA used, and after
 each extraction the least recently read SHAs are removed until the cache is under that bound. The reuse of a cached
@@ -768,7 +776,8 @@ already taken exits 1. The page polls the view it shows every five seconds while
 | `/api/waves/<id>`                     | `brigade wave show <id>`           |
 | `/api/inbox`                          | `brigade inbox list`               |
 | `/api/ledger`                         | `brigade ledger`                   |
-| `/api/corpus/<project>?ref=<ref>`     | `brigade corpus <project> --ref <ref>` |
+| `/api/corpus`                         | `brigade project list`             |
+| `/api/corpus/<project>?ref=<ref>`     | `brigade corpus <project> --ref <ref>`, and `--type`, `--field`, `--entity` of the parameters `type`, `field`, `entity` |
 
 | POST route                            | Command run, with `--json`         |
 |---------------------------------------|------------------------------------|
@@ -776,7 +785,9 @@ already taken exits 1. The page polls the view it shows every five seconds while
 | `/api/inbox/dismiss/<id>`             | `brigade inbox dismiss <id>`       |
 
 `/views/<route>` serves the HTML fragment of the document `/api/<route>` serves; the Inbox view shows the new
-signals by family and the proposed patterns, with their ratify and dismiss buttons. A command that exits non-zero
+signals by family and the proposed patterns, with their ratify and dismiss buttons. The Corpus view chooses a registered
+project, a ref, a type and a board field, then shows the tree of the type, the board and the dependencies of the entity
+clicked, read-only: its one form only changes the view shown; awawa-web stays the editor. A command that exits non-zero
 answers 404 for a wave, a project, a pattern or a signal its listing command does not list, 500 otherwise, with its
 standard error in the body. A request whose Host is not `127.0.0.1:<port>` answers 400; a POST without the token of
 the page in `X-Brigade-Token` and the Origin `http://127.0.0.1:<port>` answers 403. Every response carries

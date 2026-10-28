@@ -82,6 +82,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
                 scheduler="cron",
                 instructions="/home/ada/.ai",
                 document="markdown",
+                ide_link="idea://open?file={path}&line={line}",
                 refs_cache_mb=2048,
                 reasoning={"deep": ReasoningRow(model="opus", effort="max")},
                 clients={"fake": {"recordings": "/srv/recordings"}},
@@ -455,3 +456,15 @@ class ReadConfigurationOfTheDashboardPortTest(ReadConfigurationTestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), f"{message} {self.path}")
+
+
+class ReadConfigurationOfTheIdeLinkTest(ReadConfigurationTestCase):
+    def test_should_answer_no_link_when_the_key_is_absent(self):
+        # Arrange
+        self.path.write_text("")
+
+        # Act
+        configuration = parse_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.ide_link, "")
