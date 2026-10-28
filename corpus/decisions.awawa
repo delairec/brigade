@@ -4147,3 +4147,24 @@ DECISION ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
 	SOURCE "the user's ruling of 2026-10-27 in the refinement of @TASK.B27, \"Côté serveur, en"
 		+ "Python\""
 		REF @TASK.B27
+
+DECISION ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
+	TITLE "on a project of FORGE github, a task branch is cut from, rebased onto and checked"
+		+ "against origin/<integration> fetched at its launch; a project of FORGE none keeps its"
+		+ "local integration branch"
+	STATUS active
+	DESC "binds @TASK.B210"
+		REF @TASK.B210
+	REJECTED "the local integration branch, as prepare_task_worktree.py cuts and checks it before"
+		+ "B210: the tick merges task pull requests with gh pr merge on GitHub, so the local branch"
+		+ "lags behind the merges and a new task branch starts from a stale base"
+	REJECTED "the rebase alone on origin, the cut and the check kept local: two references for one"
+		+ "branch, the check failing whenever they differ"
+	RATIONALE "the integration branch moves on the forge, where the task pull requests merge and"
+		+ "where the wave report is pushed; one reference read after a fetch gives every launch the"
+		+ "same base, as @DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge"
+		+ "does for MAIN"
+		REF @DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
+	SOURCE "the user's rulings of 2026-10-28 in the refinement of @TASK.B210,"
+		+ "\"origin/<integration>\" then \"Tout sur origin (Recommandé)\""
+		REF @TASK.B210
