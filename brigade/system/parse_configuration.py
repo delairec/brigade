@@ -6,6 +6,7 @@ from brigade.errors import BrigadeError
 from brigade.system.name_toml_type import name_toml_type
 from brigade.system.read_dashboard_port import DASHBOARD_PORT_BY_DEFAULT, DASHBOARD_PORT_KEY, read_dashboard_port
 from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
+from brigade.system.read_quota_window import QUOTA_WINDOW_BY_DEFAULT_H, QUOTA_WINDOW_KEY, read_quota_window
 from brigade.system.read_runs_kept import RUNS_KEPT_BY_DEFAULT, RUNS_KEPT_KEY, read_runs_kept
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT, STUDY_RUNS_KEY, read_study_runs
 from brigade.system.read_tick_stale_after import (
@@ -73,6 +74,7 @@ class Configuration:
     attribution: tuple[str, ...] | None = None
     dashboard_port: int = DASHBOARD_PORT_BY_DEFAULT
     ide_link: str = ""
+    quota_window_hours: int = QUOTA_WINDOW_BY_DEFAULT_H
 
 
 @dataclass(frozen=True)
@@ -216,6 +218,7 @@ KNOWN_KEYS = (
     FORGE_ATTEMPTS_KEY,
     ATTRIBUTION_KEY,
     DASHBOARD_PORT_KEY,
+    QUOTA_WINDOW_KEY,
 )
 
 
@@ -250,4 +253,5 @@ def parse_configuration(path: Path) -> Configuration:
         forge_attempts=_read_forge_attempts(document, path),
         attribution=_read_attribution(document, path),
         dashboard_port=read_dashboard_port(document, path),
+        quota_window_hours=read_quota_window(document, path),
     )

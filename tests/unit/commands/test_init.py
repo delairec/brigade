@@ -100,6 +100,16 @@ class InitTest(unittest.TestCase):
         # Assert
         self.assertIn("\n# dashboard_port = 8470\n", content)
 
+    def test_should_document_the_quota_window_with_its_default(self):
+        # Arrange
+        init(self.no_option, self.runtime)
+
+        # Act
+        content = (self.config_root / "config.toml").read_text()
+
+        # Assert
+        self.assertIn("\n# quota_window_hours = 5\n", content)
+
     def test_should_create_neither_the_state_root_nor_the_cache_root(self):
         # Act
         init(self.no_option, self.runtime)

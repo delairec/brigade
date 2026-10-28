@@ -1,9 +1,7 @@
 import dataclasses
 from datetime import datetime
 
-from brigade.errors import BrigadeError
 from brigade.ledger.format_instant import format_instant
-from brigade.studies.read_schedule import read_schedule
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
@@ -27,8 +25,9 @@ from brigade.tick.actions import (
     RunPreflight,
     StartWave,
 )
-from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, TaskFacts, WaveFacts
 from brigade.tick.decide_resume_at import decide_resume_at
+from brigade.tick.is_study_due import is_study_due
 from brigade.waves.read_task_state import PARKED_STATE
 
 BUILD_SLOT = "build"
@@ -52,7 +51,6 @@ MERGED_PULL_REQUEST = "merged"
 CLOSED_PULL_REQUEST = "closed"
 SETTLED_PULL_REQUESTS = (MERGED_PULL_REQUEST, CLOSED_PULL_REQUEST)
 CLOSED_REASON = "pull request closed"
-ACTIVE_STATUS = "active"
 SCAN_SLOT = "none"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
 QUOTA_REASON = "quota"
@@ -515,23 +513,13 @@ def _is_startable(task: TaskFacts, wave: WaveFacts) -> bool:
     )
 
 
-def _is_study_due(study: StudyFacts, snapshot: Snapshot) -> bool:
-    if study.status != ACTIVE_STATUS or study.every is None or study.parked:
-        return False
-    try:
-        schedule = read_schedule(study.every)
-    except BrigadeError as refusal:
-        raise BrigadeError(f"@STUDY.{study.name}: {refusal}") from None
-    return study.last_started is None or schedule.has_passed_since(study.last_started, snapshot.now)
-
-
 def _plan_studies(snapshot: Snapshot) -> tuple:
     scans = {study.name for study in snapshot.studies if study.slot == SCAN_SLOT}
     live = {run.study for run in snapshot.live_study_runs}
     free_runs = snapshot.study_runs - sum(1 for run in snapshot.live_study_runs if run.study not in scans)
     launches = []
     for study in sorted(snapshot.studies, key=lambda study: study.name):
-        if study.name in live or not _is_study_due(study, snapshot):
+        if study.name in live or not is_study_due(study, snapshot.now):
             continue
         if study.slot != SCAN_SLOT:
             if free_runs <= 0:

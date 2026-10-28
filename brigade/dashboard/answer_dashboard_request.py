@@ -5,7 +5,9 @@ from string import Template
 from urllib.parse import urlsplit
 
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
+from brigade.dashboard.render_home import render_home
 from brigade.dashboard.render_inbox_view import render_inbox_view
+from brigade.dashboard.route_action import route_action
 from brigade.dashboard.route_change import route_change
 from brigade.dashboard.route_command import CommandRoute, route_command
 from brigade.dashboard.route_view import route_view
@@ -29,7 +31,7 @@ BAD_REQUEST = 400
 FORBIDDEN = 403
 NOT_FOUND = 404
 OK = 200
-VIEW_RENDERERS = {"inbox": render_inbox_view}
+VIEW_RENDERERS = {"inbox": render_inbox_view, "status": render_home}
 
 
 def _answer_error(status: int, message: str) -> DashboardResponse:
@@ -72,7 +74,10 @@ def _answer_command(target: str, runtime: Runtime) -> DashboardResponse:
 
 
 def _answer_change(target: str, runtime: Runtime) -> DashboardResponse:
-    route = route_change(target.removeprefix(API_PREFIX))
+    path = urlsplit(target).path
+    route = None
+    if path.startswith(API_PREFIX):
+        route = route_change(target.removeprefix(API_PREFIX)) or route_action(path.removeprefix(API_PREFIX))
     if route is None:
         return _answer_error(NOT_FOUND, f"no route changes state at {target}")
     return _answer_route(route, runtime)
