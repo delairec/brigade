@@ -2748,7 +2748,8 @@ TASK B28
 
 TASK B29
 	TITLE "Inbox view"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 238
 	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
