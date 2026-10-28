@@ -9,6 +9,7 @@ from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
 from brigade.system.locate_unit_directory import locate_unit_directory
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.scheduler_state import SchedulerState
+from brigade.tick.describe_heartbeat import describe_heartbeat
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.read_heartbeat import read_heartbeat
 from brigade.waves.read_task_state import PARKED_STATE, TASK_EVENTS, read_task_state
@@ -33,10 +34,6 @@ def _find_installed(runtime: Runtime):
         if status.installed:
             return name, status
     return NO_SCHEDULER, NOT_INSTALLED
-
-
-def _describe_heartbeat(heartbeat: Heartbeat) -> dict:
-    return {"ts": heartbeat.ts, "duration_ms": heartbeat.duration_ms, "actions_applied": heartbeat.actions_applied}
 
 
 def _is_stale(heartbeat: Heartbeat | None, status: SchedulerState, now: datetime, minutes: int) -> bool:
@@ -123,7 +120,7 @@ def scheduler_status(request: argparse.Namespace, runtime: Runtime) -> dict:
         "unit_files": list(status.unit_files),
         "cron_line": status.cron_line,
         "next_activation": status.next_activation,
-        "last_tick": None if heartbeat is None else _describe_heartbeat(heartbeat),
+        "last_tick": describe_heartbeat(heartbeat),
         "tick_stale_after": minutes,
         "stale": _is_stale(heartbeat, status, runtime.now, minutes),
         "paused_waves": _list_paused_waves(events, open_waves),
