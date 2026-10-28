@@ -44,6 +44,7 @@ class DescribeOverviewTest(unittest.TestCase):
                 "files": ["/state/ledger/2026-10.jsonl"],
                 "runs": {"outcomes": {"failed": 1}, "error_classes": {"ToolFailure": 1}},
                 "segments": {"outcomes": {"failed": 1, "wall_limit": 1}, "error_classes": {"ToolFailure": 1}},
+                "waves_started": {"2026-10": ["w1"]},
             },
         )
 
@@ -57,3 +58,30 @@ class DescribeOverviewTest(unittest.TestCase):
         # Assert
         self.assertEqual(overview["first"], None)
         self.assertEqual(overview["last"], None)
+
+    def test_should_group_the_waves_started_by_the_month_they_started_in(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(
+                    instant=datetime(2026, 10, 9, 9, 0, tzinfo=UTC),
+                    event=WaveStarted(wave="w3", project="tidepool", branch="main", tasks=("TP3",)),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 9, 30, 23, 0, tzinfo=UTC),
+                    event=WaveStarted(wave="w1", project="tidepool", branch="main", tasks=("TP1",)),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 10, 1, 0, 0, tzinfo=UTC),
+                    event=WaveStarted(wave="w2", project="tidepool", branch="main", tasks=("TP2",)),
+                ),
+            ),
+            files=("/state/ledger/2026-09.jsonl", "/state/ledger/2026-10.jsonl"),
+            skipped=(),
+        )
+
+        # Act
+        overview = describe_overview(reading)
+
+        # Assert
+        self.assertEqual(overview["waves_started"], {"2026-09": ["w1"], "2026-10": ["w2", "w3"]})

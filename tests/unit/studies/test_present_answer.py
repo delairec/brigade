@@ -30,12 +30,13 @@ RENDERING = {
 
 
 class DocumentDouble:
-    def __init__(self):
+    def __init__(self, rendering: dict = RENDERING):
+        self.rendering = rendering
         self.requests = []
 
     def render_document(self, request: dict, runtime) -> dict:
         self.requests.append(request)
-        return RENDERING
+        return self.rendering
 
 
 def create_context(document: DocumentDouble) -> StudyRunContext:
@@ -68,3 +69,20 @@ class PresentAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document.requests, [{"path": "/srv/runs/r1/answer.awawa"}])
+
+    def test_should_present_the_manual_tests_of_a_report_as_a_table(self):
+        # Arrange
+        report = {
+            "type": "REPORT",
+            "name": "oak_w3",
+            "fields": [{"name": "WAVE", "value": "oak_w3"}, {"name": "MANUAL_TEST", "value": "OK1: the page"}],
+        }
+
+        # Act
+        publication = present_answer(create_context(DocumentDouble({"entities": [report]})))
+
+        # Assert
+        self.assertEqual(
+            publication.markdown,
+            "# REPORT oak_w3\n\n- WAVE: oak_w3\n\n## Manual tests\n\n| # | test |\n| --- | --- |\n| 1 | OK1: the page |\n",
+        )

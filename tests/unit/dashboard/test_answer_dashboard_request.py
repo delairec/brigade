@@ -110,6 +110,8 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
             ("/api/ledger", ("ledger", "--json")),
             ("/api/corpus/oak?ref=main", ("corpus", "--ref=main", "--json", "oak")),
             ("/api/corpus/oak", ("corpus", "--json", "oak")),
+            ("/api/reports", ("reports", "list", "--json")),
+            ("/api/reports/oak_w3", ("reports", "show", "--json", "oak_w3")),
         ]
         for target, arguments in rows:
             with self.subTest(target=target):
@@ -445,3 +447,100 @@ class AnswerDashboardRequestOfAnInboxActionTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(response.status, 404)
+
+
+class AnswerDashboardRequestOfAReportNoListingNamesTest(unittest.TestCase):
+    def test_should_answer_not_found(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "reports", "show"): ProcessAnswer(exit_code=1, stderr="no report oak_w9\n"),
+                (PYTHON, ENTRY_POINT, "reports", "list"): ProcessAnswer(stdout='{"schema_version": 1, "reports": []}'),
+            }
+        )
+
+        # Act
+        response = answer_get("/api/reports/oak_w9", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 404)
+
+
+class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
+    def test_should_render_the_list_of_the_reports(self):
+        # Arrange
+        listed = '{"schema_version": 1, "reports": []}'
+        runner = ScriptedProcessRunner(
+            {(PYTHON, ENTRY_POINT, "reports", "list", "--json"): ProcessAnswer(stdout=listed)}
+        )
+
+        # Act
+        response = answer_get("/views/reports", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response, DashboardResponse(status=200, content_type="text/html; charset=utf-8", body=b"<p>no report</p>")
+        )
+
+    def test_should_render_the_report_asked(self):
+        # Arrange
+        shown = (
+            '{"schema_version": 1, "report": {"id": "oak_w3", "kind": "wave-report", "project": "oak",'
+            ' "type": "REPORT", "fields": [{"name": "WAVE", "value": "oak_w3"}]}}'
+        )
+        runner = ScriptedProcessRunner(
+            {(PYTHON, ENTRY_POINT, "reports", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown)}
+        )
+
+        # Act
+        response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response,
+            DashboardResponse(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body=b"<h2>wave-report oak_w3</h2><dl><dt>WAVE</dt><dd>oak_w3</dd></dl>",
+            ),
+        )
+
+
+class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
+    def test_should_run_the_commands_of_the_sections_the_query_asks_for(self):
+        # Arrange
+        overview = ProcessAnswer(stdout='{"schema_version": 1, "view": "overview", "waves_started": {}}')
+        budgets = ProcessAnswer(stdout='{"schema_version": 1, "last": 20, "procedures": {}}')
+        refused = ProcessAnswer(exit_code=1, stderr="refused\n")
+        rows = [
+            (
+                "/views/ledger",
+                [(PYTHON, ENTRY_POINT, "ledger", "--json"), (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json")],
+            ),
+            (
+                "/views/ledger?wave=w4&before=2026-10-01",
+                [
+                    (PYTHON, ENTRY_POINT, "ledger", "--json"),
+                    (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
+                    (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
+                    (PYTHON, ENTRY_POINT, "ledger", "compare", "--before=2026-10-01", "--json"),
+                ],
+            ),
+        ]
+        for target, commands in rows:
+            with self.subTest(target=target):
+                runner = ScriptedProcessRunner(
+                    {
+                        (PYTHON, ENTRY_POINT, "ledger", "--json"): overview,
+                        (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"): budgets,
+                        (PYTHON, ENTRY_POINT, "ledger", "--wave=w4"): refused,
+                        (PYTHON, ENTRY_POINT, "ledger", "compare"): refused,
+                    }
+                )
+
+                # Act
+                response = answer_get(target, create_test_runtime(run_process=runner.run))
+
+                # Assert
+                self.assertEqual(response.status, 200)
+                self.assertEqual(runner.argvs, commands)

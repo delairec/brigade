@@ -43,6 +43,7 @@ class LedgerTest(unittest.TestCase):
                 "files": [str(self.ledger_directory / "2026-10.jsonl")],
                 "runs": {"outcomes": {}, "error_classes": {}},
                 "segments": {"outcomes": {}, "error_classes": {}},
+                "waves_started": {},
                 "skipped": [{"file": str(self.ledger_directory / "2026-10.jsonl"), "line": 1, "reason": "not JSON"}],
             },
         )
@@ -100,6 +101,7 @@ class LedgerOfNoJournalTest(unittest.TestCase):
                 "skipped": [],
                 "runs": {"outcomes": {}, "error_classes": {}},
                 "segments": {"outcomes": {}, "error_classes": {}},
+                "waves_started": {},
             },
         )
 
