@@ -1,0 +1,23 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@STEP.s1",
+      "--json",
+      "<tmp:0>/progress.awawa"
+    ],
+    "cwd": "<tmp:0>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/progress.awawa": "STEP s1\n\tDONE \"read the task\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"STEP\", \"name\": \"s1\", \"file\": \"<tmp:0>/progress.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"DONE\", \"atoms\": [\"\\\"read the task\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

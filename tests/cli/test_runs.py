@@ -97,6 +97,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                 },
                 "segments": [{"segment": 1, "outcome": "done", "steps": 12, "duration_ms": ANY}],
                 "journal": None,
+                "progress": None,
             },
         )
 

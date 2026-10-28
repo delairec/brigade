@@ -563,7 +563,7 @@ brigade roles lint [--json]                  # the built-in and the machine role
 brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
             [--detach] [key=value ...]
 brigade runs list [--wave <wave>] [--task <task>] [--json]  # every run: id, procedure, slot, role, project, state, outcome
-brigade runs show <id> [--log] [--json]          # the summary of a run and its segments; --log adds its journal
+brigade runs show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
 brigade runs show <id> --follow                  # the same with --log, then each record as it is written
 brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
 brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
@@ -625,8 +625,12 @@ action of the client: `schema_version`, `at` (the UTC instant brigade read it), 
 200 characters with `cut` true. The adapter's `actions` operation turns the output into actions, `tool` (the tool and
 the path, command or pattern it acts on), `text` (its first line) and `result` (the outcome of the segment); a client whose
 probe declares no `actions` has one record of kind `raw` per line. A `journal_poll_s` that is no positive number keeps
-2 s, and `brigade doctor` names it. `runs show` prints the summary of a run and the outcome of each segment, and with
-`--log` one line per record: its time, segment, kind and summary. `--follow` prints the same, then each record once
+2 s, and `brigade doctor` names it. `runs show` prints the summary of a run and the outcome of each segment, then its
+progress, rendered by the document plugin of the file the run wrote, `progress.md` or `progress.awawa`, and with
+`--log` one line per record: its time, segment, kind and summary. With `--json` the document carries `progress`, its
+`text` and its `entities`, `null` for a Markdown progress; a progress absent or holding no entry is `null` and prints
+nothing, and a `progress.awawa` that `awawa lint --strict` refuses, a file caught in the middle of a write, is printed
+as its raw text with `entities` `null`. `--follow` prints the summary and the segments, then each record once
 its line is whole, read every `journal_poll_s` seconds, until the run is `finished` or `dead`; it then prints the
 state and the outcome of the run and exits with the code `brigade run` gives that outcome, 1 for a dead run. SIGINT
 or SIGTERM ends the follow alone, exit 0, the run going on; `--follow` with `--json` exits 2.
