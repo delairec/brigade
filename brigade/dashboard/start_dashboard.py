@@ -7,9 +7,11 @@ from brigade.dashboard.answer_dashboard_request import answer_dashboard_request
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, IncomingRequest
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
+from brigade.system.read_dashboard_port import LAST_PORT
 
 SECURITY_POLICY = "default-src 'self'"
 GUARD_HEADER = "X-Brigade-Token"
+ANY_FREE_PORT = 0
 
 
 class _DashboardServer(ThreadingHTTPServer):
@@ -48,6 +50,8 @@ class _DashboardHandler(BaseHTTPRequestHandler):
 
 
 def _listen(port: int) -> _DashboardServer:
+    if not ANY_FREE_PORT <= port <= LAST_PORT:
+        raise BrigadeError(f"cannot listen on port {port}: not a port from {ANY_FREE_PORT} to {LAST_PORT}")
     try:
         return _DashboardServer((LOOPBACK_HOST, port), _DashboardHandler)
     except OSError as error:
