@@ -85,7 +85,8 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
                 self.assertEqual(document, create_document(conflicts))
 
 
-ON_GITHUB = (("PATH", "/home/user/tidepool"), ("FORGE", "github"))
+WITHOUT_FORGE = (("PATH", "/srv/tidepool"),)
+ON_GITHUB = (("PATH", "/srv/tidepool"), ("FORGE", "github"))
 NO_PULL_REQUEST = None
 
 
@@ -98,9 +99,9 @@ class RebaseContextOfATaskWithoutAPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, project: tuple, base: str):
         answers = {
-            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/srv/tidepool-T7\n"),
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
-                stdout="/home/user/tidepool/.git\n"
+                stdout="/srv/tidepool/.git\n"
             ),
             ("git", "branch", "--show-current"): ProcessAnswer(stdout="task/M4-tides/T7\n"),
             ("git", "fetch", "--quiet", "origin", "integration/M4-tides"): ProcessAnswer(),
@@ -111,7 +112,7 @@ class RebaseContextOfATaskWithoutAPullRequestTest(unittest.TestCase):
 
     def test_should_read_the_task_from_the_branch_of_the_worktree_and_its_conflicts_with_the_wave_branch(self):
         for case, project, base in [
-            ("a project without a forge", TIDEPOOL_PROJECT, "integration/M4-tides"),
+            ("a project without a forge", WITHOUT_FORGE, "integration/M4-tides"),
             ("a project on GitHub", ON_GITHUB, "origin/integration/M4-tides"),
         ]:
             with self.subTest(case=case):
