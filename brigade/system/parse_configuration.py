@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.system.name_toml_type import name_toml_type
+from brigade.system.read_dashboard_port import DASHBOARD_PORT_BY_DEFAULT, DASHBOARD_PORT_KEY, read_dashboard_port
 from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
 from brigade.system.read_runs_kept import RUNS_KEPT_BY_DEFAULT, RUNS_KEPT_KEY, read_runs_kept
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT, STUDY_RUNS_KEY, read_study_runs
@@ -71,6 +72,7 @@ class Configuration:
     forge_attempts: int = FORGE_ATTEMPTS_BY_DEFAULT
     worktree_root: str | None = None
     attribution: tuple[str, ...] | None = None
+    dashboard_port: int = DASHBOARD_PORT_BY_DEFAULT
 
 
 @dataclass(frozen=True)
@@ -214,6 +216,7 @@ KNOWN_KEYS = (
     FORGE_ACCOUNTS_KEY,
     FORGE_ATTEMPTS_KEY,
     ATTRIBUTION_KEY,
+    DASHBOARD_PORT_KEY,
 )
 
 
@@ -250,4 +253,5 @@ def parse_configuration(path: Path) -> Configuration:
         forge_accounts=_read_forge_accounts(document.get(FORGE_ACCOUNTS_KEY, {}), path),
         forge_attempts=_read_forge_attempts(document, path),
         attribution=_read_attribution(document, path),
+        dashboard_port=read_dashboard_port(document, path),
     )
