@@ -67,23 +67,21 @@ class RenderCorpusViewOfTheTreeTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_show_the_selector_alone_before_a_type_is_chosen(self):
+    def test_should_show_the_selector_of_the_project_alone_before_a_type_is_chosen(self):
         # Act
         fragment = render_corpus_view(TREE_OF_OAK)
 
         # Assert
         self.assertEqual(
             fragment,
-            '<form class="corpus-selector" method="get">'
-            '<label>project <select name="project"><option value="oak">oak</option></select></label>'
+            '<form class="corpus-selector" data-view="corpus/oak" method="get">'
             '<label>ref <input name="ref" value="main"></label>'
             '<label>type <input name="type" list="corpus-types" value=""></label>'
             '<datalist id="corpus-types"></datalist>'
             '<label>board field <input name="field" value=""></label>'
             "<button>read</button></form>"
-            "<p>de446f3</p>",
+            "<p>oak de446f3</p>",
         )
-
 
     def test_should_offer_the_types_of_the_corpus_in_the_selector(self):
         # Act
@@ -94,6 +92,7 @@ class RenderCorpusViewOfTheTreeTest(unittest.TestCase):
             '<datalist id="corpus-types"><option value="MILESTONE"></option><option value="TASK"></option></datalist>',
             fragment,
         )
+
 
 class RenderCorpusViewOfTheBoardTest(unittest.TestCase):
     def test_should_show_every_task_under_its_status(self):
