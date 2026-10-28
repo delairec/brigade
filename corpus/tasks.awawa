@@ -2829,7 +2829,8 @@ TASK B30
 
 TASK B31
 	TITLE "Ledger and Reports views"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 242
 	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
