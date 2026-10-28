@@ -3891,6 +3891,11 @@ TASK B51
 		+ "that changed a field the CLI filled, and stores it through the document kind of"
 		+ "@TASK.B106; a judge step is a run with its procedure's budget"
 		REF @TASK.B106
+	SPEC "brigade reports list prints the outputs of an order with their id, their kind and their"
+		+ "project, and brigade reports show <id> prints one, text and --json: the order outputs"
+		+ "the second SPEC of @TASK.B31 names, which no code wrote when it was delivered"
+		REF @TASK.B31
+		REF @DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
 	SPEC "a failed gate or command parks the order with the step's reason unless the recipe says"
 		+ "skip, stop or retry:N; a parked order shows on Home and in the inbox and resumes through"
 		+ "brigade order resume once the user acted; nothing is assumed"
