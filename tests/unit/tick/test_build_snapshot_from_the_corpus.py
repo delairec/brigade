@@ -1373,7 +1373,27 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_set_aside_the_preflight_and_the_verdict_recorded_before_the_last_requeue_of_the_task(self):
+        # Arrange
+        self.record(25, dataclasses.replace(create_preflight("B1"), checks=(FAILING_BODY,)))
+        self.record(20, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
 
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[0],
+            TaskFacts(
+                name="B1",
+                after=("B0",),
+                pull_request=PULL_REQUEST,
+                worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+            ),
+        )
+
+
+REQUEUE_REASON = "brigade wave requeue"
 FAILING_CHECKS = {"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}
 FAILING_BODY = {"name": "body", "verdict": "fail", "findings": ["the body names no task"]}
 PASSING_PRIVACY = {"name": "privacy", "verdict": "pass", "findings": []}
@@ -1443,6 +1463,40 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, expected_rounds)
+
+    def test_should_count_no_round_recorded_before_the_last_verdict_or_the_last_requeue_of_the_task(self):
+        for case, recorded_after_the_rounds, expected_rounds in [
+            ("a verdict on the task", create_verdict("B1", "4f2a9c1", "changes"), 0),
+            ("a requeue of the task", TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON), 0),
+            ("a state the tick records", TaskState(wave="w1", task="B1", state="pr_open"), 2),
+            ("a verdict on another task", create_verdict("B2", "4f2a9c1", "changes"), 2),
+            (
+                "a requeue of the task in another wave",
+                TaskState(wave="w4", task="B1", state="pr_open", reason=REQUEUE_REASON),
+                2,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record(35, recorded_after_the_rounds)
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, expected_rounds)
+
+    def test_should_count_the_rounds_recorded_after_the_last_requeue_of_the_task(self):
+        # Arrange
+        self.record(35, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+        self.record(20, TaskState(wave="w1", task="B1", state="fixing"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, 1)
 
     def test_should_carry_the_question_of_the_last_run_of_the_task_when_it_ended_blocked(self):
         for case, outcome, message, expected in [

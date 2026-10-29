@@ -15,7 +15,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
-from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_state import REQUEUE_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -367,11 +367,34 @@ def _is_rebase_launch(entry: LedgerEntry, runs: tuple[dict, ...]) -> bool:
     )
 
 
+def _is_requeue(event, wave: str) -> bool:
+    return isinstance(event, TaskState) and event.wave == wave and event.reason == REQUEUE_REASON
+
+
+def _restarts_the_rounds(event, wave: str) -> bool:
+    return _is_requeue(event, wave) or (isinstance(event, TaskVerdict) and event.wave == wave)
+
+
+def _is_verification_fact(event, wave: str, task: str) -> bool:
+    return isinstance(event, TaskPreflighted | TaskVerdict) and event.wave == wave and event.task == task
+
+
+def _list_events_since_requeue(events: tuple, wave: str) -> tuple:
+    kept = []
+    for event in events:
+        if _is_requeue(event, wave):
+            kept = [held for held in kept if not _is_verification_fact(held, wave, event.task)]
+        kept.append(event)
+    return tuple(kept)
+
+
 def _count_repair_rounds(reading: WaveReading, wave: str) -> dict:
     rounds = {}
     for entry in reading.entries:
         event = entry.event
-        if (
+        if _restarts_the_rounds(event, wave):
+            rounds[event.task] = 0
+        elif (
             isinstance(event, TaskState)
             and event.wave == wave
             and event.state == FIXING_STATE
@@ -503,8 +526,13 @@ def _locate_wave_repository(reading: WaveReading, started: WaveStarted) -> Path:
     return Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD))
 
 
+def _read_preflighted_heads(events: tuple, wave: str) -> dict:
+    return {event.task: event.head for event in events if isinstance(event, TaskPreflighted) and event.wave == wave}
+
+
 def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, states: dict) -> FollowedWave:
     wave = started.wave
+    since_requeue = _list_events_since_requeue(reading.events, wave)
     return FollowedWave(
         repository=_locate_wave_repository(reading, started),
         worktree_root=reading.configuration.worktree_root,
@@ -513,20 +541,16 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
         opened_pull_requests={
             event.task: event.pr for event in reading.events if isinstance(event, TaskPrOpened) and event.wave == wave
         },
-        preflighted_heads={
-            event.task: event.head
-            for event in reading.events
-            if isinstance(event, TaskPreflighted) and event.wave == wave
-        },
+        preflighted_heads=_read_preflighted_heads(since_requeue, wave),
         verdicts={
             event.task: RecordedVerdict(head=event.head, verdict=event.verdict)
-            for event in reading.events
+            for event in since_requeue
             if isinstance(event, TaskVerdict) and event.wave == wave
         },
-        reviewed_heads=_read_reviewed_heads(reading.events, wave),
+        reviewed_heads=_read_reviewed_heads(since_requeue, wave),
         preflight_failures={
             event.task: _list_preflight_failures(event)
-            for event in reading.events
+            for event in since_requeue
             if isinstance(event, TaskPreflighted) and event.wave == wave
         },
         repair_rounds=_count_repair_rounds(reading, wave),
