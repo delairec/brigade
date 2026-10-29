@@ -75,7 +75,7 @@ MILESTONE M9
 
 MILESTONE M10
 	TITLE "Repair rounds that converge"
-	STATUS planned
+	STATUS active
 	DESC "a milestone delivered alone, as DESC 5 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
 		+ "a change the tick itself needs: the fixes of the parks « past 2 repair rounds »"
