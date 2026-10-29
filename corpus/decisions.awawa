@@ -4411,3 +4411,28 @@ DECISION TheCheckRepairBriefNamesTheCoverageRemedyOnAFailingCheckWhoseNameHoldsC
 		REF @TASK.B28
 	SOURCE "the build run of @TASK.B218 of 2026-10-29, which left this ruling open"
 		REF @TASK.B218
+
+DECISION ARequeueReadsThePullRequestOfItsTaskFromTheLedgerAndSetsAsideTheVerificationRecordedBeforeIt
+	TITLE "brigade wave requeue finds the pull request of a parked task in the ledger, and the tick"
+		+ "reads the preflight and the verdict of a task from the events recorded after its last"
+		+ "requeue, so that an unchanged head is preflighted and verified again"
+	STATUS active
+	DESC "a parked task has an open pull request for brigade wave requeue when the ledger holds a"
+		+ "task.pr_opened of the task in its wave; a pull request closed since is parked again by"
+		+ "the next tick, on the reason pull request closed"
+	DESC "the task.state brigade wave requeue records carries the reason brigade wave requeue; the"
+		+ "tick reads the preflighted head, the preflight failures, the verdict and the reviewed"
+		+ "head of a task from the events recorded after the last task.state of that reason"
+	DESC "binds @TASK.B217"
+		REF @TASK.B217
+	REJECTED "the forge asked by brigade wave requeue whether the pull request is open: the requeue"
+		+ "would need the forge account of a slot for a fact the next tick reads anyway, and a"
+		+ "closed pull request is parked again by that tick"
+	REJECTED "the preflight and the verdict kept across a requeue: an unchanged head is not"
+		+ "preflighted again, the verdict recorded on it is applied again without a verification,"
+		+ "and the remediation receives no fresh preflight"
+	RATIONALE "the count of the rounds and the mark of the requeue are read from the ledger alone,"
+		+ "as @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "the build run of @TASK.B217 of 2026-10-29, on SPEC 2 and SPEC 4 of the task"
+		REF @TASK.B217
