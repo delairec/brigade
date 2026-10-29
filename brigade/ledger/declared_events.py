@@ -2,6 +2,7 @@ from brigade.ledger.constraint_delivered import ConstraintDelivered
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.inbox_dismissed import InboxDismissed
 from brigade.ledger.inbox_recorded import InboxRecorded
+from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
@@ -25,6 +26,7 @@ from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.undeclared_event import UndeclaredEvent
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
+from brigade.ledger.wave_merged import WaveMerged
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
@@ -64,6 +66,8 @@ DECLARED_EVENTS = {
         PlanLintFailed,
         TaskPrOpened,
         MilestoneCreated,
+        MilestoneBranchCut,
+        WaveMerged,
         TaskPromoted,
         TaskPreflighted,
         TaskVerdict,
@@ -98,6 +102,8 @@ LedgerEvent = (
     | PlanLintFailed
     | TaskPrOpened
     | MilestoneCreated
+    | MilestoneBranchCut
+    | WaveMerged
     | TaskPromoted
     | TaskPreflighted
     | TaskVerdict
