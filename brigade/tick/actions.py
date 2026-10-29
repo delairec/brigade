@@ -105,6 +105,7 @@ class ResumeTaskRun:
     wave: str
     task: str
     run: str
+    state: str | None = None
 
 
 @dataclass(frozen=True)

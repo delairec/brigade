@@ -1771,3 +1771,50 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, ())
+
+
+class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
+    def test_should_pause_a_task_in_fixing_whose_repair_run_was_cut_and_launch_no_repair(self):
+        for case, pull_request in [("a pull request up to date", OPEN), ("a pull request behind its base", BEHIND)]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    rate_limit=RateLimit(reset=None),
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    preflight_failures=(BODY_FAILURE,),
+                )
+                snapshot = Snapshot(
+                    now=NOW,
+                    waves=(create_wave((task,), {"S3": "fixing"}),),
+                    projects=(SHOP,),
+                    rate_limits=(RateLimit(reset=None),),
+                )
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions, (PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T12:30:00Z"), PAUSED_S3)
+                )
+
+    def test_should_resume_the_cut_repair_run_with_the_task_back_in_fixing(self):
+        # Arrange
+        task = TaskFacts(name="S3", stopped_run=STOPPED_RUN, resumed_state="fixing")
+        wave = dataclasses.replace(create_wave((task,), {"S3": "paused:quota"}), pause=QUOTA_UNTIL_12)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeWave(wave="shop_w1", reason="quota"),
+                ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN, state="fixing"),
+            ),
+        )

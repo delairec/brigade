@@ -494,6 +494,17 @@ class ClaudeCodeResultTest(unittest.TestCase):
         self.assertEqual(result["error_class"], "rate_limit")
         self.assertIsNone(result["reset"])
 
+    def test_should_classify_run_9d1b1f_cut_by_the_five_hour_limit_as_a_rate_limit_with_its_reset(self):
+        # Arrange
+        stdout = (FIXTURES / "result-five-hour-limit.json").read_text()
+
+        # Act
+        result = parse_claude_output(stdout, exit_code=1)
+
+        # Assert
+        self.assertEqual(result["error_class"], "rate_limit")
+        self.assertEqual(result["reset"], {"hour": "01:30", "timezone": "Europe/Paris"})
+
     def test_should_classify_any_other_error_as_an_execution_failure(self):
         # Arrange
         stdout = (

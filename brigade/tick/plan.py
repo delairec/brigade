@@ -156,7 +156,7 @@ def _plan_resumes(snapshot: Snapshot) -> tuple:
         if wave.pause is not None:
             actions.append(ResumeWave(wave=wave.wave, reason=QUOTA_REASON))
         actions.extend(
-            ResumeTaskRun(wave=wave.wave, task=task.name, run=task.stopped_run)
+            ResumeTaskRun(wave=wave.wave, task=task.name, run=task.stopped_run, state=task.resumed_state)
             for task in wave.tasks
             if wave.states.get(task.name) == PAUSED_ON_QUOTA_STATE
         )
@@ -213,6 +213,8 @@ def _decide_worktree_removal(wave: WaveFacts, task: TaskFacts, occupancy: _Occup
 
 
 def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy) -> tuple:
+    if task.rate_limit is not None:
+        return ()
     record = _decide_task_state(wave, task)
     recorded = () if record is None else (record,)
     blocked_parking = _decide_blocked_parking(wave, task, occupancy)
