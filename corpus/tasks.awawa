@@ -12924,7 +12924,8 @@ TASK B212
 	TITLE "A milestone has one integration branch named after its title, the branch of a wave is"
 		+ "cut from it, and the pull request of a wave is opened into it and merged by the tick,"
 		+ "never into main"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 255
 	TYPE feat
 	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
