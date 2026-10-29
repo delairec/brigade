@@ -5,6 +5,11 @@ from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
 from tests.value_matchers import PatternMatcher
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
+CONVENTIONAL_COMMITS_HOOK = (
+    "#!/bin/sh\n"
+    "head -n 1 \"$1\" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)"
+    "(\\([a-zA-Z0-9._/-]+\\))?!?: .+'\n"
+)
 NEW_WAVE_BRANCH = "integration/M1-empty-cart-again"
 S3_PARKED_IN_THE_FIRST_WAVE = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -119,3 +124,21 @@ class TickAfterTheCancellationOfTheWaveOfAParkedTaskWithUncommittedChangesTest(
         self.assertEqual(
             self.project.run_git("show", "--name-only", "--format=", "task/M1-empty-cart/S3"), "notes.md\n"
         )
+
+
+class TickAfterTheCancellationOfTheWaveOfAParkedTaskWithUncommittedChangesUnderAConventionalCommitsHookTest(
+    TickAfterTheCancellationOfTheWaveOfAParkedTaskTestCase
+):
+    def setUp(self):
+        super().setUp()
+        (self.worktree / "notes.md").write_text("half of the work\n")
+        hook = self.project.path / ".git" / "hooks" / "commit-msg"
+        hook.write_text(CONVENTIONAL_COMMITS_HOOK)
+        hook.chmod(0o755)
+
+    def test_should_launch_the_build_run_of_the_new_wave(self):
+        # Act
+        self.cancel_then_start_a_new_wave_then_tick()
+
+        # Assert
+        self.assertEqual(self.read_events()[-1], BUILD_RUN_OF_THE_NEW_WAVE)
