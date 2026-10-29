@@ -13,7 +13,7 @@ class ReadPrivacyPatternsTest(unittest.TestCase):
             fields=(
                 EntityField(name="PRIVATE", value="oak-internal"),
                 EntityField(name="PATH", value="/srv/oak"),
-                EntityField(name="PUBLIC", value="/home/user"),
+                EntityField(name="PUBLIC", value="/home/alice"),
                 EntityField(name="PRIVATE", value="acme-corp"),
             ),
         )
@@ -22,4 +22,4 @@ class ReadPrivacyPatternsTest(unittest.TestCase):
         patterns = read_privacy_patterns(project)
 
         # Assert
-        self.assertEqual(patterns, PrivacyPatterns(private=("oak-internal", "acme-corp"), public=("/home/user",)))
+        self.assertEqual(patterns, PrivacyPatterns(private=("oak-internal", "acme-corp"), public=("/home/alice",)))
