@@ -110,6 +110,7 @@ class WriteRepairBriefTest(unittest.TestCase):
     def test_should_name_the_remedy_of_an_uncovered_line_when_the_coverage_check_failed(self):
         for case, checks, expected_ending in [
             ("the coverage check failed", ("tests", "Coverage of the unit tests by coverage.py"), COVERAGE_REMEDY),
+            ("the coverage check named in capitals failed", ("tests", "Coverage"), COVERAGE_REMEDY),
             ("the coverage check passed", ("tests",), ""),
         ]:
             with self.subTest(case=case):
