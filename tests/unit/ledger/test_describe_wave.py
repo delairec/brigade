@@ -175,6 +175,24 @@ class DescribeWaveOfEachTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(wave["steps_by_task"], {"TP5": 36, "TP6": 7})
 
+    def test_should_leave_out_of_the_steps_by_task_a_run_of_the_wave_without_a_task(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(at_minute(0), WaveStarted(wave="w6", project="tidepool", branch="main", tasks=("TP7",))),
+                LedgerEntry(at_minute(1), create_run_finished("r7", main_steps=9, wave="w6", task="TP7")),
+                LedgerEntry(at_minute(2), create_run_finished("r8", main_steps=4, wave="w6")),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        wave = describe_wave(reading, "w6")
+
+        # Assert
+        self.assertEqual(wave["steps_by_task"], {"TP7": 9})
+
     def test_should_date_each_entry_of_the_wave_oldest_first(self):
         # Arrange
         reading = LedgerReading(
