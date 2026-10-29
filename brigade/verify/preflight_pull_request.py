@@ -16,10 +16,11 @@ from brigade.verify.check_ancestry import AncestryFacts, check_ancestry
 from brigade.verify.check_body import check_body
 from brigade.verify.check_check_runs import check_check_runs
 from brigade.verify.check_corpus_at_head import check_corpus_at_head
-from brigade.verify.check_privacy import PrivacyPatterns, check_privacy
+from brigade.verify.check_privacy import check_privacy
 from brigade.verify.check_promotion import PromotionFacts, check_promotion
 from brigade.verify.check_untouched_files import UntouchedFilesFacts, check_untouched_files
 from brigade.verify.measure_size import measure_size
+from brigade.verify.read_privacy_patterns import read_privacy_patterns
 
 DOCUMENT_SCHEMA_VERSION = 1
 FORGE_NAME = "github"
@@ -74,13 +75,6 @@ def _compare_commits(runtime: Runtime, repository: Path, wave_branch: str, head:
     return _ComparedCommits(repository=repository, wave_head=wave_head, base=base, head=head)
 
 
-def _read_privacy_patterns(project: Entity) -> PrivacyPatterns:
-    return PrivacyPatterns(
-        private=tuple(field.value for field in project.fields if field.name == "PRIVATE"),
-        public=tuple(field.value for field in project.fields if field.name == "PUBLIC"),
-    )
-
-
 def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, commits: _ComparedCommits) -> list:
     run_process = runtime.run_process
     project = demand.project.name
@@ -99,7 +93,7 @@ def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, c
             run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
         ),
         check_privacy(
-            _read_privacy_patterns(demand.project),
+            read_privacy_patterns(demand.project),
             list_added_lines(run_process, commits.repository, commits.base, commits.head),
         ),
         check_body(pull_request["body"]),

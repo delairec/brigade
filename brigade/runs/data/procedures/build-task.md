@@ -41,29 +41,38 @@ in the file of its type, appended. A `SPEC` you cannot satisfy as worded, or tha
 contradicts, is not yours to reword or override: stop and end blocked, naming the `SPEC` and the ruling, as step 1
 does for a live `BLOCKED_BY`. Anchor each `SPEC` with an `IMPL` pointing at the code that delivers it.
 
-## 4. Commit, then check until it passes
+## 4. Prove each branch is demanded
+
+For each branch the implementation added (a condition, an arm, a guard, an early return, a fallback), remove it and
+run the tests. A branch whose removal fails a test is demanded: put it back, and keep the test that failed for the
+report. A branch whose removal fails no test is deleted: write the test that demands it and see it fail on its
+business assertion, then write the branch anew from that test, as if for the first time; never paste the removed
+branch back as it was.
+
+## 5. Commit, then check until it passes
 
 Commit the work with a Conventional Commits subject, the attribution lines of the package closing the message.
 `brigade task check` refuses a worktree whose files differ from `HEAD`, so every change is committed before it runs.
-It runs the acceptance commands of the project, then `awawa fmt --check` and `awawa lint --strict` on the corpus: a
-failure is corrected in a new commit and the check run again, until it passes. A failure is investigated, never
-masked.
+It runs the acceptance commands of the project, then `awawa fmt --check` and `awawa lint --strict` on the corpus, then
+the privacy check on the lines the branch adds since its base, each finding as `file:line`: a failure is corrected in
+a new commit and the check run again, until it passes. A failure is investigated, never masked.
 
-## 5. Open the pull request
+## 6. Open the pull request
 
 `brigade task pr --subject <subject>`, the subject in the imperative and in English. It refuses a check that is not of
 `HEAD` or that failed: run the check again rather than work around it. It prints the number of the pull request.
 
-## 6. Promote
+## 7. Promote
 
 `brigade task promote`. It sets the task `implemented`, delivered by the pull request just opened, then formats,
 lints, commits and pushes the corpus. Never promote before the pull request exists.
 
-## 7. Report
+## 8. Report
 
 The verdict first, in one line: the task delivered, or what stopped it. Then one fact per line: the pull request by
 its number, the branch, the verdict of each acceptance command, the evidence of each failing test seen before its
-code, the entities written in the corpus by name, and the question left to a ruling, verbatim, if there is one.
+code, the test each added branch failed on its removal, the entities written in the corpus by name, and the question
+left to a ruling, verbatim, if there is one.
 
 A run that stops on a ruling, at step 1, at step 3, or on a failing check whose repair needs a decision the task did
 not settle, pushes nothing and ends blocked: its final message states the question on the lines above
