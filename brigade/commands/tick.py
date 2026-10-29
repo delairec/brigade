@@ -26,6 +26,7 @@ from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
+from brigade.ledger.wave_merged import WaveMerged
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
@@ -67,6 +68,7 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeWavePullRequest,
     OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
@@ -384,7 +386,9 @@ def _count_review_rounds(runtime: Runtime, action: MergePullRequest) -> int:
     )
 
 
-def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: MergePullRequest) -> None:
+def _merge_on_the_forge(
+    runtime: Runtime, configuration: Configuration, action: MergePullRequest | MergeWavePullRequest
+) -> str:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     project = find_project(read_projects(runtime), action.project)
@@ -398,6 +402,16 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
         },
         runtime,
     )
+    return login
+
+
+def _merge_wave_pull_request(runtime: Runtime, configuration: Configuration, action: MergeWavePullRequest) -> None:
+    login = _merge_on_the_forge(runtime, configuration, action)
+    append_event(runtime.paths, runtime.now, WaveMerged(wave=action.wave, pr=action.pr, login=login))
+
+
+def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: MergePullRequest) -> None:
+    login = _merge_on_the_forge(runtime, configuration, action)
     append_event(
         runtime.paths,
         runtime.now,
@@ -538,6 +552,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
+        MergeWavePullRequest: lambda action: _merge_wave_pull_request(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
         LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),

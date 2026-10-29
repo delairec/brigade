@@ -32,8 +32,9 @@ from brigade.studies.convert_study import Study
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_studies import read_studies
+from brigade.system.ask_review_threads import ReviewThreadsQuery, ask_review_threads
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
-from brigade.system.parse_configuration import Configuration
+from brigade.system.parse_configuration import CLI_KEY, Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.reset_hour import ResetHour
@@ -46,6 +47,7 @@ from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.cut_wave_branch import WaveBranchCut
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
+from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
@@ -80,6 +82,10 @@ DONE_OUTCOME = "done"
 FORGE_ACCOUNT_REASON = "forge_account"
 PROJECT_STATUS_FIELD = "STATUS"
 PAUSED_PROJECT_STATUS = "paused"
+FORGE_KIND = "forge"
+FORGE_NAME = "github"
+OPEN_PULL_REQUEST = "open"
+NO_UNRESOLVED_THREAD = 0
 MERGE_FIELD = "MERGE"
 REBASE_MERGE = "rebase"
 POLICY_TYPE = "POLICY"
@@ -557,6 +563,40 @@ def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tre
     )
 
 
+@dataclass(frozen=True)
+class _WavePullRequest:
+    facts: PullRequestFacts | None
+    milestone_branch: str | None
+    unresolved_threads: int
+
+
+def _read_milestone_branch(reading: WaveReading, project: str, tasks: tuple[TaskFacts, ...]) -> str | None:
+    milestones = {task.milestone for task in tasks}
+    if len(milestones) != 1 or None in milestones:
+        return None
+    return find_milestone_branch(reading.entries, project, milestones.pop())
+
+
+def _count_unresolved_threads(runtime: Runtime, reading: WaveReading, repository: Path, number: int) -> int:
+    query = ReviewThreadsQuery(repository=str(repository), number=number, environment=reading.read_environment(CLI_KEY))
+    return len(ask_review_threads(runtime.resolve_plugin(FORGE_KIND, FORGE_NAME), FORGE_NAME, query, runtime))
+
+
+def _read_wave_pull_request(
+    runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, tasks: tuple[TaskFacts, ...]
+) -> _WavePullRequest:
+    started = open_wave.started
+    milestone_branch = _read_milestone_branch(reading, started.project, tasks)
+    if not _is_reported(reading, started.wave):
+        return _WavePullRequest(facts=None, milestone_branch=milestone_branch, unresolved_threads=NO_UNRESOLVED_THREAD)
+    repository = open_wave.followed.repository
+    facts = reading.read_pull_request(str(repository), started.branch)
+    if facts is None or facts.state != OPEN_PULL_REQUEST or facts.base != milestone_branch:
+        return _WavePullRequest(facts=facts, milestone_branch=milestone_branch, unresolved_threads=NO_UNRESOLVED_THREAD)
+    threads = _count_unresolved_threads(runtime, reading, repository, facts.number)
+    return _WavePullRequest(facts=facts, milestone_branch=milestone_branch, unresolved_threads=threads)
+
+
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
     project = find_project(reading.projects, started.project)
     cut = WaveBranchCut(project=project, branch=started.branch, read_environment=reading.read_environment)
@@ -565,21 +605,22 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
     tree = prepare_wave_tree(runtime, reading.configuration, started)
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
     open_wave = _open_wave(runtime, reading, started, tree.root)
-    reported = _is_reported(reading, started.wave)
+    wave_tasks = tuple(_read_wave_task(runtime, reading, open_wave, tasks[task]) for task in started.tasks)
+    pull_request = _read_wave_pull_request(runtime, reading, open_wave, wave_tasks)
     return WaveFacts(
         project=started.project,
         wave=started.wave,
         branch=started.branch,
-        tasks=tuple(_read_wave_task(runtime, reading, open_wave, tasks[task]) for task in started.tasks),
+        tasks=wave_tasks,
         states=open_wave.followed.states,
         implemented=open_wave.implemented,
         pause=read_wave_pause(reading.events, started.wave),
         forge_account_unavailable=_is_forge_account_unavailable(reading.entries, started.wave),
-        reported=reported,
-        integration_pull_request=(
-            reading.read_pull_request(str(open_wave.followed.repository), started.branch) if reported else None
-        ),
+        reported=_is_reported(reading, started.wave),
+        integration_pull_request=pull_request.facts,
         opened_integration_pull_request=find_integration_pull_request(reading.events, started.wave),
+        milestone_branch=pull_request.milestone_branch,
+        unresolved_threads=pull_request.unresolved_threads,
     )
 
 
