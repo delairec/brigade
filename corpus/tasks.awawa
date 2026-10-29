@@ -13154,7 +13154,8 @@ TASK B217
 TASK B218
 	TITLE "The brief of a check repair carries every failing check of the preflight, and names the"
 		+ "remedy of a coverage failure"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 249
 	TYPE fix
 	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
