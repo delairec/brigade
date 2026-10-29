@@ -451,6 +451,8 @@ class AnswerDashboardRequestOfAnActionTest(unittest.TestCase):
             "/api/inbox/ratify/FlakyTests/again",
             "/api/inbox",
             "/views/inbox/dismiss/FlakyTests",
+            "inbox/dismiss/FlakyTests",
+            "waves/w4/resume",
         ]
         runtime = create_test_runtime()
         for target in rows:
