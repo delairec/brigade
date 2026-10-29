@@ -15,7 +15,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
-from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_state import REQUEUE_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -90,6 +90,7 @@ MERGE_INTO_INTEGRATION = "integration"
 VERIFY_ROUNDS_BY_DEFAULT = 2
 VERIFY_ROUNDS_FIELD = "VERIFY_ROUNDS"
 FIXING_STATE = "fixing"
+QUOTA_PAUSED_STATES = (RUNNING_STATE, FIXING_STATE)
 FAILED_PREFLIGHT_CHECK = "fail"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
@@ -129,6 +130,7 @@ class TaskFacts:
     worktree: str | None = None
     rate_limit: RateLimit | None = None
     stopped_run: str | None = None
+    resumed_state: str | None = None
     opened_pull_request: int | None = None
     preflighted_head: str | None = None
     verdict: RecordedVerdict | None = None
@@ -367,17 +369,63 @@ def _is_rebase_launch(entry: LedgerEntry, runs: tuple[dict, ...]) -> bool:
     )
 
 
+def _is_requeue(event, wave: str) -> bool:
+    return isinstance(event, TaskState) and event.wave == wave and event.reason == REQUEUE_REASON
+
+
+def _restarts_the_rounds(event, wave: str) -> bool:
+    return _is_requeue(event, wave) or (isinstance(event, TaskVerdict) and event.wave == wave)
+
+
+def _is_verification_fact(event, wave: str, task: str) -> bool:
+    return isinstance(event, TaskPreflighted | TaskVerdict) and event.wave == wave and event.task == task
+
+
+def _list_events_since_requeue(events: tuple, wave: str) -> tuple:
+    kept = []
+    for event in events:
+        if _is_requeue(event, wave):
+            kept = [held for held in kept if not _is_verification_fact(held, wave, event.task)]
+        kept.append(event)
+    return tuple(kept)
+
+
+def _is_rate_limited_launch(entry: LedgerEntry, reading: WaveReading) -> bool:
+    launched = f"{entry.instant.astimezone(UTC).strftime(COMPACT_INSTANT_FORMAT)}-"
+    return any(
+        isinstance(event, RunFinished)
+        and event.error_class == RATE_LIMIT
+        and event.wave == entry.event.wave
+        and event.task == entry.event.task
+        and event.run.startswith(launched)
+        for event in reading.events
+    )
+
+
+def _is_spending_round(entry: LedgerEntry, reading: WaveReading, previous_state: str | None) -> bool:
+    return (
+        previous_state != PAUSED_ON_QUOTA_STATE
+        and not _is_rebase_launch(entry, reading.runs)
+        and not _is_rate_limited_launch(entry, reading)
+    )
+
+
 def _count_repair_rounds(reading: WaveReading, wave: str) -> dict:
     rounds = {}
+    states = {}
     for entry in reading.entries:
         event = entry.event
-        if (
+        if _restarts_the_rounds(event, wave):
+            rounds[event.task] = 0
+        elif (
             isinstance(event, TaskState)
             and event.wave == wave
             and event.state == FIXING_STATE
-            and not _is_rebase_launch(entry, reading.runs)
+            and _is_spending_round(entry, reading, states.get(event.task))
         ):
             rounds[event.task] = rounds.get(event.task, 0) + 1
+        if isinstance(event, TaskState) and event.wave == wave:
+            states[event.task] = event.state
     return rounds
 
 
@@ -427,10 +475,26 @@ def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...], wave: str) -
     return bool(unavailable) and max(unavailable) > max(cleared, default=BEFORE_ANY_EVENT)
 
 
+def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str | None:
+    held = [
+        event.state
+        for event in reading.events
+        if isinstance(event, TaskState)
+        and event.wave == wave
+        and event.task == task
+        and event.state != PAUSED_ON_QUOTA_STATE
+    ]
+    return held[-1] if held else None
+
+
 def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
     if states.get(task.name) == PAUSED_ON_QUOTA_STATE:
-        return dataclasses.replace(task, stopped_run=_list_task_runs(reading, wave, task.name)[-1].run)
-    if states.get(task.name) != RUNNING_STATE:
+        return dataclasses.replace(
+            task,
+            stopped_run=_list_task_runs(reading, wave, task.name)[-1].run,
+            resumed_state=_read_state_before_pause(reading, wave, task.name),
+        )
+    if states.get(task.name) not in QUOTA_PAUSED_STATES:
         return task
     return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
 
@@ -503,8 +567,13 @@ def _locate_wave_repository(reading: WaveReading, started: WaveStarted) -> Path:
     return Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD))
 
 
+def _read_preflighted_heads(events: tuple, wave: str) -> dict:
+    return {event.task: event.head for event in events if isinstance(event, TaskPreflighted) and event.wave == wave}
+
+
 def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, states: dict) -> FollowedWave:
     wave = started.wave
+    since_requeue = _list_events_since_requeue(reading.events, wave)
     return FollowedWave(
         repository=_locate_wave_repository(reading, started),
         worktree_root=reading.configuration.worktree_root,
@@ -513,20 +582,16 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
         opened_pull_requests={
             event.task: event.pr for event in reading.events if isinstance(event, TaskPrOpened) and event.wave == wave
         },
-        preflighted_heads={
-            event.task: event.head
-            for event in reading.events
-            if isinstance(event, TaskPreflighted) and event.wave == wave
-        },
+        preflighted_heads=_read_preflighted_heads(since_requeue, wave),
         verdicts={
             event.task: RecordedVerdict(head=event.head, verdict=event.verdict)
-            for event in reading.events
+            for event in since_requeue
             if isinstance(event, TaskVerdict) and event.wave == wave
         },
-        reviewed_heads=_read_reviewed_heads(reading.events, wave),
+        reviewed_heads=_read_reviewed_heads(since_requeue, wave),
         preflight_failures={
             event.task: _list_preflight_failures(event)
-            for event in reading.events
+            for event in since_requeue
             if isinstance(event, TaskPreflighted) and event.wave == wave
         },
         repair_rounds=_count_repair_rounds(reading, wave),

@@ -1,0 +1,65 @@
+# REPORT brigade_w8
+
+- WAVE: brigade_w8
+- PROJECT: brigade
+- TASK_ROW: B217 merged #251
+- TASK_ROW: B218 merged #249
+- TASK_ROW: B220 merged #254
+- TASK_ROW: B221 merged #250
+- STATISTIC: tasks 4
+- STATISTIC: merged 4
+- STATISTIC: parked 0
+- STATISTIC: runs 15
+- STATISTIC: files 0
+- STATISTIC: insertions 0
+- STATISTIC: deletions 0
+- GRAPH: B220 after B217
+- MANUAL_TEST: B217: the repair rounds of a task are its task.state fixing recorded after its last task.verdict or its last requeue, whichever is later, a run of the rebase slot still excluded; a task.state fixing recorded before either counts none, where today _count_repair_rounds of brigade/tick/build_snapshot.py counts every one of the wave
+- MANUAL_TEST: B217: brigade wave requeue of a parked task whose pull request is open records task.state pr_open and prints that state; the next tick preflights the head of the pull request, verifies it, and a verdict changes launches the remediation with its findings
+- MANUAL_TEST: B217: brigade wave requeue of a parked task without a pull request records task.state queued and the next tick launches its build run, as TASK B210 sets
+- MANUAL_TEST: B217: the task.state brigade wave requeue records carries a reason naming the requeue, so that the count of SPEC 1 finds the last requeue in the ledger
+- MANUAL_TEST: B217: tests/unit prove a task with two task.state fixing before its first task.verdict and none after it counting zero rounds, a requeue restarting the count, pr_open recorded on the requeue of a task with an open pull request and queued without one; tests/cli gains one flow through the fake adapter: a task parked after its first verdict, requeued, and the next tick launches its preflight, not its build run
+- MANUAL_TEST: B218: the brief of a check repair carries, after the tail of the log of each failing check, every other finding of the preflight of the same head, each under the name of its check: the file:line of each privacy finding, the finding of the body and the untouched files, where today brigade/tick/write_repair_brief.py and repair-brief.md.tpl render the job logs alone
+- MANUAL_TEST: B218: when the failing checks include the coverage check, the brief names the remedy the rules demand: an uncovered line is removed, then written again from a test that demands it, never a test written after the code it covers
+- MANUAL_TEST: B218: tests/unit prove a brief carrying the privacy file:line and the body finding after the logs, and the coverage remedy present when the coverage check failed and absent otherwise
+- MANUAL_TEST: B220: the claude-code adapter classifies as rate_limit a result whose message names a limit hit, « You've hit your 5-hour limit · resets 1:30am (Europe/Paris) » included, with the reset hour 01:30 and the timezone Europe/Paris; the result.json of the run 20261028T223554Z-9d1b1f is the fixture of its test, where today RATE_LIMIT_PHRASES of brigade/adapters/clients/claude_code.py matches none of its phrases and the run is classified execution
+- MANUAL_TEST: B220: a task in fixing whose last run.finished ends on rate_limit, no live run holding it, is paused on the quota like a running task: every running wave pauses until the reset, and after the reset the tick launches the repair again as DECISION QuotaPausesTheWaveAndResumesTheSameSession resumes a run, the task back in fixing
+- MANUAL_TEST: B220: the task.state fixing recorded at the launch of a run that ended on rate_limit counts no repair round
+- MANUAL_TEST: B220: tests/unit prove the classification of the fixture, the pause of a task in fixing on the quota, its resume after the reset and the round spared; tests/cli gains at most one flow through the fake adapter: a remediation cut by a rate limit, resumed after the reset, the rounds of the task unchanged
+- MANUAL_TEST: B221: brigade task check runs, after the ACCEPTANCE commands and the checks of the corpus, the privacy check of brigade/verify/check_privacy.py on the lines the task branch adds since its base, with the PRIVATE and PUBLIC patterns of the project, and reports each finding as file:line as the preflight does; a finding fails the check
+- MANUAL_TEST: B221: build-task.md gains a step before the check: for each branch the implementation added, the run removes it and runs the tests; a branch whose removal fails no test is deleted, the test that demands it is written and fails, and the branch is written anew from that test, never pasted back as it was
+- MANUAL_TEST: B221: tests/unit prove a privacy finding failing brigade task check with its file:line and a diff without one passing; brigade/runs/data/procedures/build-task.md holds the step of SPEC 2
+- NARRATIVE: Verdict: the wave delivered its four tasks, merged into integration/brigade_w8 with no task parked or failed; integration pull request #252 into main is open, opened at 19:05:14Z (ledger wave.pr_opened; pr-list).
+- NARRATIVE: Span: wave.started 18:45:46Z to the last pr.merged 20:15:14Z, 89.5 minutes (ledger).
+- NARRATIVE: Runs: 15 run.finished, all outcome done, exit 0, no error_class; 426 steps, 65.7 run-minutes, 24.15 USD summed from cost_usd (ledger run.finished).
+- NARRATIVE: By kind: 4 build runs (243 steps, 14.34 USD), 8 verify runs (142 steps, 8.47 USD), 2 remediation runs (29 steps, 1.11 USD), 1 rebase run (12 steps, 0.24 USD) (ledger run.finished).
+- NARRATIVE: By task: B217 7 runs, 168 steps, 24.5 min, 8.92 USD; B218 4 runs, 87 steps, 10.9 min, 5.01 USD; B220 2 runs, 105 steps, 16.8 min, 6.62 USD; B221 2 runs, 66 steps, 13.5 min, 3.60 USD (ledger run.finished).
+- NARRATIVE: Verdicts: 8, of which B221 and B220 passed at their first verdict, B218 at its second after one remediation of one medium finding, B217 at its fourth (pr.merged rounds 1, 1, 2, 4) (ledger task.verdict, pr.merged).
+- NARRATIVE: Went well: every finding the verifier raised was a real gap under RULE tdd_green_writes_only_demanded_code, each proven by a mutation no test caught, and each remediation closed it with a test that fails on that mutation (ledger task.verdict, task.review_answered).
+- NARRATIVE: Went well: B220 started at 19:50:54Z, the tick in which B217 merged, as GRAPH B220 after B217 sets, and passed its first verdict (ledger task.state, task.verdict).
+- NARRATIVE: Went wrong: the first changes verdict of B217 (19:10:33Z) never reached a remediation; at 19:10:50Z the tick rebased the branch (task.rebased 2e185a97 to efe515e3) and set it pr_open, the verdict set aside, then a verify run (19:15:30Z), a rebase run (19:20:54Z) and another verify run (19:30:54Z) returned the same three findings marked left without an answer; the remediation came only at 19:35:30Z (ledger).
+- NARRATIVE: Cost of that detour: 2 verify runs and 1 rebase run, 39 steps, 1.82 USD, and about 25 minutes before the remediation, which also delayed the start of B220 that waits on B217 (ledger run.finished).
+- NARRATIVE: Went wrong: the collector git-diff-stat reports 0 files, 0 insertions, 0 deletions, so the STATISTIC lines files, insertions and deletions are wrong; the preflight size checks measured 12 files 468 lines for B217, 9 files 175 lines for B218, 13 files 419 lines for B220, 8 files 250 lines for B221 (ledger task.preflighted; git-diff-stat document).
+- NARRATIVE: Next wave should change: a verdict of changes recorded before a rebase must survive it, the task going to changes_requested and its remediation, not back to pr_open for a new verification of the same findings.
+- NARRATIVE: Next wave should change: the git-diff-stat collector must measure integration/<wave> against its merge base with main, not a range that is empty once the wave is merged into its integration branch.
+- NARRATIVE: Next wave should change: the build runs left untested branches in two tasks out of four (B217, B218); B221, delivered in this wave, adds the step of build-task.md that proves each added branch, and the next wave is the first to run with it.
+- REASON: No task of the wave was parked or failed: the four ended merged (ledger task.state).
+- TESTER_STEP: B217 rounds: in a scratch ledger give a task two task.state fixing before its first task.verdict and none after; brigade tick --dry-run shows 0 repair rounds for it; add a requeue then one fixing and it shows 1.
+- TESTER_STEP: B217 requeue with an open pull request: park a task that has an open PR, run brigade wave requeue <wave> <task>; it prints pr_open; brigade tick --dry-run plans its preflight and verification, not a build run.
+- TESTER_STEP: B217 requeue without a pull request: park a task that has no PR, requeue it; it prints queued and brigade tick --dry-run plans its build run.
+- TESTER_STEP: B217 requeue reason: after a requeue, the last task.state of the task in the wave ledger carries a reason that names the requeue.
+- TESTER_STEP: B217 tests: python3 -m unittest passes; delete event.task == task from _is_verification_fact in brigade/tick/build_snapshot.py and test_should_keep_the_preflight_and_the_verdict_of_the_other_tasks_of_the_wave_across_a_requeue fails.
+- TESTER_STEP: B218 brief: force a failing check together with a privacy finding on the same head; the repair brief lists, after each failing check log, the privacy file:line, the body finding and the untouched files, each under its check name.
+- TESTER_STEP: B218 coverage remedy: when a check whose name holds coverage, in any case, fails, the brief says to remove the uncovered line and write it again from a test that demands it; when no such check fails, the remedy is absent.
+- TESTER_STEP: B218 tests: python3 -m unittest passes; replace check.casefold() by check in _name_remedy of brigade/tick/write_repair_brief.py and test_should_name_the_remedy_of_an_uncovered_line_when_the_coverage_check_failed fails.
+- TESTER_STEP: B220 classification: feed the result.json of run 20261028T223554Z-9d1b1f to the claude-code adapter; it classifies rate_limit with reset 01:30 Europe/Paris, not execution.
+- TESTER_STEP: B220 pause: with a task in fixing whose last run.finished ended on rate_limit and no live run, brigade tick --dry-run pauses every running wave until the reset, and after the reset plans the repair again with the task still in fixing.
+- TESTER_STEP: B220 round spared: after that resumed repair, brigade wave show <wave> counts the same repair rounds for the task as before the cut run.
+- TESTER_STEP: B220 tests: python3 -m unittest passes, the tests/cli flow of a remediation cut by a rate limit included.
+- TESTER_STEP: B221 privacy in task check: on a task branch add a line matching a PRIVATE pattern of the project; brigade task check fails and prints file:line; remove it and the check passes.
+- TESTER_STEP: B221 build-task step: read brigade/runs/data/procedures/build-task.md and find, before the check, the step that removes each added branch, runs the tests, and rewrites an unproven branch from a failing test.
+- TESTER_STEP: B221 tests: python3 -m unittest passes, the privacy-finding and clean-diff cases of brigade task check included.
+- SAMPLING: brigade/tick/build_snapshot.py, _is_verification_fact near line 379 and reviewed_heads near line 550 (B217, PR #251): the requeue logic took 4 verdicts, and two of its conditions were untested until the remediation.
+- SAMPLING: brigade/tick/write_repair_brief.py, _name_remedy near line 46 (B218, PR #249): the casefold of the check name was untested until the remediation.
+- SAMPLING: brigade/adapters/clients/claude_code.py, RATE_LIMIT_PHRASES and the reset parsing (B220, PR #254): the largest run of the wave, 85 steps and 5.13 USD, passed at its first verdict; a read confirms the phrase matching is not over-broad.
+- SAMPLING: brigade/verify/check_privacy.py as called from brigade task check, and the new step of brigade/runs/data/procedures/build-task.md (B221, PR #250): passed at its first verdict and changes how every later build run works.

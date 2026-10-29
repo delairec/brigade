@@ -4494,3 +4494,76 @@ DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 		+ "whose pull request is open: « Oui, pr_open »"
 	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8: a"
 		+ "requeue restarts nothing and relaunches the wrong procedure"
+
+DECISION TheCheckRepairBriefNamesTheCoverageRemedyOnAFailingCheckWhoseNameHoldsCoverage
+	TITLE "the brief of a check repair tells the coverage check by its name holding coverage, in"
+		+ "any case, and carries every preflight failure other than checks, ancestry included"
+	STATUS active
+	DESC "a failing check whose name holds coverage, compared after casefold, is the coverage check"
+		+ "of the brief: its failure adds the remedy of an uncovered line"
+	DESC "the other findings of the brief are every failure of the preflight of the same head but"
+		+ "checks, whose logs the brief already carries; ancestry is among them"
+	DESC "binds @TASK.B218"
+		REF @TASK.B218
+	REJECTED "a key of config.toml or a field of PROJECT naming the coverage check: the forge names"
+		+ "a check after its job, and every coverage job brigade drives so far holds the word"
+	REJECTED "the findings of the changes requested alone, ancestry left out as _describe_request"
+		+ "does: SPEC 1 of the task asks for every other finding of the preflight"
+	RATIONALE "the check of brigade is Coverage of the unit tests by coverage.py; a brief that"
+		+ "names the remedy on a check that is not one costs a paragraph, a brief that misses it"
+		+ "costs a verdict, as the coverage repair of @TASK.B28 did"
+		REF @TASK.B28
+	SOURCE "the build run of @TASK.B218 of 2026-10-29, which left this ruling open"
+		REF @TASK.B218
+
+DECISION ARequeueReadsThePullRequestOfItsTaskFromTheLedgerAndSetsAsideTheVerificationRecordedBeforeIt
+	TITLE "brigade wave requeue finds the pull request of a parked task in the ledger, and the tick"
+		+ "reads the preflight and the verdict of a task from the events recorded after its last"
+		+ "requeue, so that an unchanged head is preflighted and verified again"
+	STATUS active
+	DESC "a parked task has an open pull request for brigade wave requeue when the ledger holds a"
+		+ "task.pr_opened of the task in its wave; a pull request closed since is parked again by"
+		+ "the next tick, on the reason pull request closed"
+	DESC "the task.state brigade wave requeue records carries the reason brigade wave requeue; the"
+		+ "tick reads the preflighted head, the preflight failures, the verdict and the reviewed"
+		+ "head of a task from the events recorded after the last task.state of that reason"
+	DESC "binds @TASK.B217"
+		REF @TASK.B217
+	REJECTED "the forge asked by brigade wave requeue whether the pull request is open: the requeue"
+		+ "would need the forge account of a slot for a fact the next tick reads anyway, and a"
+		+ "closed pull request is parked again by that tick"
+	REJECTED "the preflight and the verdict kept across a requeue: an unchanged head is not"
+		+ "preflighted again, the verdict recorded on it is applied again without a verification,"
+		+ "and the remediation receives no fresh preflight"
+	RATIONALE "the count of the rounds and the mark of the requeue are read from the ledger alone,"
+		+ "as @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "pull request #251 of the brigade repository, delivering @TASK.B217"
+		REF @TASK.B217
+
+DECISION ARunCutByARateLimitSpendsNoRoundOnceResumedAndItsResumeRestoresTheStateHeldBeforeThePause
+	TITLE "a run of which a segment ended on rate_limit spends no round, resumed or not, the"
+		+ "task.state its resume records spends none, and the resume restores the state the task"
+		+ "held before paused:quota"
+	STATUS active
+	DESC "the task.state fixing recorded at the launch of a run counts no round when a run.finished"
+		+ "of that run, of any segment, ends on rate_limit, whether the run resumed after the reset"
+		+ "ends done or not"
+	DESC "the task.state fixing recorded by the resume of a task, the one following its"
+		+ "paused:quota, counts no round"
+	DESC "the resume of a task paused on the quota records the last task.state the task held before"
+		+ "paused:quota: fixing for a repair run, running for a build run"
+	DESC "the tick plans no action on the pull request of a task whose rate limit it notes, so that"
+		+ "no repair is launched in the tick that pauses the task"
+	DESC "binds @TASK.B220"
+		REF @TASK.B220
+	REJECTED "the launch of a cut run counted once its resumed segment ends done: the user ruled «"
+		+ "Ne compte aucun round » for a run cut by a rate limit, and SPEC 4 of TASK B220 asks the"
+		+ "rounds of the task unchanged after the resume"
+	REJECTED "the state of the resume read from the slot of the run: a check repair runs in the"
+		+ "build slot while its task is in fixing"
+	REJECTED "every resume recording running, as the tick did: a task in fixing resumed into"
+		+ "running would be recorded pr_open by the next tick, its repair abandoned"
+	SOURCE "the delivery of @TASK.B220, on the user's ruling of 2026-10-29 « Ne compte aucun round"
+		+ "»"
+		REF @TASK.B220

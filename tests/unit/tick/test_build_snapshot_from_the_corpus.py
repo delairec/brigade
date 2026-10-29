@@ -1373,7 +1373,60 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_set_aside_the_preflight_and_the_verdict_recorded_before_the_last_requeue_of_the_task(self):
+        # Arrange
+        self.record(25, dataclasses.replace(create_preflight("B1"), checks=(FAILING_BODY,)))
+        self.record(20, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
 
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[0],
+            TaskFacts(
+                name="B1",
+                after=("B0",),
+                pull_request=PULL_REQUEST,
+                worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+            ),
+        )
+
+    def test_should_set_aside_the_head_reviewed_before_the_last_requeue_of_the_task(self):
+        # Arrange
+        self.record(20, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].tasks[0].reviewed_head)
+
+    def test_should_keep_the_preflight_and_the_verdict_of_the_other_tasks_of_the_wave_across_a_requeue(self):
+        # Arrange
+        self.record(35, create_verdict("B2", "4f2a9c1", "changes"))
+        self.record(20, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[1:],
+            (
+                TaskFacts(
+                    name="B2",
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                    verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
+                ),
+                TaskFacts(name="B3", milestone="M4"),
+                TaskFacts(name="B4", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+            ),
+        )
+
+
+REQUEUE_REASON = "brigade wave requeue"
 FAILING_CHECKS = {"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}
 FAILING_BODY = {"name": "body", "verdict": "fail", "findings": ["the body names no task"]}
 PASSING_PRIVACY = {"name": "privacy", "verdict": "pass", "findings": []}
@@ -1443,6 +1496,120 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, expected_rounds)
+
+    def test_should_count_no_round_recorded_before_the_last_verdict_or_the_last_requeue_of_the_task(self):
+        for case, recorded_after_the_rounds, expected_rounds in [
+            ("a verdict on the task", create_verdict("B1", "4f2a9c1", "changes"), 0),
+            ("a requeue of the task", TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON), 0),
+            ("a state the tick records", TaskState(wave="w1", task="B1", state="pr_open"), 2),
+            ("a verdict on another task", create_verdict("B2", "4f2a9c1", "changes"), 2),
+            (
+                "a requeue of the task in another wave",
+                TaskState(wave="w4", task="B1", state="pr_open", reason=REQUEUE_REASON),
+                2,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record(35, recorded_after_the_rounds)
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, expected_rounds)
+
+    def test_should_count_the_rounds_recorded_after_the_last_requeue_of_the_task(self):
+        # Arrange
+        self.record(35, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+        self.record(20, TaskState(wave="w1", task="B1", state="fixing"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, 1)
+
+    def test_should_count_no_round_for_a_repair_run_cut_by_a_rate_limit(self):
+        for case, error_class, expected_rounds in [
+            ("a repair run cut by a rate limit", "rate_limit", 1),
+            ("a repair run ended on another failure", "execution", 2),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                write_run(
+                    self.paths.state_root,
+                    {**create_run_record("20261019T082100Z-a00002", "w1", "B1"), "slot": "remediate"},
+                    None,
+                )
+                self.record(
+                    30,
+                    create_run_finished(
+                        "20261019T082100Z-a00002", wave="w1", task="B1", outcome="failed", error_class=error_class
+                    ),
+                )
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, expected_rounds)
+
+    def test_should_count_no_round_for_the_resume_of_a_repair_run_cut_by_a_rate_limit(self):
+        # Arrange
+        write_run(
+            self.paths.state_root,
+            {**create_run_record("20261019T082100Z-a00002", "w1", "B1"), "slot": "remediate"},
+            None,
+        )
+        self.record(
+            30,
+            create_run_finished(
+                "20261019T082100Z-a00002", wave="w1", task="B1", outcome="failed", error_class="rate_limit"
+            ),
+        )
+        self.record(29, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(20, TaskState(wave="w1", task="B1", state="fixing"))
+        self.record(10, create_run_finished("20261019T082100Z-a00002", wave="w1", task="B1", outcome="done"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, 1)
+
+    def test_should_note_the_rate_limit_of_a_task_in_fixing_whose_repair_run_was_cut(self):
+        # Arrange
+        self.record(
+            5,
+            create_run_finished(
+                "20261019T085500Z-a00003", wave="w1", task="B1", outcome="failed", error_class="rate_limit"
+            ),
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].rate_limit, RateLimit(reset=None))
+
+    def test_should_resume_a_task_paused_on_the_quota_in_the_state_it_held_before_its_pause(self):
+        # Arrange
+        self.record(
+            5,
+            create_run_finished(
+                "20261019T085500Z-a00003", wave="w1", task="B1", outcome="failed", error_class="rate_limit"
+            ),
+        )
+        self.record(4, TaskState(wave="w1", task="B1", state="paused:quota"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].resumed_state, "fixing")
 
     def test_should_carry_the_question_of_the_last_run_of_the_task_when_it_ended_blocked(self):
         for case, outcome, message, expected in [

@@ -6,8 +6,10 @@ from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import BrigadeError, EntityNotDefined
 from brigade.ledger.append_event import append_event
+from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
-from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_state import REQUEUE_REASON, TaskState
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
@@ -23,6 +25,7 @@ from brigade.waves.require_wave_summary import require_wave_summary
 
 DOCUMENT_SCHEMA_VERSION = 1
 QUEUED_STATE = "queued"
+PR_OPEN_STATE = "pr_open"
 TASK_TYPE = "TASK"
 NO_WORKTREE = None
 
@@ -53,8 +56,18 @@ def _require_unruled_on_main(runtime: Runtime, configuration: Configuration, sta
         )
 
 
+def _decide_requeued_state(entries: tuple[LedgerEntry, ...], wave: str, task: str) -> str:
+    if any(
+        isinstance(entry.event, TaskPrOpened) and entry.event.wave == wave and entry.event.task == task
+        for entry in entries
+    ):
+        return PR_OPEN_STATE
+    return QUEUED_STATE
+
+
 def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
-    summary = require_wave_summary(read_ledger(runtime.paths.state_root).entries, request.wave)
+    entries = read_ledger(runtime.paths.state_root).entries
+    summary = require_wave_summary(entries, request.wave)
     if request.task not in summary.started.tasks:
         raise BrigadeError(f"the task {request.task} is not a task of the wave {request.wave}")
     state = read_task_states(runtime.paths.state_root, request.wave).get(request.task, QUEUED_STATE)
@@ -68,12 +81,17 @@ def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
         )
     on_wave = read_entity(runtime.run_process, tree.root, TASK_TYPE, request.task)
     _require_unruled_on_main(runtime, configuration, summary.started, on_wave)
-    append_event(runtime.paths, runtime.now, TaskState(wave=request.wave, task=request.task, state=QUEUED_STATE))
+    requeued = _decide_requeued_state(entries, request.wave, request.task)
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskState(wave=request.wave, task=request.task, state=requeued, reason=REQUEUE_REASON),
+    )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "wave": request.wave,
         "task": request.task,
-        "state": QUEUED_STATE,
+        "state": requeued,
     }
 
 

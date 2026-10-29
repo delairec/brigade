@@ -547,6 +547,13 @@ TASK_PREFLIGHTED_ON_FAILING_CHECKS = {
     **TASK_PREFLIGHTED_AT_THE_HEAD,
     "checks": [{"name": "checks", "verdict": "fail", "findings": ["ci: failure", "coverage: failure"]}],
 }
+TASK_PREFLIGHTED_ON_FAILING_CHECKS_AND_PRIVACY = {
+    **TASK_PREFLIGHTED_AT_THE_HEAD,
+    "checks": [
+        {"name": "checks", "verdict": "fail", "findings": ["ci: failure", "coverage: failure"]},
+        {"name": "privacy", "verdict": "fail", "findings": ["src/cart.py:12: an e-mail address"]},
+    ],
+}
 PULL_REQUEST_DETAILS = {
     "head": "task/M4/T7",
     "head_sha": "8885daa",
@@ -814,7 +821,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         }
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
-        write_ledger(self.root, [WAVE_STARTED, finished, _record_task_state("paused:quota")])
+        write_ledger(
+            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("paused:quota")]
+        )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
@@ -855,7 +864,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         }
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
-        write_ledger(self.root, [WAVE_STARTED, finished, _record_task_state("paused:quota")])
+        write_ledger(
+            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("paused:quota")]
+        )
         self.spawn = SpawnReadingTheLedgerDouble(self.root / "state" / "ledger" / "2026-10.jsonl")
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
@@ -1415,12 +1426,17 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             ],
         )
 
-    def test_should_launch_the_repair_of_the_failing_checks_with_the_tail_of_their_logs_and_record_it_in_fixing(self):
+    def test_should_launch_the_check_repair_with_the_logs_and_the_other_findings_and_record_it_in_fixing(self):
         # Arrange
         self.worktree.mkdir(parents=True)
         write_ledger(
             self.root,
-            [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_ON_FAILING_CHECKS, _record_task_state("pr_open")],
+            [
+                WAVE_STARTED,
+                TASK_PR_OPENED,
+                TASK_PREFLIGHTED_ON_FAILING_CHECKS_AND_PRIVACY,
+                _record_task_state("pr_open"),
+            ],
         )
         tails = {"ci": "FAIL test_cart\nexit 1", "coverage": None}
         runtime = self._create_runtime(
@@ -1476,7 +1492,16 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             "\n"
             "## coverage\n"
             "\n"
-            "The forge keeps no log of this check.\n",
+            "The forge keeps no log of this check.\n"
+            "\n"
+            "The other findings of the preflight of the same head:\n"
+            "\n"
+            "## privacy\n"
+            "\n"
+            "- src/cart.py:12: an e-mail address\n"
+            "\n"
+            "The coverage check failed: remove each uncovered line, then write it again from a test that demands it,"
+            " seen failing first; never write a test after the code it covers.\n",
         )
         self.assertEqual(
             self._read_events(),
@@ -1515,6 +1540,11 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                             "name": "checks",
                             "verdict": "fail",
                             "findings": ["ci: failure", "coverage: failure"],
+                        },
+                        {
+                            "name": "privacy",
+                            "verdict": "fail",
+                            "findings": ["src/cart.py:12: an e-mail address"],
                         },
                     ],
                 },
@@ -1948,7 +1978,14 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
         write_ledger(
-            self.root, [WAVE_STARTED, finished, PAUSED_ON_THE_QUOTA_UNTIL_08, _record_task_state("paused:quota")]
+            self.root,
+            [
+                WAVE_STARTED,
+                _record_task_state("running"),
+                finished,
+                PAUSED_ON_THE_QUOTA_UNTIL_08,
+                _record_task_state("paused:quota"),
+            ],
         )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
@@ -1967,6 +2004,14 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "project": "tidepool",
                     "branch": "integration/M4",
                     "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
                 },
                 {
                     "schema_version": 2,

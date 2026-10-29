@@ -34,7 +34,9 @@ MODEL_USAGE_COUNTERS = {
     "cache_read_input_tokens": "cacheReadInputTokens",
 }
 TASK_NOTIFICATION_ORIGIN = "task-notification"
-RATE_LIMIT_PHRASES = ("limit reached", "hit your limit", "usage limit", "rate limit", "out of usage credits")
+RATE_LIMIT_PATTERN = re.compile(
+    r"limit reached|hit your (?:[\w-]+ )?limit|usage limit|rate limit|out of usage credits", re.IGNORECASE
+)
 RESET_PATTERN = re.compile(r"resets (?:at )?(\d{1,2})(?::(\d{2}))?(am|pm)?(?: \(([^)]+)\))?", re.IGNORECASE)
 ERROR_SUBTYPE_PREFIX = "error"
 TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
@@ -167,7 +169,7 @@ def _read_reset(message: str):
 
 
 def _names_rate_limit(message) -> bool:
-    return message is not None and any(phrase in message.lower() for phrase in RATE_LIMIT_PHRASES)
+    return message is not None and RATE_LIMIT_PATTERN.search(message) is not None
 
 
 def _classify_error(result: dict, message):
