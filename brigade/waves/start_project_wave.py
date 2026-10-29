@@ -78,22 +78,22 @@ def _find_branch_anywhere(runtime: Runtime, start: WaveStart, project: Entity, b
     return find_remote_branch(runtime.run_process, remote_branch)
 
 
-def _locate_base(runtime: Runtime, start: WaveStart, project: Entity, tasks: ProjectTasks, wave: WaveStarted) -> str:
-    demand = WaveBaseDemand(
+def _demand_base(start: WaveStart, project: Entity, tasks: ProjectTasks, wave: WaveStarted) -> WaveBaseDemand:
+    return WaveBaseDemand(
         project=project,
         milestone=read_wave_milestone(wave.wave, (tasks.by_name[task] for task in wave.tasks)),
         root=tasks.root,
         read_environment=start.read_environment,
         read_login=start.read_login,
     )
-    return locate_wave_base(runtime, demand)
 
 
 def _cut_missing_branches(runtime: Runtime, start: WaveStart, project: Entity, tasks: ProjectTasks) -> None:
     for wave in list_open_waves(read_ledger(runtime.paths.state_root).entries, start.project):
         cut = WaveBranchCut(project=project, branch=wave.branch, read_environment=start.read_environment)
         if is_wave_branch_missing(runtime.run_process, cut):
-            cut_wave_branch(runtime.run_process, cut, _locate_base(runtime, start, project, tasks, wave))
+            base = locate_wave_base(runtime, _demand_base(start, project, tasks, wave))
+            cut_wave_branch(runtime.run_process, cut, base)
 
 
 def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:

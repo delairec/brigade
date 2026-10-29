@@ -27,6 +27,7 @@ class ReadWaveMilestoneTest(unittest.TestCase):
         self.assertIsNone(milestone)
 
     def test_should_refuse_a_wave_whose_tasks_name_two_milestones(self):
+        # Arrange
         rows = ((TASK_OF_M3, TASK_OF_M4), (TASK_OF_M3, TASK_OF_NO_MILESTONE))
         for tasks in rows:
             with self.subTest(tasks=tasks):
