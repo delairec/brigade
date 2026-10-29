@@ -1053,8 +1053,16 @@ RECORD_CHANGES_REQUESTED_BY_THE_BODY = RecordTaskState(
 )
 REMEDIATE_S3 = LaunchRemediation(project="shop", wave="shop_w1", task="S3", pr=42, worktree=WORKTREE_S3)
 REPAIR_CHECKS_OF_S3 = LaunchCheckRepair(
-    project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", pr=42, worktree=WORKTREE_S3, checks=("tests",)
+    project="shop",
+    wave="shop_w1",
+    branch=WAVE_BRANCH,
+    task="S3",
+    pr=42,
+    worktree=WORKTREE_S3,
+    checks=("tests",),
+    findings=(),
 )
+REPAIR_CHECKS_OF_S3_BESIDE_THE_BODY = dataclasses.replace(REPAIR_CHECKS_OF_S3, findings=(BODY_FAILURE,))
 PARK_S3_PAST_ITS_ROUNDS = ParkTask(wave="shop_w1", task="S3", reason="past 2 repair rounds", blockers=())
 PARK_S3_PAST_ONE_ROUND = ParkTask(wave="shop_w1", task="S3", reason="past 1 repair rounds", blockers=())
 REMEDIATION_RUN_OF_S3 = LiveRun(
@@ -1126,7 +1134,7 @@ class PlanRepairTest(unittest.TestCase):
                 FAILED_CHECK_RUN,
                 (CHECKS_FAILURE, BODY_FAILURE),
                 PREFLIGHTED_AT_THE_HEAD,
-                (REPAIR_CHECKS_OF_S3,),
+                (REPAIR_CHECKS_OF_S3_BESIDE_THE_BODY,),
             ),
             (
                 "a failing check before a push",

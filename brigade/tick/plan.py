@@ -341,6 +341,7 @@ def _launch_repair(wave: WaveFacts, task: TaskFacts) -> LaunchRemediation | Laun
             pr=task.pull_request.number,
             worktree=task.worktree,
             checks=tuple(check.name for check in task.pull_request.checks if check.verdict != SUCCESSFUL_CHECK),
+            findings=tuple(failure for failure in task.preflight_failures if failure.name != CHECKS_FINDING),
         )
     return LaunchRemediation(
         project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree

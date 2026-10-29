@@ -4,4 +4,4 @@ Repair the failing checks of the pull request #$pr, which delivers @TASK.$task o
 - Worktree: $worktree, on the branch $task_branch.
 
 The tail of the log of each failing check:
-$logs
+$logs$findings$remedy
