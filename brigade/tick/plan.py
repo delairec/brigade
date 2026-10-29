@@ -474,7 +474,6 @@ def _is_wave_pull_request_ready(wave: WaveFacts, project: ProjectFacts) -> bool:
     return (
         pull_request is not None
         and pull_request.state == OPEN_PULL_REQUEST
-        and wave.milestone_branch is not None
         and pull_request.base == wave.milestone_branch
         and project.auto_merge != NO_AUTO_MERGE
         and _are_checks_passed(pull_request, project)
