@@ -448,6 +448,7 @@ class TickRequestTest(unittest.TestCase):
 WAVE = "tidepool_w16"
 WAVE_BRANCH = "integration/M4"
 WAVE_HEAD = "8885daa"
+MAIN_HEAD = "4c1d2e0"
 TASK_TO_DELIVER = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"))
 TASK_DELIVERED = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "implemented"), ("DELIVERED_BY", "42"))
 MILESTONE_M4 = (("STATUS", "active"), ("TITLE", "Tides"))
@@ -3013,6 +3014,51 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                         }
                     ],
                 )
+
+    def test_should_open_the_pull_request_into_the_milestone_its_tasks_name_at_the_wave_branch_not_at_main(self):
+        # Arrange
+        (self.root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True)
+        wave_corpus = create_corpus_double(
+            {
+                "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+                "TASK": {"T7": TASK_DELIVERED},
+                "MILESTONE": {"M4": MILESTONE_M4},
+            }
+        )
+        main_corpus = create_corpus_double(
+            {
+                "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+                "TASK": {"T7": (("MILESTONE", "@MILESTONE.M5"), ("STATUS", "implemented"), ("DELIVERED_BY", "42"))},
+                "MILESTONE": {"M4": MILESTONE_M4, "M5": (("STATUS", "active"), ("TITLE", "Currents"))},
+            }
+        )
+
+        def answer_by_tree(request):
+            if request.argv[:1] == ("awawa",) and MAIN_HEAD in request.argv[-1]:
+                return main_corpus(request)
+            return wave_corpus(request)
+
+        answers = {
+            **MACHINE_ANSWERS,
+            ("git", "ls-remote"): ProcessAnswer(stdout=""),
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"): ProcessAnswer(
+                stdout=f"{MAIN_HEAD}\n"
+            ),
+        }
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=ScriptedProcessRunner(answers, fallback=answer_by_tree).run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
+            ),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.forge.opened[0]["base"], "integration/tides")
 
     def test_should_open_the_pull_request_of_a_wave_of_tasks_naming_no_milestone_into_the_main_branch(self):
         # Arrange
