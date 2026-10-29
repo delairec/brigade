@@ -13266,7 +13266,8 @@ TASK B219
 TASK B220
 	TITLE "A run cut by the 5-hour limit is classified rate_limit, pauses the waves and spends no"
 		+ "repair round"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 254
 	TYPE fix
 	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
