@@ -13278,7 +13278,8 @@ TASK B220
 TASK B221
 	TITLE "brigade task check runs the privacy check on the diff of the task, and build-task"
 		+ "rewrites from a new test each branch no test demands"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 250
 	TYPE feat
 	MILESTONE @MILESTONE.M10
 	COMPONENT "the build slot"
