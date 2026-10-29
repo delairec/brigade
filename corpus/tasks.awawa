@@ -11251,7 +11251,7 @@ TASK B171
 		IMPL "tests/unit/tick/test_plan.py::def"
 			+ "test_should_open_the_integration_pull_request_once_the_first_task_of_the_wave_is_merged("
 		IMPL "tests/unit/commands/test_tick.py::def"
-			+ "test_should_open_the_pull_request_from_the_wave_branch_to_the_main_branch("
+			+ "test_should_open_the_pull_request_of_a_wave_of_tasks_naming_no_milestone_into_the_main_branch("
 	SPEC "the ledger declares wave.pr_opened with wave, pr and login, appended by the tick once the"
 		+ "pull request is opened; brigade wave show prints its number"
 		IMPL "brigade/ledger/wave_pr_opened.py::class WavePrOpened:"

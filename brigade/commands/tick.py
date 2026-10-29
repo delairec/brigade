@@ -10,6 +10,7 @@ from brigade.collecting.collect_document import CollectionRequest, collect_docum
 from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
 from brigade.errors import StandingDown, UsageError
@@ -23,6 +24,7 @@ from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_rebased import TaskRebased
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_pr_opened import WavePrOpened
@@ -94,6 +96,9 @@ from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pul
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
 from brigade.waves.find_wave_started import find_wave_started
+from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
+from brigade.waves.read_project_tasks import read_project_tasks
+from brigade.waves.read_wave_milestone import read_wave_milestone
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -408,17 +413,32 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
     _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
 
 
+def _locate_wave_base(runtime: Runtime, configuration: Configuration, project_name: str, wave: str) -> str:
+    project = find_project(read_projects(runtime), project_name)
+    read_environment = _cache_forge_environment(runtime, configuration)
+    tasks = read_project_tasks(runtime, configuration, project, read_environment)
+    started = find_wave_started(tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), wave)
+    demand = WaveBaseDemand(
+        project=project,
+        milestone=read_wave_milestone(wave, (tasks.by_name[task] for task in started.tasks)),
+        root=tasks.root,
+        read_environment=read_environment,
+        read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
+    )
+    return locate_wave_base(runtime, demand)
+
+
 def _open_integration_pull_request(
     runtime: Runtime, configuration: Configuration, action: OpenIntegrationPullRequest
 ) -> None:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     project = find_project(read_projects(runtime), action.project)
-    main = read_project_field(project, MAIN_FIELD)
+    base = _locate_wave_base(runtime, configuration, action.project, action.wave)
     repository = read_project_field(project, PATH_FIELD)
     query = PullRequestQuery(repository=repository, branch=action.branch, environment=environment)
     found = ask_pull_request(forge, FORGE_NAME, query, runtime)
-    if found is not None and found.state == OPEN_PULL_REQUEST and found.base == main:
+    if found is not None and found.state == OPEN_PULL_REQUEST and found.base == base:
         append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=found.number, login=UNKNOWN_OPENER))
         return
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
@@ -426,10 +446,10 @@ def _open_integration_pull_request(
     opened = forge.open_pull_request(
         {
             "repository": repository,
-            "base": main,
+            "base": base,
             "branch": action.branch,
-            "title": f"chore(wave): merge the wave {action.wave} into {main}",
-            "body": f"Integrates the wave {action.wave} of @PROJECT.{action.project} into {main}: {tasks}.",
+            "title": f"chore(wave): merge the wave {action.wave} into {base}",
+            "body": f"Integrates the wave {action.wave} of @PROJECT.{action.project} into {base}: {tasks}.",
             "milestone": NO_MILESTONE,
             "environment": environment,
         },
@@ -444,7 +464,13 @@ def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> 
 
 def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
     read_environment = _cache_forge_environment(runtime, configuration)
-    start = WaveStart(project=action.project, tasks=(), configuration=configuration, read_environment=read_environment)
+    start = WaveStart(
+        project=action.project,
+        tasks=(),
+        configuration=configuration,
+        read_environment=read_environment,
+        read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
+    )
     start_project_wave(runtime, start)
 
 
@@ -454,7 +480,7 @@ def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: Cut
         branch=action.branch,
         read_environment=_cache_forge_environment(runtime, configuration),
     )
-    cut_wave_branch(runtime.run_process, cut)
+    cut_wave_branch(runtime.run_process, cut, _locate_wave_base(runtime, configuration, action.project, action.wave))
 
 
 def _park_task(runtime: Runtime, action: ParkTask) -> None:
@@ -550,13 +576,18 @@ def _plan_registered_connectors(runtime: Runtime) -> tuple:
     return plan_connectors(read_projects(runtime))
 
 
+def _record_failure(runtime: Runtime, event: TickActionFailed) -> None:
+    sys.stderr.write(f"brigade tick: {event.action} failed: {event.error}\n")
+    append_event(runtime.paths, runtime.now, event)
+
+
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
     read_pull_request = _follow_pull_requests(runtime, configuration)
     read_environment = _cache_forge_environment(runtime, configuration)
     apply = functools.partial(
         apply_actions,
         executors=_list_executors(runtime, configuration),
-        record_failure=lambda event: append_event(runtime.paths, runtime.now, event),
+        record_failure=lambda event: _record_failure(runtime, event),
     )
     outcome = run_rounds(
         Rounds(

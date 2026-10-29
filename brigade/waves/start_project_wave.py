@@ -23,9 +23,11 @@ from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_open_waves import list_open_waves
+from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.name_next_wave import name_next_wave
 from brigade.waves.read_project_tasks import ProjectTasks, read_project_tasks
+from brigade.waves.read_wave_milestone import read_wave_milestone
 
 TASK_TYPE = "TASK"
 
@@ -36,6 +38,7 @@ class WaveStart:
     tasks: tuple[str, ...]
     configuration: Configuration
     read_environment: Callable[[str], dict]
+    read_login: Callable[[], str]
 
 
 def _take_named_tasks(start: WaveStart, tasks: ProjectTasks, open_tasks: dict[str, str]) -> tuple[str, ...]:
@@ -75,11 +78,22 @@ def _find_branch_anywhere(runtime: Runtime, start: WaveStart, project: Entity, b
     return find_remote_branch(runtime.run_process, remote_branch)
 
 
-def _cut_missing_branches(runtime: Runtime, start: WaveStart, project: Entity) -> None:
+def _locate_base(runtime: Runtime, start: WaveStart, project: Entity, tasks: ProjectTasks, wave: WaveStarted) -> str:
+    demand = WaveBaseDemand(
+        project=project,
+        milestone=read_wave_milestone(wave.wave, (tasks.by_name[task] for task in wave.tasks)),
+        root=tasks.root,
+        read_environment=start.read_environment,
+        read_login=start.read_login,
+    )
+    return locate_wave_base(runtime, demand)
+
+
+def _cut_missing_branches(runtime: Runtime, start: WaveStart, project: Entity, tasks: ProjectTasks) -> None:
     for wave in list_open_waves(read_ledger(runtime.paths.state_root).entries, start.project):
         cut = WaveBranchCut(project=project, branch=wave.branch, read_environment=start.read_environment)
         if is_wave_branch_missing(runtime.run_process, cut):
-            cut_wave_branch(runtime.run_process, cut)
+            cut_wave_branch(runtime.run_process, cut, _locate_base(runtime, start, project, tasks, wave))
 
 
 def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:
@@ -96,5 +110,5 @@ def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:
         return WaveStarted(wave=wave, project=start.project, branch=branch, tasks=chosen)
 
     started = append_derived_event(runtime.paths, runtime.now, name_wave)
-    _cut_missing_branches(runtime, start, project)
+    _cut_missing_branches(runtime, start, project, tasks)
     return {key: started[key] for key in ("wave", "project", "branch", "tasks")}

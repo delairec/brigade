@@ -449,6 +449,16 @@ WAVE_BRANCH = "integration/M4"
 WAVE_HEAD = "8885daa"
 TASK_TO_DELIVER = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"))
 TASK_DELIVERED = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "implemented"), ("DELIVERED_BY", "42"))
+MILESTONE_M4 = (("STATUS", "active"), ("TITLE", "Tides"))
+CUT_OF_M4 = {
+    "schema_version": 1,
+    "ts": "2026-10-18T09:30:00Z",
+    "event": "milestone.branch_cut",
+    "project": "tidepool",
+    "milestone": "M4",
+    "branch": "integration/tides",
+    "login": "tidepool-cli",
+}
 MACHINE_OUTPUTS = {
     ("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n",
     ("git", "cat-file", "-p"): ".brigade/worktrees/\n",
@@ -2729,6 +2739,12 @@ INTEGRATION_PULL_REQUEST_CLOSED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "s
 INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "base": "develop"}
 
 
+INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH = INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN | {
+    "base": "integration/tides"
+}
+TASK_OF_NO_MILESTONE_DELIVERED = (("STATUS", "implemented"), ("DELIVERED_BY", "42"))
+
+
 class OpeningForgeDouble:
     def __init__(self, found_by_branch: dict):
         self.found_by_branch = found_by_branch
@@ -2774,14 +2790,15 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         self.forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
-        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4])
         self.runtime = self._create_runtime(self.forge)
 
-    def _create_runtime(self, forge: OpeningForgeDouble) -> Runtime:
+    def _create_runtime(self, forge: OpeningForgeDouble, task: tuple = TASK_DELIVERED) -> Runtime:
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
-            "TASK": {"T7": TASK_DELIVERED},
+            "TASK": {"T7": task},
+            "MILESTONE": {"M4": MILESTONE_M4},
         }
         return create_test_runtime(
             create_test_paths(self.root),
@@ -2797,7 +2814,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
         )
 
-    def test_should_open_the_pull_request_from_the_wave_branch_to_the_main_branch(self):
+    def test_should_open_the_pull_request_from_the_wave_branch_to_the_branch_of_its_milestone(self):
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
@@ -2807,10 +2824,10 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             [
                 {
                     "repository": str(self.repository),
-                    "base": "main",
+                    "base": "integration/tides",
                     "branch": "integration/M4",
-                    "title": "chore(wave): merge the wave tidepool_w16 into main",
-                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
+                    "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
+                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
                     "milestone": None,
                     "environment": {},
                 }
@@ -2842,6 +2859,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "task": "T7",
                     "state": "merged",
                 },
+                CUT_OF_M4,
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
@@ -2882,19 +2900,19 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             [
                 {
                     "repository": f"{self.root}/tidepool",
-                    "base": "main",
+                    "base": "integration/tides",
                     "branch": "integration/M4",
-                    "title": "chore(wave): merge the wave tidepool_w16 into main",
-                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
+                    "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
+                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
                     "milestone": None,
                     "environment": {},
                 }
             ],
         )
 
-    def test_should_open_none_while_the_wave_branch_has_one_open_into_the_main_branch(self):
+    def test_should_open_none_while_the_wave_branch_has_one_open_into_the_branch_of_its_milestone(self):
         # Arrange
-        forge = OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN})
+        forge = OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
         runtime = self._create_runtime(forge)
 
         # Act
@@ -2903,9 +2921,11 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(forge.opened, [])
 
-    def test_should_record_as_opened_the_pull_request_already_open_into_the_main_branch_whoever_opened_it(self):
+    def test_should_record_as_opened_the_pull_request_already_open_into_the_milestone_branch_whoever_opened_it(self):
         # Arrange
-        runtime = self._create_runtime(OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN}))
+        runtime = self._create_runtime(
+            OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
+        )
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -2931,6 +2951,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "task": "T7",
                     "state": "merged",
                 },
+                CUT_OF_M4,
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
@@ -2959,10 +2980,14 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         )
 
     def test_should_open_its_own_beside_a_pull_request_of_the_wave_branch_closed_or_into_another_base(self):
-        for found in [INTEGRATION_PULL_REQUEST_CLOSED, INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE]:
+        for found in [
+            INTEGRATION_PULL_REQUEST_CLOSED,
+            INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE,
+            INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN,
+        ]:
             with self.subTest(state=found["state"], base=found["base"]):
                 # Arrange
-                write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+                write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4])
                 forge = OpeningForgeDouble({"integration/M4": found})
                 runtime = self._create_runtime(forge)
 
@@ -2975,15 +3000,25 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     [
                         {
                             "repository": str(self.repository),
-                            "base": "main",
+                            "base": "integration/tides",
                             "branch": "integration/M4",
-                            "title": "chore(wave): merge the wave tidepool_w16 into main",
-                            "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
+                            "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
+                            "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
                             "milestone": None,
                             "environment": {},
                         }
                     ],
                 )
+
+    def test_should_open_the_pull_request_of_a_wave_of_tasks_naming_no_milestone_into_the_main_branch(self):
+        # Arrange
+        runtime = self._create_runtime(self.forge, TASK_OF_NO_MILESTONE_DELIVERED)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.forge.opened[0]["base"], "main")
 
 
 class TickStartingAndCuttingWavesTest(unittest.TestCase):
@@ -2996,7 +3031,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
             "TASK": {"T7": TASK_TO_DELIVER},
-            "MILESTONE": {"M4": (("STATUS", "active"),)},
+            "MILESTONE": {"M4": MILESTONE_M4},
         }
         outputs = {
             **MACHINE_ANSWERS,
@@ -3019,6 +3054,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
     def test_should_start_a_wave_of_the_candidates_of_a_project_without_one(self):
         # Arrange
         self._miss_the_branch("integration/tidepool_w1")
+        self._miss_the_branch("integration/tides")
 
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
@@ -3037,18 +3073,36 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
                 "tasks": ["T7"],
             },
         )
-        self.assertIn(("git", "branch", "--quiet", "integration/tidepool_w1", "main"), self.machine.argvs)
+        self.assertIn(("git", "branch", "--quiet", "integration/tidepool_w1", "integration/tides"), self.machine.argvs)
 
     def test_should_cut_the_missing_branch_of_an_open_wave(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED])
         self._miss_the_branch("integration/M4")
+        self._miss_the_branch("integration/tides")
 
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
-        self.assertIn(("git", "branch", "--quiet", "integration/M4", "main"), self.machine.argvs)
+        self.assertIn(("git", "branch", "--quiet", "integration/M4", "integration/tides"), self.machine.argvs)
+
+    def test_should_name_on_stderr_the_milestone_and_the_unrecorded_branch_it_refuses_to_cut(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED])
+        self._miss_the_branch("integration/M4")
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: CutWaveBranch failed: @MILESTONE.M4: the branch integration/tides exists and no"
+            " milestone.branch_cut records it\n",
+            errors.getvalue(),
+        )
 
 
 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
