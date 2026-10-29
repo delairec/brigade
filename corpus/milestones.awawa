@@ -72,3 +72,14 @@ MILESTONE M9
 	SOURCE "the user's ruling of 2026-10-28 on the milestone of the tasks B212 to B216: « Nouveau"
 		+ "milestone », on the session's recommendation « Un milestone à part, livré seul, comme la"
 		+ "règle 2 le prévoit pour les correctifs du tick. M3 garde son périmètre dashboard »"
+
+MILESTONE M10
+	TITLE "Repair rounds that converge"
+	STATUS planned
+	DESC "a milestone delivered alone, as DESC 5 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
+		+ "a change the tick itself needs: the fixes of the parks « past 2 repair rounds »"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	SOURCE "the user's ruling of 2026-10-29 on the milestone of the tasks B217 to B221: « Nouveau"
+		+ "milestone M10 », on the session's recommendation « livré seul comme M9 : le tick les"
+		+ "livre sans attendre les questions ouvertes de M9 ni le dashboard de M3 »"
