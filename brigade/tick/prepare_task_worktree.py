@@ -72,7 +72,7 @@ def _keep_uncommitted_changes(runtime: Runtime, worktree: BranchWorktree, task: 
         CommitRequest(
             repository=worktree.path,
             files=(WHOLE_WORKTREE,),
-            message=f"brigade tick: keep the changes of @TASK.{task} left uncommitted in a cancelled wave",
+            message=f"chore(tick): keep the changes of @TASK.{task} left uncommitted in a cancelled wave",
         ),
     )
 

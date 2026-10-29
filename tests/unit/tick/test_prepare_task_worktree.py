@@ -563,7 +563,7 @@ COMMIT_THE_UNCOMMITTED_CHANGES = (
     "commit",
     "--quiet",
     "-m",
-    "brigade tick: keep the changes of @TASK.B1 left uncommitted in a cancelled wave",
+    "chore(tick): keep the changes of @TASK.B1 left uncommitted in a cancelled wave",
 )
 SWITCH_TO_A_NEW_TASK_BRANCH = ("git", "switch", "--quiet", "--create", "task/w1/B1", "integration/w1")
 
