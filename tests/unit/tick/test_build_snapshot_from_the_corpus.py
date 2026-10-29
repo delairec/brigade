@@ -1392,6 +1392,39 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_set_aside_the_head_reviewed_before_the_last_requeue_of_the_task(self):
+        # Arrange
+        self.record(20, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].tasks[0].reviewed_head)
+
+    def test_should_keep_the_preflight_and_the_verdict_of_the_other_tasks_of_the_wave_across_a_requeue(self):
+        # Arrange
+        self.record(35, create_verdict("B2", "4f2a9c1", "changes"))
+        self.record(20, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[1:],
+            (
+                TaskFacts(
+                    name="B2",
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                    verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
+                ),
+                TaskFacts(name="B3", milestone="M4"),
+                TaskFacts(name="B4", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+            ),
+        )
+
 
 REQUEUE_REASON = "brigade wave requeue"
 FAILING_CHECKS = {"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}
