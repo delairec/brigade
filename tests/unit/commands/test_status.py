@@ -140,6 +140,18 @@ class StatusOfTheMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(document, HOME)
 
+    def test_should_leave_out_of_the_quota_a_wave_paused_on_another_reason(self):
+        # Arrange
+        self.write_machine()
+        append_event(self.paths, at(8, 20), WavePaused(wave="elm_w1", reason="forge_account", resume_at=None))
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(document["quota"]["paused_waves"], [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}])
+
 
 class StatusTextTest(unittest.TestCase):
     def test_should_print_one_line_per_fact_of_the_home_document(self):
