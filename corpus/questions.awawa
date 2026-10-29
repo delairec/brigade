@@ -81,7 +81,7 @@ OPEN_QUESTION TheNameOfTheIntegrationBranchOfAMilestone
 		+ "integration/M3, or with its TITLE as a slug, integration/M3-dashboard, as the archived"
 		+ "decision named it; and does the branch of a wave keep integration/<project>_w<n> beside"
 		+ "it?"
-	STATUS open
+	STATUS closed
 	BLOCKS @TASK.B212
 	BLOCKS @TASK.B216
 	RATIONALE "the user ruled that the integration branch carries the name of the milestone, « je"
@@ -97,7 +97,7 @@ OPEN_QUESTION TheNameOfTheIntegrationBranchOfAMilestone
 OPEN_QUESTION TheWaveOfATaskNamingNoMilestone
 	QUESTION "on which integration branch does a task naming no MILESTONE run, and into which pull"
 		+ "request is it merged, a TASK of a project corpus being allowed to name none?"
-	STATUS open
+	STATUS closed
 	BLOCKS @TASK.B212
 	BLOCKS @TASK.B213
 	RATIONALE "@DECISION.AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone admits a task"
@@ -115,7 +115,7 @@ OPEN_QUESTION WhoMergesAWaveIntoTheIntegrationBranchOfItsMilestone
 	QUESTION "who merges the pull request of a wave into the integration branch of its milestone,"
 		+ "and on what gate: brigade once the checks of the pull request pass, as it merges a task"
 		+ "pull request into the wave branch, the user, or another gate?"
-	STATUS open
+	STATUS closed
 	BLOCKS @TASK.B212
 	RATIONALE "the user ruled that a wave merges into the integration branch and that the user"
 		+ "intervenes for the final merge into main alone, « alors j'interviens pour le merge final"
@@ -130,7 +130,7 @@ OPEN_QUESTION SeveralMilestonesActiveAtOnce
 	QUESTION "may several milestones of a project be active at once, each with its integration"
 		+ "branch and its waves, and if so which the tick serves first; or does one milestone run"
 		+ "at a time?"
-	STATUS open
+	STATUS closed
 	BLOCKS @TASK.B212
 	BLOCKS @TASK.B213
 	BLOCKS @TASK.B214
@@ -148,7 +148,7 @@ OPEN_QUESTION HowM3MovesToTheIntegrationBranchOfTheMilestone
 		+ "integration/brigade_w6 and their pull requests #237 and #239 open into main, move to one"
 		+ "integration branch of the milestone: the open pull requests retargeted onto it, the"
 		+ "waves merged into it by hand, or M3 delivered under the model it started on?"
-	STATUS open
+	STATUS closed
 	BLOCKS @TASK.B212
 	BLOCKS @TASK.B215
 	RATIONALE "the user keeps #237 and #239 open, « je garde ouvertes »; the tasks of the new model"
@@ -165,7 +165,7 @@ OPEN_QUESTION TheRebaseOfAMilestoneBranchUnderItsOpenWaves
 		+ "while other waves of the milestone are open, cut from the branch before the rebase, what"
 		+ "becomes of those waves: their branches rebased onto the new base too, the rebase waited"
 		+ "for until they are merged, or something else?"
-	STATUS open
+	STATUS closed
 	BLOCKS @TASK.B214
 	RATIONALE "the user ruled the rebase over the merge, « je préfère rebase que merge », which"
 		+ "rewrites the base of every wave branch cut from the milestone branch; several waves of a"

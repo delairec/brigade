@@ -64,7 +64,7 @@ MILESTONE ADD0
 
 MILESTONE M9
 	TITLE "Milestone integration branch"
-	STATUS planned
+	STATUS active
 	DESC "a milestone delivered alone, as DESC 5 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
 		+ "a change the tick itself needs; M3 keeps its dashboard perimeter"

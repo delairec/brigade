@@ -3180,7 +3180,8 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 	DESC "several waves of a project may be open at once; a task belongs to at most one open wave,"
 		+ "and the tick and brigade wave start take their candidates outside every open wave"
 	DESC "the CLI forms a wave without a model: the candidates are the tasks STATUS todo of the"
-		+ "corpus at the integration branch of the milestone, as"
+		+ "corpus at the integration branch of their milestone, or at PROJECT.MAIN for a task"
+		+ "naming none, as"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce sets, with no"
 		+ "live blocker, naming no MILESTONE or one whose STATUS is active, a fixpoint admitting a"
 		+ "task whose every AFTER is implemented or in the wave; --task <task> ... takes exactly"
@@ -4271,12 +4272,12 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 		REF @TASK.B210
 
 DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
-	TITLE "a milestone has one integration branch, named after it; a wave merges into that branch,"
-		+ "and the user merges the branch into main once, when every wave of the milestone is"
-		+ "merged into it"
+	TITLE "a milestone has one integration branch, named after its title; a wave merges into that"
+		+ "branch, merged by the tick, and the user merges the branch into main once, when every"
+		+ "wave of the milestone is merged into it"
 	STATUS active
-	DESC "a milestone has one integration branch, named after the milestone; the pull request of a"
-		+ "wave is opened into that branch, never into PROJECT.MAIN"
+	DESC "a milestone has one integration branch, integration/<slug of its TITLE> as DESC 8 derives"
+		+ "it; the pull request of a wave is opened into that branch, never into PROJECT.MAIN"
 	DESC "the integration pull request of @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate"
 		+ "is the milestone's, from its integration branch into PROJECT.MAIN, opened once every"
 		+ "wave of the milestone is merged into that branch and merged by the user alone; a wave is"
@@ -4303,6 +4304,37 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @TASK.B214
 		REF @TASK.B215
 		REF @TASK.B216
+	DESC "the branch of a milestone is integration/<slug>, slug its TITLE lowercased with every run"
+		+ "of characters other than ASCII letters and digits replaced by one hyphen and none at"
+		+ "either end, integration/dashboard for M3 \"Dashboard\"; MILESTONE carries no BRANCH"
+		+ "field; the tick cuts the branch from PROJECT.MAIN the first time a wave of the milestone"
+		+ "needs it and records it in the ledger, which names the branch from then on whatever the"
+		+ "TITLE becomes; a derived name that is the recorded branch of another milestone of the"
+		+ "project, or a branch of that name the ledger does not record, refuses the wave"
+	DESC "the pull request of a wave is merged into the branch of its milestone by the tick, with"
+		+ "PROJECT.MERGE, once the forge shows it ready to merge: open, its checks passed as those"
+		+ "of a task pull request, no review thread of it unresolved and, under POLICY.REVIEW"
+		+ "approval, approved; no verification run is launched on it, each task of the wave having"
+		+ "passed one before its merge into the wave branch"
+	DESC "several milestones of a project may be active at once, each with its branch and its"
+		+ "waves, none before another: the tick serves their waves in the order of its slots, as it"
+		+ "serves the waves of a project today"
+	DESC "a task naming no MILESTONE runs in a wave of tasks naming none, cut from PROJECT.MAIN,"
+		+ "whose pull request is opened into PROJECT.MAIN and merged by the user alone: the model"
+		+ "this decision replaces stays the fallback; a wave holds the tasks of one milestone, or"
+		+ "tasks naming none"
+	DESC "the rebase of DESC 4 is followed by the rebase of every open wave branch of the milestone"
+		+ "onto the rebased milestone branch; a conflict of either rebase launches a run of the"
+		+ "rebase slot on a worktree of that branch, as @TASK.B210 does for a task branch; the new"
+		+ "wave starts at once, waiting for no rebase run"
+		REF @TASK.B210
+	DESC "M3, in flight on one branch per wave, moves to this model by hand once @MILESTONE.M9 is"
+		+ "merged into PROJECT.MAIN: the tick cuts integration/dashboard at its first need, the"
+		+ "session retargets the pull requests #237 and #239 onto it, gh pr edit <n> --base"
+		+ "integration/dashboard, and the tick merges them on the gate of DESC 9; brigade_w7"
+		+ "follows the model as it stands; no task carries the move, and neither pull request is"
+		+ "merged into main"
+		REF @MILESTONE.M9
 	REJECTED "one integration branch per wave, integration/<project>_w<n> cut from PROJECT.MAIN and"
 		+ "merged into main by a pull request of its own, as the tick does today: the user ruled"
 		+ "that a wave merges into the integration branch of its milestone and never into main"
@@ -4314,6 +4346,36 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	REJECTED "merging the open integration pull requests of the waves brigade_w4 and brigade_w6"
 		+ "into main, #237 and #239, under the model this decision replaces: the user keeps them"
 		+ "open"
+	REJECTED "integration/<NAME>, integration/M3, or integration/<NAME>-<slug> as the name of the"
+		+ "milestone branch: the user ruled the name carried by the milestone's TITLE, « ça doit"
+		+ "pas s'appeler integration/M3, le nom est censé être porté par la milestone »"
+	REJECTED "a BRANCH field on MILESTONE naming the branch: asked between a field and the TITLE,"
+		+ "the user chose « Le TITLE du milestone »"
+	REJECTED "the branch of a milestone derived from its TITLE at each read, with no record: a"
+		+ "retitled milestone would have a second branch cut from main and its merged waves left on"
+		+ "the first"
+	REJECTED "one milestone active at a time, or a priority among the active ones: the user ruled"
+		+ "several, each on its own branch, « ça ne devait pas poser de problème »"
+	REJECTED "the user merging the pull request of a wave into the milestone branch: the user ruled"
+		+ "brigade, once the pull request is ready to merge, and keeps the merge into main alone"
+	REJECTED "a verification run on the pull request of a wave before its merge: each task of the"
+		+ "wave passed one before its merge into the wave branch, as the decision"
+		+ "AVerifierRunOnEveryPullRequestAndOneHumanGate sets, and the pull request of the wave"
+		+ "adds the wave report alone"
+	REJECTED "a task naming no MILESTONE run on the branch of an active milestone, or refused as a"
+		+ "candidate: the user ruled the model of today as the fallback, « Comme aujourd'hui »"
+	REJECTED "the open waves of M3 merged into the milestone branch by hand, or M3 delivered under"
+		+ "the model it started on: the user ruled the retarget of #237 and #239, « Retarget"
+		+ "#237/#239 »"
+	REJECTED "the rebase of the milestone branch waited for until its open waves are merged: the"
+		+ "user ruled the open wave branches rebased too and the ratified task started at once, «"
+		+ "Rebaser aussi w9 »"
+	CLOSES @OPEN_QUESTION.SeveralMilestonesActiveAtOnce
+	CLOSES @OPEN_QUESTION.TheNameOfTheIntegrationBranchOfAMilestone
+	CLOSES @OPEN_QUESTION.WhoMergesAWaveIntoTheIntegrationBranchOfItsMilestone
+	CLOSES @OPEN_QUESTION.TheWaveOfATaskNamingNoMilestone
+	CLOSES @OPEN_QUESTION.HowM3MovesToTheIntegrationBranchOfTheMilestone
+	CLOSES @OPEN_QUESTION.TheRebaseOfAMilestoneBranchUnderItsOpenWaves
 	RATIONALE "on 2026-10-28 the pull request #239 of the wave brigade_w6 was mergeable into main"
 		+ "before the other pull requests of M3, and the branches integration/brigade_w4 and"
 		+ "integration/brigade_w6 carried the names of waves, not of the milestone; the user's"
@@ -4325,6 +4387,24 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "through bin/brigade, as on 2026-10-28 when @TASK.B210, the requeue onto the rebased"
 		+ "branch, was needed to requeue B210 itself"
 		REF @TASK.B210
+	RATIONALE "DESC 8: the GitHub milestone of a task pull request is already named after the TITLE"
+		+ "of its MILESTONE,"
+		+ "@DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle; the ledger"
+		+ "record of the branch follows @DECISION.HybridStorageCorpusAndLedger, the ledger holding"
+		+ "what the machine decides"
+		REF @DECISION.TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
+		REF @DECISION.HybridStorageCorpusAndLedger
+	RATIONALE "DESC 9 reads « review + feedbacks traités » as the state the forge shows: on"
+		+ "2026-10-29 the pull requests #237 and #239 carried no review and no comment, gh pr view"
+		+ "--json reviews,comments, while every task they merge had passed its preflight and its"
+		+ "prudence run"
+	RATIONALE "DESC 13: the tick runs from the main checkout, so the tasks of @MILESTONE.M9 reach"
+		+ "it only once M9 is merged into main; on 2026-10-29 @TASK.B94, AFTER @TASK.B182"
+		+ "implemented on integration/brigade_w6 alone, had not started, « c'est surtout la m3"
+		+ "qu'il faut débloquer en fait, et m9 était censé être la solution »"
+		REF @MILESTONE.M9
+		REF @TASK.B94
+		REF @TASK.B182
 	SOURCE "the user's words of 2026-10-28 on pull request #239: « comment ça la pr 239 peut être"
 		+ "mergée, il est pas censé y avoir d'abord le merge de toutes les pr de m3?, puis je"
 		+ "comprends pas pourquoi les branche d'intégration ne porte pas le nom de la milestone,"
@@ -4343,6 +4423,30 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @TASK.B212
 		REF @TASK.B216
 		REF @MILESTONE.M9
+	SOURCE "the user's ruling of 2026-10-29 on SeveralMilestonesActiveAtOnce, DESC 10: « ben oui"
+		+ "parce que normalement on devait pas merger les waves dans main mais dans une branche"
+		+ "d'intégration dédiée, donc ça ne devait pas poser de problème! »"
+	SOURCE "the user's ruling of 2026-10-29 on TheNameOfTheIntegrationBranchOfAMilestone, DESC 8: «"
+		+ "mais le nom de la milestone est censé être porté par la milestone »; « ça doit pas"
+		+ "s'appeler integration/M3, le nom est censé être porté par la milestone »; asked whether"
+		+ "a BRANCH field on MILESTONE or its TITLE: « Le TITLE du milestone », the option « La"
+		+ "branche est nommée d'après le titre du milestone (ex. « Dashboard »), sous une forme"
+		+ "dérivée par le tick »; the wave branch keeps integration/<project>_w<n>, unruled"
+	SOURCE "the user's ruling of 2026-10-29 on"
+		+ "WhoMergesAWaveIntoTheIntegrationBranchOfItsMilestone, DESC 9: « brigade une fois la pr"
+		+ "déclarée prête à mergée (review + feedbacks traités) »"
+	SOURCE "the user's ruling of 2026-10-29 on TheWaveOfATaskNamingNoMilestone, DESC 11: « Comme"
+		+ "aujourd'hui (Recommended) », the option « Sa vague est coupée de main et sa PR de vague"
+		+ "ouverte dans main, que tu merges : le modèle actuel reste le repli »"
+	SOURCE "the user's ruling of 2026-10-29 on HowM3MovesToTheIntegrationBranchOfTheMilestone, DESC"
+		+ "13: « Retarget #237/#239 (Recommended) », the option « integration/M3 est créée depuis"
+		+ "main, #237 et #239 sont retargetées dessus et mergées par brigade sur leur verdict ; B94"
+		+ "voit alors B182 sur integration/M3 et démarre ; w7 suit le nouveau modèle », the branch"
+		+ "read as integration/dashboard since the ruling on its name"
+	SOURCE "the user's ruling of 2026-10-29 on TheRebaseOfAMilestoneBranchUnderItsOpenWaves, DESC"
+		+ "12: « Rebaser aussi w9 (Recommended) », the option « Le tick rebase integration/M3 sur"
+		+ "main, puis rebase la branche de w9 sur la nouvelle integration/M3 ; un conflit lance un"
+		+ "run de rebase, comme pour une tâche (B210). La tâche ratifiée part tout de suite »"
 
 DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 	TITLE "brigade wave requeue of a parked task whose pull request is open records task.state"
