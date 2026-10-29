@@ -4436,3 +4436,30 @@ DECISION ARequeueReadsThePullRequestOfItsTaskFromTheLedgerAndSetsAsideTheVerific
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	SOURCE "pull request #251 of the brigade repository, delivering @TASK.B217"
 		REF @TASK.B217
+
+DECISION ARunCutByARateLimitSpendsNoRoundOnceResumedAndItsResumeRestoresTheStateHeldBeforeThePause
+	TITLE "a run of which a segment ended on rate_limit spends no round, resumed or not, the"
+		+ "task.state its resume records spends none, and the resume restores the state the task"
+		+ "held before paused:quota"
+	STATUS active
+	DESC "the task.state fixing recorded at the launch of a run counts no round when a run.finished"
+		+ "of that run, of any segment, ends on rate_limit, whether the run resumed after the reset"
+		+ "ends done or not"
+	DESC "the task.state fixing recorded by the resume of a task, the one following its"
+		+ "paused:quota, counts no round"
+	DESC "the resume of a task paused on the quota records the last task.state the task held before"
+		+ "paused:quota: fixing for a repair run, running for a build run"
+	DESC "the tick plans no action on the pull request of a task whose rate limit it notes, so that"
+		+ "no repair is launched in the tick that pauses the task"
+	DESC "binds @TASK.B220"
+		REF @TASK.B220
+	REJECTED "the launch of a cut run counted once its resumed segment ends done: the user ruled «"
+		+ "Ne compte aucun round » for a run cut by a rate limit, and SPEC 4 of TASK B220 asks the"
+		+ "rounds of the task unchanged after the resume"
+	REJECTED "the state of the resume read from the slot of the run: a check repair runs in the"
+		+ "build slot while its task is in fixing"
+	REJECTED "every resume recording running, as the tick did: a task in fixing resumed into"
+		+ "running would be recorded pr_open by the next tick, its repair abandoned"
+	SOURCE "the delivery of @TASK.B220, on the user's ruling of 2026-10-29 « Ne compte aucun round"
+		+ "»"
+		REF @TASK.B220

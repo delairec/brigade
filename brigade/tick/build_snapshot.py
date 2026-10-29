@@ -90,6 +90,7 @@ MERGE_INTO_INTEGRATION = "integration"
 VERIFY_ROUNDS_BY_DEFAULT = 2
 VERIFY_ROUNDS_FIELD = "VERIFY_ROUNDS"
 FIXING_STATE = "fixing"
+QUOTA_PAUSED_STATES = (RUNNING_STATE, FIXING_STATE)
 FAILED_PREFLIGHT_CHECK = "fail"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 
@@ -129,6 +130,7 @@ class TaskFacts:
     worktree: str | None = None
     rate_limit: RateLimit | None = None
     stopped_run: str | None = None
+    resumed_state: str | None = None
     opened_pull_request: int | None = None
     preflighted_head: str | None = None
     verdict: RecordedVerdict | None = None
@@ -388,8 +390,29 @@ def _list_events_since_requeue(events: tuple, wave: str) -> tuple:
     return tuple(kept)
 
 
+def _is_rate_limited_launch(entry: LedgerEntry, reading: WaveReading) -> bool:
+    launched = f"{entry.instant.astimezone(UTC).strftime(COMPACT_INSTANT_FORMAT)}-"
+    return any(
+        isinstance(event, RunFinished)
+        and event.error_class == RATE_LIMIT
+        and event.wave == entry.event.wave
+        and event.task == entry.event.task
+        and event.run.startswith(launched)
+        for event in reading.events
+    )
+
+
+def _is_spending_round(entry: LedgerEntry, reading: WaveReading, previous_state: str | None) -> bool:
+    return (
+        previous_state != PAUSED_ON_QUOTA_STATE
+        and not _is_rebase_launch(entry, reading.runs)
+        and not _is_rate_limited_launch(entry, reading)
+    )
+
+
 def _count_repair_rounds(reading: WaveReading, wave: str) -> dict:
     rounds = {}
+    states = {}
     for entry in reading.entries:
         event = entry.event
         if _restarts_the_rounds(event, wave):
@@ -398,9 +421,11 @@ def _count_repair_rounds(reading: WaveReading, wave: str) -> dict:
             isinstance(event, TaskState)
             and event.wave == wave
             and event.state == FIXING_STATE
-            and not _is_rebase_launch(entry, reading.runs)
+            and _is_spending_round(entry, reading, states.get(event.task))
         ):
             rounds[event.task] = rounds.get(event.task, 0) + 1
+        if isinstance(event, TaskState) and event.wave == wave:
+            states[event.task] = event.state
     return rounds
 
 
@@ -450,10 +475,26 @@ def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...], wave: str) -
     return bool(unavailable) and max(unavailable) > max(cleared, default=BEFORE_ANY_EVENT)
 
 
+def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str | None:
+    held = [
+        event.state
+        for event in reading.events
+        if isinstance(event, TaskState)
+        and event.wave == wave
+        and event.task == task
+        and event.state != PAUSED_ON_QUOTA_STATE
+    ]
+    return held[-1] if held else None
+
+
 def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
     if states.get(task.name) == PAUSED_ON_QUOTA_STATE:
-        return dataclasses.replace(task, stopped_run=_list_task_runs(reading, wave, task.name)[-1].run)
-    if states.get(task.name) != RUNNING_STATE:
+        return dataclasses.replace(
+            task,
+            stopped_run=_list_task_runs(reading, wave, task.name)[-1].run,
+            resumed_state=_read_state_before_pause(reading, wave, task.name),
+        )
+    if states.get(task.name) not in QUOTA_PAUSED_STATES:
         return task
     return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
 
