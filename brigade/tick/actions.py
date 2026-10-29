@@ -130,6 +130,14 @@ class OpenIntegrationPullRequest:
 
 
 @dataclass(frozen=True)
+class MergeWavePullRequest:
+    project: str
+    wave: str
+    pr: int
+    method: str
+
+
+@dataclass(frozen=True)
 class CloseWave:
     wave: str
     pr: int

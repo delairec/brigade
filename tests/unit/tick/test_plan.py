@@ -15,6 +15,7 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeWavePullRequest,
     OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
@@ -1038,6 +1039,147 @@ class PlanWaveCloseTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=("M4",)),))
+
+
+MILESTONE_BRANCH = "integration/empty-cart"
+WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH = PullRequestFacts(
+    number=77,
+    state="open",
+    checks=(CheckVerdict(name="tests", verdict="success"),),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base=MILESTONE_BRANCH,
+)
+MERGE_THE_WAVE_PULL_REQUEST = MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="rebase")
+NO_MILESTONE_BRANCH = None
+NO_UNRESOLVED_THREAD = 0
+ONE_UNRESOLVED_THREAD = 1
+
+
+def create_reported_wave(
+    pull_request: PullRequestFacts, milestone_branch: str | None, unresolved_threads: int
+) -> WaveFacts:
+    return dataclasses.replace(
+        create_wave(TWO_TASKS, {"S3": "merged", "S4": "merged"}),
+        reported=True,
+        opened_integration_pull_request=77,
+        integration_pull_request=pull_request,
+        milestone_branch=milestone_branch,
+        unresolved_threads=unresolved_threads,
+    )
+
+
+class PlanWaveMergeTest(unittest.TestCase):
+    def test_should_merge_the_pull_request_of_a_wave_into_the_branch_of_its_milestone_once_ready(self):
+        # Arrange
+        wave = create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_THE_WAVE_PULL_REQUEST,))
+
+    def test_should_merge_it_with_the_merge_method_of_the_project(self):
+        # Arrange
+        wave = create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_MERGING_BY_SQUASH,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="squash"),))
+
+    def test_should_merge_none_short_of_the_gate(self):
+        # Arrange
+        rows = [
+            (
+                "a check failed",
+                dataclasses.replace(
+                    WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, checks=(CheckVerdict(name="tests", verdict="failure"),)
+                ),
+                NO_UNRESOLVED_THREAD,
+                SHOP,
+            ),
+            (
+                "a check pending",
+                dataclasses.replace(
+                    WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, checks=(CheckVerdict(name="tests", verdict="pending"),)
+                ),
+                NO_UNRESOLVED_THREAD,
+                SHOP,
+            ),
+            ("a review thread unresolved", WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, ONE_UNRESOLVED_THREAD, SHOP),
+            (
+                "not approved under the approval policy",
+                WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
+                NO_UNRESOLVED_THREAD,
+                SHOP_UNDER_APPROVAL,
+            ),
+            (
+                "a project without automatic merge",
+                WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
+                NO_UNRESOLVED_THREAD,
+                SHOP_WITHOUT_AUTO_MERGE,
+            ),
+        ]
+        for case, pull_request, unresolved_threads, project in rows:
+            with self.subTest(case=case):
+                # Arrange
+                wave = create_reported_wave(pull_request, MILESTONE_BRANCH, unresolved_threads)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_close_the_wave_and_merge_nothing_once_its_pull_request_is_merged(self):
+        # Arrange
+        merged = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, state="merged")
+        wave = create_reported_wave(merged, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=()),))
+
+    def test_should_merge_it_approved_under_the_approval_policy(self):
+        # Arrange
+        approved = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, review="approved")
+        wave = create_reported_wave(approved, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_UNDER_APPROVAL,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_THE_WAVE_PULL_REQUEST,))
+
+    def test_should_merge_no_pull_request_whose_base_is_the_main_branch(self):
+        # Arrange
+        into_main = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, base="main")
+        rows = [
+            ("a wave of tasks naming no milestone", into_main, NO_MILESTONE_BRANCH),
+            ("a wave of a milestone", into_main, MILESTONE_BRANCH),
+        ]
+        for case, pull_request, milestone_branch in rows:
+            with self.subTest(case=case):
+                # Arrange
+                wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
 
 
 BODY_FAILURE = PreflightFailure(name="body", findings=("the body names no task",))

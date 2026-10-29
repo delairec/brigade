@@ -15,6 +15,7 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeWavePullRequest,
     OpenIntegrationPullRequest,
     ParkTask,
     PauseWave,
@@ -83,6 +84,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_dead_run_parkings(snapshot)
         + _plan_branch_cuts(snapshot)
         + _plan_reports(snapshot)
+        + _plan_wave_merges(snapshot)
         + _plan_closes(snapshot)
         + _plan_integration_pull_requests(snapshot)
         + _plan_launches(snapshot, paused)
@@ -465,6 +467,34 @@ def _is_settled(wave: WaveFacts) -> bool:
 
 def _plan_reports(snapshot: Snapshot) -> tuple:
     return tuple(ReportWave(wave=wave.wave) for wave in snapshot.waves if _is_settled(wave) and not wave.reported)
+
+
+def _is_wave_pull_request_ready(wave: WaveFacts, project: ProjectFacts) -> bool:
+    pull_request = wave.integration_pull_request
+    return (
+        pull_request is not None
+        and pull_request.state == OPEN_PULL_REQUEST
+        and wave.milestone_branch is not None
+        and pull_request.base == wave.milestone_branch
+        and project.auto_merge != NO_AUTO_MERGE
+        and _are_checks_passed(pull_request, project)
+        and wave.unresolved_threads == 0
+        and (project.review != APPROVAL_REVIEW or pull_request.review == APPROVED_REVIEW)
+    )
+
+
+def _plan_wave_merges(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    return tuple(
+        MergeWavePullRequest(
+            project=wave.project,
+            wave=wave.wave,
+            pr=wave.integration_pull_request.number,
+            method=projects[wave.project].merge,
+        )
+        for wave in snapshot.waves
+        if _is_wave_pull_request_ready(wave, projects[wave.project])
+    )
 
 
 def _plan_closes(snapshot: Snapshot) -> tuple:

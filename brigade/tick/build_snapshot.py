@@ -184,6 +184,8 @@ class WaveFacts:
     reported: bool = False
     integration_pull_request: PullRequestFacts | None = None
     opened_integration_pull_request: int | None = None
+    milestone_branch: str | None = None
+    unresolved_threads: int = 0
 
     def to_document(self) -> dict:
         return {
@@ -201,6 +203,8 @@ class WaveFacts:
                 None if self.integration_pull_request is None else self.integration_pull_request.to_document()
             ),
             "opened_integration_pull_request": self.opened_integration_pull_request,
+            "milestone_branch": self.milestone_branch,
+            "unresolved_threads": self.unresolved_threads,
         }
 
 
