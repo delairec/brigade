@@ -13102,3 +13102,208 @@ TASK B216
 		REF @TASK.B215
 	SOURCE "the user's answer of 2026-10-28 to the session's recommendation: « je garde ouvertes,"
 		+ "fais écrire la décision par lex »"
+
+TASK B217
+	TITLE "The repair rounds of a task are counted since its last verdict or its last requeue, and"
+		+ "a requeue of a task whose pull request is open sends it back to its preflight"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M3
+	COMPONENT "the tick"
+	ROLE ada
+	SPEC "the repair rounds of a task are its task.state fixing recorded after its last"
+		+ "task.verdict or its last requeue, whichever is later, a run of the rebase slot still"
+		+ "excluded; a task.state fixing recorded before either counts none, where today"
+		+ "_count_repair_rounds of brigade/tick/build_snapshot.py counts every one of the wave"
+	SPEC "brigade wave requeue of a parked task whose pull request is open records task.state"
+		+ "pr_open and prints that state; the next tick preflights the head of the pull request,"
+		+ "verifies it, and a verdict changes launches the remediation with its findings"
+	SPEC "brigade wave requeue of a parked task without a pull request records task.state queued"
+		+ "and the next tick launches its build run, as TASK B210 sets"
+	SPEC "the task.state brigade wave requeue records carries a reason naming the requeue, so that"
+		+ "the count of SPEC 1 finds the last requeue in the ledger"
+	SPEC "tests/unit prove a task with two task.state fixing before its first task.verdict and none"
+		+ "after it counting zero rounds, a requeue restarting the count, pr_open recorded on the"
+		+ "requeue of a task with an open pull request and queued without one; tests/cli gains one"
+		+ "flow through the fake adapter: a task parked after its first verdict, requeued, and the"
+		+ "next tick launches its preflight, not its build run"
+	RATIONALE "implements DESC 1 of"
+		+ "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone and"
+		+ "@DECISION.ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight; on 2026-10-28"
+		+ "the two rounds of @TASK.B210 and of @TASK.B28 were spent before their first verdict, by"
+		+ "check repairs and privacy repairs the ledger records as task.preflighted of B210 at"
+		+ "20:15 and 20:25 and of B28 at 21:00, 21:30 and 21:40, and the first verdict asking for"
+		+ "changes parked each task at once, brigade/tick/plan.py _decide_repair reading the rounds"
+		+ "of the whole wave; each requeue recorded queued, and the build run launched on it"
+		+ "received no finding"
+		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
+		REF @DECISION.ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
+		REF @TASK.B210
+		REF @TASK.B28
+	RATIONALE "the two changes share a task because the requeue restarts the same count SPEC 1"
+		+ "defines, and both are read from the ledger alone, as"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks; how the ledger"
+		+ "marks a requeue, SPEC 4, is a point of the refinement"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "the user's rulings of 2026-10-29 in session, on the report of max on the parks « past 2"
+		+ "repair rounds »: on the counter, « Reset par verdict »; on the requeue of a task whose"
+		+ "pull request is open, « Oui, pr_open »"
+	SOURCE "the report of max of 2026-10-29, main 02d56fa8: causes A and B, the budget spent before"
+		+ "the first verdict and a requeue that restarts nothing and relaunches the wrong procedure"
+
+TASK B218
+	TITLE "The brief of a check repair carries every failing check of the preflight, and names the"
+		+ "remedy of a coverage failure"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M3
+	COMPONENT "the tick"
+	ROLE ada
+	SPEC "the brief of a check repair carries, after the tail of the log of each failing check,"
+		+ "every other finding of the preflight of the same head, each under the name of its check:"
+		+ "the file:line of each privacy finding, the finding of the body and the untouched files,"
+		+ "where today brigade/tick/write_repair_brief.py and repair-brief.md.tpl render the job"
+		+ "logs alone"
+	SPEC "when the failing checks include the coverage check, the brief names the remedy the rules"
+		+ "demand: an uncovered line is removed, then written again from a test that demands it,"
+		+ "never a test written after the code it covers"
+	SPEC "tests/unit prove a brief carrying the privacy file:line and the body finding after the"
+		+ "logs, and the coverage remedy present when the coverage check failed and absent"
+		+ "otherwise"
+	RATIONALE "today brigade/tick/plan.py _launch_repair plans LaunchCheckRepair whenever the check"
+		+ "checks failed and passes the names of the failing checks alone, so the privacy lines"
+		+ "known from the first preflight cost @TASK.B210 a second round and were handed to no run"
+		+ "for @TASK.B28; the coverage repair of B28 wrote tests after the code, commit 089d7e82,"
+		+ "which became finding 4 of its verdict"
+		REF @TASK.B210
+		REF @TASK.B28
+	RATIONALE "the preflight findings other than checks already reach the remediation as the"
+		+ "request of changes_requested, SPEC 3 of @TASK.B18; this task hands them to the check"
+		+ "repair, the one repair run that received none"
+		REF @TASK.B18
+	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8:"
+		+ "cause E, the check-repair brief drops the other preflight findings; change 3, no ruling"
+		+ "needed"
+
+TASK B219
+	TITLE "A conflicting rebase of a task behind its wave branch launches the run of the rebase"
+		+ "slot whatever its rounds, and a behind task holding uncommitted changes is parked under"
+		+ "a reason naming them"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M3
+	COMPONENT "the tick"
+	ROLE ada
+	SPEC "the tick launches the run of the rebase slot on a conflicting git rebase of a task behind"
+		+ "its wave branch whatever the count of its repair rounds, where today"
+		+ "brigade/tick/plan.py passes the reason of the rounds spent to RebaseTask and"
+		+ "brigade/commands/tick.py parks the task on it instead of launching the run"
+	SPEC "a task behind its wave branch whose worktree holds uncommitted changes and whose repair"
+		+ "rounds are spent is parked with the reason of the rounds spent naming the uncommitted"
+		+ "changes, distinct from the bare reason of the rounds spent, readable in brigade wave"
+		+ "show and in the ledger"
+	SPEC "tests/unit prove a RebaseTask with no parking reason for a task whose rounds are spent,"
+		+ "the run of the rebase slot launched on its conflict, and the reason of a behind task"
+		+ "holding uncommitted changes past its rounds"
+	RATIONALE "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone"
+		+ "DESC 2 says that a run of the rebase slot counts no round and that no count of its own"
+		+ "bounds its launches; the code of pull request #218 kept the parking reason on"
+		+ "RebaseTask, so on 2026-10-28 the conflicting rebase of @TASK.B28 was parked past 2"
+		+ "repair rounds, trail 20261028T220506Z.jsonl lines 1531 and 2296-2299, a park that names"
+		+ "a repair no repair ran"
+		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
+		REF @TASK.B28
+	RATIONALE "SPEC 2 keeps SPEC 2 of @TASK.B196 true, the park past the rounds with the reason of"
+		+ "the rounds spent, and names its cause; the alternative, taking the worktree over as"
+		+ "@TASK.B211 does for a launch, the changes committed on the task branch and the rebase"
+		+ "run, is for the refinement"
+		REF @TASK.B196
+		REF @TASK.B211
+	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8:"
+		+ "cause C, a conflicting git rebase after the base moved is parked on the repair bound;"
+		+ "change 4, no ruling needed, the active decision deciding"
+
+TASK B220
+	TITLE "A run cut by the 5-hour limit is classified rate_limit, pauses the waves and spends no"
+		+ "repair round"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M3
+	COMPONENT "the tick"
+	ROLE ada
+	AFTER @TASK.B217
+	SPEC "the claude-code adapter classifies as rate_limit a result whose message names a limit"
+		+ "hit, « You've hit your 5-hour limit · resets 1:30am (Europe/Paris) » included, with the"
+		+ "reset hour 01:30 and the timezone Europe/Paris; the result.json of the run"
+		+ "20261028T223554Z-9d1b1f is the fixture of its test, where today RATE_LIMIT_PHRASES of"
+		+ "brigade/adapters/clients/claude_code.py matches none of its phrases and the run is"
+		+ "classified execution"
+	SPEC "a task in fixing whose last run.finished ends on rate_limit, no live run holding it, is"
+		+ "paused on the quota like a running task: every running wave pauses until the reset, and"
+		+ "after the reset the tick launches the repair again by the resume of SPEC 2 of TASK B19,"
+		+ "the task back in fixing"
+	SPEC "the task.state fixing recorded at the launch of a run that ended on rate_limit counts no"
+		+ "repair round"
+	SPEC "tests/unit prove the classification of the fixture, the pause of a task in fixing on the"
+		+ "quota, its resume after the reset and the round spared; tests/cli gains at most one flow"
+		+ "through the fake adapter: a remediation cut by a rate limit, resumed after the reset,"
+		+ "the rounds of the task unchanged"
+	RATIONALE "implements DESC 3 of @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset"
+		+ "and the round spared by"
+		+ "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone; on"
+		+ "2026-10-28 the runs 20261028T223554Z-9d1b1f and 20261028T224054Z-8eea2b of @TASK.B211"
+		+ "ended on the 5-hour limit, 7 and 1 steps, classified execution, so no wave paused,"
+		+ "brigade/tick/build_snapshot.py _note_quota reading the rate limit of a running task"
+		+ "alone, and brigade/tick/plan.py _decide_repair launched a new remediation at each tick,"
+		+ "one round each, until the task was parked"
+		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
+		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
+		REF @TASK.B211
+	RATIONALE "after @TASK.B217 because both rewrite _count_repair_rounds of"
+		+ "brigade/tick/build_snapshot.py; the classification and the count share a task because"
+		+ "the park of B211 needed both defects"
+		REF @TASK.B217
+	SOURCE "the user's ruling of 2026-10-29 in session, on a run cut by a rate limit: « Ne compte"
+		+ "aucun round »"
+	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8:"
+		+ "cause D, the 5-hour quota message classified execution and the repair run never resumed;"
+		+ "change 5a, no ruling needed"
+
+TASK B221
+	TITLE "brigade task check runs the privacy check on the diff of the task, and build-task"
+		+ "rewrites from a new test each branch no test demands"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M3
+	COMPONENT "the build slot"
+	ROLE ada
+	SPEC "brigade task check runs, after the ACCEPTANCE commands and the checks of the corpus, the"
+		+ "privacy check of brigade/verify/check_privacy.py on the lines the task branch adds since"
+		+ "its base, with the PRIVATE and PUBLIC patterns of the project, and reports each finding"
+		+ "as file:line as the preflight does; a finding fails the check"
+	SPEC "build-task.md gains a step before the check: for each branch the implementation added,"
+		+ "the run removes it and runs the tests; a branch whose removal fails no test is deleted,"
+		+ "the test that demands it is written and fails, and the branch is written anew from that"
+		+ "test, never pasted back as it was"
+	SPEC "tests/unit prove a privacy finding failing brigade task check with its file:line and a"
+		+ "diff without one passing; the procedure test of build-task.md proves the step"
+	RATIONALE "today the gate of the build run, brigade task check, runs the ACCEPTANCE of the"
+		+ "project then awawa fmt --check and awawa lint --strict; the preflight gate adds the CI,"
+		+ "the privacy, the body and the untouched files; the verdict gate removes a sample of the"
+		+ "added branches and expects a test to fail; nothing before the pull request checks the"
+		+ "demand, so the privacy findings of @TASK.B210 and @TASK.B28 and the undemanded code of"
+		+ "B28 surfaced after the pull request, each costing a round"
+		REF @TASK.B210
+		REF @TASK.B28
+	RATIONALE "ruff and coverage in the ACCEPTANCE of @PROJECT.Brigade are a configuration of the"
+		+ "machine, ~/.config/brigade/projects.awawa, outside this repository: brigade task check"
+		+ "runs them as any ACCEPTANCE line, so brigade changes nothing for them"
+		REF @PROJECT.Brigade
+	SOURCE "the user's rulings of 2026-10-29 in session: « task check + privacy » and « ruff +"
+		+ "coverage » retained; on the build-task step, « Pour l'étape build-task, sans échec d'un"
+		+ "test, retirer la branche me parait un peu cavalier... Il s'agirait plutôt de supprimer"
+		+ "la branche puis ajouter un test et réécrire la branche comme si c'était la première fois"
+		+ "(c'est à dire éviter de recoller l'ancienne telle quelle, on repart d'une réflexion"
+		+ "nouvelle) »"
+	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8:"
+		+ "answer 4, why builds produce code prudence rejects; change 6"
