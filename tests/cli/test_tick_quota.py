@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from unittest.mock import ANY
 
@@ -35,8 +36,8 @@ S3_IN_CHANGES_REQUESTED = (
 )
 
 
-RESET_PASSED_BY_EVENT = {"run.finished": {"ts": RESET_PASSED}, "wave.paused": {"resume_at": RESUME_AT_PASSED}}
-NOT_SHIFTED = {}
+FINISHED_INSTANT = re.compile(r'"ts": "[^"]+", "event": "run.finished"')
+RESUME_AT = re.compile(r'"resume_at": "[^"]+"')
 
 
 class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
@@ -72,8 +73,10 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
         self.run_tick("--once")
         self.wait_for_the_runs()
         ledger = self.state / "ledger" / "2026-10.jsonl"
-        shifted = [{**event, **RESET_PASSED_BY_EVENT.get(event["event"], NOT_SHIFTED)} for event in self.read_events()]
-        ledger.write_text("".join(json.dumps(event) + "\n" for event in shifted))
+        finished_before_the_reset = FINISHED_INSTANT.sub(
+            f'"ts": "{RESET_PASSED}", "event": "run.finished"', ledger.read_text()
+        )
+        ledger.write_text(RESUME_AT.sub(f'"resume_at": "{RESUME_AT_PASSED}"', finished_before_the_reset))
         self.run_tick("--once")
         self.wait_for_the_runs()
 
