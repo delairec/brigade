@@ -4390,3 +4390,24 @@ DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 		+ "whose pull request is open: « Oui, pr_open »"
 	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8: a"
 		+ "requeue restarts nothing and relaunches the wrong procedure"
+
+DECISION TheCheckRepairBriefNamesTheCoverageRemedyOnAFailingCheckWhoseNameHoldsCoverage
+	TITLE "the brief of a check repair tells the coverage check by its name holding coverage, in"
+		+ "any case, and carries every preflight failure other than checks, ancestry included"
+	STATUS active
+	DESC "a failing check whose name holds coverage, compared after casefold, is the coverage check"
+		+ "of the brief: its failure adds the remedy of an uncovered line"
+	DESC "the other findings of the brief are every failure of the preflight of the same head but"
+		+ "checks, whose logs the brief already carries; ancestry is among them"
+	DESC "binds @TASK.B218"
+		REF @TASK.B218
+	REJECTED "a key of config.toml or a field of PROJECT naming the coverage check: the forge names"
+		+ "a check after its job, and every coverage job brigade drives so far holds the word"
+	REJECTED "the findings of the changes requested alone, ancestry left out as _describe_request"
+		+ "does: SPEC 1 of the task asks for every other finding of the preflight"
+	RATIONALE "the check of brigade is Coverage of the unit tests by coverage.py; a brief that"
+		+ "names the remedy on a check that is not one costs a paragraph, a brief that misses it"
+		+ "costs a verdict, as the coverage repair of @TASK.B28 did"
+		REF @TASK.B28
+	SOURCE "the build run of @TASK.B218 of 2026-10-29, which left this ruling open"
+		REF @TASK.B218

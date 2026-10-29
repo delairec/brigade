@@ -1,9 +1,11 @@
+import dataclasses
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
 from brigade.tick.actions import LaunchCheckRepair
+from brigade.tick.build_snapshot import PreflightFailure
 from brigade.tick.write_repair_brief import write_repair_brief
 
 ACTION = LaunchCheckRepair(
@@ -14,6 +16,7 @@ ACTION = LaunchCheckRepair(
     pr=42,
     worktree="/srv/shop/.brigade/worktrees/B1",
     checks=("tests",),
+    findings=(),
 )
 BRIEF_HEAD = (
     "Repair the failing checks of the pull request #42, which delivers @TASK.B1 of @PROJECT.shop, in the wave shop_w1.\n"
@@ -25,6 +28,20 @@ BRIEF_HEAD = (
     "\n"
     "## tests\n"
     "\n"
+)
+FAILING_TESTS_LOG = [{"name": "tests", "tail": "FAIL test_cart"}]
+PRIVACY_FAILURE = PreflightFailure(
+    name="privacy",
+    findings=("brigade/cart.py:12: an e-mail address", "README.md:3: a home path"),
+)
+BODY_FAILURE = PreflightFailure(name="body", findings=("the body keeps the placeholder $summary",))
+UNTOUCHED_FILES_FAILURE = PreflightFailure(
+    name="untouched", findings=("corpus/tasks.awawa changes while none of its entities does",)
+)
+COVERAGE_REMEDY = (
+    "\n"
+    "The coverage check failed: remove each uncovered line, then write it again from a test that demands it,"
+    " seen failing first; never write a test after the code it covers.\n"
 )
 
 
@@ -61,3 +78,48 @@ class WriteRepairBriefTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(path.read_text(encoding="utf-8"), BRIEF_HEAD + "The log of this check could not be read.\n")
+
+    def test_should_write_every_other_finding_of_the_preflight_after_the_logs_under_the_name_of_its_check(self):
+        # Arrange
+        action = dataclasses.replace(ACTION, findings=(PRIVACY_FAILURE, BODY_FAILURE, UNTOUCHED_FILES_FAILURE))
+
+        # Act
+        path = write_repair_brief(self.state_root, action, FAILING_TESTS_LOG)
+
+        # Assert
+        self.assertEqual(
+            path.read_text(encoding="utf-8"),
+            BRIEF_HEAD + "```\nFAIL test_cart\n```\n"
+            "\n"
+            "The other findings of the preflight of the same head:\n"
+            "\n"
+            "## privacy\n"
+            "\n"
+            "- brigade/cart.py:12: an e-mail address\n"
+            "- README.md:3: a home path\n"
+            "\n"
+            "## body\n"
+            "\n"
+            "- the body keeps the placeholder $summary\n"
+            "\n"
+            "## untouched\n"
+            "\n"
+            "- corpus/tasks.awawa changes while none of its entities does\n",
+        )
+
+    def test_should_name_the_remedy_of_an_uncovered_line_when_the_coverage_check_failed(self):
+        for case, checks, expected_ending in [
+            ("the coverage check failed", ("tests", "Coverage of the unit tests by coverage.py"), COVERAGE_REMEDY),
+            ("the coverage check passed", ("tests",), ""),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                action = dataclasses.replace(ACTION, checks=checks)
+
+                # Act
+                path = write_repair_brief(self.state_root, action, FAILING_TESTS_LOG)
+
+                # Assert
+                self.assertEqual(
+                    path.read_text(encoding="utf-8"), BRIEF_HEAD + "```\nFAIL test_cart\n```\n" + expected_ending
+                )
