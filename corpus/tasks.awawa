@@ -13106,9 +13106,9 @@ TASK B216
 TASK B217
 	TITLE "The repair rounds of a task are counted since its last verdict or its last requeue, and"
 		+ "a requeue of a task whose pull request is open sends it back to its preflight"
-	STATUS draft
+	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
 	ROLE ada
 	SPEC "the repair rounds of a task are its task.state fixing recorded after its last"
@@ -13154,9 +13154,9 @@ TASK B217
 TASK B218
 	TITLE "The brief of a check repair carries every failing check of the preflight, and names the"
 		+ "remedy of a coverage failure"
-	STATUS draft
+	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
 	ROLE ada
 	SPEC "the brief of a check repair carries, after the tail of the log of each failing check,"
@@ -13186,25 +13186,28 @@ TASK B218
 		+ "needed"
 
 TASK B219
-	TITLE "A conflicting rebase of a task behind its wave branch launches the run of the rebase"
-		+ "slot whatever its rounds, and a behind task holding uncommitted changes is parked under"
-		+ "a reason naming them"
-	STATUS draft
+	TITLE "A task behind its wave branch is rebased whatever its repair rounds: a conflicting"
+		+ "rebase launches the run of the rebase slot, and uncommitted changes are taken over"
+		+ "before the rebase"
+	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
 	ROLE ada
+	AFTER @TASK.B211
 	SPEC "the tick launches the run of the rebase slot on a conflicting git rebase of a task behind"
 		+ "its wave branch whatever the count of its repair rounds, where today"
 		+ "brigade/tick/plan.py passes the reason of the rounds spent to RebaseTask and"
 		+ "brigade/commands/tick.py parks the task on it instead of launching the run"
 	SPEC "a task behind its wave branch whose worktree holds uncommitted changes and whose repair"
-		+ "rounds are spent is parked with the reason of the rounds spent naming the uncommitted"
-		+ "changes, distinct from the bare reason of the rounds spent, readable in brigade wave"
-		+ "show and in the ledger"
+		+ "rounds are spent is not parked: the tick takes the worktree over as SPEC 2 of TASK B211"
+		+ "takes over the worktree of a cancelled wave, the changes committed on the task branch,"
+		+ "then rebases the task as SPEC 1 does, where today brigade/tick/plan.py parks it with the"
+		+ "reason of the rounds spent"
 	SPEC "tests/unit prove a RebaseTask with no parking reason for a task whose rounds are spent,"
-		+ "the run of the rebase slot launched on its conflict, and the reason of a behind task"
-		+ "holding uncommitted changes past its rounds"
+		+ "the run of the rebase slot launched on its conflict, and a behind task holding"
+		+ "uncommitted changes past its rounds rebased with the changes in a commit of its branch,"
+		+ "never parked"
 	RATIONALE "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone"
 		+ "DESC 2 says that a run of the rebase slot counts no round and that no count of its own"
 		+ "bounds its launches; the code of pull request #218 kept the parking reason on"
@@ -13213,22 +13216,24 @@ TASK B219
 		+ "a repair no repair ran"
 		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
 		REF @TASK.B28
-	RATIONALE "SPEC 2 keeps SPEC 2 of @TASK.B196 true, the park past the rounds with the reason of"
-		+ "the rounds spent, and names its cause; the alternative, taking the worktree over as"
-		+ "@TASK.B211 does for a launch, the changes committed on the task branch and the rebase"
-		+ "run, is for the refinement"
+	RATIONALE "SPEC 2 replaces SPEC 2 of @TASK.B196, the park of a behind task holding uncommitted"
+		+ "changes past its rounds: a park there names a repair no repair needs, the changes being"
+		+ "taken over as @TASK.B211 takes over the worktree of a cancelled wave; after B211 because"
+		+ "SPEC 2 reuses its take-over"
 		REF @TASK.B196
 		REF @TASK.B211
 	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8:"
 		+ "cause C, a conflicting git rebase after the base moved is parked on the repair bound;"
 		+ "change 4, no ruling needed, the active decision deciding"
+	SOURCE "the user's ruling of 2026-10-29 in session on SPEC 2, a behind task holding uncommitted"
+		+ "changes past its rounds: « Reprendre le worktree (B211) »"
 
 TASK B220
 	TITLE "A run cut by the 5-hour limit is classified rate_limit, pauses the waves and spends no"
 		+ "repair round"
-	STATUS draft
+	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
 	ROLE ada
 	AFTER @TASK.B217
@@ -13240,8 +13245,8 @@ TASK B220
 		+ "classified execution"
 	SPEC "a task in fixing whose last run.finished ends on rate_limit, no live run holding it, is"
 		+ "paused on the quota like a running task: every running wave pauses until the reset, and"
-		+ "after the reset the tick launches the repair again by the resume of SPEC 2 of TASK B19,"
-		+ "the task back in fixing"
+		+ "after the reset the tick launches the repair again as DECISION"
+		+ "QuotaPausesTheWaveAndResumesTheSameSession resumes a run, the task back in fixing"
 	SPEC "the task.state fixing recorded at the launch of a run that ended on rate_limit counts no"
 		+ "repair round"
 	SPEC "tests/unit prove the classification of the fixture, the pause of a task in fixing on the"
@@ -13257,6 +13262,7 @@ TASK B220
 		+ "alone, and brigade/tick/plan.py _decide_repair launched a new remediation at each tick,"
 		+ "one round each, until the task was parked"
 		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
+		REF @DECISION.QuotaPausesTheWaveAndResumesTheSameSession
 		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
 		REF @TASK.B211
 	RATIONALE "after @TASK.B217 because both rewrite _count_repair_rounds of"
@@ -13272,9 +13278,9 @@ TASK B220
 TASK B221
 	TITLE "brigade task check runs the privacy check on the diff of the task, and build-task"
 		+ "rewrites from a new test each branch no test demands"
-	STATUS draft
+	STATUS todo
 	TYPE feat
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M10
 	COMPONENT "the build slot"
 	ROLE ada
 	SPEC "brigade task check runs, after the ACCEPTANCE commands and the checks of the corpus, the"
@@ -13286,7 +13292,8 @@ TASK B221
 		+ "the test that demands it is written and fails, and the branch is written anew from that"
 		+ "test, never pasted back as it was"
 	SPEC "tests/unit prove a privacy finding failing brigade task check with its file:line and a"
-		+ "diff without one passing; the procedure test of build-task.md proves the step"
+		+ "diff without one passing; brigade/runs/data/procedures/build-task.md holds the step of"
+		+ "SPEC 2"
 	RATIONALE "today the gate of the build run, brigade task check, runs the ACCEPTANCE of the"
 		+ "project then awawa fmt --check and awawa lint --strict; the preflight gate adds the CI,"
 		+ "the privacy, the body and the untouched files; the verdict gate removes a sample of the"
