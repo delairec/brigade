@@ -13,6 +13,8 @@ from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
+from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_entities import read_entities
 from brigade.errors import StandingDown, UsageError
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
@@ -31,6 +33,7 @@ from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -99,14 +102,16 @@ from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pul
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
 from brigade.waves.find_wave_started import find_wave_started
+from brigade.waves.locate_project_main import locate_project_main
 from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
-from brigade.waves.read_project_tasks import read_project_tasks
+from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_wave_milestone import read_wave_milestone
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
+TASK_TYPE = "TASK"
 VERIFY_PROCEDURE = "verify-pr"
 REMEDIATE_PROCEDURE = "remediate-pr"
 REMEDIATE_SLOT = "remediate"
@@ -428,19 +433,34 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
     _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
 
 
-def _locate_wave_base(runtime: Runtime, configuration: Configuration, project_name: str, wave: str) -> str:
-    project = find_project(read_projects(runtime), project_name)
-    read_environment = _cache_forge_environment(runtime, configuration)
-    tasks = read_project_tasks(runtime, configuration, project, read_environment)
-    started = find_wave_started(tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), wave)
+def _find_started_wave(runtime: Runtime, wave: str) -> WaveStarted:
+    return find_wave_started(tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), wave)
+
+
+def _locate_wave_base(runtime: Runtime, configuration: Configuration, started: WaveStarted, root: Path) -> str:
+    tasks = {task.name: task for task in read_entities(runtime.run_process, root, TASK_TYPE)}
     demand = WaveBaseDemand(
-        project=project,
-        milestone=read_wave_milestone(wave, (tasks.by_name[task] for task in started.tasks)),
-        root=tasks.root,
-        read_environment=read_environment,
+        project=find_project(read_projects(runtime), started.project),
+        milestone=read_wave_milestone(started.wave, (tasks[task] for task in started.tasks)),
+        root=root,
+        read_environment=_cache_forge_environment(runtime, configuration),
         read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
     )
     return locate_wave_base(runtime, demand)
+
+
+def _locate_open_wave_base(runtime: Runtime, configuration: Configuration, wave: str) -> str:
+    started = _find_started_wave(runtime, wave)
+    root = prepare_wave_tree(runtime, configuration, started).root
+    return _locate_wave_base(runtime, configuration, started, root)
+
+
+def _locate_missing_wave_base(runtime: Runtime, configuration: Configuration, wave: str) -> str:
+    started = _find_started_wave(runtime, wave)
+    project = find_project(read_projects(runtime), started.project)
+    main = locate_project_main(runtime.run_process, project, _cache_forge_environment(runtime, configuration))
+    query = argparse.Namespace(project=project.name, ref=main, worktree=None)
+    return _locate_wave_base(runtime, configuration, started, prepare_project_tree(query, configuration, runtime).root)
 
 
 def _open_integration_pull_request(
@@ -449,7 +469,7 @@ def _open_integration_pull_request(
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     project = find_project(read_projects(runtime), action.project)
-    base = _locate_wave_base(runtime, configuration, action.project, action.wave)
+    base = _locate_open_wave_base(runtime, configuration, action.wave)
     repository = read_project_field(project, PATH_FIELD)
     query = PullRequestQuery(repository=repository, branch=action.branch, environment=environment)
     found = ask_pull_request(forge, FORGE_NAME, query, runtime)
@@ -495,7 +515,7 @@ def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: Cut
         branch=action.branch,
         read_environment=_cache_forge_environment(runtime, configuration),
     )
-    cut_wave_branch(runtime.run_process, cut, _locate_wave_base(runtime, configuration, action.project, action.wave))
+    cut_wave_branch(runtime.run_process, cut, _locate_missing_wave_base(runtime, configuration, action.wave))
 
 
 def _park_task(runtime: Runtime, action: ParkTask) -> None:
