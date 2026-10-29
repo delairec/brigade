@@ -38,6 +38,8 @@ PLAN = (
     'TASK S3\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n'
 )
 READ_THE_BRIEF = '#!/bin/sh\nbrief=$(cat)\nread_argument() { printf \'%s\\n\' "$brief" | sed -n "s/^$1=//p"; }\n'
+RELEASE_FILE = "released"
+AWAIT_THE_RELEASE = f'until [ -e "$BRIGADE_RUN_DIR/{RELEASE_FILE}" ]; do sleep 0.1; done\n'
 PLANNER_PLAY = (
     READ_THE_BRIEF + 'plan="$BRIGADE_RUN_DIR/plan.awawa"\n'
     f"cat > \"$plan\" <<'PLAN'\n{PLAN}PLAN\n"
@@ -45,14 +47,14 @@ PLANNER_PLAY = (
     'cat -- "$1"\n'
 )
 BUILDER_PLAY = (
-    READ_THE_BRIEF + 'task=$(read_argument task | sed "s/^@TASK\\.//")\n'
+    READ_THE_BRIEF + AWAIT_THE_RELEASE + 'task=$(read_argument task | sed "s/^@TASK\\.//")\n'
     'printf \'%s\\n\' "$task" > "delivered-$task.txt"\n'
     'git add -- "delivered-$task.txt" && git commit --quiet -m "feat: deliver $task" >&2\n'
     'brigade task check >&2 && brigade task pr --subject "deliver $task" >&2 && brigade task promote >&2\n'
     'cat -- "$1"\n'
 )
 REVIEWER_PLAY = (
-    READ_THE_BRIEF + 'verdict="$BRIGADE_RUN_DIR/verdict.json"\n'
+    READ_THE_BRIEF + AWAIT_THE_RELEASE + 'verdict="$BRIGADE_RUN_DIR/verdict.json"\n'
     'printf \'{"head": "%s", "verdict": "pass", "findings": []}\\n\' "$(git rev-parse HEAD)" > "$verdict"\n'
     'brigade verify verdict "$(read_argument pr)" --file "$verdict" >&2\n'
     'cat -- "$1"\n'
@@ -163,10 +165,15 @@ class WaveRehearser:
         return json.loads((self.store / "pulls" / f"{number}.json").read_text())
 
     def list_finished_runs(self) -> list[str]:
-        records = sorted((self.state / "runs").glob("*/run.json"))
+        records = sorted((self.state / "runs").glob("*/run.json"), key=self.order_run)
         for record in records:
+            (record.parent / RELEASE_FILE).touch()
             self.wait_until((record.parent / "result.json").exists, f"{record.parent} never finished")
         return [record.parent.name for record in records]
+
+    @staticmethod
+    def order_run(record: Path) -> tuple[str, str]:
+        return json.loads(record.read_text())["task"] or "", record.parent.name
 
     def wait_until(self, condition, failure: str) -> None:
         deadline = time.monotonic() + FILE_WAIT_S
