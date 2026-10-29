@@ -3350,10 +3350,17 @@ DECISION ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 		+ "quota with a resume_at not reached, with the latest such resume_at; otherwise while a"
 		+ "rate limit is in force, with the resume_at SPEC 1 of @TASK.B19 sets"
 		REF @TASK.B19
-	DESC "a running task moves to paused:quota when its last run.finished, keyed by its wave and"
-		+ "its task, ends on rate_limit and no live run holds it"
+	DESC "a running task, or a task in fixing whose repair run was cut, moves to paused:quota when"
+		+ "its last run.finished, keyed by its wave and its task, ends on rate_limit and no live"
+		+ "run holds it; a run so cut spends no repair round, and after the reset it is launched"
+		+ "again as @DECISION.QuotaPausesTheWaveAndResumesTheSameSession provides"
+		REF @DECISION.QuotaPausesTheWaveAndResumesTheSameSession
 	DESC "a wave started after forge_account.unavailable is paused on the forge account like the"
 		+ "waves running then: only brigade wave resume lifts that pause"
+	DESC "the pause of a task in fixing and the round it spares bind @TASK.B220; until it is"
+		+ "delivered a task in fixing stays fixing and the tick launches a new repair run at each"
+		+ "tick, one round each"
+		REF @TASK.B220
 	REJECTED "the build run of a running task of a running wave alone: the user ruled that any run"
 		+ "on rate_limit pauses the waves, a study run or a run launched by hand included"
 	REJECTED "every run.finished on rate_limit the ledger holds: a rate limit whose reset has"
@@ -3365,11 +3372,25 @@ DECISION ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 		+ "with the same resume_at, one client serving every project of the machine"
 	REJECTED "a wave.started after forge_account.unavailable clearing the pause of that wave: the"
 		+ "user ruled the clause out, the account being as unavailable as before"
-	REJECTED "the last run.finished of the task whatever its state: a task past its build run, its"
-		+ "pull request open or merged, would move back to paused:quota"
+	REJECTED "the last run.finished of the task whatever its state: a task awaiting its preflight"
+		+ "or its verdict, or merged, would move back to paused:quota"
+	REJECTED "a repair run cut by a rate limit counted as one round and launched again at the next"
+		+ "tick, as the tick did until the ruling of 2026-10-29: on 2026-10-28 each tick launched"
+		+ "on B211 a remediation that died in 1 to 7 steps on the 5-hour limit, each launch a"
+		+ "round, until the task was parked past its rounds"
 	RATIONALE "@TASK.B164 keys every run.finished by its wave and its task, so the run a rate limit"
 		+ "stopped is found without reading run.json"
 		REF @TASK.B164
+	RATIONALE "on 2026-10-28 the runs 20261028T223554Z-9d1b1f and 20261028T224054Z-8eea2b of"
+		+ "@TASK.B211 ended on « You've hit your 5-hour limit · resets 1:30am (Europe/Paris) », a"
+		+ "message the adapter classified execution, and brigade/tick/build_snapshot.py _note_quota"
+		+ "reads the rate limit of a running task alone, so no wave paused and the task in fixing"
+		+ "spent a round at each tick; a run the quota cut did no repair, so it spends no round"
+		REF @TASK.B211
+	SOURCE "the user's ruling of 2026-10-29 in session, on the remediation runs of @TASK.B211 cut"
+		+ "by the 5-hour limit on 2026-10-28, each launch counted as a round: « Ne compte aucun"
+		+ "round »"
+		REF @TASK.B211
 	SOURCE "pull request #156 of the brigade repository, delivering @TASK.B19, and the user's"
 		+ "rulings of 2026-10-19 on its review: \"(1) B (2) B (3) B\""
 		REF @TASK.B19
@@ -3893,12 +3914,20 @@ DECISION AFindingRecordedWithoutASummaryPrintsNoneAsItsSummaryInThePreviousVerdi
 
 DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
 	TITLE "a repair round is one launch by the tick of a run of the remediate or the build slot on"
-		+ "a task of a wave; a run of the rebase slot counts none, and no other bound replaces it"
+		+ "a task of a wave, counted since the last verdict or the last requeue of the task; a run"
+		+ "of the rebase slot counts none, a run cut by a rate limit counts none, and no other"
+		+ "bound replaces it"
 	STATUS active
 	DESC "the rounds of a task are the count of the runs of the remediate slot and of the build"
-		+ "slot the tick launched on it in its wave, each recorded as task.state fixing after its"
-		+ "launch; past the VERIFY_ROUNDS of the project's POLICY the task is parked with the"
-		+ "reason of the rounds spent"
+		+ "slot the tick launched on it in its wave since its last task.verdict or its last"
+		+ "requeue, whichever is later, each recorded as task.state fixing after its launch; past"
+		+ "the VERIFY_ROUNDS of the project's POLICY the task is parked with the reason of the"
+		+ "rounds spent: VERIFY_ROUNDS bounds the repair of one verdict, and a verdict or a requeue"
+		+ "restarts the count"
+	DESC "a run of the remediate or the build slot cut by a rate limit spends no round: its"
+		+ "task.state fixing is not counted, and the run is launched again after the reset, as"
+		+ "@DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset provides"
+		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 	DESC "a run of the rebase slot, launched on a conflict of the git rebase, counts no round, and"
 		+ "no count of its own bounds its launches"
 	DESC "a task left fixing whose pull request head is still the head of its last preflight, with"
@@ -3917,12 +3946,23 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		REF @TASK.B18
 		REF @TASK.B143
 		REF @TASK.B196
+	DESC "the count since the last verdict or the last requeue binds @TASK.B217, and the round a"
+		+ "rate limit spares binds @TASK.B220; until they are delivered the tick counts every"
+		+ "task.state fixing of the wave"
+		REF @TASK.B217
+		REF @TASK.B220
 	REJECTED "a run of the rebase slot counted as one round, as the former ruling did: the user"
 		+ "ruled that only the repair rounds are counted"
 	REJECTED "a bound of its own on the runs of the rebase slot once they count no round: the user"
 		+ "refused a second limit"
-	REJECTED "the rounds counted from run.finished of the repair slots: a run resumed after a rate"
-		+ "limit finishes once per segment and would count twice"
+	REJECTED "the rounds counted from run.finished of the repair slots: a run cut by a rate limit"
+		+ "finishes once per segment and would count, where it spends none"
+	REJECTED "the rounds counted over the whole wave, as the tick did until the ruling of"
+		+ "2026-10-29: on 2026-10-28 every round of B210 and B28 went to a check repair or a"
+		+ "privacy repair before the first verdict, and the first verdict asking for changes parked"
+		+ "the task at once"
+	REJECTED "a repair launched before the first verdict, a check repair or a privacy repair,"
+		+ "counting no round: a repair that pushes nothing would be launched again without end"
 	REJECTED "the rounds counted by pushes: a run that never pushes would be launched without end"
 	RATIONALE "the user's words: « non mais seuls les rounds de réparations doivent être comptés »,"
 		+ "and on a bound of its own for the runs of the rebase slot: « je ne comprends pas"
@@ -3930,6 +3970,19 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		+ "decision the tick took, so the count follows from facts as"
 		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks"
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	RATIONALE "on 2026-10-28 the two rounds of the default policy of @TASK.B210 and of @TASK.B28"
+		+ "were spent by check repairs and privacy repairs before the first verdict, the runs that"
+		+ "debit the budget without receiving the findings of a verdict, so the first verdict"
+		+ "asking for changes parked each task at once and no remediation of a verdict ever ran on"
+		+ "either; a count restarted by each verdict bounds what VERIFY_ROUNDS was meant to bound,"
+		+ "the repair of one verdict"
+		REF @TASK.B210
+		REF @TASK.B28
+	SOURCE "the user's ruling of 2026-10-29 in session, on the parks « past 2 repair rounds » of"
+		+ "@TASK.B210 and @TASK.B28 of 2026-10-28 and the report of max on main 02d56fa8: « Reset"
+		+ "par verdict »"
+		REF @TASK.B210
+		REF @TASK.B28
 	SOURCE "the user's rulings of 2026-10-26 in session, on @TASK.B25 parked past 2 repair rounds"
 		+ "at its first verdict on pull request #211, its two rounds being one run of the rebase"
 		+ "slot of 2026-10-25 and one check repair of 2026-10-26"
@@ -4290,3 +4343,50 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @TASK.B212
 		REF @TASK.B216
 		REF @MILESTONE.M9
+
+DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
+	TITLE "brigade wave requeue of a parked task whose pull request is open records task.state"
+		+ "pr_open, not queued: the head goes through preflight and verification again and the"
+		+ "remediation receives the findings; a task without a pull request is queued and its build"
+		+ "run launched"
+	STATUS active
+	DESC "a requeue of a parked task whose pull request is open records task.state pr_open; the"
+		+ "next tick preflights the head of the pull request, verifies it, and a verdict changes"
+		+ "launches the remediation with its findings"
+	DESC "a requeue of a parked task without a pull request records task.state queued, and the next"
+		+ "tick launches its build run, as @TASK.B210 sets"
+		REF @TASK.B210
+	DESC "a requeue restarts the count of the repair rounds of the task, as DESC 1 of"
+		+ "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone"
+		+ "says"
+		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
+	DESC "binds @TASK.B217; until it is delivered brigade wave requeue records queued for every"
+		+ "task"
+		REF @TASK.B217
+	REJECTED "queued recorded for every requeued task, as brigade wave requeue did until the ruling"
+		+ "of 2026-10-29: on a task with an open pull request the tick launched a build run with"
+		+ "the brief Deliver the task, which received neither the verdict nor the preflight"
+		+ "findings, did nothing or rebased and force-pushed on its own, and the next verdict"
+		+ "re-raised the previous findings and parked the task at once"
+	REJECTED "changes_requested recorded on the requeue, the remediation launched at once: the head"
+		+ "was not preflighted since the park, and a failing check or a privacy finding would"
+		+ "surface only at the next verdict; pr_open is the one state from which the preflight of a"
+		+ "head opens the next verification"
+	RATIONALE "observed on 2026-10-28 on the requeues of @TASK.B210 and @TASK.B28:"
+		+ "brigade/commands/wave_requeue.py appends task.state queued alone, brigade/tick/plan.py"
+		+ "then plans LaunchTask and the build run starts on build-brief.md.tpl, whose package"
+		+ "carries the worktree, the task, the rules, AGENTS.md and the acceptance and no finding;"
+		+ "the runs bb222f and cb6753 did nothing and 28179e rebased and force-pushed on its own"
+		REF @TASK.B210
+		REF @TASK.B28
+	RATIONALE "a verification after the first verdict judges the answer to each previous finding,"
+		+ "@DECISION.AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff, so"
+		+ "a head requeued without a repair is judged on the findings it left open, and the"
+		+ "remediation that follows receives them; pr_open is the state a rebased head moves back"
+		+ "to for the same reason, @DECISION.ACleanRebaseSendsTheTaskBackToItsPreflight"
+		REF @DECISION.AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairDiff
+		REF @DECISION.ACleanRebaseSendsTheTaskBackToItsPreflight
+	SOURCE "the user's ruling of 2026-10-29 in session, on the state a requeue records for a task"
+		+ "whose pull request is open: « Oui, pr_open »"
+	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8: a"
+		+ "requeue restarts nothing and relaunches the wrong procedure"
