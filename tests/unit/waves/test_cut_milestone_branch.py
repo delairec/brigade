@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
@@ -17,6 +18,7 @@ BRANCH = "integration/milestone-integration-branch"
 BRANCH_NOT_FOUND = 1
 GIT_BRANCH = ("git", "branch")
 GIT_PUSH = ("git", "push")
+PUSH_REFUSED = 1
 REMOTE_BRANCH_NOT_FOUND = 2
 MILESTONE = Entity(name="M9", fields=(EntityField(name="TITLE", value="Milestone integration branch"),))
 RETITLED_MILESTONE = Entity(name="M9", fields=(EntityField(name="TITLE", value="One branch per milestone"),))
@@ -52,6 +54,10 @@ def _read_login() -> str:
     return "octo-bot"
 
 
+def _fail_to_read_login() -> str:
+    raise BrigadeError("the forge answers no login for the cli key")
+
+
 class CutMilestoneBranchTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -68,12 +74,12 @@ class CutMilestoneBranchTestCase(unittest.TestCase):
         self.processes.answer(("git", "branch", "--quiet", BRANCH, "origin/main"))
         self.processes.answer(("git", "push", "--quiet", "origin", BRANCH))
 
-    def cut(self, forge: str, milestone: Entity = MILESTONE) -> str:
+    def cut(self, forge: str, milestone: Entity = MILESTONE, read_login: Callable[[], str] = _read_login) -> str:
         demand = MilestoneBranchDemand(
             project=_create_project(forge),
             milestone=milestone,
             read_environment=_read_forge_environment,
-            read_login=_read_login,
+            read_login=read_login,
         )
         return cut_milestone_branch(self.runtime, demand)
 
@@ -132,6 +138,35 @@ class CutMilestoneBranchOnTheGithubForgeTest(CutMilestoneBranchTestCase):
 
         # Assert
         self.assertEqual(self.read_events()[0]["login"], "octo-bot")
+
+    def test_should_delete_the_branch_it_cut_and_record_nothing_when_the_push_fails(self):
+        # Arrange
+        self.processes.answer(("git", "push", "--quiet", "origin", BRANCH), exit_code=PUSH_REFUSED)
+        self.processes.answer(("git", "branch", "--quiet", "-D", BRANCH))
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            self.cut("github")
+
+        # Assert
+        self.assertEqual(
+            self.list_git_writes(),
+            [
+                ("git", "branch", "--quiet", BRANCH, "origin/main"),
+                ("git", "push", "--quiet", "origin", BRANCH),
+                ("git", "branch", "--quiet", "-D", BRANCH),
+            ],
+        )
+        self.assertEqual(self.read_events(), [])
+
+    def test_should_cut_and_push_nothing_when_the_login_cannot_be_read(self):
+        # Act
+        with self.assertRaises(BrigadeError):
+            self.cut("github", read_login=_fail_to_read_login)
+
+        # Assert
+        self.assertEqual(self.list_git_writes(), [])
+        self.assertEqual(self.read_events(), [])
 
     def test_should_refuse_a_branch_of_the_name_the_forge_holds_and_no_cut_records(self):
         # Arrange

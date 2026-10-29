@@ -5,6 +5,7 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
 from brigade.git.cut_branch import BranchCut, cut_branch
+from brigade.git.delete_branch import delete_branch
 from brigade.git.find_branch import find_branch
 from brigade.git.find_remote_branch import RemoteBranch, find_remote_branch
 from brigade.git.push_branch import BranchPush, push_branch
@@ -58,12 +59,15 @@ def _find_branch_anywhere(runtime: Runtime, demand: MilestoneBranchDemand, branc
 def _cut_and_record(runtime: Runtime, demand: MilestoneBranchDemand, branch: str) -> None:
     repository = Path(read_project_field(demand.project, "PATH"))
     start = locate_project_main(runtime.run_process, demand.project, demand.read_environment)
+    login = demand.read_login() if is_on_github(demand.project) else NO_LOGIN
     cut_branch(runtime.run_process, BranchCut(repository=repository, branch=branch, start=start))
-    login = NO_LOGIN
     if is_on_github(demand.project):
         push = BranchPush(repository=repository, branch=branch, environment=demand.read_environment(CLI_KEY))
-        push_branch(runtime.run_process, push)
-        login = demand.read_login()
+        try:
+            push_branch(runtime.run_process, push)
+        except BrigadeError:
+            delete_branch(runtime.run_process, repository, branch)
+            raise
     cut = MilestoneBranchCut(project=demand.project.name, milestone=demand.milestone.name, branch=branch, login=login)
     append_event(runtime.paths, runtime.now, cut)
 
