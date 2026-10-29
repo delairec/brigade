@@ -13106,7 +13106,8 @@ TASK B216
 TASK B217
 	TITLE "The repair rounds of a task are counted since its last verdict or its last requeue, and"
 		+ "a requeue of a task whose pull request is open sends it back to its preflight"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 251
 	TYPE fix
 	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
