@@ -241,9 +241,9 @@ class CheckTaskOfLinesTheTaskAddsHoldingPrivateDataTest(unittest.TestCase):
     def test_should_pass_a_line_the_public_patterns_of_the_project_allow(self):
         # Arrange
         script_passing_commands(
-            self.processes, MERGE_BASE_ARGV, "+++ b/README.md\n@@ -0,0 +1 @@\n+Clone it into /home/user/oak.\n"
+            self.processes, MERGE_BASE_ARGV, "+++ b/README.md\n@@ -0,0 +1 @@\n+Clone it into /home/alice/oak.\n"
         )
-        worktree = create_worktree(EntityField(name="PUBLIC", value="/home/user"))
+        worktree = create_worktree(EntityField(name="PUBLIC", value="/home/alice"))
 
         # Act
         document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), worktree)
