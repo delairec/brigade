@@ -7,7 +7,7 @@ from tests.value_matchers import PatternMatcher
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 CONVENTIONAL_COMMITS_HOOK = (
     "#!/bin/sh\n"
-    "head -n 1 \"$1\" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)"
+    'head -n 1 "$1" | grep -qE \'^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)'
     "(\\([a-zA-Z0-9._/-]+\\))?!?: .+'\n"
 )
 NEW_WAVE_BRANCH = "integration/M1-empty-cart-again"
