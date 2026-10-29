@@ -10,10 +10,13 @@ from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 
 REPOSITORY = "/srv/shop"
 BRANCH = "integration/milestone-integration-branch"
 BRANCH_NOT_FOUND = 1
+GIT_BRANCH = ("git", "branch")
+GIT_PUSH = ("git", "push")
 REMOTE_BRANCH_NOT_FOUND = 2
 MILESTONE = Entity(name="M9", fields=(EntityField(name="TITLE", value="Milestone integration branch"),))
 RETITLED_MILESTONE = Entity(name="M9", fields=(EntityField(name="TITLE", value="One branch per milestone"),))
@@ -76,10 +79,10 @@ class CutMilestoneBranchTestCase(unittest.TestCase):
 
     def read_events(self) -> list[dict]:
         ledger = self.root / "state" / "ledger" / "2026-10.jsonl"
-        return [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+        return list(map(json.loads, ledger.read_text(encoding="utf-8").splitlines()))
 
     def list_git_writes(self) -> list[tuple[str, ...]]:
-        return [argv for argv in self.processes.list_argvs() if argv[:2] in (("git", "branch"), ("git", "push"))]
+        return select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH, GIT_PUSH)
 
 
 class CutMilestoneBranchWithoutAForgeTest(CutMilestoneBranchTestCase):
@@ -156,7 +159,8 @@ class CutMilestoneBranchAlreadyRecordedTest(CutMilestoneBranchTestCase):
         branch = self.cut("github", RETITLED_MILESTONE)
 
         # Assert
-        self.assertEqual((branch, self.processes.list_argvs()), (BRANCH, []))
+        self.assertEqual(branch, BRANCH)
+        self.assertEqual(self.processes.list_argvs(), [])
 
     def test_should_refuse_the_name_another_milestone_of_the_project_records(self):
         # Arrange
@@ -167,10 +171,8 @@ class CutMilestoneBranchAlreadyRecordedTest(CutMilestoneBranchTestCase):
             self.cut("none")
 
         # Assert
-        self.assertEqual(
-            (str(refusal.exception), self.list_git_writes()),
-            (f"@MILESTONE.M9: the branch {BRANCH} is the branch of @MILESTONE.M3", []),
-        )
+        self.assertEqual(str(refusal.exception), f"@MILESTONE.M9: the branch {BRANCH} is the branch of @MILESTONE.M3")
+        self.assertEqual(self.list_git_writes(), [])
 
     def test_should_cut_the_name_another_project_records_for_its_milestone(self):
         # Arrange
@@ -192,6 +194,6 @@ class CutMilestoneBranchAlreadyRecordedTest(CutMilestoneBranchTestCase):
 
         # Assert
         self.assertEqual(
-            (str(refusal.exception), self.list_git_writes()),
-            (f"@MILESTONE.M9: the branch {BRANCH} exists and no milestone.branch_cut records it", []),
+            str(refusal.exception), f"@MILESTONE.M9: the branch {BRANCH} exists and no milestone.branch_cut records it"
         )
+        self.assertEqual(self.list_git_writes(), [])

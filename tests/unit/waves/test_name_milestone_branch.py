@@ -5,6 +5,7 @@ from brigade.waves.name_milestone_branch import name_milestone_branch
 
 class NameMilestoneBranchTest(unittest.TestCase):
     def test_should_name_the_branch_after_the_slug_of_the_title(self):
+        # Arrange
         rows = (
             ("Dashboard", "integration/dashboard"),
             ("Milestone integration branch", "integration/milestone-integration-branch"),
