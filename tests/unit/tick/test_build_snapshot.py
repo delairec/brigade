@@ -137,6 +137,8 @@ class SnapshotTest(unittest.TestCase):
                     "reported": False,
                     "integration_pull_request": None,
                     "opened_integration_pull_request": None,
+                    "milestone_branch": None,
+                    "unresolved_threads": 0,
                 }
             ],
         )

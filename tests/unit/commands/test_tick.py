@@ -38,6 +38,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+from tests.unit.select_wave_events import select_wave_events
 from tests.unit.spawned_process_double import SpawnedProcessDouble
 
 GIT_PUSH = ("git", "push")
@@ -2766,6 +2767,9 @@ class OpeningForgeDouble:
     def list_pull_requests(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "pull_requests": []}
 
+    def list_review_threads(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "threads": []}
+
 
 def _resolve_the_collectors_beside(resolve_plugin, root: Path):
     places = locate_collectors(root, create_test_paths(root))
@@ -3019,6 +3023,131 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.forge.opened[0]["base"], "main")
+
+
+WAVE_PR_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:30:00Z",
+    "event": "wave.pr_opened",
+    "wave": "tidepool_w16",
+    "pr": 206,
+    "login": "tidepool-cli",
+}
+WAVE_PULL_REQUEST_READY = INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH | {
+    "checks": [{"name": "tests", "verdict": "success"}]
+}
+NO_REVIEW_THREAD = []
+UNRESOLVED_REVIEW_THREAD = [
+    {"id": "PRRT_1", "file": "brigade/tick/plan.py", "line": 12, "author": "octo-reviewer", "body": "Why here?"}
+]
+
+
+class WaveMergingForgeDouble(OpeningForgeDouble):
+    def __init__(self, found_by_branch: dict, threads: list[dict]):
+        super().__init__(found_by_branch)
+        self.threads = threads
+        self.merges = []
+
+    def list_review_threads(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "threads": self.threads}
+
+    def merge_pull_request(self, request: dict, runtime) -> dict:
+        self.merges.append(request)
+        self.found_by_branch = {WAVE_BRANCH: WAVE_PULL_REQUEST_READY | {"state": "merged"}}
+        return {"schema_version": 1}
+
+
+class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4, WAVE_REPORTED, WAVE_PR_OPENED])
+
+    def _create_runtime(self, forge: WaveMergingForgeDouble) -> Runtime:
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": {"T7": TASK_DELIVERED},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
+        )
+
+    def _read_wave_events(self) -> list[dict]:
+        return select_wave_events(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
+
+    def test_should_merge_the_pull_request_of_the_wave_into_the_branch_of_its_milestone_on_the_gate(self):
+        # Arrange
+        forge = WaveMergingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY}, NO_REVIEW_THREAD)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.merges, [{"repository": str(self.repository), "number": 206, "method": "rebase", "environment": {}}]
+        )
+
+    def test_should_record_the_merge_then_the_close_of_the_wave(self):
+        # Arrange
+        forge = WaveMergingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY}, NO_REVIEW_THREAD)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            self._read_wave_events(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.merged",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                    "login": "tidepool-cli",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.closed",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                },
+            ],
+        )
+
+    def test_should_merge_none_while_a_review_thread_of_it_is_unresolved(self):
+        # Arrange
+        forge = WaveMergingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY}, UNRESOLVED_REVIEW_THREAD)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(forge.merges, [])
+
+    def test_should_merge_none_into_the_main_branch(self):
+        # Arrange
+        into_main = WAVE_PULL_REQUEST_READY | {"base": "main"}
+        forge = WaveMergingForgeDouble({WAVE_BRANCH: into_main}, NO_REVIEW_THREAD)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(forge.merges, [])
 
 
 class TickStartingAndCuttingWavesTest(unittest.TestCase):
