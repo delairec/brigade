@@ -3060,6 +3060,40 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(self.forge.opened[0]["base"], "integration/tides")
 
+    def test_should_record_the_cut_of_the_branch_of_the_milestone_with_the_login_of_the_cli(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged")])
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": {"T7": TASK_DELIVERED},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        answers = {
+            **MACHINE_ANSWERS,
+            ("git", "ls-remote"): ProcessAnswer(stdout=""),
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides"): ProcessAnswer(exit_code=1),
+            ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/tides"): (
+                ProcessAnswer(exit_code=2)
+            ),
+            ("git", "branch", "--quiet", "integration/tides"): ProcessAnswer(),
+            ("git", "push", "--quiet", "origin", "integration/tides"): ProcessAnswer(),
+        }
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus)).run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
+            ),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn({**CUT_OF_M4, "ts": ANY}, self._read_events())
+
     def test_should_open_the_pull_request_of_a_wave_of_tasks_naming_no_milestone_into_the_main_branch(self):
         # Arrange
         runtime = self._create_runtime(self.forge, TASK_OF_NO_MILESTONE_DELIVERED)
