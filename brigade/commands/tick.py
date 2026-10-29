@@ -47,6 +47,7 @@ from brigade.studies.start_study_run import start_study_run
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
+from brigade.system.ask_review_threads import ReviewThreadsQuery, ask_review_threads
 from brigade.system.collector_places import locate_collectors
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
@@ -82,7 +83,7 @@ from brigade.tick.actions import (
     StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
-from brigade.tick.build_snapshot import build_snapshot
+from brigade.tick.build_snapshot import ForgeReaders, build_snapshot
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
@@ -585,6 +586,27 @@ def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Cal
     )
 
 
+def _follow_review_threads(runtime: Runtime, configuration: Configuration) -> Callable[[str, int], int]:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    read_environment = functools.cache(lambda: read_forge_environment(configuration, CLI_KEY, runtime))
+    return lambda repository, number: len(
+        ask_review_threads(
+            forge,
+            FORGE_NAME,
+            ReviewThreadsQuery(repository=repository, number=number, environment=read_environment()),
+            runtime,
+        )
+    )
+
+
+def _read_the_forge(runtime: Runtime, configuration: Configuration) -> ForgeReaders:
+    return ForgeReaders(
+        read_pull_request=_follow_pull_requests(runtime, configuration),
+        read_environment=_cache_forge_environment(runtime, configuration),
+        count_unresolved_threads=_follow_review_threads(runtime, configuration),
+    )
+
+
 def _plan_registered_connectors(runtime: Runtime) -> tuple:
     if not runtime.paths.schema_file.exists():
         return ()
@@ -597,8 +619,7 @@ def _record_failure(runtime: Runtime, event: TickActionFailed) -> None:
 
 
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
-    read_pull_request = _follow_pull_requests(runtime, configuration)
-    read_environment = _cache_forge_environment(runtime, configuration)
+    forge = _read_the_forge(runtime, configuration)
     apply = functools.partial(
         apply_actions,
         executors=_list_executors(runtime, configuration),
@@ -606,7 +627,7 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     )
     outcome = run_rounds(
         Rounds(
-            build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
+            build_snapshot=lambda: build_snapshot(runtime, configuration, forge),
             plan=plan,
             apply=apply,
             cap=ROUND_CAP,
@@ -653,12 +674,7 @@ def _tick_once(runtime: Runtime) -> dict:
 
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    snapshot = build_snapshot(
-        runtime,
-        configuration,
-        _follow_pull_requests(runtime, configuration),
-        _cache_forge_environment(runtime, configuration),
-    )
+    snapshot = build_snapshot(runtime, configuration, _read_the_forge(runtime, configuration))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",

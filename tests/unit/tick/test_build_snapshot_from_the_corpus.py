@@ -27,6 +27,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    ForgeReaders,
     LiveRun,
     PreflightFailure,
     ProjectFacts,
@@ -101,6 +102,10 @@ def answer_unreadable_tree(ref: str) -> dict:
 
 def _read_forge_environment(slot: str) -> dict:
     return FORGE_ENVIRONMENT
+
+
+def _count_no_thread(repository: str, number: int) -> int:
+    return 0
 
 
 class PullRequestReaderDouble:
@@ -221,7 +226,9 @@ class BuildSnapshotTestCase(unittest.TestCase):
         runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            snapshot = build_snapshot(runtime, Configuration(), self.reader, _read_forge_environment)
+            snapshot = build_snapshot(
+                runtime, Configuration(), ForgeReaders(self.reader, _read_forge_environment, _count_no_thread)
+            )
         return snapshot, stderr.getvalue()
 
 

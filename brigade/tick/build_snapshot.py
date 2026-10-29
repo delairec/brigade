@@ -32,9 +32,8 @@ from brigade.studies.convert_study import Study
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_studies import read_studies
-from brigade.system.ask_review_threads import ReviewThreadsQuery, ask_review_threads
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
-from brigade.system.parse_configuration import CLI_KEY, Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.reset_hour import ResetHour
@@ -82,9 +81,6 @@ DONE_OUTCOME = "done"
 FORGE_ACCOUNT_REASON = "forge_account"
 PROJECT_STATUS_FIELD = "STATUS"
 PAUSED_PROJECT_STATUS = "paused"
-FORGE_KIND = "forge"
-FORGE_NAME = "github"
-OPEN_PULL_REQUEST = "open"
 NO_UNRESOLVED_THREAD = 0
 MERGE_FIELD = "MERGE"
 REBASE_MERGE = "rebase"
@@ -355,6 +351,13 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
 
 
 @dataclass(frozen=True)
+class ForgeReaders:
+    read_pull_request: Callable[[str, str], PullRequestFacts | None]
+    read_environment: Callable[[str], dict]
+    count_unresolved_threads: Callable[[str, int], int]
+
+
+@dataclass(frozen=True)
 class WaveReading:
     configuration: Configuration
     entries: tuple[LedgerEntry, ...]
@@ -362,8 +365,7 @@ class WaveReading:
     live_runs: frozenset[str]
     runs: tuple[dict, ...]
     projects: tuple[Entity, ...]
-    read_pull_request: Callable[[str, str], PullRequestFacts | None]
-    read_environment: Callable[[str], dict]
+    forge: ForgeReaders
 
 
 def _is_rebase_launch(entry: LedgerEntry, runs: tuple[dict, ...]) -> bool:
@@ -540,7 +542,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
             if isinstance(event, TaskPreflighted) and event.wave == wave
         },
         repair_rounds=_count_repair_rounds(reading, wave),
-        read_pull_request=reading.read_pull_request,
+        read_pull_request=reading.forge.read_pull_request,
         run_process=runtime.run_process,
     )
 
@@ -570,43 +572,31 @@ class _WavePullRequest:
     unresolved_threads: int
 
 
-def _read_milestone_branch(reading: WaveReading, project: str, tasks: tuple[TaskFacts, ...]) -> str | None:
-    milestones = {task.milestone for task in tasks}
-    if len(milestones) != 1 or None in milestones:
-        return None
-    return find_milestone_branch(reading.entries, project, milestones.pop())
-
-
-def _count_unresolved_threads(runtime: Runtime, reading: WaveReading, repository: Path, number: int) -> int:
-    query = ReviewThreadsQuery(repository=str(repository), number=number, environment=reading.read_environment(CLI_KEY))
-    return len(ask_review_threads(runtime.resolve_plugin(FORGE_KIND, FORGE_NAME), FORGE_NAME, query, runtime))
-
-
 def _read_wave_pull_request(
-    runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, tasks: tuple[TaskFacts, ...]
+    reading: WaveReading, open_wave: _OpenWave, tasks: tuple[TaskFacts, ...]
 ) -> _WavePullRequest:
     started = open_wave.started
-    milestone_branch = _read_milestone_branch(reading, started.project, tasks)
+    milestone_branch = find_milestone_branch(reading.entries, started.project, tasks[0].milestone)
     if not _is_reported(reading, started.wave):
         return _WavePullRequest(facts=None, milestone_branch=milestone_branch, unresolved_threads=NO_UNRESOLVED_THREAD)
     repository = open_wave.followed.repository
-    facts = reading.read_pull_request(str(repository), started.branch)
-    if facts is None or facts.state != OPEN_PULL_REQUEST or facts.base != milestone_branch:
+    facts = reading.forge.read_pull_request(str(repository), started.branch)
+    if facts is None or facts.base != milestone_branch:
         return _WavePullRequest(facts=facts, milestone_branch=milestone_branch, unresolved_threads=NO_UNRESOLVED_THREAD)
-    threads = _count_unresolved_threads(runtime, reading, repository, facts.number)
+    threads = reading.forge.count_unresolved_threads(str(repository), facts.number)
     return _WavePullRequest(facts=facts, milestone_branch=milestone_branch, unresolved_threads=threads)
 
 
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
     project = find_project(reading.projects, started.project)
-    cut = WaveBranchCut(project=project, branch=started.branch, read_environment=reading.read_environment)
+    cut = WaveBranchCut(project=project, branch=started.branch, read_environment=reading.forge.read_environment)
     if is_wave_branch_missing(runtime.run_process, cut):
         return WaveFacts(project=started.project, wave=started.wave, branch=started.branch, branch_missing=True)
     tree = prepare_wave_tree(runtime, reading.configuration, started)
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
     open_wave = _open_wave(runtime, reading, started, tree.root)
     wave_tasks = tuple(_read_wave_task(runtime, reading, open_wave, tasks[task]) for task in started.tasks)
-    pull_request = _read_wave_pull_request(runtime, reading, open_wave, wave_tasks)
+    pull_request = _read_wave_pull_request(reading, open_wave, wave_tasks)
     return WaveFacts(
         project=started.project,
         wave=started.wave,
@@ -627,7 +617,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
 def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[str, ...]:
     if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
         return ()
-    tasks = read_project_tasks(runtime, reading.configuration, project, reading.read_environment)
+    tasks = read_project_tasks(runtime, reading.configuration, project, reading.forge.read_environment)
     return admit_candidates(runtime.run_process, tasks, map_open_tasks(reading.entries, project.name))
 
 
@@ -676,12 +666,7 @@ def _describe_study(study: Study, last_order: LastStudyOrder | None) -> StudyFac
     )
 
 
-def _assemble_reading(
-    runtime: Runtime,
-    configuration: Configuration,
-    read_pull_request: Callable[[str, str], PullRequestFacts | None],
-    read_environment: Callable[[str], dict],
-) -> WaveReading:
+def _assemble_reading(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> WaveReading:
     entries = read_ledger(runtime.paths.state_root).entries
     runs = list_runs(runtime.paths.state_root)["runs"]
     return WaveReading(
@@ -691,8 +676,7 @@ def _assemble_reading(
         live_runs=frozenset(run["run"] for run in runs if run["state"] == LIVE_RUN_STATE),
         runs=tuple(runs),
         projects=read_projects(runtime),
-        read_pull_request=read_pull_request,
-        read_environment=read_environment,
+        forge=forge,
     )
 
 
@@ -717,15 +701,10 @@ def _read_registered_projects(runtime: Runtime, reading: WaveReading) -> tuple[P
     )
 
 
-def build_snapshot(
-    runtime: Runtime,
-    configuration: Configuration,
-    read_pull_request: Callable[[str, str], PullRequestFacts | None],
-    read_environment: Callable[[str], dict],
-) -> Snapshot:
+def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
-    reading = _assemble_reading(runtime, configuration, read_pull_request, read_environment)
+    reading = _assemble_reading(runtime, configuration, forge)
     last_orders = read_last_study_orders(runtime.paths.state_root)
     return Snapshot(
         now=runtime.now.astimezone(),

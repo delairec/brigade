@@ -4,7 +4,7 @@ from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 NOT_CUT = None
 
 
-def find_milestone_branch(entries: tuple[LedgerEntry, ...], project: str, milestone: str) -> str | None:
+def find_milestone_branch(entries: tuple[LedgerEntry, ...], project: str, milestone: str | None) -> str | None:
     return next(
         (
             entry.event.branch

@@ -25,7 +25,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "project": "shop",
                 "branch": "integration/shop_w1",
                 "started_at": ANY,
-                "last_event": "wave.reported",
+                "last_event": "wave.closed",
                 "pull_request": ANY,
                 "tasks": [
                     {"task": "S1", "state": "merged", "pull_request": ANY, "run": ANY, "reason": None},
@@ -35,7 +35,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
             },
         )
 
-    def test_should_open_the_integration_pull_request_the_wave_names(self):
+    def test_should_merge_the_pull_request_of_the_wave_into_the_branch_of_its_milestone(self):
         # Arrange
         shown = json.loads(self.rehearser.run_brigade("wave", "show", "shop_w1", "--json").stdout)
 
@@ -47,11 +47,12 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
             pull_request,
             {
                 "number": shown["pull_request"],
-                "title": "chore(wave): merge the wave shop_w1 into main",
-                "body": "Integrates the wave shop_w1 of @PROJECT.shop into main: @TASK.S1, @TASK.S2, @TASK.S3.",
+                "title": "chore(wave): merge the wave shop_w1 into integration/empty-cart",
+                "body": "Integrates the wave shop_w1 of @PROJECT.shop into integration/empty-cart: @TASK.S1, @TASK.S2, @TASK.S3.",
                 "headRefName": "integration/shop_w1",
-                "baseRefName": "main",
-                "state": "OPEN",
+                "baseRefName": "integration/empty-cart",
+                "state": "MERGED",
+                "mergedHead": ANY,
                 "reviewDecision": None,
                 "author": "octo-build",
             },
@@ -71,6 +72,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "schema_version": 1,
                 "view": "overview",
                 "events": {
+                    "milestone.branch_cut": 1,
                     "milestone.created": 3,
                     "order.parked": 1,
                     "order.started": 1,
@@ -83,9 +85,11 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                     "task.promoted": 3,
                     "task.state": 15,
                     "task.verdict": 3,
+                    "wave.closed": 1,
+                    "wave.merged": 1,
                     "wave.pr_opened": 1,
                     "wave.reported": 1,
-                    "wave.started": 1,
+                    "wave.started": 2,
                 },
                 "first": ANY,
                 "last": ANY,
