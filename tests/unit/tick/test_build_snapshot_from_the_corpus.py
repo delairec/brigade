@@ -39,6 +39,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
+from brigade.waves.list_candidate_waves import CandidateWave
 from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
@@ -778,7 +779,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 name="shop",
                 slots=2,
                 awaits_check_runs=False,
-                candidates=("B5",),
+                candidates=(CandidateWave(milestone=None, tasks=("B5",)),),
                 merge="squash",
                 review="approval",
                 auto_merge="none",
@@ -847,7 +848,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     name="shop",
                     slots=2,
                     awaits_check_runs=False,
-                    candidates=("B5",),
+                    candidates=(CandidateWave(milestone=None, tasks=("B5",)),),
                     merge="squash",
                     review="approval",
                     auto_merge="none",
@@ -1207,7 +1208,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     live_runs=(),
                     awaits_check_runs=False,
                     wave_start="auto",
-                    candidates=("B5",),
+                    candidates=(CandidateWave(milestone=None, tasks=("B5",)),),
                     merge="squash",
                     review="approval",
                     auto_merge="none",

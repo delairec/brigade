@@ -26,7 +26,7 @@ from brigade.waves.list_open_waves import list_open_waves
 from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.name_next_wave import name_next_wave
-from brigade.waves.read_project_tasks import ProjectTasks, read_project_tasks
+from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
 from brigade.waves.read_wave_milestone import read_wave_milestone
 
 TASK_TYPE = "TASK"
@@ -96,10 +96,16 @@ def _cut_missing_branches(runtime: Runtime, start: WaveStart, project: Entity, t
             cut_wave_branch(runtime.run_process, cut, base)
 
 
-def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:
+def start_project_wave(runtime: Runtime, start: WaveStart, milestone: str | None) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), start.project)
-    tasks = read_project_tasks(runtime, start.configuration, project, start.read_environment)
+    tasks_reading = ProjectTasksReading(
+        configuration=start.configuration,
+        project=project,
+        read_environment=start.read_environment,
+        entries=read_ledger(runtime.paths.state_root).entries,
+    )
+    tasks = read_project_tasks(runtime, tasks_reading, milestone)
 
     def name_wave(reading: LedgerReading) -> WaveStarted:
         chosen = _compose_tasks(runtime, start, tasks, reading)

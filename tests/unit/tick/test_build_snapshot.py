@@ -14,6 +14,7 @@ from brigade.tick.build_snapshot import (
     TaskFacts,
     WaveFacts,
 )
+from brigade.waves.list_candidate_waves import CandidateWave
 from brigade.waves.read_wave_pause import WavePause
 
 
@@ -145,7 +146,11 @@ class SnapshotTest(unittest.TestCase):
 
     def test_should_carry_the_wave_start_policy_and_the_candidates_of_a_project_in_its_document(self):
         # Arrange
-        project = ProjectFacts(name="brigade", slots=4, wave_start="ask", candidates=("B188", "B189"))
+        candidates = (
+            CandidateWave(milestone="M9", tasks=("B188", "B189")),
+            CandidateWave(milestone=None, tasks=("B190",)),
+        )
+        project = ProjectFacts(name="brigade", slots=4, wave_start="ask", candidates=candidates)
         snapshot = Snapshot(now=datetime(2026, 10, 20, 12, 0, tzinfo=UTC), projects=(project,))
 
         # Act
@@ -160,7 +165,10 @@ class SnapshotTest(unittest.TestCase):
                     "slots": 4,
                     "live_runs": [],
                     "wave_start": "ask",
-                    "candidates": ["B188", "B189"],
+                    "candidates": [
+                        {"milestone": "M9", "tasks": ["B188", "B189"]},
+                        {"milestone": None, "tasks": ["B190"]},
+                    ],
                     "merge": "rebase",
                     "review": "verdict",
                     "auto_merge": "integration",

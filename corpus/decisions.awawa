@@ -3185,8 +3185,9 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce sets, with no"
 		+ "live blocker, naming no MILESTONE or one whose STATUS is active, a fixpoint admitting a"
 		+ "task whose every AFTER is implemented or in the wave; --task <task> ... takes exactly"
-		+ "the named tasks, their MILESTONE unread, and exits 1 on one whose AFTER is neither"
-		+ "implemented nor named; an empty wave exits 1"
+		+ "the named tasks, read on the branch of their milestone whatever its STATUS, exits 1 when"
+		+ "they name two milestones or one milestone and none, and exits 1 on one whose AFTER is"
+		+ "neither implemented nor named; an empty wave exits 1"
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "the tick starts a wave of a project under POLICY.WAVE_START auto, the default, the mirror"
 		+ "of PLAN_REVIEW; under ask the user runs brigade wave start <project> [--task <task> ...]"
@@ -3258,6 +3259,9 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 		+ "the branch of a wave from the integration branch of its milestone, DESC 8 reads the"
 		+ "candidates there, REJECTED 5 loses « a wave spans milestones »"
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	SOURCE "SPEC 3 of @TASK.B213, ratified: DESC 8 reads the tasks --task names on the branch of"
+		+ "their milestone and refuses tasks of two milestones, or of one milestone and none"
+		REF @TASK.B213
 
 DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 	TITLE "the tick runs an active study that is due and not parked, and counts against study_runs"

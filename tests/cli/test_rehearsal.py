@@ -89,7 +89,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                     "wave.merged": 1,
                     "wave.pr_opened": 1,
                     "wave.reported": 1,
-                    "wave.started": 2,
+                    "wave.started": 1,
                 },
                 "first": ANY,
                 "last": ANY,
