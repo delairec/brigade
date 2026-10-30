@@ -14,6 +14,7 @@ class PullRequestFactsTest(unittest.TestCase):
             "behind": False,
             "head": "4f2a9c1",
             "base": "integration/M1",
+            "updated_at": "2026-10-30T14:04:22Z",
         }
 
         # Act
@@ -30,5 +31,6 @@ class PullRequestFactsTest(unittest.TestCase):
                 "behind": False,
                 "head": "4f2a9c1",
                 "base": "integration/M1",
+                "updated_at": "2026-10-30T14:04:22Z",
             },
         )

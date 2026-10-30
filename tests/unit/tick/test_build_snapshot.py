@@ -77,7 +77,14 @@ class SnapshotTest(unittest.TestCase):
                 branch="integration/currents",
                 opened_pull_request=90,
                 pull_request=PullRequestFacts(
-                    number=90, state="open", checks=(), review=None, behind=False, head="abc123", base="main"
+                    number=90,
+                    state="open",
+                    checks=(),
+                    review=None,
+                    behind=False,
+                    head="abc123",
+                    base="main",
+                    updated_at=datetime(2026, 10, 18, 11, 0, tzinfo=UTC),
                 ),
             ),
         )
@@ -119,6 +126,7 @@ class SnapshotTest(unittest.TestCase):
                         "behind": False,
                         "head": "abc123",
                         "base": "main",
+                        "updated_at": "2026-10-18T11:00:00Z",
                     },
                     "behind_main": False,
                     "rebase_run_live": False,

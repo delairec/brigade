@@ -329,7 +329,7 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
         detach=True,
         resume=True,
     )
-    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
+    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=action.state))
     run(resuming, runtime)
 
 

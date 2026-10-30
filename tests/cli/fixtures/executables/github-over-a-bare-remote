@@ -42,6 +42,7 @@ class Forge:
             **pull,
             "headRefOid": self.read_head(pull),
             "statusCheckRollup": [],
+            "updatedAt": "2026-10-18T11:00:00Z",
             "author": {"login": pull["author"]},
             "isDraft": False,
             "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},

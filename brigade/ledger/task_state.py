@@ -15,6 +15,7 @@ TASK_STATES = (
     "parked",
     "paused:quota",
 )
+REQUEUE_REASON = "brigade wave requeue"
 
 
 @dataclass(frozen=True)

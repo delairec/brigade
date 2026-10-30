@@ -127,6 +127,7 @@ LIVE_RUN_OF_S9 = LiveRun(
 
 
 HEAD = "0123abc"
+PUSHED_WITHIN_THE_MINUTE = datetime(2026, 10, 6, 11, 59, 1, tzinfo=UTC)
 
 
 def create_pull_request(state: str, verdict: str = "success", base: str = WAVE_BRANCH) -> PullRequestFacts:
@@ -138,6 +139,7 @@ def create_pull_request(state: str, verdict: str = "success", base: str = WAVE_B
         behind=False,
         head=HEAD,
         base=base,
+        updated_at=PUSHED_WITHIN_THE_MINUTE,
     )
 
 
@@ -223,8 +225,16 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
 PENDING = create_pull_request("open", "pending")
 FAILED_CHECK_RUN = create_pull_request("open", "failure")
 NO_CHECK_RUN = PullRequestFacts(
-    number=42, state="open", checks=(), review=None, behind=False, head=HEAD, base=WAVE_BRANCH
+    number=42,
+    state="open",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base=WAVE_BRANCH,
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
+NO_CHECK_RUN_FOR_A_MINUTE = dataclasses.replace(NO_CHECK_RUN, updated_at=datetime(2026, 10, 6, 11, 59, tzinfo=UTC))
 SHOP_WITHOUT_CHECK_RUNS = ProjectFacts(name="shop", slots=4, awaits_check_runs=False)
 OPENED_BY_THE_TASK = 42
 OPENED_BY_AN_EARLIER_RUN = 41
@@ -248,7 +258,24 @@ class PlanPreflightTest(unittest.TestCase):
                 (PREFLIGHT_S3,),
             ),
             ("a check run pending", "pr_open", PENDING, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
-            ("no check run yet", "pr_open", NO_CHECK_RUN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
+            (
+                "no check run within a minute of the last update",
+                "pr_open",
+                NO_CHECK_RUN,
+                OPENED_BY_THE_TASK,
+                NOT_PREFLIGHTED,
+                SHOP,
+                (),
+            ),
+            (
+                "no check run a minute after the last update",
+                "pr_open",
+                NO_CHECK_RUN_FOR_A_MINUTE,
+                OPENED_BY_THE_TASK,
+                NOT_PREFLIGHTED,
+                SHOP,
+                (PREFLIGHT_S3,),
+            ),
             (
                 "no check run in a project without continuous integration",
                 "pr_open",
@@ -442,7 +469,14 @@ class PlanMergeTest(unittest.TestCase):
             ("under approval, approved", SHOP_UNDER_APPROVAL, APPROVED, PASS_BEFORE_A_PUSH, (MERGE_S3,)),
             ("a check run failed", SHOP, FAILED_CHECK_RUN, PASS_AT_THE_HEAD, ()),
             ("a check run pending", SHOP, PENDING, PASS_AT_THE_HEAD, ()),
-            ("no check run yet", SHOP, NO_CHECK_RUN, PASS_AT_THE_HEAD, ()),
+            ("no check run within a minute of the last update", SHOP, NO_CHECK_RUN, PASS_AT_THE_HEAD, ()),
+            (
+                "no check run a minute after the last update",
+                SHOP,
+                NO_CHECK_RUN_FOR_A_MINUTE,
+                PASS_AT_THE_HEAD,
+                (MERGE_S3,),
+            ),
             (
                 "no check run in a project without continuous integration",
                 SHOP_WITHOUT_CHECK_RUNS,
@@ -1008,10 +1042,24 @@ class PlanWaveReportTest(unittest.TestCase):
 
 
 INTEGRATION_MERGED = PullRequestFacts(
-    number=77, state="merged", checks=(), review=None, behind=False, head=HEAD, base="main"
+    number=77,
+    state="merged",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base="main",
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 INTEGRATION_OPEN = PullRequestFacts(
-    number=77, state="open", checks=(), review=None, behind=False, head=HEAD, base="main"
+    number=77,
+    state="open",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base="main",
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 NO_INTEGRATION_PULL_REQUEST = None
 
@@ -1066,6 +1114,7 @@ WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH = PullRequestFacts(
     behind=False,
     head=HEAD,
     base=MILESTONE_BRANCH,
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 MERGE_THE_WAVE_PULL_REQUEST = MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="rebase")
 NO_MILESTONE_BRANCH = None
@@ -1211,8 +1260,16 @@ RECORD_CHANGES_REQUESTED_BY_THE_BODY = RecordTaskState(
 )
 REMEDIATE_S3 = LaunchRemediation(project="shop", wave="shop_w1", task="S3", pr=42, worktree=WORKTREE_S3)
 REPAIR_CHECKS_OF_S3 = LaunchCheckRepair(
-    project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", pr=42, worktree=WORKTREE_S3, checks=("tests",)
+    project="shop",
+    wave="shop_w1",
+    branch=WAVE_BRANCH,
+    task="S3",
+    pr=42,
+    worktree=WORKTREE_S3,
+    checks=("tests",),
+    findings=(),
 )
+REPAIR_CHECKS_OF_S3_BESIDE_THE_BODY = dataclasses.replace(REPAIR_CHECKS_OF_S3, findings=(BODY_FAILURE,))
 PARK_S3_PAST_ITS_ROUNDS = ParkTask(wave="shop_w1", task="S3", reason="past 2 repair rounds", blockers=())
 PARK_S3_PAST_ONE_ROUND = ParkTask(wave="shop_w1", task="S3", reason="past 1 repair rounds", blockers=())
 REMEDIATION_RUN_OF_S3 = LiveRun(
@@ -1230,6 +1287,7 @@ FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE = PullRequestFacts(
     behind=False,
     head=HEAD,
     base=WAVE_BRANCH,
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 
 
@@ -1284,7 +1342,7 @@ class PlanRepairTest(unittest.TestCase):
                 FAILED_CHECK_RUN,
                 (CHECKS_FAILURE, BODY_FAILURE),
                 PREFLIGHTED_AT_THE_HEAD,
-                (REPAIR_CHECKS_OF_S3,),
+                (REPAIR_CHECKS_OF_S3_BESIDE_THE_BODY,),
             ),
             (
                 "a failing check before a push",
@@ -1972,7 +2030,14 @@ WAVES_OF_M4_MERGED = (MergedWave(wave="shop_w1", pr=77), MergedWave(wave="shop_w
 NO_WAVE_MERGED = ()
 NO_TASK_TODO = ()
 MILESTONE_PULL_REQUEST = PullRequestFacts(
-    number=90, state="open", checks=(), review=None, behind=False, head=HEAD, base="main"
+    number=90,
+    state="open",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base="main",
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 OPEN_THE_PULL_REQUEST_OF_M4 = OpenMilestonePullRequest(
     project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, waves=WAVES_OF_M4_MERGED
@@ -2193,3 +2258,50 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+
+class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
+    def test_should_pause_a_task_in_fixing_whose_repair_run_was_cut_and_launch_no_repair(self):
+        for case, pull_request in [("a pull request up to date", OPEN), ("a pull request behind its base", BEHIND)]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    rate_limit=RateLimit(reset=None),
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    preflight_failures=(BODY_FAILURE,),
+                )
+                snapshot = Snapshot(
+                    now=NOW,
+                    waves=(create_wave((task,), {"S3": "fixing"}),),
+                    projects=(SHOP,),
+                    rate_limits=(RateLimit(reset=None),),
+                )
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions, (PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T12:30:00Z"), PAUSED_S3)
+                )
+
+    def test_should_resume_the_cut_repair_run_with_the_task_back_in_fixing(self):
+        # Arrange
+        task = TaskFacts(name="S3", stopped_run=STOPPED_RUN, resumed_state="fixing")
+        wave = dataclasses.replace(create_wave((task,), {"S3": "paused:quota"}), pause=QUOTA_UNTIL_12)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeWave(wave="shop_w1", reason="quota"),
+                ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN, state="fixing"),
+            ),
+        )

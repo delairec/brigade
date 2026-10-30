@@ -38,7 +38,7 @@ class TaskCheckTestCase(TaskContextTestCase):
 
 
 class BrigadeTaskCheckOfPassingCommandsTest(TaskCheckTestCase):
-    def test_should_run_each_acceptance_line_then_the_checks_of_the_corpus_in_their_order(self):
+    def test_should_run_each_acceptance_line_then_the_checks_of_the_corpus_then_the_privacy_check(self):
         # Act
         completed = self.run_task_check("--json")
 
@@ -56,6 +56,7 @@ class BrigadeTaskCheckOfPassingCommandsTest(TaskCheckTestCase):
                     {"command": PASSING_LINE, "passed": True, "duration_ms": ANY, "tail": []},
                     {"command": "awawa fmt --check .", "passed": True, "duration_ms": ANY, "tail": []},
                     {"command": "awawa lint --strict .", "passed": True, "duration_ms": ANY, "tail": []},
+                    {"command": "privacy", "passed": True, "duration_ms": ANY, "tail": []},
                 ],
             },
         )

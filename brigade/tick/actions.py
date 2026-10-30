@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from brigade.tick.build_snapshot import MergedWave
+from brigade.tick.build_snapshot import MergedWave, PreflightFailure
 
 
 @dataclass(frozen=True)
@@ -68,6 +68,7 @@ class LaunchCheckRepair:
     pr: int
     worktree: str
     checks: tuple[str, ...]
+    findings: tuple[PreflightFailure, ...]
 
 
 @dataclass(frozen=True)
@@ -104,6 +105,7 @@ class ResumeTaskRun:
     wave: str
     task: str
     run: str
+    state: str | None = None
 
 
 @dataclass(frozen=True)

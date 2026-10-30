@@ -56,6 +56,28 @@ T7_ABSENT_FROM_MAIN = ProcessAnswer(exit_code=1, stderr="@TASK.T7 is not defined
 IMPLEMENTED_TASKS_QUERY = ("awawa", "status", "TASK", "--where", "STATUS==implemented")
 NO_TASK_IMPLEMENTED = '{"entities": []}'
 T7_IMPLEMENTED = '{"entities": [{"type": "TASK", "name": "T7"}]}'
+PULL_REQUEST_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:10:00Z",
+    "event": "task.pr_opened",
+    "project": "tidepool",
+    "task": "T7",
+    "wave": "tidepool_w16",
+    "branch": "task/tidepool_w16/T7",
+    "pr": 12,
+    "login": "octo-bot",
+}
+PULL_REQUEST_OF_ANOTHER_TASK_OPENED = {**PULL_REQUEST_OPENED, "task": "T8", "branch": "task/tidepool_w16/T8"}
+PULL_REQUEST_OF_THE_TASK_IN_ANOTHER_WAVE_OPENED = {**PULL_REQUEST_OPENED, "wave": "tidepool_w15"}
+PARKED_PAST_TWO_REPAIR_ROUNDS = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:30:00Z",
+    "event": "task.parked",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "reason": "past 2 repair rounds",
+    "blockers": [],
+}
 RUNNING = {
     "schema_version": 1,
     "ts": "2026-10-19T08:30:00Z",
@@ -142,14 +164,22 @@ class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
         self.root = Path(directory.name)
         self.runtime = create_wave_tree_runtime(self.root, NO_TASK_IMPLEMENTED)
 
-    def test_should_record_the_parked_task_queued(self):
-        for case, parking in [
-            ("parked by task.parked", PARKED_ON_A_DEAD_RUN),
-            ("parked by task.state", PARKED_ON_A_FAILED_SETUP),
+    def test_should_record_the_parked_task_without_a_pull_request_queued_by_the_requeue(self):
+        for case, events in [
+            ("parked by task.parked", [WAVE_STARTED, PARKED_ON_A_DEAD_RUN]),
+            ("parked by task.state", [WAVE_STARTED, PARKED_ON_A_FAILED_SETUP]),
+            (
+                "a pull request of another task",
+                [WAVE_STARTED, PULL_REQUEST_OF_ANOTHER_TASK_OPENED, PARKED_ON_A_DEAD_RUN],
+            ),
+            (
+                "a pull request of the task in another wave",
+                [WAVE_STARTED, PULL_REQUEST_OF_THE_TASK_IN_ANOTHER_WAVE_OPENED, PARKED_ON_A_DEAD_RUN],
+            ),
         ]:
             with self.subTest(case=case):
                 # Arrange
-                write_ledger(self.root, [WAVE_STARTED, parking])
+                write_ledger(self.root, events)
 
                 # Act
                 COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), self.runtime)
@@ -157,8 +187,31 @@ class WaveRequeueOfAParkedTaskTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(
                     read_ledger(self.runtime.paths.state_root).entries[-1].event,
-                    TaskState(wave="tidepool_w16", task="T7", state="queued"),
+                    TaskState(wave="tidepool_w16", task="T7", state="queued", reason="brigade wave requeue"),
                 )
+
+    def test_should_record_the_parked_task_whose_pull_request_is_open_back_to_its_preflight_by_the_requeue(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, PULL_REQUEST_OPENED, PARKED_PAST_TWO_REPAIR_ROUNDS])
+
+        # Act
+        COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.runtime.paths.state_root).entries[-1].event,
+            TaskState(wave="tidepool_w16", task="T7", state="pr_open", reason="brigade wave requeue"),
+        )
+
+    def test_should_describe_the_task_whose_pull_request_is_open_back_to_its_preflight(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, PULL_REQUEST_OPENED, PARKED_PAST_TWO_REPAIR_ROUNDS])
+
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), self.runtime)
+
+        # Assert
+        self.assertEqual(document, {"schema_version": 1, "wave": "tidepool_w16", "task": "T7", "state": "pr_open"})
 
     def test_should_describe_the_task_queued_again(self):
         # Arrange
@@ -186,7 +239,7 @@ class WaveRequeueOfAParkedTaskTheMainBranchDoesNotHoldTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(runtime.paths.state_root).entries[-1].event,
-            TaskState(wave="tidepool_w16", task="T7", state="queued"),
+            TaskState(wave="tidepool_w16", task="T7", state="queued", reason="brigade wave requeue"),
         )
 
 

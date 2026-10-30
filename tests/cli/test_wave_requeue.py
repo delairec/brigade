@@ -1,3 +1,4 @@
+import json
 from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
@@ -54,6 +55,7 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "wave": "shop_w1",
                     "task": "S3",
                     "state": "queued",
+                    "reason": "brigade wave requeue",
                 },
                 {
                     "schema_version": 1,
@@ -225,3 +227,112 @@ class BrigadeWaveRequeueOfATaskRuledOnTheMainBranchTest(LaunchingTickTestCase):
 
         # Assert
         self.assertEqual(requeued.stdout, "task S3 of shop_w1 queued\n", requeued.stderr)
+
+
+TASK_BRANCH = "task/M1-empty-cart/S3"
+SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}
+S3_PARKED_AFTER_ITS_FIRST_VERDICT = (
+    '{{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    ' "project": "shop", "branch": "{wave_branch}", "tasks": ["S3"]}}\n'
+    '{{"schema_version": 1, "ts": "2026-10-13T09:10:00Z", "event": "task.pr_opened", "project": "shop",'
+    ' "task": "S3", "wave": "shop_w1", "branch": "{task_branch}", "pr": 12, "login": "octo-bot"}}\n'
+    '{{"schema_version": 1, "ts": "2026-10-13T09:15:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
+    ' "state": "pr_open"}}\n'
+    '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.preflighted", "project": "shop",'
+    ' "wave": "shop_w1", "task": "S3", "pr": 12, "head": "{head}", "checks": []}}\n'
+    '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
+    ' "state": "verifying"}}\n'
+    '{{"schema_version": 1, "ts": "2026-10-13T09:40:00Z", "event": "task.verdict", "project": "shop",'
+    ' "wave": "shop_w1", "task": "S3", "pr": 12, "head": "{head}", "verdict": "changes",'
+    ' "findings": [{{"severity": "major", "summary": "the cart is not emptied"}}], "login": null}}\n'
+    '{{"schema_version": 1, "ts": "2026-10-13T09:45:00Z", "event": "task.parked", "wave": "shop_w1", "task": "S3",'
+    ' "reason": "past 2 repair rounds", "blockers": []}}\n'
+)
+
+
+class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.run_git("branch", TASK_BRANCH, WAVE_BRANCH)
+        remote = self.project.path.parent / "shop.git"
+        self.project.run_git("init", "--quiet", "--bare", str(remote))
+        self.project.run_git("remote", "add", "origin", str(remote))
+        self.project.run_git("push", "--quiet", "origin", WAVE_BRANCH, TASK_BRANCH)
+        self.head = self.project.run_git("rev-parse", TASK_BRANCH).strip()
+        (self.pull_requests / "task-M1-empty-cart-S3.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "number": 12,
+                        "state": "OPEN",
+                        "headRefOid": self.head,
+                        "baseRefName": WAVE_BRANCH,
+                        "reviewDecision": "",
+                        "updatedAt": "2026-10-18T11:00:00Z",
+                        "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
+                    }
+                ]
+            )
+        )
+        (self.pull_requests / "12.json").write_text(
+            json.dumps(
+                {
+                    "number": 12,
+                    "title": "feat(cart): empty the cart in one click (@TASK.S3)",
+                    "body": "Empty the cart in one click",
+                    "headRefName": TASK_BRANCH,
+                    "headRefOid": self.head,
+                    "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
+                }
+            )
+        )
+        (self.state / "ledger" / "2026-10.jsonl").write_text(
+            S3_PARKED_AFTER_ITS_FIRST_VERDICT.format(wave_branch=WAVE_BRANCH, task_branch=TASK_BRANCH, head=self.head)
+        )
+
+    def test_should_send_the_task_back_to_its_preflight_and_the_next_tick_preflights_its_head(self):
+        # Act
+        requeued = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+
+        # Assert
+        self.assertEqual(requeued.stdout, "task S3 of shop_w1 pr_open\n", requeued.stderr)
+        self.assertEqual(
+            self.read_events()[7:9],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "pr_open",
+                    "reason": "brigade wave requeue",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.preflighted",
+                    "project": "shop",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "pr": 12,
+                    "head": self.head,
+                    "checks": ANY,
+                },
+            ],
+        )
+
+    def test_should_launch_no_build_run(self):
+        # Act
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+
+        # Assert
+        self.assertEqual(self.read_run_records(), [])

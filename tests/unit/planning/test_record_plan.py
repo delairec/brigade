@@ -52,6 +52,7 @@ def create_found_pull_request(review: str | None, state: str = "open") -> dict:
             "behind": False,
             "head": "c0ffee",
             "base": "main",
+            "updated_at": "2026-10-18T11:00:00Z",
         },
     }
 
