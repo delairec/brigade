@@ -161,6 +161,44 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
             [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
         )
 
+    def test_should_rebase_in_the_worktree_the_milestone_branch_already_holds_without_adding_one(self):
+        # Arrange
+        self.wave_descent = 0
+        self.processes.answer(
+            ("git", "worktree", "list", "--porcelain", "-z"),
+            stdout=f"worktree {MILESTONE_WORKTREE}\0HEAD {MILESTONE_HEAD}\0branch refs/heads/{MILESTONE_BRANCH}\0\0",
+        )
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, ("git", "worktree", "add")),
+            [(REPOSITORY, ("git", "worktree", "add", "--quiet", WAVE_WORKTREE, "integration/shop_w1"))],
+        )
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, GIT_REBASE),
+            [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
+        )
+
+    def test_should_add_the_worktree_of_the_milestone_branch_where_its_place_holds_another_branch(self):
+        # Arrange
+        self.wave_descent = 0
+        self.processes.answer(
+            ("git", "worktree", "list", "--porcelain", "-z"),
+            stdout=f"worktree {MILESTONE_WORKTREE}\0HEAD {MILESTONE_HEAD}\0branch refs/heads/task/shop_w1/S20\0\0",
+        )
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, ("git", "worktree", "add"))[0],
+            (REPOSITORY, ("git", "worktree", "add", "--quiet", MILESTONE_WORKTREE, MILESTONE_BRANCH)),
+        )
+
     def test_should_push_the_rebased_milestone_branch_with_a_lease_on_its_head_on_the_forge(self):
         # Arrange
         self.wave_descent = 0
