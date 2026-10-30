@@ -401,6 +401,16 @@ class RebaseMilestoneBranchesStoppedOnAConflictTest(RebaseMilestoneBranchesTestC
             ],
         )
 
+    def test_should_touch_no_wave_branch_whose_worktree_a_live_run_holds(self):
+        # Arrange
+        self.live_worktrees = {Path(WAVE_WORKTREE)}
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(select_argvs_run_in(self.processes.requests, WAVE_WORKTREE), [])
+
     def test_should_touch_no_branch_whose_worktree_a_live_run_holds(self):
         # Arrange
         self.live_worktrees = {Path(MILESTONE_WORKTREE)}

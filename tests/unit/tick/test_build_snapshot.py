@@ -270,7 +270,6 @@ class WaveFactsTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["opened_integration_pull_request"], 184)
 
-
     def test_should_carry_the_rebase_run_its_branch_waits_on_a_ruling_from_and_the_question_in_its_document(self):
         # Arrange
         wave = WaveFacts(

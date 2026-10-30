@@ -1649,9 +1649,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
 
     def test_should_carry_no_blocked_rebase_run_from_a_blocked_run_of_another_slot_on_the_wave_branch(self):
         # Arrange
-        write_run(
-            self.paths.state_root, create_run_record("20261019T083000Z-4eba5e", "w1", WAVE_BRANCH_RUN), None
-        )
+        write_run(self.paths.state_root, create_run_record("20261019T083000Z-4eba5e", "w1", WAVE_BRANCH_RUN), None)
         self.record(
             5,
             dataclasses.replace(
