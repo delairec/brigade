@@ -3317,6 +3317,36 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             errors.getvalue(),
         )
 
+    def test_should_name_on_stderr_the_milestone_branch_whose_rebase_run_ended_blocked_with_its_question(self):
+        # Arrange
+        blocked_run = {
+            **create_run_record(FIRST_RUN, None, None),
+            "slot": "rebase",
+            "project": "tidepool",
+            "worktree": str(self.root / "tidepool" / ".brigade" / "worktrees" / "integration-tides"),
+        }
+        blocked = {
+            **create_run_result(FIRST_RUN, "blocked", "2026-10-18T10:00:00Z"),
+            "message": "Keep the guard of plan.py or drop it?\nbrigade-end: blocked",
+        }
+        write_run(self.root / "state", blocked_run, blocked)
+        write_ledger(self.root, [CUT_OF_M4, blocked])
+        self.machine.answers[("git", "reset")] = ProcessAnswer()
+        self.machine.answers[("git", "rev-parse", "HEAD")] = ProcessAnswer(stdout=f"{WAVE_HEAD}\n")
+        self.machine.answers[("git", "rebase")] = ProcessAnswer()
+        self.machine.answers[("git", "push")] = ProcessAnswer()
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: the rebase of integration/tides is blocked: Keep the guard of plan.py or drop it?\n",
+            errors.getvalue(),
+        )
+
 
 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
     **MACHINE_ANSWERS,
