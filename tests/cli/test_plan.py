@@ -286,6 +286,7 @@ class PlanRecordOnTheGithubForgeTestCase(PlanRecordTestCase):
             "headRefOid": "0123456789abcdef",
             "baseRefName": "main",
             "reviewDecision": review_decision,
+            "updatedAt": "2026-10-18T11:00:00Z",
             "statusCheckRollup": [],
         }
         self.listed.write_text(json.dumps([pull_request]))

@@ -16,7 +16,7 @@ BODY_FROM_STDIN = "-"
 URL_SEPARATOR = "/"
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
-PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup"
+PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup,updatedAt"
 PULL_REQUEST_DETAIL_FIELDS = "number,title,body,headRefName,headRefOid,statusCheckRollup"
 PULL_REQUESTS_QUERY = """query($owner: String!, $name: String!, $states: [PullRequestState!], $endCursor: String) {
   repository(owner: $owner, name: $name) {
@@ -295,6 +295,7 @@ def _describe_found_pull_request(pull_request: dict, behind_by: str) -> dict:
         "behind": int(behind_by) > 0,
         "head": pull_request["headRefOid"],
         "base": pull_request["baseRefName"],
+        "updated_at": pull_request["updatedAt"],
     }
 
 

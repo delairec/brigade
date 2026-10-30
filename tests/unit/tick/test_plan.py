@@ -120,6 +120,7 @@ LIVE_RUN_OF_S9 = LiveRun(
 
 
 HEAD = "0123abc"
+PUSHED_WITHIN_THE_MINUTE = datetime(2026, 10, 6, 11, 59, 1, tzinfo=UTC)
 
 
 def create_pull_request(state: str, verdict: str = "success", base: str = WAVE_BRANCH) -> PullRequestFacts:
@@ -131,6 +132,7 @@ def create_pull_request(state: str, verdict: str = "success", base: str = WAVE_B
         behind=False,
         head=HEAD,
         base=base,
+        updated_at=PUSHED_WITHIN_THE_MINUTE,
     )
 
 
@@ -216,7 +218,14 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
 PENDING = create_pull_request("open", "pending")
 FAILED_CHECK_RUN = create_pull_request("open", "failure")
 NO_CHECK_RUN = PullRequestFacts(
-    number=42, state="open", checks=(), review=None, behind=False, head=HEAD, base=WAVE_BRANCH
+    number=42,
+    state="open",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base=WAVE_BRANCH,
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 SHOP_WITHOUT_CHECK_RUNS = ProjectFacts(name="shop", slots=4, awaits_check_runs=False)
 OPENED_BY_THE_TASK = 42
@@ -991,10 +1000,24 @@ class PlanWaveReportTest(unittest.TestCase):
 
 
 INTEGRATION_MERGED = PullRequestFacts(
-    number=77, state="merged", checks=(), review=None, behind=False, head=HEAD, base="main"
+    number=77,
+    state="merged",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base="main",
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 INTEGRATION_OPEN = PullRequestFacts(
-    number=77, state="open", checks=(), review=None, behind=False, head=HEAD, base="main"
+    number=77,
+    state="open",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base="main",
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 NO_INTEGRATION_PULL_REQUEST = None
 
@@ -1080,6 +1103,7 @@ FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE = PullRequestFacts(
     behind=False,
     head=HEAD,
     base=WAVE_BRANCH,
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 
 

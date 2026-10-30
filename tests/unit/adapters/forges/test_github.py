@@ -427,14 +427,14 @@ FIND_REQUEST = {
 }
 OPEN_PULL_REQUEST = (
     '[{"number": 42, "state": "OPEN", "headRefOid": "0123abc", "baseRefName": "integration/M1-empty-cart",'
-    ' "reviewDecision": "CHANGES_REQUESTED", "statusCheckRollup": ['
+    ' "reviewDecision": "CHANGES_REQUESTED", "updatedAt": "2026-10-30T14:04:22Z", "statusCheckRollup": ['
     '{"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"},'
     '{"__typename": "CheckRun", "name": "lint", "status": "IN_PROGRESS", "conclusion": ""},'
     '{"__typename": "StatusContext", "context": "deploy", "state": "SUCCESS"}]}]'
 )
 UNREVIEWED_PULL_REQUEST = (
     '[{"number": 42, "state": "MERGED", "headRefOid": "0123abc", "baseRefName": "integration/M1-empty-cart",'
-    ' "reviewDecision": "", "statusCheckRollup": []}]'
+    ' "reviewDecision": "", "updatedAt": "2026-10-30T14:04:22Z", "statusCheckRollup": []}]'
 )
 
 
@@ -464,6 +464,7 @@ class FindPullRequestTest(unittest.TestCase):
                     "behind": True,
                     "head": "0123abc",
                     "base": "integration/M1-empty-cart",
+                    "updated_at": "2026-10-30T14:04:22Z",
                 },
             },
         )
@@ -487,6 +488,7 @@ class FindPullRequestTest(unittest.TestCase):
                 "behind": False,
                 "head": "0123abc",
                 "base": "integration/M1-empty-cart",
+                "updated_at": "2026-10-30T14:04:22Z",
             },
         )
 
@@ -525,7 +527,7 @@ class FindPullRequestTest(unittest.TestCase):
                         "--limit",
                         "1",
                         "--json",
-                        "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup",
+                        "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup,updatedAt",
                     ),
                     cwd="/projects/shop",
                     timeout_s=60.0,
