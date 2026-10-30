@@ -13162,7 +13162,8 @@ TASK B214
 TASK B215
 	TITLE "The tick opens the pull request of the integration branch of a milestone into main once"
 		+ "every wave of the milestone is merged, and merges it never"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 258
 	TYPE feat
 	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
