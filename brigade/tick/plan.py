@@ -531,9 +531,10 @@ def _plan_integration_pull_requests(snapshot: Snapshot) -> tuple:
 
 def _plan_wave_starts(snapshot: Snapshot) -> tuple:
     return tuple(
-        StartWave(project=project.name)
+        StartWave(project=project.name, milestone=wave.milestone)
         for project in snapshot.projects
-        if project.wave_start == AUTOMATIC_WAVE_START and project.candidates
+        if project.wave_start == AUTOMATIC_WAVE_START
+        for wave in project.candidates
     )
 
 

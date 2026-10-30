@@ -107,6 +107,7 @@ class ResumeTaskRun:
 @dataclass(frozen=True)
 class StartWave:
     project: str
+    milestone: str | None
 
 
 @dataclass(frozen=True)

@@ -506,7 +506,7 @@ def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWav
         read_environment=read_environment,
         read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
     )
-    start_project_wave(runtime, start)
+    start_project_wave(runtime, start, action.milestone)
 
 
 def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: CutWaveBranch) -> None:

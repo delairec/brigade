@@ -42,6 +42,7 @@ from brigade.tick.build_snapshot import (
     WavePause,
 )
 from brigade.tick.plan import plan
+from brigade.waves.list_candidate_waves import CandidateWave
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 SHOP = ProjectFacts(name="shop", slots=4)
@@ -882,15 +883,25 @@ class PlanForgeAccountPauseTest(unittest.TestCase):
         self.assertEqual(actions, (PauseWave(wave="shop_w1", reason="forge_account", resume_at=None),))
 
 
-PROJECT_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, candidates=("S7", "S8"))
-PROJECT_ASKING_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, wave_start="ask", candidates=("S7", "S8"))
+CANDIDATE_WAVES = (
+    CandidateWave(milestone="M9", tasks=("S7",)),
+    CandidateWave(milestone="M10", tasks=("S8",)),
+    CandidateWave(milestone=None, tasks=("S9",)),
+)
+PROJECT_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, candidates=CANDIDATE_WAVES)
+PROJECT_ASKING_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, wave_start="ask", candidates=CANDIDATE_WAVES)
 PROJECT_WITHOUT_CANDIDATES = ProjectFacts(name="shop", slots=4)
+ONE_START_PER_CANDIDATE_WAVE = (
+    StartWave(project="shop", milestone="M9"),
+    StartWave(project="shop", milestone="M10"),
+    StartWave(project="shop", milestone=None),
+)
 
 
 class PlanWaveStartTest(unittest.TestCase):
-    def test_should_start_a_wave_only_under_auto_and_with_a_candidate(self):
+    def test_should_start_a_wave_per_milestone_only_under_auto_and_with_a_candidate(self):
         for case, project, expected in [
-            ("under auto with candidates", PROJECT_WITH_CANDIDATES, (StartWave(project="shop"),)),
+            ("under auto with candidates", PROJECT_WITH_CANDIDATES, ONE_START_PER_CANDIDATE_WAVE),
             ("under ask with candidates", PROJECT_ASKING_WITH_CANDIDATES, ()),
             ("under auto without candidates", PROJECT_WITHOUT_CANDIDATES, ()),
         ]:

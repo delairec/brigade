@@ -43,14 +43,13 @@ from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_live_blockers import read_live_blockers
-from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.cut_wave_branch import WaveBranchCut
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
-from brigade.waves.map_open_tasks import map_open_tasks
+from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
-from brigade.waves.read_project_tasks import read_project_tasks
+from brigade.waves.read_project_tasks import ProjectTasksReading
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.read_wave_start import read_wave_start
@@ -226,7 +225,7 @@ class ProjectFacts:
     live_runs: tuple[LiveRun, ...] = ()
     awaits_check_runs: bool = True
     wave_start: str = "auto"
-    candidates: tuple[str, ...] = ()
+    candidates: tuple[CandidateWave, ...] = ()
     merge: str = REBASE_MERGE
     review: str = VERDICT_REVIEW
     auto_merge: str = MERGE_INTO_INTEGRATION
@@ -239,7 +238,7 @@ class ProjectFacts:
             "slots": self.slots,
             "live_runs": [{"run": live.run, "slot": live.slot, "worktree": live.worktree} for live in self.live_runs],
             "wave_start": self.wave_start,
-            "candidates": list(self.candidates),
+            "candidates": [{"milestone": wave.milestone, "tasks": list(wave.tasks)} for wave in self.candidates],
             "merge": self.merge,
             "review": self.review,
             "auto_merge": self.auto_merge,
@@ -614,11 +613,18 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
     )
 
 
-def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[str, ...]:
+def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[CandidateWave, ...]:
     if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
         return ()
-    tasks = read_project_tasks(runtime, reading.configuration, project, reading.forge.read_environment)
-    return admit_candidates(runtime.run_process, tasks, map_open_tasks(reading.entries, project.name))
+    return list_candidate_waves(
+        runtime,
+        ProjectTasksReading(
+            configuration=reading.configuration,
+            project=project,
+            read_environment=reading.forge.read_environment,
+            entries=reading.entries,
+        ),
+    )
 
 
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
