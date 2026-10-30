@@ -13021,7 +13021,8 @@ TASK B212
 
 TASK B213
 	TITLE "The candidates of a wave are read on the integration branch of its milestone"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 259
 	TYPE feat
 	MILESTONE @MILESTONE.M9
 	COMPONENT "waves"
