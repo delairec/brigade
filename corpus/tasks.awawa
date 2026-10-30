@@ -13274,7 +13274,8 @@ TASK B215
 TASK B216
 	TITLE "The Bootstrap section of AGENTS.md describes the delivery of a milestone through its"
 		+ "integration branch"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 263
 	TYPE docs
 	MILESTONE @MILESTONE.M9
 	COMPONENT "AGENTS.md"
