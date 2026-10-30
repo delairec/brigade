@@ -15,6 +15,7 @@ from unittest.mock import ANY
 from brigade.collectors import pr_threads
 from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
+from brigade.runs.record_run_pid import record_run_pid
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
 from brigade.system.resolve_collector import BuiltInCollector, resolve_collector
@@ -3320,6 +3321,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
 MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "main", "integration/tides")
 REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "main")
+REBASE_OF_THE_WAVE_BRANCH = ("git", "rebase", "integration/tides")
 OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN = {
     **MACHINE_ANSWERS,
     ("git", "branch", "--quiet"): ProcessAnswer(),
@@ -3459,6 +3461,26 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.machine.argvs.count(REBASE_OF_THE_MILESTONE_BRANCH), 1)
+
+    def test_should_rebase_no_open_wave_branch_whose_worktree_a_live_run_holds(self):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4, WAVE_STARTED])
+        self.machine.answers[("git", "merge-base", "--is-ancestor", "integration/tides", "HEAD")] = ProcessAnswer(
+            exit_code=1
+        )
+        self.machine.answers[REBASE_OF_THE_WAVE_BRANCH] = ProcessAnswer()
+        live_run = {
+            **create_run_record(FIRST_RUN, "tidepool_w16", "T7"),
+            "cwd": str(self.root / "tidepool" / ".brigade" / "worktrees" / "integration-M4"),
+        }
+        record_run_pid(write_run(self.root / "state", live_run, None), os.getpid())
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+        self.assertNotIn(REBASE_OF_THE_WAVE_BRANCH, self.machine.argvs)
 
     def test_should_name_on_stderr_the_milestone_branch_whose_rebase_run_ended_blocked_with_its_question(self):
         # Arrange
