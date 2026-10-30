@@ -4274,6 +4274,7 @@ OPEN_WAVE_OF_M4_STARTED = {
 }
 OPEN_WAVE_OF_M5_STARTED = {**OPEN_WAVE_OF_M4_STARTED, "tasks": ["T9"]}
 OPEN_WAVE_OF_ANOTHER_PROJECT_STARTED = {**WAVE_OF_ANOTHER_PROJECT_STARTED, "ts": "2026-10-18T14:00:00Z"}
+NO_OTHER_PROJECT = {}
 MILESTONE_BRANCH_DELETED_FROM_THE_FORGE = CommandFailed(
     ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH), 128, "couldn't find remote ref integration/tides"
 )
@@ -4293,7 +4294,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
         )
 
     def _create_runtime(
-        self, forge: OpeningForgeDouble, tasks: dict, answers: dict = MACHINE_ANSWERS, projects: dict = {}
+        self, forge: OpeningForgeDouble, tasks: dict, answers: dict = MACHINE_ANSWERS, projects: dict = NO_OTHER_PROJECT
     ) -> Runtime:
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
@@ -4462,7 +4463,12 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_open_it_beside_an_open_wave_of_no_task_of_the_milestone(self):
         for case, open_wave, tasks, projects in [
-            ("another milestone of the project", OPEN_WAVE_OF_M5_STARTED, {"T9": TASK_OF_M5_DELIVERED}, {}),
+            (
+                "another milestone of the project",
+                OPEN_WAVE_OF_M5_STARTED,
+                {"T9": TASK_OF_M5_DELIVERED},
+                NO_OTHER_PROJECT,
+            ),
             (
                 "a task of the same name in another project",
                 OPEN_WAVE_OF_ANOTHER_PROJECT_STARTED,
