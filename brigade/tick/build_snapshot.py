@@ -23,6 +23,7 @@ from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
+from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
@@ -33,6 +34,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
+from brigade.runs.read_run_question import read_run_question
 from brigade.runtime import Runtime
 from brigade.studies.convert_study import Study
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
@@ -197,6 +199,7 @@ class WaveFacts:
     opened_integration_pull_request: int | None = None
     milestone_branch: str | None = None
     unresolved_threads: int = 0
+    blocked_rebase: BlockedRun | None = None
 
     def to_document(self) -> dict:
         return {
@@ -488,17 +491,26 @@ def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) 
     return dataclasses.replace(task, rate_limit=_read_rate_limit(reading, wave, task.name))
 
 
-def _read_question(message: str | None) -> str:
-    if message is None:
-        return ""
-    return " ".join(line.strip() for line in message.splitlines()[:-1] if line.strip())
-
-
 def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
     finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == run]
     if not finished or finished[-1].outcome != BLOCKED_OUTCOME:
         return None
-    return BlockedRun(run=run, question=_read_question(finished[-1].message))
+    return BlockedRun(run=run, question=read_run_question(finished[-1].message))
+
+
+def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
+    naming = [run for run in reading.runs if run["wave"] == wave and run["task"] is None and run["slot"] == REBASE_SLOT]
+    if not naming:
+        return None
+    run = naming[-1]["run"]
+    finished = [
+        index for index, event in enumerate(reading.events) if isinstance(event, RunFinished) and event.run == run
+    ]
+    if not finished or any(
+        isinstance(event, (WavePaused, WaveResumed)) and event.wave == wave for event in reading.events[finished[-1] :]
+    ):
+        return None
+    return _read_blocked_run(reading, run)
 
 
 def _is_rebase_done(reading: WaveReading, run: dict) -> bool:
@@ -652,6 +664,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         opened_integration_pull_request=find_integration_pull_request(reading.events, started.wave),
         milestone_branch=pull_request.milestone_branch,
         unresolved_threads=pull_request.unresolved_threads,
+        blocked_rebase=_read_blocked_rebase(reading, started.wave),
     )
 
 
