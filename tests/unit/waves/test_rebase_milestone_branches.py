@@ -254,6 +254,16 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         # Assert
         self.assertEqual(self.processes.list_argvs(), [])
 
+    def test_should_rebase_nothing_for_a_milestone_whose_branch_another_project_cut(self):
+        # Arrange
+        write_ledger(self.root, [{**CUT_OF_M3, "project": "depot"}, OPEN_WAVE_OF_M3])
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(self.processes.list_argvs(), [])
+
     def test_should_rebase_nothing_for_a_milestone_that_is_not_active(self):
         # Arrange
         self.answer_active_milestones(NO_ACTIVE_MILESTONE)

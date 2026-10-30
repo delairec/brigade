@@ -227,6 +227,26 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
             "the branch feature/tides is not a task, a wave or a milestone branch of @PROJECT.tidepool",
         )
 
+    def test_should_refuse_a_milestone_or_wave_branch_another_project_recorded(self):
+        for case, recorded, branch in [
+            ("a milestone branch", {**TIDES_BRANCH_CUT, "project": "depot"}, "integration/tides"),
+            ("a wave branch", {**WAVE_STARTED, "project": "depot"}, "integration/M4-tides"),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                write_ledger(self.root, [recorded])
+                runtime = self._create_runtime(MILESTONE_WITHOUT_FORGE, branch, "main")
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    COMMAND.run(Namespace(pr=NO_PULL_REQUEST), runtime)
+
+                # Assert
+                self.assertEqual(
+                    str(raised.exception),
+                    f"the branch {branch} is not a task, a wave or a milestone branch of @PROJECT.tidepool",
+                )
+
 
 class RebaseContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
