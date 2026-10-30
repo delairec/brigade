@@ -7,6 +7,7 @@ from brigade.studies.read_schedule import read_schedule
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
+    CloseMilestone,
     CloseWave,
     CutWaveBranch,
     LaunchCheckRepair,
@@ -17,6 +18,7 @@ from brigade.tick.actions import (
     MergePullRequest,
     MergeWavePullRequest,
     OpenIntegrationPullRequest,
+    OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
     RebaseTask,
@@ -28,7 +30,15 @@ from brigade.tick.actions import (
     RunPreflight,
     StartWave,
 )
-from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.build_snapshot import (
+    SETTLED_STATES,
+    MilestoneFacts,
+    ProjectFacts,
+    Snapshot,
+    StudyFacts,
+    TaskFacts,
+    WaveFacts,
+)
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -87,6 +97,8 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_wave_merges(snapshot)
         + _plan_closes(snapshot)
         + _plan_integration_pull_requests(snapshot)
+        + _plan_milestone_pull_requests(snapshot)
+        + _plan_milestone_closes(snapshot)
         + _plan_launches(snapshot, paused)
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
@@ -526,6 +538,40 @@ def _plan_integration_pull_requests(snapshot: Snapshot) -> tuple:
         )
         for wave in snapshot.waves
         if _is_integration_pull_request_due(wave, projects[wave.project])
+    )
+
+
+def _is_milestone_pull_request_due(milestone: MilestoneFacts, snapshot: Snapshot, project: ProjectFacts) -> bool:
+    return (
+        project.on_github
+        and milestone.opened_pull_request is None
+        and bool(milestone.merged_waves)
+        and not milestone.todo
+        and not any(
+            wave.project == milestone.project and wave.milestone_branch == milestone.branch for wave in snapshot.waves
+        )
+    )
+
+
+def _plan_milestone_pull_requests(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    return tuple(
+        OpenMilestonePullRequest(
+            project=milestone.project,
+            milestone=milestone.milestone,
+            branch=milestone.branch,
+            waves=milestone.merged_waves,
+        )
+        for milestone in snapshot.milestones
+        if _is_milestone_pull_request_due(milestone, snapshot, projects[milestone.project])
+    )
+
+
+def _plan_milestone_closes(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CloseMilestone(project=milestone.project, milestone=milestone.milestone, pr=milestone.opened_pull_request)
+        for milestone in snapshot.milestones
+        if milestone.pull_request is not None and milestone.pull_request.state == MERGED_PULL_REQUEST
     )
 
 

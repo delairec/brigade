@@ -5,7 +5,9 @@ from brigade.ledger.inbox_dismissed import InboxDismissed
 from brigade.ledger.inbox_recorded import InboxRecorded
 from brigade.ledger.ledger_locations import LOCK_FILE
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
+from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_created import MilestoneCreated
+from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
@@ -49,6 +51,8 @@ AppendedEvent = (
     | TaskPrOpened
     | MilestoneCreated
     | MilestoneBranchCut
+    | MilestonePrOpened
+    | MilestoneClosed
     | TaskPromoted
     | WavePaused
     | WaveResumed

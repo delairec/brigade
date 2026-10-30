@@ -38,6 +38,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+from tests.unit.select_milestone_events import select_milestone_events
 from tests.unit.select_wave_events import select_wave_events
 from tests.unit.spawned_process_double import SpawnedProcessDouble
 
@@ -219,6 +220,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "live_study_runs": [],
                     "study_runs": 2,
                     "rate_limits": [],
+                    "milestones": [],
                 },
                 "plan": [],
             },
@@ -401,12 +403,14 @@ class TickTextTest(unittest.TestCase):
                         "live_study_runs": [],
                         "study_runs": 2,
                         "rate_limits": [],
+                        "milestones": [],
                     },
                     "plan": [],
                 },
                 (
                     "snapshot\n  now  2026-10-07T09:00:00Z\n  waves  []\n  projects  []\n  studies  []"
-                    "\n  live_study_runs  []\n  study_runs  2\n  rate_limits  []\nplan\n  no action"
+                    "\n  live_study_runs  []\n  study_runs  2\n  rate_limits  []"
+                    "\n  milestones  []\nplan\n  no action"
                 ),
             ),
             (
@@ -4231,4 +4235,310 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
             '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "recorded", "kind": "review_thread",'
             ' "project": "oak", "fingerprint": "rt:PRRT_oak4", "evidence": {"pull_request": 4, "path": "src/cart.py",'
             ' "line": 12, "author": "delairec", "comment": "Name the total"}}\n',
+        )
+
+
+MILESTONE_BRANCH = "integration/tides"
+WAVE_CLOSED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T13:00:00Z",
+    "event": "wave.closed",
+    "wave": "tidepool_w16",
+    "pr": 206,
+}
+MILESTONE_PR_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T13:30:00Z",
+    "event": "milestone.pr_opened",
+    "project": "tidepool",
+    "milestone": "M4",
+    "pr": 77,
+    "login": "tidepool-cli",
+}
+MILESTONE_PULL_REQUEST_MERGED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "number": 77, "state": "merged"}
+TASK_OF_M4_TO_DELIVER = (("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"))
+TASK_OF_M5_DELIVERED = (("MILESTONE", "@MILESTONE.M5"), ("STATUS", "implemented"), ("DELIVERED_BY", "42"))
+WAVE_OF_ANOTHER_PROJECT_STARTED = {
+    **WAVE_STARTED,
+    "wave": "reef_w3",
+    "project": "reef",
+    "branch": "integration/reef_w3",
+}
+WAVE_OF_ANOTHER_PROJECT_CLOSED = {**WAVE_CLOSED, "wave": "reef_w3", "pr": 12}
+MILESTONE_BRANCH_DELETED_FROM_THE_FORGE = CommandFailed(
+    ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH), 128, "couldn't find remote ref integration/tides"
+)
+
+
+class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4, WAVE_REPORTED, WAVE_PR_OPENED, WAVE_CLOSED],
+        )
+
+    def _create_runtime(self, forge: OpeningForgeDouble, tasks: dict, answers: dict = MACHINE_ANSWERS) -> Runtime:
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": tasks,
+            "MILESTONE": {"M4": MILESTONE_M4, "M5": (("STATUS", "active"), ("TITLE", "Currents"))},
+        }
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=ScriptedProcessRunner(
+                {**answers, ("git", "ls-remote"): ProcessAnswer(stdout="")}, fallback=create_corpus_double(corpus)
+            ).run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
+        )
+
+    def _read_milestone_events(self) -> list[dict]:
+        return select_milestone_events(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
+
+    def test_should_open_the_pull_request_of_the_milestone_branch_into_main_once_its_last_wave_is_closed(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+
+        # Assert
+        self.assertEqual(
+            self.forge.opened,
+            [
+                {
+                    "repository": str(self.repository),
+                    "base": "main",
+                    "branch": "integration/tides",
+                    "title": "chore(milestone): merge the milestone M4 into main",
+                    "body": "Merges the milestone M4 of @PROJECT.tidepool into main, its waves merged:"
+                    " tidepool_w16 #206.",
+                    "milestone": None,
+                    "environment": {},
+                }
+            ],
+        )
+
+    def test_should_record_the_opening_with_the_login_of_the_cli(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+
+        # Assert
+        self.assertEqual(
+            self._read_milestone_events(),
+            [
+                CUT_OF_M4,
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "milestone.pr_opened",
+                    "project": "tidepool",
+                    "milestone": "M4",
+                    "pr": 77,
+                    "login": "tidepool-cli",
+                },
+            ],
+        )
+
+    def test_should_open_none_at_a_second_tick(self):
+        # Arrange
+        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED})
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(len(self.forge.opened), 1)
+
+    def test_should_open_it_beside_the_pull_request_opened_for_another_milestone(self):
+        for case, opened_elsewhere in [
+            ("another milestone of the project", {**MILESTONE_PR_OPENED, "milestone": "M5"}),
+            ("the milestone of the same name of another project", {**MILESTONE_PR_OPENED, "project": "reef"}),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                write_ledger(
+                    self.root,
+                    [
+                        WAVE_STARTED,
+                        _record_task_state("merged"),
+                        CUT_OF_M4,
+                        WAVE_REPORTED,
+                        WAVE_PR_OPENED,
+                        WAVE_CLOSED,
+                        opened_elsewhere,
+                    ],
+                )
+                forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
+
+                # Act
+                COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
+
+                # Assert
+                self.assertEqual(
+                    forge.opened,
+                    [
+                        {
+                            "repository": str(self.repository),
+                            "base": "main",
+                            "branch": "integration/tides",
+                            "title": "chore(milestone): merge the milestone M4 into main",
+                            "body": "Merges the milestone M4 of @PROJECT.tidepool into main, its waves merged:"
+                            " tidepool_w16 #206.",
+                            "milestone": None,
+                            "environment": {},
+                        }
+                    ],
+                )
+
+    def test_should_open_none_on_the_closed_wave_of_another_project(self):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4, WAVE_OF_ANOTHER_PROJECT_STARTED, WAVE_OF_ANOTHER_PROJECT_CLOSED])
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+
+        # Assert
+        self.assertEqual(self.forge.opened, [])
+
+    def test_should_open_none_while_a_task_of_the_milestone_is_todo_at_its_branch(self):
+        # Arrange
+        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED, "T8": TASK_OF_M4_TO_DELIVER})
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.forge.opened, [])
+
+    def test_should_open_none_while_no_closed_wave_holds_a_task_of_the_milestone(self):
+        # Arrange
+        runtime = self._create_runtime(self.forge, {"T7": TASK_OF_M5_DELIVERED})
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.forge.opened, [])
+
+    def test_should_record_the_close_of_the_milestone_once_its_pull_request_is_merged(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                WAVE_STARTED,
+                _record_task_state("merged"),
+                CUT_OF_M4,
+                WAVE_REPORTED,
+                WAVE_PR_OPENED,
+                WAVE_CLOSED,
+                MILESTONE_PR_OPENED,
+            ],
+        )
+        forge = OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED})
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
+
+        # Assert
+        self.assertEqual(
+            self._read_milestone_events(),
+            [
+                CUT_OF_M4,
+                MILESTONE_PR_OPENED,
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "milestone.closed",
+                    "project": "tidepool",
+                    "milestone": "M4",
+                    "pr": 77,
+                },
+            ],
+        )
+
+    def test_should_record_the_close_once_whatever_the_ticks_after_it(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                WAVE_STARTED,
+                _record_task_state("merged"),
+                CUT_OF_M4,
+                WAVE_REPORTED,
+                WAVE_PR_OPENED,
+                WAVE_CLOSED,
+                MILESTONE_PR_OPENED,
+            ],
+        )
+        runtime = self._create_runtime(
+            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED}
+        )
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_milestone_events(),
+            [
+                CUT_OF_M4,
+                MILESTONE_PR_OPENED,
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "milestone.closed",
+                    "project": "tidepool",
+                    "milestone": "M4",
+                    "pr": 77,
+                },
+            ],
+        )
+
+    def test_should_record_the_close_of_a_milestone_whose_branch_the_forge_deleted_at_the_merge(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                WAVE_STARTED,
+                _record_task_state("merged"),
+                CUT_OF_M4,
+                WAVE_REPORTED,
+                WAVE_PR_OPENED,
+                WAVE_CLOSED,
+                MILESTONE_PR_OPENED,
+            ],
+        )
+        answers = {
+            **MACHINE_ANSWERS,
+            ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH): MILESTONE_BRANCH_DELETED_FROM_THE_FORGE,
+        }
+        runtime = self._create_runtime(
+            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED}, answers
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "milestone.closed",
+                "project": "tidepool",
+                "milestone": "M4",
+                "pr": 77,
+            },
+            self._read_milestone_events(),
         )

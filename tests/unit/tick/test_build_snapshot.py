@@ -2,9 +2,12 @@ import unittest
 from datetime import UTC, datetime
 
 from brigade.studies.read_live_study_runs import LiveStudyRun
+from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    MergedWave,
+    MilestoneFacts,
     PreflightFailure,
     ProjectFacts,
     RateLimit,
@@ -38,6 +41,7 @@ class SnapshotTest(unittest.TestCase):
                 "live_study_runs": [],
                 "study_runs": 2,
                 "rate_limits": [],
+                "milestones": [],
             },
         )
 
@@ -52,6 +56,64 @@ class SnapshotTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document["rate_limits"], [{"reset": {"hour": "7pm", "timezone": "Europe/Paris"}}, {"reset": None}]
+        )
+
+    def test_should_carry_the_milestones_and_their_pull_request_in_its_document(self):
+        # Arrange
+        milestones = (
+            MilestoneFacts(
+                project="shop",
+                milestone="M4",
+                branch="integration/tides",
+                merged_waves=(MergedWave(wave="shop_w1", pr=77),),
+                todo=("S5",),
+            ),
+            MilestoneFacts(
+                project="shop",
+                milestone="M5",
+                branch="integration/currents",
+                opened_pull_request=90,
+                pull_request=PullRequestFacts(
+                    number=90, state="open", checks=(), review=None, behind=False, head="abc123", base="main"
+                ),
+            ),
+        )
+        snapshot = Snapshot(now=datetime(2026, 10, 18, 12, 0, tzinfo=UTC), milestones=milestones)
+
+        # Act
+        document = snapshot.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["milestones"],
+            [
+                {
+                    "project": "shop",
+                    "milestone": "M4",
+                    "branch": "integration/tides",
+                    "merged_waves": [{"wave": "shop_w1", "pr": 77}],
+                    "todo": ["S5"],
+                    "opened_pull_request": None,
+                    "pull_request": None,
+                },
+                {
+                    "project": "shop",
+                    "milestone": "M5",
+                    "branch": "integration/currents",
+                    "merged_waves": [],
+                    "todo": [],
+                    "opened_pull_request": 90,
+                    "pull_request": {
+                        "number": 90,
+                        "state": "open",
+                        "checks": [],
+                        "review": None,
+                        "behind": False,
+                        "head": "abc123",
+                        "base": "main",
+                    },
+                },
+            ],
         )
 
     def test_should_carry_the_studies_and_their_live_runs_in_its_document(self):

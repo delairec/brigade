@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from brigade.tick.build_snapshot import MergedWave
+
 
 @dataclass(frozen=True)
 class LaunchTask:
@@ -144,6 +146,21 @@ class CloseWave:
     pr: int
     project: str
     milestones: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OpenMilestonePullRequest:
+    project: str
+    milestone: str
+    branch: str
+    waves: tuple[MergedWave, ...]
+
+
+@dataclass(frozen=True)
+class CloseMilestone:
+    project: str
+    milestone: str
+    pr: int
 
 
 @dataclass(frozen=True)

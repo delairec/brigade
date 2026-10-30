@@ -74,6 +74,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "events": {
                     "milestone.branch_cut": 1,
                     "milestone.created": 3,
+                    "milestone.pr_opened": 1,
                     "order.parked": 1,
                     "order.started": 1,
                     "pr.merged": 3,
