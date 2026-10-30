@@ -1,5 +1,5 @@
 import dataclasses
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from brigade.errors import BrigadeError
 from brigade.ledger.format_instant import format_instant
@@ -68,6 +68,7 @@ SUCCESSFUL_CHECK = "success"
 OTHER_BASE_REASON = "pull request base is not the wave branch"
 RUN_DEAD_REASON = "run dead"
 RUN_NOT_STARTED_REASON = "run not started"
+CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
 
 
 def plan(snapshot: Snapshot) -> tuple:
@@ -194,8 +195,14 @@ def _read_occupancy(snapshot: Snapshot) -> _Occupancy:
     )
 
 
-def _decide_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> RunPreflight | None:
-    if not _is_ready_for_preflight(wave, task, project):
+@dataclasses.dataclass(frozen=True)
+class _FollowedReading:
+    occupancy: _Occupancy
+    now: datetime
+
+
+def _decide_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, now: datetime) -> RunPreflight | None:
+    if not _is_ready_for_preflight(wave, task, project, now):
         return None
     return RunPreflight(
         project=wave.project, wave=wave.wave, branch=wave.branch, task=task.name, pr=task.pull_request.number
@@ -212,36 +219,36 @@ def _decide_worktree_removal(wave: WaveFacts, task: TaskFacts, occupancy: _Occup
     return RemoveTaskWorktree(project=wave.project, task=task.name, worktree=task.worktree)
 
 
-def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy) -> tuple:
+def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, reading: _FollowedReading) -> tuple:
     if task.rate_limit is not None:
         return ()
     record = _decide_task_state(wave, task)
     recorded = () if record is None else (record,)
-    blocked_parking = _decide_blocked_parking(wave, task, occupancy)
+    blocked_parking = _decide_blocked_parking(wave, task, reading.occupancy)
     if blocked_parking is not None:
         return (*recorded, blocked_parking)
-    catch_up = _decide_catch_up(wave, task, project, occupancy)
+    catch_up = _decide_catch_up(wave, task, project, reading.occupancy)
     if catch_up is not None:
         return (*recorded, catch_up)
     decided = (
-        _decide_preflight(wave, task, project),
-        _decide_verification(wave, task, occupancy),
-        _decide_repair(wave, task, project, occupancy),
-        _decide_merge(wave, task, project),
-        _decide_worktree_removal(wave, task, occupancy),
+        _decide_preflight(wave, task, project, reading.now),
+        _decide_verification(wave, task, reading.occupancy),
+        _decide_repair(wave, task, project, reading.occupancy),
+        _decide_merge(wave, task, project, reading.now),
+        _decide_worktree_removal(wave, task, reading.occupancy),
     )
     return (*recorded, *(action for action in decided if action is not None))
 
 
 def _plan_followed_pull_requests(snapshot: Snapshot) -> tuple:
-    occupancy = _read_occupancy(snapshot)
+    reading = _FollowedReading(occupancy=_read_occupancy(snapshot), now=snapshot.now)
     projects = {project.name: project for project in snapshot.projects}
     return tuple(
         action
         for wave in snapshot.waves
         for task in wave.tasks
         if task.pull_request is not None
-        for action in _plan_followed_task(wave, task, projects[wave.project], occupancy)
+        for action in _plan_followed_task(wave, task, projects[wave.project], reading)
     )
 
 
@@ -376,8 +383,16 @@ def _decide_repair(
     return _launch_repair(wave, task)
 
 
-def _are_checks_passed(pull_request: PullRequestFacts, project: ProjectFacts) -> bool:
-    return (bool(pull_request.checks) or not project.awaits_check_runs) and all(
+def _is_awaiting_check_runs(pull_request: PullRequestFacts, project: ProjectFacts, now: datetime) -> bool:
+    return (
+        project.awaits_check_runs
+        and not pull_request.checks
+        and now - pull_request.updated_at < CHECK_SUITE_CREATION_DELAY
+    )
+
+
+def _are_checks_passed(pull_request: PullRequestFacts, project: ProjectFacts, now: datetime) -> bool:
+    return not _is_awaiting_check_runs(pull_request, project, now) and all(
         check.verdict == SUCCESSFUL_CHECK for check in pull_request.checks
     )
 
@@ -392,12 +407,14 @@ def _is_verdict_accepted(task: TaskFacts, project: ProjectFacts) -> bool:
     )
 
 
-def _decide_merge(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> MergePullRequest | ParkTask | None:
+def _decide_merge(
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, now: datetime
+) -> MergePullRequest | ParkTask | None:
     if (
         wave.states.get(task.name) != VERIFIED_STATE
         or task.pull_request.state != OPEN_PULL_REQUEST
         or project.auto_merge == NO_AUTO_MERGE
-        or not _are_checks_passed(task.pull_request, project)
+        or not _are_checks_passed(task.pull_request, project, now)
         or not _is_verdict_accepted(task, project)
     ):
         return None
@@ -408,12 +425,12 @@ def _decide_merge(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> Me
     )
 
 
-def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> bool:
+def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, now: datetime) -> bool:
     return (
         wave.states.get(task.name) == PR_OPEN_STATE
         and task.opened_pull_request == task.pull_request.number
         and task.pull_request.state == OPEN_PULL_REQUEST
-        and (bool(task.pull_request.checks) or not project.awaits_check_runs)
+        and not _is_awaiting_check_runs(task.pull_request, project, now)
         and all(check.verdict != PENDING_VERDICT for check in task.pull_request.checks)
         and task.preflighted_head != task.pull_request.head
     )

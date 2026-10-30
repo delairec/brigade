@@ -227,6 +227,7 @@ NO_CHECK_RUN = PullRequestFacts(
     base=WAVE_BRANCH,
     updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
+NO_CHECK_RUN_FOR_A_MINUTE = dataclasses.replace(NO_CHECK_RUN, updated_at=datetime(2026, 10, 6, 11, 59, tzinfo=UTC))
 SHOP_WITHOUT_CHECK_RUNS = ProjectFacts(name="shop", slots=4, awaits_check_runs=False)
 OPENED_BY_THE_TASK = 42
 OPENED_BY_AN_EARLIER_RUN = 41
@@ -250,7 +251,24 @@ class PlanPreflightTest(unittest.TestCase):
                 (PREFLIGHT_S3,),
             ),
             ("a check run pending", "pr_open", PENDING, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
-            ("no check run yet", "pr_open", NO_CHECK_RUN, OPENED_BY_THE_TASK, NOT_PREFLIGHTED, SHOP, ()),
+            (
+                "no check run within a minute of the last update",
+                "pr_open",
+                NO_CHECK_RUN,
+                OPENED_BY_THE_TASK,
+                NOT_PREFLIGHTED,
+                SHOP,
+                (),
+            ),
+            (
+                "no check run a minute after the last update",
+                "pr_open",
+                NO_CHECK_RUN_FOR_A_MINUTE,
+                OPENED_BY_THE_TASK,
+                NOT_PREFLIGHTED,
+                SHOP,
+                (PREFLIGHT_S3,),
+            ),
             (
                 "no check run in a project without continuous integration",
                 "pr_open",
@@ -444,7 +462,14 @@ class PlanMergeTest(unittest.TestCase):
             ("under approval, approved", SHOP_UNDER_APPROVAL, APPROVED, PASS_BEFORE_A_PUSH, (MERGE_S3,)),
             ("a check run failed", SHOP, FAILED_CHECK_RUN, PASS_AT_THE_HEAD, ()),
             ("a check run pending", SHOP, PENDING, PASS_AT_THE_HEAD, ()),
-            ("no check run yet", SHOP, NO_CHECK_RUN, PASS_AT_THE_HEAD, ()),
+            ("no check run within a minute of the last update", SHOP, NO_CHECK_RUN, PASS_AT_THE_HEAD, ()),
+            (
+                "no check run a minute after the last update",
+                SHOP,
+                NO_CHECK_RUN_FOR_A_MINUTE,
+                PASS_AT_THE_HEAD,
+                (MERGE_S3,),
+            ),
             (
                 "no check run in a project without continuous integration",
                 SHOP_WITHOUT_CHECK_RUNS,
