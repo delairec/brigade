@@ -5,7 +5,6 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.run_process import ProcessRequest
-from brigade.waves.read_project_tasks import ProjectTasks
 from brigade.waves.rebase_milestone_branches import BranchRebaseRun, MilestoneBranchesRebase, rebase_milestone_branches
 from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_test_paths import create_test_paths
@@ -23,14 +22,9 @@ WAVE_HEAD = "c3d9f04"
 STOPPED_ON_A_CONFLICT = 1
 NOT_AN_ANCESTOR = 1
 REBASE_IN_PROGRESS = 0
-GIT = ("git",)
 GIT_REBASE = ("git", "rebase")
 GIT_PUSH = ("git", "push")
 GIT_RESET = ("git", "reset")
-TASKS_AT_MAIN = {
-    "S7": Entity(name="S7", fields=(EntityField(name="STATUS", value="todo"),)),
-    "S20": Entity(name="S20", fields=(EntityField(name="MILESTONE", value="@MILESTONE.M3"),)),
-}
 CUT_OF_M3 = {
     "schema_version": 1,
     "ts": "2026-10-28T09:00:00Z",
@@ -58,9 +52,8 @@ OPEN_WAVE_OF_NO_MILESTONE = {
     "branch": "integration/shop_w2",
     "tasks": ["S7"],
 }
-ACTIVE_M3 = {"entities": [{"type": "MILESTONE", "name": "M3"}]}
-NO_ACTIVE_MILESTONE = {"entities": []}
 NO_WORKTREE = ""
+OPEN_WAVES_OF_M3 = ("shop_w1",)
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-cli-key"}
 
 
@@ -82,7 +75,6 @@ def _create_project(forge: str) -> Entity:
 class RebaseMilestoneBranchesTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.tree = self.root / "cache" / "refs" / "shop" / "4f1c2a9"
         self.processes = ScriptedProcesses()
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.launched: list[BranchRebaseRun] = []
@@ -90,7 +82,6 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         self.rebase_exit_codes = {MILESTONE_WORKTREE: 0, WAVE_WORKTREE: 0}
         self.wave_descent = NOT_AN_ANCESTOR
         write_ledger(self.root, [CUT_OF_M3, OPEN_WAVE_OF_M3, OPEN_WAVE_OF_NO_MILESTONE])
-        self.answer_active_milestones(ACTIVE_M3)
         self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=NO_WORKTREE)
         self.processes.answer(("git", "worktree", "add", "--quiet", MILESTONE_WORKTREE, MILESTONE_BRANCH))
         self.processes.answer(("git", "worktree", "add", "--quiet", WAVE_WORKTREE, "integration/shop_w1"))
@@ -112,11 +103,6 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
     def answer_rebase(self, request: ProcessRequest) -> tuple[int, str, str]:
         return self.rebase_exit_codes[request.cwd], "", ""
 
-    def answer_active_milestones(self, document: dict) -> None:
-        self.processes.answer_json(
-            ("awawa", "status", "MILESTONE", "--where", "STATUS==active", "--json", str(self.tree)), document
-        )
-
     def register_project(self, forge: str) -> Entity:
         self.processes.answer(("git", "fetch", "--quiet", "origin", "main"))
         self.processes.answer(("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH))
@@ -134,7 +120,8 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         project = self.register_project(forge)
         rebase = MilestoneBranchesRebase(
             project=project,
-            tasks=ProjectTasks(root=self.tree, by_name=TASKS_AT_MAIN, implemented=frozenset()),
+            branch=MILESTONE_BRANCH,
+            waves=OPEN_WAVES_OF_M3,
             worktree_root=None,
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: worktree in self.live_worktrees,
@@ -244,36 +231,6 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         # Assert
         self.assertEqual(select_commands_opening_on(self.processes.requests, GIT_PUSH), [])
 
-    def test_should_rebase_nothing_for_a_milestone_whose_branch_is_not_cut(self):
-        # Arrange
-        write_ledger(self.root, [OPEN_WAVE_OF_NO_MILESTONE])
-
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(self.processes.list_argvs(), [])
-
-    def test_should_rebase_nothing_for_a_milestone_whose_branch_another_project_cut(self):
-        # Arrange
-        write_ledger(self.root, [{**CUT_OF_M3, "project": "depot"}, OPEN_WAVE_OF_M3])
-
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(self.processes.list_argvs(), [])
-
-    def test_should_rebase_nothing_for_a_milestone_that_is_not_active(self):
-        # Arrange
-        self.answer_active_milestones(NO_ACTIVE_MILESTONE)
-
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(select_commands_opening_on(self.processes.requests, GIT), [])
-
     def test_should_rebase_under_the_worktrees_lock_of_the_project(self):
         # Arrange
         held = []
@@ -288,7 +245,8 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         self.processes.answer_by(("git", "rebase", "origin/main"), answer_rebase_with_the_lock_tried)
         rebase = MilestoneBranchesRebase(
             project=project,
-            tasks=ProjectTasks(root=self.tree, by_name=TASKS_AT_MAIN, implemented=frozenset()),
+            branch=MILESTONE_BRANCH,
+            waves=OPEN_WAVES_OF_M3,
             worktree_root=None,
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: False,

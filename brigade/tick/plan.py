@@ -21,6 +21,7 @@ from brigade.tick.actions import (
     OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
+    RebaseMilestone,
     RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -101,6 +102,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_milestone_pull_requests(snapshot)
         + _plan_milestone_closes(snapshot)
         + _plan_launches(snapshot, paused)
+        + _plan_milestone_rebases(snapshot)
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
     )
@@ -590,12 +592,33 @@ def _plan_milestone_closes(snapshot: Snapshot) -> tuple:
     )
 
 
+def _is_rebase_due(milestone: MilestoneFacts) -> bool:
+    return milestone.behind_main and not milestone.rebase_run_live and milestone.blocked_rebase is None
+
+
+def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
+    return tuple(
+        RebaseMilestone(
+            project=milestone.project,
+            milestone=milestone.milestone,
+            branch=milestone.branch,
+            waves=milestone.open_waves,
+        )
+        for milestone in snapshot.milestones
+        if _is_rebase_due(milestone)
+    )
+
+
 def _plan_wave_starts(snapshot: Snapshot) -> tuple:
+    rebasing = {
+        (milestone.project, milestone.milestone) for milestone in snapshot.milestones if _is_rebase_due(milestone)
+    }
     return tuple(
         StartWave(project=project.name, milestone=wave.milestone)
         for project in snapshot.projects
         if project.wave_start == AUTOMATIC_WAVE_START
         for wave in project.candidates
+        if (project.name, wave.milestone) not in rebasing
     )
 
 

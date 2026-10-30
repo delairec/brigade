@@ -11,8 +11,6 @@ from brigade.git.push_with_lease import LeasedPush, push_with_lease
 from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.reset_worktree import reset_worktree
-from brigade.ledger.ledger_entry import LedgerEntry
-from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.is_on_github import is_on_github
@@ -21,13 +19,9 @@ from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import CLI_KEY
-from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.list_open_waves import list_open_waves
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
-from brigade.waves.read_active_milestones import MILESTONE_PREFIX, read_active_milestones
-from brigade.waves.read_project_tasks import ProjectTasks
-from brigade.waves.read_wave_milestone import read_wave_milestone
 
 DESCENDING = 0
 HEAD = "HEAD"
@@ -47,7 +41,8 @@ class BranchRebaseRun:
 @dataclass(frozen=True)
 class MilestoneBranchesRebase:
     project: Entity
-    tasks: ProjectTasks
+    branch: str
+    waves: tuple[str, ...]
     worktree_root: str | None
     read_environment: Callable[[str], dict]
     is_run_live_on: Callable[[Path], bool]
@@ -113,38 +108,13 @@ def _rebase_wave(runtime: Runtime, rebase: MilestoneBranchesRebase, wave: WaveSt
     _rebase_branch(runtime, rebase, run, milestone_branch)
 
 
-def _list_cut_milestones(entries: tuple[LedgerEntry, ...], project: str) -> tuple[str, ...]:
-    return tuple(
-        sorted(
-            {
-                entry.event.milestone
-                for entry in entries
-                if isinstance(entry.event, MilestoneBranchCut) and entry.event.project == project
-            }
-        )
-    )
-
-
-def _is_wave_of(rebase: MilestoneBranchesRebase, wave: WaveStarted, milestone: str) -> bool:
-    return read_wave_milestone(wave.wave, (rebase.tasks.by_name[task] for task in wave.tasks)) == milestone
-
-
 def rebase_milestone_branches(runtime: Runtime, rebase: MilestoneBranchesRebase) -> None:
     entries = read_ledger(runtime.paths.state_root).entries
     project = rebase.project.name
-    cut = _list_cut_milestones(entries, project)
-    if not cut:
-        return
-    active = read_active_milestones(runtime.run_process, rebase.tasks.root)
-    milestones = tuple(milestone for milestone in cut if f"{MILESTONE_PREFIX}{milestone}" in active)
-    if not milestones:
-        return
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, project)):
         main_branch = read_project_field(rebase.project, MAIN_FIELD)
         main = locate_forge_branch(runtime.run_process, rebase.project, main_branch, rebase.read_environment)
-        for milestone in milestones:
-            branch = find_milestone_branch(entries, project, milestone)
-            _rebase_milestone(runtime, rebase, branch, main)
-            for wave in list_open_waves(entries, project):
-                if _is_wave_of(rebase, wave, milestone):
-                    _rebase_wave(runtime, rebase, wave, branch)
+        _rebase_milestone(runtime, rebase, rebase.branch, main)
+        for wave in list_open_waves(entries, project):
+            if wave.wave in rebase.waves:
+                _rebase_wave(runtime, rebase, wave, rebase.branch)

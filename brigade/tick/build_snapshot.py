@@ -9,6 +9,7 @@ from pathlib import Path
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.errors import BrigadeError, CommandFailed, ToolFailure
+from brigade.git.check_ancestor import check_ancestor
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
@@ -57,8 +58,10 @@ from brigade.waves.find_integration_pull_request import find_integration_pull_re
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
+from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
+from brigade.waves.read_active_milestones import read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasksReading
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
@@ -80,6 +83,8 @@ PARKED_OUTCOME = "parked"
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
+MAIN_FIELD = "MAIN"
+DESCENDING = 0
 RUNNING_STATE = "running"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
 RATE_LIMIT = "rate_limit"
@@ -282,6 +287,9 @@ class MilestoneFacts:
     todo: tuple[str, ...] = ()
     opened_pull_request: int | None = None
     pull_request: PullRequestFacts | None = None
+    behind_main: bool = False
+    rebase_run_live: bool = False
+    blocked_rebase: BlockedRun | None = None
 
     def to_document(self) -> dict:
         return {
@@ -293,6 +301,13 @@ class MilestoneFacts:
             "todo": list(self.todo),
             "opened_pull_request": self.opened_pull_request,
             "pull_request": None if self.pull_request is None else self.pull_request.to_document(),
+            "behind_main": self.behind_main,
+            "rebase_run_live": self.rebase_run_live,
+            "blocked_rebase": (
+                None
+                if self.blocked_rebase is None
+                else {"run": self.blocked_rebase.run, "question": self.blocked_rebase.question}
+            ),
         }
 
 
@@ -512,7 +527,8 @@ def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
         index for index, event in enumerate(reading.events) if isinstance(event, RunFinished) and event.run == run
     ]
     if not finished or any(
-        isinstance(event, (WavePaused, WaveResumed)) and event.wave == wave for event in reading.events[finished[-1] :]
+        isinstance(event, WavePaused) and event.wave == wave and event.reason.startswith(f"run {run} blocked")
+        for event in reading.events[finished[-1] :]
     ):
         return None
     return _read_blocked_run(reading, run)
@@ -796,6 +812,27 @@ def _list_open_waves(reading: WaveReading, project: str, of_milestone: set[str])
     )
 
 
+def _is_behind_main(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut, ref: str) -> bool:
+    project = find_project(reading.projects, cut.project)
+    main = locate_forge_branch(
+        runtime.run_process, project, read_project_field(project, MAIN_FIELD), reading.forge.read_environment
+    )
+    query = argparse.Namespace(project=cut.project, ref=main, worktree=None)
+    active = read_active_milestones(
+        runtime.run_process, prepare_project_tree(query, reading.configuration, runtime).root
+    )
+    if MILESTONE_PREFIX + cut.milestone not in active:
+        return False
+    repository = Path(read_project_field(project, PATH_FIELD))
+    return check_ancestor(runtime.run_process, repository, main, ref).exit_code != DESCENDING
+
+
+def _list_branch_rebase_runs(reading: WaveReading, project: Entity, branch: str) -> tuple[dict, ...]:
+    repository = Path(read_project_field(project, PATH_FIELD))
+    worktree = locate_branch_worktree(repository, reading.configuration.worktree_root, branch)
+    return tuple(run for run in reading.runs if run["worktree"] == str(worktree))
+
+
 def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut) -> MilestoneFacts:
     project = find_project(reading.projects, cut.project)
     opened = _find_milestone_pull_request(reading, cut.project, cut.milestone)
@@ -808,6 +845,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
             pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
         )
     ref = locate_forge_branch(runtime.run_process, project, cut.branch, reading.forge.read_environment)
+    rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
     query = argparse.Namespace(project=cut.project, ref=ref, worktree=None)
     tasks = read_entities(
         runtime.run_process, prepare_project_tree(query, reading.configuration, runtime).root, TASK_TYPE
@@ -821,6 +859,9 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
         merged_waves=_list_merged_waves(reading, cut.project, names),
         open_waves=_list_open_waves(reading, cut.project, names),
         todo=tuple(task.name for task in of_milestone if read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)),
+        behind_main=_is_behind_main(runtime, reading, cut, ref),
+        rebase_run_live=any(run["state"] == LIVE_RUN_STATE for run in rebase_runs),
+        blocked_rebase=_read_blocked_run(reading, rebase_runs[-1]["run"]) if rebase_runs else None,
     )
 
 

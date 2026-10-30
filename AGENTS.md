@@ -46,9 +46,11 @@ which already has write access to this repository: there is nothing to request.
 ## Bootstrap
 
 From M2, brigade delivers its own milestones through its tick, as it does for any registered project: the timer
-fires `brigade tick --once` every five minutes, the tick starts, for each active milestone, a wave of the ratified
-tasks read on `integration/<slug of the milestone TITLE>`, on `integration/<wave>` cut from it, merges each verified
-task pull request into the wave branch, then opens the pull request of the wave into the milestone branch and merges it once ready;
+fires `brigade tick --once` every five minutes, the tick rebases `integration/<slug of the milestone TITLE>` onto
+`main` once `main` has moved, and the open wave branches of the milestone onto it; then
+the tick starts, for each active milestone, a wave of the ratified tasks read on the milestone branch, on
+`integration/<wave>` cut from it, merges each verified task pull request into the wave branch, then opens the pull
+request of the wave into the milestone branch and merges it once ready;
 once every wave of the milestone is merged and no task of it is left todo, the tick opens the pull request of the
 milestone branch into `main`, which the user alone merges. A session launches no wave and no task run by hand.
 

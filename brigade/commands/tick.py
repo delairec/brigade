@@ -10,6 +10,7 @@ from brigade.collecting.collect_document import CollectionRequest, collect_docum
 from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands._launch_branch_rebase import launch_branch_rebase
 from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
@@ -40,7 +41,8 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
-from brigade.runs.list_runs import list_runs
+from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
+from brigade.runs.is_run_live_on import is_run_live_on
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
@@ -81,6 +83,7 @@ from brigade.tick.actions import (
     OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
+    RebaseMilestone,
     RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -91,9 +94,8 @@ from brigade.tick.actions import (
     StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
-from brigade.tick.build_snapshot import ForgeReaders, build_snapshot
+from brigade.tick.build_snapshot import ForgeReaders, Snapshot, build_snapshot
 from brigade.tick.heartbeat import Heartbeat
-from brigade.tick.list_blocked_milestone_rebases import MilestoneRebasesReading, list_blocked_milestone_rebases
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
@@ -112,6 +114,7 @@ from brigade.waves.locate_project_main import locate_project_main
 from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_wave_milestone import read_wave_milestone
+from brigade.waves.rebase_milestone_branches import MilestoneBranchesRebase, rebase_milestone_branches
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -550,6 +553,19 @@ def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWav
     start_project_wave(runtime, start, action.milestone)
 
 
+def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: RebaseMilestone) -> None:
+    rebase = MilestoneBranchesRebase(
+        project=find_project(read_projects(runtime), action.project),
+        branch=action.branch,
+        waves=action.waves,
+        worktree_root=configuration.worktree_root,
+        read_environment=_cache_forge_environment(runtime, configuration),
+        is_run_live_on=lambda worktree: is_run_live_on(runtime.paths.state_root, worktree, is_recorded_process_alive),
+        launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
+    )
+    rebase_milestone_branches(runtime, rebase)
+
+
 def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: CutWaveBranch) -> None:
     cut = WaveBranchCut(
         project=find_project(read_projects(runtime), action.project),
@@ -626,6 +642,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
         ),
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
+        RebaseMilestone: lambda action: _rebase_milestone(runtime, configuration, action),
         StartWave: lambda action: _start_wave(runtime, configuration, action),
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
@@ -681,21 +698,16 @@ def _record_failure(runtime: Runtime, event: TickActionFailed) -> None:
     append_event(runtime.paths, runtime.now, event)
 
 
-def _name_the_blocked_milestone_rebases(runtime: Runtime, configuration: Configuration) -> None:
-    if not runtime.paths.schema_file.exists():
-        return
-    reading = MilestoneRebasesReading(
-        entries=read_ledger(runtime.paths.state_root).entries,
-        runs=tuple(list_runs(runtime.paths.state_root)["runs"]),
-        projects=read_projects(runtime),
-        worktree_root=configuration.worktree_root,
-    )
-    for blocked in list_blocked_milestone_rebases(reading):
-        sys.stderr.write(f"brigade tick: the rebase of {blocked.branch} is blocked: {blocked.question}\n")
+def _name_the_blocked_milestone_rebases(snapshot: Snapshot) -> Snapshot:
+    for milestone in snapshot.milestones:
+        if milestone.behind_main and milestone.blocked_rebase is not None:
+            sys.stderr.write(
+                f"brigade tick: the rebase of {milestone.branch} is blocked: {milestone.blocked_rebase.question}\n"
+            )
+    return snapshot
 
 
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
-    _name_the_blocked_milestone_rebases(runtime, configuration)
     forge = _read_the_forge(runtime, configuration)
     apply = functools.partial(
         apply_actions,
@@ -704,7 +716,7 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     )
     outcome = run_rounds(
         Rounds(
-            build_snapshot=lambda: build_snapshot(runtime, configuration, forge),
+            build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
             plan=plan,
             apply=apply,
             cap=ROUND_CAP,

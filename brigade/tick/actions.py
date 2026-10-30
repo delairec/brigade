@@ -107,6 +107,14 @@ class ResumeTaskRun:
 
 
 @dataclass(frozen=True)
+class RebaseMilestone:
+    project: str
+    milestone: str
+    branch: str
+    waves: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class StartWave:
     project: str
     milestone: str | None
