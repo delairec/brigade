@@ -40,6 +40,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
+from brigade.runs.list_runs import list_runs
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
@@ -92,6 +93,7 @@ from brigade.tick.actions import (
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import ForgeReaders, build_snapshot
 from brigade.tick.heartbeat import Heartbeat
+from brigade.tick.list_blocked_milestone_rebases import MilestoneRebasesReading, list_blocked_milestone_rebases
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
@@ -679,7 +681,21 @@ def _record_failure(runtime: Runtime, event: TickActionFailed) -> None:
     append_event(runtime.paths, runtime.now, event)
 
 
+def _name_the_blocked_milestone_rebases(runtime: Runtime, configuration: Configuration) -> None:
+    if not runtime.paths.schema_file.exists():
+        return
+    reading = MilestoneRebasesReading(
+        entries=read_ledger(runtime.paths.state_root).entries,
+        runs=tuple(list_runs(runtime.paths.state_root)["runs"]),
+        projects=read_projects(runtime),
+        worktree_root=configuration.worktree_root,
+    )
+    for blocked in list_blocked_milestone_rebases(reading):
+        sys.stderr.write(f"brigade tick: the rebase of {blocked.branch} is blocked: {blocked.question}\n")
+
+
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
+    _name_the_blocked_milestone_rebases(runtime, configuration)
     forge = _read_the_forge(runtime, configuration)
     apply = functools.partial(
         apply_actions,
