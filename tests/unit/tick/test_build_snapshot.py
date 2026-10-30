@@ -205,6 +205,7 @@ class SnapshotTest(unittest.TestCase):
                     "opened_integration_pull_request": None,
                     "milestone_branch": None,
                     "unresolved_threads": 0,
+                    "blocked_rebase": None,
                 }
             ],
         )
@@ -268,6 +269,24 @@ class WaveFactsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["opened_integration_pull_request"], 184)
+
+
+    def test_should_carry_the_rebase_run_its_branch_waits_on_a_ruling_from_and_the_question_in_its_document(self):
+        # Arrange
+        wave = WaveFacts(
+            project="brigade",
+            wave="brigade_w9",
+            branch="integration/brigade_w9",
+            blocked_rebase=BlockedRun(run="20261030T080000Z-4eba5e", question="Keep the guard or drop it?"),
+        )
+
+        # Act
+        document = wave.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["blocked_rebase"], {"run": "20261030T080000Z-4eba5e", "question": "Keep the guard or drop it?"}
+        )
 
 
 class TaskFactsTest(unittest.TestCase):
