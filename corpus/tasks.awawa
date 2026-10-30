@@ -13585,3 +13585,50 @@ TASK B222
 		+ "pull request #260: « Il faudrait aussi réécrire environ 1 700 lignes en action du plan."
 		+ "C'est un tour de remédiation (rôle remi ou ada), pas un rebase. »"
 		REF @TASK.B214
+
+TASK B223
+	TITLE "The tick records milestone.rebased in the ledger when it rebases the branch of a"
+		+ "milestone onto the main branch without a conflict"
+	STATUS todo
+	TYPE feat
+	MILESTONE @MILESTONE.M9
+	COMPONENT "the tick"
+	ROLE ada
+	AFTER @TASK.B214
+	SPEC "the ledger declares milestone.rebased with project, milestone, branch, before and after,"
+		+ "the head of the branch before and after the rebase, waves, the open waves whose branch"
+		+ "was rebased onto it and pushed in the same action, and login, read as"
+		+ "brigade/waves/cut_milestone_branch.py reads it for milestone.branch_cut"
+	SPEC "brigade/commands/tick.py:_rebase_milestone appends it once"
+		+ "brigade/waves/rebase_milestone_branches.py has rebased the branch of the milestone onto"
+		+ "PROJECT.MAIN without a conflict, pushed it with lease and served the open waves; it"
+		+ "appends nothing on a rebase stopped on a conflict, the run it launches recording its own"
+		+ "outcome, nothing on a branch whose worktree a live run holds, and nothing when the"
+		+ "rebase left the head where it was"
+	SPEC "brigade ledger counts milestone.rebased among the events of its overview and reads it"
+		+ "back as every declared event, through brigade/ledger/declared_events.py"
+	SPEC "tests/unit prove the event read, written and declared, as"
+		+ "tests/unit/ledger/test_milestone_branch_cut.py proves milestone.branch_cut, the executor"
+		+ "appending it after a clean rebase with the heads before and after and the waves rebased,"
+		+ "and appending none on a conflict, none under a live run and none on a head left where it"
+		+ "was; tests/cli gains no flow"
+	RATIONALE "DESC 3 of @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks"
+		+ "the executor to record each outcome in the ledger; the RebaseMilestone action of"
+		+ "@TASK.B214 records none, where brigade/commands/tick.py:_rebase_task records"
+		+ "task.rebased with the heads before and after, and brigade/waves/cut_milestone_branch.py"
+		+ "records milestone.branch_cut with project, milestone, branch and login; a head left"
+		+ "where it was records nothing, as DESC 7 of the same decision keeps the ledger free of a"
+		+ "line per empty tick"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+		REF @TASK.B214
+	RATIONALE "rejected: an event recorded by the CutWaveBranch executor in the same task; no"
+		+ "recorded decision asks for it and the user ruled on the milestone event alone"
+	SOURCE "the final report of the run that implemented @TASK.B214, pull request #260: « A clean"
+		+ "rebase writes no ledger event; the facts live in git."
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks the executor to"
+		+ "record each outcome, but the SPEC names no event and the existing CutWaveBranch executor"
+		+ "records none either. Question: should a milestone.rebased event be added in a follow-up?"
+		+ "»"
+		REF @TASK.B214
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "the user's ruling of 2026-10-30: « ok pour l'événement »"
