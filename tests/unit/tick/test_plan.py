@@ -1927,7 +1927,6 @@ MILESTONE_M4_BRANCH = "integration/tides"
 WAVES_OF_M4_MERGED = (MergedWave(wave="shop_w1", pr=77), MergedWave(wave="shop_w2", pr=81))
 NO_WAVE_MERGED = ()
 NO_TASK_TODO = ()
-NO_PULL_REQUEST_OPENED = None
 MILESTONE_PULL_REQUEST = PullRequestFacts(
     number=90, state="open", checks=(), review=None, behind=False, head=HEAD, base="main"
 )
