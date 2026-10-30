@@ -4099,6 +4099,12 @@ DECISION ACheckRunFailsOnFailureTimeoutOrStartupFailureAndTheTickRunsItsConnecto
 		+ "actions_failed"
 	DESC "binds @TASK.B24"
 		REF @TASK.B24
+	DESC "the tick awaits the check runs of a task pull request, unless the project's CHECK_RUNS is"
+		+ "none, until the forge reports one on its head; a pull request with none whose last"
+		+ "update on the forge, which a push moves, is at least one minute old is awaited no more:"
+		+ "its preflight and its merge gate proceed as under CHECK_RUNS none"
+	DESC "binds @TASK.B15"
+		REF @TASK.B15
 	REJECTED "the connector actions planned by plan in every round: the rounds plan again until the"
 		+ "plan is empty, so a connector would run up to the round cap at each tick"
 	REJECTED "a failing check run as any conclusion but success, as the preflight reads it: a"
@@ -4106,11 +4112,26 @@ DECISION ACheckRunFailsOnFailureTimeoutOrStartupFailureAndTheTickRunsItsConnecto
 		+ "concludes"
 	REJECTED "the listing of pr-list widened with the head and the links of the check runs: the"
 		+ "document of another collector changed for the need of this one"
+	REJECTED "a pull request with no check run awaited until ten minutes after its head commit: the"
+		+ "user ruled ten minutes too long, one minute enough for GitHub Actions to create its"
+		+ "suite"
+	REJECTED "the commit date of the head as its age: build-task commits before brigade task check,"
+		+ "so a head reaches the forge minutes after its commit date and the minute is spent before"
+		+ "the suite can exist"
+	REJECTED "the paths-ignore of .github/workflows/ci.yml removed so that every pull request gets"
+		+ "a check run: the user ruled the workflow unchanged"
 	RATIONALE "@TASK.B24 names the failing check runs and leaves open which conclusions fail, the"
 		+ "shape of summary and where the tick runs its connectors"
 		REF @TASK.B24
 	SOURCE "taken in the delivery of @TASK.B24, pull request 212"
 		REF @TASK.B24
+	SOURCE "the user's rulings of 2026-10-30, a quick fix with no TASK, pull request #265 of the"
+		+ "brigade repository, on pull request #263 of @TASK.B216 left in pr_open with no check"
+		+ "run, its diff ignored by the paths-ignore of the CI workflow: « les 2 dans une même PR"
+		+ "en mode quick fix c'est possible? »; on .github/workflows/ci.yml « Ne rien changer »; on"
+		+ "the proposal to stop awaiting check runs ten minutes after the head commit « 10 min ça"
+		+ "parait très long. 1 min devrait suffire »"
+		REF @TASK.B216
 
 DECISION TheTickRunsTheConnectorsOnceAfterItsRoundsThroughItsExecutor
 	TITLE "the tick runs the review threads connector once per tick, after its plan and apply"
