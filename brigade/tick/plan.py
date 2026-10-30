@@ -32,6 +32,7 @@ from brigade.tick.actions import (
 )
 from brigade.tick.build_snapshot import (
     SETTLED_STATES,
+    BlockedRun,
     MilestoneFacts,
     ProjectFacts,
     Snapshot,
@@ -82,7 +83,7 @@ RUN_NOT_STARTED_REASON = "run not started"
 
 
 def plan(snapshot: Snapshot) -> tuple:
-    pauses = _plan_pauses(snapshot)
+    pauses = _plan_blocked_rebase_pauses(snapshot) + _plan_pauses(snapshot)
     paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
         pause.wave for pause in pauses if isinstance(pause, PauseWave)
     }
@@ -155,6 +156,18 @@ def _plan_pauses(snapshot: Snapshot) -> tuple:
     return (
         tuple(PauseWave(wave=wave.wave, reason=QUOTA_REASON, resume_at=format_instant(resume_at)) for wave in unpaused)
         + stopped_tasks
+    )
+
+
+def _plan_blocked_rebase_pauses(snapshot: Snapshot) -> tuple:
+    return tuple(
+        PauseWave(
+            wave=wave.wave,
+            reason=_describe_blocked_run(wave.blocked_rebase),
+            resume_at=None,
+        )
+        for wave in snapshot.waves
+        if wave.pause is None and wave.blocked_rebase is not None
     )
 
 
@@ -270,7 +283,7 @@ def _decide_blocked_parking(wave: WaveFacts, task: TaskFacts, occupancy: _Occupa
     return ParkTask(
         wave=wave.wave,
         task=task.name,
-        reason=_describe_blocked_run(task),
+        reason=_describe_blocked_run(task.blocked_run),
         blockers=(),
     )
 
@@ -439,13 +452,13 @@ def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
     )
 
 
-def _describe_blocked_run(task: TaskFacts) -> str:
-    return f"run {task.blocked_run.run} blocked: {task.blocked_run.question}"
+def _describe_blocked_run(blocked: BlockedRun) -> str:
+    return f"run {blocked.run} blocked: {blocked.question}"
 
 
 def _describe_dead_run(task: TaskFacts) -> str:
     if task.blocked_run is not None:
-        return _describe_blocked_run(task)
+        return _describe_blocked_run(task.blocked_run)
     if task.last_run is None:
         return RUN_NOT_STARTED_REASON
     return f"{RUN_DEAD_REASON}: {task.last_run}"

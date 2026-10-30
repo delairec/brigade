@@ -21,9 +21,9 @@ from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import CLI_KEY
-from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.list_open_waves import list_open_waves
+from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_active_milestones import MILESTONE_PREFIX, read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasks
@@ -33,8 +33,6 @@ DESCENDING = 0
 HEAD = "HEAD"
 PATH_FIELD = "PATH"
 MAIN_FIELD = "MAIN"
-BRANCH_SEPARATOR = "/"
-WORKTREE_SEPARATOR = "-"
 
 
 @dataclass(frozen=True)
@@ -58,9 +56,7 @@ class MilestoneBranchesRebase:
 
 def _locate_branch_worktree(rebase: MilestoneBranchesRebase, branch: str) -> Path:
     repository = Path(read_project_field(rebase.project, PATH_FIELD))
-    return locate_scheduled_worktree(
-        repository, rebase.worktree_root, branch.replace(BRANCH_SEPARATOR, WORKTREE_SEPARATOR)
-    )
+    return locate_branch_worktree(repository, rebase.worktree_root, branch)
 
 
 def _open_branch_worktree(runtime: Runtime, rebase: MilestoneBranchesRebase, worktree: BranchWorktree) -> None:

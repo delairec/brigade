@@ -1678,6 +1678,49 @@ PARK_S3_ON_THE_QUESTION = ParkTask(
 )
 
 
+BLOCKED_REBASE_OF_THE_WAVE_BRANCH = BlockedRun(run="20261006T110000Z-4eba5e", question="Keep the guard or drop it?")
+PAUSED_ON_THE_REBASE_QUESTION = WavePause(
+    reason="run 20261006T110000Z-4eba5e blocked: Keep the guard or drop it?", resume_at=None
+)
+
+
+class PlanBlockedRebaseRunOfAWaveBranchTest(unittest.TestCase):
+    def test_should_pause_the_wave_on_the_question_of_its_blocked_rebase_run_and_launch_none_of_its_tasks(self):
+        # Arrange
+        wave = dataclasses.replace(create_wave(ALONE, {}), blocked_rebase=BLOCKED_REBASE_OF_THE_WAVE_BRANCH)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                PauseWave(
+                    wave="shop_w1",
+                    reason="run 20261006T110000Z-4eba5e blocked: Keep the guard or drop it?",
+                    resume_at=None,
+                ),
+            ),
+        )
+
+    def test_should_not_pause_again_a_wave_already_paused(self):
+        # Arrange
+        wave = dataclasses.replace(
+            create_wave(ALONE, {}),
+            blocked_rebase=BLOCKED_REBASE_OF_THE_WAVE_BRANCH,
+            pause=PAUSED_ON_THE_REBASE_QUESTION,
+        )
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
 class PlanBlockedRunParkingTest(unittest.TestCase):
     def test_should_park_on_its_question_a_task_in_fixing_whose_last_run_ended_blocked_whatever_its_rounds(self):
         for case, pull_request, failures, rounds in [
