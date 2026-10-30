@@ -8,7 +8,7 @@ from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
-from brigade.errors import CommandFailed, ToolFailure
+from brigade.errors import BrigadeError, CommandFailed, ToolFailure
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
@@ -270,6 +270,7 @@ class MilestoneFacts:
     milestone: str
     branch: str
     merged_waves: tuple[MergedWave, ...] = ()
+    open_waves: tuple[str, ...] = ()
     todo: tuple[str, ...] = ()
     opened_pull_request: int | None = None
     pull_request: PullRequestFacts | None = None
@@ -280,6 +281,7 @@ class MilestoneFacts:
             "milestone": self.milestone,
             "branch": self.branch,
             "merged_waves": [{"wave": merged.wave, "pr": merged.pr} for merged in self.merged_waves],
+            "open_waves": list(self.open_waves),
             "todo": list(self.todo),
             "opened_pull_request": self.opened_pull_request,
             "pull_request": None if self.pull_request is None else self.pull_request.to_document(),
@@ -768,6 +770,14 @@ def _list_merged_waves(reading: WaveReading, project: str, of_milestone: set[str
     )
 
 
+def _list_open_waves(reading: WaveReading, project: str, of_milestone: set[str]) -> tuple[str, ...]:
+    return tuple(
+        summary.started.wave
+        for summary in summarize_waves(reading.entries)
+        if summary.is_open and summary.started.project == project and of_milestone.intersection(summary.started.tasks)
+    )
+
+
 def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut) -> MilestoneFacts:
     project = find_project(reading.projects, cut.project)
     opened = _find_milestone_pull_request(reading, cut.project, cut.milestone)
@@ -785,13 +795,25 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
         runtime.run_process, prepare_project_tree(query, reading.configuration, runtime).root, TASK_TYPE
     )
     of_milestone = [task for task in tasks if _read_milestone(task) == cut.milestone]
+    names = {task.name for task in of_milestone}
     return MilestoneFacts(
         project=cut.project,
         milestone=cut.milestone,
         branch=cut.branch,
-        merged_waves=_list_merged_waves(reading, cut.project, {task.name for task in of_milestone}),
+        merged_waves=_list_merged_waves(reading, cut.project, names),
+        open_waves=_list_open_waves(reading, cut.project, names),
         todo=tuple(task.name for task in of_milestone if read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)),
     )
+
+
+def _read_readable_milestone_facts(
+    runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut
+) -> MilestoneFacts | None:
+    try:
+        return _read_milestone_facts(runtime, reading, cut)
+    except BrigadeError as failure:
+        sys.stderr.write(f"brigade tick: the milestone {cut.milestone} of {cut.project} skipped: {failure}\n")
+        return None
 
 
 def _read_milestones(runtime: Runtime, reading: WaveReading) -> tuple[MilestoneFacts, ...]:
@@ -799,7 +821,13 @@ def _read_milestones(runtime: Runtime, reading: WaveReading) -> tuple[MilestoneF
         (event.project, event.milestone): event for event in reading.events if isinstance(event, MilestoneBranchCut)
     }
     closed = {(event.project, event.milestone) for event in reading.events if isinstance(event, MilestoneClosed)}
-    return tuple(_read_milestone_facts(runtime, reading, cut) for key, cut in cuts.items() if key not in closed)
+    return tuple(
+        facts
+        for facts in (
+            _read_readable_milestone_facts(runtime, reading, cut) for key, cut in cuts.items() if key not in closed
+        )
+        if facts is not None
+    )
 
 
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:

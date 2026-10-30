@@ -4265,6 +4265,13 @@ WAVE_OF_ANOTHER_PROJECT_STARTED = {
     "branch": "integration/reef_w3",
 }
 WAVE_OF_ANOTHER_PROJECT_CLOSED = {**WAVE_CLOSED, "wave": "reef_w3", "pr": 12}
+OPEN_WAVE_OF_M4_STARTED = {
+    **WAVE_STARTED,
+    "ts": "2026-10-18T14:00:00Z",
+    "wave": "tidepool_w17",
+    "branch": "integration/tidepool_w17",
+    "tasks": ["T8"],
+}
 MILESTONE_BRANCH_DELETED_FROM_THE_FORGE = CommandFailed(
     ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH), 128, "couldn't find remote ref integration/tides"
 )
@@ -4409,6 +4416,97 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.forge.opened, [])
+
+    def test_should_open_none_while_a_wave_of_the_milestone_whose_branch_is_missing_is_open(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                WAVE_STARTED,
+                _record_task_state("merged"),
+                CUT_OF_M4,
+                WAVE_REPORTED,
+                WAVE_PR_OPENED,
+                WAVE_CLOSED,
+                OPEN_WAVE_OF_M4_STARTED,
+            ],
+        )
+        answers = {
+            **MACHINE_ANSWERS,
+            (
+                "git",
+                "ls-remote",
+                "--quiet",
+                "--exit-code",
+                "--heads",
+                "origin",
+                "refs/heads/integration/tidepool_w17",
+            ): (ProcessAnswer(exit_code=2)),
+            ("git", "push", "--quiet", "origin", "integration/tidepool_w17"): ProcessAnswer(),
+        }
+        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED, "T8": TASK_DELIVERED}, answers)
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.forge.opened, [])
+
+    def test_should_skip_a_milestone_whose_branch_cannot_be_fetched(self):
+        # Arrange
+        answers = {
+            **MACHINE_ANSWERS,
+            ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH): MILESTONE_BRANCH_DELETED_FROM_THE_FORGE,
+        }
+        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED}, answers)
+        reported = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(reported):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            reported.getvalue(),
+            f"brigade tick: the milestone M4 of tidepool skipped: {MILESTONE_BRANCH_DELETED_FROM_THE_FORGE}\n",
+        )
+
+    def test_should_open_it_beside_the_milestone_of_a_project_no_longer_registered(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                WAVE_STARTED,
+                _record_task_state("merged"),
+                CUT_OF_M4,
+                WAVE_REPORTED,
+                WAVE_PR_OPENED,
+                WAVE_CLOSED,
+                {**CUT_OF_M4, "project": "reef"},
+            ],
+        )
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+
+        # Assert
+        self.assertEqual(
+            self.forge.opened,
+            [
+                {
+                    "repository": str(self.repository),
+                    "base": "main",
+                    "branch": "integration/tides",
+                    "title": "chore(milestone): merge the milestone M4 into main",
+                    "body": "Merges the milestone M4 of @PROJECT.tidepool into main, its waves merged:"
+                    " tidepool_w16 #206.",
+                    "milestone": None,
+                    "environment": {},
+                }
+            ],
+        )
 
     def test_should_open_none_while_a_task_of_the_milestone_is_todo_at_its_branch(self):
         # Arrange
