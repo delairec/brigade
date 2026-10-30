@@ -21,6 +21,7 @@ from brigade.tick.actions import (
     OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
+    RebaseMilestone,
     RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -2145,3 +2146,50 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, ())
+
+
+BEHIND_MAIN = True
+DESCENDING_FROM_MAIN = False
+RUN_LIVE = True
+NO_RUN_LIVE = False
+NOT_BLOCKED = None
+BLOCKED_REBASE = BlockedRun(run="20261030T005500Z-2f5135", question="Keep the guard of plan.py or drop it?")
+START_OF_M10_AND_NO_MILESTONE = (
+    StartWave(project="shop", milestone="M10"),
+    StartWave(project="shop", milestone=None),
+)
+REBASE_OF_M9 = RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=("shop_w4",))
+
+
+class PlanMilestoneRebaseTest(unittest.TestCase):
+    def test_should_rebase_a_milestone_branch_main_has_outrun_and_start_no_wave_of_it_in_that_round(self):
+        for case, behind_main, rebase_run_live, blocked_rebase, expected in [
+            ("outrun by main", BEHIND_MAIN, NO_RUN_LIVE, NOT_BLOCKED, (REBASE_OF_M9, *START_OF_M10_AND_NO_MILESTONE)),
+            ("descending from main", DESCENDING_FROM_MAIN, NO_RUN_LIVE, NOT_BLOCKED, ONE_START_PER_CANDIDATE_WAVE),
+            ("outrun with a rebase run live", BEHIND_MAIN, RUN_LIVE, NOT_BLOCKED, ONE_START_PER_CANDIDATE_WAVE),
+            (
+                "outrun with a blocked rebase run",
+                BEHIND_MAIN,
+                NO_RUN_LIVE,
+                BLOCKED_REBASE,
+                ONE_START_PER_CANDIDATE_WAVE,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                milestone = MilestoneFacts(
+                    project="shop",
+                    milestone="M9",
+                    branch="integration/delivery",
+                    open_waves=("shop_w4",),
+                    behind_main=behind_main,
+                    rebase_run_live=rebase_run_live,
+                    blocked_rebase=blocked_rebase,
+                )
+                snapshot = Snapshot(now=NOW, projects=(PROJECT_WITH_CANDIDATES,), milestones=(milestone,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)

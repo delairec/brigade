@@ -68,6 +68,8 @@ class SnapshotTest(unittest.TestCase):
                 merged_waves=(MergedWave(wave="shop_w1", pr=77),),
                 open_waves=("shop_w3",),
                 todo=("S5",),
+                behind_main=True,
+                blocked_rebase=BlockedRun(run="20261030T005500Z-2f5135", question="Keep the guard or drop it?"),
             ),
             MilestoneFacts(
                 project="shop",
@@ -97,6 +99,9 @@ class SnapshotTest(unittest.TestCase):
                     "todo": ["S5"],
                     "opened_pull_request": None,
                     "pull_request": None,
+                    "behind_main": True,
+                    "rebase_run_live": False,
+                    "blocked_rebase": {"run": "20261030T005500Z-2f5135", "question": "Keep the guard or drop it?"},
                 },
                 {
                     "project": "shop",
@@ -115,6 +120,9 @@ class SnapshotTest(unittest.TestCase):
                         "head": "abc123",
                         "base": "main",
                     },
+                    "behind_main": False,
+                    "rebase_run_live": False,
+                    "blocked_rebase": None,
                 },
             ],
         )

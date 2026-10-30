@@ -3317,24 +3317,152 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             errors.getvalue(),
         )
 
-    def test_should_name_on_stderr_the_milestone_branch_whose_rebase_run_ended_blocked_with_its_question(self):
-        # Arrange
+
+MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "main", "integration/tides")
+REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "main")
+OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN = {
+    **MACHINE_ANSWERS,
+    ("git", "branch", "--quiet"): ProcessAnswer(),
+    ("git", "reset"): ProcessAnswer(),
+    ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
+    MILESTONE_BRANCH_DESCENT: ProcessAnswer(exit_code=1),
+    REBASE_OF_THE_MILESTONE_BRANCH: ProcessAnswer(),
+    ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
+    ("git", "rebase", "--abort"): ProcessAnswer(),
+}
+NO_ACTIVE_MILESTONE = ProcessAnswer(stdout='{"entities": []}')
+BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH = {
+    **create_run_result(FIRST_RUN, "blocked", "2026-10-18T10:00:00Z"),
+    "message": "Keep the guard of plan.py or drop it?\nbrigade-end: blocked",
+}
+
+
+class MilestoneBranchRebasingRunnerDouble(ScriptedProcessRunner):
+    def run(self, request):
+        record = super().run(request)
+        if request.argv == REBASE_OF_THE_MILESTONE_BRANCH and record.exit_code == 0:
+            self.answers[MILESTONE_BRANCH_DESCENT] = ProcessAnswer()
+        return record
+
+
+class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.worktree = self.root / "tidepool" / ".brigade" / "worktrees" / "integration-tides"
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [CUT_OF_M4])
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        self.machine = MilestoneBranchRebasingRunnerDouble(
+            {
+                **OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN,
+                ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tidepool_w1"): ProcessAnswer(
+                    exit_code=1
+                ),
+            },
+            fallback=create_corpus_double(corpus),
+        )
+        self.spawn = SpawnRecorderDouble()
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.machine.run,
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+
+    def _stop_the_rebase_on_a_conflict(self) -> None:
+        self.machine.answers[REBASE_OF_THE_MILESTONE_BRANCH] = ProcessAnswer(
+            exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
+        )
+
+    def _block_the_last_rebase_run(self) -> None:
         blocked_run = {
             **create_run_record(FIRST_RUN, None, None),
             "slot": "rebase",
             "project": "tidepool",
-            "worktree": str(self.root / "tidepool" / ".brigade" / "worktrees" / "integration-tides"),
+            "worktree": str(self.worktree),
         }
-        blocked = {
-            **create_run_result(FIRST_RUN, "blocked", "2026-10-18T10:00:00Z"),
-            "message": "Keep the guard of plan.py or drop it?\nbrigade-end: blocked",
-        }
-        write_run(self.root / "state", blocked_run, blocked)
-        write_ledger(self.root, [CUT_OF_M4, blocked])
-        self.machine.answers[("git", "reset")] = ProcessAnswer()
-        self.machine.answers[("git", "rev-parse", "HEAD")] = ProcessAnswer(stdout=f"{WAVE_HEAD}\n")
-        self.machine.answers[("git", "rebase")] = ProcessAnswer()
-        self.machine.answers[("git", "push")] = ProcessAnswer()
+        write_run(self.root / "state", blocked_run, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH)
+        write_ledger(self.root, [CUT_OF_M4, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH])
+
+    def test_should_rebase_the_milestone_branch_onto_main_before_the_wave_of_its_candidates_starts_on_it(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[1]),
+            {
+                "schema_version": 2,
+                "ts": ANY,
+                "event": "wave.started",
+                "wave": "tidepool_w1",
+                "project": "tidepool",
+                "branch": "integration/tidepool_w1",
+                "tasks": ["T7"],
+            },
+        )
+        self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_rebase_no_milestone_branch_whose_milestone_is_no_longer_active(self):
+        # Arrange
+        self.machine.answers[("awawa", "status", "MILESTONE")] = NO_ACTIVE_MILESTONE
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_launch_a_rebase_run_on_the_worktree_of_the_milestone_branch_stopped_on_a_conflict(self):
+        # Arrange
+        self._stop_the_rebase_on_a_conflict()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs[0],
+            (
+                "run",
+                "rebase-on-base",
+                "base=main",
+                "--slot",
+                "rebase",
+                "--cwd",
+                str(self.worktree),
+                "--project",
+                "tidepool",
+                "--run-id",
+                ANY,
+            ),
+        )
+
+    def test_should_launch_no_second_rebase_run_while_the_first_lives(self):
+        # Arrange
+        self._stop_the_rebase_on_a_conflict()
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(self.machine.argvs.count(REBASE_OF_THE_MILESTONE_BRANCH), 1)
+
+    def test_should_name_on_stderr_the_milestone_branch_whose_rebase_run_ended_blocked_with_its_question(self):
+        # Arrange
+        self._block_the_last_rebase_run()
         errors = io.StringIO()
 
         # Act
@@ -3346,6 +3474,19 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             "brigade tick: the rebase of integration/tides is blocked: Keep the guard of plan.py or drop it?\n",
             errors.getvalue(),
         )
+
+    def test_should_name_no_milestone_branch_main_no_longer_outruns_though_its_rebase_run_ended_blocked(self):
+        # Arrange
+        self._block_the_last_rebase_run()
+        self.machine.answers[MILESTONE_BRANCH_DESCENT] = ProcessAnswer()
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertNotIn("brigade tick: the rebase of integration/tides is blocked", errors.getvalue())
 
 
 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
