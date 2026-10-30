@@ -19,6 +19,8 @@ from brigade.errors import StandingDown, UsageError
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.milestone_closed import MilestoneClosed
+from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_parked import TaskParked
@@ -62,6 +64,7 @@ from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
+    CloseMilestone,
     CloseWave,
     CollectCheckRuns,
     CollectReviewThreads,
@@ -74,6 +77,7 @@ from brigade.tick.actions import (
     MergePullRequest,
     MergeWavePullRequest,
     OpenIntegrationPullRequest,
+    OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
     RebaseTask,
@@ -493,6 +497,41 @@ def _open_integration_pull_request(
     append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=opened["number"], login=login))
 
 
+def _open_milestone_pull_request(
+    runtime: Runtime, configuration: Configuration, action: OpenMilestonePullRequest
+) -> None:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    project = find_project(read_projects(runtime), action.project)
+    main = read_project_field(project, MAIN_FIELD)
+    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+    waves = ", ".join(f"{merged.wave} #{merged.pr}" for merged in action.waves)
+    opened = forge.open_pull_request(
+        {
+            "repository": read_project_field(project, PATH_FIELD),
+            "base": main,
+            "branch": action.branch,
+            "title": f"chore(milestone): merge the milestone {action.milestone} into {main}",
+            "body": f"Merges the milestone {action.milestone} of @PROJECT.{action.project} into {main},"
+            f" its waves merged: {waves}.",
+            "milestone": NO_MILESTONE,
+            "environment": environment,
+        },
+        runtime,
+    )
+    append_event(
+        runtime.paths,
+        runtime.now,
+        MilestonePrOpened(project=action.project, milestone=action.milestone, pr=opened["number"], login=login),
+    )
+
+
+def _close_milestone(runtime: Runtime, action: CloseMilestone) -> None:
+    append_event(
+        runtime.paths, runtime.now, MilestoneClosed(project=action.project, milestone=action.milestone, pr=action.pr)
+    )
+
+
 def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
     return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
 
@@ -590,6 +629,8 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: _report_wave(runtime, action),
         CloseWave: lambda action: _close_wave(runtime, action),
+        OpenMilestonePullRequest: lambda action: _open_milestone_pull_request(runtime, configuration, action),
+        CloseMilestone: lambda action: _close_milestone(runtime, action),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
     }

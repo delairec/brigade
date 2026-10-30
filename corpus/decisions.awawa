@@ -4498,3 +4498,31 @@ DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 		+ "whose pull request is open: « Oui, pr_open »"
 	SOURCE "the report of max of 2026-10-29 on the parks « past 2 repair rounds », main 02d56fa8: a"
 		+ "requeue restarts nothing and relaunches the wrong procedure"
+
+DECISION TheTickReadsTheWavesOfAMilestoneAtItsBranchAndACancelledWaveCountsNeither
+	TITLE "the tick reads the waves of a milestone from the ledger and the tasks at the branch of"
+		+ "the milestone: a closed wave whose tasks name the milestone there is merged, an open"
+		+ "wave is one the tick follows on that branch, and a cancelled wave counts neither"
+	STATUS active
+	DESC "a closed wave belongs to a milestone when one of its tasks names that MILESTONE in the"
+		+ "corpus at the branch of the milestone; its pull request is the pr of its wave.closed"
+	DESC "an open wave belongs to a milestone when the branch of its milestone, read as the tick"
+		+ "reads it to open the pull request of the wave, is the branch of the milestone"
+	DESC "a cancelled wave is neither closed nor open: it neither opens nor holds back the pull"
+		+ "request of its milestone, and a task it left todo at the branch of the milestone holds"
+		+ "it back as SPEC 1 of @TASK.B215 sets"
+		REF @TASK.B215
+	DESC "the tree of the branch of a milestone is read until milestone.pr_opened only; from then"
+		+ "on the tick reads the pull request of the branch alone"
+	DESC "binds @TASK.B215"
+		REF @TASK.B215
+	REJECTED "a cancelled wave counted as a wave not closed: nothing closes a cancelled wave, so"
+		+ "its milestone would never open its pull request"
+	REJECTED "the tree of the branch of a milestone read at every tick until milestone.closed: on a"
+		+ "forge that deletes the head branch of a merged pull request the fetch fails, and"
+		+ "milestone.closed is never appended"
+	RATIONALE "SPEC 1 of @TASK.B215 asks every wave of the milestone closed and none open, and"
+		+ "names no cancelled wave; summarize_waves ends a wave on wave.closed or wave.cancelled"
+		REF @TASK.B215
+	SOURCE "the build run of @TASK.B215, 2026-10-30"
+		REF @TASK.B215

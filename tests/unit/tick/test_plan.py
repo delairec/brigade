@@ -7,6 +7,7 @@ from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
+    CloseMilestone,
     CloseWave,
     CutWaveBranch,
     LaunchCheckRepair,
@@ -17,6 +18,7 @@ from brigade.tick.actions import (
     MergePullRequest,
     MergeWavePullRequest,
     OpenIntegrationPullRequest,
+    OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
     RebaseTask,
@@ -31,6 +33,8 @@ from brigade.tick.actions import (
 from brigade.tick.build_snapshot import (
     BlockedRun,
     LiveRun,
+    MergedWave,
+    MilestoneFacts,
     PreflightFailure,
     ProjectFacts,
     RateLimit,
@@ -1916,3 +1920,164 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, ())
+
+
+SHOP_ON_GITHUB = ProjectFacts(name="shop", slots=4, on_github=True)
+MILESTONE_M4_BRANCH = "integration/tides"
+WAVES_OF_M4_MERGED = (MergedWave(wave="shop_w1", pr=77), MergedWave(wave="shop_w2", pr=81))
+NO_WAVE_MERGED = ()
+NO_TASK_TODO = ()
+NO_PULL_REQUEST_OPENED = None
+MILESTONE_PULL_REQUEST = PullRequestFacts(
+    number=90, state="open", checks=(), review=None, behind=False, head=HEAD, base="main"
+)
+OPEN_THE_PULL_REQUEST_OF_M4 = OpenMilestonePullRequest(
+    project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, waves=WAVES_OF_M4_MERGED
+)
+
+
+def create_milestone(merged_waves: tuple[MergedWave, ...], todo: tuple[str, ...]) -> MilestoneFacts:
+    return MilestoneFacts(
+        project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, merged_waves=merged_waves, todo=todo
+    )
+
+
+def create_open_wave_of_m4() -> WaveFacts:
+    return dataclasses.replace(
+        create_wave(ALONE, {"S3": "running"}), wave="shop_w3", milestone_branch=MILESTONE_M4_BRANCH
+    )
+
+
+class PlanMilestonePullRequestTest(unittest.TestCase):
+    def test_should_open_the_pull_request_of_a_milestone_once_its_last_wave_is_closed(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (OPEN_THE_PULL_REQUEST_OF_M4,))
+
+    def test_should_open_none_before_a_wave_of_the_milestone_is_closed(self):
+        # Arrange
+        milestone = create_milestone(NO_WAVE_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_while_a_wave_of_the_milestone_is_open(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_open_wave_of_m4(),), projects=(SHOP_ON_GITHUB,), milestones=(milestone,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertNotIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+
+    def test_should_open_it_while_a_wave_of_another_milestone_is_open(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        other_wave = dataclasses.replace(create_open_wave_of_m4(), milestone_branch="integration/currents")
+        snapshot = Snapshot(now=NOW, waves=(other_wave,), projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+
+    def test_should_open_it_while_a_wave_of_another_project_is_open_on_a_branch_of_the_same_name(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        wave_of_another_project = dataclasses.replace(create_open_wave_of_m4(), project="reef")
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(wave_of_another_project,),
+            projects=(SHOP_ON_GITHUB, ProjectFacts(name="reef", slots=4)),
+            milestones=(milestone,),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+
+    def test_should_open_none_while_a_task_of_the_milestone_is_todo(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, ("S5",))
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_once_its_pull_request_is_opened(self):
+        # Arrange
+        milestone = dataclasses.replace(
+            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            opened_pull_request=90,
+            pull_request=MILESTONE_PULL_REQUEST,
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_for_a_project_without_a_forge(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_close_the_milestone_once_its_pull_request_is_merged(self):
+        # Arrange
+        milestone = dataclasses.replace(
+            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            opened_pull_request=90,
+            pull_request=dataclasses.replace(MILESTONE_PULL_REQUEST, state="merged"),
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M4", pr=90),))
+
+    def test_should_merge_the_pull_request_of_a_milestone_never(self):
+        # Arrange
+        milestone = dataclasses.replace(
+            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            opened_pull_request=90,
+            pull_request=dataclasses.replace(
+                MILESTONE_PULL_REQUEST, checks=(CheckVerdict(name="tests", verdict="success"),), review="approved"
+            ),
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
