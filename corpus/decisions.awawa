@@ -4339,6 +4339,12 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "follows the model as it stands; no task carries the move, and neither pull request is"
 		+ "merged into main"
 		REF @MILESTONE.M9
+	DESC "the rebase of DESC 4 and DESC 12 is an action of the plan of the tick,"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction: planned as soon as"
+		+ "the recorded branch of an active milestone does not descend from PROJECT.MAIN, applied"
+		+ "by the executor, the candidates of the milestone read in the next round of the same tick"
+		+ "on the rebased branch; brigade wave start rebases nothing"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	REJECTED "one integration branch per wave, integration/<project>_w<n> cut from PROJECT.MAIN and"
 		+ "merged into main by a pull request of its own, as the tick does today: the user ruled"
 		+ "that a wave merges into the integration branch of its milestone and never into main"
@@ -4374,6 +4380,10 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	REJECTED "the rebase of the milestone branch waited for until its open waves are merged: the"
 		+ "user ruled the open wave branches rebased too and the ratified task started at once, «"
 		+ "Rebaser aussi w9 »"
+	REJECTED "a step of the tick rebasing the branches before the snapshot, skipped under"
+		+ "--dry-run, and before list_candidate_waves in brigade wave start: a write outside the"
+		+ "executor, which the decision TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction"
+		+ "forbids; the user chose « Une action du plan » over « Une étape avant la lecture »"
 	CLOSES @OPEN_QUESTION.SeveralMilestonesActiveAtOnce
 	CLOSES @OPEN_QUESTION.TheNameOfTheIntegrationBranchOfAMilestone
 	CLOSES @OPEN_QUESTION.WhoMergesAWaveIntoTheIntegrationBranchOfItsMilestone
@@ -4409,6 +4419,14 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @MILESTONE.M9
 		REF @TASK.B94
 		REF @TASK.B182
+	RATIONALE "DESC 14: the build run of @TASK.B214 of 2026-10-30, pull request #260, rebased the"
+		+ "branches in brigade/waves/start_project_wave.py, after a StartWave was planned from"
+		+ "candidates the snapshot had read on the branch before the rebase, so a task ratified on"
+		+ "main after the cut was never a candidate; the run held that an action of the plan makes"
+		+ "the candidates arrive one tick later, but brigade/tick/run_rounds.py rebuilds the"
+		+ "snapshot at each round, so a rebase applied in one round is read in the next round of"
+		+ "the same tick"
+		REF @TASK.B214
 	SOURCE "the user's words of 2026-10-28 on pull request #239: « comment ça la pr 239 peut être"
 		+ "mergée, il est pas censé y avoir d'abord le merge de toutes les pr de m3?, puis je"
 		+ "comprends pas pourquoi les branche d'intégration ne porte pas le nom de la milestone,"
@@ -4451,6 +4469,14 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "12: « Rebaser aussi w9 (Recommended) », the option « Le tick rebase integration/M3 sur"
 		+ "main, puis rebase la branche de w9 sur la nouvelle integration/M3 ; un conflit lance un"
 		+ "run de rebase, comme pour une tâche (B210). La tâche ratifiée part tout de suite »"
+	SOURCE "the user's ruling of 2026-10-30 on the question of the run 20261030T005500Z-2f5135 of"
+		+ "@TASK.B214, pull request #260, DESC 14: « Une action du plan (Recommended) », the option"
+		+ "« Dès que la branche du milestone ne descend plus de main, le plan produit une action de"
+		+ "rebase. Le tick relit l'état à chaque tour (brigade/tick/run_rounds.py), donc les"
+		+ "candidats sont relus après le rebase dans le même tick. Cela respecte"
+		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction », against « Une étape avant la"
+		+ "lecture »"
+		REF @TASK.B214
 
 DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 	TITLE "brigade wave requeue of a parked task whose pull request is open records task.state"
