@@ -268,6 +268,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
                         "headRefOid": self.head,
                         "baseRefName": WAVE_BRANCH,
                         "reviewDecision": "",
+                        "updatedAt": "2026-10-18T11:00:00Z",
                         "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
                     }
                 ]

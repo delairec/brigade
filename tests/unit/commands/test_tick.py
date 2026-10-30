@@ -525,6 +525,7 @@ OPEN_PULL_REQUEST = {
     "behind": False,
     "head": "8885daa",
     "base": "integration/M4",
+    "updated_at": "2026-10-18T11:00:00Z",
 }
 MERGED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "state": "merged"}
 TASK_PREFLIGHTED_AT_THE_HEAD = {
@@ -2769,6 +2770,7 @@ INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN = {
     "behind": False,
     "head": "8885daa",
     "base": "main",
+    "updated_at": "2026-10-18T11:00:00Z",
 }
 INTEGRATION_PULL_REQUEST_CLOSED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "state": "closed"}
 INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "base": "develop"}

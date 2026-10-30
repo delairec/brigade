@@ -1,4 +1,5 @@
 import unittest
+from datetime import UTC, datetime
 
 from brigade.errors import BrigadeError
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
@@ -26,6 +27,7 @@ class AskPullRequestTest(unittest.TestCase):
                         "behind": False,
                         "head": "0123abc",
                         "base": "integration/M1-empty-cart",
+                        "updated_at": "2026-10-30T14:04:22Z",
                     },
                 }
             }
@@ -59,6 +61,7 @@ class AskPullRequestTest(unittest.TestCase):
                 behind=False,
                 head="0123abc",
                 base="integration/M1-empty-cart",
+                updated_at=datetime(2026, 10, 30, 14, 4, 22, tzinfo=UTC),
             ),
         )
 

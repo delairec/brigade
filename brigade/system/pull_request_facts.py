@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from datetime import datetime
+
+from brigade.ledger.format_instant import format_instant
 
 
 @dataclass(frozen=True)
@@ -16,6 +19,7 @@ class PullRequestFacts:
     behind: bool
     head: str
     base: str
+    updated_at: datetime
 
     @classmethod
     def from_document(cls, document: dict) -> "PullRequestFacts":
@@ -27,6 +31,7 @@ class PullRequestFacts:
             behind=document["behind"],
             head=document["head"],
             base=document["base"],
+            updated_at=datetime.fromisoformat(document["updated_at"]),
         )
 
     def to_document(self) -> dict:
@@ -38,4 +43,5 @@ class PullRequestFacts:
             "behind": self.behind,
             "head": self.head,
             "base": self.base,
+            "updated_at": format_instant(self.updated_at),
         }

@@ -6,7 +6,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from brigade.errors import CommandFailed
@@ -49,7 +49,14 @@ WAVE_SHA = "abc123"
 MAIN_SHA = "def456"
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
 PULL_REQUEST = PullRequestFacts(
-    number=7, state="open", checks=(), review=None, behind=False, head="4f2a9c1", base="integration/w1"
+    number=7,
+    state="open",
+    checks=(),
+    review=None,
+    behind=False,
+    head="4f2a9c1",
+    base="integration/w1",
+    updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
 )
 from brigade.system.run_process import ProcessRequest
 from tests.unit.select_requests_opening_on import select_requests_opening_on
@@ -367,6 +374,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
                             rate_limit=RateLimit(reset=None),
@@ -392,6 +400,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -435,6 +444,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -503,6 +513,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
                             rate_limit=RateLimit(reset=None),
@@ -528,6 +539,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -571,6 +583,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -599,6 +612,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         behind=False,
                         head="4f2a9c1",
                         base="integration/w1",
+                        updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                     ),
                     opened_integration_pull_request=None,
                 ),
@@ -647,6 +661,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
                             rate_limit=RateLimit(reset=None),
@@ -672,6 +687,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -715,6 +731,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -901,6 +918,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
                             rate_limit=RateLimit(reset=None),
@@ -926,6 +944,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -969,6 +988,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -1037,6 +1057,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
                             rate_limit=RateLimit(reset=None),
@@ -1062,6 +1083,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
@@ -1105,6 +1127,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 behind=False,
                                 head="4f2a9c1",
                                 base="integration/w1",
+                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=None,
                             rate_limit=None,
