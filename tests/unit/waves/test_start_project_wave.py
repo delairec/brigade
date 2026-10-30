@@ -501,6 +501,22 @@ class StartProjectWaveOfTheTasksOfAMilestoneTest(StartProjectWaveTestCase):
             [("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH)],
         )
 
+    def test_should_cut_again_the_branch_of_an_open_wave_whose_tasks_the_milestone_branch_lacks(self):
+        # Arrange
+        write_ledger(self.root, [OPEN_WAVE, CUT_OF_M9])
+
+        # Act
+        self.start_wave(("S21",), "M9")
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH),
+            [
+                ("git", "branch", "--quiet", "integration/shop_w1", "main"),
+                ("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH),
+            ],
+        )
+
     def test_should_refuse_the_wave_naming_the_milestone_and_the_branch_the_clone_holds_unrecorded(self):
         # Arrange
         self.processes.answer(("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{MILESTONE_BRANCH}"))
