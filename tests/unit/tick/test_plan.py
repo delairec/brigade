@@ -1983,6 +1983,28 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         # Assert
         self.assertNotIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
 
+    def test_should_open_none_while_the_ledger_holds_an_open_wave_of_the_milestone(self):
+        # Arrange
+        milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO), open_waves=("shop_w3",))
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_for_a_project_the_snapshot_does_not_hold(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
     def test_should_open_it_while_a_wave_of_another_milestone_is_open(self):
         # Arrange
         milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)

@@ -541,11 +541,13 @@ def _plan_integration_pull_requests(snapshot: Snapshot) -> tuple:
     )
 
 
-def _is_milestone_pull_request_due(milestone: MilestoneFacts, snapshot: Snapshot, project: ProjectFacts) -> bool:
+def _is_milestone_pull_request_due(milestone: MilestoneFacts, snapshot: Snapshot, project: ProjectFacts | None) -> bool:
     return (
-        project.on_github
+        project is not None
+        and project.on_github
         and milestone.opened_pull_request is None
         and bool(milestone.merged_waves)
+        and not milestone.open_waves
         and not milestone.todo
         and not any(
             wave.project == milestone.project and wave.milestone_branch == milestone.branch for wave in snapshot.waves
@@ -563,7 +565,7 @@ def _plan_milestone_pull_requests(snapshot: Snapshot) -> tuple:
             waves=milestone.merged_waves,
         )
         for milestone in snapshot.milestones
-        if _is_milestone_pull_request_due(milestone, snapshot, projects[milestone.project])
+        if _is_milestone_pull_request_due(milestone, snapshot, projects.get(milestone.project))
     )
 
 

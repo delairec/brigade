@@ -66,6 +66,7 @@ class SnapshotTest(unittest.TestCase):
                 milestone="M4",
                 branch="integration/tides",
                 merged_waves=(MergedWave(wave="shop_w1", pr=77),),
+                open_waves=("shop_w3",),
                 todo=("S5",),
             ),
             MilestoneFacts(
@@ -92,6 +93,7 @@ class SnapshotTest(unittest.TestCase):
                     "milestone": "M4",
                     "branch": "integration/tides",
                     "merged_waves": [{"wave": "shop_w1", "pr": 77}],
+                    "open_waves": ["shop_w3"],
                     "todo": ["S5"],
                     "opened_pull_request": None,
                     "pull_request": None,
@@ -101,6 +103,7 @@ class SnapshotTest(unittest.TestCase):
                     "milestone": "M5",
                     "branch": "integration/currents",
                     "merged_waves": [],
+                    "open_waves": [],
                     "todo": [],
                     "opened_pull_request": 90,
                     "pull_request": {
