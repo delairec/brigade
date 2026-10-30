@@ -219,6 +219,11 @@ class WaveFacts:
             "opened_integration_pull_request": self.opened_integration_pull_request,
             "milestone_branch": self.milestone_branch,
             "unresolved_threads": self.unresolved_threads,
+            "blocked_rebase": (
+                None
+                if self.blocked_rebase is None
+                else {"run": self.blocked_rebase.run, "question": self.blocked_rebase.question}
+            ),
         }
 
 
