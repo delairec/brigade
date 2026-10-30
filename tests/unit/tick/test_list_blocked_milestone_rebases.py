@@ -85,6 +85,19 @@ class ListBlockedMilestoneRebasesTest(unittest.TestCase):
                 (create_rebase_run("20261030T080000Z-4eba5e", OTHER_WORKTREE),),
                 (TIDES_CUT, create_finished_entry("20261030T080000Z-4eba5e", "blocked")),
             ),
+            (
+                "a blocked run on a milestone branch another project cut",
+                (create_rebase_run("20261030T080000Z-4eba5e", TIDES_WORKTREE),),
+                (
+                    LedgerEntry(
+                        instant=INSTANT,
+                        event=MilestoneBranchCut(
+                            project="depot", milestone="M9", branch="integration/tides", login="brigade-bot"
+                        ),
+                    ),
+                    create_finished_entry("20261030T080000Z-4eba5e", "blocked"),
+                ),
+            ),
         ]:
             with self.subTest(case=case):
                 # Arrange
