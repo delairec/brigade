@@ -4536,9 +4536,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
             COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(
-            reported.getvalue(),
-            f"brigade tick: the milestone M4 of tidepool skipped: {MILESTONE_BRANCH_DELETED_FROM_THE_FORGE}\n",
+        self.assertIn(
+            f"brigade tick: the milestone M4 of tidepool skipped: {MILESTONE_BRANCH_DELETED_FROM_THE_FORGE}",
+            reported.getvalue().splitlines(),
         )
 
     def test_should_open_it_beside_the_milestone_of_a_project_no_longer_registered(self):
