@@ -556,14 +556,18 @@ def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWav
 def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: RebaseMilestone) -> None:
     rebase = MilestoneBranchesRebase(
         project=find_project(read_projects(runtime), action.project),
+        milestone=action.milestone,
         branch=action.branch,
         waves=action.waves,
         worktree_root=configuration.worktree_root,
         read_environment=_cache_forge_environment(runtime, configuration),
         is_run_live_on=lambda worktree: is_run_live_on(runtime.paths.state_root, worktree, is_recorded_process_alive),
         launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
+        read_login=lambda: read_cli_login(configuration, runtime),
     )
-    rebase_milestone_branches(runtime, rebase)
+    rebased = rebase_milestone_branches(runtime, rebase)
+    if rebased is not None:
+        append_event(runtime.paths, runtime.now, rebased)
 
 
 def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: CutWaveBranch) -> None:
