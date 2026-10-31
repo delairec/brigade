@@ -7080,7 +7080,8 @@ TASK B93
 TASK B94
 	TITLE "A run is followed while it runs, inside or outside a wave: /api/runs and a Runs view of"
 		+ "the dashboard"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 270
 	TYPE feat
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
