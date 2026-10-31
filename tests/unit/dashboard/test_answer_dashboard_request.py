@@ -119,6 +119,8 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
             ("/api/corpus", ("project", "list", "--json")),
             ("/api/reports", ("reports", "list", "--json")),
             ("/api/reports/oak_w3", ("reports", "show", "--json", "oak_w3")),
+            ("/api/runs", ("runs", "list", "--json")),
+            ("/api/runs/20261031T135554Z-513a4f", ("runs", "show", "--json", "20261031T135554Z-513a4f")),
         ]
         for target, arguments in rows:
             with self.subTest(target=target):
@@ -225,13 +227,14 @@ class AnswerDashboardRequestOfAPathNoRouteServesTest(unittest.TestCase):
     def test_should_answer_not_found_and_run_nothing(self):
         # Arrange
         rows = [
-            "/api/runs",
             "/api/waves/w4/tasks",
             "/api/waves/",
             "/api/waves/--help",
             "/api/corpus/-h?ref=main",
             "/nowhere",
-            "/views/runs",
+            "/api/runs/--help",
+            "/views/nowhere",
+            "/views/runs/--help",
             "/api/projects/oak/pause",
         ]
         runtime = create_test_runtime()
@@ -738,3 +741,77 @@ class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest
             response,
             DashboardResponse(status=404, content_type=JSON, body=b'{"error": "no route serves the method DELETE"}'),
         )
+
+
+RUN_LIST = (PYTHON, ENTRY_POINT, "runs", "list", "--json")
+NO_RUN = '{"schema_version": 1, "runs": [], "skipped": []}\n'
+RUN_R1_SHOWN = (
+    '{"schema_version": 1, "run": {"run": "r1", "procedure": "build-task", "slot": "build", "role": "ada",'
+    ' "project": "oak", "worktree": "/srv/oak/B94", "state": "running", "outcome": null, "wave": null,'
+    ' "task": null, "message": null}, "segments": [], "journal": null,'
+    ' "progress": {"text": "STEP s1 <read>\\n", "entities": null}}\n'
+)
+
+
+class AnswerDashboardRequestOfARunNoListingNamesTest(unittest.TestCase):
+    def test_should_answer_not_found(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "runs", "show"): ProcessAnswer(
+                    exit_code=1, stderr="brigade runs show: no run r9\n"
+                ),
+                RUN_LIST: ProcessAnswer(stdout=NO_RUN),
+            }
+        )
+
+        # Act
+        response = answer_get("/api/runs/r9", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 404)
+
+
+class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
+    def test_should_render_the_list_of_the_runs(self):
+        # Arrange
+        runner = ScriptedProcessRunner({RUN_LIST: ProcessAnswer(stdout=NO_RUN)})
+
+        # Act
+        response = answer_get("/views/runs", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response, DashboardResponse(status=200, content_type="text/html; charset=utf-8", body=b"<p>no run</p>")
+        )
+
+    def test_should_render_the_run_asked_with_its_progress(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {(PYTHON, ENTRY_POINT, "runs", "show", "--json", "r1"): ProcessAnswer(stdout=RUN_R1_SHOWN)}
+        )
+
+        # Act
+        response = answer_get("/views/runs/r1", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertIn(b"<h3>Progress</h3><pre>STEP s1 &lt;read&gt;\n</pre>", response.body)
+
+    def test_should_render_the_error_of_a_run_no_listing_names(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "runs", "show"): ProcessAnswer(
+                    exit_code=1, stderr="brigade runs show: no run r9\n"
+                ),
+                RUN_LIST: ProcessAnswer(stdout=NO_RUN),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/runs/r9", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 404)
+        self.assertEqual(response.body, b"<dl><dt>error</dt><dd>brigade runs show: no run r9\n</dd></dl>")
