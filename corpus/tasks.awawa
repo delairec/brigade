@@ -13704,7 +13704,8 @@ TASK B222
 TASK B223
 	TITLE "The tick records milestone.rebased in the ledger when it rebases the branch of a"
 		+ "milestone onto the main branch without a conflict"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 266
 	TYPE feat
 	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
