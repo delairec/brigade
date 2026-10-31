@@ -1,0 +1,34 @@
+# REPORT brigade_w11
+
+- WAVE: brigade_w11
+- PROJECT: brigade
+- TASK_ROW: B94 merged #270
+- STATISTIC: tasks 1
+- STATISTIC: merged 1
+- STATISTIC: parked 0
+- STATISTIC: runs 2
+- STATISTIC: files 132
+- STATISTIC: insertions 6776
+- STATISTIC: deletions 252
+- MANUAL_TEST: B94: /api/runs serves the standard output of brigade runs list --json, every run inside or outside a wave with its state, running, finished or dead, and /api/runs/<id> that of brigade runs show <id> --json, its segments, their outcomes and its progress, run at each request
+- MANUAL_TEST: B94: a Runs view of the dashboard lists the runs and shows one run with its progress, refreshed by the polling of the page; every string of the progress is escaped on render, as the server requires of every rendered string
+- INSTRUCTIONS_CHANGE: corpus/decisions.awawa +213 -0
+- INSTRUCTIONS_CHANGE: corpus/tasks.awawa +260 -23
+- INSTRUCTIONS_CHANGE: corpus/waves/4-report.md +96 -0
+- INSTRUCTIONS_CHANGE: corpus/waves/6-report.md +44 -0
+- NARRATIVE: Verdict: the wave delivered its one task, B94, merged as PR #270 in one round, with no task parked or failed (ledger collector).
+- NARRATIVE: Duration: 20 min from wave.started at 13:55:54Z to pr.merged at 14:15:54Z (ledger timestamps).
+- NARRATIVE: Build run 20261031T135554Z-513a4f, role ada, procedure build-task: 38 steps, 372 s, 2.46 USD, outcome done, PR opened at 14:02:41Z (ledger run.finished).
+- NARRATIVE: Verify run 20261031T141054Z-695eaa, role prudence, procedure verify-pr: 19 steps, 97 s, 1.08 USD, verdict pass with no finding (ledger run.finished and task.verdict).
+- NARRATIVE: Total of the two runs: 57 steps, 469 s of run time, 3.54 USD (sum of the two run.finished events).
+- NARRATIVE: Preflight of PR #270 passed all seven gating checks; its size check reads 12 files, 337 lines, 4 packages (ledger task.preflighted).
+- NARRATIVE: Most of the 20 min was tick latency: the PR waited 8 min between its opening and the preflight, and 3 min between the verdict and the merge, the five-minute tick cadence (ledger timestamps).
+- NARRATIVE: Gap: the git-diff-stat collector reports 132 files, +6776 -252 without naming its base, and lists no file of a Runs view; these figures do not measure B94, whose own size is the 12 files of the preflight.
+- NARRATIVE: Next wave: the git-diff-stat collector should name its base and range, so that the files statistic covers the wave and not the whole integration branch.
+- TESTER_STEP: B94 API: with the dashboard started, request /api/runs and compare the body with the output of brigade runs list --json run at the same moment; check that a run outside any wave is listed and that each run carries its state, running, finished or dead.
+- TESTER_STEP: B94 API: take one id from that list, request /api/runs/<id> and compare the body with brigade runs show <id> --json; check that segments, their outcomes and the progress are present; start a new run, request again without restarting the dashboard, and check it appears, proving the command runs at each request.
+- TESTER_STEP: B94 view: open the Runs view of the dashboard, check it lists the runs, open one and check its progress is shown; leave the page open while a run advances and check the view updates without a reload.
+- TESTER_STEP: B94 escaping: open a run whose progress file holds a string with <script> or an HTML tag, and check the view shows the characters as text and runs no script.
+- SAMPLING: the Runs view rendering added by B94 in brigade/dashboard (file named by PR #270, not by the collector): read how each string of the progress is escaped, the safety requirement of the task.
+- SAMPLING: the route of /api/runs and /api/runs/<id> added by B94 in brigade/dashboard/route_view.py or its sibling (named by PR #270): read that it runs the command at each request and passes the id without shell interpolation.
+- SAMPLING: corpus/tasks.awawa +260 -23: the 23 deleted lines are the only changes to existing specification in the range; read that they are status promotions and not rewritten SPEC lines.
