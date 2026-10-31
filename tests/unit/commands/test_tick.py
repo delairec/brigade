@@ -3368,14 +3368,15 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
 
 MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "main", "integration/tides")
+FORGE_MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "origin/main", "origin/integration/tides")
 REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "main")
+FORGE_REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "origin/main")
 REBASE_OF_THE_WAVE_BRANCH = ("git", "rebase", "integration/tides")
 OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN = {
     **MACHINE_ANSWERS,
     ("git", "branch", "--quiet"): ProcessAnswer(),
     ("git", "reset"): ProcessAnswer(),
     ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
-    MILESTONE_BRANCH_DESCENT: ProcessAnswer(exit_code=1),
     REBASE_OF_THE_MILESTONE_BRANCH: ProcessAnswer(),
     ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
     ("git", "rebase", "--abort"): ProcessAnswer(),
@@ -3388,10 +3389,17 @@ BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH = {
 
 
 class MilestoneBranchRebasingRunnerDouble(ScriptedProcessRunner):
+    def __init__(self, answers: dict, fallback, rebase: tuple, descent: tuple):
+        super().__init__({**answers, descent: ProcessAnswer(exit_code=1)}, fallback)
+        self.head_after_rebase = WAVE_HEAD
+        self.rebase = rebase
+        self.descent = descent
+
     def run(self, request):
         record = super().run(request)
-        if request.argv == REBASE_OF_THE_MILESTONE_BRANCH and record.exit_code == 0:
-            self.answers[MILESTONE_BRANCH_DESCENT] = ProcessAnswer()
+        if request.argv == self.rebase and record.exit_code == 0:
+            self.answers[self.descent] = ProcessAnswer()
+            self.answers[("git", "rev-parse", "HEAD")] = ProcessAnswer(stdout=f"{self.head_after_rebase}\n")
         return record
 
 
@@ -3404,9 +3412,13 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self.worktree = self.root / "tidepool" / ".brigade" / "worktrees" / "integration-tides"
         self.worktree.mkdir(parents=True)
         write_ledger(self.root, [CUT_OF_M4])
+        self.spawn = SpawnRecorderDouble()
+        self._create_runtime()
+
+    def _create_runtime(self, forge: tuple = (), answers: dict | None = None):
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
-            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"), *forge)},
             "TASK": {"T7": TASK_TO_DELIVER},
             "MILESTONE": {"M4": MILESTONE_M4},
         }
@@ -3416,16 +3428,23 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
                 ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tidepool_w1"): ProcessAnswer(
                     exit_code=1
                 ),
+                **(answers or {}),
             },
             fallback=create_corpus_double(corpus),
+            rebase=FORGE_REBASE_OF_THE_MILESTONE_BRANCH if forge else REBASE_OF_THE_MILESTONE_BRANCH,
+            descent=FORGE_MILESTONE_BRANCH_DESCENT if forge else MILESTONE_BRANCH_DESCENT,
         )
-        self.spawn = SpawnRecorderDouble()
+        forge_double = (
+            OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
+            if forge
+            else create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+        )
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=self.machine.run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge_double), self.root
             ),
         )
 
@@ -3463,6 +3482,73 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             },
         )
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_record_the_rebase_of_the_milestone_branch_with_its_heads_before_and_after(self):
+        # Arrange
+        self.machine.head_after_rebase = "9b41d08"
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[1]),
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "milestone.rebased",
+                "project": "tidepool",
+                "milestone": "M4",
+                "branch": "integration/tides",
+                "before": "8885daa",
+                "after": "9b41d08",
+                "waves": [],
+                "login": None,
+            },
+        )
+
+    def test_should_record_the_rebase_of_the_milestone_branch_of_a_forge_with_the_login_of_the_cli(self):
+        # Arrange
+        self._create_runtime(
+            forge=(("FORGE", "github"),),
+            answers={
+                FORGE_REBASE_OF_THE_MILESTONE_BRANCH: ProcessAnswer(),
+                ("git", "push", "--quiet", f"--force-with-lease=integration/tides:{WAVE_HEAD}"): ProcessAnswer(),
+                ("git", "ls-remote"): ProcessAnswer(exit_code=2),
+                ("git", "push", "--quiet", "origin"): ProcessAnswer(),
+            },
+        )
+        self.machine.head_after_rebase = "9b41d08"
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[1]),
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "milestone.rebased",
+                "project": "tidepool",
+                "milestone": "M4",
+                "branch": "integration/tides",
+                "before": "8885daa",
+                "after": "9b41d08",
+                "waves": [],
+                "login": "tidepool-cli",
+            },
+        )
+
+    def test_should_record_no_rebase_of_the_milestone_branch_whose_head_the_rebase_left_where_it_was(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8")
+        self.assertNotIn('"event": "milestone.rebased"', ledger)
 
     def test_should_rebase_no_milestone_branch_whose_milestone_is_no_longer_active(self):
         # Arrange

@@ -1,0 +1,34 @@
+# REPORT brigade_w10
+
+- WAVE: brigade_w10
+- PROJECT: brigade
+- TASK_ROW: B223 merged #266
+- STATISTIC: tasks 1
+- STATISTIC: merged 1
+- STATISTIC: parked 0
+- STATISTIC: runs 4
+- STATISTIC: files 0
+- STATISTIC: insertions 0
+- STATISTIC: deletions 0
+- MANUAL_TEST: B223: the ledger declares milestone.rebased with project, milestone, branch, before and after, the head of the branch before and after the rebase, waves, the open waves whose branch was rebased onto it and pushed in the same action, and login, read as brigade/waves/cut_milestone_branch.py reads it for milestone.branch_cut
+- MANUAL_TEST: B223: brigade/commands/tick.py:_rebase_milestone appends it once brigade/waves/rebase_milestone_branches.py has rebased the branch of the milestone onto PROJECT.MAIN without a conflict, pushed it with lease and served the open waves; it appends nothing on a rebase stopped on a conflict, the run it launches recording its own outcome, nothing on a branch whose worktree a live run holds, and nothing when the rebase left the head where it was
+- MANUAL_TEST: B223: brigade ledger counts milestone.rebased among the events of its overview and reads it back as every declared event, through brigade/ledger/declared_events.py
+- MANUAL_TEST: B223: tests/unit prove the event read, written and declared, as tests/unit/ledger/test_milestone_branch_cut.py proves milestone.branch_cut, the executor appending it after a clean rebase with the heads before and after and the waves rebased, and appending none on a conflict, none under a live run and none on a head left where it was; tests/cli gains no flow
+- NARRATIVE: Verdict: the wave delivered its single task, B223, merged as PR #266 into integration/brigade_w10 at the second review round, with no task parked or failed (ledger collector, events task.state, pr.merged)
+- NARRATIVE: Cost: 4 runs, 123 steps, 1217.8 s of run time and 6.78 USD, summed over the run.finished events of the ledger collector; the wave lasted 35 min 21 s from wave.started (00:20:33Z) to pr.merged (00:55:54Z)
+- NARRATIVE: Build, role ada, procedure build-task: 51 steps, 534.7 s, 2.97 USD, outcome done; PR #266 opened at 00:30:00Z with 9 files and 381 lines across 7 packages (ledger, run 20261031T002033Z-e9c896 and the first task.preflighted)
+- NARRATIVE: First verification, role prudence, procedure verify-pr: 19 steps, 240.8 s, 1.46 USD, verdict changes with two medium findings: the login of the CLI read after the rebase and push instead of before, as cut_milestone_branch.py does, and no test executing the read_cli_login lambda of tick.py (ledger, run 20261031T003554Z-125aad)
+- NARRATIVE: Remediation, role remediator, procedure remediate-pr: 40 steps, 368.7 s, 1.73 USD, both findings fixed by commit 15406d75 with one test proving each, the PR growing to 461 lines (ledger, run 20261031T004054Z-2f90c2 and the second task.preflighted)
+- NARRATIVE: Second verification, role prudence: 13 steps, 73.5 s, 0.63 USD, verdict pass with no finding; every preflight check and the eight CI checks of PR #266 passed (ledger, run 20261031T005054Z-77e6cd; pr-list collector)
+- NARRATIVE: Went well: the verifier caught a real ordering defect against SPEC 1 of B223 and a mutation-surviving lambda, and the fix round cost less than the build and closed both with tests
+- NARRATIVE: Went wrong: the build missed the order SPEC 1 states verbatim ('read as cut_milestone_branch.py reads it'), which cost a second round, 3.09 USD and 442 s of remediation and re-verification, 45 % of the wave's cost
+- NARRATIVE: Gap: the git-diff-stat collector reports 0 files, 0 insertions and 0 deletions while the preflight of PR #266 reports 9 files and 461 lines; the STATISTIC lines files, insertions and deletions of this report are therefore not a measure of the wave
+- NARRATIVE: Next wave should change: have git-diff-stat measure the wave branch against its base at the time of the report, and have the build check each SPEC that names a reference file against the order of that file before opening the PR
+- REASON: No task of brigade_w10 was parked or failed: the ledger records 4 runs, all outcome done, and B223 reached merged
+- TESTER_STEP: B223, event declared: on a scratch project registered with brigade, with an active milestone whose integration branch exists, push a commit to main, run brigade tick --once, then read the ledger: one milestone.rebased event carries project, milestone, branch, before and after (two different commit hashes, after being the head of the pushed milestone branch), waves (the open wave branches rebased in the same tick) and login (the GitHub account of the CLI, as on the milestone.branch_cut event of the same milestone)
+- TESTER_STEP: B223, appended only on a clean rebase: run brigade tick --once again without moving main and check no new milestone.rebased appears (head left where it was); then commit a conflicting change to the same lines on main and on the milestone branch, run the tick, and check no milestone.rebased is appended while the run launched for the conflict records its own outcome; the case of a worktree held by a live run is proven by the unit tests only
+- TESTER_STEP: B223, read back: run brigade ledger on that project and check its overview counts milestone.rebased among the events, with the count matching the number of clean rebases performed above, and that the event is listed among the declared events rather than as unknown
+- TESTER_STEP: B223, tests: run python3 -m unittest discover -s tests/unit from the repository root and check it passes, including test_should_rebase_no_branch_when_the_login_of_the_cli_cannot_be_read and test_should_record_the_rebase_of_the_milestone_branch_of_a_forge_with_the_login_of_the_cli; check tests/cli has no new flow for milestone.rebased
+- SAMPLING: brigade/waves/rebase_milestone_branches.py, around line 151 and the read of the login moved by 15406d75: check the login is now read after main is located and before any rebase or push, so a failure to read it leaves no branch rebased without its event
+- SAMPLING: brigade/commands/tick.py, around line 566, the read_cli_login lambda passed to the rebase, with the tick test on a GitHub project that now executes it: check the test fails if the lambda returns a constant
+- SAMPLING: brigade/commands/tick.py:_rebase_milestone, the three cases that append nothing (conflict, live run holding the worktree, head unchanged): check each returns before the append rather than appending a partial event

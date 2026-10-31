@@ -13704,7 +13704,8 @@ TASK B222
 TASK B223
 	TITLE "The tick records milestone.rebased in the ledger when it rebases the branch of a"
 		+ "milestone onto the main branch without a conflict"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 266
 	TYPE feat
 	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
@@ -13714,19 +13715,28 @@ TASK B223
 		+ "the head of the branch before and after the rebase, waves, the open waves whose branch"
 		+ "was rebased onto it and pushed in the same action, and login, read as"
 		+ "brigade/waves/cut_milestone_branch.py reads it for milestone.branch_cut"
+		IMPL "brigade/ledger/milestone_rebased.py::class MilestoneRebased:"
 	SPEC "brigade/commands/tick.py:_rebase_milestone appends it once"
 		+ "brigade/waves/rebase_milestone_branches.py has rebased the branch of the milestone onto"
 		+ "PROJECT.MAIN without a conflict, pushed it with lease and served the open waves; it"
 		+ "appends nothing on a rebase stopped on a conflict, the run it launches recording its own"
 		+ "outcome, nothing on a branch whose worktree a live run holds, and nothing when the"
 		+ "rebase left the head where it was"
+		IMPL "brigade/commands/tick.py::    rebased = rebase_milestone_branches(runtime, rebase)"
+		IMPL "brigade/waves/rebase_milestone_branches.py::def _rebase_milestone("
 	SPEC "brigade ledger counts milestone.rebased among the events of its overview and reads it"
 		+ "back as every declared event, through brigade/ledger/declared_events.py"
+		IMPL "brigade/ledger/declared_events.py::        MilestoneRebased,"
 	SPEC "tests/unit prove the event read, written and declared, as"
 		+ "tests/unit/ledger/test_milestone_branch_cut.py proves milestone.branch_cut, the executor"
 		+ "appending it after a clean rebase with the heads before and after and the waves rebased,"
 		+ "and appending none on a conflict, none under a live run and none on a head left where it"
 		+ "was; tests/cli gains no flow"
+		IMPL "tests/unit/ledger/test_milestone_rebased.py::class MilestoneRebasedTest("
+		IMPL "tests/unit/waves/test_rebase_milestone_branches.py::class"
+			+ "RebaseMilestoneBranchesRecordedTest("
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_record_the_rebase_of_the_milestone_branch_with_its_heads_before_and_after("
 	RATIONALE "DESC 3 of @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction asks"
 		+ "the executor to record each outcome in the ledger; the RebaseMilestone action of"
 		+ "@TASK.B214 records none, where brigade/commands/tick.py:_rebase_task records"
