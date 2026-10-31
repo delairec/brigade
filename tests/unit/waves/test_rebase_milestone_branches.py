@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
+from brigade.errors import BrigadeError
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.run_process import ProcessRequest
@@ -68,6 +69,10 @@ def _read_login() -> str:
     return "octo-bot"
 
 
+def _fail_to_read_login() -> str:
+    raise BrigadeError("gh api user failed")
+
+
 def _create_project(forge: str) -> Entity:
     return Entity(
         name="shop",
@@ -90,6 +95,7 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         self.heads_after_rebase = {MILESTONE_WORKTREE: REBASED_MILESTONE_HEAD, WAVE_WORKTREE: REBASED_WAVE_HEAD}
         self.rebased_worktrees: set[str] = set()
         self.wave_descent = NOT_AN_ANCESTOR
+        self.read_login = _read_login
         write_ledger(self.root, [CUT_OF_M3, OPEN_WAVE_OF_M3, OPEN_WAVE_OF_NO_MILESTONE])
         self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=NO_WORKTREE)
         self.processes.answer(("git", "worktree", "add", "--quiet", MILESTONE_WORKTREE, MILESTONE_BRANCH))
@@ -140,7 +146,7 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: worktree in self.live_worktrees,
             launch_rebase_run=self.launched.append,
-            read_login=_read_login,
+            read_login=self.read_login,
         )
         return rebase_milestone_branches(self.runtime, rebase)
 
@@ -517,6 +523,17 @@ class RebaseMilestoneBranchesRecordedTest(RebaseMilestoneBranchesTestCase):
 
         # Assert
         self.assertIsNone(rebased)
+
+    def test_should_rebase_no_branch_when_the_login_of_the_cli_cannot_be_read(self):
+        # Arrange
+        self.read_login = _fail_to_read_login
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            self.rebase()
+
+        # Assert
+        self.assertEqual(select_commands_opening_on(self.processes.requests, GIT_REBASE), [])
 
     def test_should_answer_no_rebase_when_the_rebase_left_the_head_of_the_milestone_branch_where_it_was(self):
         # Arrange
