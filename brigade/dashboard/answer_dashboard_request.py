@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
 from brigade.dashboard.render_home import render_home
 from brigade.dashboard.render_inbox_view import render_inbox_view
+from brigade.dashboard.render_runs_fragment import render_runs_fragment
 from brigade.dashboard.route_action import route_action
 from brigade.dashboard.route_change import route_change
 from brigade.dashboard.route_command import CommandRoute, route_command
@@ -31,7 +32,7 @@ BAD_REQUEST = 400
 FORBIDDEN = 403
 NOT_FOUND = 404
 OK = 200
-VIEW_RENDERERS = {"inbox": render_inbox_view, "status": render_home}
+VIEW_RENDERERS = {"inbox": render_inbox_view, "status": render_home, "runs": render_runs_fragment}
 
 
 def _answer_error(status: int, message: str) -> DashboardResponse:

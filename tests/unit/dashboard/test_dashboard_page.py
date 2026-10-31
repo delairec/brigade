@@ -34,3 +34,12 @@ class DashboardPageTest(unittest.TestCase):
         self.assertEqual(collector.inline_scripts, [])
         self.assertEqual(collector.style_elements, [])
         self.assertEqual(collector.inline_attributes, [])
+
+    def test_should_link_every_view_from_its_navigation(self):
+        # Act
+        collector = collect_page_elements()
+
+        # Assert
+        self.assertEqual(
+            collector.view_links, ["#status", "#waves", "#inbox", "#corpus", "#ledger", "#reports", "#runs"]
+        )
