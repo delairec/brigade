@@ -133,6 +133,7 @@ def rebase_milestone_branches(runtime: Runtime, rebase: MilestoneBranchesRebase)
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, project)):
         main_branch = read_project_field(rebase.project, MAIN_FIELD)
         main = locate_forge_branch(runtime.run_process, rebase.project, main_branch, rebase.read_environment)
+        login = rebase.read_login() if is_on_github(rebase.project) else NO_LOGIN
         moved = _rebase_milestone(runtime, rebase, rebase.branch, main)
         rebased_waves = tuple(
             wave.wave
@@ -148,5 +149,5 @@ def rebase_milestone_branches(runtime: Runtime, rebase: MilestoneBranchesRebase)
         before=moved.before,
         after=moved.after,
         waves=rebased_waves,
-        login=rebase.read_login() if is_on_github(rebase.project) else NO_LOGIN,
+        login=login,
     )
