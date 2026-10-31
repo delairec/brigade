@@ -2,9 +2,12 @@ import unittest
 from datetime import UTC, datetime
 
 from brigade.studies.read_live_study_runs import LiveStudyRun
+from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    MergedWave,
+    MilestoneFacts,
     PreflightFailure,
     ProjectFacts,
     RateLimit,
@@ -14,6 +17,7 @@ from brigade.tick.build_snapshot import (
     TaskFacts,
     WaveFacts,
 )
+from brigade.waves.list_candidate_waves import CandidateWave
 from brigade.waves.read_wave_pause import WavePause
 
 
@@ -37,6 +41,7 @@ class SnapshotTest(unittest.TestCase):
                 "live_study_runs": [],
                 "study_runs": 2,
                 "rate_limits": [],
+                "milestones": [],
             },
         )
 
@@ -51,6 +56,83 @@ class SnapshotTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document["rate_limits"], [{"reset": {"hour": "7pm", "timezone": "Europe/Paris"}}, {"reset": None}]
+        )
+
+    def test_should_carry_the_milestones_and_their_pull_request_in_its_document(self):
+        # Arrange
+        milestones = (
+            MilestoneFacts(
+                project="shop",
+                milestone="M4",
+                branch="integration/tides",
+                merged_waves=(MergedWave(wave="shop_w1", pr=77),),
+                open_waves=("shop_w3",),
+                todo=("S5",),
+                behind_main=True,
+                blocked_rebase=BlockedRun(run="20261030T005500Z-2f5135", question="Keep the guard or drop it?"),
+            ),
+            MilestoneFacts(
+                project="shop",
+                milestone="M5",
+                branch="integration/currents",
+                opened_pull_request=90,
+                pull_request=PullRequestFacts(
+                    number=90,
+                    state="open",
+                    checks=(),
+                    review=None,
+                    behind=False,
+                    head="abc123",
+                    base="main",
+                    updated_at=datetime(2026, 10, 18, 11, 0, tzinfo=UTC),
+                ),
+            ),
+        )
+        snapshot = Snapshot(now=datetime(2026, 10, 18, 12, 0, tzinfo=UTC), milestones=milestones)
+
+        # Act
+        document = snapshot.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["milestones"],
+            [
+                {
+                    "project": "shop",
+                    "milestone": "M4",
+                    "branch": "integration/tides",
+                    "merged_waves": [{"wave": "shop_w1", "pr": 77}],
+                    "open_waves": ["shop_w3"],
+                    "todo": ["S5"],
+                    "opened_pull_request": None,
+                    "pull_request": None,
+                    "behind_main": True,
+                    "rebase_run_live": False,
+                    "blocked_rebase": {"run": "20261030T005500Z-2f5135", "question": "Keep the guard or drop it?"},
+                },
+                {
+                    "project": "shop",
+                    "milestone": "M5",
+                    "branch": "integration/currents",
+                    "merged_waves": [],
+                    "open_waves": [],
+                    "todo": [],
+                    "opened_pull_request": 90,
+                    "pull_request": {
+                        "number": 90,
+                        "state": "open",
+                        "checks": [],
+                        "review": None,
+                        "behind": False,
+                        "head": "abc123",
+                        "base": "main",
+                        "updated_at": "2026-10-18T11:00:00Z",
+                    },
+                    "behind_main": False,
+                    "rebase_run_live": False,
+                    "blocked_rebase": None,
+                },
+            ],
         )
 
     def test_should_carry_the_studies_and_their_live_runs_in_its_document(self):
@@ -137,13 +219,20 @@ class SnapshotTest(unittest.TestCase):
                     "reported": False,
                     "integration_pull_request": None,
                     "opened_integration_pull_request": None,
+                    "milestone_branch": None,
+                    "unresolved_threads": 0,
+                    "blocked_rebase": None,
                 }
             ],
         )
 
     def test_should_carry_the_wave_start_policy_and_the_candidates_of_a_project_in_its_document(self):
         # Arrange
-        project = ProjectFacts(name="brigade", slots=4, wave_start="ask", candidates=("B188", "B189"))
+        candidates = (
+            CandidateWave(milestone="M9", tasks=("B188", "B189")),
+            CandidateWave(milestone=None, tasks=("B190",)),
+        )
+        project = ProjectFacts(name="brigade", slots=4, wave_start="ask", candidates=candidates)
         snapshot = Snapshot(now=datetime(2026, 10, 20, 12, 0, tzinfo=UTC), projects=(project,))
 
         # Act
@@ -158,7 +247,10 @@ class SnapshotTest(unittest.TestCase):
                     "slots": 4,
                     "live_runs": [],
                     "wave_start": "ask",
-                    "candidates": ["B188", "B189"],
+                    "candidates": [
+                        {"milestone": "M9", "tasks": ["B188", "B189"]},
+                        {"milestone": None, "tasks": ["B190"]},
+                    ],
                     "merge": "rebase",
                     "review": "verdict",
                     "auto_merge": "integration",
@@ -193,6 +285,23 @@ class WaveFactsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["opened_integration_pull_request"], 184)
+
+    def test_should_carry_the_rebase_run_its_branch_waits_on_a_ruling_from_and_the_question_in_its_document(self):
+        # Arrange
+        wave = WaveFacts(
+            project="brigade",
+            wave="brigade_w9",
+            branch="integration/brigade_w9",
+            blocked_rebase=BlockedRun(run="20261030T080000Z-4eba5e", question="Keep the guard or drop it?"),
+        )
+
+        # Act
+        document = wave.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["blocked_rebase"], {"run": "20261030T080000Z-4eba5e", "question": "Keep the guard or drop it?"}
+        )
 
 
 class TaskFactsTest(unittest.TestCase):

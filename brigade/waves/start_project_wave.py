@@ -1,3 +1,4 @@
+import functools
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,11 +24,14 @@ from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_open_waves import list_open_waves
+from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.name_next_wave import name_next_wave
-from brigade.waves.read_project_tasks import ProjectTasks, read_project_tasks
+from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
+from brigade.waves.read_wave_milestone import read_wave_milestone
 
 TASK_TYPE = "TASK"
+NO_MILESTONE = None
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,7 @@ class WaveStart:
     tasks: tuple[str, ...]
     configuration: Configuration
     read_environment: Callable[[str], dict]
+    read_login: Callable[[], str]
 
 
 def _take_named_tasks(start: WaveStart, tasks: ProjectTasks, open_tasks: dict[str, str]) -> tuple[str, ...]:
@@ -75,17 +80,46 @@ def _find_branch_anywhere(runtime: Runtime, start: WaveStart, project: Entity, b
     return find_remote_branch(runtime.run_process, remote_branch)
 
 
-def _cut_missing_branches(runtime: Runtime, start: WaveStart, project: Entity) -> None:
+def _demand_base(start: WaveStart, project: Entity, tasks: ProjectTasks, wave: WaveStarted) -> WaveBaseDemand:
+    return WaveBaseDemand(
+        project=project,
+        milestone=read_wave_milestone(wave.wave, (tasks.by_name[task] for task in wave.tasks)),
+        root=tasks.root,
+        read_environment=start.read_environment,
+        read_login=start.read_login,
+    )
+
+
+def _select_wave_tasks(
+    wave: WaveStarted, tasks: ProjectTasks, read_main_tasks: Callable[[], ProjectTasks]
+) -> ProjectTasks:
+    if all(task in tasks.by_name for task in wave.tasks):
+        return tasks
+    return read_main_tasks()
+
+
+def _cut_missing_branches(
+    runtime: Runtime, start: WaveStart, tasks: ProjectTasks, reading: ProjectTasksReading
+) -> None:
+    read_main_tasks = functools.cache(lambda: read_project_tasks(runtime, reading, NO_MILESTONE))
     for wave in list_open_waves(read_ledger(runtime.paths.state_root).entries, start.project):
-        cut = WaveBranchCut(project=project, branch=wave.branch, read_environment=start.read_environment)
+        cut = WaveBranchCut(project=reading.project, branch=wave.branch, read_environment=start.read_environment)
         if is_wave_branch_missing(runtime.run_process, cut):
-            cut_wave_branch(runtime.run_process, cut)
+            wave_tasks = _select_wave_tasks(wave, tasks, read_main_tasks)
+            base = locate_wave_base(runtime, _demand_base(start, reading.project, wave_tasks, wave))
+            cut_wave_branch(runtime.run_process, cut, base)
 
 
-def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:
+def start_project_wave(runtime: Runtime, start: WaveStart, milestone: str | None) -> dict:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), start.project)
-    tasks = read_project_tasks(runtime, start.configuration, project, start.read_environment)
+    tasks_reading = ProjectTasksReading(
+        configuration=start.configuration,
+        project=project,
+        read_environment=start.read_environment,
+        entries=read_ledger(runtime.paths.state_root).entries,
+    )
+    tasks = read_project_tasks(runtime, tasks_reading, milestone)
 
     def name_wave(reading: LedgerReading) -> WaveStarted:
         chosen = _compose_tasks(runtime, start, tasks, reading)
@@ -96,5 +130,5 @@ def start_project_wave(runtime: Runtime, start: WaveStart) -> dict:
         return WaveStarted(wave=wave, project=start.project, branch=branch, tasks=chosen)
 
     started = append_derived_event(runtime.paths, runtime.now, name_wave)
-    _cut_missing_branches(runtime, start, project)
+    _cut_missing_branches(runtime, start, tasks, tasks_reading)
     return {key: started[key] for key in ("wave", "project", "branch", "tasks")}

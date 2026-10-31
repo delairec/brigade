@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from brigade.tick.build_snapshot import PreflightFailure
+from brigade.tick.build_snapshot import MergedWave, PreflightFailure
 
 
 @dataclass(frozen=True)
@@ -109,8 +109,17 @@ class ResumeTaskRun:
 
 
 @dataclass(frozen=True)
+class RebaseMilestone:
+    project: str
+    milestone: str
+    branch: str
+    waves: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class StartWave:
     project: str
+    milestone: str | None
 
 
 @dataclass(frozen=True)
@@ -134,11 +143,34 @@ class OpenIntegrationPullRequest:
 
 
 @dataclass(frozen=True)
+class MergeWavePullRequest:
+    project: str
+    wave: str
+    pr: int
+    method: str
+
+
+@dataclass(frozen=True)
 class CloseWave:
     wave: str
     pr: int
     project: str
     milestones: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OpenMilestonePullRequest:
+    project: str
+    milestone: str
+    branch: str
+    waves: tuple[MergedWave, ...]
+
+
+@dataclass(frozen=True)
+class CloseMilestone:
+    project: str
+    milestone: str
+    pr: int
 
 
 @dataclass(frozen=True)

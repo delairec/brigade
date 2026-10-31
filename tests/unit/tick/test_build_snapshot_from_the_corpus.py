@@ -18,6 +18,7 @@ from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
+from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -27,6 +28,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    ForgeReaders,
     LiveRun,
     PreflightFailure,
     ProjectFacts,
@@ -38,6 +40,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
+from brigade.waves.list_candidate_waves import CandidateWave
 from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
@@ -108,6 +111,10 @@ def answer_unreadable_tree(ref: str) -> dict:
 
 def _read_forge_environment(slot: str) -> dict:
     return FORGE_ENVIRONMENT
+
+
+def _count_no_thread(repository: str, number: int) -> int:
+    return 0
 
 
 class PullRequestReaderDouble:
@@ -228,7 +235,9 @@ class BuildSnapshotTestCase(unittest.TestCase):
         runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            snapshot = build_snapshot(runtime, Configuration(), self.reader, _read_forge_environment)
+            snapshot = build_snapshot(
+                runtime, Configuration(), ForgeReaders(self.reader, _read_forge_environment, _count_no_thread)
+            )
         return snapshot, stderr.getvalue()
 
 
@@ -788,7 +797,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 name="shop",
                 slots=2,
                 awaits_check_runs=False,
-                candidates=("B5",),
+                candidates=(CandidateWave(milestone=None, tasks=("B5",)),),
                 merge="squash",
                 review="approval",
                 auto_merge="none",
@@ -857,7 +866,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     name="shop",
                     slots=2,
                     awaits_check_runs=False,
-                    candidates=("B5",),
+                    candidates=(CandidateWave(milestone=None, tasks=("B5",)),),
                     merge="squash",
                     review="approval",
                     auto_merge="none",
@@ -1223,7 +1232,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     live_runs=(),
                     awaits_check_runs=False,
                     wave_start="auto",
-                    candidates=("B5",),
+                    candidates=(CandidateWave(milestone=None, tasks=("B5",)),),
                     merge="squash",
                     review="approval",
                     auto_merge="none",
@@ -1746,6 +1755,139 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertIsNone(snapshot.waves[0].tasks[0].blocked_run)
+
+
+BLOCKED_REBASE_MESSAGE = "Keep the guard of plan.py or drop it?\nbrigade-end: blocked"
+WAVE_BRANCH_RUN = None
+PAUSE_ON_THE_BLOCKED_REBASE_RUN = WavePaused(
+    wave="w1", reason="run 20261019T083000Z-4eba5e blocked: Keep the guard of plan.py or drop it?", resume_at=None
+)
+
+
+class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+
+    def record_rebase_run(self, task: str | None, outcome: str) -> None:
+        write_run(
+            self.paths.state_root,
+            {**create_run_record("20261019T083000Z-4eba5e", "w1", task), "slot": "rebase"},
+            None,
+        )
+        self.record(
+            5,
+            dataclasses.replace(
+                create_run_finished("20261019T083000Z-4eba5e", wave="w1", task=task, outcome=outcome),
+                message=BLOCKED_REBASE_MESSAGE,
+            ),
+        )
+
+    def test_should_carry_the_question_of_the_last_rebase_run_of_the_wave_branch_when_it_ended_blocked(self):
+        for case, task, outcome, expected in [
+            (
+                "a rebase run of the wave branch blocked",
+                WAVE_BRANCH_RUN,
+                "blocked",
+                BlockedRun(run="20261019T083000Z-4eba5e", question="Keep the guard of plan.py or drop it?"),
+            ),
+            ("a rebase run of the wave branch delivered", WAVE_BRANCH_RUN, "done", None),
+            ("a rebase run of a task of the wave blocked", "B1", "blocked", None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record_rebase_run(task, outcome)
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].blocked_rebase, expected)
+
+    def test_should_carry_no_blocked_rebase_run_once_the_wave_is_paused_on_it(self):
+        # Arrange
+        self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
+        self.record(4, PAUSE_ON_THE_BLOCKED_REBASE_RUN)
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].blocked_rebase)
+
+    def test_should_carry_no_blocked_rebase_run_once_the_wave_paused_on_it_is_resumed(self):
+        # Arrange
+        self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
+        self.record(4, PAUSE_ON_THE_BLOCKED_REBASE_RUN)
+        self.record(3, WaveResumed(wave="w1", reason="user"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].blocked_rebase)
+
+    def test_should_carry_the_blocked_rebase_run_past_a_quota_pause_of_the_wave_and_its_resume(self):
+        # Arrange
+        self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
+        self.record(4, WavePaused(wave="w1", reason="quota", resume_at="2026-10-19T10:00:00Z"))
+        self.record(3, WaveResumed(wave="w1", reason="quota"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].blocked_rebase,
+            BlockedRun(run="20261019T083000Z-4eba5e", question="Keep the guard of plan.py or drop it?"),
+        )
+
+    def test_should_carry_no_blocked_rebase_run_while_the_rebase_run_of_the_wave_branch_has_not_finished(self):
+        # Arrange
+        write_run(
+            self.paths.state_root,
+            {**create_run_record("20261019T083000Z-4eba5e", "w1", WAVE_BRANCH_RUN), "slot": "rebase"},
+            None,
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].blocked_rebase)
+
+    def test_should_carry_no_blocked_rebase_run_from_a_blocked_run_of_another_slot_on_the_wave_branch(self):
+        # Arrange
+        write_run(self.paths.state_root, create_run_record("20261019T083000Z-4eba5e", "w1", WAVE_BRANCH_RUN), None)
+        self.record(
+            5,
+            dataclasses.replace(
+                create_run_finished("20261019T083000Z-4eba5e", wave="w1", task=WAVE_BRANCH_RUN, outcome="blocked"),
+                message=BLOCKED_REBASE_MESSAGE,
+            ),
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].blocked_rebase)
+
+    def test_should_carry_the_blocked_rebase_run_when_another_wave_is_paused_after_it(self):
+        # Arrange
+        self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
+        self.record(4, WavePaused(wave="w0", reason="user", resume_at=None))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].blocked_rebase,
+            BlockedRun(run="20261019T083000Z-4eba5e", question="Keep the guard of plan.py or drop it?"),
+        )
 
 
 class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):

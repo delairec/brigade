@@ -7,6 +7,7 @@ from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
+    CloseMilestone,
     CloseWave,
     CutWaveBranch,
     LaunchCheckRepair,
@@ -15,9 +16,12 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeWavePullRequest,
     OpenIntegrationPullRequest,
+    OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
+    RebaseMilestone,
     RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -30,6 +34,8 @@ from brigade.tick.actions import (
 from brigade.tick.build_snapshot import (
     BlockedRun,
     LiveRun,
+    MergedWave,
+    MilestoneFacts,
     PreflightFailure,
     ProjectFacts,
     RateLimit,
@@ -41,6 +47,7 @@ from brigade.tick.build_snapshot import (
     WavePause,
 )
 from brigade.tick.plan import plan
+from brigade.waves.list_candidate_waves import CandidateWave
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 SHOP = ProjectFacts(name="shop", slots=4)
@@ -915,15 +922,25 @@ class PlanForgeAccountPauseTest(unittest.TestCase):
         self.assertEqual(actions, (PauseWave(wave="shop_w1", reason="forge_account", resume_at=None),))
 
 
-PROJECT_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, candidates=("S7", "S8"))
-PROJECT_ASKING_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, wave_start="ask", candidates=("S7", "S8"))
+CANDIDATE_WAVES = (
+    CandidateWave(milestone="M9", tasks=("S7",)),
+    CandidateWave(milestone="M10", tasks=("S8",)),
+    CandidateWave(milestone=None, tasks=("S9",)),
+)
+PROJECT_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, candidates=CANDIDATE_WAVES)
+PROJECT_ASKING_WITH_CANDIDATES = ProjectFacts(name="shop", slots=4, wave_start="ask", candidates=CANDIDATE_WAVES)
 PROJECT_WITHOUT_CANDIDATES = ProjectFacts(name="shop", slots=4)
+ONE_START_PER_CANDIDATE_WAVE = (
+    StartWave(project="shop", milestone="M9"),
+    StartWave(project="shop", milestone="M10"),
+    StartWave(project="shop", milestone=None),
+)
 
 
 class PlanWaveStartTest(unittest.TestCase):
-    def test_should_start_a_wave_only_under_auto_and_with_a_candidate(self):
+    def test_should_start_a_wave_per_milestone_only_under_auto_and_with_a_candidate(self):
         for case, project, expected in [
-            ("under auto with candidates", PROJECT_WITH_CANDIDATES, (StartWave(project="shop"),)),
+            ("under auto with candidates", PROJECT_WITH_CANDIDATES, ONE_START_PER_CANDIDATE_WAVE),
             ("under ask with candidates", PROJECT_ASKING_WITH_CANDIDATES, ()),
             ("under auto without candidates", PROJECT_WITHOUT_CANDIDATES, ()),
         ]:
@@ -1086,6 +1103,148 @@ class PlanWaveCloseTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=("M4",)),))
+
+
+MILESTONE_BRANCH = "integration/empty-cart"
+WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH = PullRequestFacts(
+    number=77,
+    state="open",
+    checks=(CheckVerdict(name="tests", verdict="success"),),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base=MILESTONE_BRANCH,
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
+)
+MERGE_THE_WAVE_PULL_REQUEST = MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="rebase")
+NO_MILESTONE_BRANCH = None
+NO_UNRESOLVED_THREAD = 0
+ONE_UNRESOLVED_THREAD = 1
+
+
+def create_reported_wave(
+    pull_request: PullRequestFacts, milestone_branch: str | None, unresolved_threads: int
+) -> WaveFacts:
+    return dataclasses.replace(
+        create_wave(TWO_TASKS, {"S3": "merged", "S4": "merged"}),
+        reported=True,
+        opened_integration_pull_request=77,
+        integration_pull_request=pull_request,
+        milestone_branch=milestone_branch,
+        unresolved_threads=unresolved_threads,
+    )
+
+
+class PlanWaveMergeTest(unittest.TestCase):
+    def test_should_merge_the_pull_request_of_a_wave_into_the_branch_of_its_milestone_once_ready(self):
+        # Arrange
+        wave = create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_THE_WAVE_PULL_REQUEST,))
+
+    def test_should_merge_it_with_the_merge_method_of_the_project(self):
+        # Arrange
+        wave = create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_MERGING_BY_SQUASH,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="squash"),))
+
+    def test_should_merge_none_short_of_the_gate(self):
+        # Arrange
+        rows = [
+            (
+                "a check failed",
+                dataclasses.replace(
+                    WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, checks=(CheckVerdict(name="tests", verdict="failure"),)
+                ),
+                NO_UNRESOLVED_THREAD,
+                SHOP,
+            ),
+            (
+                "a check pending",
+                dataclasses.replace(
+                    WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, checks=(CheckVerdict(name="tests", verdict="pending"),)
+                ),
+                NO_UNRESOLVED_THREAD,
+                SHOP,
+            ),
+            ("a review thread unresolved", WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, ONE_UNRESOLVED_THREAD, SHOP),
+            (
+                "not approved under the approval policy",
+                WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
+                NO_UNRESOLVED_THREAD,
+                SHOP_UNDER_APPROVAL,
+            ),
+            (
+                "a project without automatic merge",
+                WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
+                NO_UNRESOLVED_THREAD,
+                SHOP_WITHOUT_AUTO_MERGE,
+            ),
+        ]
+        for case, pull_request, unresolved_threads, project in rows:
+            with self.subTest(case=case):
+                # Arrange
+                wave = create_reported_wave(pull_request, MILESTONE_BRANCH, unresolved_threads)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_close_the_wave_and_merge_nothing_once_its_pull_request_is_merged(self):
+        # Arrange
+        merged = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, state="merged")
+        wave = create_reported_wave(merged, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=()),))
+
+    def test_should_merge_it_approved_under_the_approval_policy(self):
+        # Arrange
+        approved = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, review="approved")
+        wave = create_reported_wave(approved, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_UNDER_APPROVAL,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_THE_WAVE_PULL_REQUEST,))
+
+    def test_should_merge_no_pull_request_whose_base_is_the_main_branch(self):
+        # Arrange
+        into_main = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, base="main")
+        rows = [
+            ("a wave of tasks naming no milestone", into_main, NO_MILESTONE_BRANCH),
+            ("a wave of a milestone", into_main, MILESTONE_BRANCH),
+        ]
+        for case, pull_request, milestone_branch in rows:
+            with self.subTest(case=case):
+                # Arrange
+                wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
 
 
 BODY_FAILURE = PreflightFailure(name="body", findings=("the body names no task",))
@@ -1578,6 +1737,49 @@ PARK_S3_ON_THE_QUESTION = ParkTask(
 )
 
 
+BLOCKED_REBASE_OF_THE_WAVE_BRANCH = BlockedRun(run="20261006T110000Z-4eba5e", question="Keep the guard or drop it?")
+PAUSED_ON_THE_REBASE_QUESTION = WavePause(
+    reason="run 20261006T110000Z-4eba5e blocked: Keep the guard or drop it?", resume_at=None
+)
+
+
+class PlanBlockedRebaseRunOfAWaveBranchTest(unittest.TestCase):
+    def test_should_pause_the_wave_on_the_question_of_its_blocked_rebase_run_and_launch_none_of_its_tasks(self):
+        # Arrange
+        wave = dataclasses.replace(create_wave(ALONE, {}), blocked_rebase=BLOCKED_REBASE_OF_THE_WAVE_BRANCH)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                PauseWave(
+                    wave="shop_w1",
+                    reason="run 20261006T110000Z-4eba5e blocked: Keep the guard or drop it?",
+                    resume_at=None,
+                ),
+            ),
+        )
+
+    def test_should_not_pause_again_a_wave_already_paused(self):
+        # Arrange
+        wave = dataclasses.replace(
+            create_wave(ALONE, {}),
+            blocked_rebase=BLOCKED_REBASE_OF_THE_WAVE_BRANCH,
+            pause=PAUSED_ON_THE_REBASE_QUESTION,
+        )
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
 class PlanBlockedRunParkingTest(unittest.TestCase):
     def test_should_park_on_its_question_a_task_in_fixing_whose_last_run_ended_blocked_whatever_its_rounds(self):
         for case, pull_request, failures, rounds in [
@@ -1820,6 +2022,242 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, ())
+
+
+SHOP_ON_GITHUB = ProjectFacts(name="shop", slots=4, on_github=True)
+MILESTONE_M4_BRANCH = "integration/tides"
+WAVES_OF_M4_MERGED = (MergedWave(wave="shop_w1", pr=77), MergedWave(wave="shop_w2", pr=81))
+NO_WAVE_MERGED = ()
+NO_TASK_TODO = ()
+MILESTONE_PULL_REQUEST = PullRequestFacts(
+    number=90,
+    state="open",
+    checks=(),
+    review=None,
+    behind=False,
+    head=HEAD,
+    base="main",
+    updated_at=PUSHED_WITHIN_THE_MINUTE,
+)
+OPEN_THE_PULL_REQUEST_OF_M4 = OpenMilestonePullRequest(
+    project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, waves=WAVES_OF_M4_MERGED
+)
+
+
+def create_milestone(merged_waves: tuple[MergedWave, ...], todo: tuple[str, ...]) -> MilestoneFacts:
+    return MilestoneFacts(
+        project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, merged_waves=merged_waves, todo=todo
+    )
+
+
+def create_open_wave_of_m4() -> WaveFacts:
+    return dataclasses.replace(
+        create_wave(ALONE, {"S3": "running"}), wave="shop_w3", milestone_branch=MILESTONE_M4_BRANCH
+    )
+
+
+class PlanMilestonePullRequestTest(unittest.TestCase):
+    def test_should_open_the_pull_request_of_a_milestone_once_its_last_wave_is_closed(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (OPEN_THE_PULL_REQUEST_OF_M4,))
+
+    def test_should_open_none_before_a_wave_of_the_milestone_is_closed(self):
+        # Arrange
+        milestone = create_milestone(NO_WAVE_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_while_a_wave_of_the_milestone_is_open(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_open_wave_of_m4(),), projects=(SHOP_ON_GITHUB,), milestones=(milestone,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertNotIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+
+    def test_should_open_none_while_the_ledger_holds_an_open_wave_of_the_milestone(self):
+        # Arrange
+        milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO), open_waves=("shop_w3",))
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_for_a_project_the_snapshot_does_not_hold(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_it_while_a_wave_of_another_milestone_is_open(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        other_wave = dataclasses.replace(create_open_wave_of_m4(), milestone_branch="integration/currents")
+        snapshot = Snapshot(now=NOW, waves=(other_wave,), projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+
+    def test_should_open_it_while_a_wave_of_another_project_is_open_on_a_branch_of_the_same_name(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        wave_of_another_project = dataclasses.replace(create_open_wave_of_m4(), project="reef")
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(wave_of_another_project,),
+            projects=(SHOP_ON_GITHUB, ProjectFacts(name="reef", slots=4)),
+            milestones=(milestone,),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+
+    def test_should_open_none_while_a_task_of_the_milestone_is_todo(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, ("S5",))
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_once_its_pull_request_is_opened(self):
+        # Arrange
+        milestone = dataclasses.replace(
+            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            opened_pull_request=90,
+            pull_request=MILESTONE_PULL_REQUEST,
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_open_none_for_a_project_without_a_forge(self):
+        # Arrange
+        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_close_the_milestone_once_its_pull_request_is_merged(self):
+        # Arrange
+        milestone = dataclasses.replace(
+            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            opened_pull_request=90,
+            pull_request=dataclasses.replace(MILESTONE_PULL_REQUEST, state="merged"),
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M4", pr=90),))
+
+    def test_should_merge_the_pull_request_of_a_milestone_never(self):
+        # Arrange
+        milestone = dataclasses.replace(
+            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            opened_pull_request=90,
+            pull_request=dataclasses.replace(
+                MILESTONE_PULL_REQUEST, checks=(CheckVerdict(name="tests", verdict="success"),), review="approved"
+            ),
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
+BEHIND_MAIN = True
+DESCENDING_FROM_MAIN = False
+RUN_LIVE = True
+NO_RUN_LIVE = False
+NOT_BLOCKED = None
+BLOCKED_REBASE = BlockedRun(run="20261030T005500Z-2f5135", question="Keep the guard of plan.py or drop it?")
+START_OF_M10_AND_NO_MILESTONE = (
+    StartWave(project="shop", milestone="M10"),
+    StartWave(project="shop", milestone=None),
+)
+REBASE_OF_M9 = RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=("shop_w4",))
+
+
+class PlanMilestoneRebaseTest(unittest.TestCase):
+    def test_should_rebase_a_milestone_branch_main_has_outrun_and_start_no_wave_of_it_in_that_round(self):
+        for case, behind_main, rebase_run_live, blocked_rebase, expected in [
+            ("outrun by main", BEHIND_MAIN, NO_RUN_LIVE, NOT_BLOCKED, (REBASE_OF_M9, *START_OF_M10_AND_NO_MILESTONE)),
+            ("descending from main", DESCENDING_FROM_MAIN, NO_RUN_LIVE, NOT_BLOCKED, ONE_START_PER_CANDIDATE_WAVE),
+            ("outrun with a rebase run live", BEHIND_MAIN, RUN_LIVE, NOT_BLOCKED, ONE_START_PER_CANDIDATE_WAVE),
+            (
+                "outrun with a blocked rebase run",
+                BEHIND_MAIN,
+                NO_RUN_LIVE,
+                BLOCKED_REBASE,
+                ONE_START_PER_CANDIDATE_WAVE,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                milestone = MilestoneFacts(
+                    project="shop",
+                    milestone="M9",
+                    branch="integration/delivery",
+                    open_waves=("shop_w4",),
+                    behind_main=behind_main,
+                    rebase_run_live=rebase_run_live,
+                    blocked_rebase=blocked_rebase,
+                )
+                snapshot = Snapshot(now=NOW, projects=(PROJECT_WITH_CANDIDATES,), milestones=(milestone,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
 
 
 class PlanQuotaOfATaskInRepairTest(unittest.TestCase):

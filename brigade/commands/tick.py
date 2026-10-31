@@ -10,12 +10,18 @@ from brigade.collecting.collect_document import CollectionRequest, collect_docum
 from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands._launch_branch_rebase import launch_branch_rebase
+from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
+from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_entities import read_entities
 from brigade.errors import StandingDown, UsageError
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.milestone_closed import MilestoneClosed
+from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_parked import TaskParked
@@ -23,15 +29,20 @@ from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_rebased import TaskRebased
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
+from brigade.ledger.wave_merged import WaveMerged
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
+from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
+from brigade.runs.is_run_live_on import is_run_live_on
 from brigade.runs.read_run_document import read_run_document
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
@@ -44,6 +55,7 @@ from brigade.studies.start_study_run import start_study_run
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
+from brigade.system.ask_review_threads import ReviewThreadsQuery, ask_review_threads
 from brigade.system.collector_places import locate_collectors
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
@@ -55,6 +67,7 @@ from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
+    CloseMilestone,
     CloseWave,
     CollectCheckRuns,
     CollectReviewThreads,
@@ -65,9 +78,12 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeWavePullRequest,
     OpenIntegrationPullRequest,
+    OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
+    RebaseMilestone,
     RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -78,7 +94,7 @@ from brigade.tick.actions import (
     StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
-from brigade.tick.build_snapshot import build_snapshot
+from brigade.tick.build_snapshot import ForgeReaders, Snapshot, build_snapshot
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
@@ -94,11 +110,17 @@ from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pul
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
 from brigade.waves.find_wave_started import find_wave_started
+from brigade.waves.locate_project_main import locate_project_main
+from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
+from brigade.waves.prepare_wave_tree import prepare_wave_tree
+from brigade.waves.read_wave_milestone import read_wave_milestone
+from brigade.waves.rebase_milestone_branches import MilestoneBranchesRebase, rebase_milestone_branches
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
+TASK_TYPE = "TASK"
 VERIFY_PROCEDURE = "verify-pr"
 REMEDIATE_PROCEDURE = "remediate-pr"
 REMEDIATE_SLOT = "remediate"
@@ -379,7 +401,9 @@ def _count_review_rounds(runtime: Runtime, action: MergePullRequest) -> int:
     )
 
 
-def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: MergePullRequest) -> None:
+def _merge_on_the_forge(
+    runtime: Runtime, configuration: Configuration, action: MergePullRequest | MergeWavePullRequest
+) -> str:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     project = find_project(read_projects(runtime), action.project)
@@ -393,6 +417,16 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
         },
         runtime,
     )
+    return login
+
+
+def _merge_wave_pull_request(runtime: Runtime, configuration: Configuration, action: MergeWavePullRequest) -> None:
+    login = _merge_on_the_forge(runtime, configuration, action)
+    append_event(runtime.paths, runtime.now, WaveMerged(wave=action.wave, pr=action.pr, login=login))
+
+
+def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: MergePullRequest) -> None:
+    login = _merge_on_the_forge(runtime, configuration, action)
     append_event(
         runtime.paths,
         runtime.now,
@@ -408,17 +442,47 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
     _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
 
 
+def _find_started_wave(runtime: Runtime, wave: str) -> WaveStarted:
+    return find_wave_started(tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), wave)
+
+
+def _locate_wave_base(runtime: Runtime, configuration: Configuration, started: WaveStarted, root: Path) -> str:
+    tasks = {task.name: task for task in read_entities(runtime.run_process, root, TASK_TYPE)}
+    demand = WaveBaseDemand(
+        project=find_project(read_projects(runtime), started.project),
+        milestone=read_wave_milestone(started.wave, (tasks[task] for task in started.tasks)),
+        root=root,
+        read_environment=_cache_forge_environment(runtime, configuration),
+        read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
+    )
+    return locate_wave_base(runtime, demand)
+
+
+def _locate_open_wave_base(runtime: Runtime, configuration: Configuration, wave: str) -> str:
+    started = _find_started_wave(runtime, wave)
+    root = prepare_wave_tree(runtime, configuration, started).root
+    return _locate_wave_base(runtime, configuration, started, root)
+
+
+def _locate_missing_wave_base(runtime: Runtime, configuration: Configuration, wave: str) -> str:
+    started = _find_started_wave(runtime, wave)
+    project = find_project(read_projects(runtime), started.project)
+    main = locate_project_main(runtime.run_process, project, _cache_forge_environment(runtime, configuration))
+    query = argparse.Namespace(project=project.name, ref=main, worktree=None)
+    return _locate_wave_base(runtime, configuration, started, prepare_project_tree(query, configuration, runtime).root)
+
+
 def _open_integration_pull_request(
     runtime: Runtime, configuration: Configuration, action: OpenIntegrationPullRequest
 ) -> None:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     project = find_project(read_projects(runtime), action.project)
-    main = read_project_field(project, MAIN_FIELD)
+    base = _locate_open_wave_base(runtime, configuration, action.wave)
     repository = read_project_field(project, PATH_FIELD)
     query = PullRequestQuery(repository=repository, branch=action.branch, environment=environment)
     found = ask_pull_request(forge, FORGE_NAME, query, runtime)
-    if found is not None and found.state == OPEN_PULL_REQUEST and found.base == main:
+    if found is not None and found.state == OPEN_PULL_REQUEST and found.base == base:
         append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=found.number, login=UNKNOWN_OPENER))
         return
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
@@ -426,10 +490,10 @@ def _open_integration_pull_request(
     opened = forge.open_pull_request(
         {
             "repository": repository,
-            "base": main,
+            "base": base,
             "branch": action.branch,
-            "title": f"chore(wave): merge the wave {action.wave} into {main}",
-            "body": f"Integrates the wave {action.wave} of @PROJECT.{action.project} into {main}: {tasks}.",
+            "title": f"chore(wave): merge the wave {action.wave} into {base}",
+            "body": f"Integrates the wave {action.wave} of @PROJECT.{action.project} into {base}: {tasks}.",
             "milestone": NO_MILESTONE,
             "environment": environment,
         },
@@ -438,14 +502,68 @@ def _open_integration_pull_request(
     append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=opened["number"], login=login))
 
 
+def _open_milestone_pull_request(
+    runtime: Runtime, configuration: Configuration, action: OpenMilestonePullRequest
+) -> None:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    project = find_project(read_projects(runtime), action.project)
+    main = read_project_field(project, MAIN_FIELD)
+    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+    waves = ", ".join(f"{merged.wave} #{merged.pr}" for merged in action.waves)
+    opened = forge.open_pull_request(
+        {
+            "repository": read_project_field(project, PATH_FIELD),
+            "base": main,
+            "branch": action.branch,
+            "title": f"chore(milestone): merge the milestone {action.milestone} into {main}",
+            "body": f"Merges the milestone {action.milestone} of @PROJECT.{action.project} into {main},"
+            f" its waves merged: {waves}.",
+            "milestone": NO_MILESTONE,
+            "environment": environment,
+        },
+        runtime,
+    )
+    append_event(
+        runtime.paths,
+        runtime.now,
+        MilestonePrOpened(project=action.project, milestone=action.milestone, pr=opened["number"], login=login),
+    )
+
+
+def _close_milestone(runtime: Runtime, action: CloseMilestone) -> None:
+    append_event(
+        runtime.paths, runtime.now, MilestoneClosed(project=action.project, milestone=action.milestone, pr=action.pr)
+    )
+
+
 def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
     return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
 
 
 def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
     read_environment = _cache_forge_environment(runtime, configuration)
-    start = WaveStart(project=action.project, tasks=(), configuration=configuration, read_environment=read_environment)
-    start_project_wave(runtime, start)
+    start = WaveStart(
+        project=action.project,
+        tasks=(),
+        configuration=configuration,
+        read_environment=read_environment,
+        read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
+    )
+    start_project_wave(runtime, start, action.milestone)
+
+
+def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: RebaseMilestone) -> None:
+    rebase = MilestoneBranchesRebase(
+        project=find_project(read_projects(runtime), action.project),
+        branch=action.branch,
+        waves=action.waves,
+        worktree_root=configuration.worktree_root,
+        read_environment=_cache_forge_environment(runtime, configuration),
+        is_run_live_on=lambda worktree: is_run_live_on(runtime.paths.state_root, worktree, is_recorded_process_alive),
+        launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
+    )
+    rebase_milestone_branches(runtime, rebase)
 
 
 def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: CutWaveBranch) -> None:
@@ -454,7 +572,7 @@ def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: Cut
         branch=action.branch,
         read_environment=_cache_forge_environment(runtime, configuration),
     )
-    cut_wave_branch(runtime.run_process, cut)
+    cut_wave_branch(runtime.run_process, cut, _locate_missing_wave_base(runtime, configuration, action.wave))
 
 
 def _park_task(runtime: Runtime, action: ParkTask) -> None:
@@ -512,6 +630,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
+        MergeWavePullRequest: lambda action: _merge_wave_pull_request(runtime, configuration, action),
         LaunchTask: lambda action: _launch_task(runtime, configuration, action),
         LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
         LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
@@ -523,11 +642,14 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
         ),
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
+        RebaseMilestone: lambda action: _rebase_milestone(runtime, configuration, action),
         StartWave: lambda action: _start_wave(runtime, configuration, action),
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: _report_wave(runtime, action),
         CloseWave: lambda action: _close_wave(runtime, action),
+        OpenMilestonePullRequest: lambda action: _open_milestone_pull_request(runtime, configuration, action),
+        CloseMilestone: lambda action: _close_milestone(runtime, action),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
     }
@@ -544,23 +666,57 @@ def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Cal
     )
 
 
+def _follow_review_threads(runtime: Runtime, configuration: Configuration) -> Callable[[str, int], int]:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    read_environment = functools.cache(lambda: read_forge_environment(configuration, CLI_KEY, runtime))
+    return lambda repository, number: len(
+        ask_review_threads(
+            forge,
+            FORGE_NAME,
+            ReviewThreadsQuery(repository=repository, number=number, environment=read_environment()),
+            runtime,
+        )
+    )
+
+
+def _read_the_forge(runtime: Runtime, configuration: Configuration) -> ForgeReaders:
+    return ForgeReaders(
+        read_pull_request=_follow_pull_requests(runtime, configuration),
+        read_environment=_cache_forge_environment(runtime, configuration),
+        count_unresolved_threads=_follow_review_threads(runtime, configuration),
+    )
+
+
 def _plan_registered_connectors(runtime: Runtime) -> tuple:
     if not runtime.paths.schema_file.exists():
         return ()
     return plan_connectors(read_projects(runtime))
 
 
+def _record_failure(runtime: Runtime, event: TickActionFailed) -> None:
+    sys.stderr.write(f"brigade tick: {event.action} failed: {event.error}\n")
+    append_event(runtime.paths, runtime.now, event)
+
+
+def _name_the_blocked_milestone_rebases(snapshot: Snapshot) -> Snapshot:
+    for milestone in snapshot.milestones:
+        if milestone.behind_main and milestone.blocked_rebase is not None:
+            sys.stderr.write(
+                f"brigade tick: the rebase of {milestone.branch} is blocked: {milestone.blocked_rebase.question}\n"
+            )
+    return snapshot
+
+
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
-    read_pull_request = _follow_pull_requests(runtime, configuration)
-    read_environment = _cache_forge_environment(runtime, configuration)
+    forge = _read_the_forge(runtime, configuration)
     apply = functools.partial(
         apply_actions,
         executors=_list_executors(runtime, configuration),
-        record_failure=lambda event: append_event(runtime.paths, runtime.now, event),
+        record_failure=lambda event: _record_failure(runtime, event),
     )
     outcome = run_rounds(
         Rounds(
-            build_snapshot=lambda: build_snapshot(runtime, configuration, read_pull_request, read_environment),
+            build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
             plan=plan,
             apply=apply,
             cap=ROUND_CAP,
@@ -607,12 +763,7 @@ def _tick_once(runtime: Runtime) -> dict:
 
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    snapshot = build_snapshot(
-        runtime,
-        configuration,
-        _follow_pull_requests(runtime, configuration),
-        _cache_forge_environment(runtime, configuration),
-    )
+    snapshot = build_snapshot(runtime, configuration, _read_the_forge(runtime, configuration))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",

@@ -7,6 +7,7 @@ from brigade.studies.read_schedule import read_schedule
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
+    CloseMilestone,
     CloseWave,
     CutWaveBranch,
     LaunchCheckRepair,
@@ -15,9 +16,12 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeWavePullRequest,
     OpenIntegrationPullRequest,
+    OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
+    RebaseMilestone,
     RebaseTask,
     RecordTaskState,
     RemoveTaskWorktree,
@@ -27,7 +31,16 @@ from brigade.tick.actions import (
     RunPreflight,
     StartWave,
 )
-from brigade.tick.build_snapshot import SETTLED_STATES, ProjectFacts, Snapshot, StudyFacts, TaskFacts, WaveFacts
+from brigade.tick.build_snapshot import (
+    SETTLED_STATES,
+    BlockedRun,
+    MilestoneFacts,
+    ProjectFacts,
+    Snapshot,
+    StudyFacts,
+    TaskFacts,
+    WaveFacts,
+)
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -72,7 +85,7 @@ CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
 
 
 def plan(snapshot: Snapshot) -> tuple:
-    pauses = _plan_pauses(snapshot)
+    pauses = _plan_blocked_rebase_pauses(snapshot) + _plan_pauses(snapshot)
     paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
         pause.wave for pause in pauses if isinstance(pause, PauseWave)
     }
@@ -84,9 +97,13 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_dead_run_parkings(snapshot)
         + _plan_branch_cuts(snapshot)
         + _plan_reports(snapshot)
+        + _plan_wave_merges(snapshot)
         + _plan_closes(snapshot)
         + _plan_integration_pull_requests(snapshot)
+        + _plan_milestone_pull_requests(snapshot)
+        + _plan_milestone_closes(snapshot)
         + _plan_launches(snapshot, paused)
+        + _plan_milestone_rebases(snapshot)
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
     )
@@ -142,6 +159,18 @@ def _plan_pauses(snapshot: Snapshot) -> tuple:
     return (
         tuple(PauseWave(wave=wave.wave, reason=QUOTA_REASON, resume_at=format_instant(resume_at)) for wave in unpaused)
         + stopped_tasks
+    )
+
+
+def _plan_blocked_rebase_pauses(snapshot: Snapshot) -> tuple:
+    return tuple(
+        PauseWave(
+            wave=wave.wave,
+            reason=_describe_blocked_run(wave.blocked_rebase),
+            resume_at=None,
+        )
+        for wave in snapshot.waves
+        if wave.pause is None and wave.blocked_rebase is not None
     )
 
 
@@ -265,7 +294,7 @@ def _decide_blocked_parking(wave: WaveFacts, task: TaskFacts, occupancy: _Occupa
     return ParkTask(
         wave=wave.wave,
         task=task.name,
-        reason=_describe_blocked_run(task),
+        reason=_describe_blocked_run(task.blocked_run),
         blockers=(),
     )
 
@@ -445,13 +474,13 @@ def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
     )
 
 
-def _describe_blocked_run(task: TaskFacts) -> str:
-    return f"run {task.blocked_run.run} blocked: {task.blocked_run.question}"
+def _describe_blocked_run(blocked: BlockedRun) -> str:
+    return f"run {blocked.run} blocked: {blocked.question}"
 
 
 def _describe_dead_run(task: TaskFacts) -> str:
     if task.blocked_run is not None:
-        return _describe_blocked_run(task)
+        return _describe_blocked_run(task.blocked_run)
     if task.last_run is None:
         return RUN_NOT_STARTED_REASON
     return f"{RUN_DEAD_REASON}: {task.last_run}"
@@ -487,6 +516,33 @@ def _plan_reports(snapshot: Snapshot) -> tuple:
     return tuple(ReportWave(wave=wave.wave) for wave in snapshot.waves if _is_settled(wave) and not wave.reported)
 
 
+def _is_wave_pull_request_ready(wave: WaveFacts, project: ProjectFacts, now: datetime) -> bool:
+    pull_request = wave.integration_pull_request
+    return (
+        pull_request is not None
+        and pull_request.state == OPEN_PULL_REQUEST
+        and pull_request.base == wave.milestone_branch
+        and project.auto_merge != NO_AUTO_MERGE
+        and _are_checks_passed(pull_request, project, now)
+        and wave.unresolved_threads == 0
+        and (project.review != APPROVAL_REVIEW or pull_request.review == APPROVED_REVIEW)
+    )
+
+
+def _plan_wave_merges(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    return tuple(
+        MergeWavePullRequest(
+            project=wave.project,
+            wave=wave.wave,
+            pr=wave.integration_pull_request.number,
+            method=projects[wave.project].merge,
+        )
+        for wave in snapshot.waves
+        if _is_wave_pull_request_ready(wave, projects[wave.project], snapshot.now)
+    )
+
+
 def _plan_closes(snapshot: Snapshot) -> tuple:
     return tuple(
         CloseWave(
@@ -520,11 +576,69 @@ def _plan_integration_pull_requests(snapshot: Snapshot) -> tuple:
     )
 
 
-def _plan_wave_starts(snapshot: Snapshot) -> tuple:
+def _is_milestone_pull_request_due(milestone: MilestoneFacts, snapshot: Snapshot, project: ProjectFacts | None) -> bool:
+    return (
+        project is not None
+        and project.on_github
+        and milestone.opened_pull_request is None
+        and bool(milestone.merged_waves)
+        and not milestone.open_waves
+        and not milestone.todo
+        and not any(
+            wave.project == milestone.project and wave.milestone_branch == milestone.branch for wave in snapshot.waves
+        )
+    )
+
+
+def _plan_milestone_pull_requests(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
     return tuple(
-        StartWave(project=project.name)
+        OpenMilestonePullRequest(
+            project=milestone.project,
+            milestone=milestone.milestone,
+            branch=milestone.branch,
+            waves=milestone.merged_waves,
+        )
+        for milestone in snapshot.milestones
+        if _is_milestone_pull_request_due(milestone, snapshot, projects.get(milestone.project))
+    )
+
+
+def _plan_milestone_closes(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CloseMilestone(project=milestone.project, milestone=milestone.milestone, pr=milestone.opened_pull_request)
+        for milestone in snapshot.milestones
+        if milestone.pull_request is not None and milestone.pull_request.state == MERGED_PULL_REQUEST
+    )
+
+
+def _is_rebase_due(milestone: MilestoneFacts) -> bool:
+    return milestone.behind_main and not milestone.rebase_run_live and milestone.blocked_rebase is None
+
+
+def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
+    return tuple(
+        RebaseMilestone(
+            project=milestone.project,
+            milestone=milestone.milestone,
+            branch=milestone.branch,
+            waves=milestone.open_waves,
+        )
+        for milestone in snapshot.milestones
+        if _is_rebase_due(milestone)
+    )
+
+
+def _plan_wave_starts(snapshot: Snapshot) -> tuple:
+    rebasing = {
+        (milestone.project, milestone.milestone) for milestone in snapshot.milestones if _is_rebase_due(milestone)
+    }
+    return tuple(
+        StartWave(project=project.name, milestone=wave.milestone)
         for project in snapshot.projects
-        if project.wave_start == AUTOMATIC_WAVE_START and project.candidates
+        if project.wave_start == AUTOMATIC_WAVE_START
+        for wave in project.candidates
+        if (project.name, wave.milestone) not in rebasing
     )
 
 

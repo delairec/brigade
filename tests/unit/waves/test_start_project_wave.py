@@ -55,10 +55,35 @@ OPEN_WAVE = {
     "tasks": ["S7"],
 }
 EVERY_STARTABLE_TASK = ()
+NO_MILESTONE = None
+MILESTONE_SHA = "7d3e1b0"
+MILESTONE_BRANCH = "integration/milestone-integration-branch"
+TASKS_OF_A_MILESTONE = {
+    "S7": (("STATUS", "todo"),),
+    "S20": (("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M9")),
+    "S21": (("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M9")),
+}
+TASKS_AT_THE_MILESTONE_BRANCH = {
+    "S20": (("STATUS", "implemented"), ("MILESTONE", "@MILESTONE.M9")),
+    "S21": (("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M9"), ("AFTER", "@TASK.S20")),
+}
+CUT_OF_M9 = {
+    "schema_version": 1,
+    "ts": "2026-10-14T09:00:00Z",
+    "event": "milestone.branch_cut",
+    "project": "shop",
+    "milestone": "M9",
+    "branch": MILESTONE_BRANCH,
+    "login": None,
+}
 
 
 def _read_forge_environment(slot: str) -> dict:
     return FORGE_ENVIRONMENT
+
+
+def _read_login() -> str:
+    return "octo-bot"
 
 
 class StartProjectWaveTestCase(unittest.TestCase):
@@ -107,11 +132,15 @@ class StartProjectWaveTestCase(unittest.TestCase):
         argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", f"refs/heads/integration/{wave}")
         self.processes.answer(argv, exit_code=exit_code)
 
-    def start_wave(self, tasks: tuple[str, ...]) -> dict:
+    def start_wave(self, tasks: tuple[str, ...], milestone: str | None = NO_MILESTONE) -> dict:
         start = WaveStart(
-            project="shop", tasks=tasks, configuration=Configuration(), read_environment=_read_forge_environment
+            project="shop",
+            tasks=tasks,
+            configuration=Configuration(),
+            read_environment=_read_forge_environment,
+            read_login=_read_login,
         )
-        return start_project_wave(self.runtime, start)
+        return start_project_wave(self.runtime, start, milestone)
 
     def read_events(self) -> list[dict]:
         return list(
@@ -387,6 +416,140 @@ class StartProjectWaveOnTheGithubForgeTest(StartProjectWaveTestCase):
 
         # Assert
         self.assertNotIn(("git", "push", "--quiet", "origin", "integration/shop_w1"), self.processes.list_argvs())
+
+
+class StartProjectWaveOfTheTasksOfAMilestoneTest(StartProjectWaveTestCase):
+    def setUp(self):
+        super().setUp()
+        tree = self.root / "cache" / "refs" / "shop" / MAIN_SHA
+        self.processes.answer_entities(tree, "TASK", TASKS_OF_A_MILESTONE)
+        for task in TASKS_OF_A_MILESTONE:
+            self.processes.answer_json(("awawa", "refs", f"@TASK.{task}", "--json", str(tree)), NO_INCOMING_REFERENCE)
+        self.processes.answer_entity(tree, "MILESTONE", "M9", (("TITLE", "Milestone integration branch"),))
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{MILESTONE_BRANCH}"), exit_code=BRANCH_NOT_FOUND
+        )
+        self.processes.answer(("git", "branch", "--quiet", MILESTONE_BRANCH, "main"))
+        self.processes.answer(("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH))
+        milestone_tree = self.root / "cache" / "refs" / "shop" / MILESTONE_SHA
+        milestone_tree.mkdir(parents=True)
+        for ref in (MILESTONE_BRANCH, f"origin/{MILESTONE_BRANCH}"):
+            self.processes.answer(
+                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"),
+                stdout=f"{MILESTONE_SHA}\n",
+            )
+        self.processes.answer_entities(milestone_tree, "TASK", TASKS_AT_THE_MILESTONE_BRANCH)
+        for task in TASKS_AT_THE_MILESTONE_BRANCH:
+            argv = ("awawa", "refs", f"@TASK.{task}", "--json", str(milestone_tree))
+            self.processes.answer_json(argv, NO_INCOMING_REFERENCE)
+        self.processes.answer_entity(milestone_tree, "MILESTONE", "M9", (("TITLE", "Milestone integration branch"),))
+
+    def test_should_compose_the_wave_of_a_milestone_from_the_tasks_at_the_branch_the_ledger_records(self):
+        # Arrange
+        write_ledger(self.root, [OPEN_WAVE, CUT_OF_M9])
+        self.answer_local_branch("shop_w1", 0)
+
+        # Act
+        started = self.start_wave(EVERY_STARTABLE_TASK, "M9")
+
+        # Assert
+        self.assertEqual(started["tasks"], ["S21"])
+
+    def test_should_cut_the_branch_of_the_milestone_from_the_main_branch_then_the_wave_branch_from_it(self):
+        # Act
+        self.start_wave(("S20", "S21"), "M9")
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH),
+            [
+                ("git", "branch", "--quiet", "integration/shop_w1", "main"),
+                ("git", "branch", "--quiet", MILESTONE_BRANCH, "main"),
+                ("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH),
+            ],
+        )
+
+    def test_should_record_the_cut_of_the_branch_of_the_milestone(self):
+        # Act
+        self.start_wave(("S20", "S21"), "M9")
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[-1],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "milestone.branch_cut",
+                "project": "shop",
+                "milestone": "M9",
+                "branch": MILESTONE_BRANCH,
+                "login": None,
+            },
+        )
+
+    def test_should_cut_the_branch_of_the_next_wave_from_the_branch_the_ledger_records(self):
+        # Arrange
+        write_ledger(self.root, [OPEN_WAVE, CUT_OF_M9])
+        self.answer_local_branch("shop_w1", 0)
+
+        # Act
+        self.start_wave(("S21",), "M9")
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH),
+            [("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH)],
+        )
+
+    def test_should_cut_again_the_branch_of_an_open_wave_whose_tasks_the_milestone_branch_lacks(self):
+        # Arrange
+        write_ledger(self.root, [OPEN_WAVE, CUT_OF_M9])
+
+        # Act
+        self.start_wave(("S21",), "M9")
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH),
+            [
+                ("git", "branch", "--quiet", "integration/shop_w1", "main"),
+                ("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH),
+            ],
+        )
+
+    def test_should_refuse_the_wave_naming_the_milestone_and_the_branch_the_clone_holds_unrecorded(self):
+        # Arrange
+        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{MILESTONE_BRANCH}"))
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            self.start_wave(("S20",), "M9")
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            f"@MILESTONE.M9: the branch {MILESTONE_BRANCH} exists and no milestone.branch_cut records it",
+        )
+
+    def test_should_cut_the_wave_branch_from_the_milestone_branch_of_the_forge(self):
+        # Arrange
+        self.register_github_project()
+        write_ledger(self.root, [OPEN_WAVE, CUT_OF_M9])
+        self.answer_local_branch("shop_w1", 0)
+        self.answer_remote_branch("shop_w1", 0)
+        self.answer_remote_branch("shop_w2", REMOTE_BRANCH_NOT_FOUND)
+        self.processes.answer(("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH))
+        self.processes.answer(("git", "branch", "--quiet", "integration/shop_w2", f"origin/{MILESTONE_BRANCH}"))
+        self.processes.answer(("git", "push", "--quiet", "origin", "integration/shop_w2"))
+
+        # Act
+        self.start_wave(("S21",), "M9")
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH),
+            [("git", "branch", "--quiet", "integration/shop_w2", f"origin/{MILESTONE_BRANCH}")],
+        )
 
 
 if __name__ == "__main__":

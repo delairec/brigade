@@ -46,10 +46,14 @@ which already has write access to this repository: there is nothing to request.
 ## Bootstrap
 
 From M2, brigade delivers its own milestones through its tick, as it does for any registered project: the timer
-fires `brigade tick --once` every five minutes, the tick starts a wave of the ratified tasks on
-`integration/<wave>`, merges each verified task pull request into that branch, and opens the integration pull
-request into `main`; the milestone is delivered when the user merges it. A session launches no wave and no task
-run by hand.
+fires `brigade tick --once` every five minutes. For each active milestone, the tick cuts its integration branch,
+`integration/<slug of its TITLE>`, rebases it onto `main` once `main` has moved, and the open wave branches of the
+milestone onto it; it starts a wave of the ratified tasks read on that branch, on `integration/<wave>` cut from it,
+merges each verified task pull request into the wave branch, then opens the pull request of the wave into the
+milestone branch and merges it once it is ready. Once every wave of the milestone is merged, the tick opens the pull
+request of the milestone branch into `main`: the milestone is delivered when the user merges it.
+A task naming no milestone runs as before: the user merges the pull request of its wave into `main`.
+A session launches no wave and no task run by hand.
 
 ```
 brigade scheduler install                   # writes the timer; again after every change to the unit templates
@@ -59,7 +63,8 @@ brigade tick --dry-run                      # the snapshot and the plan the next
 ```
 
 The tick runs from the main checkout through `bin/brigade`: a fix to brigade reaches the tick once `main` is pulled
-there. `awawa status TASK --where MILESTONE==@MILESTONE.M2 .` lists the tasks of a milestone.
+there, so a fix the tick itself needs reaches `main` by a pull request of its own, or by a milestone delivered alone.
+`awawa status TASK --where MILESTONE==@MILESTONE.M2 .` lists the tasks of a milestone.
 
 ## Commands
 
