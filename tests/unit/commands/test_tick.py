@@ -3388,10 +3388,15 @@ BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH = {
 
 
 class MilestoneBranchRebasingRunnerDouble(ScriptedProcessRunner):
+    def __init__(self, answers: dict, fallback):
+        super().__init__(answers, fallback)
+        self.head_after_rebase = WAVE_HEAD
+
     def run(self, request):
         record = super().run(request)
         if request.argv == REBASE_OF_THE_MILESTONE_BRANCH and record.exit_code == 0:
             self.answers[MILESTONE_BRANCH_DESCENT] = ProcessAnswer()
+            self.answers[("git", "rev-parse", "HEAD")] = ProcessAnswer(stdout=f"{self.head_after_rebase}\n")
         return record
 
 
@@ -3463,6 +3468,39 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             },
         )
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_record_the_rebase_of_the_milestone_branch_with_its_heads_before_and_after(self):
+        # Arrange
+        self.machine.head_after_rebase = "9b41d08"
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[1]),
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "milestone.rebased",
+                "project": "tidepool",
+                "milestone": "M4",
+                "branch": "integration/tides",
+                "before": "8885daa",
+                "after": "9b41d08",
+                "waves": [],
+                "login": None,
+            },
+        )
+
+    def test_should_record_no_rebase_of_the_milestone_branch_whose_head_the_rebase_left_where_it_was(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8")
+        self.assertNotIn('"event": "milestone.rebased"', ledger)
 
     def test_should_rebase_no_milestone_branch_whose_milestone_is_no_longer_active(self):
         # Arrange
