@@ -3181,19 +3181,16 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 	DESC "a wave is a batch of ratified tasks started together, decided at start by the CLI from"
 		+ "the startable tasks and their overlap; brigade declares no WAVE type in any corpus and a"
 		+ "project corpus need not mention a wave"
-	DESC "a wave lives in the ledger alone: wave.started carries wave, project, branch and tasks,"
-		+ "and the state of a wave is read from its last wave event and the task.state events keyed"
-		+ "by it"
+	DESC "a wave lives in the ledger alone: wave.started carries wave, project and tasks, and the"
+		+ "state of a wave is read from its last wave event and the task.state events keyed by it"
 	DESC "a wave is named <project>_w<n> when it starts, n one above the highest wave number of the"
 		+ "project in the ledger, read and appended under one lock; the name is never changed and"
 		+ "is the key of every wave event"
-	DESC "the branch of a wave is integration/<project>_w<n>, cut from the integration branch of"
-		+ "its milestone, as"
-		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce sets, when"
-		+ "the wave starts, after wave.started is appended: an open wave without its branch has it"
-		+ "cut again, and a branch of the name that no wave.started of the ledger names, as another"
-		+ "machine leaves it, refuses the start"
-		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	DESC "a wave has no branch of its own: the branch of each of its tasks is cut from the"
+		+ "integration branch of its milestone at the launch of the task, as"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
+		+ "sets"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 	DESC "a wave the tick starts takes every candidate, its size unbounded; PROJECT.SLOTS bounds"
 		+ "the live build runs of the project, not the size of a wave"
 	DESC "several waves of a project may be open at once; a task belongs to at most one open wave,"
@@ -3281,6 +3278,11 @@ DECISION AWaveIsABatchOfTasksStartedTogetherAndLivesInTheLedgerAlone
 	SOURCE "SPEC 3 of @TASK.B213, ratified: DESC 8 reads the tasks --task names on the branch of"
 		+ "their milestone and refuses tasks of two milestones, or of one milestone and none"
 		REF @TASK.B213
+	SOURCE "the user's ruling of 2026-11-01,"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
+		+ "DESC 3 loses the branch of wave.started, DESC 5 loses the wave branch, « Plus de branche"
+		+ "de wave »"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 
 DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 	TITLE "the tick runs an active study that is due and not parked, and counts against study_runs"
@@ -3653,18 +3655,19 @@ DECISION AFailedActionIsNotAppliedAgainInTheTickThatSawItFail
 DECISION AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
 	TITLE "on a project of FORGE github, brigade fetches origin/<MAIN> and reads from it the corpus"
 		+ "the planner is given, checks and records the plan on a worktree cut from it, and rebases"
-		+ "the integration branch of a milestone onto it; the candidates of a wave are read and its"
-		+ "branch cut from origin/<the integration branch of the milestone>, fetched the same way;"
-		+ "a project of FORGE none keeps its local branches"
+		+ "the integration branch of a milestone onto it; the candidates of a wave are read and the"
+		+ "branch of each task cut from origin/<the integration branch of the milestone>, fetched"
+		+ "the same way; a project of FORGE none keeps its local branches"
 	STATUS active
 	DESC "the fetch runs with the environment of the cli slot, at each plan context, each plan"
 		+ "record, each rebase of the integration branch of a milestone onto MAIN, each read of the"
-		+ "candidates and each cut of a wave branch; the local MAIN and the checkout of the user"
+		+ "candidates and each cut of a task branch; the local MAIN and the checkout of the user"
 		+ "are never touched"
 	DESC "since @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce the"
-		+ "candidates of a wave are read and its branch cut from origin/<the integration branch of"
-		+ "its milestone>, not from origin/<MAIN>; origin/<MAIN> stays what the plan is recorded"
-		+ "against and what the milestone branch is rebased onto before a wave starts"
+		+ "candidates of a wave are read and the branch of each task cut from origin/<the"
+		+ "integration branch of its milestone>, not from origin/<MAIN>; origin/<MAIN> stays what"
+		+ "the plan is recorded against and what the milestone branch is rebased onto before a wave"
+		+ "starts"
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "plan context reads the corpus from the tree of that commit on both forges, never from the"
 		+ "checkout of the clone, so the planner sees the corpus the plan is recorded against"
@@ -3687,6 +3690,11 @@ DECISION AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
 		+ "and DESC 1 read the candidates and cut the wave branch from the milestone branch, DESC 3"
 		+ "added"
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	SOURCE "the user's ruling of 2026-11-01,"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
+		+ "the TITLE, DESC 1 and DESC 3 read the cut of a task branch where they read the cut of a"
+		+ "wave branch"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 
 DECISION TheFakeClientPlaysAnAgentFromAnExecutableNamedAfterItsRole
 	TITLE "the setting plays of [clients.fake] names a directory whose executable named after the"
@@ -3742,9 +3750,8 @@ DECISION ARehearsalReplaysItsWaveOnceForTheTestsThatReadIt
 		+ "its tests only read what the wave left"
 	STATUS active
 	DESC "WaveRehearser builds the machine, the sandbox and the client, then ticks until the three"
-		+ "tasks are merged, the integration pull request is opened and the report of the wave has"
-		+ "ended; between two ticks it waits for every run to hold its result.json, never on a"
-		+ "delay"
+		+ "tasks are merged and the report of the wave has ended; between two ticks it waits for"
+		+ "every run to hold its result.json, never on a delay"
 	DESC "a test of the rehearsal reads the ledger, the forge or brigade's output and writes"
 		+ "nothing the other tests read; ClassCleanupRegistrar gives the fixture the addCleanup and"
 		+ "fail the awawa replay needs, as class cleanups"
@@ -3762,6 +3769,10 @@ DECISION ARehearsalReplaysItsWaveOnceForTheTestsThatReadIt
 		+ "no test"
 	SOURCE "taken in the delivery of @TASK.B206, pull request 194"
 		REF @TASK.B206
+	SOURCE "the user's ruling of 2026-11-01,"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
+		+ "DESC 1 no longer waits for the pull request of the wave"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 
 DECISION AReaderOfATestDecodesEveryLineWholeAndFiltersNone
 	TITLE "a function of a test module that reads a JSON Lines output decodes every line whole,"
@@ -4297,8 +4308,9 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 	STATUS active
 	DESC "binds @TASK.B210"
 		REF @TASK.B210
-	DESC "brigade rebase context without a pull request reads the task and its wave from the branch"
-		+ "task/<slug>/<task> of the worktree, as brigade task context does"
+	DESC "brigade rebase context without a pull request reads the task from the branch"
+		+ "<prefix>/<id>-<slug> of the worktree, as brigade task context does, and its wave from"
+		+ "the open wave of the ledger that holds the task"
 	DESC "the task stays running while that run lives; a running task with no pull request whose"
 		+ "last run is a rebase run ended done is launched again, not parked as a dead run"
 	DESC "brigade wave requeue compares the entity of the task on both branches only when the main"
@@ -4314,18 +4326,25 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 		REF @TASK.B210
 	SOURCE "the build run of @TASK.B210 on 2026-10-28"
 		REF @TASK.B210
+	SOURCE "the user's ruling of 2026-11-01,"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
+		+ "DESC 2 reads the branch <prefix>/<id>-<slug> where it read task/<slug>/<task>"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 
 DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
-	TITLE "a milestone has one integration branch, named after its title; a wave merges into that"
-		+ "branch, merged by the tick, and the user merges the branch into main once, when every"
-		+ "wave of the milestone is merged into it"
+	TITLE "a milestone has one integration branch, named after its title; each task pull request"
+		+ "merges into that branch, merged by the tick, and the user merges the branch into main"
+		+ "once, when every task of the milestone is merged into it"
 	STATUS active
 	DESC "a milestone has one integration branch, integration/<slug of its TITLE> as DESC 8 derives"
-		+ "it; the pull request of a wave is opened into that branch, never into PROJECT.MAIN"
+		+ "it; the pull request of a task is opened into that branch, never into PROJECT.MAIN, as"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
+		+ "sets"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 	DESC "the integration pull request of @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate"
 		+ "is the milestone's, from its integration branch into PROJECT.MAIN, opened once every"
-		+ "wave of the milestone is merged into that branch and merged by the user alone; a wave is"
-		+ "never merged into PROJECT.MAIN"
+		+ "task of the milestone is merged into that branch and no wave of it is open, and merged"
+		+ "by the user alone; a task of a milestone is never merged into PROJECT.MAIN"
 		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
 	DESC "the candidates of a wave are read on the integration branch of the milestone, not on"
 		+ "PROJECT.MAIN: a task whose AFTER is implemented on that branch alone is startable"
@@ -4355,11 +4374,9 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "needs it and records it in the ledger, which names the branch from then on whatever the"
 		+ "TITLE becomes; a derived name that is the recorded branch of another milestone of the"
 		+ "project, or a branch of that name the ledger does not record, refuses the wave"
-	DESC "the pull request of a wave is merged into the branch of its milestone by the tick, with"
-		+ "PROJECT.MERGE, once the forge shows it ready to merge: open, its checks passed as those"
-		+ "of a task pull request, no review thread of it unresolved and, under POLICY.REVIEW"
-		+ "approval, approved; no verification run is launched on it, each task of the wave having"
-		+ "passed one before its merge into the wave branch"
+	DESC "the pull request of a task is merged into the branch of its milestone by the tick, with"
+		+ "PROJECT.MERGE, on the gate of a task pull request: verified, its checks passed and,"
+		+ "under POLICY.REVIEW approval, approved; no pull request of a wave exists"
 	DESC "several milestones of a project may be active at once, each with its branch and its"
 		+ "waves, none before another: the tick serves their waves in the order of its slots, as it"
 		+ "serves the waves of a project today"
@@ -4541,6 +4558,12 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @TASK.B214
 	SOURCE "the user's ruling of 2026-11-01 on the ticks failing since the merge of #268: « tu te"
 		+ "débrouilles pour fixer tout ça et qu'on en finisse avec m3 »"
+	SOURCE "the user's ruling of 2026-11-01,"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
+		+ "the TITLE, DESC 1, DESC 2 and DESC 9 read the pull request of a task where they read the"
+		+ "pull request of a wave; DESC 11 and DESC 12 await the rulings @TASK.B232 carries"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+		REF @TASK.B232
 
 DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 	TITLE "brigade wave requeue of a parked task whose pull request is open records task.state"
@@ -4596,10 +4619,9 @@ DECISION TheTickReadsTheWavesOfAMilestoneAtItsBranchAndACancelledWaveCountsNeith
 	STATUS active
 	DESC "a closed wave belongs to a milestone when one of its tasks names that MILESTONE in the"
 		+ "corpus at the branch of the milestone; its pull request is the pr of its wave.closed"
-	DESC "an open wave belongs to a milestone when the branch of its milestone, read as the tick"
-		+ "reads it to open the pull request of the wave, is the branch of the milestone, or when"
-		+ "one of its tasks names that MILESTONE in the corpus at the branch of the milestone: the"
-		+ "ledger holds it open even when its branch is missing or its reading failed"
+	DESC "an open wave belongs to a milestone when one of its tasks names that MILESTONE in the"
+		+ "corpus at the branch of the milestone: the ledger holds it open even when its reading"
+		+ "failed"
 	DESC "a cancelled wave is neither closed nor open: it neither opens nor holds back the pull"
 		+ "request of its milestone, and a task it left todo at the branch of the milestone holds"
 		+ "it back as SPEC 1 of @TASK.B215 sets"
@@ -4618,6 +4640,12 @@ DECISION TheTickReadsTheWavesOfAMilestoneAtItsBranchAndACancelledWaveCountsNeith
 		REF @TASK.B215
 	SOURCE "the build run of @TASK.B215, 2026-10-30"
 		REF @TASK.B215
+	SOURCE "the user's ruling of 2026-11-01,"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
+		+ "DESC 2 loses the branch of the milestone read to open the pull request of the wave; DESC"
+		+ "1 awaits the ruling @TASK.B232 carries on what closes a wave"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+		REF @TASK.B232
 
 DECISION TheCheckRepairBriefNamesTheCoverageRemedyOnAFailingCheckWhoseNameHoldsCoverage
 	TITLE "the brief of a check repair tells the coverage check by its name holding coverage, in"
@@ -5050,19 +5078,21 @@ DECISION APatternAnswerIsCheckedAgainstTheFingerprintsTheCollectorsOfItsStudyCol
 DECISION AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMergesItsMilestoneByHand
 	TITLE "on a project of FORGE none a task is ready to merge once the ACCEPTANCE commands of the"
 		+ "project pass on the head of its branch and the prudence verdict kept in the ledger"
-		+ "passes at that head; the tick merges the task into the wave branch and the wave into the"
-		+ "milestone branch with git merge, and the user merges the milestone branch into main with"
-		+ "the command brigade names"
+		+ "passes at that head; the tick merges the task into the milestone branch with git merge,"
+		+ "and the user merges the milestone branch into main with the command brigade names"
 	STATUS active
 	DESC "the readiness of a task of FORGE none is its preflight, the acceptance commands run on"
 		+ "the head of its branch in place of the check runs, then its task.verdict at that head;"
 		+ "no pull request exists, so no review thread and no approval is awaited"
 	DESC "the verdict is a task.verdict event of the ledger, as on GitHub, with no pull request,"
 		+ "and is posted nowhere"
-	DESC "a wave of FORGE none is merged into the branch of its milestone once every task of it is"
-		+ "merged into the wave branch, by git merge with PROJECT.MERGE; DESC 9 of"
+	DESC "a task of FORGE none is merged into the branch of its milestone by git merge with"
+		+ "PROJECT.MERGE, no wave branch standing between, as"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
+		+ "sets; DESC 9 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce reads so"
 		+ "without a forge"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "the merge of the milestone branch into main stays the user's,"
 		+ "@DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate; brigade names the command, git"
@@ -5088,6 +5118,11 @@ DECISION AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMer
 		+ "ensuite git merge vers la wave, puis vers le jalon. Le merge du jalon dans main reste à"
 		+ "l'utilisateur, et brigade lui indique la commande. », against « Acceptance seule » and «"
 		+ "Verdict seul »"
+	SOURCE "the user's ruling of 2026-11-01,"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
+		+ "the TITLE and DESC 3 lose the merge of the task into the wave branch and of the wave"
+		+ "into the milestone branch"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 
 DECISION AStaleBranchIsALocalBranchWhosePullRequestsAreAllMergedOrClosed
 	TITLE "a branch is stale when it is a local branch other than the main branch, the head of at"
@@ -5133,3 +5168,44 @@ DECISION TheVibeAdapterPinsTheRustCliOfVibeAndAnswersNoResume
 	SOURCE "the user's ruling of 2026-11-01 on the question of run 20261101T185054Z-d8a913 of wave"
 		+ "brigade_w20, on @TASK.B108: « (b) VIBE_CLI=rust, sans resume (Recommandé) »"
 		REF @TASK.B108
+
+DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+	TITLE "the branch of a task is <prefix>/<id>-<slug>, the prefix from its TYPE, cut from the"
+		+ "integration branch of its milestone and merged into it by its pull request; a wave is a"
+		+ "batch of tasks of the ledger with no branch of its own"
+	STATUS active
+	DESC "the branch of a task is <prefix>/<id>-<slug>: the prefix derived from its TYPE, feat"
+		+ "giving feature/, fix giving fix/, docs giving docs/; then the full id of the task; then"
+		+ "a slug drawn from its TITLE; feature/B46-<slug>"
+	DESC "the branch of a task is cut from the integration branch of its milestone,"
+		+ "integration/<slug> of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, and its pull"
+		+ "request is opened into that branch"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	DESC "a wave is a batch of tasks of the ledger and nothing more: no branch is cut for a wave"
+		+ "and no pull request of a wave exists; the stage between a task and its milestone"
+		+ "disappears"
+	DESC "binds @TASK.B232, which carries to a ruling what this decision leaves open: the prefix of"
+		+ "the other TYPE values, the form of the slug, the open waves started on a wave branch,"
+		+ "what closes a wave, where the wave report is published, the rebase of a task branch"
+		+ "under a moved milestone branch, the base of a task naming no milestone"
+		REF @TASK.B232
+	REJECTED "the wave branch integration/<project>_w<n> kept, cut from the branch of its"
+		+ "milestone: the user ruled that integration/ names the working branch of a milestone, the"
+		+ "one aimed at main, and that a wave has no branch, « Plus de branche de wave »"
+	REJECTED "task/<wave>/<task> as the name of a task branch: it names no type and ties the branch"
+		+ "to a wave the user removed from the branch model"
+	REJECTED "the number alone after the prefix, feature/46-local-mode: the user chose the full id,"
+		+ "« feature/B46-<slug> »"
+	RATIONALE "the user's words of 2026-11-01: « Y a un autre truc qui va pas c'est que les waves"
+		+ "créent des branches nommée integration alors que integration est censé être la branche"
+		+ "de travail qui vise main »"
+	SOURCE "the user's rulings of 2026-11-01, asked for the name of the wave branch: « En fait non,"
+		+ "ça dépend de la tâche mais la plupart devraient être"
+		+ "feature/<numerodetache>-ce-que-fait-la-tachr »; then « Plus de branche de wave »: « La"
+		+ "branche d'une tâche, <type>/<numéro>-<slug> (feature/46-local-mode, fix/231-…), est"
+		+ "coupée directement du jalon integration/<slug>, et sa PR vise ce jalon. Une wave n'est"
+		+ "plus qu'un lot de tâches dans le ledger, sans branche à elle : l'étage intermédiaire"
+		+ "disparaît. »; then the format « feature/B46-<slug> »: « Le préfixe vient du TYPE de la"
+		+ "tâche (feat donne feature/, fix donne fix/, docs donne docs/…), suivi de l'id complet et"
+		+ "d'un slug tiré du TITLE. »"
