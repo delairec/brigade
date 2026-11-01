@@ -13720,7 +13720,8 @@ TASK B219
 	TITLE "A task behind its wave branch is rebased whatever its repair rounds: a conflicting"
 		+ "rebase launches the run of the rebase slot, and uncommitted changes are taken over"
 		+ "before the rebase"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 280
 	TYPE fix
 	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
