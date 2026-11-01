@@ -62,6 +62,7 @@ class ClaudeCodeProbeTest(unittest.TestCase):
                 "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
                 "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
                 "models": {"deepest": "fable", "deep": "fable", "standard": "opus", "light": "sonnet"},
+                "edit_tools": ["Edit", "Write", "NotebookEdit"],
             },
         )
 
@@ -1072,6 +1073,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                         "timestamp": "2026-10-06T10:00:00.000Z",
                         "content": "Deliver the task B42.",
                         "tool_calls": 0,
+                        "tools": [],
                         "id": None,
                         "usage": None,
                     },
@@ -1080,6 +1082,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                         "timestamp": "2026-10-06T10:00:09.000Z",
                         "content": [{"type": "text", "text": "Done."}],
                         "tool_calls": 0,
+                        "tools": [],
                         "id": None,
                         "usage": None,
                     },
@@ -1131,6 +1134,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                         {"type": "tool_use", "name": "Grep", "input": {}},
                     ],
                     "tool_calls": 2,
+                    "tools": [{"name": "Read", "target": None}, {"name": "Grep", "target": None}],
                     "id": None,
                     "usage": None,
                     "calls": [{"tool": "Read", "input": {}}, {"tool": "Grep", "input": {}}],
@@ -1147,6 +1151,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                             "timestamp": "2026-10-06T10:00:30.000Z",
                             "content": "Make it pass.",
                             "tool_calls": 0,
+                            "tools": [],
                             "id": None,
                             "usage": None,
                         },
@@ -1159,6 +1164,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                             "timestamp": "2026-10-06T10:01:00.000Z",
                             "content": [{"type": "tool_use", "name": "Bash", "input": {}}],
                             "tool_calls": 1,
+                            "tools": [{"name": "Bash", "target": None}],
                             "id": None,
                             "usage": None,
                             "calls": [{"tool": "Bash", "input": {}}],
@@ -1213,6 +1219,12 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                         {"type": "tool_use", "name": "Bash", "input": {"command": "git status"}},
                     ],
                     "tool_calls": 4,
+                    "tools": [
+                        {"name": "Bash", "target": "rm -rf build"},
+                        {"name": "Edit", "target": "/srv/b42/cli.py"},
+                        {"name": "Bash", "target": "git log"},
+                        {"name": "Bash", "target": "git status"},
+                    ],
                     "id": None,
                     "usage": None,
                     "calls": [
@@ -1244,6 +1256,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                         {"type": "tool_result", "content": "On branch main"},
                     ],
                     "tool_calls": 0,
+                    "tools": [],
                     "id": None,
                     "usage": None,
                     "results": [
@@ -1279,6 +1292,38 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
         # Assert
         self.assertEqual(transcripts["messages"][0]["results"], [{"refused": False, "truncated": None}])
 
+    def test_should_name_each_tool_call_of_a_message_by_the_argument_that_identifies_it(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        projects.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z","message":{"role":"assistant",'
+            '"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"/srv/b42/brigade/cli.py"}},'
+            '{"type":"tool_use","name":"Bash","input":{"command":"python3 -m unittest"}},'
+            '{"type":"tool_use","name":"TodoWrite","input":{"todos":[]}}]}}\n'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(
+            transcripts["messages"][0]["tools"],
+            [
+                {"name": "Edit", "target": "/srv/b42/brigade/cli.py"},
+                {"name": "Bash", "target": "python3 -m unittest"},
+                {"name": "TodoWrite", "target": None},
+            ],
+        )
+
     def test_should_answer_the_id_and_the_four_usage_counters_of_each_message(self):
         # Arrange
         projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
@@ -1309,6 +1354,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     "timestamp": "2026-10-06T10:00:09.000Z",
                     "content": [{"type": "text", "text": "Done."}],
                     "tool_calls": 0,
+                    "tools": [],
                     "id": "msg_01",
                     "usage": {
                         "input_tokens": 3,
@@ -1349,6 +1395,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     "timestamp": "2026-10-06T10:00:00.000Z",
                     "content": "Go.",
                     "tool_calls": 0,
+                    "tools": [],
                     "id": None,
                     "usage": None,
                 }
@@ -1385,6 +1432,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     "timestamp": "2026-10-06T10:00:00.000Z",
                     "content": "Go.",
                     "tool_calls": 0,
+                    "tools": [],
                     "id": None,
                     "usage": None,
                 },
@@ -1393,6 +1441,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     "timestamp": "2026-10-06T10:00:09.000Z",
                     "content": [{"type": "text", "text": "Done."}],
                     "tool_calls": 0,
+                    "tools": [],
                     "id": None,
                     "usage": None,
                 },
@@ -1542,6 +1591,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                             "timestamp": "2026-10-06T10:00:30.000Z",
                             "content": "Make it pass.",
                             "tool_calls": 0,
+                            "tools": [],
                             "id": None,
                             "usage": None,
                         }

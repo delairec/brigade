@@ -10,6 +10,7 @@ TRANSCRIPTS_DOCUMENT = {
             "timestamp": "2026-10-08T09:00:00Z",
             "content": "Deliver the task.",
             "tool_calls": 0,
+            "tools": [],
             "id": None,
             "usage": None,
         },
@@ -18,6 +19,7 @@ TRANSCRIPTS_DOCUMENT = {
             "timestamp": None,
             "content": [{"type": "tool_use", "name": "Read"}],
             "tool_calls": 1,
+            "tools": [],
             "id": "msg_01",
             "usage": {
                 "input_tokens": 3,
@@ -35,6 +37,7 @@ TRANSCRIPTS_DOCUMENT = {
                     "timestamp": None,
                     "content": "Make it pass.",
                     "tool_calls": 0,
+                    "tools": [],
                     "id": None,
                     "usage": None,
                 }
@@ -60,6 +63,7 @@ class TranscriptsAnswerTest(unittest.TestCase):
                         "timestamp": "2026-10-08T09:00:00Z",
                         "content": "Deliver the task.",
                         "tool_calls": 0,
+                        "tools": [],
                         "id": None,
                         "usage": None,
                     },
@@ -68,6 +72,7 @@ class TranscriptsAnswerTest(unittest.TestCase):
                         "timestamp": None,
                         "content": [{"type": "tool_use", "name": "Read"}],
                         "tool_calls": 1,
+                        "tools": [],
                         "id": "msg_01",
                         "usage": {
                             "input_tokens": 3,
@@ -85,6 +90,7 @@ class TranscriptsAnswerTest(unittest.TestCase):
                                 "timestamp": None,
                                 "content": "Make it pass.",
                                 "tool_calls": 0,
+                                "tools": [],
                                 "id": None,
                                 "usage": None,
                             }
