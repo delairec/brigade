@@ -19,7 +19,7 @@ TRANSCRIPTS_DOCUMENT = {
             "timestamp": None,
             "content": [{"type": "tool_use", "name": "Read"}],
             "tool_calls": 1,
-            "tools": [],
+            "tools": [{"name": "Read", "target": "/work/b84/README.md"}],
             "id": "msg_01",
             "usage": {
                 "input_tokens": 3,
@@ -72,7 +72,7 @@ class TranscriptsAnswerTest(unittest.TestCase):
                         "timestamp": None,
                         "content": [{"type": "tool_use", "name": "Read"}],
                         "tool_calls": 1,
-                        "tools": [],
+                        "tools": [{"name": "Read", "target": "/work/b84/README.md"}],
                         "id": "msg_01",
                         "usage": {
                             "input_tokens": 3,
