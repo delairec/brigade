@@ -12,12 +12,12 @@ from unittest.mock import ANY
 
 from brigade.adapters.documents import markdown
 from brigade.errors import BrigadeError, CannotWrite
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
-from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
