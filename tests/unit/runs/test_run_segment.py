@@ -1222,6 +1222,19 @@ class RunSegmentFilesTest(unittest.TestCase):
             " brigade-end: blocked when it waits for a ruling.\n",
         )
 
+    def test_should_pass_the_client_the_applied_cap_as_the_budget_of_the_role(self):
+        # Arrange
+        cap_applied_below_the_shipped_budget = RoleBudget(
+            shipped=75, computed=63, applied=63, segments=6, restarts=3, growth=100.0, restart_tokens=200000.0
+        )
+        plan = dataclasses.replace(_create_plan(self.root), budget=cap_applied_below_the_shipped_budget)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(plan.client_adapter.requests["launch-argv"]["role"]["budget"], 63)
+
     def test_should_name_the_directory_of_the_segment_it_cannot_create(self):
         # Arrange
         plan = _create_plan(self.root)
