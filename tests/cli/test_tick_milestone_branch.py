@@ -20,7 +20,8 @@ PULL_REQUEST_OPEN_INTO_MAIN = (
 )
 PULL_REQUEST_THAT_DELIVERED_THE_TASK = (
     '{"number": 7, "title": "feat(cart): empty the cart in one click (@TASK.S1)", "body": "Delivers @TASK.S1.",'
-    ' "headRefName": "task/shop_w1/S1", "baseRefName": "main", "mergedHead": "main", "state": "MERGED",'
+    ' "headRefName": "task/shop_w1/S1", "baseRefName": "main", "mergedHead": "main", "mergedCommits": [],'
+    ' "state": "MERGED",'
     ' "reviewDecision": null, "author": "octo-build"}'
 )
 EVENTS_OF_A_WAVE_STARTED_BEFORE_ITS_MILESTONE_HAD_A_BRANCH = (
