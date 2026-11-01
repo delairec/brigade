@@ -173,6 +173,55 @@ class ReadClientAnswerTest(unittest.TestCase):
         # Assert
         self.assertEqual(answer.edit_tools, ())
 
+    def test_should_refuse_a_probe_whose_edit_tools_are_not_a_list_of_names(self):
+        # Arrange
+        probe = {
+            "schema_version": 1,
+            "client": "vibe",
+            "version_argv": None,
+            "operations": ["probe"],
+            "features": [],
+            "models": {},
+        }
+        cases = (
+            ("one tool written as a string", "write_file", "edit_tools is a string, not a list"),
+            ("a tool that is not a name", ["write_file", 7], "edit_tools[1] is an integer, not a string"),
+        )
+        for name, edit_tools, expected_message in cases:
+            with self.subTest(name):
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    read_client_answer(PROBE_QUESTION, {**probe, "edit_tools": edit_tools})
+
+                # Assert
+                self.assertEqual(str(raised.exception), f"client adapter vibe answered probe: {expected_message}")
+
+    def test_should_refuse_a_transcripts_message_whose_tool_calls_depart_from_their_shape(self):
+        # Arrange
+        message = {
+            "role": "assistant",
+            "timestamp": None,
+            "content": "Done.",
+            "tool_calls": 1,
+            "id": None,
+            "usage": None,
+        }
+        cases = (
+            ("a call written as its name", ["Edit"], "messages[0].tools[0] is a string, not an object"),
+            ("a call naming no target", [{"name": "Edit"}], "lacks the key messages[0].tools[0].target"),
+        )
+        for name, tools, expected_message in cases:
+            with self.subTest(name):
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    read_client_answer(
+                        TRANSCRIPTS_QUESTION,
+                        {"schema_version": 1, "messages": [{**message, "tools": tools}], "subagents": []},
+                    )
+
+                # Assert
+                self.assertEqual(str(raised.exception), f"client adapter vibe answered transcripts: {expected_message}")
+
     def test_should_refuse_a_probe_whose_attribution_is_not_a_list_of_lines(self):
         # Arrange
         cases = (
