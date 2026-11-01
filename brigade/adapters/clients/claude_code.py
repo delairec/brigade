@@ -24,6 +24,7 @@ CAPABILITY_TOOLS = {
     "shell": ("Bash",),
     "net": ("WebFetch", "WebSearch"),
 }
+WRITE_CAPABILITY = "write"
 PROGRESS_FILE_TOOLS = ("Write", "Edit")
 TURN_MARGIN_DIVISOR = 4
 USAGE_COUNTERS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
@@ -67,6 +68,7 @@ def _probe(request: dict) -> dict:
         "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
         "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
         "models": _bind_models(request),
+        "edit_tools": list(CAPABILITY_TOOLS[WRITE_CAPABILITY]),
     }
 
 
@@ -225,9 +227,13 @@ def _parse_result(request: dict) -> dict:
     }
 
 
-def _summarise_tool_call(item: dict) -> str:
+def _read_identifying_argument(item: dict):
     tool_input = item.get("input", {})
-    argument = next((tool_input[name] for name in IDENTIFYING_ARGUMENTS if name in tool_input), None)
+    return next((tool_input[name] for name in IDENTIFYING_ARGUMENTS if name in tool_input), None)
+
+
+def _summarise_tool_call(item: dict) -> str:
+    argument = _read_identifying_argument(item)
     return item["name"] if argument is None else f"{item['name']} {argument}"
 
 
@@ -299,6 +305,10 @@ def _describe_message(entry: dict) -> dict:
         "timestamp": entry.get("timestamp"),
         "content": content,
         "tool_calls": len(_list_content_items(content, "tool_use")),
+        "tools": [
+            {"name": item["name"], "target": _read_identifying_argument(item)}
+            for item in _list_content_items(content, "tool_use")
+        ],
         "id": message.get("id"),
         "usage": _read_message_usage(message),
         **_describe_tool_exchanges(content),
