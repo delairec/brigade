@@ -12,7 +12,7 @@ DEPENDENCY_DEPTH = 1
 
 @dataclass(frozen=True)
 class CorpusView:
-    entity_type: str
+    entity_type: str | None
     field: str | None = None
     entity: str | None = None
     ide_link: str = ""
@@ -67,7 +67,10 @@ def _describe_dependencies(
 
 
 def describe_corpus_view(run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, view: CorpusView) -> dict:
-    status = read_awawa_document(run_process, root, ("status", view.entity_type))
+    status = read_awawa_document(run_process, root, ("status",))
+    types = {"types": [row["type"] for row in status["types"]]}
+    if view.entity_type is None:
+        return types
     listed = sorted(
         (
             entity
@@ -76,9 +79,8 @@ def describe_corpus_view(run_process: Callable[[ProcessRequest], ProcessRecord],
         ),
         key=lambda entity: (entity["file"], entity["line"]),
     )
-    document = {
+    document = types | {
         "type": view.entity_type,
-        "types": [row["type"] for row in status["types"]],
         "entities": [_describe_entity(entity, root, view.ide_link) for entity in listed],
     }
     if view.field is not None:

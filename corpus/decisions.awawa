@@ -4888,3 +4888,18 @@ DECISION TheWaveViewRunsItsShowAndItsLedgerAsOneViewUnderTheStatusOfItsShow
 		+ "merge of @TASK.B31"
 		REF @TASK.B28
 		REF @TASK.B31
+
+DECISION EveryReadingOfBrigadeCorpusRunsOneWholeAwawaStatusAndNoRefReadsTheMainBranch
+	TITLE "every reading of brigade corpus runs one awawa status of the whole corpus, the types and"
+		+ "the entities of --type read from it; named with neither --ref nor --worktree, brigade"
+		+ "corpus and brigade corpus -- <awawa args> read the branch of the MAIN field of the"
+		+ "project"
+	STATUS active
+	DESC "binds @TASK.B228"
+		REF @TASK.B228
+	REJECTED "awawa status <TYPE> under --type and awawa status alone without it: two readings of"
+		+ "one input for no measured gain"
+	RATIONALE "awawa status TASK --json took 63 ms and awawa status --json 60 ms on the brigade"
+		+ "corpus, time on 2026-11-01"
+	SOURCE "the build run of @TASK.B228 of 2026-11-01"
+		REF @TASK.B228

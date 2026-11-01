@@ -62,13 +62,14 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
         "kind": tree.kind,
         "root": str(tree.root),
     }
-    if request.type is None:
-        return document
     view = CorpusView(
         entity_type=request.type, field=request.field, entity=request.entity, ide_link=configuration.ide_link
     )
+    reading = document | describe_corpus_view(runtime.run_process, tree.root, view)
+    if request.type is None:
+        return reading
     awawa_web = AWAWA_WEB_ADDRESS if find_awawa_web(runtime.run_process) else None
-    return document | describe_corpus_view(runtime.run_process, tree.root, view) | {"awawa_web": awawa_web}
+    return reading | {"awawa_web": awawa_web}
 
 
 COMMAND = Command(
@@ -89,7 +90,6 @@ COMMAND = Command(
                     ("--worktree",), {"type": Path, "help": "the path of a worktree of the project, read in place"}
                 ),
             ),
-            required=True,
         ),
         Argument(("--type",), {"help": "the entity type whose entities the document lists"}),
         Argument(("--field",), {"help": "with --type, the field whose values the board groups the entities by"}),
