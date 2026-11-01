@@ -13,6 +13,9 @@ def create_plugin_resolver(plugins: dict) -> Callable:
     def resolve_plugin(kind: str, name: str, **options):
         if (kind, name) not in plugins:
             raise AssertionError(f"the command resolved the {kind} plugin {name}")
-        return plugins[kind, name]
+        plugin = plugins[kind, name]
+        if isinstance(plugin, Exception):
+            raise plugin
+        return plugin
 
     return resolve_plugin
