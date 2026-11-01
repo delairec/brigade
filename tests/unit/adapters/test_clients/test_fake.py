@@ -46,6 +46,16 @@ class FakeProbeTest(unittest.TestCase):
             },
         )
 
+    def test_should_name_the_edit_tools_its_settings_grant_for_write(self):
+        # Arrange
+        settings = {"edit_tools": "Write, Edit"}
+
+        # Act
+        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/home/ada"})
+
+        # Assert
+        self.assertEqual(probe["edit_tools"], ["Write", "Edit"])
+
 
 class FakeLaunchTest(unittest.TestCase):
     def test_should_print_the_recording_named_after_the_role(self):
@@ -459,7 +469,15 @@ class FakeTranscriptsTest(unittest.TestCase):
         recorded = {
             "schema_version": 1,
             "messages": [
-                {"role": "assistant", "timestamp": None, "content": "Done.", "tool_calls": 0, "id": None, "usage": None}
+                {
+                    "role": "assistant",
+                    "timestamp": None,
+                    "content": "Done.",
+                    "tool_calls": 0,
+                    "tools": [],
+                    "id": None,
+                    "usage": None,
+                }
             ],
             "subagents": [],
         }
@@ -489,6 +507,7 @@ class FakeTranscriptsTest(unittest.TestCase):
                         "timestamp": None,
                         "content": "Done.",
                         "tool_calls": 0,
+                        "tools": [],
                         "id": None,
                         "usage": None,
                     }

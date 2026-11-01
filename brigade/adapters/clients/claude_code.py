@@ -24,6 +24,7 @@ CAPABILITY_TOOLS = {
     "shell": ("Bash",),
     "net": ("WebFetch", "WebSearch"),
 }
+WRITE_CAPABILITY = "write"
 PROGRESS_FILE_TOOLS = ("Write", "Edit")
 TURN_MARGIN_DIVISOR = 4
 USAGE_COUNTERS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
@@ -65,6 +66,7 @@ def _probe(request: dict) -> dict:
         "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
         "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
         "models": _bind_models(request),
+        "edit_tools": list(CAPABILITY_TOOLS[WRITE_CAPABILITY]),
     }
 
 
@@ -223,9 +225,13 @@ def _parse_result(request: dict) -> dict:
     }
 
 
+def _read_identifying_argument(item: dict):
+    tool_input = item.get("input", {})
+    return next((tool_input[name] for name in IDENTIFYING_ARGUMENTS if name in tool_input), None)
+
+
 def _summarise_tool_call(item: dict) -> str:
-    tool_input = item["input"]
-    argument = next((tool_input[name] for name in IDENTIFYING_ARGUMENTS if name in tool_input), None)
+    argument = _read_identifying_argument(item)
     return item["name"] if argument is None else f"{item['name']} {argument}"
 
 
@@ -258,10 +264,10 @@ def _name_project_directory(worktree: str) -> str:
     return re.sub(r"[^A-Za-z0-9]", "-", worktree)
 
 
-def _count_tool_calls(content) -> int:
+def _list_tool_uses(content) -> list[dict]:
     if isinstance(content, str):
-        return 0
-    return sum(1 for item in content if item.get("type") == "tool_use")
+        return []
+    return [item for item in content if item.get("type") == "tool_use"]
 
 
 def _read_message_usage(message: dict):
@@ -278,7 +284,10 @@ def _describe_message(entry: dict) -> dict:
         "role": message["role"],
         "timestamp": entry.get("timestamp"),
         "content": content,
-        "tool_calls": _count_tool_calls(content),
+        "tool_calls": len(_list_tool_uses(content)),
+        "tools": [
+            {"name": item["name"], "target": _read_identifying_argument(item)} for item in _list_tool_uses(content)
+        ],
         "id": message.get("id"),
         "usage": _read_message_usage(message),
     }
