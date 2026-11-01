@@ -73,11 +73,11 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
         self.wait_for_the_runs()
         self.run_tick("--once")
         self.wait_for_the_runs()
-        ledger = self.state / "ledger" / "2026-10.jsonl"
+        current_month = max((self.state / "ledger").glob("*.jsonl"))
         finished_before_the_reset = FINISHED_INSTANT.sub(
-            f'"ts": "{RESET_PASSED}", "event": "run.finished"', ledger.read_text()
+            f'"ts": "{RESET_PASSED}", "event": "run.finished"', current_month.read_text()
         )
-        ledger.write_text(RESUME_AT.sub(f'"resume_at": "{RESUME_AT_PASSED}"', finished_before_the_reset))
+        current_month.write_text(RESUME_AT.sub(f'"resume_at": "{RESUME_AT_PASSED}"', finished_before_the_reset))
         self.run_tick("--once")
         self.wait_for_the_runs()
 
