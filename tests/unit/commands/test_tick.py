@@ -2885,7 +2885,6 @@ INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN = {
     "updated_at": "2026-10-18T11:00:00Z",
 }
 INTEGRATION_PULL_REQUEST_CLOSED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "state": "closed"}
-INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "base": "develop"}
 
 
 INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH = INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN | {
@@ -3132,36 +3131,30 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             ],
         )
 
-    def test_should_open_its_own_beside_a_pull_request_of_the_wave_branch_closed_or_into_another_base(self):
-        for found in [
-            INTEGRATION_PULL_REQUEST_CLOSED,
-            INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE,
-            INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN,
-        ]:
-            with self.subTest(state=found["state"], base=found["base"]):
-                # Arrange
-                write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4])
-                forge = OpeningForgeDouble({"integration/M4": found})
-                runtime = self._create_runtime(forge)
+    def test_should_open_its_own_beside_a_closed_pull_request_of_the_wave_branch(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4])
+        forge = OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_CLOSED})
+        runtime = self._create_runtime(forge)
 
-                # Act
-                COMMAND.run(Namespace(mode="once"), runtime)
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
 
-                # Assert
-                self.assertEqual(
-                    forge.opened,
-                    [
-                        {
-                            "repository": str(self.repository),
-                            "base": "integration/tides",
-                            "branch": "integration/M4",
-                            "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
-                            "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
-                            "milestone": None,
-                            "environment": {},
-                        }
-                    ],
-                )
+        # Assert
+        self.assertEqual(
+            forge.opened,
+            [
+                {
+                    "repository": str(self.repository),
+                    "base": "integration/tides",
+                    "branch": "integration/M4",
+                    "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
+                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
+                    "milestone": None,
+                    "environment": {},
+                }
+            ],
+        )
 
     def test_should_open_the_pull_request_into_the_milestone_its_tasks_name_at_the_wave_branch_not_at_main(self):
         # Arrange
@@ -3301,6 +3294,15 @@ class RetargetingForgeDouble(WaveMergingForgeDouble):
         return {"schema_version": 1}
 
 
+EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN = [
+    WAVE_STARTED,
+    _record_task_state("merged"),
+    CUT_OF_M4,
+    WAVE_REPORTED,
+    WAVE_PR_OPENED,
+]
+
+
 class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -3308,7 +3310,7 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
-        write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4, WAVE_REPORTED, WAVE_PR_OPENED])
+        write_ledger(self.root, EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN)
 
     def _create_runtime(self, forge: WaveMergingForgeDouble) -> Runtime:
         corpus = {
@@ -3481,18 +3483,30 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
         # Assert
         self.assertEqual(forge.merges, [])
 
-    def test_should_retarget_its_pull_request_open_into_the_main_branch_onto_the_branch_of_its_milestone(self):
-        # Arrange
-        forge = RetargetingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY | {"base": "main"}}, NO_REVIEW_THREAD)
+    def test_should_retarget_its_pull_request_open_into_another_base_onto_the_branch_of_its_milestone(self):
+        for base in ["main", "develop"]:
+            with self.subTest(base=base):
+                # Arrange
+                write_ledger(self.root, EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN)
+                forge = RetargetingForgeDouble(
+                    {WAVE_BRANCH: WAVE_PULL_REQUEST_READY | {"base": base}}, NO_REVIEW_THREAD
+                )
 
-        # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+                # Act
+                COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
 
-        # Assert
-        self.assertEqual(
-            forge.retargets,
-            [{"repository": str(self.repository), "number": 206, "base": "integration/tides", "environment": {}}],
-        )
+                # Assert
+                self.assertEqual(
+                    forge.retargets,
+                    [
+                        {
+                            "repository": str(self.repository),
+                            "number": 206,
+                            "base": "integration/tides",
+                            "environment": {},
+                        }
+                    ],
+                )
 
     def test_should_record_the_retarget_then_merge_the_pull_request_on_its_new_base_at_the_next_round(self):
         # Arrange
@@ -3563,8 +3577,13 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         verify = ("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}")
         self.machine.answers[verify] = ProcessAnswer(exit_code=1)
 
+    def _read_events(self) -> list[dict]:
+        ledger = self.root / "state" / "ledger" / "2026-10.jsonl"
+        return list(map(json.loads, ledger.read_text(encoding="utf-8").splitlines()))
+
     def test_should_start_a_wave_of_the_candidates_of_a_project_without_one(self):
         # Arrange
+        write_ledger(self.root, [CUT_OF_M4])
         self._miss_the_branch("integration/tidepool_w1")
         self._miss_the_branch("integration/tides")
 
@@ -3574,7 +3593,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(
-            json.loads(ledger[0]),
+            json.loads(ledger[1]),
             {
                 "schema_version": 2,
                 "ts": ANY,
@@ -3586,6 +3605,39 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             },
         )
         self.assertIn(("git", "branch", "--quiet", "integration/tidepool_w1", "integration/tides"), self.machine.argvs)
+
+    def test_should_cut_the_branch_of_the_milestone_of_the_candidates_then_start_their_wave_on_it(self):
+        # Arrange
+        self._miss_the_branch("integration/tidepool_w1")
+        self._miss_the_branch("integration/tides")
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "milestone.branch_cut",
+                    "project": "tidepool",
+                    "milestone": "M4",
+                    "branch": "integration/tides",
+                    "login": None,
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w1",
+                    "project": "tidepool",
+                    "branch": "integration/tidepool_w1",
+                    "tasks": ["T7"],
+                },
+            ],
+        )
 
     def test_should_cut_the_missing_branch_of_an_open_wave(self):
         # Arrange
