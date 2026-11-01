@@ -10,7 +10,7 @@ from brigade.system.render_table import render_table
 DOCUMENT_SCHEMA_VERSION = 1
 NO_VALUE = ""
 NO_PROJECT = "no project registered"
-COLUMNS = ("name", "status", "path")
+COLUMNS = ("name", "status", "forge", "path")
 
 
 def _read_field(project: Entity, name: str) -> str:
@@ -29,7 +29,12 @@ def project_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "projects": [
-            {"name": project.name, "path": _read_field(project, "PATH"), "status": _read_field(project, "STATUS")}
+            {
+                "name": project.name,
+                "path": _read_field(project, "PATH"),
+                "status": _read_field(project, "STATUS"),
+                "forge": _read_field(project, "FORGE"),
+            }
             for project in read_projects(runtime)
         ],
     }
