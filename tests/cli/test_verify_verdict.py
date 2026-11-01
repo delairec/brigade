@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from unittest.mock import ANY
 
+from tests.cli.read_ledger_events import read_ledger_events
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_collect import install_executable
 from tests.cli.test_verify_preflight import VerifyPreflightTestCase
@@ -47,8 +48,7 @@ class VerifyVerdictTestCase(VerifyPreflightTestCase):
         )
 
     def read_events(self) -> list[dict]:
-        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
-        return list(map(json.loads, lines))
+        return read_ledger_events(self.state)
 
 
 class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):

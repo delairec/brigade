@@ -1,6 +1,6 @@
-import json
 from unittest.mock import ANY
 
+from tests.cli.read_ledger_events import read_ledger_events
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.wave_tick_test_case import WaveTickTestCase
 
@@ -19,8 +19,7 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
             ledger.write(PAUSED_ON_THE_FORGE_ACCOUNT)
 
     def read_events(self) -> list:
-        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
-        return list(map(json.loads, lines))
+        return read_ledger_events(self.state)
 
     def test_should_resume_the_wave_named(self):
         # Act
