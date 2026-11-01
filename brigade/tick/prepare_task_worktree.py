@@ -16,7 +16,6 @@ from brigade.git.require_ancestor import require_ancestor
 from brigade.git.switch_worktree_to_branch import switch_worktree_to_branch
 from brigade.git.switch_worktree_to_new_branch import switch_worktree_to_new_branch
 from brigade.ledger.append_event import append_event
-from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
@@ -83,7 +82,9 @@ def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree,
     if held == worktree.branch:
         return True
     found = find_branch(runtime.run_process, repository, worktree.branch)
-    cancelled = name_cancelled_task_branches(read_ledger(runtime.paths.state_root).entries, action.project, action.task)
+    cancelled = name_cancelled_task_branches(
+        runtime.read_ledger(runtime.paths.state_root).entries, action.project, action.task
+    )
     if held in cancelled:
         _keep_uncommitted_changes(runtime, worktree, action.task)
         (switch_worktree_to_branch if found else switch_worktree_to_new_branch)(runtime.run_process, worktree)

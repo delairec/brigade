@@ -18,7 +18,6 @@ from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
-from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
@@ -52,7 +51,6 @@ from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
-from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.cut_wave_branch import WaveBranchCut
@@ -358,7 +356,7 @@ def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
     return TaskFacts(
         name=task.name,
         after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
-        blocked_by=read_live_blockers(runtime.run_process, root, task.name),
+        blocked_by=runtime.read_live_blockers(runtime.run_process, root, task.name),
         milestone=_read_milestone(task),
     )
 
@@ -649,7 +647,7 @@ def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave
 
 
 def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tree_root: Path) -> _OpenWave:
-    states = read_task_states(runtime.paths.state_root, started.wave)
+    states = read_task_states(reading.entries, started.wave)
     return _OpenWave(
         started=started,
         tree_root=tree_root,
@@ -757,7 +755,7 @@ def _read_readable_project_facts(
 
 
 def _assemble_reading(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> WaveReading:
-    entries = read_ledger(runtime.paths.state_root).entries
+    entries = runtime.read_ledger(runtime.paths.state_root).entries
     runs = list_runs(runtime.paths.state_root)["runs"]
     return WaveReading(
         configuration=configuration,
@@ -903,7 +901,7 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
     reading = _assemble_reading(runtime, configuration, forge)
-    last_orders = read_last_study_orders(runtime.paths.state_root)
+    last_orders = read_last_study_orders(reading.entries)
     projects = _read_registered_projects(runtime, reading)
     projects_read = frozenset(project.name for project in projects)
     return Snapshot(

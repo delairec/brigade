@@ -5,6 +5,8 @@ from datetime import date
 from pathlib import Path
 
 from brigade.commands.ledger_compare import COMMAND, ledger_compare
+from brigade.errors import UsageError
+from brigade.system.read_day_range import DayRange
 
 RUN_FINISHED_BEFORE = (
     '{"schema_version": 2, "ts": "2026-09-30T10:33:00Z", "event": "run.finished", "run": "20260930T101817Z-1aa96f",'
@@ -20,6 +22,33 @@ RUN_FINISHED_FROM = (
     ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
     ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63}\n'
 )
+SEPTEMBER = DayRange(start=date(2026, 9, 1), end=date(2026, 9, 30))
+OCTOBER = DayRange(start=date(2026, 10, 1), end=date(2026, 10, 31))
+NOVEMBER = DayRange(start=date(2026, 11, 1), end=date(2026, 11, 30))
+STEPS = {
+    "runs": {"p50": 40, "p90": 52, "measured": 2, "partial": 0, "unmeasured": 0},
+    "segments": {"p50": 40, "p90": 52, "measured": 2, "unmeasured": 0},
+}
+SEPTEMBER_RANGE = {
+    "start": "2026-09-01",
+    "end": "2026-09-30",
+    "runs": 2,
+    "segments": 2,
+    "steps": STEPS,
+    "steps_to_first_edit": None,
+    "oversized_output_steps": None,
+    "figures": {"steps_to_first_edit_p50": None, "task_run_steps_p50": 40, "oversized_output_steps_per_launch": None},
+}
+OCTOBER_RANGE = {
+    "start": "2026-10-01",
+    "end": "2026-10-31",
+    "runs": 2,
+    "segments": 3,
+    "steps": STEPS,
+    "steps_to_first_edit": STEPS,
+    "oversized_output_steps": STEPS,
+    "figures": {"steps_to_first_edit_p50": 40, "task_run_steps_p50": 40, "oversized_output_steps_per_launch": 1.5},
+}
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -35,9 +64,9 @@ class LedgerCompareTest(unittest.TestCase):
         self.october = ledger_directory / "2026-10.jsonl"
         self.october.write_text(RUN_FINISHED_FROM + "not a document\n")
 
-    def test_should_set_the_runs_before_the_day_against_the_runs_from_it(self):
+    def test_should_set_one_range_of_days_against_the_other(self):
         # Arrange
-        request = argparse.Namespace(before=date(2026, 10, 1))
+        request = argparse.Namespace(ranges=(SEPTEMBER, OCTOBER), reference={})
 
         # Act
         document = ledger_compare(request, self.runtime)
@@ -47,21 +76,62 @@ class LedgerCompareTest(unittest.TestCase):
 
 
 class LedgerCompareRequestTest(unittest.TestCase):
-    def test_should_take_the_options_as_they_are(self):
+    def test_should_take_two_ranges_or_one_range_and_reference_figures(self):
+        for ranges, references, expected in [
+            ([SEPTEMBER, OCTOBER], None, argparse.Namespace(ranges=(SEPTEMBER, OCTOBER), reference={})),
+            (
+                [OCTOBER],
+                [("task_run_steps_p50", 47.0), ("steps_to_first_edit_p50", 23.0)],
+                argparse.Namespace(
+                    ranges=(OCTOBER,), reference={"task_run_steps_p50": 47.0, "steps_to_first_edit_p50": 23.0}
+                ),
+            ),
+        ]:
+            with self.subTest(ranges=ranges, references=references):
+                # Arrange
+                options = argparse.Namespace(range=ranges, reference=references)
+
+                # Act
+                request = COMMAND.read_request(options)
+
+                # Assert
+                self.assertEqual(request, expected)
+
+    def test_should_refuse_a_comparison_without_two_sides(self):
+        for ranges, references in [
+            ([OCTOBER], None),
+            ([SEPTEMBER, OCTOBER], [("task_run_steps_p50", 47.0)]),
+            ([SEPTEMBER, OCTOBER, NOVEMBER], None),
+        ]:
+            with self.subTest(ranges=ranges, references=references):
+                # Arrange
+                options = argparse.Namespace(range=ranges, reference=references)
+
+                # Act
+                with self.assertRaises(UsageError) as refusal:
+                    COMMAND.read_request(options)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), "compare takes two --range, or one --range and --reference")
+
+    def test_should_refuse_two_references_naming_the_same_measure(self):
         # Arrange
-        options = argparse.Namespace(before=date(2026, 10, 1))
+        options = argparse.Namespace(
+            range=[OCTOBER], reference=[("task_run_steps_p50", 47.0), ("task_run_steps_p50", 52.0)]
+        )
 
         # Act
-        request = COMMAND.read_request(options)
+        with self.assertRaises(UsageError) as refusal:
+            COMMAND.read_request(options)
 
         # Assert
-        self.assertEqual(request, argparse.Namespace(before=date(2026, 10, 1)))
+        self.assertEqual(str(refusal.exception), "compare takes one --reference per measure: task_run_steps_p50")
 
 
 class LedgerCompareExitCodeTest(unittest.TestCase):
     def test_should_exit_0_once_the_journal_is_read(self):
         # Arrange
-        document = {"before": "2026-10-01", "periods": {}}
+        document = {"ranges": [], "reference": {}}
 
         # Act
         exit_code = COMMAND.decide_exit_code(document)
@@ -71,31 +141,9 @@ class LedgerCompareExitCodeTest(unittest.TestCase):
 
 
 class LedgerCompareTextTest(unittest.TestCase):
-    def test_should_present_each_period_and_the_measures_it_reports(self):
+    def test_should_present_each_range_and_the_measures_it_reports(self):
         # Arrange
-        steps = {
-            "runs": {"p50": 40, "p90": 52, "measured": 2, "partial": 0, "unmeasured": 0},
-            "segments": {"p50": 40, "p90": 52, "measured": 2, "unmeasured": 0},
-        }
-        document = {
-            "before": "2026-10-01",
-            "periods": {
-                "before": {
-                    "runs": 2,
-                    "segments": 2,
-                    "steps": steps,
-                    "steps_to_first_edit": None,
-                    "oversized_output_steps": None,
-                },
-                "from": {
-                    "runs": 2,
-                    "segments": 2,
-                    "steps": steps,
-                    "steps_to_first_edit": steps,
-                    "oversized_output_steps": None,
-                },
-            },
-        }
+        document = {"ranges": [SEPTEMBER_RANGE, OCTOBER_RANGE], "reference": {}}
 
         # Act
         text = COMMAND.render_text(document)
@@ -103,41 +151,42 @@ class LedgerCompareTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "before 2026-10-01: 2 runs finished, 2 segments\n"
+            "from 2026-09-01 to 2026-09-30: 2 runs finished, 2 segments\n"
             "  steps:\n"
             "    runs p50 40  p90 52  measured 2  partial 0  unmeasured 0\n"
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
             "  steps to first edit: not reported\n"
             "  oversized output steps: not reported\n"
-            "from 2026-10-01: 2 runs finished, 2 segments\n"
+            "  steps to first edit p50: -\n"
+            "  steps per task run p50: 40\n"
+            "  oversized output steps per launch: -\n"
+            "from 2026-10-01 to 2026-10-31: 2 runs finished, 3 segments\n"
             "  steps:\n"
             "    runs p50 40  p90 52  measured 2  partial 0  unmeasured 0\n"
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
             "  steps to first edit:\n"
             "    runs p50 40  p90 52  measured 2  partial 0  unmeasured 0\n"
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
-            "  oversized output steps: not reported",
+            "  oversized output steps:\n"
+            "    runs p50 40  p90 52  measured 2  partial 0  unmeasured 0\n"
+            "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
+            "  steps to first edit p50: 40\n"
+            "  steps per task run p50: 40\n"
+            "  oversized output steps per launch: 1.5",
         )
 
-    def test_should_present_a_period_whose_runs_count_more_segments_than_runs(self):
+    def test_should_present_the_reference_figures_after_the_range(self):
         # Arrange
-        steps = {
-            "runs": {"p50": 30, "p90": 30, "measured": 1, "partial": 1, "unmeasured": 0},
-            "segments": {"p50": 30, "p90": 30, "measured": 1, "unmeasured": 1},
+        document = {
+            "ranges": [SEPTEMBER_RANGE],
+            "reference": {"steps_to_first_edit_p50": 23.0, "oversized_output_steps_per_launch": 2.18},
         }
-        period = {"runs": 1, "segments": 2, "steps": steps, "steps_to_first_edit": None, "oversized_output_steps": None}
-        document = {"before": "2026-10-05", "periods": {"before": period, "from": period}}
 
         # Act
         text = COMMAND.render_text(document)
 
         # Assert
         self.assertEqual(
-            text.splitlines()[:4],
-            [
-                "before 2026-10-05: 1 runs finished, 2 segments",
-                "  steps:",
-                "    runs p50 30  p90 30  measured 1  partial 1  unmeasured 0",
-                "    segments p50 30  p90 30  measured 1  unmeasured 1",
-            ],
+            text.splitlines()[-3:],
+            ["reference:", "  steps to first edit p50: 23", "  oversized output steps per launch: 2.18"],
         )

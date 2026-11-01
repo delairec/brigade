@@ -12,7 +12,6 @@ from brigade.git.push_branch import BranchPush, push_branch
 from brigade.git.push_ref_to_branch import RefPush, push_ref_to_branch
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
-from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
@@ -90,7 +89,7 @@ def _cut_again_and_record(runtime: Runtime, demand: MilestoneBranchDemand, branc
 
 def cut_milestone_branch(runtime: Runtime, demand: MilestoneBranchDemand) -> str:
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, demand.project.name)):
-        entries = read_ledger(runtime.paths.state_root).entries
+        entries = runtime.read_ledger(runtime.paths.state_root).entries
         recorded = find_milestone_branch(entries, demand.project.name, demand.milestone.name)
         if recorded is not None:
             recorded_branch = RecordedMilestoneBranch(

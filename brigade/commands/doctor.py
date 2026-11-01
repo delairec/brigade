@@ -1,17 +1,23 @@
 import argparse
+import shlex
+import shutil
 import sys
 from pathlib import Path
 
 from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
-from brigade.corpus.read_entities import read_entities
+from brigade.corpus.read_entities import Entity, read_entities
+from brigade.corpus.read_entity import read_entity
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
 from brigade.git.describe_checkout_lag import describe_checkout_lag
+from brigade.git.find_branch import find_branch
 from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_projects import read_projects
+from brigade.roles.resolve_role import BUILT_IN_ROLESET, CORPUS_ROLESET, ROLE_FILE_PATTERN
 from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_login_environment import ask_login_environment
@@ -56,6 +62,10 @@ BUILD_SLOT = "build"
 REVIEW_SLOT = "review"
 REVIEW_FALLBACK = "GitHub refuses the approval of the review slot"
 POLICIES_FALLBACK = "the review mode of each project unchecked"
+AGENT_TYPE = "AGENT"
+UNLOCATED_ROLESETS = (None, BUILT_IN_ROLESET, CORPUS_ROLESET)
+PROJECT_COMMAND_FIELDS = ("SETUP", "ACCEPTANCE", "HEAVY")
+PATH_SEPARATOR = "/"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
 DETAIL_WIDTH = 36
@@ -319,6 +329,141 @@ def _check_configuration(reading: Configuration | BrigadeError) -> list[dict]:
     return [_create_prerequisite("config", "finding", finding) for finding in reading.findings]
 
 
+def _report_findings(name: str, problems) -> list[dict]:
+    return [_create_prerequisite(name, "finding", problem) for problem in problems]
+
+
+def _find_slot_problems(slot: str, agent: str, configuration: Configuration, runtime: Runtime) -> list[str]:
+    if configuration.instructions is None:
+        file = runtime.paths.configuration_file
+        return [f"slots.{slot} binds {agent} but no instructions corpus is set in {file}"]
+    try:
+        read_entity(runtime.run_process, Path(configuration.instructions), AGENT_TYPE, agent)
+    except BrigadeError as error:
+        return [f"slots.{slot}: {error}"]
+    return []
+
+
+def _check_slots(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+    if isinstance(reading, BrigadeError):
+        return []
+    return _report_findings(
+        "slots",
+        (
+            problem
+            for slot, agent in reading.slots.items()
+            for problem in _find_slot_problems(slot, agent, reading, runtime)
+        ),
+    )
+
+
+def _find_client_problems(client: str, runtime: Runtime) -> list[str]:
+    try:
+        runtime.resolve_plugin("client", client)
+    except BrigadeError as error:
+        return [str(error)]
+    return []
+
+
+def _check_slot_clients(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+    if isinstance(reading, BrigadeError):
+        return []
+    return _report_findings(
+        "slot_clients",
+        (
+            f"slot_clients.{slot}: {problem}"
+            for slot, client in reading.slot_clients.items()
+            for problem in _find_client_problems(client, runtime)
+        ),
+    )
+
+
+def _find_project_client_problems(client: str | None, runtime: Runtime) -> list[str]:
+    if client is None:
+        return []
+    return _find_client_problems(client, runtime)
+
+
+def _find_roleset_problems(roleset: str | None, checkout: Path) -> list[str]:
+    if roleset in UNLOCATED_ROLESETS:
+        return []
+    directory = checkout / roleset
+    if any(directory.glob(ROLE_FILE_PATTERN)):
+        return []
+    return [f"ROLESET {roleset} holds no role file in {directory}"]
+
+
+def _find_main_problems(main: str, checkout: Path, runtime: Runtime) -> list[str]:
+    try:
+        found = find_branch(runtime.run_process, checkout, main)
+    except ToolFailure as error:
+        return [f"MAIN {main} cannot be read in {checkout}: {error}"]
+    if found:
+        return []
+    return [f"MAIN {main} is not a branch of {checkout}"]
+
+
+def _locate_program(word: str, checkout: Path) -> str:
+    if PATH_SEPARATOR in word:
+        return str(checkout / word)
+    return word
+
+
+def _find_command_problems(field_name: str, line: str, checkout: Path, search_path: str) -> list[str]:
+    try:
+        argv = shlex.split(line)
+    except ValueError as error:
+        return [f"{field_name} {line}: shlex.split refuses it, {error}"]
+    if not argv:
+        return [f"{field_name} is an empty line"]
+    if shutil.which(_locate_program(argv[0], checkout), path=search_path) is None:
+        return [f"{field_name} {line}: no executable {argv[0]}"]
+    return []
+
+
+def _read_values(project: Entity, field_name: str) -> list[str]:
+    return [field.value for field in project.fields if field.name == field_name]
+
+
+def _inspect_checkout(project: Entity, checkout: Path, runtime: Runtime) -> list[str]:
+    search_path = runtime.paths.executable_search_path
+    return [
+        *_find_roleset_problems(read_project_field(project, "ROLESET"), checkout),
+        *_find_main_problems(read_project_field(project, "MAIN"), checkout, runtime),
+        *(
+            problem
+            for field_name in PROJECT_COMMAND_FIELDS
+            for line in _read_values(project, field_name)
+            for problem in _find_command_problems(field_name, line, checkout, search_path)
+        ),
+    ]
+
+
+def _inspect_project(project: Entity, runtime: Runtime) -> list[str]:
+    checkout = Path(read_project_field(project, "PATH"))
+    located = (
+        _inspect_checkout(project, checkout, runtime) if checkout.exists() else [f"PATH {checkout} does not exist"]
+    )
+    return [*_find_project_client_problems(read_project_field(project, "CLIENT"), runtime), *located]
+
+
+def _check_projects(runtime: Runtime) -> list[dict]:
+    if not runtime.paths.schema_file.exists():
+        return []
+    try:
+        projects = read_projects(runtime)
+    except ToolFailure as error:
+        return _report_findings("project", [f"PROJECT unreadable: {error}"])
+    return _report_findings(
+        "project",
+        (
+            f"@PROJECT.{project.name}: {problem}"
+            for project in projects
+            for problem in _inspect_project(project, runtime)
+        ),
+    )
+
+
 def _render_prerequisite(item: dict) -> str:
     return f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['detail']}"
 
@@ -386,6 +531,9 @@ def doctor(request: argparse.Namespace, runtime: Runtime) -> dict:
             _check_instructions(reading, runtime),
             *_check_steps(reading, runtime),
             *_check_configuration(reading),
+            *_check_slots(reading, runtime),
+            *_check_slot_clients(reading, runtime),
+            *_check_projects(runtime),
             *_check_checkout(runtime),
             *_check_schema(runtime),
         ],

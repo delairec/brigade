@@ -5133,3 +5133,105 @@ DECISION TheVibeAdapterPinsTheRustCliOfVibeAndAnswersNoResume
 	SOURCE "the user's ruling of 2026-11-01 on the question of run 20261101T185054Z-d8a913 of wave"
 		+ "brigade_w20, on @TASK.B108: « (b) VIBE_CLI=rust, sans resume (Recommandé) »"
 		REF @TASK.B108
+
+DECISION DoctorChecksABindingWhereTheRunResolvesIt
+	TITLE "doctor checks each binding where the run resolves it, so that a finding foretells a"
+		+ "failure of the unattended run and nothing else"
+	STATUS active
+	DESC "a [slots] entry is checked against the AGENT entities of the instructions corpus, the"
+		+ "role set brigade/roles/resolve_role.py reads a slot binding from; a [slots] entry with"
+		+ "no instructions corpus set is a finding"
+	DESC "a ROLESET other than builtin and corpus resolves to nothing when its directory, under the"
+		+ "project's PATH unless absolute, holds no role file"
+	DESC "the first word of a project command holding a slash is looked up under the project's"
+		+ "PATH, the runner running it with the worktree as its cwd; a word without one is looked"
+		+ "up on PATH; such a script is the form @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell"
+		+ "prescribes for a command needing a shell feature"
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
+	DESC "an empty project command line is a finding: it splits into no argv"
+	DESC "binds @TASK.B173"
+		REF @TASK.B173
+	REJECTED "every first word looked up on PATH alone: every command calling a script the project"
+		+ "versions would be a finding"
+	REJECTED "a ROLESET resolving to nothing only when its directory is missing: an empty directory"
+		+ "falls back to the built-in roles as silently"
+	RATIONALE "@TASK.B173 names the findings, not where each binding resolves; the run resolves a"
+		+ "slot binding in the instructions corpus alone and a roleset directory without role files"
+		+ "falls back to the built-ins without a word"
+		REF @TASK.B173
+	SOURCE "the delivery of @TASK.B173 in the wave brigade_w19"
+		REF @TASK.B173
+
+DECISION TheTickExtendsItsLedgerReadingWithTheBytesAppendedPastEachMonthlyFile
+	TITLE "the tick reads the ledger once through a LedgerReadingKeeper, which extends that reading"
+		+ "with read_ledger since it: the lines past the end of each monthly file it read, so the"
+		+ "extension holds the events the tick appended and those another process appended"
+		+ "meanwhile; append_derived_event keeps its own reading under the ledger lock: the wave it"
+		+ "derives must see every wave.started, a brigade wave start run by hand included"
+	STATUS active
+	REJECTED "the appended events added to the reading in memory at each append_event of the tick:"
+		+ "every writer reached by an executor passes Paths, not the runtime, and the reads under a"
+		+ "worktrees lock would miss what another process recorded"
+	RATIONALE "@TASK.B174 bounds the reads of a tick to one; a read past the known ends costs a"
+		+ "seek per monthly file, where brigade/ledger/read_ledger.py read every line of every file"
+		REF @TASK.B174
+	SOURCE "the build run of @TASK.B174 of 2026-11-01"
+		REF @TASK.B174
+
+DECISION TheTickRemembersTheLiveBlockersOfATaskByTheTreeItReadThemOn
+	TITLE "the tick caches read_live_blockers by its tree root, which names a commit: a task whose"
+		+ "branch did not move is read once per tick, and again on the tree of a branch the tick"
+		+ "moved"
+	STATUS active
+	REJECTED "the blockers cached by task alone: a merge or a rebase the tick applies changes the"
+		+ "corpus the task is read on, and its blockers would stay those of the branch before"
+	RATIONALE "brigade/corpus/prepare_tree.py extracts an archive tree under the SHA of its ref, so"
+		+ "the root of a tree changes exactly when its branch moved"
+	SOURCE "the build run of @TASK.B174 of 2026-11-01"
+		REF @TASK.B174
+
+DECISION ALedgerComparisonSetsTwoRangesOfDaysOrOneRangeAgainstReferenceFigures
+	TITLE "brigade ledger compare takes two ranges of days, the end day included, or one range and"
+		+ "the reference figures it is set against"
+	STATUS active
+	DESC "a range is --range START..END, two days YYYY-MM-DD in UTC, the end day included: a run"
+		+ "belongs to it when its last segment finished from START at 00:00 to the day after END at"
+		+ "00:00 excluded"
+	DESC "compare takes two --range, or one --range and one --reference <measure>=<value> per"
+		+ "measure, and refuses any other count as a usage error; --before leaves the command"
+	DESC "the reference measures and what a range gives for each: steps_to_first_edit_p50, the runs"
+		+ "p50 of the steps to the first edit; task_run_steps_p50, the runs p50 of the steps of the"
+		+ "runs whose last segment names a task; oversized_output_steps_per_launch, the oversized"
+		+ "output steps per segment reporting them, rounded to two decimals"
+	DESC "the link compare before <day> of the ledger page of the dashboard passes ?range=<first"
+		+ "day of the ledger>..<the day before>&range=<day>..<last day of the ledger>, so it still"
+		+ "sets every run before the day against every run from it on"
+	REJECTED "--before kept beside --range: two ways to read one window, against the rule"
+		+ "specific_isolated_one_path of the instructions corpus"
+	REJECTED "the end day excluded: the baseline of the user's notes is named from 26/09 to 03/10,"
+		+ "both days in"
+	REJECTED "the steps per task run read from every run: a study or a verification naming no task"
+		+ "would weigh in a figure the baseline measured on task agents"
+	REJECTED "the oversized output steps per launch over every segment: a segment whose client"
+		+ "reports no transcript would count as zero"
+	RATIONALE "the reference figures carry the baseline of the user's notes, which predates the"
+		+ "ledger, as the comparison of @TASK.B39 needs"
+		REF @TASK.B39
+	SOURCE "the build run of @TASK.B175 of 2026-11-01"
+		REF @TASK.B175
+
+DECISION TheViewsOfBrigadeLedgerTakeSinceAndSumOnlyTheCostsTheRunsCarry
+	TITLE "--since narrows the overview, --wave, --task and --project of brigade ledger, and a"
+		+ "cost, a token count or a duration of a view is the sum of the run.finished events that"
+		+ "carry it, none when no event does"
+	STATUS active
+	DESC "--since filters the entries of the ledger once, before the view reads them; ledger"
+		+ "budgets keeps --last and ledger compare its ranges"
+	DESC "the cost in USD, the tokens and the duration of a wave, of a task of a wave and of a run"
+		+ "of brigade ledger --task sum the run.finished events that carry them, and are none when"
+		+ "no event of the view carries one"
+	REJECTED "--since on ledger compare and ledger budgets: a second window beside the ranges and"
+		+ "--last"
+	REJECTED "a cost of zero when no event carries one: it would read as a wave that cost nothing"
+	SOURCE "the build run of @TASK.B175 of 2026-11-01"
+		REF @TASK.B175

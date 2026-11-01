@@ -207,7 +207,11 @@ class BrigadeLedgerWaveTest(LedgerTestCase):
             completed.stdout.splitlines(),
             [
                 "wave tidepool_w16: 2026-09-30T22:00:00Z to 2026-10-01T01:40:00Z, wall time 3h40m",
-                "tasks: TP146, TP147",
+                "cost: none",
+                "tokens: none",
+                "tasks:",
+                "  TP146  steps 92  duration 0h00m  cost -",
+                "  TP147  steps -  duration 0h00m  cost -",
                 "pull requests: #291 TP146 rounds 1",
                 "steps by slot:",
                 "  build",
@@ -291,7 +295,7 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
 
     def test_should_print_the_comparison_as_text(self):
         # Act
-        completed = self.run_ledger("compare", "--before", "2026-10-03")
+        completed = self.run_ledger("compare", "--range", "2026-10-01..2026-10-02", "--range", "2026-10-03..2026-10-04")
 
         # Assert
         self.assertEqual(completed.returncode, 0)
@@ -299,7 +303,7 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "before 2026-10-03: 3 runs finished, 3 segments",
+                "from 2026-10-01 to 2026-10-02: 3 runs finished, 3 segments",
                 "  steps:",
                 "    runs p50 40  p90 60  measured 2  partial 0  unmeasured 1",
                 "    segments p50 40  p90 60  measured 2  unmeasured 1",
@@ -307,7 +311,10 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
                 "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 2",
                 "    segments p50 12  p90 12  measured 1  unmeasured 2",
                 "  oversized output steps: not reported",
-                "from 2026-10-03: 2 runs finished, 2 segments",
+                "  steps to first edit p50: 12",
+                "  steps per task run p50: 40",
+                "  oversized output steps per launch: -",
+                "from 2026-10-03 to 2026-10-04: 2 runs finished, 2 segments",
                 "  steps:",
                 "    runs p50 20  p90 30  measured 2  partial 0  unmeasured 0",
                 "    segments p50 20  p90 30  measured 2  unmeasured 0",
@@ -317,5 +324,18 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
                 "  oversized output steps:",
                 "    runs p50 1  p90 1  measured 1  partial 0  unmeasured 1",
                 "    segments p50 1  p90 1  measured 1  unmeasured 1",
+                "  steps to first edit p50: 4",
+                "  steps per task run p50: 20",
+                "  oversized output steps per launch: 1",
             ],
         )
+
+    def test_should_print_the_reference_figures_after_the_range(self):
+        # Act
+        completed = self.run_ledger(
+            "compare", "--range", "2026-10-03..2026-10-04", "--reference", "task_run_steps_p50=47"
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout.splitlines()[-2:], ["reference:", "  steps per task run p50: 47"])

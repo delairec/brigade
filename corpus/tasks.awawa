@@ -358,7 +358,12 @@ TASK B04
 TASK B05
 	TITLE "brigade ledger: the append-only event journal, its writer, its overview and its views by"
 		+ "wave, project, budget and comparison"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-01: @TASK.B175 makes false its SPEC that brigade ledger compare"
+		+ "--before <YYYY-MM-DD> sets the events before that day against those from it on; compare"
+		+ "takes two ranges of days, or one range and reference figures, and --since applies to"
+		+ "every view of brigade ledger"
+		REF @TASK.B175
 	MILESTONE @MILESTONE.M0
 	COMPONENT "ledger"
 	ROLE ada
@@ -390,7 +395,7 @@ TASK B05
 		+ "that is not JSON, lacks schema_version, ts or event, or carries an unknown"
 		+ "schema_version is skipped and reported with its file and line number, on stderr and in"
 		+ "the document, and the command still exits 0"
-		IMPL "brigade/ledger/read_ledger.py::def read_ledger(state_root: Path) -> LedgerReading:"
+		IMPL "brigade/ledger/read_ledger.py::def read_ledger(state_root: Path, since: LedgerReading"
 		IMPL "brigade/command.py::describe_diagnostics: Callable[[object], list[str]] ="
 			+ "_describe_no_diagnostics"
 		IMPL "tests/unit/ledger/test_read_ledger.py::def"
@@ -645,7 +650,6 @@ TASK B06
 		IMPL "tests/cli/test_runs.py::class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):"
 		IMPL "tests/cli/test_runs.py::class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):"
 	AFTER @TASK.B04
-	AFTER @TASK.B05
 	AFTER @TASK.B42
 	AFTER @TASK.B43
 	RATIONALE "the Blueprint is the reference the user named: brigade run, its hand-over by"
@@ -2297,7 +2301,6 @@ TASK B22
 			+ "test_should_run_a_study_answering_into_the_inbox"
 		IMPL "tests/unit/commands/test_study_new.py::def"
 			+ "test_should_record_the_study_answering_into_the_inbox"
-	AFTER @TASK.B05
 	RATIONALE "the inbox is the buffer of the outer loop of the Blueprint: connectors, notes and"
 		+ "scans turn facts into signals, and the triage groups them into patterns, thirty similar"
 		+ "signals being one structural problem; B22 is the root of M2, @TASK.B23, @TASK.B24 and"
@@ -2656,7 +2659,6 @@ TASK B27
 		IMPL "brigade/dashboard/render_fragment.py::def render_fragment(document: object) -> str:"
 		IMPL "tests/unit/dashboard/test_render_fragment.py::def"
 			+ "test_should_leave_none_of_the_markup_in_the_fragment(self):"
-	AFTER @TASK.B05
 	AFTER @TASK.B08
 	RATIONALE "the dashboard of @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept starts"
 		+ "with the server every view of @MILESTONE.M3 runs in, its security criteria and the"
@@ -2928,7 +2930,7 @@ TASK B31
 		IMPL "tests/unit/dashboard/test_render_ledger_fragment.py::def"
 			+ "test_should_render_the_steps_by_role_and_the_pauses_of_the_wave_asked(self):"
 		IMPL "tests/unit/dashboard/test_render_ledger_fragment.py::def"
-			+ "test_should_render_the_baseline_comparison_of_the_day_asked(self):"
+			+ "test_should_render_the_comparison_of_the_two_ranges_asked(self):"
 		IMPL "tests/unit/ledger/test_describe_overview.py::def"
 			+ "test_should_group_the_waves_started_by_the_month_they_started_in(self):"
 		IMPL "tests/unit/dashboard/test_answer_dashboard_request.py::class"
@@ -3959,7 +3961,6 @@ TASK B47
 		+ "where it is not on PATH"
 		IMPL "tests/cli/test_collect.py::class CollectTestCase(unittest.TestCase):"
 		IMPL "tests/awawa/recordings/status-45a565ee88fb.json::\"status\","
-	AFTER @TASK.B05
 	AFTER @TASK.B06
 	AFTER @TASK.B08
 	AFTER @TASK.B42
@@ -4870,7 +4871,6 @@ TASK B61
 	AFTER @TASK.B02
 	AFTER @TASK.B03
 	AFTER @TASK.B04
-	AFTER @TASK.B05
 	AFTER @TASK.B06
 	AFTER @TASK.B07
 	AFTER @TASK.B08
@@ -12117,7 +12117,8 @@ TASK B172
 TASK B173
 	TITLE "brigade doctor validates the agents of [slots], the CLIENT and ROLESET of each project,"
 		+ "and the path, MAIN and commands of each registered project"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 298
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "doctor"
@@ -12126,9 +12127,23 @@ TASK B173
 		+ "[slot_clients] entry naming a client no adapter answers, and for a PROJECT whose CLIENT"
 		+ "or ROLESET resolves to nothing, where today brigade/commands/doctor.py:370-396 reports"
 		+ "none of them and the error surfaces at the unattended run"
+		IMPL "brigade/commands/doctor.py::def _check_slots("
+		IMPL "brigade/commands/doctor.py::def _check_slot_clients("
+		IMPL "brigade/commands/doctor.py::def _find_project_client_problems("
+		IMPL "brigade/commands/doctor.py::def _find_roleset_problems("
+		IMPL "tests/unit/commands/test_doctor.py::class DoctorSlotsTest(DoctorTestCase):"
+		IMPL "tests/unit/commands/test_doctor.py::class DoctorSlotClientsTest(DoctorTestCase):"
+		IMPL "tests/unit/commands/test_doctor.py::def"
+			+ "test_should_find_a_project_whose_client_no_adapter_answers("
+		IMPL "tests/unit/commands/test_doctor.py::def"
+			+ "test_should_find_a_project_whose_roleset_holds_no_role_file("
 	SPEC "doctor reports a finding per registered project whose PATH does not exist, whose MAIN is"
 		+ "not a branch of the repository, or the first word of whose SETUP, ACCEPTANCE or HEAVY"
 		+ "line, split by shlex.split, is no executable on PATH, and a line shlex.split refuses"
+		IMPL "brigade/commands/doctor.py::def _check_projects("
+		IMPL "brigade/commands/doctor.py::def _find_main_problems("
+		IMPL "brigade/commands/doctor.py::def _find_command_problems("
+		IMPL "tests/unit/commands/test_doctor.py::class DoctorProjectsTest(DoctorTestCase):"
 	RATIONALE "the commands of a project are one argv split by shlex.split, as"
 		+ "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell rules"
 		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
@@ -12140,7 +12155,8 @@ TASK B173
 TASK B174
 	TITLE "The read cost of a tick is bounded: the ledger read once per tick, awawa refs once per"
 		+ "task per tick"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 299
 	TYPE perf
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
@@ -12149,13 +12165,25 @@ TASK B174
 		+ "with the events the tick appends, where today brigade/tick/build_snapshot.py:760 reads"
 		+ "it at every round, brigade/waves/read_task_states.py:10 once per open wave at every"
 		+ "round, and brigade/commands/tick.py:362, 417 and 464 once per executor"
+		IMPL "brigade/commands/tick.py::read_ledger=LedgerReadingKeeper(runtime.read_ledger).read,"
+		IMPL "brigade/tick/ledger_reading_keeper.py::class LedgerReadingKeeper:"
+		IMPL "brigade/ledger/read_ledger.py::def read_ledger(state_root: Path, since: LedgerReading"
+		IMPL "tests/unit/tick/test_ledger_reading_keeper.py::def"
+			+ "test_should_extend_its_reading_with_the_events_appended_since"
 	SPEC "a tick runs awawa refs, and the show per citing type, at most once per task, again only"
 		+ "for a task whose branch the tick moved, where today"
 		+ "brigade/tick/read_live_blockers.py:40-44 runs them for every task of an open wave at"
 		+ "every round, up to ROUND_CAP 10 of brigade/commands/tick.py:144, and"
 		+ "brigade/waves/admit_candidates.py:33 for every candidate"
+		IMPL "brigade/commands/tick.py::read_live_blockers=functools.cache(runtime.read_live_blockers),"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_read_the_references_of_each_task_again_on_the_wave_branch_the_merge_moved"
 	SPEC "a test counts the reads: a tick of several rounds over a wave of N tasks reads the ledger"
 		+ "once and runs awawa refs at most N times"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_read_the_ledger_once_over_the_rounds_of_a_tick"
+		IMPL "tests/unit/commands/test_tick.py::def"
+			+ "test_should_read_the_references_of_each_task_once_over_the_rounds_of_a_tick"
 	RATIONALE "brigade/tick/run_rounds.py:25-26 rebuilds the snapshot from scratch at every round,"
 		+ "and brigade/ledger/read_ledger.py:96-107 reads every monthly file at each call; the"
 		+ "views of brigade ledger and the dashboard, which runs brigade ledger --json as a"
@@ -12166,7 +12194,8 @@ TASK B174
 TASK B175
 	TITLE "The ledger views give the cost by wave and by task, a --task view, --since on every"
 		+ "view, and a comparison over ranges or against reference figures"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 300
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "ledger"
@@ -12175,15 +12204,25 @@ TASK B175
 		+ "from the run.finished events carrying them, and one row per task with its steps,"
 		+ "duration and cost, where today brigade/ledger/describe_wave.py reads neither cost_usd"
 		+ "nor usage"
+		IMPL "brigade/ledger/describe_wave.py::def _cost_wave("
+		IMPL "brigade/commands/ledger.py::def _render_task_rows("
 	SPEC "brigade ledger --task <task> prints the runs of a task with their outcome, steps,"
 		+ "duration and cost"
+		IMPL "brigade/ledger/describe_task.py::def describe_task("
+		IMPL "brigade/commands/ledger.py::def _render_task("
 	SPEC "--since applies to every view of brigade ledger, where today"
 		+ "brigade/commands/ledger.py:130-133 accepts it with --project alone"
+		IMPL "brigade/commands/ledger.py::def _select_since("
 	SPEC "brigade ledger compare takes a range, a start and an end day, for each side, where today"
 		+ "brigade/ledger/describe_comparison.py:28-36 cuts at one day with no upper bound"
+		IMPL "brigade/system/read_day_range.py::def read_day_range("
+		IMPL "brigade/ledger/describe_comparison.py::def _select_range("
 	SPEC "brigade ledger compare --reference <measure>=<value>, repeatable, compares one range with"
 		+ "reference figures in place of a second range, for steps to first edit p50, steps per"
 		+ "task run p50 and oversized output steps per launch"
+		IMPL "brigade/ledger/read_reference.py::def read_reference("
+		IMPL "brigade/ledger/describe_comparison.py::def _measure_figures("
+		IMPL "brigade/commands/ledger_compare.py::def _render_reference("
 	RATIONALE "run.finished already carries cost_usd and usage, brigade/ledger/run_finished.py:22"
 		+ "and 31; the reference figures carry a baseline that predates the ledger, as the"
 		+ "comparison of @TASK.B39 needs"
