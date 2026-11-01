@@ -48,7 +48,7 @@ def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
         procedure=plan.procedure.name,
         run=plan.run_id,
         segment=record.number,
-        budget=plan.procedure.budget,
+        budget=plan.budget.applied,
         wall_limit_s=plan.wall_limit_s if ended_on_the_clock else None,
     )
 
@@ -60,7 +60,7 @@ def _describe_budget_exceeded(plan: RunPlan, record: SegmentRecord, steps: int) 
         procedure=plan.procedure.name,
         run=plan.run_id,
         segment=record.number,
-        budget=plan.procedure.budget,
+        budget=plan.budget.applied,
         steps=steps,
     )
 
@@ -72,6 +72,8 @@ def _locate_segment_result(plan: RunPlan, number: int) -> Path:
 def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
     records = []
     instant = runtime.now
+    if plan.budget_applied is not None:
+        append_event(runtime.paths, instant, plan.budget_applied)
     while True:
         record = run_segment(plan, plan.first_segment + len(records), runtime, stop)
         records.append(record)
@@ -80,7 +82,7 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
         write_json_atomically(
             _locate_segment_result(plan, record.number), append_event(runtime.paths, instant, finished)
         )
-        if finished.main_steps is not None and finished.main_steps > plan.procedure.budget:
+        if finished.main_steps is not None and finished.main_steps > plan.budget.applied:
             append_event(runtime.paths, instant, _describe_budget_exceeded(plan, record, finished.main_steps))
         if record.outcome not in RELAUNCH_SIGNALS:
             return records
