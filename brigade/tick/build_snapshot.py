@@ -114,6 +114,7 @@ BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 STATUS_FIELD = "STATUS"
 TODO_STATUS = "todo"
 OPEN_PULL_REQUEST = "open"
+PROMOTION_FIELDS = (STATUS_FIELD, "DELIVERED_BY")
 
 
 @dataclass(frozen=True)
@@ -628,8 +629,12 @@ def _read_task_on_its_pull_request(
     return read_entity(runtime.run_process, tree.root, TASK_TYPE, task.name)
 
 
+def _read_specified_fields(entity: Entity) -> tuple:
+    return tuple(field for field in entity.fields if field.name not in PROMOTION_FIELDS)
+
+
 def _note_amendment(task: TaskFacts, on_pull_request: Entity | None, on_wave: Entity) -> TaskFacts:
-    if on_pull_request is None or on_pull_request == on_wave:
+    if on_pull_request is None or _read_specified_fields(on_pull_request) == _read_specified_fields(on_wave):
         return task
     return dataclasses.replace(task, amendment=TaskAmendment(on_pull_request=on_pull_request, on_wave=on_wave))
 
