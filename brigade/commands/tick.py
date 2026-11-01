@@ -85,6 +85,7 @@ from brigade.tick.actions import (
     PauseWave,
     RebaseMilestone,
     RebaseTask,
+    RebuildTask,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -104,6 +105,7 @@ from brigade.tick.record_review_threads import record_review_threads
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
+from brigade.tick.write_rebuild_brief import write_rebuild_brief
 from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.triage.deliver_patterns import WaveDelivery, deliver_patterns
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
@@ -267,6 +269,28 @@ def _launch_check_repair(runtime: Runtime, configuration: Configuration, action:
     )
     run(repairing, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
+
+
+def _rebuild_task(runtime: Runtime, configuration: Configuration, action: RebuildTask) -> None:
+    rebuilding = argparse.Namespace(
+        procedure=configuration.procedures.get(BUILD_SLOT, BUILD_PROCEDURE),
+        slot=BUILD_SLOT,
+        project=action.project,
+        cwd=action.worktree,
+        brief=str(write_rebuild_brief(runtime.paths.state_root, action)),
+        arguments=(f"task=@TASK.{action.task}", f"base={action.base}"),
+        run_id=None,
+        wave=action.wave,
+        task=action.task,
+        detach=True,
+        resume=False,
+    )
+    run(rebuilding, runtime)
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskState(wave=action.wave, task=action.task, state=FIXING_STATE, reason=action.reason),
+    )
 
 
 def _launch_rebase(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
@@ -634,6 +658,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
         LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
         RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
+        RebuildTask: lambda action: _rebuild_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(

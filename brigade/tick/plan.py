@@ -21,6 +21,7 @@ from brigade.tick.actions import (
     PauseWave,
     RebaseMilestone,
     RebaseTask,
+    RebuildTask,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -296,9 +297,25 @@ def _decide_blocked_parking(wave: WaveFacts, task: TaskFacts, occupancy: _Occupa
     )
 
 
+def _decide_rebuild(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> RebuildTask | ParkTask:
+    parking_reason = _describe_spent_rounds(task, project)
+    if parking_reason is not None:
+        return ParkTask(wave=wave.wave, task=task.name, reason=parking_reason, blockers=())
+    return RebuildTask(
+        project=wave.project,
+        wave=wave.wave,
+        base=wave.branch,
+        task=task.name,
+        pr=task.pull_request.number,
+        worktree=task.worktree,
+        reason=f"the entity of the task amended on {wave.branch}",
+        amendment=task.amendment,
+    )
+
+
 def _decide_catch_up(
     wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy
-) -> RebaseTask | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
+) -> RebaseTask | RebuildTask | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
     if (
         not task.pull_request.behind
         or task.pull_request.state != OPEN_PULL_REQUEST
@@ -308,6 +325,8 @@ def _decide_catch_up(
         or (wave.wave, task.name) in occupancy.tasks
     ):
         return None
+    if task.amendment is not None:
+        return _decide_rebuild(wave, task, project)
     if task.holds_uncommitted_changes and _describe_spent_rounds(task, project) is None:
         return _launch_repair(wave, task)
     return RebaseTask(
