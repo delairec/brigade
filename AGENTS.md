@@ -32,6 +32,10 @@ awawa fmt --check . && awawa lint --strict .                              # the 
   A republish goes through the Artifact tool with `url` set to that address, after a read of it.
 - `artifact/use-cases/` — the sources of the published Artifact "Brigade cas d'utilisation"; its `README.md` says how
   to redo the map and republish it.
+- `wiki/` — the documentation, one page per subject, published to the GitHub wiki
+  <https://github.com/delairec/brigade/wiki> on each push to `main` by `.github/workflows/wiki.yml`; `wiki/Home.md`
+  names every page with what it answers. `README.md` keeps what brigade is, the minimal install, the basic command
+  and the link to the wiki.
 - `HANDOFF.md` — the record of the planning run, dated: it is never rewritten.
 
 ## Stack
