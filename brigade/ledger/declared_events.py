@@ -1,3 +1,4 @@
+from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.constraint_delivered import ConstraintDelivered
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.inbox_dismissed import InboxDismissed
@@ -82,6 +83,7 @@ DECLARED_EVENTS = {
         TickActionFailed,
         InboxRecorded,
         InboxDismissed,
+        BudgetApplied,
     )
 }
 LedgerEvent = (
@@ -121,5 +123,6 @@ LedgerEvent = (
     | TickActionFailed
     | InboxRecorded
     | InboxDismissed
+    | BudgetApplied
     | UndeclaredEvent
 )
