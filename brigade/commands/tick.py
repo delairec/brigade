@@ -625,7 +625,8 @@ def _collect_check_runs(runtime: Runtime, configuration: Configuration, action: 
             equipment=CollectorEquipment(
                 configuration=configuration,
                 forge=runtime.resolve_plugin("forge", FORGE_NAME),
-                forge_name=FORGE_NAME, resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name)
+                forge_name=FORGE_NAME,
+                resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
             ),
         ),
     )
@@ -637,7 +638,10 @@ def _collect_review_threads(runtime: Runtime, configuration: Configuration, acti
         COLLECTOR_KIND, REVIEW_THREADS_COLLECTOR, places=locate_collectors(repository, runtime.paths)
     )
     equipment = CollectorEquipment(
-        configuration=configuration, forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME), forge_name=FORGE_NAME, resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name)
+        configuration=configuration,
+        forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
+        forge_name=FORGE_NAME,
+        resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
     )
     inputs = CollectorInputs(project=repository, since=BEGINNING, parameters=NO_PARAMETERS)
     collection = collect_document(
