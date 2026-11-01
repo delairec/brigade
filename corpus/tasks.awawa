@@ -3885,6 +3885,12 @@ TASK B46
 		+ "brigade/verify/record_verdict.py:45 posts it as a review of the pull request"
 	SPEC "brigade doctor on a machine without gh reports the forge as a warning with its fallback,"
 		+ "local mode, and a project of FORGE none is listed by brigade project list with its forge"
+		IMPL "brigade/commands/doctor.py::FORGE_FALLBACK = \"local mode without a forge\""
+		IMPL "tests/unit/commands/test_doctor.py::def"
+			+ "test_should_check_the_forge_as_the_cli_login(self):"
+		IMPL "brigade/commands/project_list.py::\"forge\": _read_field(project, \"FORGE\"),"
+		IMPL "tests/unit/commands/test_project_list.py::def"
+			+ "test_should_list_each_project_with_its_status_its_path_and_its_forge(self):"
 	AFTER @TASK.B02
 	AFTER @TASK.B17
 	AFTER @TASK.B42
