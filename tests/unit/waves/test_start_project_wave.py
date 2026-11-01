@@ -538,6 +538,9 @@ class StartProjectWaveOfTheTasksOfAMilestoneTest(StartProjectWaveTestCase):
         self.answer_local_branch("shop_w1", 0)
         self.answer_remote_branch("shop_w1", 0)
         self.answer_remote_branch("shop_w2", REMOTE_BRANCH_NOT_FOUND)
+        self.processes.answer(
+            ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", f"refs/heads/{MILESTONE_BRANCH}")
+        )
         self.processes.answer(("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH))
         self.processes.answer(("git", "branch", "--quiet", "integration/shop_w2", f"origin/{MILESTONE_BRANCH}"))
         self.processes.answer(("git", "push", "--quiet", "origin", "integration/shop_w2"))

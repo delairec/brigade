@@ -695,6 +695,9 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	DESC "the tick keeps no truth of its own: the heartbeat of the last tick of @TASK.B28 is a"
 		+ "state file written atomically, not a ledger line per empty tick"
 		REF @TASK.B28
+	DESC "a project whose facts the snapshot cannot read is named on stderr and skipped, and"
+		+ "contributes no wave and no milestone to the snapshot, so that the plan, which reads the"
+		+ "facts of the project of each wave, serves the other projects"
 	DESC "binds @TASK.B07, @TASK.B12, @TASK.B14, @TASK.B17, @TASK.B18, @TASK.B19, @TASK.B48,"
 		+ "@TASK.B51 and @TASK.B166"
 		REF @TASK.B07
@@ -4366,6 +4369,13 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "by the executor, the candidates of the milestone read in the next round of the same tick"
 		+ "on the rebased branch; brigade wave start rebases nothing"
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	DESC "a recorded branch the forge no longer holds, as GitHub deletes the head branch of the"
+		+ "merged pull request of a milestone under delete_branch_on_merge while the milestone"
+		+ "stays active, is cut again from PROJECT.MAIN under its recorded name at the next need of"
+		+ "a wave, pushed from the main branch of the forge whatever the clone holds under that"
+		+ "name, and milestone.branch_cut appended again; until then the candidates of the"
+		+ "milestone are read at PROJECT.MAIN, as for a milestone never cut; any other failure to"
+		+ "read the branch on the forge still skips the project"
 	REJECTED "one integration branch per wave, integration/<project>_w<n> cut from PROJECT.MAIN and"
 		+ "merged into main by a pull request of its own, as the tick does today: the user ruled"
 		+ "that a wave merges into the integration branch of its milestone and never into main"
@@ -4405,6 +4415,12 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "--dry-run, and before list_candidate_waves in brigade wave start: a write outside the"
 		+ "executor, which the decision TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction"
 		+ "forbids; the user chose « Une action du plan » over « Une étape avant la lecture »"
+	REJECTED "the cut again planned by the tick at each tick for every active milestone whose"
+		+ "branch the forge no longer holds: a milestone with no ratified task would have its"
+		+ "branch cut and rebased for nothing, as TASK B224 rejects for a milestone never cut"
+	REJECTED "the branch of the clone moved with git branch --force before the push: git refuses to"
+		+ "move a branch checked out in a worktree, as integration/dashboard is in the rebase"
+		+ "worktree of M3"
 	CLOSES @OPEN_QUESTION.SeveralMilestonesActiveAtOnce
 	CLOSES @OPEN_QUESTION.TheNameOfTheIntegrationBranchOfAMilestone
 	CLOSES @OPEN_QUESTION.WhoMergesAWaveIntoTheIntegrationBranchOfItsMilestone
@@ -4448,6 +4464,15 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "snapshot at each round, so a rebase applied in one round is read in the next round of"
 		+ "the same tick"
 		REF @TASK.B214
+	RATIONALE "DESC 15: the user merged #268, the pull request of @MILESTONE.M9 into main, on"
+		+ "2026-10-31 and GitHub deleted integration/milestone-integration-branch while M9 stayed"
+		+ "active, @TASK.B224 to @TASK.B227 ratified since; from 22:41Z every tick named the"
+		+ "project brigade skipped on git fetch of that branch, exit 128, the ledger still"
+		+ "recording its milestone.branch_cut, until the session pushed main to the branch by hand"
+		+ "at 2026-11-01T01:10Z"
+		REF @MILESTONE.M9
+		REF @TASK.B224
+		REF @TASK.B227
 	SOURCE "the user's words of 2026-10-28 on pull request #239: « comment ça la pr 239 peut être"
 		+ "mergée, il est pas censé y avoir d'abord le merge de toutes les pr de m3?, puis je"
 		+ "comprends pas pourquoi les branche d'intégration ne porte pas le nom de la milestone,"
@@ -4498,6 +4523,8 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction », against « Une étape avant la"
 		+ "lecture »"
 		REF @TASK.B214
+	SOURCE "the user's ruling of 2026-11-01 on the ticks failing since the merge of #268: « tu te"
+		+ "débrouilles pour fixer tout ça et qu'on en finisse avec m3 »"
 
 DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 	TITLE "brigade wave requeue of a parked task whose pull request is open records task.state"

@@ -827,13 +827,13 @@ def _assemble_reading(runtime: Runtime, configuration: Configuration, forge: For
     )
 
 
-def _read_open_waves(runtime: Runtime, reading: WaveReading) -> tuple[WaveFacts, ...]:
+def _read_open_waves(runtime: Runtime, reading: WaveReading, projects: frozenset[str]) -> tuple[WaveFacts, ...]:
     return tuple(
         facts
         for facts in (
             _read_wave_facts(runtime, reading, summary.started)
             for summary in summarize_waves(reading.entries)
-            if summary.is_open
+            if summary.is_open and summary.started.project in projects
         )
         if facts is not None
     )
@@ -940,7 +940,7 @@ def _read_readable_milestone_facts(
         return None
 
 
-def _read_milestones(runtime: Runtime, reading: WaveReading) -> tuple[MilestoneFacts, ...]:
+def _read_milestones(runtime: Runtime, reading: WaveReading, projects: frozenset[str]) -> tuple[MilestoneFacts, ...]:
     cuts = {
         (event.project, event.milestone): event for event in reading.events if isinstance(event, MilestoneBranchCut)
     }
@@ -948,7 +948,9 @@ def _read_milestones(runtime: Runtime, reading: WaveReading) -> tuple[MilestoneF
     return tuple(
         facts
         for facts in (
-            _read_readable_milestone_facts(runtime, reading, cut) for key, cut in cuts.items() if key not in closed
+            _read_readable_milestone_facts(runtime, reading, cut)
+            for key, cut in cuts.items()
+            if key not in closed and cut.project in projects
         )
         if facts is not None
     )
@@ -959,13 +961,15 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         return Snapshot(now=runtime.now)
     reading = _assemble_reading(runtime, configuration, forge)
     last_orders = read_last_study_orders(runtime.paths.state_root)
+    projects = _read_registered_projects(runtime, reading)
+    projects_read = frozenset(project.name for project in projects)
     return Snapshot(
         now=runtime.now.astimezone(),
-        waves=_read_open_waves(runtime, reading),
-        projects=_read_registered_projects(runtime, reading),
+        waves=_read_open_waves(runtime, reading, projects_read),
+        projects=projects,
         studies=tuple(_describe_study(study, last_orders.get(study.name)) for study in read_studies(runtime)),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         rate_limits=_read_rate_limits(reading, runtime.now),
-        milestones=_read_milestones(runtime, reading),
+        milestones=_read_milestones(runtime, reading, projects_read),
     )
