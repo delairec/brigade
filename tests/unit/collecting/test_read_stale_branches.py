@@ -53,3 +53,16 @@ class ReadStaleBranchesTest(ScanCollectorTestCase):
             forge.list_requests("list_pull_requests"),
             [{"schema_version": 1, "repository": "/srv/oak", "state": "all", "environment": {}}],
         )
+
+    def test_should_read_no_stale_branch_without_asking_the_forge_for_a_project_off_the_forge(self):
+        # Arrange
+        self.register_oak(("FORGE", "none"))
+        oak = read_projects(self.runtime)[0]
+        forge = create_forge(PULL_REQUESTS)
+
+        # Act
+        stale = read_stale_branches(oak, create_equipment(forge), self.runtime)
+
+        # Assert
+        self.assertEqual(stale, [])
+        self.assertEqual(forge.list_operations(), [])

@@ -3,6 +3,7 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.corpus.read_entities import Entity
 from brigade.git.list_local_branches import list_local_branches
+from brigade.registry.describe_remote import NO_FORGE
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_requests import PullRequestsQuery, ask_pull_requests
@@ -24,6 +25,8 @@ def _read_pull_requests(repository: Path, equipment: CollectorEquipment, runtime
 
 
 def read_stale_branches(project: Entity, equipment: CollectorEquipment, runtime: Runtime) -> list[dict]:
+    if read_project_field(project, "FORGE") == NO_FORGE:
+        return []
     repository = Path(read_project_field(project, "PATH"))
     main = read_project_field(project, "MAIN")
     branches = list_local_branches(runtime.run_process, repository)
