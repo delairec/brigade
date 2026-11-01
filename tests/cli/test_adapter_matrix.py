@@ -30,6 +30,22 @@ CLAUDE_CODE_ROW = {
     },
     "error": None,
 }
+VIBE_ROW = {
+    "name": "vibe",
+    "audience": "supported_client",
+    "capabilities": {
+        "launch": "full",
+        "result": "full",
+        "resume": "fallback",
+        "transcripts": "full",
+        "actions": "fallback",
+        "step_count": "full",
+        "tool_grants": "full",
+        "reset_hour": "fallback",
+        "graceful_stop": "fallback",
+    },
+    "error": None,
+}
 FAKE_ROW = {
     "name": "fake",
     "audience": "test_suite",
@@ -74,5 +90,5 @@ class BrigadeAdapterMatrixOfTheBuiltInAdaptersTest(AdapterMatrixTestCase):
         self.assertEqual(completed.stderr, "")
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "adapters": [CLAUDE_CODE_ROW, FAKE_ROW], "fallbacks": FALLBACKS},
+            {"schema_version": 1, "adapters": [CLAUDE_CODE_ROW, VIBE_ROW, FAKE_ROW], "fallbacks": FALLBACKS},
         )
