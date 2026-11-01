@@ -3130,6 +3130,17 @@ TASK B34
 		+ "name, a signal of kind scan counting for the study its fingerprint opens on, with the"
 		+ "count of those signals and the age of the oldest; the Home view renders them from"
 		+ "/api/status"
+		IMPL "brigade/commands/status.py::def _list_scans(new_signals: list[Signal]) -> list[dict]:"
+		IMPL "brigade/commands/status.py::def _render_scan(scan: dict) -> str:"
+		IMPL "brigade/dashboard/render_home.py::def _render_inbox(inbox: dict) -> str:"
+		IMPL "tests/unit/commands/test_status.py::def"
+			+ "test_should_list_each_scan_its_new_signals_name_with_their_count_and_the_age_of_the_oldest"
+		IMPL "tests/unit/commands/test_status.py::def"
+			+ "test_should_leave_out_a_dismissed_scan_signal_and_a_signal_of_another_kind"
+		IMPL "tests/unit/commands/test_status.py::def"
+			+ "test_should_print_one_line_per_scan_holding_new_signals_after_the_inbox"
+		IMPL "tests/unit/dashboard/test_render_home.py::def"
+			+ "test_should_render_each_scan_holding_new_signals_with_their_count_and_the_age_of_the_oldest"
 	AFTER @TASK.B33
 	AFTER @TASK.B28
 	RATIONALE "a signal of a scan reaches the inbox through @TASK.B33, and brigade inbox list and"
