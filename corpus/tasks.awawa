@@ -3262,7 +3262,8 @@ TASK B36
 TASK B37
 	TITLE "brigade fits the step cap of each role to the cost of its growing context and applies it"
 		+ "at launch"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 309
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "runs"
