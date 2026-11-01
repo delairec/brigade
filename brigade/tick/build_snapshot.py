@@ -8,6 +8,7 @@ from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
+from brigade.corpus.read_entity import read_entity
 from brigade.errors import BrigadeError, CommandFailed, ToolFailure
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
@@ -112,6 +113,7 @@ FAILED_PREFLIGHT_CHECK = "fail"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 STATUS_FIELD = "STATUS"
 TODO_STATUS = "todo"
+OPEN_PULL_REQUEST = "open"
 
 
 @dataclass(frozen=True)
@@ -141,6 +143,12 @@ class BlockedRun:
 
 
 @dataclass(frozen=True)
+class TaskAmendment:
+    on_pull_request: Entity
+    on_wave: Entity
+
+
+@dataclass(frozen=True)
 class TaskFacts:
     name: str
     after: tuple[str, ...] = ()
@@ -162,6 +170,7 @@ class TaskFacts:
     rebased_by_last_run: bool = False
     last_run_is_a_rebase: bool = False
     milestone: str | None = None
+    amendment: TaskAmendment | None = None
 
     def to_document(self) -> dict:
         return {
@@ -609,12 +618,24 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
     )
 
 
+def _note_amendment(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: TaskFacts, on_wave: Entity):
+    if task.pull_request is None or task.pull_request.state != OPEN_PULL_REQUEST:
+        return task
+    query = argparse.Namespace(project=open_wave.started.project, ref=task.pull_request.head, worktree=None)
+    tree = prepare_project_tree(query, reading.configuration, runtime)
+    on_pull_request = read_entity(runtime.run_process, tree.root, TASK_TYPE, task.name)
+    if on_pull_request == on_wave:
+        return task
+    return dataclasses.replace(task, amendment=TaskAmendment(on_pull_request=on_pull_request, on_wave=on_wave))
+
+
 def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
     wave = open_wave.started.wave
     followed = _follow_task(
         _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
     )
-    return _note_last_run(_note_quota(followed, reading, wave, open_wave.followed.states), reading, wave)
+    amended = _note_amendment(runtime, reading, open_wave, followed, task)
+    return _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
 
 
 def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tree_root: Path) -> _OpenWave:

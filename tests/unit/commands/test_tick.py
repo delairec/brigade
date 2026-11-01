@@ -22,6 +22,7 @@ from brigade.system.resolve_collector import BuiltInCollector, resolve_collector
 from tests.unit.commands.command_runtime import (
     ProcessAnswer,
     ScriptedProcessRunner,
+    answer_from_corpus,
     create_corpus_double,
     create_machine_double,
     write_ledger,
@@ -5032,4 +5033,138 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                 "pr": 77,
             },
             self._read_milestone_events(),
+        )
+
+
+SHA_OF_THE_PULL_REQUEST_HEAD = "a3e4d5f"
+TASK_DELIVERED_TO_ITS_FIRST_WORDING = (*TASK_DELIVERED, ("SPEC", "the tide table lists the low tides"))
+TASK_AMENDED_ON_THE_WAVE_BRANCH = (*TASK_DELIVERED, ("SPEC", "the tide table lists the low and the high tides"))
+OUTPUTS_OF_AN_AMENDED_TASK = {
+    **MACHINE_ANSWERS,
+    ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "8885daa^{commit}"): ProcessAnswer(
+        stdout=f"{SHA_OF_THE_PULL_REQUEST_HEAD}\n"
+    ),
+}
+
+
+class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.pull_request_tree = self.root / "cache" / "refs" / "tidepool" / SHA_OF_THE_PULL_REQUEST_HEAD
+        self.pull_request_tree.mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.worktree.mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_AMENDED_ON_THE_WAVE_BRANCH},
+        }
+        on_the_pull_request = {**corpus, "TASK": {"T7": TASK_DELIVERED_TO_ITS_FIRST_WORDING}}
+        self.machine = ScriptedProcessRunner(
+            OUTPUTS_OF_AN_AMENDED_TASK,
+            fallback=lambda request: answer_from_corpus(
+                on_the_pull_request if request.argv[-1] == str(self.pull_request_tree) else corpus, request
+            ),
+        )
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.machine.run,
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])),
+        )
+
+    def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH), [])
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7-rebuild.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_record_the_task_in_fixing_for_the_amendment_of_its_entity(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            json.loads((self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[4]),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "fixing",
+                "reason": "the entity of the task amended on integration/M4",
+            },
+        )
+
+    def test_should_print_the_rebuild_with_its_task_its_pull_request_and_its_base_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["plan"],
+            [
+                {
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "base": "integration/M4",
+                    "task": "T7",
+                    "pr": 42,
+                    "worktree": str(self.worktree),
+                    "reason": "the entity of the task amended on integration/M4",
+                    "amendment": {
+                        "on_pull_request": {
+                            "name": "T7",
+                            "fields": (
+                                {"name": "MILESTONE", "value": "@MILESTONE.M4"},
+                                {"name": "STATUS", "value": "implemented"},
+                                {"name": "DELIVERED_BY", "value": "42"},
+                                {"name": "SPEC", "value": "the tide table lists the low tides"},
+                            ),
+                        },
+                        "on_wave": {
+                            "name": "T7",
+                            "fields": (
+                                {"name": "MILESTONE", "value": "@MILESTONE.M4"},
+                                {"name": "STATUS", "value": "implemented"},
+                                {"name": "DELIVERED_BY", "value": "42"},
+                                {"name": "SPEC", "value": "the tide table lists the low and the high tides"},
+                            ),
+                        },
+                    },
+                },
+            ],
         )
