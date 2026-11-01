@@ -46,7 +46,7 @@ class ComposeDeliveryBodyOfAWaveTest(unittest.TestCase):
                 "fix(waves): name the base (@TASK.T9)",
                 "docs(tick): name the timer",
             ),
-            attribution=("Co-Authored-By: Octo <octo@example.com>",),
+            attribution=("Co-Authored-By: Octo <octo@example.org>",),
             report=NO_REPORT,
         )
 
@@ -64,7 +64,7 @@ class ComposeDeliveryBodyOfAWaveTest(unittest.TestCase):
                 "- chore(tick): pin the timer",
                 "- docs(tick): name the timer",
                 "",
-                "Co-Authored-By: Octo <octo@example.com>",
+                "Co-Authored-By: Octo <octo@example.org>",
             ],
         )
 
@@ -128,7 +128,7 @@ class ComposeDeliveryBodyOfAWaveTest(unittest.TestCase):
             merged_waves=NO_MERGED_WAVE,
             tasks=(KEEP_THE_CUT_BRANCH,),
             commits=("chore(tick): pin the timer",),
-            attribution=("Co-Authored-By: Octo <octo@example.com>",),
+            attribution=("Co-Authored-By: Octo <octo@example.org>",),
             report="# Wave tidepool_w16\n\nT7 merged #41\n",
         )
 
