@@ -3280,6 +3280,15 @@ WAVE_PR_OPENED = {
     "pr": 206,
     "login": "tidepool-cli",
 }
+WAVE_PR_DESCRIBED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:30:00Z",
+    "event": "wave.pr_described",
+    "wave": "tidepool_w16",
+    "pr": 206,
+    "head": "8885daa",
+    "login": "tidepool-cli",
+}
 WAVE_PULL_REQUEST_READY = INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH | {
     "checks": [{"name": "tests", "verdict": "success"}]
 }
@@ -3326,6 +3335,7 @@ EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN = [
     CUT_OF_M4,
     WAVE_REPORTED,
     WAVE_PR_OPENED,
+    WAVE_PR_DESCRIBED,
 ]
 
 
@@ -3466,6 +3476,15 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
                     "event": "wave.pr_opened",
                     "wave": "tidepool_w16",
                     "pr": 206,
+                    "login": "tidepool-cli",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T12:30:00Z",
+                    "event": "wave.pr_described",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                    "head": "8885daa",
                     "login": "tidepool-cli",
                 },
                 {

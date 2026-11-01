@@ -56,6 +56,8 @@ from brigade.tick.read_live_blockers import read_live_blockers
 from brigade.waves.cut_wave_branch import WaveBranchCut
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_milestone_branch import find_milestone_branch
+from brigade.waves.find_milestone_described_head import find_milestone_described_head
+from brigade.waves.find_wave_described_head import find_wave_described_head
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
 from brigade.waves.list_merged_waves import list_merged_waves
@@ -748,6 +750,12 @@ def _read_wave_pull_request(
     return _WavePullRequest(facts=facts, milestone_branch=milestone_branch, unresolved_threads=threads)
 
 
+def _find_wave_described_head(reading: WaveReading, wave: str, pull_request: PullRequestFacts | None) -> str | None:
+    if pull_request is None:
+        return None
+    return find_wave_described_head(reading.events, wave, pull_request.number)
+
+
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
     project = find_project(reading.projects, started.project)
     cut = WaveBranchCut(project=project, branch=started.branch, read_environment=reading.forge.read_environment)
@@ -776,6 +784,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         rebase_run_live=any(
             run["state"] == LIVE_RUN_STATE for run in _list_wave_branch_rebase_runs(reading, started.wave)
         ),
+        described_head=_find_wave_described_head(reading, started.wave, pull_request.facts),
     )
 
 
@@ -957,6 +966,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
             branch=cut.branch,
             opened_pull_request=opened,
             pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
+            described_head=find_milestone_described_head(reading.events, cut.project, cut.milestone, opened),
         )
     ref = locate_forge_branch(runtime.run_process, project, cut.branch, reading.forge.read_environment)
     rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
