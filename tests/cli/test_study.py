@@ -606,6 +606,16 @@ class BrigadeStudyListTest(StudyRunTestCase):
                     {"name": "trees", "status": "active", "every": "1h", "last_run": trees_run, "outcome": "done"},
                     {"name": "weekly", "status": "active", "every": "mon@09:00", "last_run": None, "outcome": None},
                     {"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None},
+                    {"name": "corpus_lint_shop", "status": "active", "every": "24h", "last_run": None, "outcome": None},
+                    {"name": "corpus_fmt_shop", "status": "active", "every": "24h", "last_run": None, "outcome": None},
+                    {
+                        "name": "stale_branches_shop",
+                        "status": "active",
+                        "every": "24h",
+                        "last_run": None,
+                        "outcome": None,
+                    },
+                    {"name": "worktrees_shop", "status": "active", "every": "24h", "last_run": None, "outcome": None},
                 ],
             },
         )
