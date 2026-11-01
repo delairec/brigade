@@ -14412,3 +14412,34 @@ TASK B227
 		REF @TASK.B226
 		REF @MILESTONE.M9
 		REF @MILESTONE.M10
+
+TASK B228
+	TITLE "The Corpus view and /api/corpus read a project at its main branch when no ref is named,"
+		+ "and every reading lists the entity types of the corpus"
+	STATUS todo
+	TYPE fix
+	MILESTONE @MILESTONE.M3
+	COMPONENT "dashboard"
+	ROLE ada
+	SPEC "brigade corpus <project> named with neither --ref nor --worktree reads the project at the"
+		+ "branch of its MAIN field, and the ref of its document names that branch"
+	SPEC "every reading of brigade corpus carries types, the entity types of the corpus at the ref"
+		+ "read, whether --type is given or not"
+	SPEC "the Corpus view opened on a project with no ref, the link of the project choice, answers"
+		+ "200 with the selector, its ref field pre-filled with that branch and its type list"
+		+ "offering the types read, in place of the usage of brigade corpus"
+	SPEC "tests/cli proves the path a user follows: GET /views/corpus/<project> with no parameter"
+		+ "answers 200 with the ref pre-filled and the types offered, and GET /api/corpus/<project>"
+		+ "with no parameter answers the document of the main branch with its types"
+	AFTER @TASK.B30
+	RATIONALE "observed on 2026-11-01 against brigade serve at 16737cd4: GET /views/corpus/brigade"
+		+ "answered 500 with the usage of brigade corpus, « one of the arguments --ref --worktree"
+		+ "is required »; GET /views/corpus/brigade?ref=main answered 200 with an empty type list"
+		+ "and no entity, the types being read only under --type; the IntelliJ plugin of @TASK.B32,"
+		+ "a thin client of /api/corpus, meets the same two dead ends"
+		REF @TASK.B32
+	SOURCE "the user's words of 2026-11-01, testing the Corpus view at"
+		+ "http://127.0.0.1:8470/#corpus/brigade: « la partie corpus a l'air de buguer, elle"
+		+ "affiche un message d'erreur et rappelle l'usage quand on veut afficher le projet brigade"
+		+ "», then « ni dans la page ni dans l'ide »; asked between a ref field left empty and one"
+		+ "pre-filled with the project's default branch: « pré remplie »"
