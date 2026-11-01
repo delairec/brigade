@@ -87,6 +87,7 @@ class SnapshotTest(unittest.TestCase):
                     base="main",
                     updated_at=datetime(2026, 10, 18, 11, 0, tzinfo=UTC),
                 ),
+                described_head="9f1e2d3",
             ),
         )
         snapshot = Snapshot(now=datetime(2026, 10, 18, 12, 0, tzinfo=UTC), milestones=milestones)
@@ -110,6 +111,7 @@ class SnapshotTest(unittest.TestCase):
                     "behind_main": True,
                     "rebase_run_live": False,
                     "blocked_rebase": {"run": "20261030T005500Z-2f5135", "question": "Keep the guard or drop it?"},
+                    "described_head": None,
                 },
                 {
                     "project": "shop",
@@ -132,6 +134,7 @@ class SnapshotTest(unittest.TestCase):
                     "behind_main": False,
                     "rebase_run_live": False,
                     "blocked_rebase": None,
+                    "described_head": "9f1e2d3",
                 },
             ],
         )
@@ -224,6 +227,7 @@ class SnapshotTest(unittest.TestCase):
                     "unresolved_threads": 0,
                     "blocked_rebase": None,
                     "rebase_run_live": False,
+                    "described_head": None,
                 }
             ],
         )
