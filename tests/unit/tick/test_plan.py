@@ -2,6 +2,7 @@ import dataclasses
 import unittest
 from datetime import UTC, datetime
 
+from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
@@ -23,6 +24,7 @@ from brigade.tick.actions import (
     PauseWave,
     RebaseMilestone,
     RebaseTask,
+    RebuildTask,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -42,6 +44,7 @@ from brigade.tick.build_snapshot import (
     RecordedVerdict,
     Snapshot,
     StudyFacts,
+    TaskAmendment,
     TaskFacts,
     WaveFacts,
     WavePause,
@@ -1560,9 +1563,9 @@ REBASE_S3 = RebaseTask(
     pr=42,
     worktree=WORKTREE_S3,
     head=HEAD,
-    parking_reason=None,
+    holds_uncommitted_changes=False,
 )
-REBASE_S3_PARKED_ON_A_CONFLICT = dataclasses.replace(REBASE_S3, parking_reason="past 2 repair rounds")
+REBASE_S3_TAKING_ITS_CHANGES_OVER = dataclasses.replace(REBASE_S3, holds_uncommitted_changes=True)
 BEHIND_ON_A_FAILED_CHECK = dataclasses.replace(FAILED_CHECK_RUN, behind=True)
 HOLDING_UNCOMMITTED_CHANGES = True
 
@@ -1650,10 +1653,10 @@ class PlanRebaseTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, expected)
 
-    def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):
-        for case, rounds, expected in [
-            ("a round left", ONE_ROUND_TAKEN, REBASE_S3),
-            ("no round left", TWO_ROUNDS_TAKEN, REBASE_S3_PARKED_ON_A_CONFLICT),
+    def test_should_rebase_a_task_behind_whatever_its_repair_rounds(self):
+        for case, rounds in [
+            ("a round left", ONE_ROUND_TAKEN),
+            ("no round left", TWO_ROUNDS_TAKEN),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -1671,7 +1674,7 @@ class PlanRebaseTest(unittest.TestCase):
                 actions = plan(snapshot)
 
                 # Assert
-                self.assertEqual(actions, (expected,))
+                self.assertEqual(actions, (REBASE_S3,))
 
     def test_should_repair_rather_than_rebase_a_task_behind_whose_worktree_holds_uncommitted_changes(self):
         for state, case, pull_request, failures, expected in [
@@ -1706,7 +1709,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, (expected,))
 
-    def test_should_park_a_task_behind_holding_uncommitted_changes_whose_repair_rounds_are_spent(self):
+    def test_should_rebase_a_task_behind_taking_over_its_uncommitted_changes_once_its_repair_rounds_are_spent(self):
         for state in ["pr_open", "fixing"]:
             with self.subTest(state=state):
                 # Arrange
@@ -1725,7 +1728,116 @@ class PlanRebaseTest(unittest.TestCase):
                 actions = plan(snapshot)
 
                 # Assert
-                self.assertEqual(actions, (PARK_S3_PAST_ITS_ROUNDS,))
+                self.assertEqual(actions, (REBASE_S3_TAKING_ITS_CHANGES_OVER,))
+
+
+AMENDED_ON_THE_WAVE_BRANCH = TaskAmendment(
+    on_pull_request=Entity(name="S3", fields=(EntityField(name="SPEC", value="the cart is emptied in two clicks"),)),
+    on_wave=Entity(name="S3", fields=(EntityField(name="SPEC", value="the cart is emptied in one click"),)),
+)
+UNCHANGED_ENTITY = None
+REBUILD_S3 = RebuildTask(
+    project="shop",
+    wave="shop_w1",
+    base=WAVE_BRANCH,
+    task="S3",
+    pr=42,
+    worktree=WORKTREE_S3,
+    reason=f"the entity of the task amended on {WAVE_BRANCH}",
+    amendment=AMENDED_ON_THE_WAVE_BRANCH,
+)
+
+
+class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
+    def test_should_rebuild_rather_than_rebase_a_task_behind_whose_entity_is_amended(self):
+        for state, amendment, expected in [
+            ("pr_open", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
+            ("verifying", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
+            ("verified", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
+            ("changes_requested", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
+            ("fixing", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
+            ("pr_open", UNCHANGED_ENTITY, REBASE_S3),
+            ("fixing", UNCHANGED_ENTITY, REBASE_S3),
+        ]:
+            with self.subTest(state=state, amended=amendment is not None):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=BEHIND,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    amendment=amendment,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (expected,))
+
+    def test_should_hand_the_worktree_of_an_amended_task_to_its_rebuild_with_its_uncommitted_changes(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            pull_request=BEHIND,
+            worktree=WORKTREE_S3,
+            opened_pull_request=OPENED_BY_THE_TASK,
+            preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+            holds_uncommitted_changes=HOLDING_UNCOMMITTED_CHANGES,
+            amendment=AMENDED_ON_THE_WAVE_BRANCH,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (REBUILD_S3,))
+
+    def test_should_plan_nothing_for_an_amended_task_while_a_run_holds_its_worktree_or_works_on_it(self):
+        for case, live_run in [
+            ("a run of the task", REMEDIATION_RUN_OF_S3),
+            ("a run of no task in its worktree", RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=BEHIND,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    amendment=AMENDED_ON_THE_WAVE_BRANCH,
+                )
+                project = dataclasses.replace(SHOP, live_runs=(live_run,))
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_park_an_amended_task_past_its_repair_rounds_on_the_rounds_spent(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            pull_request=BEHIND,
+            worktree=WORKTREE_S3,
+            opened_pull_request=OPENED_BY_THE_TASK,
+            preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+            repair_rounds=TWO_ROUNDS_TAKEN,
+            amendment=AMENDED_ON_THE_WAVE_BRANCH,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PARK_S3_PAST_ITS_ROUNDS,))
 
 
 BLOCKED_ON_A_RULING = BlockedRun(run="20261006T110000Z-b10c4d", question="Keep the guard or drop it?")

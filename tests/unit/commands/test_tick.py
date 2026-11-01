@@ -22,6 +22,7 @@ from brigade.system.resolve_collector import BuiltInCollector, resolve_collector
 from tests.unit.commands.command_runtime import (
     ProcessAnswer,
     ScriptedProcessRunner,
+    answer_from_corpus,
     create_corpus_double,
     create_machine_double,
     write_ledger,
@@ -44,6 +45,9 @@ from tests.unit.select_wave_events import select_wave_events
 from tests.unit.spawned_process_double import SpawnedProcessDouble
 
 GIT_PUSH = ("git", "push")
+GIT_ADD = ("git", "add")
+GIT_COMMIT = ("git", "commit")
+STAGED_CHANGES_FOUND = 1
 GIT_REBASE = ("git", "rebase")
 
 LOOP_MODE = "loop"
@@ -3792,6 +3796,12 @@ OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT = {
     REBASE_ONTO_THE_WAVE_BRANCH: CONFLICTING_REBASE,
     ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
 }
+OUTPUTS_OF_A_REBASE_OF_A_WORKTREE_HOLDING_CHANGES = {
+    **REBASE_OUTPUTS,
+    ("git", "status", "--porcelain", "--untracked-files=no"): ProcessAnswer(stdout=" M src/tides.py\n"),
+    ("git", "diff", "--cached", "--quiet"): ProcessAnswer(exit_code=STAGED_CHANGES_FOUND),
+    GIT_COMMIT: ProcessAnswer(),
+}
 LEDGER_OF_A_TASK_IN_VERIFYING = [
     WAVE_STARTED,
     TASK_PR_OPENED,
@@ -3887,6 +3897,20 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                 REBASE_ONTO_THE_WAVE_BRANCH,
                 ("git", "push", "--quiet", "--force-with-lease=task/M4/T7:8885daa", "origin", "HEAD:task/M4/T7"),
             ],
+        )
+
+    def test_should_stage_nothing_in_a_worktree_holding_no_uncommitted_change_before_rebasing_it(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.machine.argvs, GIT_ADD, GIT_COMMIT, GIT_REBASE),
+            [REBASE_ONTO_THE_WAVE_BRANCH],
         )
 
     def test_should_record_the_rebase_with_both_heads_and_the_login_of_the_push_and_send_the_task_to_its_preflight(
@@ -4077,7 +4101,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             ],
         )
 
-    def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):
+    def test_should_launch_the_rebase_slot_on_a_conflict_whatever_the_repair_rounds_spent(self):
         # Arrange
         write_ledger(self.root, LEDGER_OF_A_TASK_PAST_ITS_ROUNDS)
         runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
@@ -4086,98 +4110,54 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(self.spawn.argvs, [("study", "run", "wave-report", "--run-id", ANY)])
         self.assertEqual(
-            self._read_events(),
+            self.spawn.argvs,
             [
-                {
-                    "schema_version": 2,
-                    "ts": "2026-10-18T09:00:00Z",
-                    "event": "wave.started",
-                    "wave": "tidepool_w16",
-                    "project": "tidepool",
-                    "branch": "integration/M4",
-                    "tasks": ["T7"],
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-18T11:00:00Z",
-                    "event": "task.pr_opened",
-                    "project": "tidepool",
-                    "task": "T7",
-                    "wave": "tidepool_w16",
-                    "branch": "task/M4/T7",
-                    "pr": 42,
-                    "login": "tidepool-bot",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-18T11:30:00Z",
-                    "event": "task.preflighted",
-                    "project": "tidepool",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "pr": 42,
-                    "head": "8885daa",
-                    "checks": [],
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-18T10:00:00Z",
-                    "event": "task.state",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "state": "verifying",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-18T10:00:00Z",
-                    "event": "task.state",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "state": "fixing",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-18T10:00:00Z",
-                    "event": "task.state",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "state": "fixing",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-18T10:00:00Z",
-                    "event": "task.state",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "state": "verifying",
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-19T09:00:00Z",
-                    "event": "task.parked",
-                    "wave": "tidepool_w16",
-                    "task": "T7",
-                    "reason": "past 2 repair rounds",
-                    "blockers": [],
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-19T09:00:00Z",
-                    "event": "order.started",
-                    "project": "tidepool",
-                    "kind": "study",
-                    "order": "wave-report",
-                    "run": ANY,
-                },
-                {
-                    "schema_version": 1,
-                    "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.reported",
-                    "wave": "tidepool_w16",
-                    "run": ANY,
-                },
+                (
+                    "run",
+                    "rebase-on-base",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_commit_the_uncommitted_changes_of_a_task_past_its_rounds_before_rebasing_it(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_PAST_ITS_ROUNDS)
+        runtime = self._create_runtime(
+            OUTPUTS_OF_A_REBASE_OF_A_WORKTREE_HOLDING_CHANGES, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST]
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.machine.argvs, GIT_ADD, GIT_COMMIT, GIT_REBASE, GIT_PUSH),
+            [
+                ("git", "add", "--", "."),
+                (
+                    "git",
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    "chore(tick): keep the changes of @TASK.T7 left uncommitted before its rebase",
+                ),
+                REBASE_ONTO_THE_WAVE_BRANCH,
+                ("git", "push", "--quiet", "--force-with-lease=task/M4/T7:8885daa", "origin", "HEAD:task/M4/T7"),
             ],
         )
 
@@ -5053,4 +5033,137 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                 "pr": 77,
             },
             self._read_milestone_events(),
+        )
+
+
+SHA_OF_THE_PULL_REQUEST_HEAD = "a3e4d5f"
+TASK_DELIVERED_TO_ITS_FIRST_WORDING = (*TASK_DELIVERED, ("SPEC", "the tide table lists the low tides"))
+TASK_AMENDED_ON_THE_WAVE_BRANCH = (*TASK_TO_DELIVER, ("SPEC", "the tide table lists the low and the high tides"))
+OUTPUTS_OF_AN_AMENDED_TASK = {
+    **MACHINE_ANSWERS,
+    ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "8885daa^{commit}"): ProcessAnswer(
+        stdout=f"{SHA_OF_THE_PULL_REQUEST_HEAD}\n"
+    ),
+}
+
+
+class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.pull_request_tree = self.root / "cache" / "refs" / "tidepool" / SHA_OF_THE_PULL_REQUEST_HEAD
+        self.pull_request_tree.mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.worktree.mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_AMENDED_ON_THE_WAVE_BRANCH},
+        }
+        on_the_pull_request = {**corpus, "TASK": {"T7": TASK_DELIVERED_TO_ITS_FIRST_WORDING}}
+        self.machine = ScriptedProcessRunner(
+            OUTPUTS_OF_AN_AMENDED_TASK,
+            fallback=lambda request: answer_from_corpus(
+                on_the_pull_request if request.argv[-1] == str(self.pull_request_tree) else corpus, request
+            ),
+        )
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.machine.run,
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])),
+        )
+
+    def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH), [])
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7-rebuild.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_record_the_task_in_fixing_for_the_amendment_of_its_entity(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            json.loads((self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[4]),
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.state",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "state": "fixing",
+                "reason": "the entity of the task amended on integration/M4",
+            },
+        )
+
+    def test_should_print_the_rebuild_with_its_task_its_pull_request_and_its_base_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["plan"],
+            [
+                {
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "base": "integration/M4",
+                    "task": "T7",
+                    "pr": 42,
+                    "worktree": str(self.worktree),
+                    "reason": "the entity of the task amended on integration/M4",
+                    "amendment": {
+                        "on_pull_request": {
+                            "name": "T7",
+                            "fields": (
+                                {"name": "MILESTONE", "value": "@MILESTONE.M4"},
+                                {"name": "STATUS", "value": "implemented"},
+                                {"name": "DELIVERED_BY", "value": "42"},
+                                {"name": "SPEC", "value": "the tide table lists the low tides"},
+                            ),
+                        },
+                        "on_wave": {
+                            "name": "T7",
+                            "fields": (
+                                {"name": "MILESTONE", "value": "@MILESTONE.M4"},
+                                {"name": "STATUS", "value": "todo"},
+                                {"name": "SPEC", "value": "the tide table lists the low and the high tides"},
+                            ),
+                        },
+                    },
+                },
+            ],
         )

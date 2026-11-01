@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from brigade.tick.build_snapshot import MergedWave, PreflightFailure
+from brigade.tick.build_snapshot import MergedWave, PreflightFailure, TaskAmendment
 
 
 @dataclass(frozen=True)
@@ -182,7 +182,7 @@ class RebaseTask:
     pr: int
     worktree: str
     head: str
-    parking_reason: str | None
+    holds_uncommitted_changes: bool
 
 
 @dataclass(frozen=True)
@@ -193,3 +193,15 @@ class CollectCheckRuns:
 @dataclass(frozen=True)
 class CollectReviewThreads:
     project: str
+
+
+@dataclass(frozen=True)
+class RebuildTask:
+    project: str
+    wave: str
+    base: str
+    task: str
+    pr: int
+    worktree: str
+    reason: str
+    amendment: TaskAmendment
