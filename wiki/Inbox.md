@@ -14,7 +14,7 @@ Every command prints text or, with `--json`, a JSON document.
 
 ## Signals
 
-The inbox holds the signals brigade records: facts seen by a connector, a note, the answer of a study. A signal is
+The inbox holds the signals brigade records: facts seen by a connector, a note, the answer of a study, the items of a scan. A signal is
 the fold of every recording of one fingerprint:
 
 - its count of recordings, its age since the first, and the evidence of the last;
@@ -26,7 +26,8 @@ Its id is the sha256 of its fingerprint: `inbox list` prints its first 7 charact
 | Kind | Recorded by | Fingerprint |
 |---|---|---|
 | `note` | `brigade note` | `note:` and the first 12 hexadecimal characters of the sha256 of the project, a newline and the text |
-| `study` | a study whose output is `inbox` | `study:<study>:` and the first 12 hexadecimal characters of the sha256 of the Markdown rendered from the answer |
+| `study` | a study with a judging run whose output is `inbox` | `study:<study>:` and the first 12 hexadecimal characters of the sha256 of the Markdown rendered from the answer |
+| `scan` | a study with `SLOT none` whose output is `inbox`, one signal per item its collectors print | `<study>:<project>:` and the `fingerprint` key of the item, the project empty for a study naming none |
 
 > **Watch out:** a line the inbox cannot read stops every command, exit 1 naming its file and its number.
 

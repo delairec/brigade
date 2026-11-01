@@ -2,6 +2,7 @@ from html import escape
 from urllib.parse import quote
 
 from brigade.dashboard.render_action import render_action
+from brigade.inbox.render_age import render_age
 
 NEVER = "never"
 DUE = "due"
@@ -59,6 +60,14 @@ def _render_last_tick(last_tick: dict | None) -> str:
     )
 
 
+def _render_inbox(inbox: dict) -> str:
+    scans = [
+        f"{escape(scan['study'])}, {scan['signals']} new signals, the oldest {render_age(scan['oldest_age_s'])}"
+        for scan in inbox["scans"]
+    ]
+    return f"<p>{inbox['new_signals']} new signals</p>{_render_list(scans)}"
+
+
 def _render_study(study: dict) -> str:
     return f"{escape(study['name'])}, {DUE if study['due'] else escape(str(study['outcome']))}"
 
@@ -68,7 +77,7 @@ def render_home(document: dict) -> str:
         [
             _render_section("Projects", _render_list([_render_project(project) for project in document["projects"]])),
             _render_section("Waves", _render_list([_render_wave(wave) for wave in document["waves"]])),
-            _render_section("Inbox", f"<p>{document['inbox']['new_signals']} new signals</p>"),
+            _render_section("Inbox", _render_inbox(document["inbox"])),
             _render_section("Quota", _render_quota(document["quota"])),
             _render_section("Last tick", _render_last_tick(document["last_tick"])),
             _render_section("Studies", _render_list([_render_study(study) for study in document["studies"]])),

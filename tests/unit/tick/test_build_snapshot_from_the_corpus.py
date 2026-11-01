@@ -948,6 +948,57 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             (
                 StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),
                 StudyFacts(name="triage", slot="triage", every="24h", status="active", last_started=None, parked=False),
+                StudyFacts(
+                    name="corpus_lint_attic", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="corpus_fmt_attic", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="stale_branches_attic",
+                    slot="none",
+                    every="24h",
+                    status="active",
+                    last_started=None,
+                    parked=False,
+                ),
+                StudyFacts(
+                    name="worktrees_attic", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="corpus_lint_depot", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="corpus_fmt_depot", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="stale_branches_depot",
+                    slot="none",
+                    every="24h",
+                    status="active",
+                    last_started=None,
+                    parked=False,
+                ),
+                StudyFacts(
+                    name="worktrees_depot", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="corpus_lint_shop", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="corpus_fmt_shop", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
+                StudyFacts(
+                    name="stale_branches_shop",
+                    slot="none",
+                    every="24h",
+                    status="active",
+                    last_started=None,
+                    parked=False,
+                ),
+                StudyFacts(
+                    name="worktrees_shop", slot="none", every="24h", status="active", last_started=None, parked=False
+                ),
             ),
         )
 
