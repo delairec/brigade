@@ -16,6 +16,7 @@ from brigade.git.find_branch import find_branch
 from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.roles.resolve_role import BUILT_IN_ROLESET, CORPUS_ROLESET, ROLE_FILE_PATTERN
 from brigade.runtime import Runtime
@@ -43,7 +44,7 @@ PROBE_TIMEOUT_S = 10.0
 SCHEDULER_FALLBACK = "a cron line, or brigade tick --loop"
 LINGER_FALLBACK = "the tick fires only while a session of the user is open"
 FORGE_FALLBACK = "local mode without a forge"
-FORGE_NAME = "github"
+NO_PROJECT_ON_A_FORGE = "no registered project on a forge"
 FORGE_LOGIN_FALLBACK = "the commands acting as it stop"
 UNBOUND_ENVIRONMENT = {}
 NO_FORGE_ACCOUNTS = {}
@@ -184,20 +185,22 @@ def _read_forge_accounts(reading: Configuration | BrigadeError) -> dict:
     return reading.forge_accounts
 
 
-def _read_login_environment(forge, login: str, runtime: Runtime) -> dict | ToolNotFound | None:
+def _read_login_environment(forge, forge_name: str, login: str, runtime: Runtime) -> dict | ToolNotFound | None:
     try:
-        return ask_login_environment(forge, FORGE_NAME, login, runtime)
+        return ask_login_environment(forge, forge_name, login, runtime)
     except ToolNotFound as error:
         return error
 
 
-def _check_forge(forge, login: str | None, environment: dict | ToolNotFound | None, runtime: Runtime) -> dict:
+def _check_forge(
+    forge, forge_name: str, login: str | None, environment: dict | ToolNotFound | None, runtime: Runtime
+) -> dict:
     if isinstance(environment, ToolNotFound):
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
     if environment is None:
         return _create_optional("forge", "warning", f"gh printed no token for {login}", FORGE_FALLBACK)
     try:
-        account = ask_forge_account(forge, FORGE_NAME, environment, runtime)
+        account = ask_forge_account(forge, forge_name, environment, runtime)
     except ToolNotFound:
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
     if account.login is None:
@@ -231,14 +234,27 @@ def _check_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: 
             _create_optional("forge", "warning", str(reading), FORGE_FALLBACK),
             _describe_forge_login("warning", str(reading)),
         ]
-    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    forge_names = _read_project_forges(runtime)
+    if not forge_names:
+        return [_create_optional("forge", "ok", NO_PROJECT_ON_A_FORGE, FORGE_FALLBACK)]
+    return [item for forge_name in forge_names for item in _check_one_forge(reading, forge_name, runtime)]
+
+
+def _read_project_forges(runtime: Runtime) -> list[str]:
+    if not runtime.paths.schema_file.exists():
+        return []
+    return sorted({read_project_forge(project) for project in read_projects(runtime)} - {NO_FORGE})
+
+
+def _check_one_forge(reading: Configuration | BrigadeError, forge_name: str, runtime: Runtime) -> list[dict]:
+    forge = runtime.resolve_plugin("forge", forge_name)
     forge_accounts = _read_forge_accounts(reading)
     keys_by_login = _group_keys_by_login(forge_accounts)
-    environments = {login: _read_login_environment(forge, login, runtime) for login in keys_by_login}
+    environments = {login: _read_login_environment(forge, forge_name, login, runtime) for login in keys_by_login}
     cli_login = forge_accounts.get(CLI_KEY)
     cli_environment = UNBOUND_ENVIRONMENT if cli_login is None else environments[cli_login]
     return [
-        _check_forge(forge, cli_login, cli_environment, runtime),
+        _check_forge(forge, forge_name, cli_login, cli_environment, runtime),
         *(_check_forge_login(login, keys, environments[login]) for login, keys in keys_by_login.items()),
     ]
 
