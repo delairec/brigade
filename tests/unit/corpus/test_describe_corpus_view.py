@@ -47,13 +47,25 @@ B30_CONTEXT = json.dumps(
 def create_corpus_runner(**answers: ProcessAnswer) -> ScriptedProcessRunner:
     return ScriptedProcessRunner(
         {
-            ("awawa", "status", "TASK", "--json", str(ROOT)): ProcessAnswer(stdout=STATUS_OF_THE_CORPUS),
+            ("awawa", "status", "--json", str(ROOT)): ProcessAnswer(stdout=STATUS_OF_THE_CORPUS),
             ("awawa", "show", "@TASK.B27", "--json", str(ROOT)): ProcessAnswer(stdout=B27_SHOWN),
             ("awawa", "show", "@TASK.B30", "--json", str(ROOT)): ProcessAnswer(stdout=B30_SHOWN),
             ("awawa", "context", "@TASK.B30", "--depth", "1", "--json", str(ROOT)): ProcessAnswer(stdout=B30_CONTEXT),
             **answers,
         }
     )
+
+
+class DescribeCorpusViewWithoutATypeTest(unittest.TestCase):
+    def test_should_list_the_entity_types_of_the_corpus_alone(self):
+        # Arrange
+        view = CorpusView(entity_type=None)
+
+        # Act
+        document = describe_corpus_view(create_corpus_runner().run, ROOT, view)
+
+        # Assert
+        self.assertEqual(document, {"types": ["MILESTONE", "TASK"]})
 
 
 class DescribeCorpusViewOfATypeTest(unittest.TestCase):
