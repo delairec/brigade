@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 
 URL_PREFIX = "https://github.com/sandbox/shop/pull/"
+HEAD_MOVED_REFUSAL = "GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)"
+HEAD_MOVING_AT_MERGE = "head-moving-at-merge"
 
 
 def run_git(*arguments: str, cwd: Path | None = None) -> str:
@@ -68,9 +70,23 @@ class Forge:
         found = [self.describe(pull) for pull in reversed(self.read_pulls()) if pull["headRefName"] == head]
         return json.dumps(found[:1])
 
-    def merge(self, number: str, method: str) -> str:
+    def push_onto_a_head_moving_at_merge(self, pull: dict) -> None:
+        moving = self.store / HEAD_MOVING_AT_MERGE
+        if not moving.exists() or moving.read_text() != pull["headRefName"]:
+            return
+        moving.unlink()
+        with tempfile.TemporaryDirectory() as clone:
+            run_git("clone", "--quiet", "--branch", pull["headRefName"], str(self.remote), clone)
+            run_git("commit", "--quiet", "--allow-empty", "-m", "a push between the read and the merge", cwd=Path(clone))
+            run_git("push", "--quiet", "origin", pull["headRefName"], cwd=Path(clone))
+
+    def merge(self, arguments: list[str]) -> str:
+        number, method = arguments[2], arguments[3]
         pull = self.read_pull(number)
+        self.push_onto_a_head_moving_at_merge(pull)
         head = self.read_head(pull)
+        if read_option(arguments, "--match-head-commit") != head:
+            raise SystemExit(HEAD_MOVED_REFUSAL)
         with tempfile.TemporaryDirectory() as clone:
             run_git("clone", "--quiet", "--branch", pull["baseRefName"], str(self.remote), clone)
             run_git("fetch", "--quiet", "origin", pull["headRefName"], cwd=Path(clone))
@@ -124,7 +140,7 @@ class Forge:
         if command == "pr view":
             return json.dumps(self.describe(self.read_pull(arguments[2])))
         if command == "pr merge":
-            return self.merge(arguments[2], arguments[3])
+            return self.merge(arguments)
         if command == "pr review":
             self.write_pull({**self.read_pull(arguments[2]), "reviewDecision": "APPROVED"})
             return ""

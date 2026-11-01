@@ -4648,3 +4648,22 @@ DECISION ARunCutByARateLimitSpendsNoRoundOnceResumedAndItsResumeRestoresTheState
 	SOURCE "the delivery of @TASK.B220, on the user's ruling of 2026-10-29 « Ne compte aucun round"
 		+ "»"
 		REF @TASK.B220
+
+DECISION ThePlanPullRequestIsMergedAtTheHeadItsReviewRead
+	TITLE "brigade merges the pull request of a plan at the head of the read that gave its review,"
+		+ "as the tick merges a task or a wave pull request at the head its snapshot read"
+	STATUS active
+	DESC "brigade/planning/review_plan_pull_request.py hands the forge the head of the pull request"
+		+ "that find_pull_request answered with its review, and merge_pull_request of the forge"
+		+ "takes a head in every request, gh pr merge <n> --<method> --match-head-commit <head>"
+	DESC "binds @TASK.B226"
+		REF @TASK.B226
+	REJECTED "a head optional in the merge request of the forge, the plan pull request merged"
+		+ "naming none: a second path in the adapter, and a plan pushed after the read of its"
+		+ "review merged unread"
+	RATIONALE "SPEC 1 of @TASK.B226 has merge_pull_request of the GitHub adapter name the head; the"
+		+ "merge of a plan pull request goes through the same operation and holds a read of the"
+		+ "pull request, the one that gives its review"
+		REF @TASK.B226
+	SOURCE "taken in the delivery of @TASK.B226"
+		REF @TASK.B226

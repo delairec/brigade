@@ -71,12 +71,14 @@ def create_gh_answering_in_turn(answers: list[str]) -> GhDouble:
 
 
 class DecidePullRequestTest(unittest.TestCase):
-    def test_should_ask_gh_to_approve_or_merge_the_pull_request_by_its_method_as_the_login_of_the_environment(self):
+    def test_should_ask_gh_to_approve_or_merge_the_pull_request_by_its_method_at_its_head_as_the_login_of_the_environment(
+        self,
+    ):
         for decide, method, expected_argv in [
             (approve_pull_request, None, ("gh", "pr", "review", "12", "--approve")),
-            (merge_pull_request, "squash", ("gh", "pr", "merge", "12", "--squash")),
-            (merge_pull_request, "rebase", ("gh", "pr", "merge", "12", "--rebase")),
-            (merge_pull_request, "merge", ("gh", "pr", "merge", "12", "--merge")),
+            (merge_pull_request, "squash", ("gh", "pr", "merge", "12", "--squash", "--match-head-commit", "4f2c9e1")),
+            (merge_pull_request, "rebase", ("gh", "pr", "merge", "12", "--rebase", "--match-head-commit", "4f2c9e1")),
+            (merge_pull_request, "merge", ("gh", "pr", "merge", "12", "--merge", "--match-head-commit", "4f2c9e1")),
         ]:
             with self.subTest(decision=decide.__name__, method=method):
                 # Arrange
@@ -86,6 +88,7 @@ class DecidePullRequestTest(unittest.TestCase):
                     "repository": "/projects/shop",
                     "number": 12,
                     "method": method,
+                    "head": "4f2c9e1",
                     "environment": BOT_ENVIRONMENT,
                 }
 
