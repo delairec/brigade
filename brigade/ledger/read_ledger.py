@@ -1,6 +1,6 @@
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -29,10 +29,23 @@ class SkippedLine:
 
 
 @dataclass(frozen=True)
+class FileEnd:
+    offset: int
+    lines: int
+
+
+START_OF_FILE = FileEnd(offset=0, lines=0)
+
+
+@dataclass(frozen=True)
 class LedgerReading:
     entries: tuple
     files: tuple
     skipped: tuple
+    ends: dict = field(default_factory=dict, compare=False, repr=False)
+
+
+NOTHING_READ = LedgerReading(entries=(), files=(), skipped=())
 
 
 class _LineRefused(Exception):
@@ -93,15 +106,27 @@ def _list_month_files(ledger_directory: Path) -> list[Path]:
     )
 
 
-def read_ledger(state_root: Path) -> LedgerReading:
+def _read_past(path: Path, end: FileEnd) -> bytes:
+    with path.open("rb") as month_file:
+        month_file.seek(end.offset)
+        return month_file.read()
+
+
+def read_ledger(state_root: Path, since: LedgerReading = NOTHING_READ) -> LedgerReading:
     paths = _list_month_files(state_root / LEDGER_DIRECTORY)
-    entries = []
-    skipped = []
+    entries = list(since.entries)
+    skipped = list(since.skipped)
+    ends = dict(since.ends)
     for path in paths:
-        content = path.read_bytes().decode("utf-8", errors="replace")
-        for number, text in enumerate(_split_lines(content), start=1):
+        end = ends.get(str(path), START_OF_FILE)
+        appended = _read_past(path, end)
+        lines = _split_lines(appended.decode("utf-8", errors="replace"))
+        for number, text in enumerate(lines, start=end.lines + 1):
             try:
                 entries.append(_read_entry(text))
             except _LineRefused as refusal:
                 skipped.append(SkippedLine(file=str(path), line=number, reason=str(refusal)))
-    return LedgerReading(entries=tuple(entries), files=tuple(str(path) for path in paths), skipped=tuple(skipped))
+        ends[str(path)] = FileEnd(offset=end.offset + len(appended), lines=end.lines + len(lines))
+    return LedgerReading(
+        entries=tuple(entries), files=tuple(str(path) for path in paths), skipped=tuple(skipped), ends=ends
+    )
