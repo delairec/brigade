@@ -4892,7 +4892,7 @@ DECISION TheWaveViewRunsItsShowAndItsLedgerAsOneViewUnderTheStatusOfItsShow
 DECISION AScanRecordsOneSignalPerItemFingerprintedByTheItemAndEachBuiltInScanRunsPerProject
 	TITLE "a scan records one inbox signal of kind scan per item its collectors print,"
 		+ "fingerprinted <study>:<project>:<the item's fingerprint>, and brigade ships each"
-		+ "built-in scan once per registered project, named <scan>-<project>"
+		+ "built-in scan once per registered project, named <scan>_<project>"
 	STATUS active
 	DESC "an item of a scan's collector carries a fingerprint key naming the fact it reports; an"
 		+ "item without one fails the run; no item, no signal"
@@ -4910,6 +4910,11 @@ DECISION AScanRecordsOneSignalPerItemFingerprintedByTheItemAndEachBuiltInScanRun
 		+ "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint sets, and a scan finds"
 		+ "several facts at once"
 		REF @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
+	RATIONALE "the built-in is named <scan>_<project> because awawa refuses a hyphen in an entity"
+		+ "name (lint L017), so a STUDY could not replace a built-in scan otherwise"
 	SOURCE "the user's rulings of 2026-11-01 in the refinement of @TASK.B33 and @TASK.B34"
 		REF @TASK.B33
 		REF @TASK.B34
+	SOURCE "the user's ruling of 2026-11-01 on the question of the build run of @TASK.B33, run"
+		+ "20261101T151054Z-bf1d28: the built-in scans are named with underscores"
+		REF @TASK.B33

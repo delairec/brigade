@@ -2998,7 +2998,7 @@ TASK B32
 		+ "record for memory, done in another repository"
 
 TASK B33
-	TITLE "Gardening scans: corpus-lint, corpus-fmt, stale-branches and worktrees record one inbox"
+	TITLE "Gardening scans: corpus_lint, corpus_fmt, stale_branches and worktrees record one inbox"
 		+ "signal per fact found"
 	STATUS todo
 	TYPE feat
@@ -3011,20 +3011,20 @@ TASK B33
 		+ "whose collectors print no item records no signal"
 	SPEC "an item of a scan's collector that carries no fingerprint key fails the run, naming the"
 		+ "collector"
-	SPEC "for each registered project P, brigade ships the built-in scans corpus-lint-P,"
-		+ "corpus-fmt-P, stale-branches-P and worktrees-P, SLOT none, OUTPUT inbox, due once a day,"
+	SPEC "for each registered project P, brigade ships the built-in scans corpus_lint_P,"
+		+ "corpus_fmt_P, stale_branches_P and worktrees_P, SLOT none, OUTPUT inbox, due once a day,"
 		+ "listed by brigade study list and launched by the tick when due; a STUDY entity of the"
 		+ "same name in the operational corpus replaces the built-in"
-	SPEC "corpus-lint prints one item per diagnostic of awawa lint --strict --json on the corpus of"
+	SPEC "corpus_lint prints one item per diagnostic of awawa lint --strict --json on the corpus of"
 		+ "the project at its main branch, fingerprint <rule>:<file relative to the"
 		+ "project>:<TYPE.Name of the entity, or none>; a project with no corpus prints none"
-	SPEC "corpus-fmt prints one item per file awawa fmt --check would reformat in the corpus of the"
+	SPEC "corpus_fmt prints one item per file awawa fmt --check would reformat in the corpus of the"
 		+ "project at its main branch, fingerprint the file relative to the project"
-	SPEC "stale-branches prints one item per local branch of the project whose pull request, read"
+	SPEC "stale_branches prints one item per local branch of the project whose pull request, read"
 		+ "from the forge, is merged or closed, fingerprint the branch name; the main branch and a"
 		+ "branch with no pull request print none"
 	SPEC "worktrees prints one item per linked worktree of the project whose branch is stale as"
-		+ "stale-branches reads it, whose branch no longer exists, or that is detached with no live"
+		+ "stale_branches reads it, whose branch no longer exists, or that is detached with no live"
 		+ "run naming it, fingerprint the path of the worktree; the main checkout prints none"
 	SPEC "the four scans report and remove nothing: no branch, worktree or file of the project"
 		+ "changes during their runs"
@@ -7765,7 +7765,7 @@ TASK B104
 		+ "cache bounded in bytes by @TASK.B08, the trails older than trail_days by @TASK.B72, the"
 		+ "disposable worktree of a reading slot after its run by @TASK.B06; in draft, the runs"
 		+ "beyond runs_kept by @TASK.B60, the worktree of a task once its pull request is merged or"
-		+ "closed by @TASK.B14, the scans stale-branches and worktrees of @TASK.B33, which report"
+		+ "closed by @TASK.B14, the scans stale_branches and worktrees of @TASK.B33, which report"
 		+ "and remove nothing"
 		REF @TASK.B08
 		REF @TASK.B72
