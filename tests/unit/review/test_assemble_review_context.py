@@ -61,7 +61,11 @@ def create_thread_listing_forge(**more_answers) -> ForgeDouble:
 
 def create_demand(forge) -> ReviewDemand:
     return ReviewDemand(
-        opened=OPENED, project_path="/home/user/tidepool", forge=forge, forge_name="github", environment={"GH_TOKEN": "t"}
+        opened=OPENED,
+        project_path="/home/user/tidepool",
+        forge=forge,
+        forge_name="github",
+        environment={"GH_TOKEN": "t"},
     )
 
 
