@@ -2321,7 +2321,9 @@ CUT_THE_DASHBOARD = CutMilestoneBranch(project="shop", milestone="M3", branch=DA
 SETTLED_WAVE_OF_THE_DASHBOARD = dataclasses.replace(
     create_wave((TaskFacts(name="S3", milestone="M3"),), {"S3": "merged"}), reported=True
 )
-SETTLED_WAVE_OF_NO_MILESTONE = dataclasses.replace(create_wave((TaskFacts(name="S3"),), {"S3": "merged"}), reported=True)
+SETTLED_WAVE_OF_NO_MILESTONE = dataclasses.replace(
+    create_wave((TaskFacts(name="S3"),), {"S3": "merged"}), reported=True
+)
 DASHBOARD_RECORDED = MilestoneFacts(project="shop", milestone="M3", branch=DASHBOARD_BRANCH)
 
 
@@ -2393,7 +2395,11 @@ class PlanWavePullRequestRetargetTest(unittest.TestCase):
 
     def test_should_retarget_none(self):
         for case, pull_request, milestone_branch in [
-            ("a pull request on the branch of its milestone", WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH),
+            (
+                "a pull request on the branch of its milestone",
+                WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
+                MILESTONE_BRANCH,
+            ),
             ("a wave naming no milestone", WAVE_PULL_REQUEST_INTO_MAIN, NO_MILESTONE_BRANCH),
             (
                 "a pull request closed",
