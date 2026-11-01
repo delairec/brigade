@@ -102,6 +102,15 @@ class Forge:
         self.write_pull({**pull, "state": "MERGED", "mergedHead": head})
         return ""
 
+    def edit(self, arguments: list[str]) -> str:
+        pull = self.read_pull(arguments[2])
+        base = read_option(arguments, "--base")
+        if base is None:
+            self.write_pull({**pull, "body": sys.stdin.read()})
+        else:
+            self.write_pull({**pull, "baseRefName": base})
+        return ""
+
     def answer_graphql(self, arguments: list[str]) -> str:
         if any(argument.startswith("number=") for argument in arguments):
             threads = {"reviewThreads": {"nodes": []}}
@@ -145,8 +154,7 @@ class Forge:
             self.write_pull({**self.read_pull(arguments[2]), "reviewDecision": "APPROVED"})
             return ""
         if command == "pr edit":
-            self.write_pull({**self.read_pull(arguments[2]), "body": sys.stdin.read()})
-            return ""
+            return self.edit(arguments)
         if arguments[0] == "api":
             return self.answer_api(arguments[1:])
         raise SystemExit(f"github-over-a-bare-remote: no answer to {' '.join(arguments)}")
