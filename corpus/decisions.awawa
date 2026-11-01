@@ -344,7 +344,7 @@ DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 	DESC "a study with no judging slot is a scan: its non-empty output is the answer; the gardening"
 		+ "scans of M4 declare OUTPUT inbox"
 	DESC "the wave report, the triage and the miner are the built-in studies wave-report, triage"
-		+ "and mine-transcripts"
+		+ "and mine_transcripts"
 	DESC "a study runs on demand with brigade study run, or when due, by the tick, within"
 		+ "study_runs of config.toml; a study that needs a second judgment is two studies, the"
 		+ "second reading the first's answer through the study collector"
@@ -5107,3 +5107,29 @@ DECISION AStaleBranchIsALocalBranchWhosePullRequestsAreAllMergedOrClosed
 		REF @TASK.B33
 	SOURCE "the build run of @TASK.B33 on 2026-11-01"
 		REF @TASK.B33
+
+DECISION TheVibeAdapterPinsTheRustCliOfVibeAndAnswersNoResume
+	TITLE "the vibe adapter runs the Rust CLI of vibe, VIBE_CLI=rust in the environment of every"
+		+ "launch, and answers no resume: a segment cut by its cap is relaunched fresh from the"
+		+ "progress file"
+	STATUS active
+	DESC "binds @TASK.B108"
+		REF @TASK.B108
+	DESC "a session of vibe is one segment, so the journal the transcripts operation reads holds"
+		+ "the whole session"
+	REJECTED "VIBE_CLI=python with resume: the Python CLI resumes a session with -p --resume, but"
+		+ "it ends a run cut by --max-turns on exit 3 with Stopped: turn_limit, the Rust CLI is"
+		+ "replacing it by the rollout vibe_cli_rust_tui_rollout of vibe 2.26.1, and after a resume"
+		+ "the journal keeps the entries since the last snapshot alone, so the transcripts of a"
+		+ "resumed session would lose its earlier segments"
+	RATIONALE "vibe 2.26.1 picks its CLI by VIBE_CLI, else by the cached GrowthBook rollout"
+		+ "vibe_cli_rust_tui_rollout, defaulting to the Python CLI, vibe/cli/launcher.py:9-30; on"
+		+ "2026-11-01 the Rust CLI refused --resume with -p, exit 2, and ended a run cut by"
+		+ "--max-turns 1 on exit 1 with an entry of type effect, while the Python CLI resumed and"
+		+ "ended a cut run on exit 3; a client without resume takes the fallback"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters records, a fresh launch from the"
+		+ "progress file"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	SOURCE "the user's ruling of 2026-11-01 on the question of run 20261101T185054Z-d8a913 of wave"
+		+ "brigade_w20, on @TASK.B108: « (b) VIBE_CLI=rust, sans resume (Recommandé) »"
+		REF @TASK.B108
