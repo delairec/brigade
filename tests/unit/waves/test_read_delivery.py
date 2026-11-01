@@ -13,7 +13,7 @@ HEAD = "8885daa"
 BASE_REF = "origin/integration/tides"
 NO_REPORT = None
 NO_MERGED_WAVE = ()
-ATTRIBUTION = ("Co-Authored-By: Tidepool CLI <cli@tidepool.test>",)
+ATTRIBUTION = ("Co-Authored-By: Tidepool CLI <cli@example.org>",)
 TASK_T9 = (
     ("TITLE", "The base is named"),
     ("TYPE", "fix"),
@@ -107,7 +107,7 @@ class ReadDeliveryTest(unittest.TestCase):
                     ),
                 ),
                 commits=("fix(waves): name the base", "feat: keep the cut branch", "chore: bump the lock"),
-                attribution=("Co-Authored-By: Tidepool CLI <cli@tidepool.test>",),
+                attribution=("Co-Authored-By: Tidepool CLI <cli@example.org>",),
                 report=None,
             ),
         )
