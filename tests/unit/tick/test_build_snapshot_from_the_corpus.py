@@ -12,6 +12,8 @@ from pathlib import Path
 from brigade.errors import CommandFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
+from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
+from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
@@ -37,6 +39,7 @@ from brigade.tick.build_snapshot import (
     Snapshot,
     StudyFacts,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
     build_snapshot,
 )
@@ -225,6 +228,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                     },
                 ),
                 **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5"),
+                **AWAWA_ANSWERS.answer_entities(self.main_tree, "MILESTONE", {}, "STATUS==active"),
                 **answer_unreadable_tree("trunk"),
                 **self.remote_answers,
             }
@@ -816,16 +820,14 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.build()
 
         # Assert
+        fetch_of_main = ProcessRequest(
+            argv=("git", "fetch", "--quiet", "origin", "main"),
+            cwd=str(self.repository),
+            timeout_s=120.0,
+            environment=FORGE_ENVIRONMENT,
+        )
         self.assertEqual(
-            select_requests_opening_on(self.runner.requests, ("git", "fetch")),
-            [
-                ProcessRequest(
-                    argv=("git", "fetch", "--quiet", "origin", "main"),
-                    cwd=str(self.repository),
-                    timeout_s=120.0,
-                    environment=FORGE_ENVIRONMENT,
-                )
-            ],
+            select_requests_opening_on(self.runner.requests, ("git", "fetch")), [fetch_of_main, fetch_of_main]
         )
 
     def test_should_mark_a_wave_whose_branch_is_gone(self):
@@ -1901,3 +1903,54 @@ class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(self.reader.branches, [])
+
+
+class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(5, MilestoneBranchCut(project="shop", milestone="M2", branch="integration/tides", login=None))
+        self.record(4, MilestoneClosed(project="shop", milestone="M2", pr=90))
+        self.remote_answers = {
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "MILESTONE",
+                {
+                    "M2": [{"name": "TITLE", "atoms": ['"Tides"']}],
+                    "M3": [{"name": "TITLE", "atoms": ['"Dashboard"']}],
+                    "M7": [{"name": "TITLE", "atoms": ['"Currents"']}],
+                },
+                "STATUS==active",
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "TASK",
+                {
+                    "B8": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M3"]}],
+                    "B9": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M2"]}],
+                    "B10": [],
+                },
+                "STATUS==todo",
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B1", "B5"),
+        }
+
+    def test_should_list_the_active_milestones_at_main_that_no_branch_cut_records_with_their_todo_tasks(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].uncut_milestones,
+            (
+                UncutMilestone(milestone="M3", branch="integration/dashboard", todo=("B8",)),
+                UncutMilestone(milestone="M7", branch="integration/currents", todo=()),
+            ),
+        )
+
+    def test_should_list_none_for_a_paused_project(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.projects[0].uncut_milestones, ())

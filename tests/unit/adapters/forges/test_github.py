@@ -24,6 +24,7 @@ from brigade.adapters.forges.github import (
     read_login_environment,
     read_pull_request,
     reply_review_thread,
+    retarget_pull_request,
     rewrite_pull_request_body,
 )
 from brigade.errors import CommandFailed
@@ -105,6 +106,36 @@ class DecidePullRequestTest(unittest.TestCase):
                         )
                     ],
                 )
+
+
+class RetargetPullRequestTest(unittest.TestCase):
+    def test_should_ask_gh_to_change_the_base_of_the_pull_request_as_the_login_of_the_environment(self):
+        # Arrange
+        gh = create_gh("")
+        runtime = create_test_runtime(run_process=gh)
+        request = {
+            "repository": "/projects/shop",
+            "number": 237,
+            "base": "integration/dashboard",
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = retarget_pull_request(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1})
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=("gh", "pr", "edit", "237", "--base", "integration/dashboard"),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
+        )
 
 
 class RewritePullRequestBodyTest(unittest.TestCase):

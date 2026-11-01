@@ -9,6 +9,7 @@ from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
+    CutMilestoneBranch,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -28,6 +29,7 @@ from brigade.tick.actions import (
     ReportWave,
     ResumeTaskRun,
     ResumeWave,
+    RetargetWavePullRequest,
     RunPreflight,
     StartWave,
 )
@@ -43,6 +45,7 @@ from brigade.tick.build_snapshot import (
     Snapshot,
     StudyFacts,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
     WavePause,
 )
@@ -1234,11 +1237,12 @@ class PlanWaveMergeTest(unittest.TestCase):
     def test_should_merge_no_pull_request_whose_base_is_the_main_branch(self):
         # Arrange
         into_main = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, base="main")
+        retarget = RetargetWavePullRequest(project="shop", wave="shop_w1", pr=77, base=MILESTONE_BRANCH)
         rows = [
-            ("a wave of tasks naming no milestone", into_main, NO_MILESTONE_BRANCH),
-            ("a wave of a milestone", into_main, MILESTONE_BRANCH),
+            ("a wave of tasks naming no milestone", into_main, NO_MILESTONE_BRANCH, ()),
+            ("a wave of a milestone", into_main, MILESTONE_BRANCH, (retarget,)),
         ]
-        for case, pull_request, milestone_branch in rows:
+        for case, pull_request, milestone_branch, expected in rows:
             with self.subTest(case=case):
                 # Arrange
                 wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
@@ -1248,7 +1252,7 @@ class PlanWaveMergeTest(unittest.TestCase):
                 actions = plan(snapshot)
 
                 # Assert
-                self.assertEqual(actions, ())
+                self.assertEqual(actions, expected)
 
 
 BODY_FAILURE = PreflightFailure(name="body", findings=("the body names no task",))
@@ -2309,3 +2313,101 @@ class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
                 ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN, state="fixing"),
             ),
         )
+
+
+DASHBOARD_BRANCH = "integration/dashboard"
+NO_TODO_TASK = ()
+CUT_THE_DASHBOARD = CutMilestoneBranch(project="shop", milestone="M3", branch=DASHBOARD_BRANCH)
+SETTLED_WAVE_OF_THE_DASHBOARD = dataclasses.replace(
+    create_wave((TaskFacts(name="S3", milestone="M3"),), {"S3": "merged"}), reported=True
+)
+SETTLED_WAVE_OF_NO_MILESTONE = dataclasses.replace(create_wave((TaskFacts(name="S3"),), {"S3": "merged"}), reported=True)
+DASHBOARD_RECORDED = MilestoneFacts(project="shop", milestone="M3", branch=DASHBOARD_BRANCH)
+
+
+def create_shop_with_uncut_dashboard(todo: tuple[str, ...]) -> ProjectFacts:
+    return dataclasses.replace(
+        SHOP, uncut_milestones=(UncutMilestone(milestone="M3", branch=DASHBOARD_BRANCH, todo=todo),)
+    )
+
+
+class PlanMilestoneBranchCutTest(unittest.TestCase):
+    def test_should_cut_the_branch_of_an_uncut_active_milestone_an_open_wave_or_a_todo_task_names(self):
+        for case, project, waves, milestones, expected in [
+            (
+                "named by an open wave",
+                create_shop_with_uncut_dashboard(NO_TODO_TASK),
+                (SETTLED_WAVE_OF_THE_DASHBOARD,),
+                (),
+                (CUT_THE_DASHBOARD,),
+            ),
+            ("named by a todo task alone", create_shop_with_uncut_dashboard(("S7",)), (), (), (CUT_THE_DASHBOARD,)),
+            (
+                "named by neither",
+                create_shop_with_uncut_dashboard(NO_TODO_TASK),
+                (SETTLED_WAVE_OF_NO_MILESTONE,),
+                (),
+                (),
+            ),
+            ("its branch recorded", SHOP, (SETTLED_WAVE_OF_THE_DASHBOARD,), (DASHBOARD_RECORDED,), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, waves=waves, projects=(project,), milestones=milestones)
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_cut_none_for_an_open_wave_of_another_project_naming_the_milestone(self):
+        # Arrange
+        wave = dataclasses.replace(SETTLED_WAVE_OF_THE_DASHBOARD, project="cafe")
+        cafe = ProjectFacts(name="cafe", slots=4)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(create_shop_with_uncut_dashboard(NO_TODO_TASK), cafe))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
+WAVE_PULL_REQUEST_INTO_MAIN = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, base="main")
+
+
+class PlanWavePullRequestRetargetTest(unittest.TestCase):
+    def test_should_retarget_the_open_pull_request_of_a_wave_onto_the_recorded_branch_of_its_milestone(self):
+        # Arrange
+        wave = create_reported_wave(WAVE_PULL_REQUEST_INTO_MAIN, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (RetargetWavePullRequest(project="shop", wave="shop_w1", pr=77, base=MILESTONE_BRANCH),)
+        )
+
+    def test_should_retarget_none(self):
+        for case, pull_request, milestone_branch in [
+            ("a pull request on the branch of its milestone", WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH),
+            ("a wave naming no milestone", WAVE_PULL_REQUEST_INTO_MAIN, NO_MILESTONE_BRANCH),
+            (
+                "a pull request closed",
+                dataclasses.replace(WAVE_PULL_REQUEST_INTO_MAIN, state="closed"),
+                MILESTONE_BRANCH,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_WITHOUT_AUTO_MERGE,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())

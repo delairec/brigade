@@ -118,6 +118,21 @@ class RebaseMilestone:
 
 
 @dataclass(frozen=True)
+class CutMilestoneBranch:
+    project: str
+    milestone: str
+    branch: str
+
+
+@dataclass(frozen=True)
+class RetargetWavePullRequest:
+    project: str
+    wave: str
+    pr: int
+    base: str
+
+
+@dataclass(frozen=True)
 class StartWave:
     project: str
     milestone: str | None

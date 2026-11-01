@@ -202,6 +202,11 @@ def merge_pull_request(request: dict, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
 
 
+def retarget_pull_request(request: dict, runtime: Runtime) -> dict:
+    _ask_gh(request, runtime, ("pr", "edit", str(request["number"]), "--base", request["base"]))
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
 def _describe_check_run(check_run: dict) -> dict:
     return {"name": check_run["name"], "verdict": (check_run["conclusion"] or PENDING_VERDICT).lower()}
 

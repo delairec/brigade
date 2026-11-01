@@ -3290,6 +3290,17 @@ class WaveMergeRefusingForgeDouble(WaveMergingForgeDouble):
         raise BrigadeError(HEAD_MOVED_REFUSAL)
 
 
+class RetargetingForgeDouble(WaveMergingForgeDouble):
+    def __init__(self, found_by_branch: dict, threads: list[dict]):
+        super().__init__(found_by_branch, threads)
+        self.retargets = []
+
+    def retarget_pull_request(self, request: dict, runtime) -> dict:
+        self.retargets.append(request)
+        self.found_by_branch = {WAVE_BRANCH: self.found_by_branch[WAVE_BRANCH] | {"base": request["base"]}}
+        return {"schema_version": 1}
+
+
 class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -3470,16 +3481,56 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
         # Assert
         self.assertEqual(forge.merges, [])
 
-    def test_should_merge_none_into_the_main_branch(self):
+    def test_should_retarget_its_pull_request_open_into_the_main_branch_onto_the_branch_of_its_milestone(self):
         # Arrange
-        into_main = WAVE_PULL_REQUEST_READY | {"base": "main"}
-        forge = WaveMergingForgeDouble({WAVE_BRANCH: into_main}, NO_REVIEW_THREAD)
+        forge = RetargetingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY | {"base": "main"}}, NO_REVIEW_THREAD)
 
         # Act
         COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
 
         # Assert
-        self.assertEqual(forge.merges, [])
+        self.assertEqual(
+            forge.retargets,
+            [{"repository": str(self.repository), "number": 206, "base": "integration/tides", "environment": {}}],
+        )
+
+    def test_should_record_the_retarget_then_merge_the_pull_request_on_its_new_base_at_the_next_round(self):
+        # Arrange
+        forge = RetargetingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY | {"base": "main"}}, NO_REVIEW_THREAD)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            self._read_wave_events(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.pr_retargeted",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                    "base": "integration/tides",
+                    "login": "tidepool-cli",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.merged",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                    "login": "tidepool-cli",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.closed",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                },
+            ],
+        )
 
 
 class TickStartingAndCuttingWavesTest(unittest.TestCase):

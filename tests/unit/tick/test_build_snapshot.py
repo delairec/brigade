@@ -15,6 +15,7 @@ from brigade.tick.build_snapshot import (
     Snapshot,
     StudyFacts,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
 )
 from brigade.waves.list_candidate_waves import CandidateWave
@@ -232,7 +233,10 @@ class SnapshotTest(unittest.TestCase):
             CandidateWave(milestone="M9", tasks=("B188", "B189")),
             CandidateWave(milestone=None, tasks=("B190",)),
         )
-        project = ProjectFacts(name="brigade", slots=4, wave_start="ask", candidates=candidates)
+        uncut = (UncutMilestone(milestone="M3", branch="integration/dashboard", todo=("B94",)),)
+        project = ProjectFacts(
+            name="brigade", slots=4, wave_start="ask", candidates=candidates, uncut_milestones=uncut
+        )
         snapshot = Snapshot(now=datetime(2026, 10, 20, 12, 0, tzinfo=UTC), projects=(project,))
 
         # Act
@@ -257,6 +261,9 @@ class SnapshotTest(unittest.TestCase):
                     "verify_rounds": 2,
                     "awaits_check_runs": True,
                     "on_github": False,
+                    "uncut_milestones": [
+                        {"milestone": "M3", "branch": "integration/dashboard", "todo": ["B94"]},
+                    ],
                 }
             ],
         )
