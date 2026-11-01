@@ -2,11 +2,12 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_NAME, read_forge_environment
+from brigade.commands._read_forge_environment import read_forge_environment
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.tasks.find_task_base import find_task_base
@@ -42,7 +43,7 @@ def verify_preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
             task=found.opened.task,
             base_branch=find_task_base(runtime, worktree, project, found.opened.task),
             pr=request.pr,
-            forge=runtime.resolve_plugin("forge", FORGE_NAME),
+            forge=runtime.resolve_plugin("forge", read_project_forge(project)),
             environment=read_forge_environment(configuration, CLI_KEY, runtime),
             configuration=configuration,
         ),
