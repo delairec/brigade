@@ -8,6 +8,7 @@ from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
+from brigade.corpus.read_entity import read_entity
 from brigade.errors import BrigadeError, CommandFailed, ToolFailure
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
@@ -60,6 +61,8 @@ from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
+from brigade.waves.locate_project_main import locate_project_main
+from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasksReading
@@ -111,6 +114,8 @@ FAILED_PREFLIGHT_CHECK = "fail"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 STATUS_FIELD = "STATUS"
 TODO_STATUS = "todo"
+MILESTONE_TYPE = "MILESTONE"
+TITLE_FIELD = "TITLE"
 
 
 @dataclass(frozen=True)
@@ -244,6 +249,13 @@ class LiveRun:
 
 
 @dataclass(frozen=True)
+class UncutMilestone:
+    milestone: str
+    branch: str
+    todo: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class ProjectFacts:
     name: str
     slots: int
@@ -256,6 +268,7 @@ class ProjectFacts:
     auto_merge: str = MERGE_INTO_INTEGRATION
     verify_rounds: int = VERIFY_ROUNDS_BY_DEFAULT
     on_github: bool = False
+    uncut_milestones: tuple[UncutMilestone, ...] = ()
 
     def to_document(self) -> dict:
         return {
@@ -270,6 +283,10 @@ class ProjectFacts:
             "verify_rounds": self.verify_rounds,
             "awaits_check_runs": self.awaits_check_runs,
             "on_github": self.on_github,
+            "uncut_milestones": [
+                {"milestone": uncut.milestone, "branch": uncut.branch, "todo": list(uncut.todo)}
+                for uncut in self.uncut_milestones
+            ],
         }
 
 
@@ -768,6 +785,39 @@ def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) ->
     )
 
 
+def _list_recorded_milestones(reading: WaveReading, project: str) -> set[str]:
+    return {
+        event.milestone for event in reading.events if isinstance(event, MilestoneBranchCut) and event.project == project
+    }
+
+
+def _read_uncut_milestones(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[UncutMilestone, ...]:
+    if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
+        return ()
+    main = locate_project_main(runtime.run_process, project, reading.forge.read_environment)
+    query = argparse.Namespace(project=project.name, ref=main, worktree=None)
+    root = prepare_project_tree(query, reading.configuration, runtime).root
+    recorded = _list_recorded_milestones(reading, project.name)
+    uncut = sorted(
+        name.removeprefix(MILESTONE_PREFIX)
+        for name in read_active_milestones(runtime.run_process, root)
+        if name.removeprefix(MILESTONE_PREFIX) not in recorded
+    )
+    if not uncut:
+        return ()
+    todo = read_entities(runtime.run_process, root, TASK_TYPE, f"{STATUS_FIELD}=={TODO_STATUS}")
+    return tuple(
+        UncutMilestone(
+            milestone=milestone,
+            branch=name_milestone_branch(
+                read_project_field(read_entity(runtime.run_process, root, MILESTONE_TYPE, milestone), TITLE_FIELD)
+            ),
+            todo=tuple(task.name for task in todo if _read_milestone(task) == milestone),
+        )
+        for milestone in uncut
+    )
+
+
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
     slots = read_project_field(project, SLOTS_FIELD)
     policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
@@ -789,6 +839,7 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
             read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
         ),
         on_github=is_on_github(project),
+        uncut_milestones=_read_uncut_milestones(runtime, reading, project),
     )
 
 

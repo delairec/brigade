@@ -29,6 +29,7 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_merged import WaveMerged
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_pr_opened import WavePrOpened
+from brigade.ledger.wave_pr_retargeted import WavePrRetargeted
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
@@ -65,6 +66,7 @@ AppendedEvent = (
     | WaveClosed
     | WaveMerged
     | WavePrOpened
+    | WavePrRetargeted
     | TickActionFailed
     | InboxRecorded
     | InboxDismissed

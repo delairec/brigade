@@ -9,6 +9,7 @@ from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
+    CutMilestoneBranch,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -28,6 +29,7 @@ from brigade.tick.actions import (
     ReportWave,
     ResumeTaskRun,
     ResumeWave,
+    RetargetWavePullRequest,
     RunPreflight,
     StartWave,
 )
@@ -96,6 +98,8 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_blocked_task_parkings(snapshot)
         + _plan_dead_run_parkings(snapshot)
         + _plan_branch_cuts(snapshot)
+        + _plan_milestone_branch_cuts(snapshot)
+        + _plan_wave_pull_request_retargets(snapshot)
         + _plan_reports(snapshot)
         + _plan_wave_merges(snapshot)
         + _plan_closes(snapshot)
@@ -510,6 +514,41 @@ def _plan_branch_cuts(snapshot: Snapshot) -> tuple:
         CutWaveBranch(project=wave.project, wave=wave.wave, branch=wave.branch)
         for wave in snapshot.waves
         if wave.branch_missing
+    )
+
+
+def _is_named_by_an_open_wave(snapshot: Snapshot, project: str, milestone: str) -> bool:
+    return any(
+        task.milestone == milestone for wave in snapshot.waves if wave.project == project for task in wave.tasks
+    )
+
+
+def _plan_milestone_branch_cuts(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CutMilestoneBranch(project=project.name, milestone=uncut.milestone, branch=uncut.branch)
+        for project in snapshot.projects
+        for uncut in project.uncut_milestones
+        if uncut.todo or _is_named_by_an_open_wave(snapshot, project.name, uncut.milestone)
+    )
+
+
+def _is_on_another_base(wave: WaveFacts) -> bool:
+    pull_request = wave.integration_pull_request
+    return (
+        pull_request is not None
+        and pull_request.state == OPEN_PULL_REQUEST
+        and wave.milestone_branch is not None
+        and pull_request.base != wave.milestone_branch
+    )
+
+
+def _plan_wave_pull_request_retargets(snapshot: Snapshot) -> tuple:
+    return tuple(
+        RetargetWavePullRequest(
+            project=wave.project, wave=wave.wave, pr=wave.integration_pull_request.number, base=wave.milestone_branch
+        )
+        for wave in snapshot.waves
+        if _is_on_another_base(wave)
     )
 
 
