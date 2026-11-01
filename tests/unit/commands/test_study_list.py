@@ -101,6 +101,13 @@ class StudyListOfTheOperationalCorpusTest(unittest.TestCase):
                 "studies": [
                     {"name": "health", "status": "active", "every": "1d", "last_run": None, "outcome": None},
                     {"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None},
+                    {
+                        "name": "mine-transcripts",
+                        "status": "active",
+                        "every": "mon@09:00",
+                        "last_run": None,
+                        "outcome": None,
+                    },
                 ],
             },
         )
