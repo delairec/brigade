@@ -3,7 +3,7 @@ from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.commands._read_attribution import read_attribution
-from brigade.commands._read_forge_environment import BUILD_SLOT, read_forge_environment
+from brigade.commands._read_forge_environment import BUILD_SLOT, FORGE_NAME, ForgeSlot, read_forge_environment
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.tasks.promote_task import TaskPromotionDemand, promote_task
@@ -21,7 +21,7 @@ def task_promote(request: argparse.Namespace, runtime: Runtime) -> dict:
             path=Path.cwd(),
             task=request.task,
             pr=request.pr,
-            environment=read_forge_environment(configuration, BUILD_SLOT, runtime),
+            environment=read_forge_environment(configuration, ForgeSlot(FORGE_NAME, BUILD_SLOT), runtime),
             attribution=tuple(read_attribution(configuration, runtime)),
         ),
     )

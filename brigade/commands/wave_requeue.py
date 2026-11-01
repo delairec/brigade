@@ -2,7 +2,7 @@ import argparse
 from dataclasses import dataclass
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import read_forge_environment
+from brigade.commands._read_forge_environment import FORGE_NAME, ForgeSlot, read_forge_environment
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entity import Entity, read_entity
@@ -39,7 +39,9 @@ def _render_text(document: dict) -> str:
 def _read_task_on_main(runtime: Runtime, configuration: Configuration, started: WaveStarted, task: str):
     project = find_project(read_projects(runtime), started.project)
     main = locate_project_main(
-        runtime.run_process, project, lambda key: read_forge_environment(configuration, key, runtime)
+        runtime.run_process,
+        project,
+        lambda key: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, key), runtime),
     )
     query = argparse.Namespace(project=started.project, ref=main, worktree=NO_WORKTREE)
     try:

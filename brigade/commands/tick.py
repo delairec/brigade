@@ -13,7 +13,7 @@ from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
 from brigade.commands._list_branch_check_runs import list_branch_check_runs
 from brigade.commands._read_cli_login import read_cli_login
-from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
+from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, ForgeSlot, read_forge_environment
 from brigade.commands._repair_red_head import repair_red_head
 from brigade.commands.run import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
@@ -266,7 +266,7 @@ def _launch_check_repair(runtime: Runtime, configuration: Configuration, action:
             number=action.pr,
             checks=action.checks,
             lines=CHECK_LOG_LINES,
-            environment=read_forge_environment(configuration, CLI_KEY, runtime),
+            environment=read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime),
         ),
         runtime,
     )
@@ -328,7 +328,7 @@ def _launch_rebase(runtime: Runtime, configuration: Configuration, action: Rebas
 
 
 def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
-    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    environment = read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
     login = ask_forge_account(runtime.resolve_plugin("forge", FORGE_NAME), FORGE_NAME, environment, runtime).login
     rebase = rebase_task(runtime, action, environment, list_branch_check_runs(runtime, configuration))
     if rebase.held_by is not None:
@@ -438,7 +438,7 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
             base_branch=action.branch,
             pr=action.pr,
             forge=runtime.resolve_plugin("forge", FORGE_NAME),
-            environment=read_forge_environment(configuration, CLI_KEY, runtime),
+            environment=read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime),
             configuration=configuration,
         ),
     )
@@ -470,7 +470,7 @@ def _count_review_rounds(runtime: Runtime, action: MergePullRequest) -> int:
 
 def _merge_on_the_forge(runtime: Runtime, configuration: Configuration, action: MergePullRequest) -> str:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
-    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    environment = read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
     project = find_project(read_projects(runtime), action.project)
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
     forge.merge_pull_request(
@@ -514,7 +514,7 @@ def _describe_milestone_pull_request(
     runtime: Runtime, configuration: Configuration, action: DescribeMilestonePullRequest
 ) -> None:
     forge = runtime.resolve_plugin(FORGE_KIND, FORGE_NAME)
-    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    environment = read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
     project = find_project(read_projects(runtime), action.project)
     repository = read_project_field(project, PATH_FIELD)
     locate_forge_branch(runtime.run_process, project, action.branch, _cache_forge_environment(runtime, configuration))
@@ -542,7 +542,7 @@ def _describe_milestone_pull_request(
 
 
 def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
-    return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
+    return functools.cache(lambda key: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, key), runtime))
 
 
 def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
@@ -691,7 +691,9 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
 
 def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Callable:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
-    read_environment = functools.cache(lambda: read_forge_environment(configuration, CLI_KEY, runtime))
+    read_environment = functools.cache(
+        lambda: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
+    )
     return lambda repository, branch: ask_pull_request(
         forge,
         FORGE_NAME,
