@@ -5031,3 +5031,31 @@ DECISION APatternAnswerIsCheckedAgainstTheFingerprintsTheCollectorsOfItsStudyCol
 		+ "collectors of the study keeps one check for every study answering PATTERN"
 	SOURCE "the user's ruling of 2026-11-01 in the refinement of M5: \"From the study's collectors"
 		+ "(Recommended)\""
+
+DECISION DoctorChecksABindingWhereTheRunResolvesIt
+	TITLE "doctor checks each binding where the run resolves it, so that a finding foretells a"
+		+ "failure of the unattended run and nothing else"
+	STATUS active
+	DESC "a [slots] entry is checked against the AGENT entities of the instructions corpus, the"
+		+ "role set brigade/roles/resolve_role.py reads a slot binding from; a [slots] entry with"
+		+ "no instructions corpus set is a finding"
+	DESC "a ROLESET other than builtin and corpus resolves to nothing when its directory, under the"
+		+ "project's PATH unless absolute, holds no role file"
+	DESC "the first word of a project command holding a slash is looked up under the project's"
+		+ "PATH, the runner running it with the worktree as its cwd; a word without one is looked"
+		+ "up on PATH; such a script is the form @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell"
+		+ "prescribes for a command needing a shell feature"
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
+	DESC "an empty project command line is a finding: it splits into no argv"
+	DESC "binds @TASK.B173"
+		REF @TASK.B173
+	REJECTED "every first word looked up on PATH alone: every command calling a script the project"
+		+ "versions would be a finding"
+	REJECTED "a ROLESET resolving to nothing only when its directory is missing: an empty directory"
+		+ "falls back to the built-in roles as silently"
+	RATIONALE "@TASK.B173 names the findings, not where each binding resolves; the run resolves a"
+		+ "slot binding in the instructions corpus alone and a roleset directory without role files"
+		+ "falls back to the built-ins without a word"
+		REF @TASK.B173
+	SOURCE "the delivery of @TASK.B173 in the wave brigade_w19"
+		REF @TASK.B173
