@@ -56,14 +56,13 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                     "- @TASK.S1 — Empty the cart in one click (#2)\n"
                     "- @TASK.S2 — Confirm before emptying the cart (#5)\n"
                     "- @TASK.S3 — Count the emptied carts (#3)\n"
-                    "- feat: deliver S1\n"
-                    "- feat: deliver S2\n"
                     "- a push between the read and the merge"
                 ),
                 "headRefName": "integration/shop_w1",
                 "baseRefName": "integration/empty-cart",
                 "state": "MERGED",
                 "mergedHead": ANY,
+                "mergedCommits": ANY,
                 "reviewDecision": None,
                 "author": "octo-build",
             },

@@ -50,11 +50,16 @@ class Forge:
             "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
         }
 
+    def read_commit_subjects(self, pull: dict) -> list[str]:
+        if pull["state"] == "MERGED":
+            return pull["mergedCommits"]
+        since_base = f"{pull['baseRefName']}..{self.read_head(pull)}"
+        return run_git("-C", str(self.remote), "log", "--reverse", "--format=%s", since_base).splitlines()
+
     def view(self, number: str) -> str:
         pull = self.read_pull(number)
-        since_base = f"{pull['baseRefName']}..{self.read_head(pull)}"
-        subjects = run_git("-C", str(self.remote), "log", "--reverse", "--format=%s", since_base).splitlines()
-        return json.dumps({**self.describe(pull), "commits": [{"messageHeadline": subject} for subject in subjects]})
+        commits = [{"messageHeadline": subject} for subject in self.read_commit_subjects(pull)]
+        return json.dumps({**self.describe(pull), "commits": commits})
 
     def create(self, arguments: list[str]) -> str:
         number = len(self.read_pulls()) + 1
@@ -93,6 +98,7 @@ class Forge:
         head = self.read_head(pull)
         if read_option(arguments, "--match-head-commit") != head:
             raise SystemExit(HEAD_MOVED_REFUSAL)
+        commits = self.read_commit_subjects(pull)
         with tempfile.TemporaryDirectory() as clone:
             run_git("clone", "--quiet", "--branch", pull["baseRefName"], str(self.remote), clone)
             run_git("fetch", "--quiet", "origin", pull["headRefName"], cwd=Path(clone))
@@ -105,7 +111,7 @@ class Forge:
             else:
                 run_git("merge", "--quiet", "--no-ff", "-m", f"Merge #{number}", "FETCH_HEAD", cwd=Path(clone))
             run_git("push", "--quiet", "origin", pull["baseRefName"], cwd=Path(clone))
-        self.write_pull({**pull, "state": "MERGED", "mergedHead": head})
+        self.write_pull({**pull, "state": "MERGED", "mergedHead": head, "mergedCommits": commits})
         return ""
 
     def edit(self, arguments: list[str]) -> str:
