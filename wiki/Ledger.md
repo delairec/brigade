@@ -55,6 +55,7 @@ line on stderr and in the document, and the command still exits 0. Lines are app
 - Every summary of steps gives the runs and the segments side by side.
 - A run is measured by the sum of its measured segments, partial when one of them is not measured, and kept in the
   percentiles; a run with no measured segment is unmeasured.
+- The steps of a task in `--wave` sum those of its runs, partial when one of its runs is.
 - The steps to the first edit of a run add the steps of the segments before the one that edited, and are partial only
   when one of those is not measured.
 - The cost and the tokens of a wave, and the duration and the cost of a task or a run, sum the `run.finished` events
@@ -66,6 +67,6 @@ line on stderr and in the document, and the command still exits 0. Lines are app
 <details><summary><code>compare</code> with an empty range</summary>
 
 `compare` exits 1 when one of its ranges holds no finished run, and 2 unless it is given two `--range`, or one
-`--range` and at least one `--reference`.
+`--range` and at least one `--reference`, or when two `--reference` name the same measure.
 
 </details>

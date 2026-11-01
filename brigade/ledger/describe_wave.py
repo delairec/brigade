@@ -86,11 +86,14 @@ def _sum_steps_by_task(events: list) -> dict:
     return steps
 
 
-def _cost_task(task: str, runs: list[RunFinished]) -> dict:
-    segments = [run for run in runs if run.task == task]
+def _cost_task(task: str, runs: list[FinishedRun]) -> dict:
+    task_runs = [run for run in runs if run.last.task == task]
+    segments = [segment for run in task_runs for segment in run.segments]
+    steps = [run.main_steps for run in task_runs]
     return {
         "task": task,
-        "steps": sum_reported(segment.main_steps for segment in segments),
+        "steps": sum_reported(measure.value for measure in steps),
+        "partial": any(measure.partial for measure in steps),
         "duration_ms": sum_reported(segment.duration_ms for segment in segments),
         "cost_usd": sum_reported(segment.cost_usd for segment in segments),
     }
@@ -101,12 +104,12 @@ def _sum_usage(runs: list[RunFinished]) -> dict | None:
     return None if usage is None else usage.to_document()
 
 
-def _cost_wave(events: list, tasks: list[str]) -> dict:
+def _cost_wave(events: list, runs: list[FinishedRun], tasks: list[str]) -> dict:
     finished = [event for event in events if isinstance(event, RunFinished)]
     return {
         "cost_usd": sum_reported(run.cost_usd for run in finished),
         "usage": _sum_usage(finished),
-        "by_task": [_cost_task(task, finished) for task in tasks],
+        "by_task": [_cost_task(task, runs) for task in tasks],
     }
 
 
@@ -134,7 +137,7 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "last": format_instant(last),
         "wall_time_ms": _measure_ms(first, last),
         "tasks": tasks,
-        **_cost_wave(events, tasks),
+        **_cost_wave(events, runs, tasks),
         "pull_requests": _list_merged_pull_requests(events),
         "steps": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
         "pauses": pauses,

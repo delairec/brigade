@@ -308,8 +308,8 @@ class LedgerWaveTextTest(unittest.TestCase):
                 "cache_read_input_tokens": 44,
             },
             "by_task": [
-                {"task": "T7", "steps": 80, "duration_ms": 1500000, "cost_usd": 4.75},
-                {"task": "T8", "steps": None, "duration_ms": None, "cost_usd": None},
+                {"task": "T7", "steps": 80, "partial": True, "duration_ms": 1500000, "cost_usd": 4.75},
+                {"task": "T8", "steps": None, "partial": False, "duration_ms": None, "cost_usd": None},
             ],
             "pull_requests": [{"task": "T7", "pr": 42, "rounds": 2}],
             "steps": {"by_slot": {"build": build_steps}, "by_role": {}},
@@ -332,7 +332,7 @@ class LedgerWaveTextTest(unittest.TestCase):
             "cost: 4.75 USD\n"
             "tokens: input 11, output 22, cache creation 33, cache read 44\n"
             "tasks:\n"
-            "  T7  steps 80  duration 0h25m  cost 4.75 USD\n"
+            "  T7  steps 80 partial  duration 0h25m  cost 4.75 USD\n"
             "  T8  steps -  duration -  cost -\n"
             "pull requests: #42 T7 rounds 2\n"
             "steps by slot:\n"
@@ -401,7 +401,7 @@ class LedgerWaveTextTest(unittest.TestCase):
             "tasks": ["TP147"],
             "cost_usd": None,
             "usage": None,
-            "by_task": [{"task": "TP147", "steps": 40, "duration_ms": 60000, "cost_usd": None}],
+            "by_task": [{"task": "TP147", "steps": 40, "partial": False, "duration_ms": 60000, "cost_usd": None}],
             "pull_requests": [],
             "steps": {"by_slot": {}, "by_role": {"ada": ada_steps}},
             "pauses": [],

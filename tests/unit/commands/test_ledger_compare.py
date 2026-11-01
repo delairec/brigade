@@ -114,6 +114,19 @@ class LedgerCompareRequestTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(str(refusal.exception), "compare takes two --range, or one --range and --reference")
 
+    def test_should_refuse_two_references_naming_the_same_measure(self):
+        # Arrange
+        options = argparse.Namespace(
+            range=[OCTOBER], reference=[("task_run_steps_p50", 47.0), ("task_run_steps_p50", 52.0)]
+        )
+
+        # Act
+        with self.assertRaises(UsageError) as refusal:
+            COMMAND.read_request(options)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "compare takes one --reference per measure: task_run_steps_p50")
+
 
 class LedgerCompareExitCodeTest(unittest.TestCase):
     def test_should_exit_0_once_the_journal_is_read(self):
