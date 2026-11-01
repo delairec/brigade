@@ -90,7 +90,7 @@ def _render_task_rows(rows: list[dict]) -> list[str]:
     return [
         "tasks:",
         *(
-            f"  {row['task']}  steps {_show_steps(row['steps'])}"
+            f"  {row['task']}  steps {_show_run_steps(row)}"
             f"  duration {_show_duration(row['duration_ms'])}  cost {_show_cost(row['cost_usd'])}"
             for row in rows
         ),
