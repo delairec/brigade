@@ -1,4 +1,5 @@
 import json
+import re
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -21,6 +22,7 @@ ENVIRONMENT = {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "2026-10-20"
 BEFORE_THE_WINDOW = datetime(2026, 10, 19, 23, 0, tzinfo=UTC)
 IN_THE_WINDOW = datetime(2026, 10, 20, 8, 0, tzinfo=UTC)
 NOW = datetime(2026, 10, 25, 9, 0, tzinfo=UTC)
+NOT_CACHED = False
 BRIEF = {"role": "user", "timestamp": None, "content": "Deliver B42.", "tool_calls": 0, "id": None, "usage": None}
 ANSWER = {
     "role": "assistant",
@@ -95,7 +97,9 @@ class TranscriptsCollectorTest(unittest.TestCase):
         # Arrange
         self.finish(BEFORE_THE_WINDOW, _finish("r1", "s-before"), "/srv/oak/.brigade/worktrees/B41")
         self.finish(IN_THE_WINDOW, _finish("r2", None), "/srv/oak/.brigade/worktrees/B42")
-        append_event(self.runtime.paths, IN_THE_WINDOW, OrderStarted(project="oak", kind="study", order="trees", run="r0"))
+        append_event(
+            self.runtime.paths, IN_THE_WINDOW, OrderStarted(project="oak", kind="study", order="trees", run="r0")
+        )
         self.finish(IN_THE_WINDOW, _finish("r3", "s-built"), "/srv/oak/.brigade/worktrees/B42")
         client = TranscriptsClientDouble({"s-before": [BRIEF], "s-built": [BRIEF, ANSWER]})
 
@@ -139,4 +143,23 @@ class TranscriptsCollectorTest(unittest.TestCase):
         document = self.collect(TranscriptsClientDouble(no_transcripts))
 
         # Assert
-        self.assertIs(document["cache"], False)
+        self.assertIs(document["cache"], NOT_CACHED)
+
+    def test_should_leave_no_identifier_a_private_pattern_or_a_built_in_matches(self):
+        # Arrange
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("PRIVATE", r"Acme\w*"))}
+        )
+        self.finish(IN_THE_WINDOW, _finish("r3", "s-lost"), "/home/ada/oak/.brigade/worktrees/B42")
+        self.finish(IN_THE_WINDOW, _finish("r4", "s-built"), "/home/ada/oak/.brigade/worktrees/B43")
+        leaking_brief = {**BRIEF, "content": "Mail ada@example.org the AcmeBilling report from /home/ada/oak."}
+        client = TranscriptsClientDouble({"s-built": [leaking_brief]})
+
+        # Act
+        document = self.collect(client)
+
+        # Assert
+        printed = json.dumps(document)
+        self.assertNotRegex(printed, re.compile(r"Acme\w*"))
+        self.assertNotRegex(printed, re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"))
+        self.assertNotRegex(printed, re.compile(r"/(?:home|Users)/[\w.-]+"))

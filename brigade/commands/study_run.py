@@ -50,7 +50,8 @@ def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
         collector_equipment=CollectorEquipment(
             configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
             forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
-            forge_name=FORGE_NAME, resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name)
+            forge_name=FORGE_NAME,
+            resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
         ),
         resolve_collector=lambda name, project: runtime.resolve_plugin(
             COLLECTOR_KIND, name, places=locate_collectors(project, runtime.paths)
