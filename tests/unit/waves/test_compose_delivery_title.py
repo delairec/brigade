@@ -96,12 +96,11 @@ class ComposeDeliveryTitleTest(unittest.TestCase):
         self.assertEqual(title, "fix(waves): keep the cut branch; name the base (M4, @TASK.T7, @TASK.T9)")
 
     def test_should_type_the_delivery_feat_over_fix_over_the_type_of_the_first_task(self):
-        rows = (
+        for first_type, second_type, expected in [
             ("fix", "feat", "feat(waves): do T1; do T2 (@TASK.T1, @TASK.T2)"),
             ("docs", "fix", "fix(waves): do T1; do T2 (@TASK.T1, @TASK.T2)"),
             ("docs", "test", "docs(waves): do T1; do T2 (@TASK.T1, @TASK.T2)"),
-        )
-        for first_type, second_type, expected in rows:
+        ]:
             with self.subTest(first_type=first_type, second_type=second_type):
                 # Arrange
                 delivery = create_delivery(

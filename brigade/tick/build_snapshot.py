@@ -213,6 +213,7 @@ class WaveFacts:
     unresolved_threads: int = 0
     blocked_rebase: BlockedRun | None = None
     rebase_run_live: bool = False
+    described_head: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -238,6 +239,7 @@ class WaveFacts:
                 else {"run": self.blocked_rebase.run, "question": self.blocked_rebase.question}
             ),
             "rebase_run_live": self.rebase_run_live,
+            "described_head": self.described_head,
         }
 
 
@@ -311,6 +313,7 @@ class MilestoneFacts:
     behind_main: bool = False
     rebase_run_live: bool = False
     blocked_rebase: BlockedRun | None = None
+    described_head: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -329,6 +332,7 @@ class MilestoneFacts:
                 if self.blocked_rebase is None
                 else {"run": self.blocked_rebase.run, "question": self.blocked_rebase.question}
             ),
+            "described_head": self.described_head,
         }
 
 

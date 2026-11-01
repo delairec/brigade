@@ -17,7 +17,7 @@ URL_SEPARATOR = "/"
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
 PULL_REQUEST_FIELDS = "number,state,headRefOid,baseRefName,reviewDecision,statusCheckRollup,updatedAt"
-PULL_REQUEST_DETAIL_FIELDS = "number,title,body,headRefName,headRefOid,statusCheckRollup"
+PULL_REQUEST_DETAIL_FIELDS = "number,title,body,headRefName,headRefOid,statusCheckRollup,commits"
 PULL_REQUESTS_QUERY = """query($owner: String!, $name: String!, $states: [PullRequestState!], $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequests(first: 100, after: $endCursor, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) {
@@ -207,6 +207,11 @@ def retarget_pull_request(request: dict, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
 
 
+def edit_pull_request(request: dict, runtime: Runtime) -> dict:
+    _publish(request, runtime, ("gh", "pr", "edit", str(request["number"])), request["environment"])
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
 def _describe_check_run(check_run: dict) -> dict:
     return {"name": check_run["name"], "verdict": (check_run["conclusion"] or PENDING_VERDICT).lower()}
 
@@ -337,6 +342,7 @@ def read_pull_request(request: dict, runtime: Runtime) -> dict:
             "head": pull_request["headRefName"],
             "head_sha": pull_request["headRefOid"],
             "checks": _describe_check_runs(pull_request["statusCheckRollup"]),
+            "commits": [commit["messageHeadline"] for commit in pull_request["commits"]],
         },
     }
 

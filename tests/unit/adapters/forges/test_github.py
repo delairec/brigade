@@ -10,6 +10,7 @@ from brigade.adapters.forges.github import (
     approve_pull_request,
     create_milestone,
     describe_account,
+    edit_pull_request,
     find_pull_request,
     list_check_runs,
     list_milestones,
@@ -163,6 +164,47 @@ class RewritePullRequestBodyTest(unittest.TestCase):
                     cwd="/projects/shop",
                     timeout_s=60.0,
                     stdin="# REPORT shop_w1\n",
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
+        )
+
+
+class EditPullRequestTest(unittest.TestCase):
+    def test_should_ask_gh_to_rewrite_the_title_and_the_body_on_stdin_as_the_login_of_the_environment(self):
+        # Arrange
+        gh = create_gh("")
+        runtime = create_test_runtime(run_process=gh)
+        request = {
+            "repository": "/projects/shop",
+            "number": 268,
+            "title": "feat(tick): record the rebase of a milestone branch (M9, @TASK.B223)",
+            "body": "Delivers the milestone M9 (Milestone integration branch) into main: its waves brigade_w9 (#257).\n",
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = edit_pull_request(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1})
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "pr",
+                        "edit",
+                        "268",
+                        "--title",
+                        "feat(tick): record the rebase of a milestone branch (M9, @TASK.B223)",
+                        "--body-file",
+                        "-",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
+                    stdin="Delivers the milestone M9 (Milestone integration branch) into main: its waves brigade_w9 (#257).\n",
                     environment=BOT_ENVIRONMENT,
                 )
             ],
@@ -858,6 +900,10 @@ class ReadPullRequestTest(unittest.TestCase):
                     "headRefName": "test/unit-coverage-rest",
                     "headRefOid": "4f2a9c1",
                     "statusCheckRollup": [{"__typename": "CheckRun", "name": "unit", "conclusion": "SUCCESS"}],
+                    "commits": [
+                        {"oid": "1a2b3c4", "messageHeadline": "test: cover the rest of the waves"},
+                        {"oid": "4f2a9c1", "messageHeadline": "test: cover the rest of the tick"},
+                    ],
                 }
             )
         )
@@ -878,8 +924,42 @@ class ReadPullRequestTest(unittest.TestCase):
                     "head": "test/unit-coverage-rest",
                     "head_sha": "4f2a9c1",
                     "checks": [{"name": "unit", "verdict": "success"}],
+                    "commits": ["test: cover the rest of the waves", "test: cover the rest of the tick"],
                 },
             },
+        )
+
+    def test_should_ask_gh_for_the_commits_of_the_pull_request_beside_its_head_and_its_checks(self):
+        # Arrange
+        gh = create_gh(
+            json.dumps(
+                {
+                    "number": 160,
+                    "title": "test: cover the rest",
+                    "body": "Coverage\n",
+                    "headRefName": "test/unit-coverage-rest",
+                    "headRefOid": "4f2a9c1",
+                    "statusCheckRollup": [],
+                    "commits": [],
+                }
+            )
+        )
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        read_pull_request({**MILESTONES_REQUEST, "number": 160}, runtime)
+
+        # Assert
+        self.assertEqual(
+            gh.requests[0].argv,
+            (
+                "gh",
+                "pr",
+                "view",
+                "160",
+                "--json",
+                "number,title,body,headRefName,headRefOid,statusCheckRollup,commits",
+            ),
         )
 
 
