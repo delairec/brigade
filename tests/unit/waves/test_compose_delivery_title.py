@@ -27,6 +27,15 @@ NAME_THE_BASE = DeliveredTask(
     pr_title="fix(waves): name the base (@TASK.T9)",
     pr_commits=(),
 )
+TAKE_OVER_THE_WORKTREE = DeliveredTask(
+    name="T11",
+    title="A task of a new wave takes over the worktree its task left in a cancelled wave",
+    type="fix",
+    component="the tick",
+    pr=43,
+    pr_title="fix(tick): take over the worktree of a cancelled wave (@TASK.T11)",
+    pr_commits=(),
+)
 
 
 def create_delivery(wave: str | None, tasks: tuple[DeliveredTask, ...]) -> Delivery:
@@ -57,23 +66,23 @@ def create_task(name: str, task_type: str, component: str | None) -> DeliveredTa
 class ComposeDeliveryTitleTest(unittest.TestCase):
     def test_should_title_a_wave_delivering_one_task_as_the_pull_request_of_that_task(self):
         # Arrange
-        delivery = create_delivery("tidepool_w16", (KEEP_THE_CUT_BRANCH,))
+        delivery = create_delivery("tidepool_w16", (TAKE_OVER_THE_WORKTREE,))
 
         # Act
         title = compose_delivery_title(delivery)
 
         # Assert
-        self.assertEqual(title, "fix(waves): keep the cut branch (@TASK.T7)")
+        self.assertEqual(title, "fix(tick): take over the worktree of a cancelled wave (@TASK.T11)")
 
     def test_should_add_the_milestone_to_the_title_of_the_one_task_a_milestone_delivers(self):
         # Arrange
-        delivery = create_delivery(NO_WAVE, (KEEP_THE_CUT_BRANCH,))
+        delivery = create_delivery(NO_WAVE, (TAKE_OVER_THE_WORKTREE,))
 
         # Act
         title = compose_delivery_title(delivery)
 
         # Assert
-        self.assertEqual(title, "fix(waves): keep the cut branch (M4, @TASK.T7)")
+        self.assertEqual(title, "fix(tick): take over the worktree of a cancelled wave (M4, @TASK.T11)")
 
     def test_should_join_the_subjects_of_several_tasks_in_their_order(self):
         # Arrange
