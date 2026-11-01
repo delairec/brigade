@@ -3166,49 +3166,113 @@ TASK B36
 	ROLE ada
 
 TASK B37
-	TITLE "Budgets from the ledger"
-	STATUS draft
+	TITLE "brigade fits the step cap of each role to the cost of its growing context and applies it"
+		+ "at launch"
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M6
-	COMPONENT "ledger"
+	COMPONENT "runs"
 	ROLE ada
-	SPEC "brigade ledger budgets proposes p90 steps per procedure"
-	SPEC "a pull request updates the front matter of each procedure"
-	SPEC "the budget declared in the front matter of each procedure is printed beside its p90"
-	SPEC "a p90 marked estimate is never proposed"
-	SPEC "the window of runs measured is bounded by the date of the last edit of the procedure and"
-		+ "by role, where today brigade/ledger/describe_budgets.py:20 takes the last 20 runs"
-		+ "whatever the change of instruction or role"
+	SPEC "every run.finished records the digest of the role package and of the procedure its"
+		+ "segment ran"
+	SPEC "for each role, brigade computes the cap of steps per segment from the segments whose"
+		+ "digests are the current ones: the growth g, the tokens a step adds to the context of the"
+		+ "next, fitted on the tokens per step of segments of different lengths, and the cost R of"
+		+ "a restart, the tokens of the steps up to the first edit of the segments relaunched after"
+		+ "budget_reached; the cap is the square root of 2R/g, rounded"
+	SPEC "a role with fewer than 5 measured segments or 3 measured restarts at its current digests"
+		+ "runs at the budget its package ships; a computed cap is applied within half and double"
+		+ "that budget"
+	SPEC "the launch of a segment passes the applied cap as the budget of the role to the client"
+		+ "adapter, and the signals budget_reached and budget_exceeded name it"
+	SPEC "a change of the applied cap of a role is appended to the ledger as a budget.applied event"
+		+ "carrying the role, the cap before, the cap after and the measures it was computed from"
+	SPEC "brigade ledger budgets prints for each role its shipped budget, its computed cap, its"
+		+ "applied cap, the segments and restarts measured, g and R; --json carries the same"
+	SPEC "the budget key leaves the front matter of the procedures, the cap of a segment being the"
+		+ "role's alone"
 	AFTER @TASK.B21
+	RATIONALE "the cap exists to restart a fresh session before the context makes every step too"
+		+ "costly: a step rereads the whole context, so a segment of L steps costs about L times"
+		+ "the base plus g L squared over 2, and each restart costs R; the cost per step is lowest"
+		+ "at L equal to the square root of 2R/g, which the ledger already measures, run.finished"
+		+ "carrying the steps, the usage and steps_to_first_edit of each segment"
+	RATIONALE "today the budget of the role package (builder 75) becomes the --max-turns of a"
+		+ "segment in brigade/adapters/clients/claude_code.py:74 and a segment reaching it is"
+		+ "relaunched from the progress file by brigade/runs/run_segments.py, while the budget of"
+		+ "the procedure (build-task 75) only emits budget_exceeded: two caps for one purpose, the"
+		+ "procedure's is removed; the IMPL of @TASK.B21 naming the procedures' budget lines are"
+		+ "amended by the delivery"
+		REF @TASK.B21
+	RATIONALE "brigade/ledger/describe_budgets.py:20 measures the last 20 runs of a procedure"
+		+ "whatever its edits and its role; the digests bound the measures to the version that"
+		+ "runs, and the floor of measures and the bounds keep a thin sample from cutting runs"
+		+ "short; the cap is applied by brigade, not proposed in a pull request, so every"
+		+ "installation fits its own"
+	RATIONALE "the curve of the applied caps on the dashboard is @TASK.B229, read from the"
+		+ "budget.applied events"
+		REF @TASK.B229
 	SOURCE "use-case map of 2026-10-16, findings C7, C14 and C8"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: the user's words « le but de"
+		+ "la tâche était d'ajuster les plafonds lorsque ceux-ci sont trop bas ou trop élevés, et"
+		+ "le but des plafonds c'est d'éviter un surcoût quand le contexte devient trop gros"
+		+ "(repartir d'une session fraîche) », « ok brigade l'applique seul », and the guards «"
+		+ "Fenêtre par version », « Minimum de données », « Bornes ×2 »"
 
 TASK B38
 	TITLE "Decisions a project records when it joins brigade"
-	STATUS draft
+	STATUS archived
+	DESC "archived on 2026-11-01 in the refinement of M6: none of its three decisions is left to"
+		+ "draft in a project; the plan is recorded against the main branch of the forge, as"
+		+ "@DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge rules, and the"
+		+ "forge accounts and AUTO_MERGE live in the operational corpus,"
+		+ "@DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode; no code reads a"
+		+ "DECISION of a project"
+		REF @DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
+		REF @DECISION.ForgeAccountsAreBoundPerSlotAndThePolicyChoosesTheReviewMode
 	MILESTONE @MILESTONE.M6
 	COMPONENT "registry"
 	ROLE ada
-	SPEC "brigade project add --init-decisions drafts in the project's corpus the three decisions a"
-		+ "wave needs, the plan travels on the integration branch, the forge account merges into"
-		+ "integration, the auto-merge policy; the draft goes through fmt, lint and a pull request"
-	AFTER @TASK.B04
-	AFTER @TASK.B21
 
 TASK B39
-	TITLE "Documentation and the first real wave"
-	STATUS draft
+	TITLE "The wiki follows the commands, and M6 is proven on a real wave against the baseline of"
+		+ "the user's notes"
+	STATUS todo
+	TYPE docs
 	MILESTONE @MILESTONE.M6
 	COMPONENT "docs"
-	ROLE bilal
-	SPEC "the wiki pages and brigade help refreshed"
-	SPEC "a wave of about ten tasks delivered on a project of the user with its report"
-	SPEC "the ledger comparison against the baseline of 26/09 to 03/10"
+	ROLE ada
+	SPEC "a test fails when a command brigade --help lists, subcommands included, has no line"
+		+ "naming it in wiki/Command-reference.md, or when a page wiki/Home.md names has no file"
+		+ "under wiki/"
+	SPEC "a wiki page quotes the output of brigade ledger --wave for a wave of at least ten tasks"
+		+ "the tick delivered on a registered project, its pull request merged"
+	SPEC "the same page quotes brigade ledger compare of that wave's range against the reference"
+		+ "figures of the user's notes of 2026-10-03: steps to first edit p50 23, steps per task"
+		+ "run p50 47, 146 oversized output steps over 67 launches"
 	AFTER @TASK.B37
-	AFTER @TASK.B38
+	AFTER @TASK.B175
+	RATIONALE "M6 closes on proof that brigade delivers unattended on a real project and costs less"
+		+ "than the agents launched by hand: the exit criterion of the plan, a real wave of about"
+		+ "ten tasks and the comparison against the baseline of 26/09 to 03/10"
+	RATIONALE "the baseline predates the ledger, which starts on 2026-10-07: it is the figures of"
+		+ "the user's notes on their largest project (119 sessions, 217 launches), given to brigade"
+		+ "ledger compare as reference figures, which @TASK.B175 delivers"
+		REF @TASK.B175
+	RATIONALE "the documentation is kept on the wiki task by task, as"
+		+ "@DECISION.TheDocumentationIsWrittenInWikiAndPublishedToTheGitHubWikiOnEachPushToMain"
+		+ "rules; the test keeps it from drifting from the commands"
+		REF @DECISION.TheDocumentationIsWrittenInWikiAndPublishedToTheGitHubWikiOnEachPushToMain
+	SOURCE "the Artifact Brigade Blueprint, plan, M6 and the measured figures of the user's notes"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « c'est quoi l'objectif de la"
+		+ "tâche? », then « Oui, ces 3 SPEC »; the comparison moved to @TASK.B175, « B175 +"
+		+ "comparaison de B39 »"
+		REF @TASK.B175
 
 TASK B40
 	TITLE "Evaluate rtk as a candidate filter of shell output"
 	STATUS draft
-	MILESTONE @MILESTONE.M6
+	MILESTONE @MILESTONE.ADD0
 	COMPONENT "runs"
 	ROLE dora
 	ROLE prudence
@@ -3225,6 +3289,9 @@ TASK B40
 		+ "output, findings missed by the verifier"
 	SPEC "a DECISION records the adoption or the rejection, with the measured comparison"
 	AFTER @TASK.B21
+	RATIONALE "moved out of M6 into the post-MVP milestone: an evaluation whose outcome is a"
+		+ "DECISION, not a delivery of the tick"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « Sortir de M6 »"
 
 TASK B41
 	TITLE "brigade board sync writes the corpus task statuses to the Blueprint board"
@@ -11713,72 +11780,108 @@ TASK B172
 TASK B173
 	TITLE "brigade doctor validates the agents of [slots], the CLIENT and ROLESET of each project,"
 		+ "and the path, MAIN and commands of each registered project"
-	STATUS draft
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "doctor"
 	ROLE ada
 	SPEC "doctor reports a finding for a [slots] entry naming an AGENT no role set declares, for a"
 		+ "[slot_clients] entry naming a client no adapter answers, and for a PROJECT whose CLIENT"
-		+ "or ROLESET resolves to nothing, where today brigade/commands/doctor.py:375-396 reports"
+		+ "or ROLESET resolves to nothing, where today brigade/commands/doctor.py:370-396 reports"
 		+ "none of them and the error surfaces at the unattended run"
 	SPEC "doctor reports a finding per registered project whose PATH does not exist, whose MAIN is"
 		+ "not a branch of the repository, or the first word of whose SETUP, ACCEPTANCE or HEAVY"
-		+ "line is no executable on PATH"
+		+ "line, split by shlex.split, is no executable on PATH, and a line shlex.split refuses"
+	RATIONALE "the commands of a project are one argv split by shlex.split, as"
+		+ "@DECISION.ProjectCommandsRunAsAnArgvWithoutAShell rules"
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
 	SOURCE "use-case map of 2026-10-16, findings A3 and A10"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: kept apart from @TASK.B176,"
+		+ "another component"
+		REF @TASK.B176
 
 TASK B174
-	TITLE "The read cost of a tick is bounded: one awawa refs per task, the ledger read once per"
-		+ "wave per tick"
-	STATUS draft
+	TITLE "The read cost of a tick is bounded: the ledger read once per tick, awawa refs once per"
+		+ "task per tick"
+	STATUS todo
+	TYPE perf
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
 	ROLE ada
-	DESC "to settle in the refinement: whether the views of brigade ledger and /api/ledger of"
-		+ "@TASK.B27 share the bound, brigade/ledger/read_ledger.py:96-106 reading every monthly"
-		+ "file at every call"
-		REF @TASK.B27
-	SPEC "a tick runs awawa refs at most once per task of a running wave, for the queued tasks"
-		+ "whose AFTER are satisfied alone, where today brigade/tick/read_live_blockers.py:40-44"
-		+ "runs refs then show per citing type for every task at every round, up to 10 rounds"
-	SPEC "the ledger is read at most once per wave per tick, the rounds of"
-		+ "brigade/tick/run_rounds.py reusing the states read, where today"
-		+ "brigade/tick/build_snapshot.py:112-129 rereads it at every round"
+	SPEC "a tick reads the ledger once; its rounds and its executors reuse that reading, extended"
+		+ "with the events the tick appends, where today brigade/tick/build_snapshot.py:760 reads"
+		+ "it at every round, brigade/waves/read_task_states.py:10 once per open wave at every"
+		+ "round, and brigade/commands/tick.py:362, 417 and 464 once per executor"
+	SPEC "a tick runs awawa refs, and the show per citing type, at most once per task, again only"
+		+ "for a task whose branch the tick moved, where today"
+		+ "brigade/tick/read_live_blockers.py:40-44 runs them for every task of an open wave at"
+		+ "every round, up to ROUND_CAP 10 of brigade/commands/tick.py:144, and"
+		+ "brigade/waves/admit_candidates.py:33 for every candidate"
+	SPEC "a test counts the reads: a tick of several rounds over a wave of N tasks reads the ledger"
+		+ "once and runs awawa refs at most N times"
+	RATIONALE "brigade/tick/run_rounds.py:25-26 rebuilds the snapshot from scratch at every round,"
+		+ "and brigade/ledger/read_ledger.py:96-107 reads every monthly file at each call; the"
+		+ "views of brigade ledger and the dashboard, which runs brigade ledger --json as a"
+		+ "subprocess, keep their reading: the bound concerns the tick"
 	SOURCE "use-case map of 2026-10-16, findings B12 and C11"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « Une lecture par tick »"
 
 TASK B175
-	TITLE "The ledger views give the cost by wave and by task, a --task view, --since on every view"
-		+ "and a comparison over a range"
-	STATUS draft
+	TITLE "The ledger views give the cost by wave and by task, a --task view, --since on every"
+		+ "view, and a comparison over ranges or against reference figures"
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "ledger"
 	ROLE ada
 	SPEC "brigade ledger --wave <wave> prints the cost in USD and the tokens of the wave, summed"
-		+ "from the run.finished events carrying it, and one row per task with its steps, duration"
-		+ "and cost, where today brigade/ledger/describe_wave.py:56-84 reads neither cost_usd nor"
-		+ "usage"
+		+ "from the run.finished events carrying them, and one row per task with its steps,"
+		+ "duration and cost, where today brigade/ledger/describe_wave.py reads neither cost_usd"
+		+ "nor usage"
 	SPEC "brigade ledger --task <task> prints the runs of a task with their outcome, steps,"
 		+ "duration and cost"
 	SPEC "--since applies to every view of brigade ledger, where today"
-		+ "brigade/commands/ledger.py:129-132 accepts it with --project alone"
-	SPEC "brigade ledger compare takes a range for each side, where today"
+		+ "brigade/commands/ledger.py:130-133 accepts it with --project alone"
+	SPEC "brigade ledger compare takes a range, a start and an end day, for each side, where today"
 		+ "brigade/ledger/describe_comparison.py:28-36 cuts at one day with no upper bound"
+	SPEC "brigade ledger compare --reference <measure>=<value>, repeatable, compares one range with"
+		+ "reference figures in place of a second range, for steps to first edit p50, steps per"
+		+ "task run p50 and oversized output steps per launch"
+	RATIONALE "run.finished already carries cost_usd and usage, brigade/ledger/run_finished.py:22"
+		+ "and 31; the reference figures carry a baseline that predates the ledger, as the"
+		+ "comparison of @TASK.B39 needs"
+		REF @TASK.B39
 	SOURCE "use-case map of 2026-10-16, findings C1, C5, C3 and C4"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « B175 + comparaison de B39 »"
 
 TASK B176
-	TITLE "The trace of a failed process keeps the tail of its stderr"
-	STATUS draft
+	TITLE "The trace of a failed process keeps the tail of its stderr, masked"
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "processes"
 	ROLE ada
-	DESC "to settle in the refinement: the bound of the tail and the scrubbing of secrets"
-	SPEC "the trail of a failed subprocess keeps the tail of its stderr, and brigade processes show"
-		+ "--failed prints it, where today brigade/system/process_trace.py:15 keeps the argv, the"
-		+ "exit code and the duration alone"
+	SPEC "the trace of a failed subprocess keeps the last 2 KiB of its stderr, and brigade"
+		+ "processes show --failed prints it, where today brigade/system/process_trace.py:15 keeps"
+		+ "the argv, the cwd, the exit code and the duration alone"
+	SPEC "before the tail is written, every token shaped as ghp_, gho_, ghs_, github_pat_ or"
+		+ "sk-ant- and every match of the PRIVATE patterns of a registered project and of brigade's"
+		+ "built-ins is replaced by a marker naming its kind, never by a value derived from the"
+		+ "match"
+	SPEC "a fixture test proves that no token of those shapes and no identifier matching a declared"
+		+ "PRIVATE pattern survives in a trace"
+	SPEC "the trace of a detached process names the file under runs/<id>/ that holds its stderr"
+	AFTER @TASK.B35
 	RATIONALE "DESC 1 of @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa says the"
-		+ "record of a subprocess holds stdout and stderr; the trace drops them, so a failure is"
-		+ "explained only by replaying with --verbose"
+		+ "record of a subprocess holds stdout and stderr, brigade/system/run_process.py:30; the"
+		+ "trace drops them, so a failure is explained only by replaying with --verbose"
 		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	RATIONALE "the masking reuses the scrubber @TASK.B35 builds for the miner, the PRIVATE patterns"
+		+ "of every registered project and the built-ins, with the token shapes added:"
+		+ "brigade/verify/check_privacy.py only detects a match"
+		REF @TASK.B35
 	SOURCE "use-case map of 2026-10-16, finding A17"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « 2 KiB + jetons + PRIVATE »"
 
 TASK B177
 	TITLE "brigade init probes the client adapters present, writes the client key, prints the next"
@@ -14610,3 +14713,20 @@ TASK B228
 		+ "affiche un message d'erreur et rappelle l'usage quand on veut afficher le projet brigade"
 		+ "», then « ni dans la page ni dans l'ide »; asked between a ref field left empty and one"
 		+ "pre-filled with the project's default branch: « pré remplie »"
+
+TASK B229
+	TITLE "The dashboard draws the applied step cap of each role over time"
+	STATUS draft
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "dashboard"
+	ROLE ada
+	SPEC "a chart of the dashboard draws, for each role, its applied cap over time from the"
+		+ "budget.applied events of the ledger, each change marked raised or lowered and a role"
+		+ "with no change marked stable"
+	AFTER @TASK.B37
+	RATIONALE "@TASK.B37 applies the cap brigade computes for each role; the curve shows whether"
+		+ "the caps settle"
+		REF @TASK.B37
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « on pourra ajouter une tâche"
+		+ "en add0 pour ajouter un graphique dans le dashboard pour voir la courbe des budgets"
+		+ "(augmentation/réduction/stable) »"
