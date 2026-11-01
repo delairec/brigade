@@ -69,8 +69,16 @@ def _render_text(document: dict) -> str:
     )
 
 
+def _read_reference_figures(references: list[tuple[str, float]]) -> dict:
+    measures = [measure for measure, _ in references]
+    repeated = sorted({measure for measure in measures if measures.count(measure) > 1})
+    if repeated:
+        raise UsageError(f"compare takes one --reference per measure: {', '.join(repeated)}")
+    return dict(references)
+
+
 def _read_request(options: argparse.Namespace) -> argparse.Namespace:
-    reference = dict(options.reference or ())
+    reference = _read_reference_figures(options.reference or [])
     expected_ranges = RANGE_AGAINST_REFERENCE if reference else COMPARED_RANGES
     if len(options.range) != expected_ranges:
         raise UsageError("compare takes two --range, or one --range and --reference")
