@@ -24,7 +24,7 @@ HOME = {
             "pause": None,
         },
     ],
-    "inbox": {"new_signals": 3},
+    "inbox": {"new_signals": 3, "scans": []},
     "quota": {
         "window_hours": 5,
         "usage": {
@@ -59,7 +59,7 @@ class RenderHomeTest(unittest.TestCase):
             ' <button type="button" data-post="/api/waves/oak_w2/resume">resume</button></li>'
             '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.started</li>'
             "</ul></section>"
-            "<section><h2>Inbox</h2><p>3 new signals</p></section>"
+            "<section><h2>Inbox</h2><p>3 new signals</p><ul></ul></section>"
             "<section><h2>Quota</h2><p>over the last 5 hours, 1 runs without usage</p><dl>"
             "<dt>input_tokens</dt><dd>10</dd><dt>output_tokens</dt><dd>20</dd>"
             "<dt>cache_creation_input_tokens</dt><dd>30</dd><dt>cache_read_input_tokens</dt><dd>40</dd>"
@@ -84,6 +84,31 @@ class RenderHomeTest(unittest.TestCase):
         # Assert
         self.assertIn("<section><h2>Last tick</h2><p>2026-10-19T08:55:00Z, 2 actions applied in 120 ms</p>", fragment)
         self.assertIn("<section><h2>Studies</h2><ul><li>debt, parked</li></ul></section>", fragment)
+
+    def test_should_render_each_scan_holding_new_signals_with_their_count_and_the_age_of_the_oldest(self):
+        # Arrange
+        document = {
+            **HOME,
+            "inbox": {
+                "new_signals": 3,
+                "scans": [
+                    {"study": "corpus_lint_oak", "signals": 2, "oldest_age_s": 7200},
+                    {"study": "stale_branches_elm", "signals": 1, "oldest_age_s": 900},
+                ],
+            },
+        }
+
+        # Act
+        fragment = render_home(document)
+
+        # Assert
+        self.assertIn(
+            "<section><h2>Inbox</h2><p>3 new signals</p><ul>"
+            "<li>corpus_lint_oak, 2 new signals, the oldest 2h</li>"
+            "<li>stale_branches_elm, 1 new signals, the oldest 15m</li>"
+            "</ul></section>",
+            fragment,
+        )
 
     def test_should_render_a_wave_paused_until_further_notice_without_a_resume_time(self):
         # Arrange
@@ -118,6 +143,7 @@ class RenderHomeTest(unittest.TestCase):
             **HOME,
             "projects": [{"name": markup, "paused": False}],
             "waves": [{**HOME["waves"][0], "wave": markup, "project": markup, "last_event": markup}],
+            "inbox": {"new_signals": 1, "scans": [{"study": markup, "signals": 1, "oldest_age_s": 60}]},
             "quota": {**HOME["quota"], "usage": NO_USAGE, "paused_waves": [{"wave": markup, "resume_at": markup}]},
             "studies": [{**HOME["studies"][0], "name": markup}],
         }

@@ -2,7 +2,8 @@ import argparse
 
 from brigade.command import Command
 from brigade.corpus.read_entities import Entity
-from brigade.inbox.read_inbox import NEW_STATUS, read_inbox
+from brigade.inbox.read_inbox import NEW_STATUS, Signal, read_inbox
+from brigade.inbox.render_age import render_age
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.sum_quota_usage import sum_quota_usage
@@ -12,6 +13,7 @@ from brigade.runtime import Runtime
 from brigade.studies.describe_study_row import describe_study_row
 from brigade.studies.read_last_study_orders import read_last_study_orders
 from brigade.studies.read_studies import read_studies
+from brigade.studies.record_scan_signals import SCAN_KIND
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.tick.describe_heartbeat import describe_heartbeat
 from brigade.tick.describe_study_facts import describe_study_facts
@@ -26,6 +28,7 @@ ACTIVE_STATUS = "active"
 QUOTA_REASON = "quota"
 DUE = "due"
 NEVER = "never"
+FINGERPRINT_SEPARATOR = ":"
 
 
 def _is_paused(project: Entity) -> bool:
@@ -76,6 +79,18 @@ def _list_studies_to_watch(runtime: Runtime) -> list[dict]:
     return studies
 
 
+def _list_scans(new_signals: list[Signal]) -> list[dict]:
+    ages_by_study: dict[str, list[int]] = {}
+    for signal in new_signals:
+        if signal.kind == SCAN_KIND:
+            study = signal.fingerprint.partition(FINGERPRINT_SEPARATOR)[0]
+            ages_by_study.setdefault(study, []).append(signal.age_s)
+    return [
+        {"study": study, "signals": len(ages), "oldest_age_s": max(ages)}
+        for study, ages in sorted(ages_by_study.items())
+    ]
+
+
 def _describe_pause(pause: dict) -> str:
     if pause["resume_at"] is None:
         return f"paused on {pause['reason']}"
@@ -98,6 +113,10 @@ def _render_last_tick(last_tick: dict | None) -> str:
     return f"{last_tick['ts']}, {last_tick['actions_applied']} actions applied in {last_tick['duration_ms']} ms"
 
 
+def _render_scan(scan: dict) -> str:
+    return f"scan       {scan['study']}, {scan['signals']} new signals, the oldest {render_age(scan['oldest_age_s'])}"
+
+
 def _render_study(study: dict) -> str:
     return f"study      {study['name']}, {DUE if study['due'] else study['outcome']}"
 
@@ -111,6 +130,7 @@ def _render_text(document: dict) -> str:
             ),
             *(_render_wave(wave) for wave in document["waves"]),
             f"inbox      {document['inbox']['new_signals']} new signals",
+            *(_render_scan(scan) for scan in document["inbox"]["scans"]),
             _render_quota(document["quota"]),
             f"last tick  {_render_last_tick(document['last_tick'])}",
             *(_render_study(study) for study in document["studies"]),
@@ -129,7 +149,7 @@ def status(request: argparse.Namespace, runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "projects": [{"name": project.name, "paused": _is_paused(project)} for project in read_projects(runtime)],
         "waves": waves,
-        "inbox": {"new_signals": len(new_signals)},
+        "inbox": {"new_signals": len(new_signals), "scans": _list_scans(new_signals)},
         "quota": _describe_quota(entries, waves, runtime),
         "last_tick": describe_heartbeat(read_heartbeat(runtime.paths.heartbeat_file)),
         "studies": _list_studies_to_watch(runtime),
@@ -138,7 +158,7 @@ def status(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("status",),
-    help="print the Home document: the projects, the open waves, the inbox, the quota, the last tick and the studies",
+    help="print the Home document: the projects, the open waves, the inbox and the scans holding new signals, the quota, the last tick and the studies",
     run=status,
     render_text=_render_text,
 )
