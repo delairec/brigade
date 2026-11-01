@@ -58,7 +58,7 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     summary = require_wave_summary(entries, request.wave)
     events = tuple(entry.event for entry in entries)
     started = summary.started
-    states = read_task_states(runtime.paths.state_root, started.wave)
+    states = read_task_states(entries, started.wave)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "wave": started.wave,
