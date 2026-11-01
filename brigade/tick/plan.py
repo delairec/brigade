@@ -11,6 +11,8 @@ from brigade.tick.actions import (
     CloseWave,
     CutMilestoneBranch,
     CutWaveBranch,
+    DescribeMilestonePullRequest,
+    DescribeWavePullRequest,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -103,6 +105,8 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_wave_pull_request_retargets(snapshot)
         + _plan_reports(snapshot)
         + _plan_wave_rebases(snapshot, paused)
+        + _plan_wave_pull_request_descriptions(snapshot)
+        + _plan_milestone_pull_request_descriptions(snapshot)
         + _plan_wave_merges(snapshot)
         + _plan_closes(snapshot)
         + _plan_integration_pull_requests(snapshot)
@@ -549,6 +553,38 @@ def _plan_wave_pull_request_retargets(snapshot: Snapshot) -> tuple:
         )
         for wave in snapshot.waves
         if _is_on_another_base(wave)
+    )
+
+
+def _is_undescribed(pull_request: PullRequestFacts | None, described_head: str | None) -> bool:
+    return pull_request is not None and pull_request.state == OPEN_PULL_REQUEST and pull_request.head != described_head
+
+
+def _plan_wave_pull_request_descriptions(snapshot: Snapshot) -> tuple:
+    return tuple(
+        DescribeWavePullRequest(
+            project=wave.project,
+            wave=wave.wave,
+            branch=wave.branch,
+            pr=wave.integration_pull_request.number,
+            head=wave.integration_pull_request.head,
+        )
+        for wave in snapshot.waves
+        if _is_undescribed(wave.integration_pull_request, wave.described_head)
+    )
+
+
+def _plan_milestone_pull_request_descriptions(snapshot: Snapshot) -> tuple:
+    return tuple(
+        DescribeMilestonePullRequest(
+            project=milestone.project,
+            milestone=milestone.milestone,
+            branch=milestone.branch,
+            pr=milestone.pull_request.number,
+            head=milestone.pull_request.head,
+        )
+        for milestone in snapshot.milestones
+        if _is_undescribed(milestone.pull_request, milestone.described_head)
     )
 
 

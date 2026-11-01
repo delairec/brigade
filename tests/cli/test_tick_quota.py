@@ -60,6 +60,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                         "reviewDecision": "",
                         "updatedAt": "2026-10-18T11:00:00Z",
                         "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
+                        "commits": [],
                     }
                 ]
             )
