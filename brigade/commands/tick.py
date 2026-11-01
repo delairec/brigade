@@ -562,18 +562,29 @@ def _compose_wave_description(
     return _compose_description(runtime, configuration, described)
 
 
-def _rewrite_pull_request(
-    runtime: Runtime, configuration: Configuration, project: Entity, pr: int, description: tuple[str, str]
-) -> str:
+@dataclass(frozen=True)
+class _PullRequestDescription:
+    project: Entity
+    pr: int
+    title: str
+    body: str
+
+
+def _rewrite_pull_request(runtime: Runtime, configuration: Configuration, described: _PullRequestDescription) -> str:
     forge = runtime.resolve_plugin("forge", FORGE_NAME)
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
-    repository = read_project_field(project, PATH_FIELD)
-    query = PullRequestDetailsQuery(repository=repository, number=pr, environment=environment)
+    repository = read_project_field(described.project, PATH_FIELD)
+    query = PullRequestDetailsQuery(repository=repository, number=described.pr, environment=environment)
     read = ask_pull_request_details(forge, FORGE_NAME, query, runtime)
-    if (read["title"], read["body"]) != description:
-        title, body = description
+    if (read["title"], read["body"]) != (described.title, described.body):
         forge.edit_pull_request(
-            {"repository": repository, "number": pr, "title": title, "body": body, "environment": environment},
+            {
+                "repository": repository,
+                "number": described.pr,
+                "title": described.title,
+                "body": described.body,
+                "environment": environment,
+            },
             runtime,
         )
     return ask_forge_account(forge, FORGE_NAME, environment, runtime).login
@@ -584,10 +595,10 @@ def _describe_wave_pull_request(
 ) -> None:
     project = find_project(read_projects(runtime), action.project)
     _read_branch_head(runtime, configuration, project, action.branch)
-    description = _compose_wave_description(
+    title, body = _compose_wave_description(
         runtime, configuration, _find_started_wave(runtime, action.wave), action.head
     )
-    login = _rewrite_pull_request(runtime, configuration, project, action.pr, description)
+    login = _rewrite_pull_request(runtime, configuration, _PullRequestDescription(project, action.pr, title, body))
     append_event(
         runtime.paths, runtime.now, WavePrDescribed(wave=action.wave, pr=action.pr, head=action.head, login=login)
     )
@@ -614,8 +625,8 @@ def _describe_milestone_pull_request(
         head=action.head,
         merged_waves=_list_milestone_merged_waves(runtime, root, action.project, action.milestone),
     )
-    description = _compose_description(runtime, configuration, described)
-    login = _rewrite_pull_request(runtime, configuration, project, action.pr, description)
+    title, body = _compose_description(runtime, configuration, described)
+    login = _rewrite_pull_request(runtime, configuration, _PullRequestDescription(project, action.pr, title, body))
     append_event(
         runtime.paths,
         runtime.now,
@@ -623,6 +634,19 @@ def _describe_milestone_pull_request(
             project=action.project, milestone=action.milestone, pr=action.pr, head=action.head, login=login
         ),
     )
+
+
+def _record_wave_pull_request_opened(runtime: Runtime, described: WavePrDescribed) -> None:
+    append_event(runtime.paths, runtime.now, WavePrOpened(wave=described.wave, pr=described.pr, login=described.login))
+    append_event(runtime.paths, runtime.now, described)
+
+
+def _record_milestone_pull_request_opened(runtime: Runtime, described: MilestonePrDescribed) -> None:
+    opened = MilestonePrOpened(
+        project=described.project, milestone=described.milestone, pr=described.pr, login=described.login
+    )
+    append_event(runtime.paths, runtime.now, opened)
+    append_event(runtime.paths, runtime.now, described)
 
 
 def _open_integration_pull_request(
@@ -653,10 +677,7 @@ def _open_integration_pull_request(
         },
         runtime,
     )
-    append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=opened["number"], login=login))
-    append_event(
-        runtime.paths, runtime.now, WavePrDescribed(wave=action.wave, pr=opened["number"], head=head, login=login)
-    )
+    _record_wave_pull_request_opened(runtime, WavePrDescribed(wave=action.wave, pr=opened["number"], head=head, login=login))
 
 
 def _open_milestone_pull_request(
@@ -668,10 +689,10 @@ def _open_milestone_pull_request(
     main = read_project_field(project, MAIN_FIELD)
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
     head = _read_branch_head(runtime, configuration, project, action.branch)
-    described = _DescribedBranch(
+    branch = _DescribedBranch(
         project=project, wave=None, milestone=action.milestone, base=main, head=head, merged_waves=action.waves
     )
-    title, body = _compose_description(runtime, configuration, described)
+    title, body = _compose_description(runtime, configuration, branch)
     opened = forge.open_pull_request(
         {
             "repository": read_project_field(project, PATH_FIELD),
@@ -684,17 +705,8 @@ def _open_milestone_pull_request(
         },
         runtime,
     )
-    append_event(
-        runtime.paths,
-        runtime.now,
-        MilestonePrOpened(project=action.project, milestone=action.milestone, pr=opened["number"], login=login),
-    )
-    append_event(
-        runtime.paths,
-        runtime.now,
-        MilestonePrDescribed(
-            project=action.project, milestone=action.milestone, pr=opened["number"], head=head, login=login
-        ),
+    _record_milestone_pull_request_opened(
+        runtime, MilestonePrDescribed(action.project, action.milestone, opened["number"], head, login)
     )
 
 
@@ -851,6 +863,16 @@ def _resume_wave(runtime: Runtime, action: ResumeWave) -> None:
     append_event(runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason))
 
 
+def _list_delivery_pull_request_executors(runtime: Runtime, configuration: Configuration) -> dict:
+    return {
+        RetargetWavePullRequest: lambda action: _retarget_wave_pull_request(runtime, configuration, action),
+        DescribeWavePullRequest: lambda action: _describe_wave_pull_request(runtime, configuration, action),
+        DescribeMilestonePullRequest: lambda action: _describe_milestone_pull_request(runtime, configuration, action),
+        OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
+        OpenMilestonePullRequest: lambda action: _open_milestone_pull_request(runtime, configuration, action),
+    }
+
+
 def _list_wave_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         MergeWavePullRequest: lambda action: _merge_wave_pull_request(runtime, configuration, action),
@@ -861,13 +883,8 @@ def _list_wave_executors(runtime: Runtime, configuration: Configuration) -> dict
         StartWave: lambda action: _start_wave(runtime, configuration, action),
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         CutMilestoneBranch: lambda action: _cut_milestone_branch(runtime, configuration, action),
-        RetargetWavePullRequest: lambda action: _retarget_wave_pull_request(runtime, configuration, action),
-        DescribeWavePullRequest: lambda action: _describe_wave_pull_request(runtime, configuration, action),
-        DescribeMilestonePullRequest: lambda action: _describe_milestone_pull_request(runtime, configuration, action),
-        OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: _report_wave(runtime, action),
         CloseWave: lambda action: _close_wave(runtime, action),
-        OpenMilestonePullRequest: lambda action: _open_milestone_pull_request(runtime, configuration, action),
         CloseMilestone: lambda action: _close_milestone(runtime, action),
     }
 
@@ -886,6 +903,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
+        **_list_delivery_pull_request_executors(runtime, configuration),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
         **_list_wave_executors(runtime, configuration),

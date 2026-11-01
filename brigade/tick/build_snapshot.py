@@ -956,18 +956,24 @@ def _list_branch_rebase_runs(reading: WaveReading, project: Entity, branch: str)
     return tuple(run for run in reading.runs if run["worktree"] == str(worktree))
 
 
+def _read_opened_milestone_facts(
+    reading: WaveReading, cut: MilestoneBranchCut, project: Entity, opened: int
+) -> MilestoneFacts:
+    return MilestoneFacts(
+        project=cut.project,
+        milestone=cut.milestone,
+        branch=cut.branch,
+        opened_pull_request=opened,
+        pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
+        described_head=find_milestone_described_head(reading.events, cut.project, cut.milestone, opened),
+    )
+
+
 def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut) -> MilestoneFacts:
     project = find_project(reading.projects, cut.project)
     opened = _find_milestone_pull_request(reading, cut.project, cut.milestone)
     if opened is not None:
-        return MilestoneFacts(
-            project=cut.project,
-            milestone=cut.milestone,
-            branch=cut.branch,
-            opened_pull_request=opened,
-            pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
-            described_head=find_milestone_described_head(reading.events, cut.project, cut.milestone, opened),
-        )
+        return _read_opened_milestone_facts(reading, cut, project, opened)
     ref = locate_forge_branch(runtime.run_process, project, cut.branch, reading.forge.read_environment)
     rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
     query = argparse.Namespace(project=cut.project, ref=ref, worktree=None)
