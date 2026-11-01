@@ -12605,7 +12605,12 @@ TASK B192
 TASK B196
 	TITLE "A task whose worktree holds uncommitted changes when its pull request falls behind is"
 		+ "repaired before it is rebased"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-01: its SPEC 2, a task behind holding uncommitted changes parked past"
+		+ "POLICY.VERIFY_ROUNDS repair rounds, is made false by SPEC 2 of @TASK.B219, whose tick"
+		+ "takes the worktree over, commits the changes on the task branch and rebases it; the"
+		+ "repair before the rebase it delivers stands"
+		REF @TASK.B219
 	DELIVERED_BY 188
 	TYPE fix
 	MILESTONE @MILESTONE.M1
@@ -12626,8 +12631,6 @@ TASK B196
 			+ "test_should_repair_rather_than_rebase_a_task_behind_whose_worktree_holds_uncommitted_changes(self):"
 	SPEC "past POLICY.VERIFY_ROUNDS repair rounds such a task is parked with the reason of the"
 		+ "rounds spent instead of a repair run; its worktree is never reset nor stashed"
-		IMPL "tests/unit/tick/test_plan.py::def"
-			+ "test_should_rebase_a_task_behind_taking_over_its_uncommitted_changes_once_its_repair_rounds_are_spent(self):"
 	SPEC "once its worktree holds no uncommitted change, a task whose pull request is behind is"
 		+ "rebased by the next tick as TASK B143 sets"
 		IMPL "brigade/tick/plan.py::return RebaseTask("
