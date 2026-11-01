@@ -1,6 +1,7 @@
 import argparse
 
 from brigade.command import Argument, Command
+from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
 from brigade.studies.describe_last_study_order import describe_last_study_order
 from brigade.studies.read_last_study_orders import read_last_study_orders
@@ -28,7 +29,7 @@ def _render_text(document: dict) -> str:
 
 def study_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     entity = read_study_entity(runtime, request.name)
-    last_order = read_last_study_orders(runtime.paths.state_root).get(entity.name)
+    last_order = read_last_study_orders(read_ledger(runtime.paths.state_root).entries).get(entity.name)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "study": {
