@@ -222,15 +222,28 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["items"][1],
-            {
-                "detector": "correction",
-                "client": "vibe",
-                "session": "s-built",
-                "run": "r5",
-                "position": 2,
-                "fingerprint": "correction:vibe:s-built:2",
-                "cost_usd": 0.42,
-                "usage": None,
-            },
+            document["items"],
+            [
+                {
+                    "detector": "correction",
+                    "client": "vibe",
+                    "session": "s-built",
+                    "run": "r5",
+                    "position": 2,
+                    "fingerprint": "correction:vibe:s-built:2",
+                    "cost_usd": 0.42,
+                    "usage": None,
+                }
+            ],
         )
+
+    def test_should_read_a_session_once_from_the_last_run_finished_naming_it(self):
+        # Arrange
+        second_segment = dataclasses.replace(_finish("r3", "s-built"), segment=2, cost_usd=0.3)
+        append_event(self.runtime.paths, IN_THE_WINDOW, second_segment)
+
+        # Act
+        document = self.collect([BRIEF, CORRECTION])
+
+        # Assert
+        self.assertEqual(document["items"], [{**_find("correction", 2), "cost_usd": 0.3}])
