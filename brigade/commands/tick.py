@@ -670,6 +670,10 @@ def _collect_review_threads(runtime: Runtime, configuration: Configuration, acti
     record_review_threads(runtime, action.project, collection.document["items"])
 
 
+def _resume_wave(runtime: Runtime, action: ResumeWave) -> None:
+    append_event(runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason))
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
@@ -685,9 +689,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: _pause_wave(runtime, action),
-        ResumeWave: lambda action: append_event(
-            runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
-        ),
+        ResumeWave: lambda action: _resume_wave(runtime, action),
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
         RebaseMilestone: lambda action: _rebase_milestone(runtime, configuration, action),
         StartWave: lambda action: _start_wave(runtime, configuration, action),
