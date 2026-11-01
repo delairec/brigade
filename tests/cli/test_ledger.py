@@ -72,7 +72,7 @@ BUDGET_LINES = (
     ' "run": "20261001T000000Z-b00006", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 8, "total_steps": null}\n'
+    ' "error_class": null, "main_steps": 8, "total_steps": null, "shipped_budget": 50}\n'
     '{"schema_version": 2, "ts": "2026-10-01T14:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP150",'
     ' "run": "20261001T000000Z-b00007", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
@@ -284,6 +284,8 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
                 "  awawa-task",
                 "    runs p50 30  p90 90  measured 5  partial 0  unmeasured 1",
                 "    segments p50 30  p90 90  measured 5  unmeasured 1",
+                "step cap of each role at its latest digests:",
+                "  remi  shipped 50  computed -  applied 50  segments 0  restarts 0  g -  R -",
             ],
         )
 

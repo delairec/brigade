@@ -9,7 +9,7 @@ collected, and a fact they did not gather is a gap the answer names, not a searc
 Arguments, which the Arguments section names: `study`, the STUDY entity of the operational corpus, and `run`, the
 run of that study you judge.
 
-**Budget: 20 steps**, a declared estimate: no run of this procedure is recorded yet. On reaching it, stop and
+**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to

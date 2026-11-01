@@ -94,7 +94,7 @@ class MainGroupHelpTest(MainTestCase):
             ("adapter", "probe", "answer probe, the request read on stdin"),
             ("adapter", "resume-argv", "answer resume-argv, the request read on stdin"),
             ("adapter", "transcripts", "answer transcripts, the request read on stdin"),
-            ("ledger", "budgets", "p50 and p90 steps per procedure over its last runs"),
+            ("ledger", "budgets", "p50 and p90 steps per procedure over its last runs, and the step cap of each role"),
             ("ledger", "compare", "two ranges of days against each other, or one range against reference figures"),
             ("project", "add", "register a git repository in the operational corpus"),
             ("project", "list", "list every registered project"),
