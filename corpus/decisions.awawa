@@ -4899,7 +4899,8 @@ DECISION EveryReadingOfBrigadeCorpusRunsOneWholeAwawaStatusAndNoRefReadsTheMainB
 		REF @TASK.B228
 	REJECTED "awawa status <TYPE> under --type and awawa status alone without it: two readings of"
 		+ "one input for no measured gain"
-	RATIONALE "awawa status TASK --json took 63 ms and awawa status --json 60 ms on the brigade"
-		+ "corpus, time on 2026-11-01"
+	RATIONALE "one awawa status of the whole corpus already carries the entity types and the"
+		+ "entities of every type, so a second reading adds nothing; a project's specification is"
+		+ "what its main branch holds, not what the checkout happens to be on"
 	SOURCE "the build run of @TASK.B228 of 2026-11-01"
 		REF @TASK.B228
