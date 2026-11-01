@@ -4605,6 +4605,16 @@ NO_OTHER_PROJECT = {}
 MILESTONE_BRANCH_DELETED_FROM_THE_FORGE = CommandFailed(
     ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH), 128, "couldn't find remote ref integration/tides"
 )
+LS_REMOTE_OF_THE_MILESTONE_BRANCH = (
+    "git",
+    "ls-remote",
+    "--quiet",
+    "--exit-code",
+    "--heads",
+    "origin",
+    f"refs/heads/{MILESTONE_BRANCH}",
+)
+MILESTONE_BRANCH_OFF_THE_FORGE = ProcessAnswer(exit_code=2)
 
 
 class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
@@ -4860,6 +4870,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
         answers = {
             **MACHINE_ANSWERS,
             ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH): MILESTONE_BRANCH_DELETED_FROM_THE_FORGE,
+            LS_REMOTE_OF_THE_MILESTONE_BRANCH: MILESTONE_BRANCH_OFF_THE_FORGE,
         }
         runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED}, answers)
         reported = io.StringIO()
@@ -5022,6 +5033,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
         answers = {
             **MACHINE_ANSWERS,
             ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH): MILESTONE_BRANCH_DELETED_FROM_THE_FORGE,
+            LS_REMOTE_OF_THE_MILESTONE_BRANCH: MILESTONE_BRANCH_OFF_THE_FORGE,
         }
         runtime = self._create_runtime(
             OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED}, answers

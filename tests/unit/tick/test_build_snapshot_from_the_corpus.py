@@ -12,6 +12,8 @@ from pathlib import Path
 from brigade.errors import CommandFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
+from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
+from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import TaskState
@@ -1251,7 +1253,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(
-            stderr.splitlines()[0],
+            stderr.splitlines()[1],
             "brigade tick: the wave w1 skipped: gh pr list --head task/w1/B1 exited 1: HTTP 502: Bad Gateway",
         )
         self.assertEqual(
@@ -1283,15 +1285,50 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             stderr.splitlines(),
             [
                 (
-                    "brigade tick: the wave w5 skipped: git rev-parse --verify --quiet --end-of-options"
-                    " integration/w5^{commit} exited 128: fatal: bad revision"
-                ),
-                (
                     "brigade tick: the project attic skipped: git rev-parse --verify --quiet --end-of-options"
                     " trunk^{commit} exited 128: fatal: bad revision"
                 ),
+                (
+                    "brigade tick: the wave w5 skipped: git rev-parse --verify --quiet --end-of-options"
+                    " integration/w5^{commit} exited 128: fatal: bad revision"
+                ),
             ],
         )
+
+
+class BuildSnapshotOfAProjectItSkipsTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.remote_answers = {
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/attic_w1"): ProcessAnswer(exit_code=1),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B1"),
+        }
+
+    def test_should_follow_no_wave_of_the_project_it_skips_and_the_waves_of_the_others(self):
+        # Arrange
+        self.record(60, WaveStarted(wave="attic_w1", project="attic", branch="integration/attic_w1", tasks=("A1",)))
+        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B7",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves,
+            (WaveFacts(project="shop", wave="w4", branch="integration/w4", branch_missing=True),),
+        )
+
+    def test_should_follow_no_milestone_of_the_project_it_skips(self):
+        # Arrange
+        self.record(60, MilestoneBranchCut(project="attic", milestone="M2", branch="integration/attic", login=None))
+        self.record(50, MilestonePrOpened(project="attic", milestone="M2", pr=12, login=None))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.milestones, ())
 
 
 def create_review_run_finished(run: str, task: str, error_class: str | None = None) -> RunFinished:
