@@ -32,6 +32,7 @@ OPTIONAL_FIELDS = (
     "tokens_to_first_edit",
     "role_digest",
     "procedure_digest",
+    "shipped_budget",
 )
 
 
@@ -64,6 +65,7 @@ class RunFinished:
     tokens_to_first_edit: int | None = None
     role_digest: str | None = None
     procedure_digest: str | None = None
+    shipped_budget: int | None = None
 
     @classmethod
     def from_document(cls, document: dict) -> "RunFinished":

@@ -18,7 +18,12 @@ brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run
 `brigade run` runs a procedure as a slot through the client adapter.
 
 - **The procedure** is a Markdown file whose front matter declares `capabilities` (`read`, `write`, `shell`, `net`,
-  comma-separated) and `budget`, its steps; the body is what the agent is asked to do.
+  comma-separated); the body is what the agent is asked to do.
+- **The step cap** of a segment is its role's: the `budget` the role package ships, until the ledger holds 5 measured
+  segments and 3 measured restarts of the role at its current digests; then √(2R/g) rounded, held within half and
+  double the shipped budget, g the tokens a step adds to the context of the next, R the tokens a restarted segment
+  spends up to its first edit. A change of the applied cap is appended as `budget.applied`, and the brief states the
+  cap in its Budget section.
 - **The slot** resolves to its role as [`brigade roles`](Roles.md) shows, unless the project of `--project` binds it
   otherwise.
 - **The client** is the one `[slot_clients]` binds to the slot, else the project's `CLIENT`, else the `client` key of
@@ -185,7 +190,7 @@ and the ledger as the foreground command does.
 
 <details><summary>The clock: wall-time limit and soft limit</summary>
 
-- Every run is held on the clock: at `ceil(budget × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
+- Every run is held on the clock: at `ceil(cap × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
   `config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the
   segment ends with the outcome `wall_limit`, whether its soft limit has passed or not.
 - The soft limit of a segment is its wall-time limit minus `soft_limit_margin_s` of `config.toml`, a positive number
@@ -203,10 +208,10 @@ and the ledger as the foreground command does.
 
 | Segment | `signal.recorded` | Naming |
 |---|---|---|
-| ended on the client's step cap | `budget_reached` | the procedure, the run and the budget |
+| ended on the client's step cap | `budget_reached` | the procedure, the run and the cap applied |
 | cut on the clock, or ended on `soft_limit` | `wall_limit_reached` | the same, and `wall_limit_s`, the limit in seconds it was held to |
 | ended on `handed_over` or `undeclared` | that name | the procedure, the run and the segment |
-| whose main steps, as `run.finished` counts them, exceed the budget of its procedure | `budget_exceeded` | the procedure, the run, the segment, the budget and `steps`, the steps it took |
+| whose main steps, as `run.finished` counts them, exceed the cap of its role | `budget_exceeded` | the procedure, the run, the segment, the cap applied and `steps`, the steps it took |
 
 - In each of the first three cases, when the document plugin answers that its progress holds an entry, the segment is
   launched again as a fresh segment, up to the `HANDOVERS`.

@@ -16,7 +16,7 @@ of another page is unknown.
 | preflight | the deterministic checks of the pull request of a task, before any judgment | [Preflight](Preflight.md) |
 | verdict | `pass` or `changes`, the judgment of a review run on the pull request of a task, recorded as `task.verdict` | [Verification](Verification.md) |
 | finding | one defect a verdict names, graded `critical`, `high`, `medium` or `low`, which a remediation run answers | [Review answers](Review-answers.md) |
-| procedure | a Markdown file whose front matter declares `capabilities` and `budget`: what the agent is asked to do | [Runs](Runs.md) |
+| procedure | a Markdown file whose front matter declares `capabilities`: what the agent is asked to do | [Runs](Runs.md) |
 | slot | what a procedure calls, never a role: `plan`, `build`, `review`, `remediate`, `rebase`, `report`, `triage`, `rules`, `explore` | [Roles](Roles.md) |
 | role | a Markdown file, a front matter then the system prompt, that a slot resolves to | [Roles](Roles.md) |
 | client adapter | what runs the agents: `claude-code`, `fake`, or an executable `brigade-client-<name>` | [Client adapters](Client-adapters.md) |

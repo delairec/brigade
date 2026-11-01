@@ -119,5 +119,6 @@ def describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
         tokens_to_first_edit=None if record.first_edit is None else record.first_edit.tokens,
         role_digest=digest_text(plan.role.body),
         procedure_digest=digest_text(plan.procedure.body),
+        shipped_budget=plan.budget.shipped,
     )
     return dataclasses.replace(finished, nulls=_explain_nulls(plan, record, finished))

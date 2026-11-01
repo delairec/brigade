@@ -99,6 +99,7 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "task": "S3",
                     "role_digest": SHA256_DIGEST,
                     "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
                     "nulls": {
                         **NO_EDIT_TOOL_NAMED,
                         "total_steps": "the client reads no transcript",
@@ -173,6 +174,7 @@ class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTick
                 "task": "S3",
                 "role_digest": SHA256_DIGEST,
                 "procedure_digest": SHA256_DIGEST,
+                "shipped_budget": 75,
                 "nulls": ANY,
                 "cost_usd": 0.42,
             },

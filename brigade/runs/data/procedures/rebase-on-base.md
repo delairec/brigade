@@ -13,7 +13,7 @@ and either `pr`, the number of the pull request a build run opened for it, or `b
 the task has no pull request yet; for the branch of a wave or of a milestone, `base` alone, the branch it is rebased
 onto.
 
-**Budget: 30 steps**, a declared estimate: no run of this procedure is recorded yet. On reaching it, stop and
+**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to

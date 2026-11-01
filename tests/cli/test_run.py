@@ -162,6 +162,7 @@ class BrigadeRunDetachedTest(RunTestCase):
                     "task": None,
                     "role_digest": SHA256_DIGEST,
                     "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
                     "nulls": {
                         **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
@@ -228,6 +229,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                     "task": None,
                     "role_digest": SHA256_DIGEST,
                     "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
                     "nulls": {
                         **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
@@ -335,6 +337,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "task": None,
                     "role_digest": SHA256_DIGEST,
                     "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
                     "nulls": {
                         **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",

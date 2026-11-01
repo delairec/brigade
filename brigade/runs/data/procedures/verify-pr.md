@@ -9,7 +9,7 @@ or changes with the findings that ask for them. You did not write the pull reque
 Arguments, which the Arguments section names: `pr`, the number of the pull request, and `task`, the TASK entity it
 delivers.
 
-**Budget: 40 steps**, a declared estimate: no run of this procedure is recorded yet. On reaching it, stop and
+**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to

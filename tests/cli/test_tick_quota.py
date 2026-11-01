@@ -136,6 +136,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "task": "S3",
                     "role_digest": SHA256_DIGEST,
                     "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 50,
                     "nulls": ANY,
                     "cost_usd": 0.42,
                 },

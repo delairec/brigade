@@ -9,7 +9,7 @@ nothing, and the plan file is the only file you write.
 
 Argument, which the Arguments section names: `request`, the REQUEST entity of the operational corpus to plan.
 
-**Budget: 30 steps**, a declared estimate: no run of this procedure is recorded yet. On reaching it, stop and
+**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to

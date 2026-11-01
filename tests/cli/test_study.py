@@ -263,6 +263,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "task": None,
                     "role_digest": SHA256_DIGEST,
                     "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         **NO_EDIT_TOOL_NAMED,
                         "wave": "not launched by a wave",
