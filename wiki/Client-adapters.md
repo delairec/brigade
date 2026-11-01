@@ -8,10 +8,30 @@ The `client` key of `config.toml` selects the client adapter:
 | `client` | Adapter |
 |---|---|
 | `claude-code` | Claude Code |
+| `vibe` | Mistral Vibe, its Rust CLI |
 | `fake` | the adapter that replays recorded result documents |
 | any name `<name>` | an executable `brigade-client-<name>` on your `PATH` |
 
 The table `[clients.<name>]` of `config.toml` holds the settings of that adapter.
+
+## The models of a client
+
+```toml
+[reasoning]
+deep = { model = "mistral-large", effort = "high" }
+```
+
+Each adapter binds a model to each reasoning level; a row of `[reasoning]` in `config.toml` replaces the model of its
+level, whatever the client:
+
+| Adapter | Model of a level no row binds | What the row sets | Settings of `[clients.<name>]` |
+|---|---|---|---|
+| `claude-code` | `fable` for deepest and deep, `opus` for standard, `sonnet` for light | `--model` and `--effort` | none |
+| `vibe` | `mistral-medium-3.5` for every level | `VIBE_ACTIVE_MODEL`; the effort is not translated, Vibe taking none | none: `[clients.vibe]` is read by no key |
+
+The `vibe` adapter runs `vibe` from your `PATH` with `VIBE_CLI=rust`, Vibe's Rust CLI, and reads the usage and the
+transcript of a session from Vibe's session store, `.vibe/logs/session/unified` under your home. A session it ends at
+its turn cap is relaunched fresh from the progress file: it answers no resume.
 
 ## A client per slot
 
@@ -33,6 +53,7 @@ each fallback. For the built-in adapters, `brigade adapter matrix --markdown` pr
 | Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | claude-code | full | full | full | full | full | full | full | full | full |
+| vibe | full | full | fallback | full | fallback | full | full | fallback | fallback |
 
 | Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -48,20 +69,6 @@ Fallbacks:
 - no reset hour: now plus thirty minutes
 - no graceful stop: the hard cut at the wall-time limit
 <!-- adapter matrix: end -->
-
-### The external vibe adapter
-
-An external adapter for Mistral Vibe, `brigade-client-vibe`, runs Vibe 2.26.0 unattended with `client = "vibe"`. It is
-not shipped in this repository: it lives on the `PATH` of the machine that installed it, until a built-in `vibe`
-adapter replaces it. With it on the `PATH`, `brigade adapter matrix --markdown` adds this row to the supported
-clients:
-
-| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| vibe | full | full | full | fallback | fallback | full | full | fallback | fallback |
-
-Its probe binds `mistral-large` to the levels deepest, deep and standard, and `mistral-medium-3.5` to light; it reads
-the usage of a session from Vibe's session store, `~/.vibe/logs/session/unified`.
 
 ## Adapter operations
 
