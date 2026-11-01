@@ -10,7 +10,7 @@ that task and no other.
 Arguments, which the Arguments section names: `task`, the TASK entity to deliver, and `base`, the branch of the wave
 its pull request goes to. The brief names the worktree and its branch.
 
-**Budget: 75 steps**, a declared estimate: no run of this procedure is recorded yet. On reaching it, stop and
+**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to

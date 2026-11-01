@@ -123,6 +123,7 @@ class DescribeFinishedTest(unittest.TestCase):
                 task=None,
                 role_digest=EMPTY_ROLE_DIGEST,
                 procedure_digest=PROCEDURE_DIGEST,
+                shipped_budget=40,
                 nulls={
                     **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
@@ -252,6 +253,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 task=None,
                 role_digest=EMPTY_ROLE_DIGEST,
                 procedure_digest=PROCEDURE_DIGEST,
+                shipped_budget=40,
                 nulls={
                     **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
@@ -676,3 +678,15 @@ class DescribeFinishedDigestsTest(unittest.TestCase):
         # Assert
         self.assertEqual(finished.role_digest, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
         self.assertEqual(finished.procedure_digest, "e395b77e8ab7354e4418d2e1bb9d6f5c5b4de99c417c8b5ac1bc588d5d5c4151")
+
+
+class DescribeFinishedShippedBudgetTest(unittest.TestCase):
+    def test_should_record_the_budget_the_package_of_the_role_ships(self):
+        # Arrange
+        record = _create_counted_record(counted_steps=None, uncounted="the client reads no transcript", first_edit=None)
+
+        # Act
+        finished = describe_finished(_create_plan(), record)
+
+        # Assert
+        self.assertEqual(finished.shipped_budget, 40)
