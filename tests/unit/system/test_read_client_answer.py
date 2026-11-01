@@ -121,6 +121,65 @@ class ReadClientAnswerTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(str(raised.exception), expected_message)
 
+    def test_should_read_the_tool_calls_and_the_marked_tool_results_of_the_messages(self):
+        # Arrange
+        transcripts = {
+            "schema_version": 1,
+            "messages": [
+                {
+                    "role": "assistant",
+                    "timestamp": None,
+                    "content": [],
+                    "tool_calls": 1,
+                    "id": None,
+                    "usage": None,
+                    "calls": ["Bash git status"],
+                },
+                {
+                    "role": "user",
+                    "timestamp": None,
+                    "content": [],
+                    "tool_calls": 0,
+                    "id": None,
+                    "usage": None,
+                    "results": [{"refused": True, "truncated": "/srv/state/tool-results/b1.txt"}],
+                },
+            ],
+            "subagents": [],
+        }
+
+        # Act
+        answer = read_client_answer(TRANSCRIPTS_QUESTION, transcripts)
+
+        # Assert
+        self.assertEqual(
+            answer.to_document(),
+            {
+                "schema_version": 1,
+                "messages": [
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": [],
+                        "tool_calls": 1,
+                        "id": None,
+                        "usage": None,
+                        "calls": ["Bash git status"],
+                    },
+                    {
+                        "role": "user",
+                        "timestamp": None,
+                        "content": [],
+                        "tool_calls": 0,
+                        "id": None,
+                        "usage": None,
+                        "results": [{"refused": True, "truncated": "/srv/state/tool-results/b1.txt"}],
+                    },
+                ],
+                "subagents": [],
+            },
+        )
+
     def test_should_refuse_a_probe_whose_attribution_is_not_a_list_of_lines(self):
         # Arrange
         cases = (
