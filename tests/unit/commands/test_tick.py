@@ -39,6 +39,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
+from tests.unit.select_events_named import select_events_named
 from tests.unit.select_milestone_events import select_milestone_events
 from tests.unit.select_wave_events import select_wave_events
 from tests.unit.spawned_process_double import SpawnedProcessDouble
@@ -3581,6 +3582,184 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
                     "pr": 206,
                 },
             ],
+        )
+
+
+WAVE_PULL_REQUEST_BEHIND_ITS_MILESTONE_BRANCH = WAVE_PULL_REQUEST_READY | {"behind": True}
+REBASED_WAVE_HEAD = "e70f3a2"
+FORGE_REBASE_OF_THE_WAVE_BRANCH = ("git", "rebase", "origin/integration/tides")
+LEASED_PUSH_OF_THE_WAVE_BRANCH = (
+    "git",
+    "push",
+    "--quiet",
+    f"--force-with-lease=integration/M4:{WAVE_HEAD}",
+    "origin",
+    "HEAD:integration/M4",
+)
+CLEAN_REBASE = 0
+STOPPED_ON_A_CONFLICT = 1
+
+
+class WaveBranchRebasingRunnerDouble(ScriptedProcessRunner):
+    def __init__(self, fallback, forge: WaveMergingForgeDouble, rebase_exit_code: int):
+        super().__init__(
+            {
+                **MACHINE_ANSWERS,
+                ("git", "ls-remote"): ProcessAnswer(),
+                ("git", "reset"): ProcessAnswer(),
+                ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
+                FORGE_REBASE_OF_THE_WAVE_BRANCH: ProcessAnswer(exit_code=rebase_exit_code),
+                ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
+                ("git", "rebase", "--abort"): ProcessAnswer(),
+                LEASED_PUSH_OF_THE_WAVE_BRANCH: ProcessAnswer(),
+            },
+            fallback,
+        )
+        self.forge = forge
+
+    def run(self, request):
+        record = super().run(request)
+        if request.argv == FORGE_REBASE_OF_THE_WAVE_BRANCH and record.exit_code == CLEAN_REBASE:
+            self.answers[("git", "rev-parse", "HEAD")] = ProcessAnswer(stdout=f"{REBASED_WAVE_HEAD}\n")
+        if request.argv == LEASED_PUSH_OF_THE_WAVE_BRANCH:
+            self.forge.found_by_branch = {WAVE_BRANCH: WAVE_PULL_REQUEST_READY}
+        return record
+
+
+class TickRebasingAWaveBranchItsMilestoneBranchHasOutrunTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        (self.repository / ".brigade" / "worktrees" / "integration-M4").mkdir(parents=True)
+        write_ledger(self.root, EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN)
+        self.forge = WaveMergingForgeDouble(
+            {WAVE_BRANCH: WAVE_PULL_REQUEST_BEHIND_ITS_MILESTONE_BRANCH}, NO_REVIEW_THREAD
+        )
+        self.spawn = SpawnRecorderDouble()
+
+    def _create_runtime(self, rebase_exit_code: int) -> tuple[Runtime, WaveBranchRebasingRunnerDouble]:
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": {"T7": TASK_DELIVERED},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        machine = WaveBranchRebasingRunnerDouble(create_corpus_double(corpus), self.forge, rebase_exit_code)
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=machine.run,
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
+            ),
+        )
+        return runtime, machine
+
+    def _read_events_named(self, name: str) -> list[dict]:
+        lines = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        return select_events_named(map(json.loads, lines), name)
+
+    def test_should_rebase_the_wave_branch_onto_the_milestone_branch_of_the_forge_and_push_it_with_a_lease(self):
+        # Arrange
+        runtime, machine = self._create_runtime(CLEAN_REBASE)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(machine.argvs, ("git", "rebase"), ("git", "push")),
+            [FORGE_REBASE_OF_THE_WAVE_BRANCH, LEASED_PUSH_OF_THE_WAVE_BRANCH],
+        )
+
+    def test_should_record_the_rebase_of_the_wave_branch_with_its_heads_before_and_after(self):
+        # Arrange
+        runtime, _ = self._create_runtime(CLEAN_REBASE)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events_named("wave.rebased"),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.rebased",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "branch": "integration/M4",
+                    "before": "8885daa",
+                    "after": "e70f3a2",
+                    "login": "tidepool-cli",
+                }
+            ],
+        )
+
+    def test_should_merge_no_wave_pull_request_in_the_round_that_finds_it_behind(self):
+        # Arrange
+        runtime, _ = self._create_runtime(STOPPED_ON_A_CONFLICT)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.forge.merges, [])
+
+    def test_should_launch_a_rebase_run_of_the_wave_branch_onto_the_milestone_branch_on_a_conflict(self):
+        # Arrange
+        runtime, _ = self._create_runtime(STOPPED_ON_A_CONFLICT)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "base=integration/tides",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_record_no_rebase_of_the_wave_branch_on_a_conflict(self):
+        # Arrange
+        runtime, _ = self._create_runtime(STOPPED_ON_A_CONFLICT)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_events_named("wave.rebased"), [])
+
+    def test_should_plan_the_rebase_of_the_wave_branch_with_its_wave_its_branch_and_its_base_on_a_dry_run(self):
+        # Arrange
+        runtime, _ = self._create_runtime(CLEAN_REBASE)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertIn(
+            {"project": "tidepool", "wave": "tidepool_w16", "branch": "integration/M4", "base": "integration/tides"},
+            document["plan"],
         )
 
 
