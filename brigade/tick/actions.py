@@ -182,7 +182,7 @@ class RebaseTask:
     pr: int
     worktree: str
     head: str
-    parking_reason: str | None
+    holds_uncommitted_changes: bool
 
 
 @dataclass(frozen=True)
