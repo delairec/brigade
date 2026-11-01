@@ -7,6 +7,7 @@ from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.system.document_request import DocumentRequest
 from brigade.system.parse_configuration import Configuration
+from tests.unit.runs.create_run_plan import CAP_OF_FORTY_STEPS
 
 NO_ARGUMENTS = {}
 NO_WAVE = None
@@ -48,7 +49,6 @@ def _create_plan(capabilities: tuple[str, ...]) -> RunPlan:
             location="built-in",
             argument="awawa-task",
             capabilities=capabilities,
-            budget=75,
             body="Deliver the task.",
         ),
         slot="build",
@@ -64,6 +64,7 @@ def _create_plan(capabilities: tuple[str, ...]) -> RunPlan:
         disposable_worktree=False,
         capabilities=capabilities,
         wall_limit_s=2820.0,
+        budget=CAP_OF_FORTY_STEPS,
         arguments=NO_ARGUMENTS,
         wave=NO_WAVE,
         task=NO_TASK,
