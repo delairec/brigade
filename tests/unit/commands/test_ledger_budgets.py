@@ -10,7 +10,7 @@ RUN_FINISHED = (
     ' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
     ' "project": "brigade", "session": "857d4221", "main_steps": 42, "total_steps": 54, "duration_ms": 900000,'
     ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
-    ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63}\n'
+    ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63, "shipped_budget": 75}\n'
 )
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -45,6 +45,17 @@ class LedgerBudgetsTest(unittest.TestCase):
                         "estimate": True,
                     }
                 },
+                "roles": {
+                    "ada": {
+                        "shipped": 75,
+                        "computed": None,
+                        "applied": 75,
+                        "segments": 0,
+                        "restarts": 0,
+                        "growth": None,
+                        "restart_tokens": None,
+                    }
+                },
                 "skipped": [{"file": str(self.ledger_file), "line": 2, "reason": "not JSON"}],
             },
         )
@@ -75,15 +86,55 @@ class LedgerBudgetsExitCodeTest(unittest.TestCase):
 
 
 class LedgerBudgetsTextTest(unittest.TestCase):
-    def test_should_print_the_heading_alone_when_no_run_finished(self):
+    def test_should_print_the_headings_alone_when_no_run_finished(self):
         # Arrange
-        document = {"last": 20, "procedures": {}}
+        no_procedures = {}
+        no_roles = {}
+        document = {"last": 20, "procedures": no_procedures, "roles": no_roles}
 
         # Act
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "steps over the last 20 runs finished of each procedure:")
+        self.assertEqual(
+            text,
+            "steps over the last 20 runs finished of each procedure:\nstep cap of each role at its latest digests:",
+        )
+
+    def test_should_print_the_step_cap_of_each_role_and_the_measures_it_rests_on(self):
+        # Arrange
+        no_procedures = {}
+        ada = {
+            "shipped": 75,
+            "computed": 132,
+            "applied": 132,
+            "segments": 6,
+            "restarts": 3,
+            "growth": 2500.4,
+            "restart_tokens": 21666.6,
+        }
+        remi = {
+            "shipped": 50,
+            "computed": None,
+            "applied": 50,
+            "segments": 2,
+            "restarts": 0,
+            "growth": None,
+            "restart_tokens": None,
+        }
+        document = {"last": 20, "procedures": no_procedures, "roles": {"ada": ada, "remi": remi}}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "steps over the last 20 runs finished of each procedure:\n"
+            "step cap of each role at its latest digests:\n"
+            "  ada  shipped 75  computed 132  applied 132  segments 6  restarts 3  g 2500  R 21667\n"
+            "  remi  shipped 50  computed -  applied 50  segments 2  restarts 0  g -  R -",
+        )
 
     def test_should_mark_the_procedures_whose_budget_is_an_estimate(self):
         # Arrange
@@ -97,7 +148,8 @@ class LedgerBudgetsTextTest(unittest.TestCase):
             "segments": {"p50": None, "p90": None, "measured": 0, "unmeasured": 13},
             "estimate": False,
         }
-        document = {"last": 20, "procedures": {"awawa-task": task_steps, "awawa-review": review_steps}}
+        no_roles = {}
+        document = {"last": 20, "procedures": {"awawa-task": task_steps, "awawa-review": review_steps}, "roles": no_roles}
 
         # Act
         text = COMMAND.render_text(document)
@@ -111,5 +163,6 @@ class LedgerBudgetsTextTest(unittest.TestCase):
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
             "  awawa-review\n"
             "    runs p50 20  p90 31  measured 12  partial 1  unmeasured 0\n"
-            "    segments p50 -  p90 -  measured 0  unmeasured 13",
+            "    segments p50 -  p90 -  measured 0  unmeasured 13\n"
+            "step cap of each role at its latest digests:",
         )

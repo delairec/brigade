@@ -8,7 +8,7 @@ brigade ledger                                        # events by name, first an
 brigade ledger --wave <id>                            # cost, tokens, steps, duration and cost per task, pull requests, pauses
 brigade ledger --task <id>                            # the runs of a task: outcome, steps, duration, cost
 brigade ledger --project <name>                       # waves, orders, pull requests, signals, patterns, constraints
-brigade ledger budgets [--last N]                     # p50 and p90 steps per procedure, 20 runs by default
+brigade ledger budgets [--last N]                     # p50 and p90 steps per procedure, 20 runs by default; step cap per role
 brigade ledger compare --range <start>..<end> --range <start>..<end>
 brigade ledger compare --range <start>..<end> --reference <measure>=<value> ...
 ```
