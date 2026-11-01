@@ -28,3 +28,22 @@ class WaveMergedTest(unittest.TestCase):
 
         # Assert
         self.assertIs(declared, WaveMerged)
+
+
+class WaveMergedWithoutAPullRequestTest(unittest.TestCase):
+    def test_should_read_the_local_merge_of_a_wave(self):
+        # Act
+        event = WaveMerged.from_document({"event": "wave.merged", "wave": "shop_w2", "login": None})
+
+        # Assert
+        self.assertEqual(event, WaveMerged(wave="shop_w2", pr=None, login=None))
+
+    def test_should_write_the_local_merge_of_a_wave_with_the_pull_request_absent(self):
+        # Arrange
+        event = WaveMerged(wave="shop_w2", pr=None, login=None)
+
+        # Act
+        document = event.to_document()
+
+        # Assert
+        self.assertEqual(document, {"wave": "shop_w2", "login": None})
