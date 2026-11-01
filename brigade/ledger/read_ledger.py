@@ -13,6 +13,7 @@ from brigade.system.validate_document import DocumentInvalid, Field, validate_do
 
 MONTH_FILE_NAME = re.compile(r"\d{4}-\d{2}\.jsonl")
 UTC_SUFFIX = "Z"
+LINE_END = b"\n"
 NOT_JSON = "not JSON"
 ENVELOPE_SHAPE = {
     "schema_version": Field((int,)),
@@ -43,6 +44,8 @@ class LedgerReading:
     files: tuple
     skipped: tuple
     ends: dict = field(default_factory=dict, compare=False, repr=False)
+    ended_entries: tuple = field(default=(), compare=False, repr=False)
+    ended_skipped: tuple = field(default=(), compare=False, repr=False)
 
 
 NOTHING_READ = LedgerReading(entries=(), files=(), skipped=())
@@ -90,11 +93,11 @@ def _read_entry(text: str) -> LedgerEntry:
     return LedgerEntry(instant=instant, event=event)
 
 
-def _split_lines(content: str) -> list[str]:
-    lines = content.split("\n")
-    if lines[-1] == "":
-        lines.pop()
-    return lines
+def _split_past_end(appended: bytes) -> tuple[int, list[str], list[str]]:
+    ended_length = appended.rfind(LINE_END) + 1
+    ended_lines = appended[:ended_length].decode("utf-8", errors="replace").split("\n")[:-1]
+    unended_lines = [appended[ended_length:].decode("utf-8", errors="replace")] if ended_length < len(appended) else []
+    return ended_length, ended_lines, unended_lines
 
 
 def _list_month_files(ledger_directory: Path) -> list[Path]:
@@ -112,21 +115,42 @@ def _read_past(path: Path, end: FileEnd) -> bytes:
         return month_file.read()
 
 
+def _read_lines(lines: list[str], path: Path, first_number: int) -> tuple[list, list]:
+    entries = []
+    skipped = []
+    for number, text in enumerate(lines, start=first_number):
+        try:
+            entries.append(_read_entry(text))
+        except _LineRefused as refusal:
+            skipped.append(SkippedLine(file=str(path), line=number, reason=str(refusal)))
+    return entries, skipped
+
+
 def read_ledger(state_root: Path, since: LedgerReading = NOTHING_READ) -> LedgerReading:
     paths = _list_month_files(state_root / LEDGER_DIRECTORY)
-    entries = list(since.entries)
-    skipped = list(since.skipped)
+    ended_entries = list(since.ended_entries)
+    ended_skipped = list(since.ended_skipped)
+    entries = list(ended_entries)
+    skipped = list(ended_skipped)
     ends = dict(since.ends)
     for path in paths:
         end = ends.get(str(path), START_OF_FILE)
         appended = _read_past(path, end)
-        lines = _split_lines(appended.decode("utf-8", errors="replace"))
-        for number, text in enumerate(lines, start=end.lines + 1):
-            try:
-                entries.append(_read_entry(text))
-            except _LineRefused as refusal:
-                skipped.append(SkippedLine(file=str(path), line=number, reason=str(refusal)))
-        ends[str(path)] = FileEnd(offset=end.offset + len(appended), lines=end.lines + len(lines))
+        ended_length, ended_lines, unended_lines = _split_past_end(appended)
+        read_entries, read_skipped = _read_lines(ended_lines, path, end.lines + 1)
+        ended_entries.extend(read_entries)
+        ended_skipped.extend(read_skipped)
+        entries.extend(read_entries)
+        skipped.extend(read_skipped)
+        unended_entries, unended_skipped = _read_lines(unended_lines, path, end.lines + len(ended_lines) + 1)
+        entries.extend(unended_entries)
+        skipped.extend(unended_skipped)
+        ends[str(path)] = FileEnd(offset=end.offset + ended_length, lines=end.lines + len(ended_lines))
     return LedgerReading(
-        entries=tuple(entries), files=tuple(str(path) for path in paths), skipped=tuple(skipped), ends=ends
+        entries=tuple(entries),
+        files=tuple(str(path) for path in paths),
+        skipped=tuple(skipped),
+        ends=ends,
+        ended_entries=tuple(ended_entries),
+        ended_skipped=tuple(ended_skipped),
     )
