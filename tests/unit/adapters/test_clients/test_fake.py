@@ -24,14 +24,14 @@ LAUNCH_REQUEST = {
     },
     "reasoning_table": {},
     "settings": {"recordings": "/srv/recordings"},
-    "home": "/home/ada",
+    "home": "/srv/agent",
 }
 
 
 class FakeProbeTest(unittest.TestCase):
     def test_should_declare_the_operations_it_replays(self):
         # Act
-        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": {}, "home": "/home/ada"})
+        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": {}, "home": "/srv/agent"})
 
         # Assert
         self.assertEqual(
@@ -51,7 +51,9 @@ class FakeProbeTest(unittest.TestCase):
         settings = {"edit_tools": "Write, Edit"}
 
         # Act
-        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/home/ada"})
+        probe = answer(
+            "probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/srv/agent"}
+        )
 
         # Assert
         self.assertEqual(probe["edit_tools"], ["Write", "Edit"])
@@ -184,7 +186,9 @@ class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
         settings = {"features": "step_count,tool_grants"}
 
         # Act
-        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/home/ada"})
+        probe = answer(
+            "probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/srv/agent"}
+        )
 
         # Assert
         self.assertEqual(probe["features"], ["step_count", "tool_grants"])
@@ -289,7 +293,7 @@ class FakeResultTest(unittest.TestCase):
                 "stderr": "",
                 "reasoning_table": {},
                 "settings": {},
-                "home": "/home/ada",
+                "home": "/srv/agent",
             },
         )
 
@@ -321,7 +325,7 @@ class FakeResultTest(unittest.TestCase):
                 "stderr": "cat: /srv/recordings/builder.json: No such file or directory\n",
                 "reasoning_table": {},
                 "settings": {},
-                "home": "/home/ada",
+                "home": "/srv/agent",
             },
         )
 
@@ -363,7 +367,9 @@ class FakeProbeOfDeclaredOperationsTest(unittest.TestCase):
         settings = {"operations": "actions"}
 
         # Act
-        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/home/ada"})
+        probe = answer(
+            "probe", {"schema_version": 1, "reasoning_table": {}, "settings": settings, "home": "/srv/agent"}
+        )
 
         # Assert
         self.assertEqual(probe["operations"], ["probe", "launch", "result", "actions"])
@@ -417,7 +423,7 @@ class FakeResultOfARecordingOfSeveralLinesTest(unittest.TestCase):
                 "stderr": "",
                 "reasoning_table": {},
                 "settings": {},
-                "home": "/home/ada",
+                "home": "/srv/agent",
             },
         )
 
@@ -443,7 +449,7 @@ class FakeActionsTest(unittest.TestCase):
                 "output": output,
                 "reasoning_table": {},
                 "settings": {"operations": "actions"},
-                "home": "/home/ada",
+                "home": "/srv/agent",
             },
         )
 
@@ -492,7 +498,7 @@ class FakeTranscriptsTest(unittest.TestCase):
                 "worktree": "/srv/worktrees/b83",
                 "reasoning_table": {},
                 "settings": {"operations": "transcripts", "recordings": str(self.recordings)},
-                "home": "/home/ada",
+                "home": "/srv/agent",
             },
         )
 

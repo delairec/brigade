@@ -149,7 +149,11 @@ class LedgerBudgetsTextTest(unittest.TestCase):
             "estimate": False,
         }
         no_roles = {}
-        document = {"last": 20, "procedures": {"awawa-task": task_steps, "awawa-review": review_steps}, "roles": no_roles}
+        document = {
+            "last": 20,
+            "procedures": {"awawa-task": task_steps, "awawa-review": review_steps},
+            "roles": no_roles,
+        }
 
         # Act
         text = COMMAND.render_text(document)
