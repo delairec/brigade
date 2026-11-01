@@ -3,10 +3,11 @@
 A CLI, a timer and a local dashboard that run AI-agent waves unattended on one machine, across every
 registered project. The CLI does everything mechanical; the agents only judge.
 
-The entry point exists with twenty-one commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
+The entry point exists with twenty-two commands so far, `brigade --version`, `brigade doctor`, `brigade init`,
 `brigade adapter`, `brigade project`, `brigade request`, `brigade wave`, `brigade plan`, `brigade task`,
 `brigade study`, `brigade collect`, `brigade collectors`, `brigade ledger`, `brigade roles`, `brigade tick`,
-`brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs`, `brigade processes` and `brigade verify`;
+`brigade scheduler`, `brigade corpus`, `brigade run`, `brigade runs`, `brigade processes`, `brigade verify` and
+`brigade serve`;
 every other one is a task of the corpus.
 
 ## Install
@@ -334,10 +335,11 @@ file and its number.
 
 `note` records a signal of kind `note`, fingerprint `note:` and the first 12 hexadecimal characters of the sha256 of
 the project, a newline and the text, the project empty when none is given; a project that is not registered exits 1.
-`inbox list` prints the new signals, `--all` adding the dismissed ones; `inbox dismiss` leaves a dismissed signal as
-it is. A study whose output is `inbox` records its answer as a signal of kind `study`, fingerprint
-`study:<study>:` and the first 12 hexadecimal characters of the sha256 of the Markdown rendered from the answer,
-evidence the study, the run and that Markdown.
+`inbox list` prints the new signals, `--all` adding the dismissed ones, then the proposed patterns, each with its
+action and the signals it cites; with `--json`, its document also groups the listed signals into the families of the
+triage, by rule cited, file and check name. `inbox dismiss` leaves a dismissed signal as it is. A study whose output
+is `inbox` records its answer as a signal of kind `study`, fingerprint `study:<study>:` and the first 12 hexadecimal
+characters of the sha256 of the Markdown rendered from the answer, evidence the study, the run and that Markdown.
 
 ## Tick and scheduler
 
@@ -451,6 +453,7 @@ with their wave and their reason; it resumes no wave. It exits 1 when the last t
 brigade corpus <project> --ref <branch|sha> [--json] [-- <awawa args>]
 brigade corpus <project> --ref worktree:<branch> [--json] [-- <awawa args>]
 brigade corpus <project> --worktree <path> [--json] [-- <awawa args>]
+brigade corpus <project> --ref <ref> --type <TYPE> [--field <FIELD>] [--entity @TYPE.Name] [--json]
 ```
 
 `--ref <branch|sha>` resolves the ref to a commit of the project's repository and extracts `git archive` of that
@@ -462,6 +465,13 @@ document; an unknown project, a ref that resolves to no commit, and a branch or 
 
 Given `-- <awawa args>`, it runs awawa with those arguments at the root of the tree instead, and passes its stdout,
 its stderr and its exit code through unchanged, after one stderr line naming the SHA it read.
+
+Given `--type <TYPE>`, the document also lists the entities of that type with their status, their file and their line,
+the types of the corpus, and `awawa_web`, `http://127.0.0.1:7878/` when `brigade doctor` finds awawa-web on the PATH,
+null otherwise; each entity carries `ide_link`, the key `ide_link` of `config.toml` with `{path}` and `{line}` replaced,
+null when the key is empty. `--field <FIELD>` adds the board: the entities grouped by the values of that field, those
+without it in a column of their own. `--entity @TYPE.Name` adds what that entity reaches and what references it.
+`--field` or `--entity` without `--type` exits 1.
 
 The cache holds at most `refs_cache_mb` of `config.toml`, 1024 by default: each read marks its SHA used, and after
 each extraction the least recently read SHAs are removed until the cache is under that bound. The reuse of a cached
@@ -571,7 +581,7 @@ brigade roles lint [--json]                  # the built-in and the machine role
 brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
             [--detach] [key=value ...]
 brigade runs list [--wave <wave>] [--task <task>] [--json]  # every run: id, procedure, slot, role, project, state, outcome
-brigade runs show <id> [--log] [--json]          # the summary of a run and its segments; --log adds its journal
+brigade runs show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
 brigade runs show <id> --follow                  # the same with --log, then each record as it is written
 brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
 brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
@@ -633,8 +643,12 @@ action of the client: `schema_version`, `at` (the UTC instant brigade read it), 
 200 characters with `cut` true. The adapter's `actions` operation turns the output into actions, `tool` (the tool and
 the path, command or pattern it acts on), `text` (its first line) and `result` (the outcome of the segment); a client whose
 probe declares no `actions` has one record of kind `raw` per line. A `journal_poll_s` that is no positive number keeps
-2 s, and `brigade doctor` names it. `runs show` prints the summary of a run and the outcome of each segment, and with
-`--log` one line per record: its time, segment, kind and summary. `--follow` prints the same, then each record once
+2 s, and `brigade doctor` names it. `runs show` prints the summary of a run and the outcome of each segment, then its
+progress, rendered by the document plugin of the file the run wrote, `progress.md` or `progress.awawa`, and with
+`--log` one line per record: its time, segment, kind and summary. With `--json` the document carries `progress`, its
+`text` and its `entities`, `null` for a Markdown progress; a progress absent or holding no entry is `null` and prints
+nothing, and a `progress.awawa` that `awawa lint --strict` refuses, a file caught in the middle of a write, is printed
+as its raw text with `entities` `null`. `--follow` prints the summary and the segments, then each record once
 its line is whole, read every `journal_poll_s` seconds, until the run is `finished` or `dead`; it then prints the
 state and the outcome of the run and exits with the code `brigade run` gives that outcome, 1 for a dead run. SIGINT
 or SIGTERM ends the follow alone, exit 0, the run going on; `--follow` with `--json` exits 2.
@@ -757,6 +771,39 @@ measured, and kept in the percentiles; a run with no measured segment is unmeasu
 run add the steps of the segments before the one that edited, and are partial only when one of those is not
 measured. Percentiles are taken by nearest rank, and a procedure with fewer than five measured runs is marked as an
 estimate. `compare` exits 1 when one of its two periods holds no finished run.
+
+## Dashboard
+
+```
+brigade serve [--port <port>]
+```
+
+`brigade serve` serves the dashboard on `127.0.0.1` alone, at the port of `--port`, else of the key `dashboard_port`
+of `config.toml`, else 8470; it prints the URL and runs in the foreground until SIGINT or SIGTERM, then exits 0. A port
+already taken exits 1. The page polls the view it shows every five seconds while its tab is visible.
+
+| Route                                 | Command run, with `--json`         |
+|---------------------------------------|------------------------------------|
+| `/api/waves`                          | `brigade wave list`                |
+| `/api/waves/<id>`                     | `brigade wave show <id>`           |
+| `/api/inbox`                          | `brigade inbox list`               |
+| `/api/ledger`                         | `brigade ledger`                   |
+| `/api/corpus`                         | `brigade project list`             |
+| `/api/corpus/<project>?ref=<ref>`     | `brigade corpus <project> --ref <ref>`, and `--type`, `--field`, `--entity` of the parameters `type`, `field`, `entity` |
+
+| POST route                            | Command run, with `--json`         |
+|---------------------------------------|------------------------------------|
+| `/api/inbox/ratify/<pattern>?kind=<kind>` | `brigade inbox ratify <pattern> --kind=<kind>`, the kind optional |
+| `/api/inbox/dismiss/<id>`             | `brigade inbox dismiss <id>`       |
+
+`/views/<route>` serves the HTML fragment of the document `/api/<route>` serves; the Inbox view shows the new
+signals by family and the proposed patterns, with their ratify and dismiss buttons. The Corpus view chooses a registered
+project, a ref, a type and a board field, then shows the tree of the type, the board and the dependencies of the entity
+clicked, read-only: its one form only changes the view shown; awawa-web stays the editor. A command that exits non-zero
+answers 404 for a wave, a project, a pattern or a signal its listing command does not list, 500 otherwise, with its
+standard error in the body. A request whose Host is not `127.0.0.1:<port>` answers 400; a POST without the token of
+the page in `X-Brigade-Token` and the Origin `http://127.0.0.1:<port>` answers 403. Every response carries
+`Content-Security-Policy: default-src 'self'`.
 
 ## Develop
 

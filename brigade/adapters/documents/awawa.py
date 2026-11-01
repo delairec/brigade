@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.format_and_lint_file import format_and_lint_file
+from brigade.corpus.lint_corpus import CLEAN
 from brigade.corpus.run_awawa import run_awawa
 from brigade.runtime import Runtime
 from brigade.system.write_text_file import write_text_file
@@ -13,6 +14,7 @@ SCHEMA_TYPE_PATTERN = re.compile(r'^SCHEMA (\S+)\n(?:\t.*\n)*?\tDESC (".*")$', r
 COMMENT = "//"
 SCHEMA_KEYWORD = "SCHEMA "
 SCHEMA_VERSION = 1
+NO_ENTITIES = None
 
 
 def _read_schema_types(schema: str) -> list[tuple[str, str]]:
@@ -35,6 +37,14 @@ def _list_entities(runtime: Runtime, path: Path) -> list[dict]:
 
 def _holds_entry_line(line: str) -> bool:
     return bool(line.strip()) and not line[0].isspace() and not line.startswith((COMMENT, SCHEMA_KEYWORD))
+
+
+def _holds_its_schema(text: str) -> bool:
+    return any(line.startswith(SCHEMA_KEYWORD) for line in text.splitlines())
+
+
+def _lints_clean(runtime: Runtime, path: Path) -> bool:
+    return run_awawa(runtime.run_process, path.parent, ("lint", "--strict", str(path))).exit_code == CLEAN
 
 
 def _describe_lint_failure(path: Path, output: str) -> str:
@@ -99,6 +109,9 @@ def detect_entry(request: dict, runtime: Runtime) -> dict:
 
 def render_document(request: dict, runtime: Runtime) -> dict:
     path = Path(request["path"])
+    text = path.read_text(encoding="utf-8")
+    if _holds_its_schema(text) and not _lints_clean(runtime, path):
+        return {"schema_version": SCHEMA_VERSION, "text": text, "entities": NO_ENTITIES}
     entities = [_read_entity(runtime, path, entity) for entity in _list_entities(runtime, path)]
     return {
         "schema_version": SCHEMA_VERSION,

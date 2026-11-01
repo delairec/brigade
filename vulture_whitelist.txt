@@ -1,3 +1,9 @@
 install  # getattr(scheduler, question.operation) in brigade/system/ask_scheduler.py, operation "install"
 read_status  # getattr(scheduler, question.operation) in brigade/system/ask_scheduler.py, operation "read_status"
 print_help  # argparse calls it on -h and --help: the override of _DeferringArgumentParser in brigade/cli.py
+do_GET  # http.server calls it on a GET: the handler of brigade/dashboard/start_dashboard.py
+do_POST  # http.server calls it on a POST: the handler of brigade/dashboard/start_dashboard.py
+default_request_version  # http.server reads it to answer a malformed request: brigade/dashboard/start_dashboard.py
+handle_starttag  # HTMLParser calls it: tests/unit/dashboard/page_elements_collector.py
+handle_endtag  # HTMLParser calls it: tests/unit/dashboard/page_elements_collector.py
+handle_data  # HTMLParser calls it: tests/unit/dashboard/page_elements_collector.py

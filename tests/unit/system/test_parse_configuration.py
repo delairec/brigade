@@ -48,7 +48,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
         self.path.write_text(
             'client = "claude-code"\n'
             'scheduler = "cron"\n'
-            'instructions = "/home/ada/.ai"\n'
+            'instructions = "/srv/instructions"\n'
             'document = "markdown"\n'
             'ide_link = "idea://open?file={path}&line={line}"\n'
             "refs_cache_mb = 2048\n"
@@ -80,8 +80,9 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             Configuration(
                 client="claude-code",
                 scheduler="cron",
-                instructions="/home/ada/.ai",
+                instructions="/srv/instructions",
                 document="markdown",
+                ide_link="idea://open?file={path}&line={line}",
                 refs_cache_mb=2048,
                 reasoning={"deep": ReasoningRow(model="opus", effort="max")},
                 clients={"fake": {"recordings": "/srv/recordings"}},
@@ -410,3 +411,70 @@ class ReadConfigurationOfTheSoftLimitMarginTest(ReadConfigurationTestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), f"{expected_problem} in {self.path}")
+
+
+class ReadConfigurationOfTheDashboardPortTest(ReadConfigurationTestCase):
+    def test_should_answer_the_port_the_key_sets(self):
+        # Arrange
+        self.path.write_text("dashboard_port = 8500\n")
+
+        # Act
+        configuration = parse_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.dashboard_port, 8500)
+
+    def test_should_answer_the_quota_window_the_key_sets(self):
+        # Arrange
+        self.path.write_text("quota_window_hours = 8\n")
+
+        # Act
+        configuration = parse_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.quota_window_hours, 8)
+
+    def test_should_answer_the_default_port_when_the_key_is_absent(self):
+        # Arrange
+        self.path.write_text("")
+
+        # Act
+        configuration = parse_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.dashboard_port, 8470)
+
+    def test_should_refuse_a_value_that_is_not_a_port(self):
+        # Arrange
+        rows = [
+            ("a string", 'dashboard_port = "8470"\n', "dashboard_port is a string, not an integer, in"),
+            ("a boolean", "dashboard_port = true\n", "dashboard_port is a boolean, not an integer, in"),
+            ("zero", "dashboard_port = 0\n", "dashboard_port is 0, not a port from 1 to 65535, in"),
+            (
+                "past the last port",
+                "dashboard_port = 65536\n",
+                "dashboard_port is 65536, not a port from 1 to 65535, in",
+            ),
+        ]
+        for case, content, message in rows:
+            with self.subTest(case=case):
+                self.path.write_text(content)
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    parse_configuration(self.path)
+
+                # Assert
+                self.assertEqual(str(raised.exception), f"{message} {self.path}")
+
+
+class ReadConfigurationOfTheIdeLinkTest(ReadConfigurationTestCase):
+    def test_should_answer_no_link_when_the_key_is_absent(self):
+        # Arrange
+        self.path.write_text("")
+
+        # Act
+        configuration = parse_configuration(self.path)
+
+        # Assert
+        self.assertEqual(configuration.ide_link, "")

@@ -4,7 +4,9 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.system.name_toml_type import name_toml_type
+from brigade.system.read_dashboard_port import DASHBOARD_PORT_BY_DEFAULT, DASHBOARD_PORT_KEY, read_dashboard_port
 from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
+from brigade.system.read_quota_window import QUOTA_WINDOW_BY_DEFAULT_H, QUOTA_WINDOW_KEY, read_quota_window
 from brigade.system.read_runs_kept import RUNS_KEPT_BY_DEFAULT, RUNS_KEPT_KEY, read_runs_kept
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT, STUDY_RUNS_KEY, read_study_runs
 from brigade.system.read_tick_stale_after import (
@@ -14,9 +16,8 @@ from brigade.system.read_tick_stale_after import (
 )
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
-STRING_KEYS = ("client", "scheduler", "instructions", "document", "worktree_root")
+STRING_KEYS = ("client", "scheduler", "instructions", "document", "worktree_root", "ide_link")
 DOCUMENT_BY_DEFAULT = "awawa"
-UNREAD_STRING_KEYS = ("ide_link",)
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
@@ -71,6 +72,9 @@ class Configuration:
     forge_attempts: int = FORGE_ATTEMPTS_BY_DEFAULT
     worktree_root: str | None = None
     attribution: tuple[str, ...] | None = None
+    dashboard_port: int = DASHBOARD_PORT_BY_DEFAULT
+    ide_link: str = ""
+    quota_window_hours: int = QUOTA_WINDOW_BY_DEFAULT_H
 
 
 @dataclass(frozen=True)
@@ -197,7 +201,6 @@ def _parse(path: Path) -> dict:
 
 KNOWN_KEYS = (
     *STRING_KEYS,
-    *UNREAD_STRING_KEYS,
     REFS_CACHE_MB_KEY,
     "reasoning",
     "clients",
@@ -214,13 +217,12 @@ KNOWN_KEYS = (
     FORGE_ACCOUNTS_KEY,
     FORGE_ATTEMPTS_KEY,
     ATTRIBUTION_KEY,
+    DASHBOARD_PORT_KEY,
+    QUOTA_WINDOW_KEY,
 )
 
 
 def _read_strings(document: dict, path: Path) -> dict:
-    for key in UNREAD_STRING_KEYS:
-        if key in document:
-            _require(document[key], STRING, key, path)
     return {key: _require(document[key], STRING, key, path) for key in STRING_KEYS if key in document}
 
 
@@ -250,4 +252,6 @@ def parse_configuration(path: Path) -> Configuration:
         forge_accounts=_read_forge_accounts(document.get(FORGE_ACCOUNTS_KEY, {}), path),
         forge_attempts=_read_forge_attempts(document, path),
         attribution=_read_attribution(document, path),
+        dashboard_port=read_dashboard_port(document, path),
+        quota_window_hours=read_quota_window(document, path),
     )

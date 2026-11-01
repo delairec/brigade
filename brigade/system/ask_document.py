@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 from brigade.system.document_creation import DocumentCreation
+from brigade.system.document_rendering import DocumentRendering
 from brigade.system.document_request import DocumentRequest
 from brigade.system.document_shapes import DOCUMENT_ANSWER_SHAPES
 from brigade.system.document_text import DocumentText
@@ -14,6 +15,7 @@ ANSWER_KINDS = {
     "describe_document": DocumentText,
     "read_document": DocumentText,
     "detect_entry": EntryDetection,
+    "render_document": DocumentRendering,
 }
 
 
@@ -26,7 +28,7 @@ class DocumentQuestion:
 
 def ask_document(
     document: object, question: DocumentQuestion, runtime: Runtime
-) -> DocumentCreation | DocumentText | EntryDetection:
+) -> DocumentCreation | DocumentText | EntryDetection | DocumentRendering:
     answer = getattr(document, question.operation)(question.request.to_document(), runtime)
     try:
         validate_document(answer, DOCUMENT_ANSWER_SHAPES[question.operation])

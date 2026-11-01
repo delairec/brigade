@@ -1,0 +1,44 @@
+# REPORT brigade_w6
+
+- WAVE: brigade_w6
+- PROJECT: brigade
+- TASK_ROW: B182 merged #236
+- STATISTIC: tasks 1
+- STATISTIC: merged 1
+- STATISTIC: parked 0
+- STATISTIC: runs 4
+- STATISTIC: files 0
+- STATISTIC: insertions 0
+- STATISTIC: deletions 0
+- MANUAL_TEST: B182: brigade runs show <id>, with or without --log, prints the progress of the run after its segments, rendered for a person by the document plugin of the form the run wrote, read from the progress file present in the run's directory, progress.md or progress.awawa, never from the configuration of the moment
+- MANUAL_TEST: B182: with --json the document carries progress: the text of the progress, with entities null in the markdown form and the entities of the file in the awawa form
+- MANUAL_TEST: B182: a run whose progress file is absent or holds no entry prints no progress section, carries progress null with --json and exits as it does today
+- MANUAL_TEST: B182: a progress.awawa that awawa lint --strict refuses, a file caught in the middle of a write, is printed as its raw text, with entities null under --json, and the command exits 0
+- MANUAL_TEST: B182: brigade runs show --follow prints no progress: it stays the stream of the journal
+- NARRATIVE: Verdict: brigade_w6 delivered its one task, B182, merged into integration/brigade_w6 as PR 236 after two review rounds, no task parked or failed (ledger collector, 20:15:12Z to 20:50:00Z on 2026-10-28).
+- NARRATIVE: Wall-clock time of the wave: 34 min 48 s, from wave.started at 20:15:12Z to pr.merged at 20:50:00Z (ledger collector).
+- NARRATIVE: Runs: 4, all outcome done, exit 0, error_class null: build-task by ada, verify-pr by prudence twice, remediate-pr by remediator once (run.finished events of the ledger collector).
+- NARRATIVE: Steps: 119 across the 4 runs, 65 build, 23 first verify, 21 remediate, 10 second verify (total_steps of run.finished, ledger collector).
+- NARRATIVE: Model time: 1 123 637 ms, 18 min 44 s, across the 4 runs; the build run alone took 697 520 ms, 62 % of it (duration_ms of run.finished, ledger collector).
+- NARRATIVE: Cost: 6.04 USD across the 4 runs, of which 3.85 USD build, 1.13 USD first verify, 0.60 USD remediate, 0.45 USD second verify (cost_usd of run.finished, ledger collector).
+- NARRATIVE: Tokens: 11 667 786 cache-read input tokens across the 4 runs, 8 928 170 of them in the build run; output 70 401 tokens (usage of run.finished, ledger collector).
+- NARRATIVE: Size of PR 236: 24 files across 13 packages, 646 lines at head 76869170, 664 lines at head 04b01220 (size check of the two task.preflighted events, ledger collector).
+- NARRATIVE: Preflight: 7 of 7 blocking checks passed at both heads, ancestry, checks, corpus, promotion, untouched_files, privacy, body (task.preflighted events, ledger collector).
+- NARRATIVE: First verify at head 76869170: verdict changes, 2 findings, one medium on brigade/system/document_shapes.py line 14 against @RULE.tdd_green_writes_only_demanded_code, one low on corpus/decisions.awawa line 4192 against @RULE.decision_holds_ruling_rejections_reason (task.verdict, ledger collector).
+- NARRATIVE: Remediation: both findings fixed in 2 min 18 s, by commits df4589f2 and 04b01220 (task.review_answered at 20:42:18Z, ledger collector).
+- NARRATIVE: Second verify at head 04b01220: verdict pass, 0 findings, in 10 steps (task.verdict at 20:47:48Z, ledger collector).
+- NARRATIVE: Went well: the review loop closed in one remediation round, and both findings were answered with a commit that a test or the corpus proves (task.review_answered, ledger collector).
+- NARRATIVE: Went wrong: the git-diff-stat collector reports 0 files, 0 insertions, 0 deletions, while both preflights of PR 236 count 24 files; the statistics files, insertions and deletions of this report are therefore false (git-diff-stat and ledger collectors).
+- NARRATIVE: Went wrong: the build run left the item constraint of render_document entities untested, a gap @RULE.tdd_green_writes_only_demanded_code forbids, caught only by the review at a cost of 2 extra runs, 31 steps, 1.06 USD (ledger collector).
+- NARRATIVE: Next wave: correct the git-diff-stat collector so it measures the diff of integration/brigade_w6 against main after the merges; this report cannot say which base it used, the collector document holds no item.
+- NARRATIVE: Next wave: the build run took 65 steps for a 24-file task; whether that exceeds the budget of build-task is not in the collected evidence and is left open.
+- TESTER_STEP: B182, progress after the segments: pick a finished run whose directory holds a progress file (ls ~/.local/state/brigade/runs/*/progress.*), run brigade runs show <id>, then brigade runs show <id> --log; both print the segments then a progress section rendered for a person, not the raw .awawa or .md source. Repeat with one run holding progress.md and one holding progress.awawa, and check the section matches the file of the run whatever the configuration says today.
+- TESTER_STEP: B182, --json: run brigade runs show <id> --json on the progress.md run and on the progress.awawa run; the document carries a progress key with the text of the file; entities is null for the markdown run and lists the STEP and HANDOVER entities of the file for the awawa run.
+- TESTER_STEP: B182, no progress: run brigade runs show <id> on a run whose directory has no progress file, and on one whose progress file holds the schema only; no progress section is printed, --json carries progress null, and the exit status (echo $?) is the same as before the change.
+- TESTER_STEP: B182, refused progress: copy a finished run's directory under a new id in ~/.local/state/brigade/runs, append to its progress.awawa a line STEP broken with no field, check awawa lint --strict refuses it, run brigade runs show <new id> and brigade runs show <new id> --json; the progress is printed as raw text, entities is null, echo $? prints 0. Remove the copied directory afterwards.
+- TESTER_STEP: B182, --follow: run brigade runs show <id> --follow on a run holding a progress file; it streams the journal only and prints no progress section.
+- SAMPLING: brigade/system/document_shapes.py line 14: the item constraint items=Field(kinds=(dict,)) of render_document entities, the line the first review found undemanded by any test.
+- SAMPLING: tests/unit/system/test_ask_document.py, commit df4589f2: the test added to refuse a rendering whose entities hold a string item; check that widening the constraint to (dict, str) makes it fail.
+- SAMPLING: corpus/decisions.awawa line 4192, commit 04b01220: @DECISION.TheAwawaDocumentPluginRendersAFileHoldingItsSchemaOnlyOnceLintAcceptsIt, a decision taken during the run; read its SOURCE, now naming PR 236, and whether its ruling is one the user would ratify.
+- SAMPLING: brigade/adapters/documents: the document plugin that renders the progress for a person and falls back to raw text when lint refuses the file, the path of the fourth manual test.
+- SAMPLING: brigade/runs: where runs show locates progress.md or progress.awawa in the run's directory rather than from the configuration of the moment, the path of the first manual test.

@@ -2,13 +2,17 @@ import json
 import shutil
 import tempfile
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.git.add_branch_worktree import BranchWorktree
 from brigade.git.timeouts import REMOTE_TIMEOUT_S
+from brigade.ledger.append_event import append_event
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_cancelled import WaveCancelled
+from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.tick.actions import LaunchTask
@@ -541,3 +545,117 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         # Assert
         self.assertTrue(prepared.conflicted)
         self.assertEqual(runner.commands[-1], (str(WORKTREE), ("git", "rebase", "--abort")))
+
+
+CANCELLATION_INSTANT = datetime(2026, 10, 28, 19, 40, tzinfo=UTC)
+WAVE_OF_THE_PREVIOUS_ATTEMPT = WaveStarted(wave="w0", project="shop", branch="integration/w0", tasks=("B1",))
+TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE = ProcessAnswer(
+    stdout=(
+        "worktree /srv/shop\0HEAD 8885daa\0branch refs/heads/main\0\0"
+        "worktree /srv/shop/.brigade/worktrees/B1\0HEAD 7a3b9c1\0branch refs/heads/task/w0/B1\0\0"
+    )
+)
+STAGE_THE_WORKTREE = ("git", "add", "--", ".")
+FIND_STAGED_CHANGES = ("git", "diff", "--cached", "--quiet", "--", ".")
+UNCOMMITTED_CHANGES = {FIND_STAGED_CHANGES: ProcessAnswer(exit_code=1)}
+COMMIT_THE_UNCOMMITTED_CHANGES = (
+    "git",
+    "commit",
+    "--quiet",
+    "-m",
+    "chore(tick): keep the changes of @TASK.B1 left uncommitted in a cancelled wave",
+)
+SWITCH_TO_A_NEW_TASK_BRANCH = ("git", "switch", "--quiet", "--create", "task/w1/B1", "integration/w1")
+
+
+class PrepareTaskWorktreeLeftInACancelledWaveTest(PrepareTaskWorktreeTestCase):
+    def setUp(self):
+        super().setUp()
+        append_event(self.paths, CANCELLATION_INSTANT, WAVE_OF_THE_PREVIOUS_ATTEMPT)
+        append_event(self.paths, CANCELLATION_INSTANT, WaveCancelled(wave="w0", reason="user"))
+
+    def test_should_switch_the_worktree_to_a_new_task_branch_cut_from_the_wave_branch_and_run_its_setup(self):
+        # Arrange
+        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE)
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(
+            prepared,
+            PreparedWorktree(
+                worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"), conflicted=False
+            ),
+        )
+        self.assertEqual(
+            runner.commands[-7:],
+            [
+                ("/srv/shop", LIST_WORKTREES),
+                ("/srv/shop", FIND_TASK_BRANCH),
+                (str(WORKTREE), STAGE_THE_WORKTREE),
+                (str(WORKTREE), FIND_STAGED_CHANGES),
+                (str(WORKTREE), SWITCH_TO_A_NEW_TASK_BRANCH),
+                (str(WORKTREE), ("make", "deps")),
+                (str(WORKTREE), REQUIRE_THE_WAVE_BRANCH),
+            ],
+        )
+
+    def test_should_commit_the_uncommitted_changes_on_the_branch_of_the_cancelled_wave_before_the_switch(self):
+        # Arrange
+        runner = self.create_runner(
+            MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE, answers=UNCOMMITTED_CHANGES
+        )
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(
+            runner.commands[-6:-2],
+            [
+                (str(WORKTREE), STAGE_THE_WORKTREE),
+                (str(WORKTREE), FIND_STAGED_CHANGES),
+                (str(WORKTREE), COMMIT_THE_UNCOMMITTED_CHANGES),
+                (str(WORKTREE), SWITCH_TO_A_NEW_TASK_BRANCH),
+            ],
+        )
+
+    def test_should_switch_the_worktree_to_the_existing_branch_of_the_task_and_put_it_on_the_wave_branch(self):
+        # Arrange
+        runner = self.create_runner(
+            MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE, branch=TASK_BRANCH_FOUND
+        )
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(
+            runner.commands[-4:-2],
+            [
+                (str(WORKTREE), ("git", "switch", "--quiet", "task/w1/B1")),
+                (str(WORKTREE), TASK_BRANCH_DESCENDS),
+            ],
+        )
+
+
+class PrepareTaskWorktreeHeldByTheTaskInAnOpenWaveTest(PrepareTaskWorktreeTestCase):
+    def test_should_leave_the_worktree_on_the_branch_of_the_open_wave(self):
+        # Arrange
+        append_event(self.paths, CANCELLATION_INSTANT, WAVE_OF_THE_PREVIOUS_ATTEMPT)
+        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE)
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(runner.commands[-3], ("/srv/shop", ADD_TASK_WORKTREE))

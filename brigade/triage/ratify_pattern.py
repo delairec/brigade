@@ -23,6 +23,7 @@ from brigade.waves.render_request_block import NewRequest, render_request_block
 RATIFIED_STATUS = "ratified"
 WAVE_ACTION = "wave"
 CONSTRAINT_ACTION = "constraint"
+CONSTRAINT_KINDS = ("rule", "guard", "lint", "schema", "skill", "script")
 ORDER_ACTION = "order"
 DISMISS_ACTION = "dismiss"
 CONSTRAINT_TYPE = "CONSTRAINT"

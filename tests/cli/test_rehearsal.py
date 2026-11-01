@@ -97,6 +97,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "files": [ANY],
                 "runs": {"outcomes": {"done": 8}, "error_classes": {}},
                 "segments": {"outcomes": {"done": 8}, "error_classes": {}},
+                "waves_started": ANY,
                 "skipped": [],
             },
         )

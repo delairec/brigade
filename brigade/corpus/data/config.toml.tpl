@@ -25,6 +25,9 @@
 # The link the dashboard opens a file with, {path} and {line} replaced.
 # ide_link = ""
 
+# The port brigade serve listens on, on the loopback address 127.0.0.1 alone, from 1 to 65535.
+# dashboard_port = 8470
+
 # The bound, in MB, of the cache of the trees brigade corpus extracts; the least recently read are removed past it.
 # refs_cache_mb = 1024
 
@@ -48,6 +51,10 @@
 
 # The minutes past which brigade scheduler status reports the last tick as stale and exits 1, 1 or more.
 # tick_stale_after = 15
+
+# The hours of the reset window of the client's quota, 1 or more: brigade status sums the usage of the runs finished
+# within it.
+# quota_window_hours = 5
 
 # The seconds between two reads of a running segment's output into the journal of its run, a positive number.
 # journal_poll_s = 2
