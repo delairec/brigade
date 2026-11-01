@@ -47,6 +47,7 @@ def review_reply(request: argparse.Namespace, runtime: Runtime) -> dict:
         project_path=read_project_field(project, PATH_FIELD),
         answers=answers,
         forge=runtime.resolve_plugin("forge", FORGE_NAME),
+        forge_name=FORGE_NAME,
         configuration=read_configuration(runtime, CONFIGURATION_REQUIRED),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_review_answers(runtime, demand)}
