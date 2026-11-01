@@ -4,6 +4,7 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.read_project_tasks import ProjectTasks
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 ROOT = Path("/srv/shop")
@@ -24,13 +25,14 @@ class AdmitCandidatesOfTheirMilestoneTest(unittest.TestCase):
         self.processes = ScriptedProcesses()
         for task in ("B1", "B2", "B3", "B4"):
             self.processes.answer_json(("awawa", "refs", f"@TASK.{task}", "--json", str(ROOT)), NO_INCOMING_REFERENCE)
+        self.runtime = create_test_runtime(run_process=self.processes)
 
     def test_should_admit_only_the_tasks_naming_the_milestone_read(self):
         # Arrange
         tasks = ProjectTasks(root=ROOT, by_name=EVERY_TASK, implemented=NO_IMPLEMENTED_TASK, milestone="M2")
 
         # Act
-        admitted = admit_candidates(self.processes, tasks, NO_OPEN_TASK)
+        admitted = admit_candidates(self.runtime, tasks, NO_OPEN_TASK)
 
         # Assert
         self.assertEqual(admitted, ("B1",))
@@ -40,7 +42,7 @@ class AdmitCandidatesOfTheirMilestoneTest(unittest.TestCase):
         tasks = ProjectTasks(root=ROOT, by_name=EVERY_TASK, implemented=NO_IMPLEMENTED_TASK, milestone=NO_MILESTONE)
 
         # Act
-        admitted = admit_candidates(self.processes, tasks, NO_OPEN_TASK)
+        admitted = admit_candidates(self.runtime, tasks, NO_OPEN_TASK)
 
         # Assert
         self.assertEqual(admitted, ("B3",))
@@ -55,7 +57,7 @@ class AdmitCandidatesOfTheirMilestoneTest(unittest.TestCase):
         )
 
         # Act
-        admitted = admit_candidates(self.processes, tasks, NO_OPEN_TASK)
+        admitted = admit_candidates(self.runtime, tasks, NO_OPEN_TASK)
 
         # Assert
         self.assertEqual(admitted, ())

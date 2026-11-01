@@ -38,6 +38,7 @@ from tests.unit.commands.run_doubles import (
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.forge_double import ForgeDouble
+from tests.unit.ledger_reader_double import LedgerReaderDouble
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 from tests.unit.select_milestone_events import select_milestone_events
@@ -5208,5 +5209,124 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
                         },
                     },
                 },
+            ],
+        )
+
+
+WAVE_OF_TWO_TASKS_STARTED = {**WAVE_STARTED, "tasks": ["T7", "T8"]}
+
+
+class TickBoundingItsReadsTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        (self.repository / ".brigade" / "worktrees" / "T7").mkdir(parents=True)
+        (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER, "T8": TASK_TO_DELIVER},
+        }
+        self.processes = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
+        self.readings = LedgerReaderDouble()
+        write_ledger(self.root, [WAVE_OF_TWO_TASKS_STARTED])
+
+    def _create_runtime(self) -> Runtime:
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.processes.run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+            read_ledger=self.readings.read,
+        )
+
+    def test_should_read_the_ledger_once_over_the_rounds_of_a_tick(self):
+        # Arrange
+        runtime = self._create_runtime()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self.readings.state_roots, [self.root / "state"])
+
+    def test_should_read_the_references_of_each_task_once_over_the_rounds_of_a_tick(self):
+        # Arrange
+        runtime = self._create_runtime()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        wave_tree = str(self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD)
+        self.assertEqual(
+            select_argvs_opening_on(self.processes.argvs, ("awawa", "refs")),
+            [
+                ("awawa", "refs", "@TASK.T7", "--json", wave_tree),
+                ("awawa", "refs", "@TASK.T8", "--json", wave_tree),
+            ],
+        )
+
+
+HEAD_OF_THE_WAVE_AFTER_THE_MERGE = "a1b2c3d"
+
+
+class WaveBranchMovedByTheMergeDouble:
+    def __init__(self, forge: MergingForgeDouble, processes: ScriptedProcessRunner):
+        self.forge = forge
+        self.processes = processes
+        self.moved = ScriptedProcessRunner(
+            {("git", "rev-parse", "--verify"): ProcessAnswer(stdout=f"{HEAD_OF_THE_WAVE_AFTER_THE_MERGE}\n")}
+        )
+
+    def run(self, request):
+        if self.forge.merges and request.argv[:3] == ("git", "rev-parse", "--verify"):
+            return self.moved.run(request)
+        return self.processes.run(request)
+
+
+class TickReadingTheReferencesOfAWaveItMovedTest(unittest.TestCase):
+    def test_should_read_the_references_of_each_task_again_on_the_wave_branch_the_merge_moved(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        (root / "cache" / "refs" / "tidepool" / HEAD_OF_THE_WAVE_AFTER_THE_MERGE).mkdir(parents=True)
+        repository = root / "tidepool"
+        (repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
+        write_ledger(root, LEDGER_OF_A_VERIFIED_TASK)
+        corpus = {
+            "STUDY": {"triage": PAUSED_TRIAGE},
+            "PROJECT": {"tidepool": (("PATH", str(repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
+        }
+        processes = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
+        forge = MergingForgeDouble({"task/M4/T7": GREEN_PULL_REQUEST})
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=WaveBranchMovedByTheMergeDouble(forge, processes).run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        wave_tree = str(root / "cache" / "refs" / "tidepool" / WAVE_HEAD)
+        moved_wave_tree = str(root / "cache" / "refs" / "tidepool" / HEAD_OF_THE_WAVE_AFTER_THE_MERGE)
+        self.assertEqual(
+            select_argvs_opening_on(processes.argvs, ("awawa", "refs")),
+            [
+                ("awawa", "refs", "@TASK.T7", "--json", wave_tree),
+                ("awawa", "refs", "@TASK.T8", "--json", wave_tree),
+                ("awawa", "refs", "@TASK.T7", "--json", moved_wave_tree),
+                ("awawa", "refs", "@TASK.T8", "--json", moved_wave_tree),
             ],
         )
