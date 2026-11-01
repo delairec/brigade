@@ -85,6 +85,7 @@ def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
             arguments=plan.arguments,
             brief=plan.brief,
             progress_description=ask_progress(plan, "describe_document", runtime).text,
+            budget=plan.budget.applied,
         )
     )
 

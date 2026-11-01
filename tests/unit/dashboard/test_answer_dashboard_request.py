@@ -559,7 +559,7 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
         overview = ProcessAnswer(
             stdout='{"schema_version": 1, "view": "overview", "first": null, "last": null, "waves_started": {}}'
         )
-        budgets = ProcessAnswer(stdout='{"schema_version": 1, "last": 20, "procedures": {}}')
+        budgets = ProcessAnswer(stdout='{"schema_version": 1, "last": 20, "procedures": {}, "roles": {}}')
         refused = ProcessAnswer(exit_code=1, stderr="refused\n")
         rows = [
             (
