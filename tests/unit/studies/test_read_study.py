@@ -155,6 +155,7 @@ class ReadStudyTest(unittest.TestCase):
 
     def test_should_read_the_built_in_mine_transcripts_the_operational_corpus_does_not_define(self):
         # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
         self.processes.answer(
             ("awawa", "show", "@STUDY.mine-transcripts", "--json", str(self.runtime.paths.config_root)),
             exit_code=1,
