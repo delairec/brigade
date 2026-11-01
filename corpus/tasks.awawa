@@ -8672,7 +8672,8 @@ TASK B107
 TASK B108
 	TITLE "A built-in client adapter vibe runs Mistral Vibe unattended, so that client = \"vibe\""
 		+ "in config.toml runs every slot on Mistral models"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 308
 	TYPE feat
 	MILESTONE @MILESTONE.M7
 	COMPONENT "adapters"
