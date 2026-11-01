@@ -518,9 +518,7 @@ def _plan_branch_cuts(snapshot: Snapshot) -> tuple:
 
 
 def _is_named_by_an_open_wave(snapshot: Snapshot, project: str, milestone: str) -> bool:
-    return any(
-        task.milestone == milestone for wave in snapshot.waves if wave.project == project for task in wave.tasks
-    )
+    return any(task.milestone == milestone for wave in snapshot.waves if wave.project == project for task in wave.tasks)
 
 
 def _plan_milestone_branch_cuts(snapshot: Snapshot) -> tuple:
