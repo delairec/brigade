@@ -17,6 +17,7 @@ from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.runs.run_segment import run_segment
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
@@ -1182,8 +1183,14 @@ class RunSegmentFilesTest(unittest.TestCase):
 
     def test_should_send_the_client_the_procedure_the_arguments_the_brief_and_the_progress_file(self):
         # Arrange
+        cap_applied_above_the_shipped_budget = RoleBudget(
+            shipped=75, computed=132, applied=132, segments=6, restarts=3, growth=2500.0, restart_tokens=21780000.0
+        )
         plan = dataclasses.replace(
-            _create_plan(self.root), arguments={"task": "@TASK.B73", "base": "main"}, brief="Deliver S3 first.\n"
+            _create_plan(self.root),
+            arguments={"task": "@TASK.B73", "base": "main"},
+            brief="Deliver S3 first.\n",
+            budget=cap_applied_above_the_shipped_budget,
         )
 
         # Act
@@ -1207,6 +1214,8 @@ class RunSegmentFilesTest(unittest.TestCase):
             "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
             " entry holds\n"
             "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "132 steps, the cap of your role for this segment.\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"

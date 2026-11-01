@@ -10,6 +10,7 @@ ABSENT = "-"
 MILLISECONDS_PER_MINUTE = 60000
 FIRST_DAY = "01"
 STEPS_HEADER = ("runs", "p50", "p90")
+ROLE_BUDGET_HEADER = ("role", "shipped", "computed", "applied", "segments", "restarts", "g", "R")
 COMPARED_MEASURES = {
     "steps": "steps",
     "steps_to_first_edit": "steps to first edit",
@@ -32,12 +33,31 @@ def _render_steps(name: str, runs: dict) -> tuple[str, ...]:
     return (escape(name), str(runs["measured"]), _show(runs["p50"]), _show(runs["p90"]))
 
 
+def _show_tokens(tokens: float | None) -> str:
+    return ABSENT if tokens is None else str(round(tokens))
+
+
+def _render_role_budget(role: str, budget: dict) -> tuple[str, ...]:
+    counts = (budget[name] for name in ("shipped", "computed", "applied", "segments", "restarts"))
+    return (
+        escape(role),
+        *(_show(count) for count in counts),
+        _show_tokens(budget["growth"]),
+        _show_tokens(budget["restart_tokens"]),
+    )
+
+
 def _render_budgets(document: dict) -> str:
     rows = [
         (*_render_steps(name, summary["runs"]), "yes" if summary["estimate"] else "no")
         for name, summary in document["procedures"].items()
     ]
-    return render_html_table(("procedure", *STEPS_HEADER, "estimate"), rows, "no run finished")
+    roles = [_render_role_budget(role, budget) for role, budget in document["roles"].items()]
+    return (
+        render_html_table(("procedure", *STEPS_HEADER, "estimate"), rows, "no run finished")
+        + "<h3>Step cap by role</h3>"
+        + render_html_table(ROLE_BUDGET_HEADER, roles, "no role measured")
+    )
 
 
 def _link_comparison(day: str, first_day: str, last_day: str) -> str:
@@ -104,7 +124,7 @@ def _render_comparison(document: dict) -> str:
 
 
 SECTIONS = (
-    ("budgets", "Steps by procedure", _render_budgets),
+    ("budgets", "Steps by procedure and step cap by role", _render_budgets),
     ("overview", "Waves started by month", _render_months),
     ("wave", "Steps by role and pauses of the wave", _render_wave),
     ("comparison", "Baseline comparison", _render_comparison),
