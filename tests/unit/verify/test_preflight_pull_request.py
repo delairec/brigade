@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
+from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from tests.unit.create_test_paths import create_test_paths
@@ -30,6 +31,11 @@ class ForgeDescribingThePullRequestDouble:
                 "checks": [{"name": "unit", "verdict": "success"}],
             },
         }
+
+
+class ForgeAnsweringOutOfShapeDouble:
+    def read_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1}
 
 
 class PreflightPullRequestTest(unittest.TestCase):
@@ -125,3 +131,25 @@ class PreflightPullRequestTest(unittest.TestCase):
                 ],
             },
         )
+
+    def test_should_name_the_forge_of_the_project_when_it_answers_out_of_shape(self):
+        # Arrange
+        demand = PreflightDemand(
+            project=Entity(
+                name="shop",
+                fields=(EntityField(name="PATH", value="/srv/shop"), EntityField(name="FORGE", value="gitlab")),
+            ),
+            task="B1",
+            wave_branch="integration/w1",
+            pr=160,
+            forge=ForgeAnsweringOutOfShapeDouble(),
+            environment={"GH_TOKEN": "token-of-octo-builder"},
+            configuration=Configuration(),
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            preflight_pull_request(create_test_runtime(self.paths, run_process=self.create_runner()), demand)
+
+        # Assert
+        self.assertRegex(str(raised.exception), "^forge plugin gitlab answered read_pull_request")
