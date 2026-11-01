@@ -11,7 +11,6 @@ from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.wave_started import WaveStarted
 
-SINCE = datetime(2026, 10, 5, 0, 0, tzinfo=UTC)
 LATER = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
 
 
@@ -20,7 +19,7 @@ def create_reading(*entries: LedgerEntry) -> LedgerReading:
 
 
 class DescribeProjectTest(unittest.TestCase):
-    def test_should_count_what_happened_to_the_project_since_the_instant(self):
+    def test_should_count_what_happened_to_the_project(self):
         # Arrange
         reading = create_reading(
             LedgerEntry(instant=datetime(2026, 10, 1, 9, 0, tzinfo=UTC), event=OrderDone(project="shop", kind="sweep")),
@@ -42,7 +41,7 @@ class DescribeProjectTest(unittest.TestCase):
         )
 
         # Act
-        description = describe_project(reading, "shop", SINCE)
+        description = describe_project(reading, "shop")
 
         # Assert
         self.assertEqual(
@@ -50,8 +49,7 @@ class DescribeProjectTest(unittest.TestCase):
             {
                 "view": "project",
                 "project": "shop",
-                "since": "2026-10-05T00:00:00Z",
-                "orders_done": {"study": 1, "sweep": 1},
+                "orders_done": {"study": 1, "sweep": 2},
                 "waves_started": 1,
                 "pull_requests_merged": 1,
                 "signals_recorded": 1,
@@ -59,17 +57,3 @@ class DescribeProjectTest(unittest.TestCase):
                 "constraints_delivered": 1,
             },
         )
-
-    def test_should_count_every_event_of_the_project_without_an_instant(self):
-        # Arrange
-        no_instant = None
-        reading = create_reading(
-            LedgerEntry(instant=datetime(2026, 10, 1, 9, 0, tzinfo=UTC), event=OrderDone(project="shop", kind="sweep"))
-        )
-
-        # Act
-        description = describe_project(reading, "shop", no_instant)
-
-        # Assert
-        self.assertEqual(description["since"], None)
-        self.assertEqual(description["orders_done"], {"sweep": 1})
