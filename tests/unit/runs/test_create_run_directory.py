@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import CannotWrite
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.read_run_pid import read_run_pid
 from brigade.system.read_process_identity import read_process_identity
@@ -62,6 +63,19 @@ class CreateRunDirectoryOfANewRunTest(CreateRunDirectoryTestCase):
                 plan.run_directory / "run.json",
             ],
         )
+
+    def test_should_record_the_applied_cap_of_the_role_as_the_budget_of_the_run(self):
+        # Arrange
+        cap_applied_below_the_shipped_budget = RoleBudget(
+            shipped=75, computed=63, applied=63, segments=6, restarts=3, growth=100.0, restart_tokens=200000.0
+        )
+        plan = create_run_plan(self.root, budget=cap_applied_below_the_shipped_budget)
+
+        # Act
+        create_run_directory(plan, self.runtime)
+
+        # Assert
+        self.assertEqual(json.loads((plan.run_directory / "run.json").read_text())["budget"], 63)
 
     def test_should_record_the_path_of_the_brief_of_the_run(self):
         # Arrange

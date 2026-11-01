@@ -923,6 +923,122 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
             ],
         )
 
+    def test_should_measure_the_steps_against_the_applied_cap_below_the_shipped_budget(self):
+        # Arrange
+        cap_of_ten_steps = RoleBudget(
+            shipped=15, computed=10, applied=10, segments=6, restarts=3, growth=8000.0, restart_tokens=400000.0
+        )
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_ten_steps)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 15,
+                    "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the run did not fail",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_exceeded",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 10,
+                    "steps": 12,
+                },
+            ],
+        )
+
+    def test_should_measure_the_steps_against_the_applied_cap_above_the_shipped_budget(self):
+        # Arrange
+        cap_of_twenty_steps = RoleBudget(
+            shipped=10, computed=20, applied=20, segments=6, restarts=3, growth=2000.0, restart_tokens=400000.0
+        )
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_twenty_steps)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
+                    "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the run did not fail",
+                    },
+                },
+            ],
+        )
+
     def test_should_record_no_signal_for_a_segment_at_exactly_its_budget(self):
         # Arrange
         plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=CAP_OF_TWELVE_STEPS)
