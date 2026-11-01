@@ -1,4 +1,3 @@
-import json
 from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
@@ -17,9 +16,6 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
         super().setUp()
         with (self.state / "ledger" / "2026-10.jsonl").open("a") as ledger:
             ledger.write(PAUSED_ON_THE_FORGE_ACCOUNT)
-
-    def read_events(self) -> list:
-        return list(map(json.loads, (self.state / "ledger" / "2026-10.jsonl").read_text().splitlines()))
 
     def test_should_resume_the_wave_named(self):
         # Act
