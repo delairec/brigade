@@ -289,9 +289,28 @@ class DescribeWaveCostTest(unittest.TestCase):
         self.assertEqual(
             wave["by_task"],
             [
-                {"task": "TP5", "steps": 30, "duration_ms": 60000, "cost_usd": 4.75},
-                {"task": "TP6", "steps": 8, "duration_ms": 30000, "cost_usd": None},
+                {"task": "TP5", "steps": 30, "partial": False, "duration_ms": 60000, "cost_usd": 4.75},
+                {"task": "TP6", "steps": 8, "partial": False, "duration_ms": 30000, "cost_usd": None},
             ],
+        )
+
+    def test_should_mark_partial_the_steps_of_a_task_whose_run_has_an_unmeasured_segment(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(at_minute(0), create_run_finished("r9", segment=1, main_steps=40, wave="w5", task="TP8")),
+                LedgerEntry(at_minute(1), create_run_finished("r9", segment=2, wave="w5", task="TP8")),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        wave = describe_wave(reading, "w5")
+
+        # Assert
+        self.assertEqual(
+            wave["by_task"], [{"task": "TP8", "steps": 40, "partial": True, "duration_ms": 2000, "cost_usd": None}]
         )
 
     def test_should_give_no_cost_and_no_tokens_when_no_run_carries_them(self):
