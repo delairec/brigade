@@ -27,6 +27,7 @@ class SumSessionUsageTest(unittest.TestCase):
                         "timestamp": None,
                         "content": "Go.",
                         "tool_calls": 0,
+                        "tools": [],
                         "id": NO_ID,
                         "usage": NO_USAGE,
                     },
@@ -35,6 +36,7 @@ class SumSessionUsageTest(unittest.TestCase):
                         "timestamp": None,
                         "content": [{"type": "text"}],
                         "tool_calls": 0,
+                        "tools": [],
                         "id": "msg_01",
                         "usage": {
                             "input_tokens": 1,
@@ -48,6 +50,7 @@ class SumSessionUsageTest(unittest.TestCase):
                         "timestamp": None,
                         "content": [{"type": "tool_use"}],
                         "tool_calls": 1,
+                        "tools": [],
                         "id": "msg_01",
                         "usage": {
                             "input_tokens": 1,
@@ -65,6 +68,7 @@ class SumSessionUsageTest(unittest.TestCase):
                                 "timestamp": None,
                                 "content": [{"type": "tool_use"}],
                                 "tool_calls": 1,
+                                "tools": [],
                                 "id": "msg_02",
                                 "usage": {
                                     "input_tokens": 2,
@@ -99,6 +103,7 @@ class SumSessionUsageTest(unittest.TestCase):
                         "timestamp": None,
                         "content": "Reading the task.",
                         "tool_calls": 0,
+                        "tools": [],
                         "id": NO_ID,
                         "usage": {
                             "input_tokens": 1,
@@ -112,6 +117,7 @@ class SumSessionUsageTest(unittest.TestCase):
                         "timestamp": None,
                         "content": "Writing the test.",
                         "tool_calls": 0,
+                        "tools": [],
                         "id": NO_ID,
                         "usage": {
                             "input_tokens": 1,
@@ -129,6 +135,7 @@ class SumSessionUsageTest(unittest.TestCase):
                                 "timestamp": None,
                                 "content": "Done.",
                                 "tool_calls": 0,
+                                "tools": [],
                                 "id": NO_ID,
                                 "usage": {
                                     "input_tokens": 1,

@@ -18,6 +18,12 @@ class ToolCall:
 
 
 @dataclass(frozen=True)
+class ToolTarget:
+    name: str
+    target: str | None
+
+
+@dataclass(frozen=True)
 class TranscriptMessage:
     role: str
     timestamp: str | None
@@ -25,6 +31,7 @@ class TranscriptMessage:
     tool_calls: int
     id: str | None
     usage: TokenUsage | None
+    tools: tuple[ToolTarget, ...]
     calls: tuple[ToolCall, ...]
     results: tuple[ToolResultMarks, ...]
 
@@ -38,6 +45,7 @@ class TranscriptMessage:
             tool_calls=document["tool_calls"],
             id=document["id"],
             usage=None if usage is None else TokenUsage.from_document(usage),
+            tools=tuple(ToolTarget(name=tool["name"], target=tool["target"]) for tool in document["tools"]),
             calls=tuple(ToolCall(**call) for call in document.get("calls", ())),
             results=tuple(ToolResultMarks(**marks) for marks in document.get("results", ())),
         )
@@ -52,6 +60,7 @@ class TranscriptMessage:
             "timestamp": self.timestamp,
             "content": self.content,
             "tool_calls": self.tool_calls,
+            "tools": [{"name": tool.name, "target": tool.target} for tool in self.tools],
             "id": self.id,
             "usage": None if self.usage is None else self.usage.to_document(),
             **{key: value for key, value in exchanges.items() if value},
