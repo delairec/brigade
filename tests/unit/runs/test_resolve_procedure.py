@@ -6,9 +6,9 @@ from brigade.errors import BrigadeError
 from brigade.runs.plan_run import SHIPPED_PROCEDURES
 from brigade.runs.resolve_procedure import ProcedureDirectories, resolve_procedure
 
-SHIPPED_REVIEW = "---\ncapabilities: read\nbudget: 30\n---\nReview as brigade ships it.\n"
-CORPUS_REVIEW = "---\ncapabilities: read, shell\nbudget: 40\n---\nReview as the instructions corpus says.\n"
-CORPUS_TRIAGE = "---\ncapabilities: read\nbudget: 15\n---\nTriage the open issues.\n"
+SHIPPED_REVIEW = "---\ncapabilities: read\n---\nReview as brigade ships it.\n"
+CORPUS_REVIEW = "---\ncapabilities: read, shell\n---\nReview as the instructions corpus says.\n"
+CORPUS_TRIAGE = "---\ncapabilities: read\n---\nTriage the open issues.\n"
 
 
 class ResolveProcedureByNameTestCase(unittest.TestCase):
@@ -86,26 +86,24 @@ class ResolveTheBuildProcedureBrigadeShipsTest(unittest.TestCase):
         # Assert
         self.assertEqual(procedure.location, str(SHIPPED_PROCEDURES / "build-task.md"))
         self.assertEqual(procedure.capabilities, ("read", "write", "shell"))
-        self.assertEqual(procedure.budget, 75)
 
 
 class ResolveTheReviewAndPlanProceduresBrigadeShipsTest(unittest.TestCase):
-    def test_should_resolve_each_with_the_capabilities_and_the_budget_of_its_slot(self):
+    def test_should_resolve_each_with_the_capabilities_of_its_slot(self):
         # Arrange
         rows = [
-            ("wave-plan", ("read", "write", "shell"), 30),
-            ("verify-pr", ("read", "shell"), 40),
+            ("wave-plan", ("read", "write", "shell")),
+            ("verify-pr", ("read", "shell")),
         ]
         no_instructions_corpus = None
         directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=no_instructions_corpus)
-        for name, capabilities, budget in rows:
+        for name, capabilities in rows:
             with self.subTest(procedure=name):
                 # Act
                 procedure = resolve_procedure(name, directories)
 
                 # Assert
                 self.assertEqual(procedure.capabilities, capabilities)
-                self.assertEqual(procedure.budget, budget)
 
 
 class ResolveProcedureGivenByPathTest(ResolveProcedureByNameTestCase):
@@ -120,30 +118,19 @@ class ResolveProcedureGivenByPathTest(ResolveProcedureByNameTestCase):
         # Assert
         self.assertEqual(str(raised.exception), f"no procedure file {missing}")
 
-    def test_should_refuse_a_front_matter_off_its_declaration(self):
+    def test_should_refuse_a_front_matter_declaring_a_capability_off_the_list(self):
         # Arrange
         procedure = Path(self.root.name) / "deliver.md"
-        rows = [
-            (
-                "---\ncapabilities: read, fly\nbudget: 10\n---\nBody.\n",
-                f"the procedure {procedure} declares fly, not one of read, write, shell, net",
-            ),
-            (
-                "---\ncapabilities: read\nbudget: many\n---\nBody.\n",
-                f"the procedure {procedure} has the budget many, not a positive integer",
-            ),
-        ]
-        for content, expected_refusal in rows:
-            with self.subTest(content=content):
-                # Arrange
-                procedure.write_text(content)
+        procedure.write_text("---\ncapabilities: read, fly\n---\nBody.\n")
 
-                # Act
-                with self.assertRaises(BrigadeError) as raised:
-                    resolve_procedure(str(procedure), self.directories)
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            resolve_procedure(str(procedure), self.directories)
 
-                # Assert
-                self.assertEqual(str(raised.exception), expected_refusal)
+        # Assert
+        self.assertEqual(
+            str(raised.exception), f"the procedure {procedure} declares fly, not one of read, write, shell, net"
+        )
 
 
 class ResolveProcedureOfAnIncompleteFileTest(ResolveProcedureByNameTestCase):
@@ -159,14 +146,14 @@ class ResolveProcedureOfAnIncompleteFileTest(ResolveProcedureByNameTestCase):
         # Assert
         self.assertEqual(str(raised.exception), f"the procedure {procedure} has no front matter between two --- lines")
 
-    def test_should_refuse_a_procedure_lacking_its_budget(self):
+    def test_should_refuse_a_procedure_lacking_its_capabilities(self):
         # Arrange
         procedure = Path(self.root.name) / "deliver.md"
-        procedure.write_text("---\ncapabilities: read\n---\nDeliver the task.\n")
+        procedure.write_text("---\nslot: build\n---\nDeliver the task.\n")
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
             resolve_procedure(str(procedure), self.directories)
 
         # Assert
-        self.assertEqual(str(raised.exception), f"the procedure {procedure} lacks budget in its front matter")
+        self.assertEqual(str(raised.exception), f"the procedure {procedure} lacks capabilities in its front matter")

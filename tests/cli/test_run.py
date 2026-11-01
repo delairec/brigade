@@ -8,6 +8,12 @@ from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
+
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
 NOT_IN_A_WAVE = "not launched by a wave"
@@ -15,7 +21,7 @@ NOT_FOR_A_TASK = "not launched for a task"
 CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
 UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 1\n---\nAnswer at once.\n"
+QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\n---\nAnswer at once.\n"
 
 
 class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
@@ -154,7 +160,11 @@ class BrigadeRunDetachedTest(RunTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
                     "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
@@ -217,7 +227,11 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                     "exit": None,
                     "wave": None,
                     "task": None,
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
                     "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
@@ -283,7 +297,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
 class BrigadeRunOnTheClockTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.2\n")
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.004\n")
         self.record("builder", DONE_RESULT)
         self.quick = self.procedure.with_name("quick.md")
         self.quick.write_text(QUICK_PROCEDURE)
@@ -321,7 +335,11 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "exit": None,
                     "wave": None,
                     "task": None,
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
                     "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
@@ -331,7 +349,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                         "error_class": CUT,
                         "exit": CUT,
                     },
-                    "message": "cut at the wall-time limit of 0.4 s",
+                    "message": "cut at the wall-time limit of 0.376 s",
                 },
                 {
                     "schema_version": 1,
@@ -342,8 +360,8 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "procedure": "quick",
                     "run": json.loads(completed.stdout)["run"],
                     "segment": 1,
-                    "budget": 1,
-                    "wall_limit_s": 0.4,
+                    "budget": 75,
+                    "wall_limit_s": 0.376,
                 },
             ],
         )

@@ -28,6 +28,7 @@ RESUMED_BRIEF_OPENING = f"# {PROGRESS_SECTION}\n"
 ATTRIBUTION_SETTING = "attribution"
 RESUME_OPERATION = "resume"
 PLAYS_SETTING = "plays"
+EDIT_TOOLS_SETTING = "edit_tools"
 
 
 def _read_list_setting(request: dict, name: str) -> list[str]:
@@ -41,6 +42,12 @@ def _answer_attribution(request: dict) -> dict:
     return {"attribution": _read_list_setting(request, ATTRIBUTION_SETTING)}
 
 
+def _answer_edit_tools(request: dict) -> dict:
+    if EDIT_TOOLS_SETTING not in request.get("settings", {}):
+        return {}
+    return {"edit_tools": _read_list_setting(request, EDIT_TOOLS_SETTING)}
+
+
 def _probe(request: dict) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -50,6 +57,7 @@ def _probe(request: dict) -> dict:
         "features": _read_list_setting(request, "features"),
         "models": {},
         **_answer_attribution(request),
+        **_answer_edit_tools(request),
     }
 
 

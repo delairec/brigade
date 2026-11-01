@@ -5,6 +5,12 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
 from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
+
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 
 S3_PARKED_ON_A_DEAD_RUN = (
@@ -91,7 +97,14 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "exit": 0,
                     "wave": "shop_w1",
                     "task": "S3",
-                    "nulls": {"total_steps": "the client reads no transcript", "error_class": "the run did not fail"},
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
+                    "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
+                        "total_steps": "the client reads no transcript",
+                        "error_class": "the run did not fail",
+                    },
                     "cost_usd": 0.42,
                 },
             ],
@@ -159,6 +172,9 @@ class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTick
                 "exit": 0,
                 "wave": "shop_w1",
                 "task": "S3",
+                "role_digest": SHA256_DIGEST,
+                "procedure_digest": SHA256_DIGEST,
+                "shipped_budget": 75,
                 "nulls": ANY,
                 "cost_usd": 0.42,
             },

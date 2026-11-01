@@ -8,6 +8,7 @@ from brigade.runs.ask_progress import ask_progress
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
 from brigade.runs.decide_stop_at import decide_stop_at
+from brigade.runs.locate_first_edit import FirstEdit, locate_first_edit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
     BRIEF_FILE,
@@ -71,6 +72,7 @@ class SegmentRecord:
     counted_steps: SessionSteps | None
     uncounted: str | None
     adapter_failure: str | None
+    first_edit: FirstEdit | None = None
 
 
 def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
@@ -83,6 +85,7 @@ def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
             arguments=plan.arguments,
             brief=plan.brief,
             progress_description=ask_progress(plan, "describe_document", runtime).text,
+            budget=plan.budget.applied,
         )
     )
 
@@ -94,7 +97,7 @@ def _describe_role(plan: RunPlan) -> ClientRole:
         package_file=str(plan.run_directory / ROLE_FILE),
         capabilities=plan.capabilities,
         reasoning=plan.role.front_matter["reasoning"],
-        budget=plan.procedure.budget,
+        budget=plan.budget.applied,
     )
 
 
@@ -121,6 +124,12 @@ def _read_transcripts(
 
 def _count_steps(transcripts: TranscriptsAnswer | None) -> SessionSteps | None:
     return None if transcripts is None else count_session_steps(transcripts)
+
+
+def _locate_first_edit(plan: RunPlan, transcripts: TranscriptsAnswer | None) -> FirstEdit | None:
+    if transcripts is None:
+        return None
+    return locate_first_edit(transcripts.messages, plan.edit_tools, str(plan.progress_file))
 
 
 @dataclass(frozen=True)
@@ -173,6 +182,7 @@ def _measure_ending(plan: RunPlan, runtime: Runtime, ending: SegmentRecord) -> S
         usage=None if transcripts is None else sum_session_usage(transcripts),
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
+        first_edit=_locate_first_edit(plan, transcripts),
     )
 
 
@@ -285,6 +295,7 @@ def _describe_answer(
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
         adapter_failure=None,
+        first_edit=_locate_first_edit(context.plan, transcripts),
     )
 
 

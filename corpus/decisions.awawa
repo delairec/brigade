@@ -5235,3 +5235,32 @@ DECISION TheViewsOfBrigadeLedgerTakeSinceAndSumOnlyTheCostsTheRunsCarry
 	REJECTED "a cost of zero when no event carries one: it would read as a wave that cost nothing"
 	SOURCE "the build run of @TASK.B175 of 2026-11-01"
 		REF @TASK.B175
+
+DECISION TheStepCapOfARoleIsFittedOnItsSegmentsAtTheLatestDigests
+	TITLE "the cap of a role is fitted on its segments whose role digest is the latest recorded for"
+		+ "the role and whose procedure digest is the latest recorded for their procedure, the"
+		+ "digests of the launch taking precedence"
+	STATUS active
+	DESC "binds @TASK.B37"
+		REF @TASK.B37
+	DESC "a segment recorded before the digests carries none and is never measured"
+	DESC "the tokens of a step are the four usage counters summed; the growth g is twice the"
+		+ "least-squares slope of the tokens per step over the length of the segments"
+	DESC "a growth not above zero, segments of one length, or no restart measured compute no cap,"
+		+ "and the role runs at the budget its package ships"
+	DESC "a restart is a segment that follows, in the same run, a segment ended on turn_limit, the"
+		+ "outcome the signal budget_reached names"
+	DESC "half the shipped budget is rounded up: a cap is never below it"
+	DESC "each run.finished records shipped_budget, the budget the role package shipped at its"
+		+ "launch; brigade ledger budgets reads the shipped budget of a role from its latest"
+		+ "run.finished carrying one, and leaves out a role none carries"
+	DESC "the brief of a segment states the applied cap in a Budget section, and a procedure states"
+		+ "no number of steps"
+	REJECTED "the digests of every procedure resolved anew at each reading: brigade ledger budgets"
+		+ "would resolve the roles and procedures of every project, where the ledger already holds"
+		+ "the latest version that ran"
+	RATIONALE "a launch knows the digests of its own role and procedure and no other; the latest"
+		+ "recorded digest of a procedure is the version that ran last, so a changed procedure"
+		+ "starts its own window at its first segment"
+	SOURCE "the delivery of @TASK.B37"
+		REF @TASK.B37

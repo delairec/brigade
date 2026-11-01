@@ -12,8 +12,10 @@ from unittest.mock import ANY
 
 from brigade.adapters.documents import markdown
 from brigade.errors import BrigadeError, CannotWrite
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
+from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import run_segment
@@ -26,6 +28,7 @@ from brigade.system.trail_writer import TrailWriter
 from tests.process_launcher import ProcessLauncher
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.runs.create_run_plan import CAP_OF_FORTY_STEPS
 
 FIRST_SEGMENT = 1
 NO_ARGUMENTS = {}
@@ -54,6 +57,7 @@ TRANSCRIPTS_ANSWER = {
             "timestamp": None,
             "content": [],
             "tool_calls": 2,
+            "tools": [{"name": "Read", "target": "/srv/b73/README.md"}, {"name": "Edit", "target": "/srv/b73/cli.py"}],
             "id": "msg_main",
             "usage": {
                 "input_tokens": 1,
@@ -71,6 +75,7 @@ TRANSCRIPTS_ANSWER = {
                     "timestamp": None,
                     "content": [],
                     "tool_calls": 1,
+                    "tools": [],
                     "id": "msg_sub",
                     "usage": {
                         "input_tokens": 2,
@@ -366,7 +371,6 @@ def _create_plan(
             location="built-in",
             argument="deliver",
             capabilities=("read", "write"),
-            budget=40,
             body="Deliver the task.",
         ),
         slot="build",
@@ -388,6 +392,7 @@ def _create_plan(
         disposable_worktree=False,
         capabilities=("read", "write"),
         wall_limit_s=wall_limit_s,
+        budget=CAP_OF_FORTY_STEPS,
         arguments=NO_ARGUMENTS,
         wave=NO_WAVE,
         task=NO_TASK,
@@ -475,6 +480,17 @@ class RunSegmentStepsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+    def test_should_locate_the_first_edit_of_the_session_among_the_edit_tools_of_the_client(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_transcripts=True)
+        plan = dataclasses.replace(plan, edit_tools=("Edit", "Write"))
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=1111))
 
     def test_should_leave_the_steps_uncounted_with_their_reason(self):
         # Arrange
@@ -1167,8 +1183,14 @@ class RunSegmentFilesTest(unittest.TestCase):
 
     def test_should_send_the_client_the_procedure_the_arguments_the_brief_and_the_progress_file(self):
         # Arrange
+        cap_applied_above_the_shipped_budget = RoleBudget(
+            shipped=75, computed=132, applied=132, segments=6, restarts=3, growth=2500.0, restart_tokens=21780000.0
+        )
         plan = dataclasses.replace(
-            _create_plan(self.root), arguments={"task": "@TASK.B73", "base": "main"}, brief="Deliver S3 first.\n"
+            _create_plan(self.root),
+            arguments={"task": "@TASK.B73", "base": "main"},
+            brief="Deliver S3 first.\n",
+            budget=cap_applied_above_the_shipped_budget,
         )
 
         # Act
@@ -1192,11 +1214,26 @@ class RunSegmentFilesTest(unittest.TestCase):
             "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
             " entry holds\n"
             "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "132 steps, the cap of your role for this segment.\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"
             " brigade-end: blocked when it waits for a ruling.\n",
         )
+
+    def test_should_pass_the_client_the_applied_cap_as_the_budget_of_the_role(self):
+        # Arrange
+        cap_applied_below_the_shipped_budget = RoleBudget(
+            shipped=75, computed=63, applied=63, segments=6, restarts=3, growth=100.0, restart_tokens=200000.0
+        )
+        plan = dataclasses.replace(_create_plan(self.root), budget=cap_applied_below_the_shipped_budget)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(plan.client_adapter.requests["launch-argv"]["role"]["budget"], 63)
 
     def test_should_name_the_directory_of_the_segment_it_cannot_create(self):
         # Arrange

@@ -6,6 +6,12 @@ DOCUMENT_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
+class ToolCall:
+    name: str
+    target: str | None
+
+
+@dataclass(frozen=True)
 class TranscriptMessage:
     role: str
     timestamp: str | None
@@ -13,6 +19,7 @@ class TranscriptMessage:
     tool_calls: int
     id: str | None
     usage: TokenUsage | None
+    tools: tuple[ToolCall, ...]
 
     @classmethod
     def from_document(cls, document: dict) -> "TranscriptMessage":
@@ -24,6 +31,7 @@ class TranscriptMessage:
             tool_calls=document["tool_calls"],
             id=document["id"],
             usage=None if usage is None else TokenUsage.from_document(usage),
+            tools=tuple(ToolCall(name=tool["name"], target=tool["target"]) for tool in document["tools"]),
         )
 
     def to_document(self) -> dict:
@@ -32,6 +40,7 @@ class TranscriptMessage:
             "timestamp": self.timestamp,
             "content": self.content,
             "tool_calls": self.tool_calls,
+            "tools": [{"name": tool.name, "target": tool.target} for tool in self.tools],
             "id": self.id,
             "usage": None if self.usage is None else self.usage.to_document(),
         }

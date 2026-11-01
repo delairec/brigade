@@ -28,6 +28,15 @@ PROBE_OF_A_CLIENT_ANSWERING_AN_ATTRIBUTION = {
     "models": {},
     "attribution": ["Co-Authored-By: Fake Model <fake@example.org>"],
 }
+PROBE_OF_A_CLIENT_NAMING_ITS_EDIT_TOOLS = {
+    "schema_version": 1,
+    "client": "claude-code",
+    "version_argv": None,
+    "operations": ["probe"],
+    "features": [],
+    "models": {},
+    "edit_tools": ["Edit", "Write", "NotebookEdit"],
+}
 
 
 class ProbeAnswerTest(unittest.TestCase):
@@ -82,3 +91,10 @@ class ProbeAnswerTest(unittest.TestCase):
                 "attribution": ["Co-Authored-By: Fake Model <fake@example.org>"],
             },
         )
+
+    def test_should_write_back_the_edit_tools_the_client_names(self):
+        # Act
+        document = ProbeAnswer.from_document(PROBE_OF_A_CLIENT_NAMING_ITS_EDIT_TOOLS).to_document()
+
+        # Assert
+        self.assertEqual(document["edit_tools"], ["Edit", "Write", "NotebookEdit"])

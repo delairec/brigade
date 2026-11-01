@@ -8,7 +8,7 @@ from pathlib import Path
 from tests.cli.read_ledger_events import read_ledger_events
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 
-PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 75\n---\nDeliver the task the brief names.\n"
+PROCEDURE = "---\ncapabilities: read, write, shell\n---\nDeliver the task the brief names.\n"
 DONE_RESULT = {
     "schema_version": 1,
     "outcome": "done",

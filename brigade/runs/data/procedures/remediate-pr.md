@@ -1,6 +1,5 @@
 ---
 capabilities: read, write, shell
-budget: 50
 ---
 # Procedure — answer the review of one pull request of a wave
 
@@ -11,7 +10,7 @@ each. You did not review the pull request.
 Arguments, which the Arguments section names: `pr`, the number of the pull request, and `task`, the TASK entity it
 delivers.
 
-**Budget: 50 steps**, a declared estimate: no run of this procedure is recorded yet. On reaching it, stop and
+**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to

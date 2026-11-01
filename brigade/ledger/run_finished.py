@@ -4,6 +4,37 @@ from typing import ClassVar
 from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
 
+REQUIRED_FIELDS = (
+    "run",
+    "segment",
+    "procedure",
+    "slot",
+    "role",
+    "client",
+    "project",
+    "session",
+    "main_steps",
+    "total_steps",
+    "duration_ms",
+    "outcome",
+    "error_class",
+    "exit",
+    "wave",
+    "task",
+    "nulls",
+)
+REQUIRED_BEFORE_USAGE = REQUIRED_FIELDS.index("outcome")
+OPTIONAL_FIELDS = (
+    "steps_to_first_edit",
+    "oversized_output_steps",
+    "cost_usd",
+    "message",
+    "tokens_to_first_edit",
+    "role_digest",
+    "procedure_digest",
+    "shipped_budget",
+)
+
 
 @dataclass(frozen=True)
 class RunFinished:
@@ -31,63 +62,30 @@ class RunFinished:
     cost_usd: float | None = None
     message: str | None = None
     reset: ResetHour | None = None
+    tokens_to_first_edit: int | None = None
+    role_digest: str | None = None
+    procedure_digest: str | None = None
+    shipped_budget: int | None = None
 
     @classmethod
     def from_document(cls, document: dict) -> "RunFinished":
         usage = document["usage"]
         reset = document.get("reset")
         return cls(
-            run=document["run"],
-            segment=document["segment"],
-            procedure=document["procedure"],
-            slot=document["slot"],
-            role=document["role"],
-            client=document["client"],
-            project=document["project"],
-            session=document["session"],
-            main_steps=document["main_steps"],
-            total_steps=document["total_steps"],
-            duration_ms=document["duration_ms"],
+            **{name: document[name] for name in REQUIRED_FIELDS},
+            **{name: document.get(name) for name in OPTIONAL_FIELDS},
             usage=None if usage is None else TokenUsage.from_document(usage),
-            outcome=document["outcome"],
-            error_class=document["error_class"],
-            exit=document["exit"],
-            wave=document["wave"],
-            task=document["task"],
-            nulls=document["nulls"],
-            steps_to_first_edit=document.get("steps_to_first_edit"),
-            oversized_output_steps=document.get("oversized_output_steps"),
-            cost_usd=document.get("cost_usd"),
-            message=document.get("message"),
             reset=None if reset is None else ResetHour.from_document(reset),
         )
 
     def to_document(self) -> dict:
         fields_absent_when_unset = {
-            "steps_to_first_edit": self.steps_to_first_edit,
-            "oversized_output_steps": self.oversized_output_steps,
-            "cost_usd": self.cost_usd,
-            "message": self.message,
+            **{name: getattr(self, name) for name in OPTIONAL_FIELDS},
             "reset": None if self.reset is None else self.reset.to_document(),
         }
         return {
-            "run": self.run,
-            "segment": self.segment,
-            "procedure": self.procedure,
-            "slot": self.slot,
-            "role": self.role,
-            "client": self.client,
-            "project": self.project,
-            "session": self.session,
-            "main_steps": self.main_steps,
-            "total_steps": self.total_steps,
-            "duration_ms": self.duration_ms,
+            **{name: getattr(self, name) for name in REQUIRED_FIELDS[:REQUIRED_BEFORE_USAGE]},
             "usage": None if self.usage is None else self.usage.to_document(),
-            "outcome": self.outcome,
-            "error_class": self.error_class,
-            "exit": self.exit,
-            "wave": self.wave,
-            "task": self.task,
-            "nulls": self.nulls,
+            **{name: getattr(self, name) for name in REQUIRED_FIELDS[REQUIRED_BEFORE_USAGE:]},
             **{field: value for field, value in fields_absent_when_unset.items() if value is not None},
         }

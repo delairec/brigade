@@ -33,6 +33,7 @@ A role is a Markdown file: a front matter between two `---` lines, then the syst
 | `name`, `slot`, `work` | |
 | `reasoning` | `deepest`, `deep`, `standard`, `light` |
 | `capabilities` | `read`, `write`, `shell`, `net`, comma-separated |
-| `budget`, `returns` | |
+| `budget` | the steps a segment of the role is capped at until the ledger measures enough of them, see [Runs](Runs.md) |
+| `returns` | |
 
 A role never names a model: the client adapter binds one to its reasoning level.

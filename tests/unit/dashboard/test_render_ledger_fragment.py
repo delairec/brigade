@@ -26,12 +26,39 @@ BUDGETS = {
             "estimate": False,
         },
     },
+    "roles": {
+        "<i>ada</i>": {
+            "shipped": 75,
+            "computed": 132,
+            "applied": 132,
+            "segments": 6,
+            "restarts": 3,
+            "growth": 2500.4,
+            "restart_tokens": 21666.6,
+        },
+        "remi": {
+            "shipped": 50,
+            "computed": None,
+            "applied": 50,
+            "segments": 2,
+            "restarts": 0,
+            "growth": None,
+            "restart_tokens": None,
+        },
+    },
 }
 STEPS_SECTION = (
-    "<section><h2>Steps by procedure</h2>"
+    "<section><h2>Steps by procedure and step cap by role</h2>"
     "<table><thead><tr><th>procedure</th><th>runs</th><th>p50</th><th>p90</th><th>estimate</th></tr></thead>"
     "<tbody><tr><td>build-task</td><td>3</td><td>40</td><td>70</td><td>yes</td></tr>"
-    "<tr><td>&lt;i&gt;review&lt;/i&gt;</td><td>0</td><td>-</td><td>-</td><td>no</td></tr></tbody></table></section>"
+    "<tr><td>&lt;i&gt;review&lt;/i&gt;</td><td>0</td><td>-</td><td>-</td><td>no</td></tr></tbody></table>"
+    "<h3>Step cap by role</h3>"
+    "<table><thead><tr><th>role</th><th>shipped</th><th>computed</th><th>applied</th><th>segments</th>"
+    "<th>restarts</th><th>g</th><th>R</th></tr></thead>"
+    "<tbody><tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>75</td><td>132</td><td>132</td><td>6</td><td>3</td>"
+    "<td>2500</td><td>21667</td></tr>"
+    "<tr><td>remi</td><td>50</td><td>-</td><td>50</td><td>2</td><td>0</td><td>-</td><td>-</td></tr></tbody></table>"
+    "</section>"
 )
 MONTHS_SECTION = (
     "<section><h2>Waves started by month</h2>"
