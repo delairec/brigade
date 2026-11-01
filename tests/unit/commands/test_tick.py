@@ -2893,13 +2893,71 @@ INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH = INTEGRATION_PULL_REQUE
     "base": "integration/tides",
     "checks": [{"name": "ci", "verdict": "pending"}],
 }
-TASK_OF_NO_MILESTONE_DELIVERED = (("STATUS", "implemented"), ("DELIVERED_BY", "42"))
+TASK_OF_NO_MILESTONE_DELIVERED = (
+    ("STATUS", "implemented"),
+    ("DELIVERED_BY", "42"),
+    ("TITLE", "The cut branch is kept"),
+    ("TYPE", "fix"),
+    ("COMPONENT", "waves"),
+)
+TASK_DELIVERED_BY_ITS_PULL_REQUEST = (
+    *TASK_DELIVERED,
+    ("TITLE", "The cut branch is kept"),
+    ("TYPE", "fix"),
+    ("COMPONENT", "waves"),
+)
+PULL_REQUEST_OF_T7 = {
+    "number": 42,
+    "title": "fix(waves): keep the cut branch (@TASK.T7)",
+    "body": "",
+    "head": "task/tidepool_w16/T7",
+    "head_sha": "77aa001",
+    "checks": [],
+    "commits": ["fix(waves): keep the cut branch"],
+}
+LOG_OF_THE_WAVE_BRANCH = (
+    "fix(waves): keep the cut branch\ndocs(corpus): mark @TASK.T7 implemented, delivered by #42\nchore: bump the lock\n"
+)
+ATTRIBUTED_CONFIGURATION = (
+    CLIENT_AND_DOCUMENT_CONFIGURATION + 'attribution = ["Co-Authored-By: Tidepool CLI <cli@tidepool.test>"]\n'
+)
+WAVE_TITLE = "fix(waves): keep the cut branch (@TASK.T7)"
+PULL_REQUEST_OF_THE_WAVE_TITLED_BY_HAND = {
+    "number": 206,
+    "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
+    "body": "Integrates the wave tidepool_w16 into integration/tides.",
+    "head": "integration/M4",
+    "head_sha": "8885daa",
+    "checks": [],
+    "commits": [],
+}
+WAVE_BODY_INTO_THE_MILESTONE_BRANCH = (
+    "Delivers the wave tidepool_w16 of the milestone M4 (Tides) into integration/tides: @TASK.T7.\n"
+    "\n"
+    "- @TASK.T7 — The cut branch is kept (#42)\n"
+    "- chore: bump the lock\n"
+    "\n"
+    "Co-Authored-By: Tidepool CLI <cli@tidepool.test>"
+)
 
 
 class OpeningForgeDouble:
-    def __init__(self, found_by_branch: dict):
+    def __init__(self, found_by_branch: dict, read_by_number: dict | None = None):
         self.found_by_branch = found_by_branch
+        self.read_by_number = {
+            42: PULL_REQUEST_OF_T7,
+            206: PULL_REQUEST_OF_THE_WAVE_TITLED_BY_HAND,
+            **(read_by_number or {}),
+        }
         self.opened = []
+        self.edited = []
+
+    def read_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_request": self.read_by_number[request["number"]]}
+
+    def edit_pull_request(self, request: dict, runtime) -> dict:
+        self.edited.append(request)
+        return {"schema_version": 1}
 
     def find_pull_request(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "pull_request": self.found_by_branch.get(request["branch"])}
@@ -2940,14 +2998,15 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(ATTRIBUTED_CONFIGURATION, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         self.forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4])
         self.runtime = self._create_runtime(self.forge)
 
-    def _create_runtime(self, forge: OpeningForgeDouble, task: tuple = TASK_DELIVERED) -> Runtime:
+    def _create_runtime(self, forge: OpeningForgeDouble, task: tuple = TASK_DELIVERED_BY_ITS_PULL_REQUEST) -> Runtime:
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
@@ -2956,12 +3015,38 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         }
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
+            run_process=create_machine_double(corpus, self._describe_the_wave_branch()),
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
             ),
         )
+
+    def _describe_the_wave_branch(self) -> dict:
+        implemented_at_the_head = (
+            "awawa",
+            "status",
+            "TASK",
+            "--where",
+            "STATUS==implemented",
+            "--json",
+            str(self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD),
+        )
+        return {
+            **MACHINE_OUTPUTS,
+            ("git", "ls-remote"): "",
+            (
+                "git",
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                "--end-of-options",
+                "origin/integration/tides^{commit}",
+            ): MAIN_HEAD,
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"): MAIN_HEAD,
+            implemented_at_the_head: '{"entities": [{"type": "TASK", "name": "T7"}]}',
+            ("git", "log", "--reverse"): LOG_OF_THE_WAVE_BRANCH,
+        }
 
     def _read_events(self) -> list[dict]:
         return list(
@@ -2980,8 +3065,8 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "repository": str(self.repository),
                     "base": "integration/tides",
                     "branch": "integration/M4",
-                    "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
-                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
+                    "title": WAVE_TITLE,
+                    "body": WAVE_BODY_INTO_THE_MILESTONE_BRANCH,
                     "milestone": None,
                     "environment": {},
                 }
@@ -3038,6 +3123,15 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "pr": 77,
                     "login": "tidepool-cli",
                 },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.pr_described",
+                    "wave": "tidepool_w16",
+                    "pr": 77,
+                    "head": "8885daa",
+                    "login": "tidepool-cli",
+                },
             ],
         )
 
@@ -3056,8 +3150,8 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "repository": f"{self.root}/tidepool",
                     "base": "integration/tides",
                     "branch": "integration/M4",
-                    "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
-                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
+                    "title": WAVE_TITLE,
+                    "body": WAVE_BODY_INTO_THE_MILESTONE_BRANCH,
                     "milestone": None,
                     "environment": {},
                 }
@@ -3078,7 +3172,10 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
     def test_should_record_as_opened_the_pull_request_already_open_into_the_milestone_branch_whoever_opened_it(self):
         # Arrange
         runtime = self._create_runtime(
-            OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
+            OpeningForgeDouble(
+                {"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH},
+                {206: PULL_REQUEST_OF_THE_WAVE_TITLED_BY_HAND},
+            )
         )
 
         # Act
@@ -3130,6 +3227,39 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "pr": 206,
                     "login": None,
                 },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.pr_described",
+                    "wave": "tidepool_w16",
+                    "pr": 206,
+                    "head": "8885daa",
+                    "login": "tidepool-cli",
+                },
+            ],
+        )
+
+    def test_should_rewrite_at_the_next_round_the_pull_request_found_open_into_the_milestone_branch(self):
+        # Arrange
+        forge = OpeningForgeDouble(
+            {"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH},
+            {206: PULL_REQUEST_OF_THE_WAVE_TITLED_BY_HAND},
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.edited,
+            [
+                {
+                    "repository": str(self.repository),
+                    "number": 206,
+                    "title": WAVE_TITLE,
+                    "body": WAVE_BODY_INTO_THE_MILESTONE_BRANCH,
+                    "environment": {},
+                }
             ],
         )
 
@@ -3150,8 +3280,8 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "repository": str(self.repository),
                     "base": "integration/tides",
                     "branch": "integration/M4",
-                    "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
-                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
+                    "title": WAVE_TITLE,
+                    "body": WAVE_BODY_INTO_THE_MILESTONE_BRANCH,
                     "milestone": None,
                     "environment": {},
                 }
@@ -3174,8 +3304,13 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "repository": str(self.repository),
                     "base": "main",
                     "branch": "integration/M4",
-                    "title": "chore(wave): merge the wave tidepool_w16 into main",
-                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
+                    "title": WAVE_TITLE,
+                    "body": "Delivers the wave tidepool_w16 of no milestone into main: @TASK.T7.\n"
+                    "\n"
+                    "- @TASK.T7 — The cut branch is kept (#42)\n"
+                    "- chore: bump the lock\n"
+                    "\n"
+                    "Co-Authored-By: Tidepool CLI <cli@tidepool.test>",
                     "milestone": None,
                     "environment": {},
                 }
@@ -3184,7 +3319,6 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
 
     def test_should_open_the_pull_request_into_the_milestone_its_tasks_name_at_the_wave_branch_not_at_main(self):
         # Arrange
-        (self.root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True)
         wave_corpus = create_corpus_double(
             {
                 "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
