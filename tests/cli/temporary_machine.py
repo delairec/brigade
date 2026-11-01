@@ -17,6 +17,44 @@ PAUSED_TRIAGE = (
     '\tANSWER "PATTERN"\n'
     "\tSTATUS paused\n"
 )
+PAUSED_SCANS_OF_SHOP = (
+    "\n"
+    "STUDY corpus_lint_shop\n"
+    '\tTITLE "the lint of the corpus of shop, paused"\n'
+    "\tPROJECT @PROJECT.shop\n"
+    '\tCOLLECTOR "corpus-lint"\n'
+    "\tSLOT none\n"
+    '\tOUTPUT "inbox"\n'
+    '\tANSWER "ANSWER"\n'
+    "\tSTATUS paused\n"
+    "\n"
+    "STUDY corpus_fmt_shop\n"
+    '\tTITLE "the format of the corpus of shop, paused"\n'
+    "\tPROJECT @PROJECT.shop\n"
+    '\tCOLLECTOR "corpus-fmt"\n'
+    "\tSLOT none\n"
+    '\tOUTPUT "inbox"\n'
+    '\tANSWER "ANSWER"\n'
+    "\tSTATUS paused\n"
+    "\n"
+    "STUDY stale_branches_shop\n"
+    '\tTITLE "the stale branches of shop, paused"\n'
+    "\tPROJECT @PROJECT.shop\n"
+    '\tCOLLECTOR "stale-branches"\n'
+    "\tSLOT none\n"
+    '\tOUTPUT "inbox"\n'
+    '\tANSWER "ANSWER"\n'
+    "\tSTATUS paused\n"
+    "\n"
+    "STUDY worktrees_shop\n"
+    '\tTITLE "the stale worktrees of shop, paused"\n'
+    "\tPROJECT @PROJECT.shop\n"
+    '\tCOLLECTOR "stale-worktrees"\n'
+    "\tSLOT none\n"
+    '\tOUTPUT "inbox"\n'
+    '\tANSWER "ANSWER"\n'
+    "\tSTATUS paused\n"
+)
 SHIPPED_SCHEMA = REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
 USER_IDENTITY = "[user]\n\tname = Ada Lovelace\n\temail = ada@example.org\n"
 
@@ -44,8 +82,8 @@ class TemporaryMachine:
     def install_awawa(self, test_case: unittest.TestCase) -> None:
         self.search_path = provide_awawa(test_case)
 
-    def pause_the_built_in_triage(self) -> None:
-        (self.corpus / "studies.awawa").write_text(PAUSED_TRIAGE)
+    def pause_the_built_in_studies_of_shop(self) -> None:
+        (self.corpus / "studies.awawa").write_text(PAUSED_TRIAGE + PAUSED_SCANS_OF_SHOP)
 
     def write_configuration(self, content: str) -> Path:
         configuration = self.corpus / "config.toml"

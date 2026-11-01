@@ -102,7 +102,7 @@ class WaveTickTestCase(unittest.TestCase):
         )
         self.machine.install_awawa(self)
         self.machine.run_init()
-        self.machine.pause_the_built_in_triage()
+        self.machine.pause_the_built_in_studies_of_shop()
         self.project = TemporaryProject(
             Path(self.root.name).resolve() / "projects" / "shop",
             {**self.machine.describe_environment(), **PINNED_COMMIT_DATES},
