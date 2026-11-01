@@ -47,8 +47,8 @@ class VerifyVerdictTestCase(VerifyPreflightTestCase):
         )
 
     def read_events(self) -> list[dict]:
-        [month] = (self.state / "ledger").glob("*.jsonl")
-        return list(map(json.loads, month.read_text().splitlines()))
+        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
+        return list(map(json.loads, lines))
 
 
 class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
