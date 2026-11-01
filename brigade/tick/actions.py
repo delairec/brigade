@@ -141,6 +141,24 @@ class RetargetWavePullRequest:
 
 
 @dataclass(frozen=True)
+class DescribeWavePullRequest:
+    project: str
+    wave: str
+    branch: str
+    pr: int
+    head: str
+
+
+@dataclass(frozen=True)
+class DescribeMilestonePullRequest:
+    project: str
+    milestone: str
+    branch: str
+    pr: int
+    head: str
+
+
+@dataclass(frozen=True)
 class StartWave:
     project: str
     milestone: str | None

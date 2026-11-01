@@ -288,6 +288,7 @@ class PlanRecordOnTheGithubForgeTestCase(PlanRecordTestCase):
             "reviewDecision": review_decision,
             "updatedAt": "2026-10-18T11:00:00Z",
             "statusCheckRollup": [],
+            "commits": [],
         }
         self.listed.write_text(json.dumps([pull_request]))
         self.viewed.write_text(json.dumps(pull_request))

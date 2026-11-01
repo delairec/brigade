@@ -107,6 +107,7 @@ class VerifyPreflightTestCase(TaskContextTestCase):
                     "headRefName": TASK_BRANCH,
                     "headRefOid": self.read_head(),
                     "statusCheckRollup": list(check_runs),
+                    "commits": [],
                 }
             )
         )

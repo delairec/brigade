@@ -50,6 +50,12 @@ class Forge:
             "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
         }
 
+    def view(self, number: str) -> str:
+        pull = self.read_pull(number)
+        since_base = f"{pull['baseRefName']}..{self.read_head(pull)}"
+        subjects = run_git("-C", str(self.remote), "log", "--reverse", "--format=%s", since_base).splitlines()
+        return json.dumps({**self.describe(pull), "commits": [{"messageHeadline": subject} for subject in subjects]})
+
     def create(self, arguments: list[str]) -> str:
         number = len(self.read_pulls()) + 1
         pull = {
@@ -106,7 +112,7 @@ class Forge:
         pull = self.read_pull(arguments[2])
         base = read_option(arguments, "--base")
         if base is None:
-            self.write_pull({**pull, "body": sys.stdin.read()})
+            self.write_pull({**pull, "title": read_option(arguments, "--title") or pull["title"], "body": sys.stdin.read()})
         else:
             self.write_pull({**pull, "baseRefName": base})
         return ""
@@ -147,7 +153,7 @@ class Forge:
         if command == "pr list":
             return self.list_by_head(arguments)
         if command == "pr view":
-            return json.dumps(self.describe(self.read_pull(arguments[2])))
+            return self.view(arguments[2])
         if command == "pr merge":
             return self.merge(arguments)
         if command == "pr review":

@@ -5,6 +5,7 @@ from brigade.ledger.inbox_recorded import InboxRecorded
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_created import MilestoneCreated
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.ledger.order_done import OrderDone
@@ -31,6 +32,7 @@ from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_merged import WaveMerged
 from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_pr_described import WavePrDescribed
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_pr_retargeted import WavePrRetargeted
 from brigade.ledger.wave_rebased import WaveRebased
@@ -54,6 +56,7 @@ DECLARED_EVENTS = {
         WaveResumed,
         WaveReported,
         WavePrOpened,
+        WavePrDescribed,
         WavePrRetargeted,
         WaveRebased,
         WaveClosed,
@@ -75,6 +78,7 @@ DECLARED_EVENTS = {
         MilestoneCreated,
         MilestoneBranchCut,
         MilestonePrOpened,
+        MilestonePrDescribed,
         MilestoneRebased,
         MilestoneClosed,
         WaveMerged,
@@ -95,6 +99,7 @@ LedgerEvent = (
     | WaveResumed
     | WaveReported
     | WavePrOpened
+    | WavePrDescribed
     | WavePrRetargeted
     | WaveRebased
     | WaveClosed
@@ -116,6 +121,7 @@ LedgerEvent = (
     | MilestoneCreated
     | MilestoneBranchCut
     | MilestonePrOpened
+    | MilestonePrDescribed
     | MilestoneRebased
     | MilestoneClosed
     | WaveMerged

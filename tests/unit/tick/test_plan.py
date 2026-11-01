@@ -11,6 +11,8 @@ from brigade.tick.actions import (
     CloseWave,
     CutMilestoneBranch,
     CutWaveBranch,
+    DescribeMilestonePullRequest,
+    DescribeWavePullRequest,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -1082,7 +1084,9 @@ class PlanWaveCloseTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 wave = dataclasses.replace(
-                    create_wave(TWO_TASKS, {"S3": "pr_open", "S4": "pr_open"}), integration_pull_request=integration
+                    create_wave(TWO_TASKS, {"S3": "pr_open", "S4": "pr_open"}),
+                    integration_pull_request=integration,
+                    described_head=HEAD,
                 )
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
@@ -1138,6 +1142,7 @@ def create_reported_wave(
         integration_pull_request=pull_request,
         milestone_branch=milestone_branch,
         unresolved_threads=unresolved_threads,
+        described_head=pull_request.head,
     )
 
 
@@ -2277,6 +2282,7 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
             create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
             opened_pull_request=90,
             pull_request=MILESTONE_PULL_REQUEST,
+            described_head=HEAD,
         )
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
@@ -2320,6 +2326,7 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
             pull_request=dataclasses.replace(
                 MILESTONE_PULL_REQUEST, checks=(CheckVerdict(name="tests", verdict="success"),), review="approved"
             ),
+            described_head=HEAD,
         )
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
@@ -2520,6 +2527,112 @@ class PlanWavePullRequestRetargetTest(unittest.TestCase):
                 # Arrange
                 wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_WITHOUT_AUTO_MERGE,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+
+UNDESCRIBED_HEAD = None
+HEAD_DESCRIBED_BEFORE_A_PUSH = "9f8e7d6"
+
+
+class PlanWavePullRequestDescriptionTest(unittest.TestCase):
+    def test_should_describe_the_open_pull_request_of_a_wave_whose_head_is_not_the_described_head(self):
+        for case, described_head in [
+            ("a head never described", UNDESCRIBED_HEAD),
+            ("a head moved since its description", HEAD_DESCRIBED_BEFORE_A_PUSH),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(
+                    create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, 0),
+                    described_head=described_head,
+                )
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_WITHOUT_AUTO_MERGE,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions,
+                    (
+                        DescribeWavePullRequest(
+                            project="shop", wave="shop_w1", branch=WAVE_BRANCH, pr=77, head="0123abc"
+                        ),
+                    ),
+                )
+
+    def test_should_describe_none(self):
+        for case, pull_request, described_head in [
+            ("a head described", WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, "0123abc"),
+            (
+                "a pull request not open",
+                dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, state="closed"),
+                UNDESCRIBED_HEAD,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(
+                    create_reported_wave(pull_request, MILESTONE_BRANCH, 0), described_head=described_head
+                )
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_WITHOUT_AUTO_MERGE,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+
+def create_milestone_under_review(pull_request: PullRequestFacts, described_head: str | None) -> MilestoneFacts:
+    return MilestoneFacts(
+        project="shop",
+        milestone="M4",
+        branch=MILESTONE_M4_BRANCH,
+        opened_pull_request=90,
+        pull_request=pull_request,
+        described_head=described_head,
+    )
+
+
+class PlanMilestonePullRequestDescriptionTest(unittest.TestCase):
+    def test_should_describe_the_open_pull_request_of_a_milestone_whose_head_is_not_the_described_head(self):
+        for case, described_head in [
+            ("a head never described", UNDESCRIBED_HEAD),
+            ("a head moved since its description", HEAD_DESCRIBED_BEFORE_A_PUSH),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                milestone = create_milestone_under_review(MILESTONE_PULL_REQUEST, described_head)
+                snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions,
+                    (
+                        DescribeMilestonePullRequest(
+                            project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, pr=90, head="0123abc"
+                        ),
+                    ),
+                )
+
+    def test_should_describe_none(self):
+        for case, pull_request, described_head in [
+            ("a head described", MILESTONE_PULL_REQUEST, "0123abc"),
+            ("a pull request not open", dataclasses.replace(MILESTONE_PULL_REQUEST, state="closed"), UNDESCRIBED_HEAD),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                milestone = create_milestone_under_review(pull_request, described_head)
+                snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
                 # Act
                 actions = plan(snapshot)

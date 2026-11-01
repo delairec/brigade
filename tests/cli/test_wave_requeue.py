@@ -270,6 +270,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
                         "reviewDecision": "",
                         "updatedAt": "2026-10-18T11:00:00Z",
                         "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
+                        "commits": [],
                     }
                 ]
             )
@@ -283,6 +284,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
                     "headRefName": TASK_BRANCH,
                     "headRefOid": self.head,
                     "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
+                    "commits": [],
                 }
             )
         )
