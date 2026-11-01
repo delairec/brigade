@@ -33,5 +33,7 @@ def _name_delivered(delivery: Delivery) -> str:
 
 def compose_delivery_title(delivery: Delivery) -> str:
     tasks = delivery.tasks
+    if len(tasks) == 1:
+        return f"{TASK_NAMES.sub('', tasks[0].pr_title)} ({_name_delivered(delivery)})"
     subjects = SUBJECT_SEPARATOR.join(_strip_subject(task) for task in tasks)
     return f"{_choose_type(tasks)}{_describe_scope(tasks)}: {subjects} ({_name_delivered(delivery)})"

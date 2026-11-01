@@ -508,6 +508,11 @@ class _DescribedBranch:
     base: str
     head: str
     merged_waves: tuple[MergedWave, ...]
+    report: str | None
+
+
+def _fetch_branch(runtime: Runtime, configuration: Configuration, project: Entity, branch: str) -> None:
+    locate_forge_branch(runtime.run_process, project, branch, _cache_forge_environment(runtime, configuration))
 
 
 def _read_branch_head(runtime: Runtime, configuration: Configuration, project: Entity, branch: str) -> str:
@@ -527,7 +532,7 @@ def _compose_description(
         base=described.base,
         base_ref=locate_forge_branch(runtime.run_process, described.project, described.base, read_environment),
         head=described.head,
-        report=None if described.wave is None else locate_wave_report(described.project, described.wave),
+        report=described.report,
         merged_waves=described.merged_waves,
         attribution=tuple(read_attribution(configuration, runtime)),
         repository=Path(repository),
@@ -551,13 +556,15 @@ def _compose_wave_description(
     runtime: Runtime, configuration: Configuration, started: WaveStarted, head: str
 ) -> tuple[str, str]:
     root = prepare_wave_tree(runtime, configuration, started).root
+    project = find_project(read_projects(runtime), started.project)
     described = _DescribedBranch(
-        project=find_project(read_projects(runtime), started.project),
+        project=project,
         wave=started.wave,
         milestone=_read_wave_milestone(runtime, started, root),
         base=_locate_wave_base(runtime, configuration, started, root),
         head=head,
         merged_waves=(),
+        report=locate_wave_report(project, started.wave),
     )
     return _compose_description(runtime, configuration, described)
 
@@ -594,7 +601,7 @@ def _describe_wave_pull_request(
     runtime: Runtime, configuration: Configuration, action: DescribeWavePullRequest
 ) -> None:
     project = find_project(read_projects(runtime), action.project)
-    _read_branch_head(runtime, configuration, project, action.branch)
+    _fetch_branch(runtime, configuration, project, action.branch)
     title, body = _compose_wave_description(
         runtime, configuration, _find_started_wave(runtime, action.wave), action.head
     )
@@ -614,7 +621,6 @@ def _describe_milestone_pull_request(
     runtime: Runtime, configuration: Configuration, action: DescribeMilestonePullRequest
 ) -> None:
     project = find_project(read_projects(runtime), action.project)
-    _read_branch_head(runtime, configuration, project, action.branch)
     query = argparse.Namespace(project=project.name, ref=action.head, worktree=None)
     root = prepare_project_tree(query, configuration, runtime).root
     described = _DescribedBranch(
@@ -624,6 +630,7 @@ def _describe_milestone_pull_request(
         base=read_project_field(project, MAIN_FIELD),
         head=action.head,
         merged_waves=_list_milestone_merged_waves(runtime, root, action.project, action.milestone),
+        report=None,
     )
     title, body = _compose_description(runtime, configuration, described)
     login = _rewrite_pull_request(runtime, configuration, _PullRequestDescription(project, action.pr, title, body))
@@ -677,7 +684,9 @@ def _open_integration_pull_request(
         },
         runtime,
     )
-    _record_wave_pull_request_opened(runtime, WavePrDescribed(wave=action.wave, pr=opened["number"], head=head, login=login))
+    _record_wave_pull_request_opened(
+        runtime, WavePrDescribed(wave=action.wave, pr=opened["number"], head=head, login=login)
+    )
 
 
 def _open_milestone_pull_request(
@@ -690,7 +699,13 @@ def _open_milestone_pull_request(
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
     head = _read_branch_head(runtime, configuration, project, action.branch)
     branch = _DescribedBranch(
-        project=project, wave=None, milestone=action.milestone, base=main, head=head, merged_waves=action.waves
+        project=project,
+        wave=None,
+        milestone=action.milestone,
+        base=main,
+        head=head,
+        merged_waves=action.waves,
+        report=None,
     )
     title, body = _compose_description(runtime, configuration, branch)
     opened = forge.open_pull_request(
