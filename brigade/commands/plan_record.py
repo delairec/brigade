@@ -3,7 +3,7 @@ import functools
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
+from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, ForgeSlot, read_forge_environment
 from brigade.errors import BrigadeError
 from brigade.planning.read_planning_request import read_planning_request
 from brigade.planning.record_plan import PlanRecording, record_plan
@@ -31,7 +31,9 @@ def plan_record(request: argparse.Namespace, runtime: Runtime) -> dict:
         project=project,
         plan_file=Path(request.file).absolute(),
         forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
-        read_environment=functools.cache(lambda key: read_forge_environment(configuration, key, runtime)),
+        read_environment=functools.cache(
+            lambda key: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, key), runtime)
+        ),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_plan(runtime, recording)}
 
