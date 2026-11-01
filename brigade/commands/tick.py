@@ -645,6 +645,17 @@ def _collect_review_threads(runtime: Runtime, configuration: Configuration, acti
     record_review_threads(runtime, action.project, collection.document["items"])
 
 
+def _list_task_run_executors(runtime: Runtime, configuration: Configuration) -> dict:
+    return {
+        LaunchTask: lambda action: _launch_task(runtime, configuration, action),
+        LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
+        LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
+        LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
+        RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
+        RebuildTask: lambda action: _rebuild_task(runtime, configuration, action),
+    }
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
@@ -653,12 +664,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
         MergeWavePullRequest: lambda action: _merge_wave_pull_request(runtime, configuration, action),
-        LaunchTask: lambda action: _launch_task(runtime, configuration, action),
-        LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
-        LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
-        LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
-        RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
-        RebuildTask: lambda action: _rebuild_task(runtime, configuration, action),
+        **_list_task_run_executors(runtime, configuration),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(
