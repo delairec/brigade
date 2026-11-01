@@ -11,7 +11,6 @@ SHIPPED_BUDGET = 75
 LATEST_RECORDED = CurrentDigests(role=None, procedures={})
 TURN_LIMIT = "turn_limit"
 DONE = "done"
-NOT_MEASURED = None
 
 
 def _create_segment(run: str, segment: int, steps: int, tokens: int, outcome: str, **measures) -> RunFinished:
