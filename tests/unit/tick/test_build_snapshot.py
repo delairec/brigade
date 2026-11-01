@@ -234,9 +234,7 @@ class SnapshotTest(unittest.TestCase):
             CandidateWave(milestone=None, tasks=("B190",)),
         )
         uncut = (UncutMilestone(milestone="M3", branch="integration/dashboard", todo=("B94",)),)
-        project = ProjectFacts(
-            name="brigade", slots=4, wave_start="ask", candidates=candidates, uncut_milestones=uncut
-        )
+        project = ProjectFacts(name="brigade", slots=4, wave_start="ask", candidates=candidates, uncut_milestones=uncut)
         snapshot = Snapshot(now=datetime(2026, 10, 20, 12, 0, tzinfo=UTC), projects=(project,))
 
         # Act
