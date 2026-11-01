@@ -2,12 +2,16 @@ import dataclasses
 from pathlib import Path
 
 from brigade.adapters.documents import markdown
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.system.parse_configuration import Configuration
 
 RUN_ID = "20261019T090000Z-c0ffee"
+CAP_OF_FORTY_STEPS = RoleBudget(
+    shipped=40, computed=None, applied=40, segments=0, restarts=0, growth=None, restart_tokens=None
+)
 
 
 def create_run_plan(root: Path, **changes) -> RunPlan:
@@ -20,7 +24,6 @@ def create_run_plan(root: Path, **changes) -> RunPlan:
             location="built-in",
             argument="build-task",
             capabilities=("read", "write"),
-            budget=40,
             body="Deliver the task.",
         ),
         slot="build",
@@ -42,6 +45,7 @@ def create_run_plan(root: Path, **changes) -> RunPlan:
         disposable_worktree=False,
         capabilities=("read", "write"),
         wall_limit_s=1500.0,
+        budget=CAP_OF_FORTY_STEPS,
         arguments={},
         wave=None,
         task=None,

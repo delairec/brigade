@@ -8,6 +8,8 @@ from brigade.adapters.documents import markdown
 from brigade.adapters.test_clients import fake
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError, UsageError
+from brigade.ledger.budget_applied import BudgetApplied
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.plan_run import RunPlan, RunPlugins, RunRequest, plan_run
 from brigade.runs.read_run_setting import RunSetting
@@ -16,6 +18,16 @@ from brigade.system.parse_configuration import Configuration
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
+from tests.unit.runs.create_run_plan import CAP_OF_FORTY_STEPS
+from tests.unit.runs.mason_segments import (
+    EARLIER_MASON_BUDGET_APPLIED,
+    MASON_BUDGET_APPLIED,
+    MASON_ROLE,
+    MASON_SEGMENTS,
+    STONEMASON_BUDGET_APPLIED,
+    STONEMASON_ROLE,
+    SURVEY_PROCEDURE,
+)
 from tests.unit.runs.write_run_result import write_run_result
 
 NO_ARGUMENTS = {}
@@ -37,7 +49,6 @@ class RunPlanOfASlotBoundToALoginTest(unittest.TestCase):
                 location="built-in",
                 argument="deliver",
                 capabilities=("read", "write"),
-                budget=40,
                 body="Deliver the task.",
             ),
             slot="build",
@@ -59,6 +70,7 @@ class RunPlanOfASlotBoundToALoginTest(unittest.TestCase):
             disposable_worktree=False,
             capabilities=("read", "write"),
             wall_limit_s=1500.0,
+            budget=CAP_OF_FORTY_STEPS,
             arguments=NO_ARGUMENTS,
             wave=NO_WAVE,
             task=NO_TASK,
@@ -159,6 +171,13 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
                 self.assertEqual(plan.role.role, role)
                 self.assertEqual(plan.capabilities, capabilities)
 
+    def test_should_hold_the_edit_tools_the_probe_names(self):
+        # Act
+        plan = self.plan(self.create_request(), {"features": "step_count", "edit_tools": "Edit, Write"})
+
+        # Assert
+        self.assertEqual(plan.edit_tools, ("Edit", "Write"))
+
     def test_should_name_a_new_run_by_its_instant(self):
         # Act
         plan = self.plan(self.create_request(), {"features": "step_count"})
@@ -217,10 +236,137 @@ class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
             plan.warnings,
             (
                 (
-                    "fake counts no steps: the budget of 10 steps is held on the clock"
-                    " and the run cut at its limit of 260 s"
+                    "fake counts no steps: the budget of 75 steps is held on the clock"
+                    " and the run cut at its limit of 1880 s"
                 ),
             ),
+        )
+
+
+class PlanRunOfARoleWithNoMeasuredSegmentTest(PlanRunTestCase):
+    def test_should_apply_the_budget_the_role_ships_and_hold_the_wall_limit_to_it(self):
+        # Act
+        plan = self.plan(self.create_request(), {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(
+            plan.budget,
+            RoleBudget(shipped=75, computed=None, applied=75, segments=0, restarts=0, growth=None, restart_tokens=None),
+        )
+        self.assertEqual(plan.wall_limit_s, 1880)
+
+    def test_should_record_no_change_of_the_applied_cap(self):
+        # Act
+        plan = self.plan(self.create_request(), {"features": "step_count"})
+
+        # Assert
+        self.assertIsNone(plan.budget_applied)
+
+
+class PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTestCase(PlanRunTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.paths.config_root / "roles").mkdir(parents=True)
+        (self.paths.config_root / "roles" / "mason.md").write_text(MASON_ROLE)
+        self.survey = self.root / "survey.md"
+        self.survey.write_text(SURVEY_PROCEDURE)
+        self.ledger = self.paths.state_root / "ledger" / "2026-10.jsonl"
+        self.ledger.parent.mkdir(parents=True)
+        self.ledger.write_text(MASON_SEGMENTS)
+
+
+class PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTest(PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTestCase):
+    def test_should_apply_the_cap_computed_from_the_segments_of_the_role(self):
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(
+            plan.budget,
+            RoleBudget(
+                shipped=40, computed=63, applied=63, segments=6, restarts=3, growth=100.0, restart_tokens=200000.0
+            ),
+        )
+        self.assertEqual(plan.wall_limit_s, 1580)
+
+    def test_should_measure_no_segment_once_the_procedure_changed(self):
+        # Arrange
+        self.survey.write_text("---\ncapabilities: read\n---\nSurvey the code and the tests.\n")
+
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(plan.budget.applied, 40)
+
+    def test_should_record_the_change_from_the_shipped_budget_to_the_computed_cap(self):
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(
+            plan.budget_applied,
+            BudgetApplied(
+                role="mason", before=40, after=63, segments=6, restarts=3, growth=100.0, restart_tokens=200000.0
+            ),
+        )
+
+
+class PlanRunOfARoleSharingItsPackageWithAMeasuredRoleTest(PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTestCase):
+    def test_should_measure_none_of_the_segments_of_the_other_role(self):
+        # Arrange
+        (self.paths.config_root / "roles" / "stonemason.md").write_text(STONEMASON_ROLE)
+
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey), slot="plan"), {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(plan.budget.segments, 0)
+
+
+class PlanRunOfARoleWhoseCapWasAppliedBeforeTest(PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTestCase):
+    def test_should_record_no_change_when_the_cap_is_the_one_last_applied(self):
+        # Arrange
+        self.ledger.write_text(MASON_SEGMENTS + MASON_BUDGET_APPLIED)
+
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+
+        # Assert
+        self.assertIsNone(plan.budget_applied)
+
+    def test_should_compare_the_cap_with_the_latest_one_applied(self):
+        # Arrange
+        self.ledger.write_text(EARLIER_MASON_BUDGET_APPLIED + MASON_SEGMENTS + MASON_BUDGET_APPLIED)
+
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+
+        # Assert
+        self.assertIsNone(plan.budget_applied)
+
+    def test_should_compare_the_cap_with_none_applied_to_another_role(self):
+        # Arrange
+        self.ledger.write_text(MASON_SEGMENTS + STONEMASON_BUDGET_APPLIED)
+
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(plan.budget_applied.before, 40)
+
+    def test_should_record_the_return_to_the_shipped_budget_once_the_procedure_changed(self):
+        # Arrange
+        self.ledger.write_text(MASON_SEGMENTS + MASON_BUDGET_APPLIED)
+        self.survey.write_text("---\ncapabilities: read\n---\nSurvey the code and the tests.\n")
+
+        # Act
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+
+        # Assert
+        self.assertEqual(
+            plan.budget_applied,
+            BudgetApplied(role="mason", before=63, after=40, segments=0, restarts=0, growth=None, restart_tokens=None),
         )
 
 
