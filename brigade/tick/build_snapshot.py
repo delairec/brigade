@@ -787,7 +787,9 @@ def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) ->
 
 def _list_recorded_milestones(reading: WaveReading, project: str) -> set[str]:
     return {
-        event.milestone for event in reading.events if isinstance(event, MilestoneBranchCut) and event.project == project
+        event.milestone
+        for event in reading.events
+        if isinstance(event, MilestoneBranchCut) and event.project == project
     }
 
 

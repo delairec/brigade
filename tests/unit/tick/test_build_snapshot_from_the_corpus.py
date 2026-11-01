@@ -1948,6 +1948,22 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_list_a_milestone_whose_branch_cut_another_project_records(self):
+        # Arrange
+        self.record(3, MilestoneBranchCut(project="attic", milestone="M3", branch="integration/dashboard", login=None))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].uncut_milestones,
+            (
+                UncutMilestone(milestone="M3", branch="integration/dashboard", todo=("B8",)),
+                UncutMilestone(milestone="M7", branch="integration/currents", todo=()),
+            ),
+        )
+
     def test_should_list_none_for_a_paused_project(self):
         # Act
         snapshot, _ = self.build()
